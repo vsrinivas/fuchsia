@@ -137,7 +137,7 @@ protocol port {
 
     /// Wait for a packet arrival in a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
-    [Blocking]
+    [blocking]
     port_wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
 
     /// Cancels async port notifications on an object.

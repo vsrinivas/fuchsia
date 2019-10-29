@@ -14,7 +14,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
 
   constexpr const char indent[] = "    ";
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
     writer->Printf("syscall_result wrapper_%s(", syscall->name().c_str());

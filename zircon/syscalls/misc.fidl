@@ -13,32 +13,32 @@ NoProtocolPrefix]
 protocol misc {
     /// High resolution sleep.
     /// Rights: None.
-    [Blocking]
+    [blocking]
     nanosleep(time deadline) -> (status status);
 
     /// Read the number of high-precision timer ticks since boot.
-    [Vdsocall]
+    [vdsocall]
     ticks_get() -> (ticks ticks);
 
     /// Read the number of high-precision timer ticks in a second.
-    [Const,
-    Vdsocall]
+    [const,
+     vdsocall]
     ticks_per_second() -> (ticks ticks);
 
     /// Convert a time relative to now to an absolute deadline.
-    [Vdsocall]
+    [vdsocall]
     deadline_after(duration nanoseconds) -> (time time);
 
     /// Unmap memory, close handle, exit.
-    [Vdsocall]
+    [vdsocall]
     vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
                                         vaddr addr, usize size,
                                         handle close_handle)
         -> (status status);
 
     /// Write to futex, wake futex, close handle, exit.
-    [Noreturn,
-    Vdsocall]
+    [noreturn,
+    vdsocall]
     futex_wake_handle_close_thread_exit(const_futexptr value_ptr,
                                         uint32 wake_count,
                                         int32 new_value,
@@ -52,6 +52,6 @@ protocol misc {
     // the proper thing, either directly reading from the hardware register
     // backing the tick counter, or by making a syscall if the register is not
     // accessible from user mode code (for whatever reason).
-    [Internal]
+    [internal]
     ticks_get_via_kernel() -> (ticks ticks);
 };

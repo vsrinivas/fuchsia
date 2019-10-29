@@ -13,7 +13,7 @@ using vector_void = vector<byte>;
 [Transport="Syscall"]
 protocol Syscall {
     // Typical case.
-    [Blocking]
+    [blocking]
     BlockingWrite(handle<vmo> handle, vector_void buffer, uint64 offset) -> (zx.status status);
 
     // Special case for abigen's test wrapper.

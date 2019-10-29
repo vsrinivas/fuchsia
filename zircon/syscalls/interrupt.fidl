@@ -20,7 +20,7 @@ protocol interrupt {
 
     /// Wait for an interrupt.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.
-    [Blocking]
+    [blocking]
     interrupt_wait(handle<interrupt> handle) -> (status status, optional_time out_timestamp);
 
     // TODO(ZX-2967): No DESTROY rights here.

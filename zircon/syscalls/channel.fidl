@@ -84,22 +84,22 @@ protocol channel {
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
     /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
-    [Internal]
+    [internal]
     channel_call_noretry(handle<channel> handle,
                          uint32 options,
                          time deadline,
                          ChannelCallArgs args)
         -> (status status, uint32 actual_bytes, uint32 actual_handles);
 
-    [Internal]
+    [internal]
     channel_call_finish(time deadline, ChannelCallArgs args)
         -> (status status, uint32 actual_bytes, uint32 actual_handles);
 
     /// Send a message to a channel and await a reply.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
     /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
-    [Blocking,
-    Vdsocall]
+    [blocking,
+    vdsocall]
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
     channel_call(handle handle, uint32 options, time deadline, ChannelCallArgs args)
         -> (status status, uint32 actual_bytes, uint32 actual_handles);

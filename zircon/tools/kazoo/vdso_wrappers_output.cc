@@ -11,14 +11,14 @@ bool VdsoWrappersOutput(const SyscallLibrary& library, Writer* writer) {
   }
 
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
 
     // This function is specially handled by abigen.
     const bool is_test_wrapper = syscall->name() == "syscall_test_wrapper";
 
-    if (!syscall->HasAttribute("Blocking") && !is_test_wrapper) {
+    if (!syscall->HasAttribute("blocking") && !is_test_wrapper) {
       continue;
     }
 

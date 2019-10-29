@@ -13,11 +13,11 @@ bool AsmOutput(const SyscallLibrary& library, Writer* writer) {
 
   size_t i = 0;
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
 
-    bool is_private = syscall->HasAttribute("Blocking") || syscall->HasAttribute("Internal") ||
+    bool is_private = syscall->HasAttribute("blocking") || syscall->HasAttribute("internal") ||
                      syscall->name() == "syscall_test_wrapper";  // This is hardcoded in abigen.
     writer->Printf("m_syscall zx_%s %zu %zu %d\n", syscall->name().c_str(), i,
                    syscall->num_kernel_args(), is_private ? 0 : 1);

@@ -9,13 +9,13 @@ library zz;
 protocol syscall {
     syscall_test_0() -> (status status);
 
-    [TestCategory1]
+    [test_category1]
     syscall_test_1(int32 a) -> (status status);
 
-    [TestCategory1]
+    [test_category1]
     syscall_test_2(int32 a, int32 b) -> (status status);
 
-    [TestCategory2]
+    [test_category2]
     syscall_test_3(int32 a, int32 b, int32 c) -> (status status);
 
     syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);

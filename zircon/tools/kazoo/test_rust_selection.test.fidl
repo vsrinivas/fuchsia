@@ -20,8 +20,8 @@ protocol Rust {
 
     MultipleInHandles(vector<handle> handles) -> (zx.status status);
 
-    // Noreturn handled properly.
-    [Noreturn]
+    // noreturn handled properly.
+    [noreturn]
     ANoRetFunc();
 
     // Function withot return handled properly too.

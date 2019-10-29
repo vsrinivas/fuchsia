@@ -11,7 +11,7 @@ bool CategoryOutput(const SyscallLibrary& library, Writer* writer) {
   }
 
   const char* kCategories[] = {
-      "Blocking", "Const", "Noreturn", "TestCategory1", "TestCategory2", "Vdsocall",
+      "blocking", "const", "noreturn", "test_category1", "test_category2", "vdsocall",
   };
 
   for (const char* category : kCategories) {

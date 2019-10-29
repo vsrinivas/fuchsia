@@ -8,7 +8,7 @@ library zz;
 [Transport = "Syscall"]
 protocol thread {
     /// Terminate the current running thread.
-    [Noreturn]
+    [noreturn]
     thread_exit();
 
     /// Create a thread.

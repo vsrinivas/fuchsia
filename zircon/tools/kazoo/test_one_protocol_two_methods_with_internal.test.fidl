@@ -9,7 +9,7 @@ using zx;
 [Transport="Syscall"]
 protocol Couple {
     /// This does a single thing.
-    [Internal]
+    [internal]
     DoThing(int32 an_input) -> (zx.status status);
 
     /// Does great stuff.

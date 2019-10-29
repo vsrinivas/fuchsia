@@ -17,13 +17,13 @@ struct WaitItem {
 protocol object {
     /// Wait for signals on an object.
     /// Rights: handle must have ZX_RIGHT_WAIT.
-    [Blocking]
+    [blocking]
     object_wait_one(handle handle, signals signals, time deadline)
         -> (status status, optional_signals observed);
 
     /// Wait for signals on multiple objects.
     /// Rights: Every entry of items must have a handle field with ZX_RIGHT_WAIT.
-    [Blocking]
+    [blocking]
     object_wait_many(mutable_vector_WaitItem items, time deadline) -> (status status);
 
     /// Subscribe for signals on an object.

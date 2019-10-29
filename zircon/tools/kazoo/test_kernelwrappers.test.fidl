@@ -17,12 +17,12 @@ protocol Kwrap {
 
     MultipleInHandles(vector<handle> handles) -> (zx.status status);
 
-    // Vdsocall excluded.
-    [Vdsocall]
+    // vdsocall excluded.
+    [vdsocall]
     TicksGet() -> (ticks ticks);
 
-    // Noreturn handled properly.
-    [Noreturn]
+    // noreturn handled properly.
+    [noreturn]
     ANoRetFunc();
 
     // |buffer| treated as inout parameter.

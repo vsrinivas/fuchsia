@@ -32,7 +32,7 @@ includes:
 - Doc comments of the form `/// Rights: ...` are used by the Kazoo JSON generator, and are
   propagated to the documentation update script.
 
-- Attributes of the form `[Vdsocall]`, `[Const]`, etc. correspond to the previous similar
+- Attributes of the form `[vdsocall]`, `[const]`, etc. correspond to the previous similar
   definitions in abigen.
 
 - Some structs are defined in the current `.fidl` files, however, they're not used to generate the

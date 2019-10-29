@@ -28,7 +28,7 @@ protocol KernelCases {
         (zx.status status, vector_paddr addrs, handle<pmt> pmt);
 
     // Still have NORETURN markup for kernel (but only this one).
-    [Noreturn]
+    [noreturn]
     ThreadExit();
 
     // inout_ptr.

@@ -12,7 +12,7 @@ bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer) {
 
   writer->Puts("start_syscall_dispatch\n");
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
     writer->Printf("syscall_dispatch %zu %s\n", syscall->num_kernel_args(),

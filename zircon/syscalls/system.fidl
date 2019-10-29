@@ -24,24 +24,24 @@ struct SystemPowerctlArg {
 
 [Transport = "Syscall"]
 protocol system {
-    [Const, Vdsocall]
+    [const, vdsocall]
     system_get_dcache_line_size() -> (uint32 size);
 
     /// Get number of logical processors on the system.
-    [Const, Vdsocall]
+    [const, vdsocall]
     system_get_num_cpus() -> (uint32 count);
 
     /// Get version string for system.
-    [Vdsocall]
+    [vdsocall]
     system_get_version(mutable_string version) -> (status status);
 
     /// Get amount of physical memory on the system.
-    [Vdsocall]
+    [vdsocall]
     system_get_physmem() -> (uint64 physmem);
 
     // TODO(scottmg): "features" has a features attribute. I'm not sure if/how it's used.
     /// Get supported hardware capabilities.
-    [Vdsocall]
+    [vdsocall]
     system_get_features(uint32 kind) -> (status status, uint32 features);
 
     /// Retrieve a handle to a system event.

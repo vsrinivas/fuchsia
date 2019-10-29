@@ -14,7 +14,7 @@ protocol vcpu {
     // See port.fidl for definition of PortPacket.
     /// Resume execution of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
-    [Blocking]
+    [blocking]
     vcpu_resume(handle<vcpu> handle) -> (status status, PortPacket packet);
 
     /// Raise an interrupt on a VCPU.

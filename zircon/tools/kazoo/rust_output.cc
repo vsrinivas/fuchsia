@@ -68,7 +68,7 @@ bool RustOutput(const SyscallLibrary& library, Writer* writer) {
   writer->Puts("#[link(name = \"zircon\")]\n");
   writer->Puts("extern {\n");
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Internal")) {
+    if (syscall->HasAttribute("internal")) {
       continue;
     }
 

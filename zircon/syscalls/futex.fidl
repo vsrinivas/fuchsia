@@ -16,7 +16,7 @@ using Futex = int32;
 protocol futex {
     /// Wait on a futex.
     /// Rights: None.
-    [Blocking]
+    [blocking]
     futex_wait(const_futexptr value_ptr, Futex current_value, handle new_futex_owner, time deadline)
         -> (status status);
 

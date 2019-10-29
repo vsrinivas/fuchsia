@@ -11,7 +11,7 @@ bool UserHeaderOutput(const SyscallLibrary& library, Writer* writer) {
   }
 
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Internal")) {
+    if (syscall->HasAttribute("internal")) {
       continue;
     }
 

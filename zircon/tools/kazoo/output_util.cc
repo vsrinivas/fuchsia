@@ -311,10 +311,10 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
     writer->Printf(" __NONNULL((%s))", JoinStrings(non_nulls, ", ").c_str());
   }
   writer->Printf(" __LEAF_FN");
-  if (syscall.HasAttribute("Const")) {
+  if (syscall.HasAttribute("const")) {
     writer->Puts(" __CONST");
   }
-  if (syscall.HasAttribute("Noreturn")) {
+  if (syscall.HasAttribute("noreturn")) {
     writer->Puts(" __NO_RETURN");
   }
   writer->Puts(";\n\n");

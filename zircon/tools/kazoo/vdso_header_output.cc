@@ -13,7 +13,7 @@ bool VdsoHeaderOutput(const SyscallLibrary& library, Writer* writer) {
   for (const auto& syscall : library.syscalls()) {
     CDeclaration(*syscall, "__LOCAL extern ", "VDSO_zx_", writer);
 
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
 

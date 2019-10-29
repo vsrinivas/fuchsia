@@ -23,7 +23,7 @@ void KernelDeclaration(const Syscall& syscall, Writer* writer) {
     }
   }
   writer->Printf(")");
-  if (syscall.HasAttribute("Noreturn")) {
+  if (syscall.HasAttribute("noreturn")) {
     writer->Printf(" __NO_RETURN");
   }
   writer->Printf(";\n\n");
@@ -37,7 +37,7 @@ bool KernelHeaderOutput(const SyscallLibrary& library, Writer* writer) {
   }
 
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
 

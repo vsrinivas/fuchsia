@@ -8,7 +8,7 @@ library zz;
 [Transport = "Syscall"]
 protocol process {
     /// Exits the currently running process.
-    [Noreturn]
+    [noreturn]
     process_exit(int64 retcode);
 
     // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.

@@ -6,16 +6,16 @@ library zz;
 
 [Transport="Syscall"]
 protocol Categories {
-    [Noreturn]
+    [noreturn]
     NoResponseNoReturn(int32 input);
 
-    [Blocking]
+    [blocking]
     Looper(int32 a) -> (int32 b);
 
-    [Vdsocall]
+    [vdsocall]
     Vdsoer(int32 a) -> (int32 b);
 
-    [Const, Vdsocall]
+    [const, vdsocall]
     TwoCategories(int32 a) -> (int32 b);
 };
 

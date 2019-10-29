@@ -17,7 +17,7 @@ protocol clock {
     clock_get(Clock clock_id) -> (status status, time out);
 
     /// Acquire the current monotonic time.
-    [Vdsocall]
+    [vdsocall]
     clock_get_monotonic() -> (time time);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
@@ -28,7 +28,7 @@ protocol clock {
     //
     // See the notes for ticks_get_via_kernel; this is not a syscall meant
     // to be used by application code.
-    [Internal]
+    [internal]
     clock_get_monotonic_via_kernel() -> (time time);
 
     // TODO: handle<clock> for all of these.

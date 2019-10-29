@@ -12,7 +12,7 @@ bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
 
   size_t i = 0;
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
     writer->Printf("#define ZX_SYS_%s %zu\n", syscall->name().c_str(), i);
