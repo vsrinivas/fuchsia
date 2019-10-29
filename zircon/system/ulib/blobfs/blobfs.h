@@ -47,6 +47,7 @@
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
 #include "directory.h"
+#include "inspector/inspector-blobfs.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/extent-iterator.h"
 #include "metrics.h"
@@ -59,7 +60,10 @@ using digest::Digest;
 using storage::OperationType;
 using storage::UnbufferedOperationsBuilder;
 
-class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public TransactionManager {
+class Blobfs : public fs::ManagedVfs,
+               public fbl::RefCounted<Blobfs>,
+               public TransactionManager,
+               public InspectorBlobfs {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -112,6 +116,11 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   BlobfsMetrics& Metrics() final { return metrics_; }
   size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
+
+  ////////////////
+  // InspectorBlobfs interface.
+
+  const Superblock& GetSuperblock() const final { return Info(); }
 
   ////////////////
   // Other methods.
