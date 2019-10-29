@@ -207,8 +207,8 @@ class Object : public NullableValue {
   Object(const Type* type, const Struct& struct_definition)
       : NullableValue(type), struct_definition_(struct_definition) {}
 
-  const std::vector<Field>& fields() const { return fields_; }
-  const Struct& struct_definition() { return struct_definition_; }
+  const std::map<std::string, std::unique_ptr<Value>>& fields() const { return fields_; }
+  const Struct& struct_definition() const { return struct_definition_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -226,7 +226,7 @@ class Object : public NullableValue {
 
  private:
   const Struct& struct_definition_;
-  std::vector<Field> fields_;
+  std::map<std::string, std::unique_ptr<Value>> fields_;
 };
 
 // An envelope (used by TableValue and XUnion).

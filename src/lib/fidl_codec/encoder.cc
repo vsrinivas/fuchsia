@@ -24,29 +24,22 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t
   encoder.Write(flags[2]);
   encoder.Write(magic);
   encoder.Write(ordinal);
-  encoder.VisitObjectBody(&object);
+  FXL_DCHECK(sizeof(fidl_message_header_t) == encoder.bytes_.size());
+
+  // The offsets for the primary object include the header size, so we have to specify an existing
+  // size equal to the size of what we've already written above.
+  encoder.VisitObjectBody(&object, /*existing_size=*/sizeof(fidl_message_header_t));
+
   encoder.Pump();
-  encoder.Align<8>();
+  encoder.Align8();
 
   return Result{std::move(encoder.bytes_), std::move(encoder.handles_)};
 }
 
-void Encoder::Align(size_t factor) {
-  FXL_CHECK(!(factor & (factor - 1)));
-  auto size = (bytes_.size() + (factor - 1)) & ~(factor - 1);
-  bytes_.resize(size);
-}
-
-template <size_t T>
-void Encoder::Align() {
-  static_assert(!(T & (T - 1)));
-  auto size = (bytes_.size() + (T - 1)) & ~(T - 1);
-  bytes_.resize(size);
-}
+void Encoder::Align8() { bytes_.resize((bytes_.size() + 7) & ~7); }
 
 template <typename T>
 void Encoder::Write(T t) {
-  Align<sizeof(T)>();
   auto old_size = bytes_.size();
   bytes_.resize(old_size + sizeof(T));
   *reinterpret_cast<T*>(bytes_.data() + old_size) = t;
@@ -66,7 +59,7 @@ void Encoder::Pump() {
   deferred_.clear();
 
   for (const auto& func : deferred) {
-    Align<8>();
+    Align8();
     func();
     Pump();
   }
@@ -74,8 +67,12 @@ void Encoder::Pump() {
 
 void Encoder::VisitUnionBody(const UnionValue* node) {
   FXL_DCHECK(!node->is_null());
-  Align(node->definition().alignment());
   auto target_size = bytes_.size() + node->definition().size();
+  const size_t align_to = node->definition().alignment();
+  const size_t align_mask = align_to - 1;
+
+  FXL_CHECK(!(align_to & align_mask));
+  bytes_.resize((bytes_.size() + align_mask) & ~align_mask);
 
   uint32_t tag = 0;
   for (const auto& member : node->definition().members()) {
@@ -94,16 +91,22 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
   FXL_NOTREACHED() << "Invalid union field '" << node->field().name() << "'";
 }
 
-void Encoder::VisitObjectBody(const Object* node) {
+void Encoder::VisitObjectBody(const Object* node, size_t existing_size) {
   FXL_DCHECK(!node->is_null());
+  FXL_DCHECK(existing_size <= bytes_.size());
 
-  Align<8>();
+  size_t object_offset = bytes_.size() - existing_size;
 
-  for (const auto& field : node->fields()) {
-    field.value()->Visit(this);
+  for (const auto& member : node->struct_definition().members()) {
+    auto it = node->fields().find(std::string(member->name()));
+    FXL_DCHECK(it != node->fields().end());
+    // Pad the buffer so the next object appended will be at the offset of the member.
+    bytes_.resize(object_offset + member->offset());
+    it->second->Visit(this);
   }
 
-  Align<8>();
+  // Structs always pad to next 8-byte alignment.
+  Align8();
 }
 
 void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
@@ -205,10 +208,7 @@ void Encoder::VisitVectorValue(const VectorValue* node) {
   }
 }
 
-void Encoder::VisitEnumValue(const EnumValue* node) {
-  Align<sizeof(uint32_t)>();
-  WriteNodeData(*node, sizeof(uint32_t));
-}
+void Encoder::VisitEnumValue(const EnumValue* node) { WriteNodeData(*node, sizeof(uint32_t)); }
 
 void Encoder::VisitHandleValue(const HandleValue* node) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {
@@ -233,44 +233,36 @@ void Encoder::VisitObject(const Object* node) {
 void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) { bytes_.push_back(node->data()[0]); }
 
 void Encoder::VisitU16Value(const NumericValue<uint16_t>* node) {
-  Align<2>();
   WriteNodeData(*node, sizeof(uint16_t));
 }
 
 void Encoder::VisitU32Value(const NumericValue<uint32_t>* node) {
-  Align<4>();
   WriteNodeData(*node, sizeof(uint32_t));
 }
 
 void Encoder::VisitU64Value(const NumericValue<uint64_t>* node) {
-  Align<8>();
   WriteNodeData(*node, sizeof(uint64_t));
 }
 
 void Encoder::VisitI8Value(const NumericValue<int8_t>* node) { bytes_.push_back(node->data()[0]); }
 
 void Encoder::VisitI16Value(const NumericValue<int16_t>* node) {
-  Align<2>();
   WriteNodeData(*node, sizeof(int16_t));
 }
 
 void Encoder::VisitI32Value(const NumericValue<int32_t>* node) {
-  Align<4>();
   WriteNodeData(*node, sizeof(int32_t));
 }
 
 void Encoder::VisitI64Value(const NumericValue<int64_t>* node) {
-  Align<8>();
   WriteNodeData(*node, sizeof(int64_t));
 }
 
 void Encoder::VisitF32Value(const NumericValue<float>* node) {
-  Align<4>();
   WriteNodeData(*node, sizeof(float));
 }
 
 void Encoder::VisitF64Value(const NumericValue<double>* node) {
-  Align<8>();
   WriteNodeData(*node, sizeof(double));
 }
 

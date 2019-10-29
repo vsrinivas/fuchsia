@@ -563,6 +563,35 @@ TEST_DECODE_WIRE(NullableStructAndInt, NullableStructAndInt, R"({"p":null, "i":"
 
 namespace {
 
+test::fidlcodec::examples::SmallStruct SmallStructFromVals(uint8_t a, uint8_t b, uint8_t c) {
+  test::fidlcodec::examples::SmallStruct ss;
+  ss.a = a;
+  ss.b = b;
+  ss.c = c;
+  return ss;
+}
+
+}  // namespace
+
+TEST_DECODE_WIRE(SmallStruct, SmallStructAfterByte,
+                 R"({"u":"1","s1":{"a":"2","b":"3","c":"4"},"s2":{"a":"5","b":"6","c":"7"}})",
+                 "{\n"
+                 "  u: #gre#uint8#rst# = #blu#1#rst#\n"
+                 "  s1: #gre#test.fidlcodec.examples/SmallStruct#rst# = {\n"
+                 "    a: #gre#uint8#rst# = #blu#2#rst#\n"
+                 "    b: #gre#uint8#rst# = #blu#3#rst#\n"
+                 "    c: #gre#uint8#rst# = #blu#4#rst#\n"
+                 "  }\n"
+                 "  s2: #gre#test.fidlcodec.examples/SmallStruct#rst# = {\n"
+                 "    a: #gre#uint8#rst# = #blu#5#rst#\n"
+                 "    b: #gre#uint8#rst# = #blu#6#rst#\n"
+                 "    c: #gre#uint8#rst# = #blu#7#rst#\n"
+                 "  }\n"
+                 "}",
+                 1, SmallStructFromVals(2, 3, 4), SmallStructFromVals(5, 6, 7));
+
+namespace {
+
 test::fidlcodec::examples::TwoStringStruct TwoStringStructFromVals(const std::string& v1,
                                                                    const std::string& v2) {
   test::fidlcodec::examples::TwoStringStruct tss;

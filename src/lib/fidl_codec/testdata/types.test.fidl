@@ -40,6 +40,8 @@ protocol FidlCodecTestInterface {
     NullableStruct(PrimitiveTypes? p);
     NullableStructAndInt(PrimitiveTypes? p, int32 i);
 
+    SmallStructAfterByte(uint8 u, SmallStruct s1, SmallStruct s2);
+
     TwoStringStructInt(TwoStringStruct s, int32 i32);
     TwoStringNullableStructInt(TwoStringStruct? s, int32 i32);
 
@@ -81,6 +83,12 @@ struct PrimitiveTypes {
     uint64 u64;
     float32 f32;
     float64 f64;
+};
+
+struct SmallStruct {
+    uint8 a;
+    uint8 b;
+    uint8 c;
 };
 
 struct TwoStringStruct {

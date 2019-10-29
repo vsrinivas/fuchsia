@@ -26,12 +26,8 @@ class Encoder : public Visitor {
  private:
   Encoder(bool union_as_xunion) : union_as_xunion_(union_as_xunion) {}
 
-  // Pad the current buffer so the next value will be aligned by the given factor.
-  void Align(size_t factor);
-
-  // Same as above, but static.
-  template <size_t T>
-  void Align();
+  // Pad the current buffer so the next value will be aligned to an 8-byte boundary.
+  void Align8();
 
   // Write an immediate value to the buffer, naturally aligned.
   template <typename T>
@@ -51,8 +47,10 @@ class Encoder : public Visitor {
   void VisitUnionBody(const UnionValue* node);
 
   // Visit an object which is known to be non-null and which we want encoded immediately at the
-  // current position.
-  void VisitObjectBody(const Object* node);
+  // current position. If existing_size is specified, it indicates some number of bytes which have
+  // already been written that should be considered part of the object for the purpose of
+  // calculating member offsets.
+  void VisitObjectBody(const Object* node, size_t existing_size = 0);
 
   // Visit any union and encode it as an XUnion.
   void VisitUnionAsXUnion(const UnionValue* node);

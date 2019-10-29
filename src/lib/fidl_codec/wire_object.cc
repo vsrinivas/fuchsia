@@ -57,12 +57,16 @@ class JsonVisitor : public Visitor {
       result_->SetNull();
     } else {
       result_->SetObject();
-      for (const auto& field : node->fields()) {
+      for (const auto& member : node->struct_definition().members()) {
+        auto it = node->fields().find(std::string(member->name()));
+        if (it == node->fields().end())
+          continue;
+        const auto& [name, value] = *it;
         rapidjson::Value key;
-        key.SetString(field.name().c_str(), *allocator_);
+        key.SetString(name.c_str(), *allocator_);
         result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[field.name().c_str()], allocator_);
-        field.value()->Visit(&visitor);
+        JsonVisitor visitor(&(*result_)[name.c_str()], allocator_);
+        value->Visit(&visitor);
       }
     }
   }
@@ -284,16 +288,16 @@ int Object::DisplaySize(int remaining_size) const {
     return 4;
   }
   int size = 0;
-  for (const auto& field : fields_) {
+  for (const auto& [name, value] : fields_) {
     // Two characters for the separator ("{ " or ", ") and three characters for
     // equal (" = ").
     constexpr int kExtraSize = 5;
-    size += static_cast<int>(field.name().size()) + kExtraSize;
-    if (field.value()->type() != nullptr) {
+    size += static_cast<int>(name.size()) + kExtraSize;
+    if (value->type() != nullptr) {
       // Two characters for ": ".
-      size += static_cast<int>(field.value()->type()->Name().size()) + 2;
+      size += static_cast<int>(value->type()->Name().size()) + 2;
     }
-    size += field.value()->DisplaySize(remaining_size - size);
+    size += value->DisplaySize(remaining_size - size);
     if (size > remaining_size) {
       return size;
     }
@@ -309,7 +313,7 @@ void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   for (const auto& member : struct_definition_.members()) {
     std::unique_ptr<Value> value = member->type()->Decode(decoder, base_offset + member->offset());
     if (value != nullptr) {
-      fields_.emplace_back(std::string(member->name()), std::move(value));
+      fields_[std::string(member->name())] = std::move(value);
     }
   }
 }
@@ -329,32 +333,39 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_vie
     os << "{}";
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
-    for (const auto& field : fields_) {
-      os << separator << field.name();
+    for (const auto& member : struct_definition_.members()) {
+      auto it = fields_.find(std::string(member->name()));
+      if (it == fields_.end())
+        continue;
+      const auto& [name, value] = *it;
+      os << separator << name;
       separator = ", ";
-      if (field.value()->type() != nullptr) {
-        std::string type_name = field.value()->type()->Name();
+      if (value->type() != nullptr) {
+        std::string type_name = value->type()->Name();
         os << ": " << colors.green << type_name << colors.reset;
       }
       os << " = ";
-      field.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
+      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
     }
     os << " }";
   } else {
     os << "{\n";
-    for (const auto& field : fields_) {
-      int size = (tabs + 1) * kTabSize + static_cast<int>(field.name().size());
-      os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field.name();
-      if (field.value()->type() != nullptr) {
-        std::string type_name = field.value()->type()->Name();
+    for (const auto& member : struct_definition_.members()) {
+      auto it = fields_.find(std::string(member->name()));
+      if (it == fields_.end())
+        continue;
+      const auto& [name, value] = *it;
+      int size = (tabs + 1) * kTabSize + static_cast<int>(name.size());
+      os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name;
+      if (value->type() != nullptr) {
+        std::string type_name = value->type()->Name();
         // Two characters for ": ".
         size += static_cast<int>(type_name.size()) + 2;
         os << ": " << colors.green << type_name << colors.reset;
       }
       size += 3;
       os << " = ";
-      field.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size,
-                                 max_line_size);
+      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size, max_line_size);
       os << "\n";
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << '}';
