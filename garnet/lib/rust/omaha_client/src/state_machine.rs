@@ -42,6 +42,7 @@ pub use timer::Timer;
 const LAST_CHECK_TIME: &str = "last_check_time";
 const INSTALL_PLAN_ID: &str = "install_plan_id";
 const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
+const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
@@ -331,6 +332,8 @@ where
 
                 self.app_set.update_from_omaha(result.app_responses).await;
 
+                self.report_attempts_to_succeed(true).await;
+
                 // TODO: update consecutive_proxied_requests
             }
             Err(error) => {
@@ -356,6 +359,8 @@ where
                     },
                 };
                 self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
+
+                self.report_attempts_to_succeed(false).await;
             }
         }
 
@@ -363,6 +368,24 @@ where
 
         if self.state != State::WaitingForReboot {
             self.set_state(State::Idle).await;
+        }
+    }
+
+    /// Update `CONSECUTIVE_FAILED_UPDATE_CHECKS` in storage and report the metrics if `success`.
+    /// Does not commit the change to storage.
+    async fn report_attempts_to_succeed(&mut self, success: bool) {
+        let storage_ref = self.storage_ref.clone();
+        let mut storage = storage_ref.lock().await;
+        let attempts = storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await.unwrap_or(0) + 1;
+        if success {
+            if let Err(e) = storage.remove(CONSECUTIVE_FAILED_UPDATE_CHECKS).await {
+                error!("Unable to remove {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
+            }
+            self.report_metrics(Metrics::AttemptsToSucceed(attempts as u64));
+        } else {
+            if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, attempts).await {
+                error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
+            }
         }
     }
 
@@ -455,6 +478,8 @@ where
         };
 
         self.report_metrics(Metrics::UpdateCheckResponseTime(update_check_start_time.elapsed()));
+        // TODO(39759): Report the real number of retries when we implement retries.
+        self.report_metrics(Metrics::UpdateCheckRetries(1));
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -1389,11 +1414,10 @@ mod tests {
             .await;
             state_machine.start_update_check(CheckOptions::default()).await;
 
-            assert!(state_machine.metrics_reporter.metrics.len() > 1);
-            assert_eq!(
-                state_machine.metrics_reporter.metrics[1],
-                Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Omaha)
-            );
+            assert!(state_machine
+                .metrics_reporter
+                .metrics
+                .contains(&Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Omaha)));
         });
     }
 
@@ -1414,11 +1438,10 @@ mod tests {
             .await;
             state_machine.start_update_check(CheckOptions::default()).await;
 
-            assert!(!state_machine.metrics_reporter.metrics.is_empty());
-            assert_eq!(
-                state_machine.metrics_reporter.metrics[0],
-                Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Network)
-            );
+            assert!(state_machine
+                .metrics_reporter
+                .metrics
+                .contains(&Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Network)));
         });
     }
 
@@ -1641,15 +1664,13 @@ mod tests {
             });
             state_machine.start_update_check(CheckOptions::default()).await;
 
-            assert!(state_machine.metrics_reporter.metrics.len() > 2);
-            assert_eq!(
-                state_machine.metrics_reporter.metrics[1],
-                Metrics::SuccessfulUpdateDuration(Duration::from_micros(98765433))
-            );
-            assert_eq!(
-                state_machine.metrics_reporter.metrics[2],
-                Metrics::SuccessfulUpdateFromFirstSeen(Duration::from_micros(198765433))
-            );
+            assert!(state_machine
+                .metrics_reporter
+                .metrics
+                .contains(&Metrics::SuccessfulUpdateDuration(Duration::from_micros(98765433))));
+            assert!(state_machine.metrics_reporter.metrics.contains(
+                &Metrics::SuccessfulUpdateFromFirstSeen(Duration::from_micros(198765433))
+            ));
         });
     }
 
@@ -1685,11 +1706,10 @@ mod tests {
             clock::mock::set(time::i64_to_time(123456789));
             state_machine.start_update_check(CheckOptions::default()).await;
 
-            assert!(state_machine.metrics_reporter.metrics.len() > 1);
-            assert_eq!(
-                state_machine.metrics_reporter.metrics[1],
-                Metrics::FailedUpdateDuration(Duration::from_micros(0))
-            );
+            assert!(state_machine
+                .metrics_reporter
+                .metrics
+                .contains(&Metrics::FailedUpdateDuration(Duration::from_micros(0))));
         });
     }
 
@@ -1726,6 +1746,57 @@ mod tests {
                 assert_eq!(storage.len(), 2);
                 assert!(storage.committed());
             }
+        });
+    }
+
+    #[test]
+    fn test_report_attempts_to_succeed() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller { should_fail: true },
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+
+            state_machine.report_attempts_to_succeed(true).await;
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
+                assert_eq!(storage.len(), 0);
+            }
+            assert_eq!(state_machine.metrics_reporter.metrics, vec![Metrics::AttemptsToSucceed(1)]);
+
+            state_machine.report_attempts_to_succeed(false).await;
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(1));
+                assert_eq!(storage.len(), 1);
+            }
+
+            state_machine.report_attempts_to_succeed(false).await;
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(2));
+                assert_eq!(storage.len(), 1);
+            }
+
+            state_machine.report_attempts_to_succeed(true).await;
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
+                assert_eq!(storage.len(), 0);
+            }
+            assert_eq!(
+                state_machine.metrics_reporter.metrics,
+                vec![Metrics::AttemptsToSucceed(1), Metrics::AttemptsToSucceed(3)]
+            );
         });
     }
 }
