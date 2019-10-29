@@ -3,23 +3,17 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/disk-inspector/disk-inspector.h>
-#include <lib/fdio/fdio.h>
 #include <stdio.h>
-#include <zircon/status.h>
 
-#include <blobfs/inspector/inspector.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
+#include <lib/disk-inspector/disk-inspector.h>
+#include <lib/fdio/fdio.h>
 #include <minfs/inspector.h>
+#include <zircon/status.h>
 
 namespace {
-
-enum class FsType {
-  kMinfs,
-  kBlobfs,
-};
 
 // Processes various disk objects recursively starting from root object
 // and prints values/elements of the objects.
@@ -74,43 +68,25 @@ void ProcessDiskObjects(std::unique_ptr<disk_inspector::DiskObject> obj, uint32_
   }
 }
 
-int Inspect(std::unique_ptr<block_client::BlockDevice> device, FsType fs_type) {
+int Inspect(std::unique_ptr<block_client::BlockDevice> device) {
+  minfs::Inspector inspector = minfs::Inspector(std::move(device));
   std::unique_ptr<disk_inspector::DiskObject> root;
-  zx_status_t status;
-  switch (fs_type) {
-    case FsType::kMinfs: {
-      minfs::Inspector inspector = minfs::Inspector(std::move(device));
-      status = inspector.GetRoot(&root);
-      break;
-    }
-    case FsType::kBlobfs: {
-      blobfs::Inspector inspector = blobfs::Inspector(std::move(device));
-      status = inspector.GetRoot(&root);
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-    }
+
+  if (inspector.GetRoot(&root) == ZX_OK) {
+    ProcessDiskObjects(std::move(root), 0);
+    printf("\n");
+    return 0;
   }
-  if (status != ZX_OK) {
-    fprintf(stderr, "ERROR: GetRoot failed\n");
-    return -1;
-  }
-  ProcessDiskObjects(std::move(root), 0);
-  printf("\n");
-  return 0;
+  fprintf(stderr, "ERROR: GetRoot failed\n");
+  return -1;
 }
 
 }  // namespace
 
-int usage(const char *binary) {
-  printf("usage: %s <device path> <--blobfs | --minfs>\n", binary);
-  return -1;
-}
-
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    return usage(argv[0]);
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s <device path>\n", argv[0]);
+    return -1;
   }
 
   fbl::unique_fd fd(open(argv[1], O_RDONLY));
@@ -120,7 +96,8 @@ int main(int argc, char **argv) {
   }
 
   zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+  zx_status_t status = fdio_get_service_handle(fd.release(),
+                                               channel.reset_and_get_address());
   if (status != ZX_OK) {
     fprintf(stderr, "ERROR: cannot acquire handle: %d\n", status);
     return -1;
@@ -133,17 +110,5 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  FsType fs_type;
-  // TODO(fxb/37907): Disk-inspect should be more interactive and not depend on hackish flags
-  // to function in the future.
-  std::string flag = argv[2];
-  if (flag == "--blobfs") {
-    fs_type = FsType::kBlobfs;
-  } else if (flag == "--minfs") {
-    fs_type = FsType::kMinfs;
-  } else {
-    return usage(argv[0]);
-  }
-
-  return Inspect(std::move(device), fs_type);
+  return Inspect(std::move(device));
 }
