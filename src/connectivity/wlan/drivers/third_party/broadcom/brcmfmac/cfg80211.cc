@@ -736,13 +736,15 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   params_le->bss_type = DOT11_BSSTYPE_ANY;
   if (request->scan_type == WLAN_SCAN_TYPE_ACTIVE) {
     params_le->scan_type = BRCMF_SCANTYPE_ACTIVE;
+    params_le->active_time = request->min_channel_time;
+    params_le->passive_time = -1;
   } else {
     params_le->scan_type = BRCMF_SCANTYPE_PASSIVE;
+    params_le->passive_time = request->min_channel_time;
+    params_le->active_time = -1;
   }
   params_le->channel_num = 0;
   params_le->nprobes = -1;
-  params_le->active_time = -1;
-  params_le->passive_time = -1;
   params_le->home_time = -1;
   params_le->ssid_le.SSID_len = request->ssid.len;
   if (request->ssid.len <= sizeof(params_le->ssid_le.SSID)) {
@@ -798,6 +800,10 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
 
 static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                    const wlanif_scan_req_t* request) {
+  if (request->min_channel_time == 0 || request->max_channel_time < request->min_channel_time) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   int32_t params_size =
       BRCMF_SCAN_PARAMS_FIXED_SIZE + offsetof(struct brcmf_escan_params_le, params_le);
   struct brcmf_escan_params_le* params;
@@ -2820,7 +2826,7 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
   BRCMF_DBG(SCAN, "About to scan! Txn ID %lu\n", ndev->scan_txn_id);
   result = brcmf_cfg80211_scan(ndev, req);
   if (result != ZX_OK) {
-    BRCMF_DBG(SCAN, "Couldn't start scan: %d %s\n", result, zx_status_get_string(result));
+    BRCMF_ERR("Couldn't start scan: %d %s\n", result, zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
     ndev->scan_busy = false;
   }

@@ -89,6 +89,24 @@ executable("netbuf_test") {
   ]
 }
 
+executable("scan_dwell_time_test") {
+  output_name = "scan_dwell_time_test"
+  testonly = true
+  sources = [
+    "scan_dwell_time_test.cc",
+    "sim_test.cc",
+    "sim_test.h",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("scan_test") {
   output_name = "scan_test"
   testonly = true
@@ -99,7 +117,6 @@ executable("scan_test") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
@@ -156,6 +173,7 @@ unittest_package("brcmfmac_test") {
     ":firmware_test",
     ":lifecycle_test",
     ":netbuf_test",
+    ":scan_dwell_time_test",
     ":scan_test",
     ":sdio_test",
     ":workqueue_test",
@@ -180,6 +198,10 @@ unittest_package("brcmfmac_test") {
     },
     {
       name = "netbuf_test"
+      environments = basic_envs
+    },
+    {
+      name = "scan_dwell_time_test"
       environments = basic_envs
     },
     {

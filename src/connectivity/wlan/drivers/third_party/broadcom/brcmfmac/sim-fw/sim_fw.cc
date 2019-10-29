@@ -496,6 +496,8 @@ void SimFirmware::EscanNextChannel() {
 void SimFirmware::EscanComplete() {
   brcmf_event_msg_be* msg_be;
 
+  scan_state_.state_ = ScanState::STOPPED;
+
   auto buf = CreateEventBuffer(0, &msg_be, nullptr);
   msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
   msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
