@@ -256,8 +256,12 @@ zx_status_t RealMain(Flags flags) {
           block_device.reset();
         }
       }
-      auto result = paver_client.WipeVolumes(std::move(block_device));
-      return result.ok() ? result.value().status : result.status();
+      auto result = paver_client.WipeVolume(std::move(block_device));
+      if (!result.ok()) {
+        return result.status();
+      }
+
+      return result->result.is_response() ? ZX_OK : result->result.err();
     }
     case Command::kInitPartitionTables: {
       if (flags.block_device == nullptr) {

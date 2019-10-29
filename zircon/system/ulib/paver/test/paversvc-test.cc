@@ -23,6 +23,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fs-management/mount.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
@@ -52,7 +53,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
     .partition_map =
         {
             .device_guid = {},
-            .partition_count = 6,
+            .partition_count = 7,
             .partitions =
                 {
                     {
@@ -118,6 +119,17 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
                         .copy_count = 0,
                         .copy_byte_offset = 0,
                         .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_FVM_VALUE,
+                        .unique_guid = {},
+                        .first_block = 18,
+                        .last_block = 39,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'f', 'v', 'm'},
                         .hidden = false,
                         .bbt = false,
                     },
@@ -238,7 +250,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
  public:
   PaverServiceSkipBlockTest() {
     ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr());
-    ASSERT_NO_FATAL_FAILURES(WaitForSysconfig());
+    ASSERT_NO_FATAL_FAILURES(WaitForDevices());
   }
 
  protected:
@@ -249,10 +261,12 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
   }
 
-  void WaitForSysconfig() {
+  void WaitForDevices() {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
                                    "misc/nand-ctl/ram-nand-0/sysconfig/skip-block", &fd));
+    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
+                                   "misc/nand-ctl/ram-nand-0/fvm/ftl/block", &fvm_));
   }
 
   void SetAbr(const abr::Data& data) {
@@ -305,6 +319,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   }
 
   fbl::unique_ptr<SkipBlockDevice> device_;
+  fbl::unique_fd fvm_;
 };
 
 constexpr abr::Data kAbrData = {
@@ -721,8 +736,34 @@ TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
   // TODO(ZX-4007): Figure out a way to test this.
 }
 
-TEST_F(PaverServiceSkipBlockTest, WipeVolumes) {
-  // TODO(ZX-4007): Figure out a way to test this.
+TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
+  auto result = client_->WipeVolume({});
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_TRUE(result->result.response().volume);
+}
+
+TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
+  constexpr size_t kBufferSize = 8192;
+  char buffer[kBufferSize];
+  memset(buffer, 'a', kBufferSize);
+  EXPECT_EQ(kBufferSize, pwrite(fvm_.get(), buffer, kBufferSize, 0));
+
+  auto result = client_->WipeVolume({});
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_TRUE(result->result.response().volume);
+
+  EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
+  EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
+
+  int volume_fd;
+  zx::channel channel = std::move(result->result.mutable_response().volume);
+  ASSERT_OK(fdio_fd_create(channel.release(), &volume_fd));
+  fbl::unique_fd block_device(volume_fd);
+
+  EXPECT_EQ(kBufferSize, pread(block_device.get(), buffer, kBufferSize, 0));
+  EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
 }
 
 // TODO(34771): Re-enable once bug in GPT is fixed.

@@ -355,6 +355,65 @@ void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::Deco
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_ReadData_Ordinal);
 }
 
+::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Paver_WipeVolume_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::paver::Paver_WipeVolume_Result::~Paver_WipeVolume_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Paver_WipeVolume_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::MoveImpl_(Paver_WipeVolume_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result) == ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::paver::Paver_WipeVolume_Response& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::paver::Paver_WipeVolume_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Paver_QueryConfigurationStatus_Result() {
   tag_ = Tag::Invalid;
 }
@@ -595,11 +654,11 @@ constexpr uint64_t kPaver_WriteDataFile_GenOrdinal = 0x55cd644f9291ad5alu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolumes_Ordinal = 0x6be96a000000000lu;
+constexpr uint64_t kPaver_WipeVolume_Ordinal = 0x4d18bc6b00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolumes_GenOrdinal = 0x22124c31791b9fbelu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
+constexpr uint64_t kPaver_WipeVolume_GenOrdinal = 0x591bcb70b1ab9e73lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializePartitionTables_Ordinal = 0x5b692a5000000000lu;
 [[maybe_unused]]
@@ -1307,62 +1366,62 @@ Paver::UnownedResultOf::WriteDataFile Paver::Call::WriteDataFile(zx::unowned_cha
 }
 
 template <>
-Paver::ResultOf::WipeVolumes_Impl<Paver::WipeVolumesResponse>::WipeVolumes_Impl(zx::unowned_channel _client_end, ::zx::channel block_device) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest, ::fidl::MessageDirection::kSending>();
+Paver::ResultOf::WipeVolume_Impl<Paver::WipeVolumeResponse>::WipeVolume_Impl(zx::unowned_channel _client_end, ::zx::channel block_device) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, WipeVolumesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_write_bytes);
+  memset(_write_bytes, 0, WipeVolumeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WipeVolumeRequest*>(_write_bytes);
   _request.block_device = std::move(block_device);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumesRequest));
-  ::fidl::DecodedMessage<WipeVolumesRequest> _decoded_request(std::move(_request_bytes));
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeRequest));
+  ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::WipeVolumes(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      Paver::InPlace::WipeVolume(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WipeVolumes Paver::SyncClient::WipeVolumes(::zx::channel block_device) {
-  return ResultOf::WipeVolumes(zx::unowned_channel(this->channel_), std::move(block_device));
+Paver::ResultOf::WipeVolume Paver::SyncClient::WipeVolume(::zx::channel block_device) {
+  return ResultOf::WipeVolume(zx::unowned_channel(this->channel_), std::move(block_device));
 }
 
-Paver::ResultOf::WipeVolumes Paver::Call::WipeVolumes(zx::unowned_channel _client_end, ::zx::channel block_device) {
-  return ResultOf::WipeVolumes(std::move(_client_end), std::move(block_device));
+Paver::ResultOf::WipeVolume Paver::Call::WipeVolume(zx::unowned_channel _client_end, ::zx::channel block_device) {
+  return ResultOf::WipeVolume(std::move(_client_end), std::move(block_device));
 }
 
 template <>
-Paver::UnownedResultOf::WipeVolumes_Impl<Paver::WipeVolumesResponse>::WipeVolumes_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < WipeVolumesRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<WipeVolumesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+Paver::UnownedResultOf::WipeVolume_Impl<Paver::WipeVolumeResponse>::WipeVolume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WipeVolumeRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WipeVolumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, WipeVolumesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_request_buffer.data());
+  memset(_request_buffer.data(), 0, WipeVolumeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WipeVolumeRequest*>(_request_buffer.data());
   _request.block_device = std::move(block_device);
-  _request_buffer.set_actual(sizeof(WipeVolumesRequest));
-  ::fidl::DecodedMessage<WipeVolumesRequest> _decoded_request(std::move(_request_buffer));
+  _request_buffer.set_actual(sizeof(WipeVolumeRequest));
+  ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::WipeVolumes(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      Paver::InPlace::WipeVolume(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WipeVolumes Paver::SyncClient::WipeVolumes(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipeVolumes(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
+Paver::UnownedResultOf::WipeVolume Paver::SyncClient::WipeVolume(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WipeVolumes Paver::Call::WipeVolumes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipeVolumes(std::move(_client_end), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
+Paver::UnownedResultOf::WipeVolume Paver::Call::WipeVolume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(std::move(_client_end), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::InPlace::WipeVolumes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipeVolumesRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WipeVolumesRequest(params);
+::fidl::DecodeResult<Paver::WipeVolumeResponse> Paver::InPlace::WipeVolume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipeVolumeRequest> params, ::fidl::BytePart response_buffer) {
+  Paver::SetTransactionHeaderFor::WipeVolumeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipeVolumesResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::WipeVolumeResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<WipeVolumesRequest, WipeVolumesResponse>(
+  auto _call_result = ::fidl::Call<WipeVolumeRequest, WipeVolumeResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipeVolumesResponse>::FromFailure(
+    return ::fidl::DecodeResult<Paver::WipeVolumeResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1641,17 +1700,17 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         Interface::WriteDataFileCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WipeVolumes_Ordinal:
-    case kPaver_WipeVolumes_GenOrdinal:
+    case kPaver_WipeVolume_Ordinal:
+    case kPaver_WipeVolume_GenOrdinal:
     {
-      auto result = ::fidl::DecodeAs<WipeVolumesRequest>(msg);
+      auto result = ::fidl::DecodeAs<WipeVolumeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
       auto message = result.message.message();
-      impl->WipeVolumes(std::move(message->block_device),
-        Interface::WipeVolumesCompleter::Sync(txn));
+      impl->WipeVolume(std::move(message->block_device),
+        Interface::WipeVolumeCompleter::Sync(txn));
       return true;
     }
     case kPaver_InitializePartitionTables_Ordinal:
@@ -2137,38 +2196,53 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
-void Paver::Interface::WipeVolumesCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesResponse, ::fidl::MessageDirection::kSending>();
+void Paver::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_WipeVolume_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<WipeVolumesResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WipeVolumesResponse(
-      ::fidl::DecodedMessage<WipeVolumesResponse>(
+  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_write_bytes);
+  Paver::SetTransactionHeaderFor::WipeVolumeResponse(
+      ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              WipeVolumesResponse::PrimarySize,
-              WipeVolumesResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumesResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumesResponse>(std::move(_response_bytes)));
+              WipeVolumeResponse::PrimarySize,
+              WipeVolumeResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_response_bytes)));
+}
+void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
+  Paver_WipeVolume_Response response;
+  response.volume = std::move(volume);
+
+  Reply(Paver_WipeVolume_Result::WithResponse(std::move(response)));
+}
+void Paver::Interface::WipeVolumeCompleterBase::ReplyError(int32_t error) {
+  Reply(Paver_WipeVolume_Result::WithErr(std::move(error)));
 }
 
-void Paver::Interface::WipeVolumesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < WipeVolumesResponse::PrimarySize) {
+void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_WipeVolume_Result result) {
+  if (_buffer.capacity() < WipeVolumeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<WipeVolumesResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WipeVolumesResponse(
-      ::fidl::DecodedMessage<WipeVolumesResponse>(
+  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_buffer.data());
+  Paver::SetTransactionHeaderFor::WipeVolumeResponse(
+      ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              WipeVolumesResponse::PrimarySize,
-              WipeVolumesResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(WipeVolumesResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumesResponse>(std::move(_buffer)));
+              WipeVolumeResponse::PrimarySize,
+              WipeVolumeResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(WipeVolumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_buffer)));
+}
+void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
+  Paver_WipeVolume_Response response;
+  response.volume = std::move(volume);
+
+  Reply(std::move(_buffer), Paver_WipeVolume_Result::WithResponse(std::move(response)));
 }
 
-void Paver::Interface::WipeVolumesCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumesResponse> params) {
-  Paver::SetTransactionHeaderFor::WipeVolumesResponse(params);
+void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumeResponse> params) {
+  Paver::SetTransactionHeaderFor::WipeVolumeResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2323,11 +2397,11 @@ void Paver::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::Decoded
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteDataFile_Ordinal);
 }
 
-void Paver::SetTransactionHeaderFor::WipeVolumesRequest(const ::fidl::DecodedMessage<Paver::WipeVolumesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolumes_Ordinal);
+void Paver::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<Paver::WipeVolumeRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolume_Ordinal);
 }
-void Paver::SetTransactionHeaderFor::WipeVolumesResponse(const ::fidl::DecodedMessage<Paver::WipeVolumesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolumes_Ordinal);
+void Paver::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<Paver::WipeVolumeResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolume_Ordinal);
 }
 
 void Paver::SetTransactionHeaderFor::InitializePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesRequest>& _msg) {

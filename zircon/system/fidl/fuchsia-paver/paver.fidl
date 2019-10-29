@@ -155,11 +155,14 @@ protocol Paver {
     /// Notable use cases include recovering from corrupted FVM as well as setting device to a
     /// "clean" state for automation.
     ///
-    /// If |block_device| is not provided, the paver will perform a search for
-    /// the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    /// to specify which one to target. It assumed that channel backing
-    /// |block_device| also implements `fuchsia.io.Node` for now.
-    WipeVolumes(request<fuchsia.hardware.block.Block>? block_device) -> (zx.status status);
+    /// If |block_device| is not provided, the paver will perform a search for the the FVM.
+    /// If multiple block devices have valid GPT, |block_device| can be provided to specify
+    /// which one to target. It assumed that channel backing |block_device| also implements
+    /// `fuchsia.io.Node` for now.
+    ///
+    /// On success, returns a channel to the initialized FVM volume.
+    WipeVolume(request<fuchsia.hardware.block.Block>? block_device)
+        -> (request<fuchsia.hardware.block.Block> volume) error zx.status;
 
     /// Initializes GPT on given block device and then adds an FVM partition.
     ///

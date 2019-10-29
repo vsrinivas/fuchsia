@@ -162,50 +162,78 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 }
 #endif
 
-zx_status_t FvmPave(const DevicePartitioner& partitioner,
-                    fbl::unique_ptr<fvm::ReaderInterface> payload) {
-  constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
-
-  LOG("Paving partition \"%s\".\n", PartitionName(partition_type));
-
-  zx_status_t status;
-  std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
+// Returns a client for the FVM partition. If the FVM volume doesn't exist, a new
+// volume will be created, without any associated children partitions.
+zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
+                            std::unique_ptr<PartitionClient>* client) {
+  constexpr Partition partition = Partition::kFuchsiaVolumeManager;
+  zx_status_t status = partitioner.FindPartition(partition, client);
+  if (status != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for partition \"%s\": %s\n", PartitionName(partition_type),
-            zx_status_get_string(status));
+      ERROR("Failure looking for FVM partition: %s\n", zx_status_get_string(status));
       return status;
     }
 
-    LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
-        PartitionName(partition_type));
+    LOG("Coud not find FVM Partition on device. Attemping to add new partition\n");
 
-    if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
-      ERROR("Failure creating partition \"%s\": %s\n", PartitionName(partition_type),
-            zx_status_get_string(status));
+    if ((status = partitioner.AddPartition(partition, client)) != ZX_OK) {
+      ERROR("Failure creating FVM partition: %s\n", zx_status_get_string(status));
       return status;
     }
   } else {
-    LOG("Partition \"%s\" already exists\n", PartitionName(partition_type));
+    LOG("FVM Partition already exists\n");
+  }
+  return ZX_OK;
+}
+
+zx_status_t FvmPave(const DevicePartitioner& partitioner,
+                    fbl::unique_ptr<fvm::ReaderInterface> payload) {
+  LOG("Paving FVM partition.\n");
+  std::unique_ptr<PartitionClient> partition;
+  zx_status_t status = GetFvmPartition(partitioner, &partition);
+  if (status != ZX_OK) {
+    return status;
   }
 
   if (partitioner.IsFvmWithinFtl()) {
-    LOG("Attempting to format FTL to \"%s\"...\n", PartitionName(partition_type));
+    LOG("Attempting to format FTL...\n");
     status = partitioner.WipeFvm();
     if (status != ZX_OK) {
-      ERROR("Failed to format FTL on \"%s\": %s\n", PartitionName(partition_type),
-            zx_status_get_string(status));
+      ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
     } else {
-      LOG("Formatted partition \"%s\" successfully!\n", PartitionName(partition_type));
+      LOG("Formatted partition successfully!\n");
     }
   }
-  LOG("Streaming partitions to \"%s\"...\n", PartitionName(partition_type));
+  LOG("Streaming partitions to FVM...\n");
   if ((status = FvmStreamPartitions(std::move(partition), std::move(payload))) != ZX_OK) {
-    ERROR("Failed to stream partitions to \"%s\": %s\n", PartitionName(partition_type),
-          zx_status_get_string(status));
+    ERROR("Failed to stream partitions to FVM: %s\n", zx_status_get_string(status));
     return status;
   }
-  LOG("Completed paving \"%s\" successfully\n", PartitionName(partition_type));
+  LOG("Completed FVM paving successfully\n");
+  return ZX_OK;
+}
+
+// Formats the FVM partition and returns a channel to the new volume.
+zx_status_t FormatFvm(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner,
+                      zx::channel* channel) {
+  std::unique_ptr<PartitionClient> partition;
+  zx_status_t status = GetFvmPartition(partitioner, &partition);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // TODO(39753): Configuration values should come from the build or environment.
+  fvm::sparse_image_t header = {};
+  header.slice_size = 1 << 20;
+
+  fbl::unique_fd fvm_fd(
+      FvmPartitionFormat(devfs_root, partition->block_fd(), header, BindOption::Reformat));
+  if (!fvm_fd) {
+    ERROR("Couldn't format FVM partition\n");
+    return ZX_ERR_IO;
+  }
+
+  *channel = partition->GetChannel();
   return ZX_OK;
 }
 
@@ -588,17 +616,32 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
   completer.Reply(ZX_OK);
 }
 
-void Paver::WipeVolumes(zx::channel block_device, WipeVolumesCompleter::Sync completer) {
+void Paver::WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync completer) {
   partitioner_.reset();
   abr_client_.reset();
 
   std::unique_ptr<DevicePartitioner> partitioner;
   if (!InitializePartitioner(std::move(block_device), &partitioner)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
+    completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
   }
 
-  completer.Reply(partitioner->WipeFvm());
+  zx_status_t status = partitioner->WipeFvm();
+  if (status != ZX_OK) {
+    ERROR("Failure wiping partition: %s\n", zx_status_get_string(status));
+    completer.ReplyError(status);
+    return;
+  }
+
+  zx::channel channel;
+  status = FormatFvm(devfs_root_, *partitioner, &channel);
+  if (status != ZX_OK) {
+    ERROR("Failure formatting partition: %s\n", zx_status_get_string(status));
+    completer.ReplyError(status);
+    return;
+  }
+
+  completer.ReplySuccess(std::move(channel));
 }
 
 void Paver::InitializePartitionTables(zx::channel block_device,

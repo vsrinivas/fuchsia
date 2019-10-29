@@ -1283,6 +1283,13 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   name_buffer.Append(response.path.data(), static_cast<size_t>(response.path.size()));
 
   const char* parent = dirname(name_buffer.data());
+  constexpr char kDevRoot[] = "/dev/";
+  constexpr size_t kDevRootLen = sizeof(kDevRoot) - 1;
+  if (strncmp(parent, kDevRoot, kDevRootLen) != 0) {
+    ERROR("Warning: Unrecognized partition name: %s\n", parent);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  parent += kDevRootLen;
 
   zx::channel local, remote;
   status = zx::channel::create(0, &local, &remote);
@@ -1290,7 +1297,8 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
     ERROR("Warning: Failed to create channel pair: %s\n", zx_status_get_string(status));
     return status;
   }
-  status = fdio_service_connect(parent, remote.release());
+  fzl::UnownedFdioCaller caller(devfs_root_.get());
+  status = fdio_service_connect_at(caller.borrow_channel(), parent, remote.release());
   if (status != ZX_OK) {
     ERROR("Warning: Unable to open block parent device: %s\n", zx_status_get_string(status));
     return status;

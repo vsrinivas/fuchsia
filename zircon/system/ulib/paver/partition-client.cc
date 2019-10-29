@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "partition-client.h"
 
 #include <lib/fdio/directory.h>
@@ -180,6 +181,11 @@ zx_status_t BlockPartitionClient::Flush() {
   return client_->Transaction(&request, 1);
 }
 
+zx::channel BlockPartitionClient::GetChannel() {
+  zx::channel channel(fdio_service_clone(partition_.channel().get()));
+  return channel;
+}
+
 fbl::unique_fd BlockPartitionClient::block_fd() {
   zx::channel dup(fdio_service_clone(partition_.channel().get()));
 
@@ -282,6 +288,8 @@ zx_status_t SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
 
 zx_status_t SkipBlockPartitionClient::Flush() { return ZX_OK; }
 
+zx::channel SkipBlockPartitionClient::GetChannel() { return {}; }
+
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }
 
 zx_status_t SysconfigPartitionClient::GetBlockSize(size_t* out_size) {
@@ -306,6 +314,8 @@ zx_status_t SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
 }
 
 zx_status_t SysconfigPartitionClient::Flush() { return ZX_OK; }
+
+zx::channel SysconfigPartitionClient::GetChannel() { return {}; }
 
 fbl::unique_fd SysconfigPartitionClient::block_fd() { return fbl::unique_fd(); }
 

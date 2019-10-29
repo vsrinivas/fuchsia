@@ -32,7 +32,7 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                      WriteDataFileCompleter::Sync completer) override;
 
-  void WipeVolumes(zx::channel gpt_block_device, WipeVolumesCompleter::Sync completer) override;
+  void WipeVolume(zx::channel gpt_block_device, WipeVolumeCompleter::Sync completer) override;
 
   void InitializePartitionTables(zx::channel gpt_block_device,
                                  InitializePartitionTablesCompleter::Sync completer) override;

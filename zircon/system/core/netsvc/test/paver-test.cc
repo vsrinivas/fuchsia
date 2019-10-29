@@ -55,7 +55,7 @@ enum class Command {
   kWriteVolumes,
   kWriteBootloader,
   kWriteDataFile,
-  kWipeVolumes,
+  kWipeVolume,
   kInitializePartitionTables,
   kWipePartitionTables,
 };
@@ -208,10 +208,9 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     completer.Reply(status);
   }
 
-  void WipeVolumes(zx::channel block_device, WipeVolumesCompleter::Sync completer) {
-    last_command_ = Command::kWipeVolumes;
-    auto status = ZX_OK;
-    completer.Reply(status);
+  void WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync completer) {
+    last_command_ = Command::kWipeVolume;
+    completer.ReplySuccess({});
   }
 
   void InitializePartitionTables(zx::channel block_device,
@@ -287,7 +286,6 @@ class PaverTest : public zxtest::Test {
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_svc_(loop_.dispatcher()),
         paver_(std::move(fake_svc_.svc_chan()), fake_dev_.devmgr_.devfs_root().duplicate()) {
-    
     paver_.set_timeout(zx::msec(500));
     loop_.StartThread("paver-test-loop");
   }

@@ -37,6 +37,9 @@ class PartitionClient {
   // Flushes all previous operations to persistent storage.
   virtual zx_status_t Flush() = 0;
 
+  // Returns a channel to the partition, when backed by a block device.
+  virtual zx::channel GetChannel() = 0;
+
   // Returns a file descriptor representing the partition.
   // Will return an invalid fd if underlying partition is not a block device.
   virtual fbl::unique_fd block_fd() = 0;
@@ -53,6 +56,7 @@ class BlockPartitionClient final : public PartitionClient {
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;
+  zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -81,6 +85,7 @@ class SkipBlockPartitionClient final : public PartitionClient {
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;
+  zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
@@ -108,6 +113,7 @@ class SysconfigPartitionClient final : public PartitionClient {
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx_status_t Flush() final;
+  zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.
