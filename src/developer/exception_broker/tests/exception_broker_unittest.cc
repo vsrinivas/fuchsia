@@ -154,32 +154,7 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report, bool va
   ASSERT_TRUE(minidump_snapshot.Initialize(&string_file));
 }
 
-bool ValidateException(const ProcessExceptionMetadata&) { return true; }
-bool ValidateException(const ProcessException& exception) { return exception.has_exception(); }
-
-template <typename T>
-void ValidateException(const ExceptionContext& context, const T& process_exception) {
-  if (std::is_same<T, ProcessException>::value)
-    ASSERT_TRUE(ValidateException(process_exception));
-  ASSERT_TRUE(process_exception.has_info());
-  ASSERT_TRUE(process_exception.has_process());
-  ASSERT_TRUE(process_exception.has_thread());
-
-  const zx::process& process = process_exception.process();
-  ASSERT_EQ(context.process_koid, fsl::GetKoid(process.get()));
-  ASSERT_EQ(context.process_koid, process_exception.info().process_koid);
-  ASSERT_EQ(context.process_name, fsl::GetObjectName(process.get()));
-
-  const zx::thread& thread = process_exception.thread();
-  ASSERT_EQ(context.thread_koid, fsl::GetKoid(thread.get()));
-  ASSERT_EQ(context.thread_koid, process_exception.info().thread_koid);
-  ASSERT_EQ(context.thread_name, fsl::GetObjectName(thread.get()));
-
-  ASSERT_EQ(process_exception.info().type, ExceptionType::FATAL_PAGE_FAULT);
-}
-
-// Tests
-// -------------------------------------------------------------------------------------------
+// Tests -------------------------------------------------------------------------------------------
 
 TEST(ExceptionBroker, CallingMultipleExceptions) {
   auto test_context = CreateTestContext();
@@ -230,24 +205,15 @@ TEST(ExceptionBroker, CallingMultipleExceptions) {
   ValidateReport(reports[1], true);
   ValidateReport(reports[2], true);
 
+  // Process limbo should be empty.
+  ASSERT_EQ(broker->limbo_manager().limbo().size(), 0u);
+
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
   // environment and create noise on the overall system.
   excps[0].job.kill();
   excps[1].job.kill();
   excps[2].job.kill();
-
-  // Process limbo should be empty.
-  bool called = false;
-  std::vector<ProcessExceptionMetadata> exceptions;
-  broker->ListProcessesWaitingOnException(
-      [&called, &exceptions](std::vector<ProcessExceptionMetadata> limbo) {
-        called = true;
-        exceptions = std::move(limbo);
-      });
-
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(exceptions.empty());
 }
 
 TEST(ExceptionBroker, NoConnection) {
@@ -281,16 +247,7 @@ TEST(ExceptionBroker, NoConnection) {
   exception.job.kill();
 
   // Process limbo should be empty.
-  called = false;
-  std::vector<ProcessExceptionMetadata> exceptions;
-  broker->ListProcessesWaitingOnException(
-      [&called, &exceptions](std::vector<ProcessExceptionMetadata> limbo) {
-        called = true;
-        exceptions = std::move(limbo);
-      });
-
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(exceptions.empty());
+  ASSERT_EQ(broker->limbo_manager().limbo().size(), 0u);
 }
 
 TEST(ExceptionBroker, GettingInvalidVMO) {
@@ -316,141 +273,8 @@ TEST(ExceptionBroker, GettingInvalidVMO) {
   ValidateReport(report, false);
 }
 
-TEST(ExceptionBroker, ProcessLimbo) {
-  auto test_context = CreateTestContext();
-  test_context->services.AddService(test_context->crash_reporter->GetHandler());
-
-  auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
-                                        test_context->services.service_directory());
-  ASSERT_TRUE(broker);
-  broker->set_use_limbo(true);
-
-  // We create multiple exceptions.
-  ExceptionContext excps[3];
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 0));
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 1));
-  ASSERT_TRUE(RetrieveExceptionContext(excps + 2));
-
-  // Get the fidl representation of the exception.
-  ExceptionInfo infos[3];
-  infos[0] = ExceptionContextToExceptionInfo(excps[0]);
-  infos[1] = ExceptionContextToExceptionInfo(excps[1]);
-  infos[2] = ExceptionContextToExceptionInfo(excps[2]);
-
-  // It's not easy to pass array references to lambdas.
-  bool cb_call0 = false;
-  bool cb_call1 = false;
-  bool cb_call2 = false;
-  broker->OnException(std::move(excps[0].exception), infos[0], [&cb_call0]() { cb_call0 = true; });
-  broker->OnException(std::move(excps[1].exception), infos[1], [&cb_call1]() { cb_call1 = true; });
-  broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
-
-  // There should not be an outgoing connection and no reports generated.
-  ASSERT_TRUE(broker->connections().empty());
-  ASSERT_TRUE(test_context->crash_reporter->reports().empty());
-
-  // Process limbo should have the exceptions.
-  ASSERT_EQ(broker->limbo().size(), 3u);
-  bool called = false;
-  std::vector<ProcessExceptionMetadata> exceptions;
-  broker->ListProcessesWaitingOnException(
-      [&called, &exceptions](std::vector<ProcessExceptionMetadata> limbo) {
-        called = true;
-        exceptions = std::move(limbo);
-      });
-
-  ASSERT_TRUE(called);
-  ASSERT_EQ(exceptions.size(), 3u);
-  ValidateException(excps[0], exceptions[0]);
-  ValidateException(excps[1], exceptions[1]);
-  ValidateException(excps[2], exceptions[2]);
-
-  // Getting a exception for a process that doesn't exist should fail.
-  called = false;
-  ProcessLimbo_RetrieveException_Result result;
-  broker->RetrieveException(-1, [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-    called = true;
-    result = std::move(res);
-  });
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(result.is_err());
-
-  // There should still be 3 exceptions.
-  ASSERT_EQ(broker->limbo().size(), 3u);
-
-  // Getting an actual exception should work.
-  called = false;
-  result = {};
-  broker->RetrieveException(infos[0].process_koid,
-                            [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                              called = true;
-                              result = std::move(res);
-                            });
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(result.is_response());
-  ValidateException(excps[0], result.response().process_exception);
-
-  // There should be one less exception.
-  ASSERT_EQ(broker->limbo().size(), 2u);
-
-  // That process shoudl've been removed.
-  called = false;
-  result = {};
-  broker->RetrieveException(infos[0].process_koid,
-                            [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                              called = true;
-                              result = std::move(res);
-                            });
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(result.is_err());
-
-  // Asking for the other process should work.
-  called = false;
-  result = {};
-  broker->RetrieveException(infos[2].process_koid,
-                            [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                              called = true;
-                              result = std::move(res);
-                            });
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(result.is_response());
-  ValidateException(excps[2], result.response().process_exception);
-
-  // There should be one less exception.
-  ASSERT_EQ(broker->limbo().size(), 1u);
-
-  // Getting the last one should work.
-  called = false;
-  ProcessLimbo_ReleaseProcess_Result release_result = {};
-  broker->ReleaseProcess(infos[1].process_koid,
-                         [&called, &release_result](ProcessLimbo_ReleaseProcess_Result res) {
-                           called = true;
-                           release_result = std::move(res);
-                         });
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(release_result.is_response());
-
-  // There should be one less exception.
-  ASSERT_EQ(broker->limbo().size(), 0u);
-
-  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
-  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
-  // environment and create noise on the overall system.
-  excps[0].job.kill();
-  excps[1].job.kill();
-  excps[2].job.kill();
-}
-
 }  // namespace
 }  // namespace exception
 }  // namespace fuchsia
 
-int main(int argc, char* argv[]) {
-  if (!fxl::SetTestSettings(argc, argv))
-    return EXIT_FAILURE;
 
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"exception-broker", "unittest"});
-
-  return RUN_ALL_TESTS();
-}

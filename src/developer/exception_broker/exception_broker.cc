@@ -81,74 +81,11 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
     process_exception.set_thread(std::move(thread));
   }
 
-  if (!use_limbo_) {
+  if (!limbo_manager_.active()) {
     FileCrashReport(std::move(process_exception));
   } else {
-    AddToLimbo(std::move(process_exception));
+    limbo_manager_.AddToLimbo(std::move(process_exception));
   }
-}
-
-// fuchsia.exception.ProcessLimbo ------------------------------------------------------------------
-
-void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback cb) {
-  std::vector<ProcessExceptionMetadata> exceptions;
-
-  size_t max_size =
-      limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() : MAX_EXCEPTIONS_PER_CALL;
-  exceptions.reserve(max_size);
-
-  // The new rights of the handles we're going to duplicate.
-  zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_TRANSFER;
-  for (const auto& [process_koid, limbo_exception] : limbo_) {
-    ProcessExceptionMetadata metadata = {};
-
-    zx::process process;
-    if (auto res = limbo_exception.process().duplicate(rights, &process); res != ZX_OK) {
-      FX_PLOGS(ERROR, res) << "Could not duplicate process handle.";
-      continue;
-    }
-
-    zx::thread thread;
-    if (auto res = limbo_exception.thread().duplicate(rights, &thread); res != ZX_OK) {
-      FX_PLOGS(ERROR, res) << "Could not duplicate thread handle.";
-      continue;
-    }
-
-    metadata.set_info(limbo_exception.info());
-    metadata.set_process(std::move(process));
-    metadata.set_thread(std::move(thread));
-
-    exceptions.push_back(std::move(metadata));
-
-    if (exceptions.size() >= MAX_EXCEPTIONS_PER_CALL)
-      break;
-  }
-
-  cb(std::move(exceptions));
-}
-
-void ExceptionBroker::RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback cb) {
-  ProcessLimbo_RetrieveException_Result result;
-
-  auto it = limbo_.find(process_koid);
-  if (it == limbo_.end()) {
-    FX_LOGS(WARNING) << "Could not find process " << process_koid << " in limbo.";
-    cb(fit::error(ZX_ERR_NOT_FOUND));
-  } else {
-    auto res = fit::ok(std::move(it->second));
-    limbo_.erase(it);
-    cb(std::move(res));
-  }
-}
-
-void ExceptionBroker::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback cb) {
-  auto it = limbo_.find(process_koid);
-  if (it == limbo_.end()) {
-    return cb(fit::error(ZX_ERR_NOT_FOUND));
-  }
-
-  limbo_.erase(it);
-  return cb(fit::ok());
 }
 
 // ExceptionBroker implementation ------------------------------------------------------------------
@@ -189,10 +126,6 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
     // Remove the connection.
     broker->connections_.erase(id);
   });
-}
-
-void ExceptionBroker::AddToLimbo(ProcessException process_exception) {
-  limbo_[process_exception.info().process_koid] = std::move(process_exception);
 }
 
 }  // namespace exception

@@ -9,6 +9,9 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/lib/syslog/cpp/logger.h"
 
+using fuchsia::exception::ProcessLimbo;
+using fuchsia::exception::ProcessLimboHandler;
+
 int main() {
   syslog::InitLogger({"exception-broker"});
 
@@ -23,8 +26,13 @@ int main() {
   fidl::BindingSet<fuchsia::exception::Handler> handler_bindings;
   context->outgoing()->AddPublicService(handler_bindings.GetHandler(broker.get()));
 
-  fidl::BindingSet<fuchsia::exception::ProcessLimbo> limbo_bindings;
-  context->outgoing()->AddPublicService(limbo_bindings.GetHandler(broker.get()));
+  fidl::BindingSet<ProcessLimbo, std::unique_ptr<ProcessLimboHandler>> limbo_bindings;
+  auto& limbo_manager = broker->limbo_manager();
+  context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<ProcessLimbo>(
+      [&limbo_manager, &limbo_bindings](fidl::InterfaceRequest<ProcessLimbo> request) {
+        auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager.GetWeakPtr());
+        limbo_bindings.AddBinding(std::move(handler), std::move(request));
+      }));
 
   loop.Run();
 

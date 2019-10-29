@@ -55,6 +55,10 @@ TEST(ExceptionBrokerIntegrationTest, OnExceptionSmokeTest) {
   ASSERT_EQ(
       exception_handler->OnException(std::move(pe.exception), ExceptionContextToExceptionInfo(pe)),
       ZX_OK);
+
+  // Kill the job so that the exception that will be freed here doesn't bubble out of the test
+  // environment.
+  pe.job.kill();
 }
 
 TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
@@ -70,6 +74,10 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
   zx_status_t status = limbo->ListProcessesWaitingOnException(&exceptions);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
   ASSERT_TRUE(exceptions.empty());
+
+  // Kill the job so that the exception that will be freed here doesn't bubble out of the test
+  // environment.
+  pe.job.kill();
 }
 
 }  // namespace

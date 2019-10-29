@@ -64,6 +64,8 @@ executable("exception_broker_unittest") {
   sources = [
     "crash_report_generation_unittest.cc",
     "exception_broker_unittest.cc",
+    "process_limbo_manager_unittest.cc",
+    "unittest_main.cc",
   ]
 
   deps = [

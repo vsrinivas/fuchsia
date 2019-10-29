@@ -9,6 +9,8 @@ source_set("lib") {
     "crash_report_generation.h",
     "exception_broker.cc",
     "exception_broker.h",
+    "process_limbo_manager.cc",
+    "process_limbo_manager.h",
   ]
 
   public_deps = [
