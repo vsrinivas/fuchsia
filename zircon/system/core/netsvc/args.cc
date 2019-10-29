@@ -26,7 +26,7 @@ int parse_common_args(int argc, char** argv, const char** error, const char** in
 }
 
 int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* nodename,
-                      bool* advertise, const char** interface) {
+                      bool* advertise, bool* all_features, const char** interface) {
   int err = parse_common_args(argc, argv, error, interface);
   if (err) {
     return err;
@@ -38,6 +38,8 @@ int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, 
       *nodename = true;
     } else if (!strncmp(argv[1], "--advertise", 11)) {
       *advertise = true;
+    } else if (!strncmp(argv[1], "--all-features", 14)) {
+      *all_features = true;
     }
     argv++;
     argc--;

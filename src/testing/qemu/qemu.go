@@ -86,6 +86,7 @@ type Params struct {
 	Arch          Arch
 	ZBI           string
 	AppendCmdline string
+	Networking    bool
 }
 
 type Instance struct {
@@ -168,9 +169,14 @@ func (d *Distribution) Create(params Params) *Instance {
 		panic("ZBI must be specified")
 	}
 	args = append(args, "-kernel", d.kernelPath(params.Arch), "-initrd", params.ZBI)
-	args = append(args, "-m", "2048", "-nographic", "-net", "none", "-smp", "4,threads=2",
+	args = append(args, "-m", "2048", "-nographic", "-smp", "4,threads=2",
 		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 		"-cpu", "Haswell,+smap,-check,-fsgsbase")
+	if params.Networking {
+		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no")
+	} else {
+		args = append(args, "-net", "none")
+	}
 	cmdline := "kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true"
 	if params.AppendCmdline != "" {
 		cmdline += " "
@@ -238,6 +244,24 @@ func (i *Instance) WaitForLogMessage(msg string) {
 	err := i.CheckForLogMessage(msg)
 	if err != nil {
 		panic(err)
+	}
+}
+
+// WaitForLogMessageAssertNotSeen is the same as WaitForLogMessage() but with
+// the addition that it will panic if |notSeen| is contained in a retrieved
+// message.
+func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) {
+	for {
+		line, err := i.stdout.ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
+		if strings.Contains(line, msg) {
+			return
+		}
+		if strings.Contains(line, notSeen) {
+			panic(notSeen + " was in output")
+		}
 	}
 }
 

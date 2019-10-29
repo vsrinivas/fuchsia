@@ -11,6 +11,7 @@
 
 void update_timeouts() {}
 bool netbootloader() { return false; }
+bool all_features() { return true; }
 const char* nodename() { return "test"; }
 void netboot_run_cmd(const char* cmd) {}
 
