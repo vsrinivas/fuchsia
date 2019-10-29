@@ -198,6 +198,95 @@ zx_status_t SetSensorReport(const SensorReport& hid_sensor_report, FidlReport* r
   return ZX_OK;
 }
 
+zx_status_t SetTouchDescriptor(const TouchDescriptor& hid_touch_desc, FidlDescriptor* descriptor) {
+  FidlTouchDescriptor& touch_desc = descriptor->touch_descriptor;
+  auto& touch_builder = touch_desc.touch_builder;
+
+  for (size_t i = 0; i < hid_touch_desc.num_contacts; i++) {
+    FidlContactDescriptor& contact = touch_desc.contacts[i];
+
+    if (hid_touch_desc.contacts[i].position_x.enabled) {
+      contact.position_x = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_x);
+      contact.contact_builder.set_position_x(&touch_desc.contacts[i].position_x);
+    }
+    if (hid_touch_desc.contacts[i].position_y.enabled) {
+      contact.position_y = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_y);
+      contact.contact_builder.set_position_y(&touch_desc.contacts[i].position_y);
+    }
+    if (hid_touch_desc.contacts[i].pressure.enabled) {
+      contact.pressure = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].pressure);
+      contact.contact_builder.set_pressure(&touch_desc.contacts[i].pressure);
+    }
+    if (hid_touch_desc.contacts[i].contact_width.enabled) {
+      contact.contact_width = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_width);
+      contact.contact_builder.set_contact_width(&touch_desc.contacts[i].contact_width);
+    }
+    if (hid_touch_desc.contacts[i].contact_height.enabled) {
+      contact.contact_height = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_height);
+      contact.contact_builder.set_contact_height(&touch_desc.contacts[i].contact_height);
+    }
+    touch_desc.contacts_built[i] = contact.contact_builder.view();
+  }
+  touch_desc.contacts_view = fidl::VectorView<llcpp_report::ContactDescriptor>(
+      touch_desc.contacts_built.data(), hid_touch_desc.num_contacts);
+  touch_builder.set_contacts(&touch_desc.contacts_view);
+
+  touch_desc.max_contacts = hid_touch_desc.max_contacts;
+  touch_builder.set_max_contacts(&touch_desc.max_contacts);
+
+  touch_desc.touch_type = hid_touch_desc.touch_type;
+  touch_builder.set_touch_type(&touch_desc.touch_type);
+
+  descriptor->touch_descriptor.touch_descriptor = touch_builder.view();
+  descriptor->descriptor_builder.set_touch(&descriptor->touch_descriptor.touch_descriptor);
+
+  return ZX_OK;
+}
+
+zx_status_t SetTouchReport(const TouchReport& hid_touch_report, FidlReport* report) {
+  FidlTouchReport& touch_report = std::get<FidlTouchReport>(report->report);
+  auto& touch_builder = touch_report.touch_builder;
+
+  touch_report.report_data = hid_touch_report;
+  TouchReport& report_data = touch_report.report_data;
+
+  for (size_t i = 0; i < report_data.num_contacts; i++) {
+    llcpp_report::ContactReport::Builder& fidl_contact = touch_report.contacts[i].contact;
+    fidl_contact = llcpp_report::ContactReport::Build();
+
+    ContactReport& contact = report_data.contacts[i];
+
+    if (contact.has_contact_id) {
+      fidl_contact.set_contact_id(&contact.contact_id);
+    }
+    if (contact.has_position_x) {
+      fidl_contact.set_position_x(&contact.position_x);
+    }
+    if (contact.has_position_y) {
+      fidl_contact.set_position_y(&contact.position_y);
+    }
+    if (contact.has_pressure) {
+      fidl_contact.set_pressure(&contact.pressure);
+    }
+    if (contact.has_contact_width) {
+      fidl_contact.set_contact_width(&contact.contact_width);
+    }
+    if (contact.has_contact_height) {
+      fidl_contact.set_contact_height(&contact.contact_height);
+    }
+    touch_report.contacts_built[i] = fidl_contact.view();
+  }
+
+  touch_report.contacts_view = fidl::VectorView<llcpp_report::ContactReport>(
+      touch_report.contacts_built.data(), hid_touch_report.num_contacts);
+  touch_builder.set_contacts(&touch_report.contacts_view);
+
+  touch_report.touch_report = touch_builder.view();
+  report->report_builder.set_touch(&touch_report.touch_report);
+
+  return ZX_OK;
+}
+
 zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
                               FidlDescriptor* descriptor) {
   if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
@@ -205,6 +294,9 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
   }
   if (std::holds_alternative<SensorDescriptor>(hid_desc.descriptor)) {
     return SetSensorDescriptor(std::get<SensorDescriptor>(hid_desc.descriptor), descriptor);
+  }
+  if (std::holds_alternative<TouchDescriptor>(hid_desc.descriptor)) {
+    return SetTouchDescriptor(std::get<TouchDescriptor>(hid_desc.descriptor), descriptor);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -217,6 +309,10 @@ zx_status_t SetFidlReport(const hid_input_report::Report& hid_report, FidlReport
   if (std::holds_alternative<SensorReport>(hid_report.report)) {
     report->report = FidlSensorReport();
     return SetSensorReport(std::get<SensorReport>(hid_report.report), report);
+  }
+  if (std::holds_alternative<TouchReport>(hid_report.report)) {
+    report->report = FidlTouchReport();
+    return SetTouchReport(std::get<TouchReport>(hid_report.report), report);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

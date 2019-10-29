@@ -154,3 +154,84 @@ TEST(FidlTest, SensorReport) {
   ASSERT_EQ(fidl_sensor.values()[1], sensor_report.values[1]);
   ASSERT_EQ(fidl_sensor.values()[2], sensor_report.values[2]);
 }
+
+TEST(FidlTest, TouchDescriptor) {
+  hid_input_report::TouchDescriptor touch_desc = {};
+  touch_desc.touch_type = llcpp_report::TouchType::TOUCHSCREEN;
+
+  touch_desc.max_contacts = 100;
+
+  touch_desc.contacts[0].position_x.enabled = true;
+  touch_desc.contacts[0].position_x.range.min = 0;
+  touch_desc.contacts[0].position_x.range.max = 0xabcdef;
+
+  touch_desc.contacts[0].position_y.enabled = true;
+  touch_desc.contacts[0].position_y.range.min = 0;
+  touch_desc.contacts[0].position_y.range.max = 0xabcdef;
+
+  touch_desc.contacts[0].pressure.enabled = true;
+  touch_desc.contacts[0].pressure.range.min = 0;
+  touch_desc.contacts[0].pressure.range.max = 100;
+
+  touch_desc.num_contacts = 1;
+
+  hid_input_report::ReportDescriptor desc;
+  desc.descriptor = touch_desc;
+
+  hid_input_report::FidlDescriptor fidl_desc = {};
+  ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
+
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  ASSERT_TRUE(fidl.has_touch());
+  auto& fidl_touch = fidl.touch();
+
+  ASSERT_TRUE(fidl_touch.has_max_contacts());
+  ASSERT_EQ(touch_desc.max_contacts, fidl_touch.max_contacts());
+
+  ASSERT_EQ(touch_desc.touch_type, fidl_touch.touch_type());
+
+  ASSERT_EQ(1, fidl_touch.contacts().count());
+
+  TestAxis(touch_desc.contacts[0].position_x, fidl_touch.contacts()[0].position_x());
+  TestAxis(touch_desc.contacts[0].position_y, fidl_touch.contacts()[0].position_y());
+  TestAxis(touch_desc.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
+}
+
+TEST(FidlTest, TouchReport) {
+  hid_input_report::TouchReport touch_report = {};
+
+  touch_report.num_contacts = 1;
+
+  touch_report.contacts[0].has_position_x = true;
+  touch_report.contacts[0].position_x = 123;
+
+  touch_report.contacts[0].has_position_y = true;
+  touch_report.contacts[0].position_y = 234;
+
+  touch_report.contacts[0].has_pressure = true;
+  touch_report.contacts[0].pressure = 345;
+
+  touch_report.contacts[0].has_contact_width = true;
+  touch_report.contacts[0].contact_width = 678;
+
+  touch_report.contacts[0].has_contact_height = true;
+  touch_report.contacts[0].contact_height = 789;
+
+  hid_input_report::Report report;
+  report.report = touch_report;
+
+  hid_input_report::FidlReport fidl_report = {};
+  ASSERT_OK(SetFidlReport(report, &fidl_report));
+
+  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  ASSERT_TRUE(fidl.has_touch());
+  auto& fidl_touch = fidl.touch();
+
+  ASSERT_EQ(1, fidl_touch.contacts().count());
+
+  EXPECT_EQ(touch_report.contacts[0].position_x, fidl_touch.contacts()[0].position_x());
+  EXPECT_EQ(touch_report.contacts[0].position_y, fidl_touch.contacts()[0].position_y());
+  EXPECT_EQ(touch_report.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
+  EXPECT_EQ(touch_report.contacts[0].contact_width, fidl_touch.contacts()[0].contact_width());
+  EXPECT_EQ(touch_report.contacts[0].contact_height, fidl_touch.contacts()[0].contact_height());
+}

@@ -5,6 +5,7 @@
 #ifndef HID_INPUT_REPORT_DESCRIPTORS_H_
 #define HID_INPUT_REPORT_DESCRIPTORS_H_
 
+#include <fuchsia/input/report/llcpp/fidl.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -70,12 +71,78 @@ struct SensorReport {
   size_t num_values;
 };
 
+const uint32_t kTouchMaxContacts = 10;
+
+struct ContactDescriptor {
+  Axis contact_id;
+  Axis is_pressed;
+
+  /// Describes the reporting of the x-axis.
+  Axis position_x;
+  /// Describes the reporting of the y-axis.
+  Axis position_y;
+
+  /// Pressure of the contact.
+  Axis pressure;
+
+  /// Width of the area of contact.
+  Axis contact_width;
+  /// Height of the area of contact.
+  Axis contact_height;
+};
+
+struct TouchDescriptor {
+  /// The type of touch device being used.
+  ::llcpp::fuchsia::input::report::TouchType touch_type;
+
+  uint32_t max_contacts;
+  /// This describes each of the contact capabilities.
+  std::array<ContactDescriptor, kTouchMaxContacts> contacts;
+  size_t num_contacts;
+};
+
+/// |Contact| describes one touch on a touch device.
+struct ContactReport {
+  /// Identifier for the contact.
+  /// Note: |contact_id| might not be sequential and will range from 0 to |max_contact_id|.
+  uint32_t contact_id;
+  bool has_contact_id;
+
+  bool is_pressed;
+  bool has_is_pressed;
+
+  /// A contact's position on the x axis.
+  int64_t position_x;
+  bool has_position_x;
+  /// A contact's position on the y axis.
+  int64_t position_y;
+  bool has_position_y;
+
+  /// Pressure of the contact.
+  int64_t pressure;
+  bool has_pressure;
+
+  /// Width of the area of contact.
+  int64_t contact_width;
+  bool has_contact_width;
+  /// Height of the area of contact.
+  int64_t contact_height;
+  bool has_contact_height;
+};
+
+/// |TouchReport| describes the current contacts recorded by the touchscreen.
+struct TouchReport {
+  /// The contacts currently being reported by the device.
+  std::array<ContactReport, kTouchMaxContacts> contacts;
+  size_t num_contacts;
+};
+
 struct ReportDescriptor {
-  std::variant<MouseDescriptor, SensorDescriptor> descriptor;
+  std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor> descriptor;
 };
 
 struct Report {
-  std::variant<std::monostate, MouseReport, SensorReport> report;
+  std::variant<std::monostate, MouseReport, SensorReport, TouchReport> report;
 };
 
 }  // namespace hid_input_report

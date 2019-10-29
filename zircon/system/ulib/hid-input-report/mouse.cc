@@ -13,15 +13,6 @@
 
 namespace hid_input_report {
 
-void SetAxisFromAttribute(const hid::Attributes& attrs, Axis* axis) {
-  axis->enabled = true;
-  axis->range.min = static_cast<int64_t>(
-      hid::unit::ConvertValToUnitType(attrs.unit, static_cast<double>(attrs.phys_mm.min)));
-  axis->range.max = static_cast<int64_t>(
-      hid::unit::ConvertValToUnitType(attrs.unit, static_cast<double>(attrs.phys_mm.max)));
-  axis->unit = hid::unit::GetUnitTypeFromUnit(attrs.unit);
-}
-
 ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   hid::Attributes movement_x = {};
   hid::Attributes movement_y = {};

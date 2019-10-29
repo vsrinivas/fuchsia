@@ -9,6 +9,7 @@ zx_library("hid-input-report") {
     "hid-input-report/device.h",
     "hid-input-report/descriptors.h",
     "hid-input-report/mouse.h",
+    "hid-input-report/touch.h",
     "hid-input-report/fidl.h",
   ]
   sources = [
@@ -16,6 +17,7 @@ zx_library("hid-input-report") {
     "fidl.cc",
     "mouse.cc",
     "sensor.cc",
+    "touch.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-input-report:llcpp",

@@ -8,6 +8,7 @@ zx_test("hid-input-report") {
     "fidl-test.cc",
     "mouse-test.cc",
     "sensor-test.cc",
+    "touch-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
