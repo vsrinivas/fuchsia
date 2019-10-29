@@ -27,10 +27,10 @@ executable("service") {
 
   deps = [
     "services",
-    "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/graphics/lib/vulkan",
     "//src/lib/fsl",
     "//src/lib/fxl",

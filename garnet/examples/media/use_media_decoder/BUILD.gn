@@ -35,8 +35,8 @@ source_set("use_media_decoder_source_set") {
 
   deps = [
     "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/media/audio/lib/wav_writer:wav_writer",
     "//src/media/lib/codec_impl:fourcc",
     "//src/media/lib/raw_video_writer:raw_video_writer",
