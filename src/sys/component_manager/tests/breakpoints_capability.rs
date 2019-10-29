@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::FrameworkCapabilityDecl,
-    component_manager_lib::{
-        framework::FrameworkCapability, model::testing::breakpoints::*, model::*,
-    },
+    component_manager_lib::{capability::*, model::testing::breakpoints::*, model::*},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, StreamExt},
@@ -54,16 +51,16 @@ impl BreakpointCapabilityHookInner {
     /// the Breakpoint framework service
     async fn on_route_framework_capability_async(
         self: Arc<Self>,
-        capability_decl: &FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        capability_decl: &ComponentManagerCapability,
+        capability: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::LegacyService(source_path))
+            (None, ComponentManagerCapability::LegacyService(source_path))
                 if *source_path == *BREAKPOINTS_SERVICE =>
             {
                 return Ok(Some(
                     Box::new(BreakpointCapability::new(self.breakpoint_registry.clone()))
-                        as Box<dyn FrameworkCapability>,
+                        as Box<dyn ComponentManagerCapabilityProvider>,
                 ))
             }
             (c, _) => return Ok(c),
@@ -74,11 +71,12 @@ impl BreakpointCapabilityHookInner {
 impl Hook for BreakpointCapabilityHookInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            if let Event::RouteFrameworkCapability { realm: _, capability_decl, capability } = event
+            if let Event::RouteFrameworkCapability { realm: _, capability, capability_provider } =
+                event
             {
-                let mut capability = capability.lock().await;
-                *capability = self
-                    .on_route_framework_capability_async(capability_decl, capability.take())
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_framework_capability_async(capability, capability_provider.take())
                     .await?;
             }
             Ok(())
@@ -188,7 +186,7 @@ impl BreakpointCapability {
     }
 }
 
-impl FrameworkCapability for BreakpointCapability {
+impl ComponentManagerCapabilityProvider for BreakpointCapability {
     fn open(
         &self,
         _flags: u32,

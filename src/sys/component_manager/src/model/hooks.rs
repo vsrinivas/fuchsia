@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{framework::FrameworkCapability, model::*},
+    crate::{capability::*, model::*},
     by_addr::ByAddr,
-    cm_rust::{ComponentDecl, FrameworkCapabilityDecl},
+    cm_rust::ComponentDecl,
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
@@ -13,29 +13,37 @@ use {
     },
 };
 
-pub trait Hook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>>;
-}
-
-// Keep the event types listed below in alphabetical order!
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum EventType {
+    // Keep the event types listed below in alphabetical order!
     AddDynamicChild,
     BindInstance,
     PostDestroyInstance,
     PreDestroyInstance,
+    RouteBuiltinCapability,
     RouteFrameworkCapability,
     StopInstance,
 }
 
-pub struct HookRegistration {
-    pub event_type: EventType,
-    pub callback: Arc<dyn Hook + Send + Sync>,
+/// The component manager calls out to objects that implement the `Hook` trait on registered
+/// component manager events. Hooks block the flow of a task, and can mutate, decorate and replace
+/// capabilities. This permits `Hook` to serve as a point of extensibility for the component
+/// manager.
+pub trait Hook: Send + Sync {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>>;
 }
 
-// Keep the events listed below in alphabetical order!
+/// An object registers a hook into a component manager event via a `HookRegistration` object.
+/// A single object may register for multiple events through a vector of `HookRegistration`
+/// objects.
+pub struct HookRegistration {
+    pub event_type: EventType,
+    pub callback: Arc<dyn Hook>,
+}
+
 #[derive(Clone)]
 pub enum Event {
+    // Keep the events listed below in alphabetical order!
     AddDynamicChild {
         realm: Arc<Realm>,
     },
@@ -51,13 +59,22 @@ pub enum Event {
     PreDestroyInstance {
         realm: Arc<Realm>,
     },
-    RouteFrameworkCapability {
+    RouteBuiltinCapability {
+        // This is always the root realm.
         realm: Arc<Realm>,
-        capability_decl: FrameworkCapabilityDecl,
+        capability: ComponentManagerCapability,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
         // a Mutex.
-        capability: Arc<Mutex<Option<Box<dyn FrameworkCapability>>>>,
+        capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
+    },
+    RouteFrameworkCapability {
+        realm: Arc<Realm>,
+        capability: ComponentManagerCapability,
+        // Events are passed to hooks as immutable borrows. In order to mutate,
+        // a field within an Event, interior mutability is employed here with
+        // a Mutex.
+        capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
     },
     StopInstance {
         realm: Arc<Realm>,
@@ -67,12 +84,13 @@ pub enum Event {
 impl Event {
     pub fn target_realm(&self) -> Arc<Realm> {
         match self {
-            Event::AddDynamicChild { realm} => realm.clone(),
+            Event::AddDynamicChild { realm } => realm.clone(),
             Event::BindInstance { realm, .. } => realm.clone(),
             Event::PostDestroyInstance { realm } => realm.clone(),
             Event::PreDestroyInstance { realm } => realm.clone(),
+            Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
             Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
-            Event::StopInstance { realm } => realm.clone()
+            Event::StopInstance { realm } => realm.clone(),
         }
     }
 
@@ -82,6 +100,7 @@ impl Event {
             Event::BindInstance { .. } => EventType::BindInstance,
             Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
+            Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
             Event::StopInstance { .. } => EventType::StopInstance,
         }
@@ -121,7 +140,7 @@ impl Hooks {
                 // call out to them. While we're upgrading references, we dedup references
                 // here as well. Ideally this would be done at installation time, not
                 // dispatch time but comparing weak references is not yet supported.
-                let mut strong_hooks: Vec<ByAddr<dyn Hook + Send + Sync>> = vec![];
+                let mut strong_hooks: Vec<ByAddr<dyn Hook>> = vec![];
                 let mut inner = self.inner.lock().await;
                 if let Some(hooks) = inner.hooks.get_mut(&event.type_()) {
                     hooks.retain(|hook| match hook.upgrade() {
@@ -154,7 +173,7 @@ impl Hooks {
 }
 
 pub struct HooksInner {
-    hooks: HashMap<EventType, Vec<Weak<dyn Hook + Send + Sync>>>,
+    hooks: HashMap<EventType, Vec<Weak<dyn Hook>>>,
 }
 
 impl HooksInner {

@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::{capability::*, model::*},
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, FrameworkCapabilityDecl,
-        OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, OfferDecl,
+        OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
         StorageDecl, StorageDirectorySource, UseDecl,
     },
     failure::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::{convert::TryFrom, sync::Arc},
+    std::sync::Arc,
 };
 const SERVICE_OPEN_FLAGS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
@@ -34,11 +34,10 @@ enum CapabilitySource {
     /// point.
     Component(RoutedCapability, Arc<Realm>),
     /// This capability originates from the root component's realm.
-    ComponentManagerNamespace(CapabilityPath),
-    /// This capability is a builtin service with the provided name.
-    BuiltinService(String),
-    /// This capability originates from component manager itself.
-    Framework(FrameworkCapabilityDecl, Arc<Realm>),
+    Builtin(ComponentManagerCapability),
+    /// This capability originates from component manager itself scoped to the requesting
+    /// component's realm.
+    Framework(ComponentManagerCapability, Arc<Realm>),
     /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
     /// describes the backing directory capability offered to this realm, into which storage
     /// requests should be fed.
@@ -99,15 +98,16 @@ async fn open_capability_at_source<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     match source {
-        CapabilitySource::BuiltinService(service_name) => {
-            model
-                .builtin_services
-                .connect_channel_to_service_name(&service_name, server_chan)
-                .map_err(ModelError::capability_discovery_error)?;
-        }
-        CapabilitySource::ComponentManagerNamespace(path) => {
-            io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
-                .map_err(|e| ModelError::capability_discovery_error(e))?;
+        CapabilitySource::Builtin(capability) => {
+            open_builtin_capability(
+                model,
+                flags,
+                open_mode,
+                relative_path,
+                &capability,
+                server_chan,
+            )
+            .await?;
         }
         CapabilitySource::Component(source_capability, realm) => {
             if let Some(path) = source_capability.source_path() {
@@ -126,13 +126,13 @@ async fn open_capability_at_source<'a>(
                 )));
             }
         }
-        CapabilitySource::Framework(capability_decl, realm) => {
+        CapabilitySource::Framework(capability, realm) => {
             open_framework_capability(
                 SERVICE_OPEN_FLAGS,
                 open_mode,
                 relative_path,
                 realm,
-                &capability_decl,
+                &capability,
                 server_chan,
             )
             .await?;
@@ -144,26 +144,57 @@ async fn open_capability_at_source<'a>(
     Ok(())
 }
 
+async fn open_builtin_capability<'a>(
+    model: &Model,
+    flags: u32,
+    open_mode: u32,
+    relative_path: String,
+    capability: &'a ComponentManagerCapability,
+    server_chan: zx::Channel,
+) -> Result<(), ModelError> {
+    let capability_provider = Arc::new(Mutex::new(None));
+
+    let event = Event::RouteBuiltinCapability {
+        realm: model.root_realm.clone(),
+        capability: capability.clone(),
+        capability_provider: capability_provider.clone(),
+    };
+    model.root_realm.hooks.dispatch(&event).await?;
+
+    let capability_provider = capability_provider.lock().await.take();
+    if let Some(capability_provider) = capability_provider {
+        capability_provider.open(flags, open_mode, relative_path, server_chan).await?;
+    } else {
+        let path = capability.path();
+        io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
+            .map_err(|e| ModelError::capability_discovery_error(e))?;
+    }
+
+    Ok(())
+}
+
 async fn open_framework_capability<'a>(
     flags: u32,
     open_mode: u32,
     relative_path: String,
     realm: Arc<Realm>,
-    capability_decl: &'a FrameworkCapabilityDecl,
+    capability: &'a ComponentManagerCapability,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let capability = Arc::new(Mutex::new(None));
+    let capability_provider = Arc::new(Mutex::new(None));
 
     let event = Event::RouteFrameworkCapability {
         realm: realm.clone(),
-        capability_decl: capability_decl.clone(),
         capability: capability.clone(),
+        capability_provider: capability_provider.clone(),
     };
     realm.hooks.dispatch(&event).await?;
 
-    let capability = capability.lock().await.take();
-    if let Some(capability) = capability {
-        capability.open(flags, open_mode, relative_path, server_chan).await?;
+    let capability_provider = capability_provider.lock().await.take();
+    // TODO(fsamuel): We should report an error message if we're trying to open a framework
+    // capability that does not exist.
+    if let Some(capability_provider) = capability_provider {
+        capability_provider.open(flags, open_mode, relative_path, server_chan).await?;
     }
 
     Ok(())
@@ -314,9 +345,9 @@ async fn find_framework_capability<'a>(
     use_decl: &'a UseDecl,
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<Option<CapabilitySource>, ModelError> {
-    if let Ok(capability_decl) = FrameworkCapabilityDecl::try_from(use_decl) {
+    if let Ok(capability) = ComponentManagerCapability::framework_from_use_decl(use_decl) {
         let realm = model.look_up_realm(abs_moniker).await?;
-        return Ok(Some(CapabilitySource::Framework(capability_decl, realm)));
+        return Ok(Some(CapabilitySource::Framework(capability, realm)));
     }
     return Ok(None);
 }
@@ -388,21 +419,36 @@ async fn walk_offer_chain<'a>(
 ) -> Result<Option<CapabilitySource>, ModelError> {
     'offerloop: loop {
         if pos.at_componentmgr_realm() {
-            // We are at the root component's realm, so determine if this is a builtin service or
-            // coming from component manager's namespace.
-            if let Some(path) = pos.capability.source_path() {
-                if path.dirname.as_str() == "/svc"
-                    && model.builtin_services.is_available(&path.basename)
-                {
-                    return Ok(Some(CapabilitySource::BuiltinService(path.basename.clone())));
-                } else {
-                    return Ok(Some(CapabilitySource::ComponentManagerNamespace(path.clone())));
+            // This is a built-in capability because the routing path was traced to the component
+            // manager's realm.
+            // TODO(fsamuel): We really ought to test the failure cases here.
+            let capability = match &pos.capability {
+                RoutedCapability::Use(use_decl) => {
+                    ComponentManagerCapability::builtin_from_use_decl(use_decl).map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching use found for capability {:?} from component {}",
+                            pos.capability,
+                            pos.moniker(),
+                        ))
+                    })
                 }
-            } else {
-                return Err(ModelError::capability_discovery_error(format_err!(
-                    "invalid capability type to come from component manager's namespace",
-                )));
-            }
+                RoutedCapability::Offer(offer_decl) => {
+                    ComponentManagerCapability::builtin_from_offer_decl(offer_decl).map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching offers found for capability {:?} from component {}",
+                            pos.capability,
+                            pos.moniker(),
+                        ))
+                    })
+                }
+                _ => Err(ModelError::capability_discovery_error(format_err!(
+                    "Unsupported capability {:?} from component {}",
+                    pos.capability,
+                    pos.moniker(),
+                ))),
+            }?;
+
+            return Ok(Some(CapabilitySource::Builtin(capability)));
         }
         let current_realm = model.look_up_realm(&pos.moniker()).await?;
         let realm_state = current_realm.lock_state().await;
@@ -429,17 +475,15 @@ async fn walk_offer_chain<'a>(
                 return Err(ModelError::unsupported("Service capability"));
             }
             OfferSource::Directory(OfferDirectorySource::Framework) => {
-                let capability_decl = FrameworkCapabilityDecl::try_from(offer).map_err(|_| {
-                    ModelError::capability_discovery_error(format_err!(
-                        "no matching offers found for capability {:?} from component {}",
-                        pos.capability,
-                        pos.moniker(),
-                    ))
-                })?;
-                return Ok(Some(CapabilitySource::Framework(
-                    capability_decl,
-                    current_realm.clone(),
-                )));
+                let capability = ComponentManagerCapability::framework_from_offer_decl(offer)
+                    .map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching offers found for capability {:?} from component {}",
+                            pos.capability,
+                            pos.moniker(),
+                        ))
+                    })?;
+                return Ok(Some(CapabilitySource::Framework(capability, current_realm.clone())));
             }
             OfferSource::LegacyService(OfferServiceSource::Realm)
             | OfferSource::Directory(OfferDirectorySource::Realm)
@@ -561,14 +605,15 @@ async fn walk_expose_chain<'a>(
                 continue;
             }
             ExposeSource::Framework => {
-                let capability_decl = FrameworkCapabilityDecl::try_from(expose).map_err(|_| {
-                    ModelError::capability_discovery_error(format_err!(
-                        "no matching offers found for capability {:?} from component {}",
-                        pos.capability,
-                        pos.moniker(),
-                    ))
-                })?;
-                return Ok(CapabilitySource::Framework(capability_decl, current_realm.clone()));
+                let capability = ComponentManagerCapability::framework_from_expose_decl(expose)
+                    .map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching offers found for capability {:?} from component {}",
+                            pos.capability,
+                            pos.moniker(),
+                        ))
+                    })?;
+                return Ok(CapabilitySource::Framework(capability, current_realm.clone()));
             }
         }
     }

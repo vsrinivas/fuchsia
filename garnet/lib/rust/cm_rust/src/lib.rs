@@ -571,72 +571,6 @@ impl From<&CapabilityName> for CapabilityName {
     }
 }
 
-// Describes the type of framework capability and its source path.
-#[derive(Clone)]
-pub enum FrameworkCapabilityDecl {
-    Service(CapabilityPath),
-    LegacyService(CapabilityPath),
-    Directory(CapabilityPath),
-}
-
-impl FrameworkCapabilityDecl {
-    pub fn path(&self) -> &CapabilityPath {
-        match self {
-            FrameworkCapabilityDecl::Service(source_path) => &source_path,
-            FrameworkCapabilityDecl::LegacyService(source_path) => &source_path,
-            FrameworkCapabilityDecl::Directory(source_path) => &source_path,
-        }
-    }
-}
-
-impl TryFrom<&UseDecl> for FrameworkCapabilityDecl {
-    type Error = Error;
-    fn try_from(decl: &UseDecl) -> Result<Self, Self::Error> {
-        match decl {
-            UseDecl::Service(s) if s.source == UseSource::Framework => {
-                Ok(FrameworkCapabilityDecl::Service(s.source_path.clone()))
-            }
-            UseDecl::LegacyService(s) if s.source == UseSource::Framework => {
-                Ok(FrameworkCapabilityDecl::LegacyService(s.source_path.clone()))
-            }
-            UseDecl::Directory(d) if d.source == UseSource::Framework => {
-                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
-            }
-            _ => {
-                return Err(Error::InvalidFrameworkCapability {});
-            }
-        }
-    }
-}
-
-impl TryFrom<&OfferDecl> for FrameworkCapabilityDecl {
-    type Error = Error;
-    fn try_from(decl: &OfferDecl) -> Result<Self, Self::Error> {
-        match decl {
-            OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
-                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
-            }
-            _ => {
-                return Err(Error::InvalidFrameworkCapability {});
-            }
-        }
-    }
-}
-
-impl TryFrom<&ExposeDecl> for FrameworkCapabilityDecl {
-    type Error = Error;
-    fn try_from(decl: &ExposeDecl) -> Result<Self, Self::Error> {
-        match decl {
-            ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
-                Ok(FrameworkCapabilityDecl::Directory(d.source_path.clone()))
-            }
-            _ => {
-                return Err(Error::InvalidFrameworkCapability {});
-            }
-        }
-    }
-}
-
 impl fmt::Display for CapabilityPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if &self.dirname == "/" {
@@ -1187,8 +1121,6 @@ pub enum Error {
     },
     #[fail(display = "Invalid capability path: {}", raw)]
     InvalidCapabilityPath { raw: String },
-    #[fail(display = "Invalid framework capability.")]
-    InvalidFrameworkCapability {},
 }
 
 #[cfg(test)]

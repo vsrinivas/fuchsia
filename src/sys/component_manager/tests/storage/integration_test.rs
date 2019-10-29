@@ -4,7 +4,7 @@
 
 use {
     component_manager_lib::{
-        framework::RealmServiceHost,
+        framework::RealmCapabilityHost,
         model::{
             hooks::*,
             moniker::AbsoluteMoniker,
@@ -52,7 +52,7 @@ async fn storage() -> Result<(), Error> {
         use_builtin_vmex: false,
         root_component_url,
     };
-    let model = startup::model_setup(&args).await?;
+    let model = startup::model_setup(&args, vec![]).await?;
     model
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await
@@ -83,7 +83,7 @@ async fn storage_from_collection() -> Result<(), Error> {
         use_builtin_vmex: false,
         root_component_url,
     };
-    let model = startup::model_setup(&args).await?;
+    let model = startup::model_setup(&args, vec![]).await?;
     let test_hook = TestHook::new();
 
     let breakpoint_registry = Arc::new(BreakpointRegistry::new());
@@ -100,12 +100,12 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     println!("creating and binding to child \"storage_user\"");
 
-    let realm_service_host = RealmServiceHost::new(model.clone());
+    let realm_capability_host = RealmCapabilityHost::new(model.clone());
     let (realm_proxy, stream) = endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
     {
         let realm = model.root_realm.clone();
         fasync::spawn(async move {
-            realm_service_host.serve(realm, stream).await.expect("failed serving realm service");
+            realm_capability_host.serve(realm, stream).await.expect("failed serving realm service");
         });
     }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod breakpoints;
+pub mod echo_service;
 pub mod mocks;
 pub mod routing_test_helpers;
 pub mod test_helpers;

@@ -4,8 +4,12 @@
 
 use {
     crate::{
-        directory_broker, framework::RealmServiceHost, klog, model::testing::breakpoints::*,
-        model::testing::mocks::*, model::testing::test_helpers, model::*, startup,
+        directory_broker,
+        framework::RealmCapabilityHost,
+        klog,
+        model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
+        model::*,
+        startup,
     },
     cm_rust::*,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
@@ -71,7 +75,8 @@ pub enum CheckUse {
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
     pub model: Model,
-    pub realm_service_host: RealmServiceHost,
+    pub realm_capability_host: RealmCapabilityHost,
+    _echo_service: Arc<EchoService>,
     pub namespaces: Namespaces,
     _test_dir: TempDir,
     test_dir_proxy: DirectoryProxy,
@@ -83,19 +88,14 @@ impl RoutingTest {
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
     ) -> Self {
-        RoutingTest::new_with_hooks(root_component, components, vec![], default_builtin_service_fs)
-            .await
+        RoutingTest::new_with_hooks(root_component, components, vec![]).await
     }
 
-    pub async fn new_with_hooks<F>(
+    pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
         additional_hooks: Vec<HookRegistration>,
-        builtin_service_fs: F,
-    ) -> Self
-    where
-        F: Fn() -> ServiceFs<ServiceObj<'static, ()>>,
-    {
+    ) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
@@ -116,9 +116,13 @@ impl RoutingTest {
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
-        let builtin_services =
-            startup::BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs()))
-                .unwrap();
+        let startup_args = startup::Arguments {
+            use_builtin_process_launcher: false,
+            use_builtin_vmex: false,
+            root_component_url: "".to_string(),
+        };
+        let echo_service = Arc::new(EchoService::new());
+        let builtin_capabilities = Arc::new(startup::BuiltinRootCapabilities::new(&startup_args));
 
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
@@ -126,16 +130,19 @@ impl RoutingTest {
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
             config: ModelConfig::default(),
-            builtin_services: Arc::new(builtin_services),
+            builtin_capabilities: builtin_capabilities.clone(),
         });
 
-        let realm_service_host = RealmServiceHost::new(model.clone());
-        model.root_realm.hooks.install(realm_service_host.hooks()).await;
+        let realm_capability_host = RealmCapabilityHost::new(model.clone());
+        model.root_realm.hooks.install(realm_capability_host.hooks()).await;
         model.root_realm.hooks.install(additional_hooks).await;
+        model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
+        model.root_realm.hooks.install(echo_service.hooks()).await;
         Self {
             components,
             model,
-            realm_service_host,
+            realm_capability_host,
+            _echo_service: echo_service,
             namespaces,
             _test_dir: test_dir,
             test_dir_proxy,
@@ -326,9 +333,9 @@ impl RoutingTest {
                 io_util::OPEN_RIGHT_READABLE,
             )
             .expect("failed to open directory");
-            test_helpers::list_directory(&dir_proxy).await
+            list_directory(&dir_proxy).await
         } else {
-            test_helpers::list_directory(&self.test_dir_proxy).await
+            list_directory(&self.test_dir_proxy).await
         }
     }
 

@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        framework::{FrameworkCapability, REALM_SERVICE},
+        capability::*,
+        framework::REALM_SERVICE,
         model::*,
         model::{
             hooks::*,
@@ -13,10 +14,9 @@ use {
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget,
-        FrameworkCapabilityDecl, OfferDecl, OfferDirectoryDecl, OfferDirectorySource,
-        OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl, UseDirectoryDecl,
-        UseLegacyServiceDecl, UseSource,
+        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
+        OfferDirectoryDecl, OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource,
+        OfferTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
@@ -36,13 +36,13 @@ use {
 /// b: uses framework service /svc/fuchsia.sys2.Realm
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_framework_service() {
-    pub struct MockRealmServiceCapability {
+    pub struct MockRealmCapabilityProvider {
         realm: Arc<Realm>,
-        host: MockRealmServiceHost,
+        host: MockRealmCapabilityHost,
     }
 
-    impl MockRealmServiceCapability {
-        pub fn new(realm: Arc<Realm>, host: MockRealmServiceHost) -> Self {
+    impl MockRealmCapabilityProvider {
+        pub fn new(realm: Arc<Realm>, host: MockRealmCapabilityHost) -> Self {
             Self { realm, host }
         }
 
@@ -68,7 +68,7 @@ async fn use_framework_service() {
         }
     }
 
-    impl FrameworkCapability for MockRealmServiceCapability {
+    impl ComponentManagerCapabilityProvider for MockRealmCapabilityProvider {
         fn open(
             &self,
             flags: u32,
@@ -80,18 +80,18 @@ async fn use_framework_service() {
         }
     }
 
-    impl Hook for MockRealmServiceHost {
+    impl Hook for MockRealmCapabilityHost {
         fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
             Box::pin(async move {
-                if let Event::RouteFrameworkCapability { realm, capability_decl, capability } =
+                if let Event::RouteFrameworkCapability { realm, capability, capability_provider } =
                     event
                 {
-                    let mut capability = capability.lock().await;
-                    *capability = self
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
                         .on_route_framework_capability_async(
                             realm.clone(),
-                            capability_decl,
-                            capability.take(),
+                            capability,
+                            capability_provider.take(),
                         )
                         .await?;
                 }
@@ -101,12 +101,12 @@ async fn use_framework_service() {
     }
 
     #[derive(Clone)]
-    pub struct MockRealmServiceHost {
+    pub struct MockRealmCapabilityHost {
         /// List of calls to `BindChild` with component's relative moniker.
         bind_calls: Arc<Mutex<Vec<String>>>,
     }
 
-    impl MockRealmServiceHost {
+    impl MockRealmCapabilityHost {
         pub fn new() -> Self {
             Self { bind_calls: Arc::new(Mutex::new(vec![])) }
         }
@@ -143,21 +143,22 @@ async fn use_framework_service() {
         pub async fn on_route_framework_capability_async<'a>(
             &'a self,
             realm: Arc<Realm>,
-            capability_decl: &'a FrameworkCapabilityDecl,
-            capability: Option<Box<dyn FrameworkCapability>>,
-        ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+            capability: &'a ComponentManagerCapability,
+            capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+        ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
             // If some other capability has already been installed, then there's nothing to
             // do here.
-            match capability_decl {
-                FrameworkCapabilityDecl::LegacyService(capability_path)
+            match capability {
+                ComponentManagerCapability::LegacyService(capability_path)
                     if *capability_path == *REALM_SERVICE =>
                 {
-                    return Ok(Some(Box::new(MockRealmServiceCapability::new(
+                    return Ok(Some(Box::new(MockRealmCapabilityProvider::new(
                         realm.clone(),
                         self.clone(),
-                    )) as Box<dyn FrameworkCapability>));
+                    ))
+                        as Box<dyn ComponentManagerCapabilityProvider>));
                 }
-                _ => return Ok(capability),
+                _ => return Ok(capability_provider),
             }
         }
     }
@@ -187,9 +188,9 @@ async fn use_framework_service() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    // RoutingTest installs the real RealmServiceHost. Installing the
-    // MockRealmServiceHost here overrides the previously installed one.
-    let realm_service_host = Arc::new(MockRealmServiceHost::new());
+    // RoutingTest installs the real RealmCapabilityHost. Installing the
+    // MockRealmCapabilityHost here overrides the previously installed one.
+    let realm_service_host = Arc::new(MockRealmCapabilityHost::new());
     test.model
         .root_realm
         .hooks
@@ -1612,7 +1613,7 @@ async fn use_in_collection() {
             },
         ),
     ];
-    // `RealmServiceHost` is needed to create dynamic children.
+    // `RealmCapabilityHost` is needed to create dynamic children.
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
@@ -1716,7 +1717,7 @@ async fn use_in_collection_not_offered() {
             },
         ),
     ];
-    // `RealmServiceHost` is needed to create dynamic children.
+    // `RealmCapabilityHost` is needed to create dynamic children.
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),

@@ -47,8 +47,10 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(args: startup::Arguments) -> Result<(), Error> {
-    let model = startup::model_setup(&args).await.context("failed to set up model")?;
-    startup::install_hub_if_possible(&model).await.context("failed to install hub")?;
+    let hub = startup::create_hub_if_possible(args.root_component_url.clone())
+        .await
+        .context("failed to create hub")?;
+    let model = startup::model_setup(&args, hub.hooks()).await.context("failed to set up model")?;
     model
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await

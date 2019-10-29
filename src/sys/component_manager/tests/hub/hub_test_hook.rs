@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::FrameworkCapabilityDecl,
-    component_manager_lib::{framework::FrameworkCapability, model::*},
+    component_manager_lib::{capability::*, model::*},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
@@ -28,7 +27,7 @@ fn get_or_insert_channel<'a>(
 }
 
 // A HubTestHook is a framework capability routing hook that injects a
-// HubTestCapability every time a connection is requested to connect to the
+// HubTestCapabilityProvider every time a connection is requested to connect to the
 // 'fuchsia.sys.HubReport' framework capability.
 pub struct HubTestHook {
     observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
@@ -73,17 +72,17 @@ impl HubTestHook {
 
     pub async fn on_route_framework_capability_async<'a>(
         &'a self,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        match (capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::LegacyService(source_path))
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        match (capability_provider, capability) {
+            (None, ComponentManagerCapability::LegacyService(source_path))
                 if *source_path == *HUB_REPORT_SERVICE =>
             {
-                return Ok(Some(Box::new(HubTestCapability::new(
+                return Ok(Some(Box::new(HubTestCapabilityProvider::new(
                     self.observers.clone(),
                     self.component_stop_tx.clone(),
-                )) as Box<dyn FrameworkCapability>));
+                )) as Box<dyn ComponentManagerCapabilityProvider>))
             }
             (c, _) => return Ok(c),
         };
@@ -100,10 +99,10 @@ impl Hook for HubTestHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::RouteFrameworkCapability { realm: _, capability_decl, capability } => {
-                    let mut capability = capability.lock().await;
-                    *capability = self
-                        .on_route_framework_capability_async(capability_decl, capability.take())
+                Event::RouteFrameworkCapability { realm: _, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_framework_capability_async(capability, capability_provider.take())
                         .await?;
                 }
                 _ => {}
@@ -127,7 +126,7 @@ pub struct HubReportChannel {
 }
 
 // Corresponds to a connection to the framework service: HubReport.
-pub struct HubTestCapability {
+pub struct HubTestCapabilityProvider {
     // Path to directory listing.
     observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
 
@@ -135,12 +134,12 @@ pub struct HubTestCapability {
     component_stop_tx: mpsc::Sender<()>,
 }
 
-impl HubTestCapability {
+impl HubTestCapabilityProvider {
     pub fn new(
         observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
         component_stop_tx: mpsc::Sender<()>,
     ) -> Self {
-        HubTestCapability { observers, component_stop_tx }
+        Self { observers, component_stop_tx }
     }
 
     pub async fn open_async(&self, server_end: zx::Channel) -> Result<(), ModelError> {
@@ -181,7 +180,7 @@ impl HubTestCapability {
     }
 }
 
-impl FrameworkCapability for HubTestCapability {
+impl ComponentManagerCapabilityProvider for HubTestCapabilityProvider {
     fn open(
         &self,
         _flags: u32,

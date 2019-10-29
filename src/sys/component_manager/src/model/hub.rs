@@ -4,8 +4,8 @@
 
 use {
     crate::{
+        capability::*,
         directory_broker,
-        framework::FrameworkCapability,
         model::{
             self,
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
@@ -13,7 +13,7 @@ use {
             hooks::*,
         },
     },
-    cm_rust::{ComponentDecl, FrameworkCapabilityDecl},
+    cm_rust::ComponentDecl,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async as fasync,
@@ -26,15 +26,15 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-struct HubCapability {
+struct HubCapabilityProvider {
     abs_moniker: model::AbsoluteMoniker,
     relative_path: Vec<String>,
     hub: Hub,
 }
 
-impl HubCapability {
+impl HubCapabilityProvider {
     pub fn new(abs_moniker: model::AbsoluteMoniker, relative_path: Vec<String>, hub: Hub) -> Self {
-        HubCapability { abs_moniker, relative_path, hub }
+        HubCapabilityProvider { abs_moniker, relative_path, hub }
     }
 
     pub async fn open_async(
@@ -59,7 +59,7 @@ impl HubCapability {
     }
 }
 
-impl FrameworkCapability for HubCapability {
+impl ComponentManagerCapabilityProvider for HubCapabilityProvider {
     fn open(
         &self,
         flags: u32,
@@ -100,9 +100,15 @@ pub struct Hub {
 }
 
 impl Hub {
-    /// Create a new Hub given a |component_url| and a controller to the root directory.
+    /// Create a new Hub given a `component_url` and a controller to the root directory.
     pub fn new(component_url: String) -> Result<Self, ModelError> {
         Ok(Hub { inner: Arc::new(HubInner::new(component_url)?) })
+    }
+
+    pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
+        let root_moniker = model::AbsoluteMoniker::root();
+        self.inner.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, vec![], server_end).await?;
+        Ok(())
     }
 
     pub fn hooks(&self) -> Vec<HookRegistration> {
@@ -127,12 +133,6 @@ impl Hub {
                 callback: self.inner.clone(),
             },
         ]
-    }
-
-    pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
-        let root_moniker = model::AbsoluteMoniker::root();
-        self.inner.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, vec![], server_end).await?;
-        Ok(())
     }
 }
 
@@ -500,22 +500,22 @@ impl HubInner {
     async fn on_route_framework_capability_async<'a>(
         self: Arc<Self>,
         realm: Arc<model::Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         // If this capability is not a directory, then it's not a hub capability.
-        let mut relative_path = match (&capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::Directory(source_path)) => source_path.split(),
-            _ => return Ok(capability),
+        let mut relative_path = match (&capability_provider, capability) {
+            (None, ComponentManagerCapability::Directory(source_path)) => source_path.split(),
+            _ => return Ok(capability_provider),
         };
 
         // If this capability's source path doesn't begin with 'hub', then it's
         // not a hub capability.
         if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-            return Ok(capability);
+            return Ok(capability_provider);
         }
 
-        Ok(Some(Box::new(HubCapability::new(
+        Ok(Some(Box::new(HubCapabilityProvider::new(
             realm.abs_moniker.clone(),
             relative_path,
             Hub { inner: self.clone() },
@@ -559,16 +559,17 @@ impl model::Hook for HubInner {
                 Event::PostDestroyInstance { realm } => {
                     self.on_post_destroy_instance_async(realm.clone()).await?;
                 }
-                Event::RouteFrameworkCapability { realm, capability_decl, capability } => {
-                    let mut capability = capability.lock().await;
-                    *capability = self
+                Event::RouteFrameworkCapability { realm, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
                         .on_route_framework_capability_async(
                             realm.clone(),
-                            capability_decl,
-                            capability.take(),
+                            capability,
+                            capability_provider.take(),
                         )
                         .await?;
                 }
+                _ => {}
             };
             Ok(())
         })
@@ -711,13 +712,15 @@ mod tests {
             use_builtin_vmex: false,
             root_component_url: "".to_string(),
         };
+        let builtin_capabilities = Arc::new(startup::BuiltinRootCapabilities::new(&startup_args));
         let model = Arc::new(model::Model::new(model::ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
             config: model::ModelConfig::default(),
-            builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
+            builtin_capabilities: builtin_capabilities.clone(),
         }));
+        model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
         model.root_realm.hooks.install(hub.hooks()).await;
         model.root_realm.hooks.install(additional_hooks).await;
 

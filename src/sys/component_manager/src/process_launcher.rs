@@ -3,21 +3,36 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        capability::*,
+        model::{error::*, hooks::*},
+    },
+    cm_rust::CapabilityPath,
     failure::{Error, Fail},
     fidl::encoding::OutOfLine,
-    fidl_fuchsia_process as fproc,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
+    lazy_static::lazy_static,
     log::warn,
     process_builder::{
         BuiltProcess, NamespaceEntry, ProcessBuilder, ProcessBuilderError, StartupHandle,
     },
-    std::convert::TryFrom,
-    std::ffi::CString,
+    std::{
+        convert::{TryFrom, TryInto},
+        ffi::CString,
+        sync::Arc,
+    },
 };
 
-/// Internal error type for ProcessLauncherService which conveniently wraps errors that might
+lazy_static! {
+    pub static ref PROCESS_LAUNCHER_CAPABILITY_PATH: CapabilityPath =
+        "/svc/fuchsia.process.Launcher".try_into().unwrap();
+}
+
+/// Internal error type for ProcessLauncher which conveniently wraps errors that might
 /// result during process launching and allows for mapping them to an equivalent zx::Status, which
 /// is what actually gets returned through the protocol.
 #[derive(Fail, Debug)]
@@ -52,9 +67,6 @@ impl From<HandleInfoError> for LauncherError {
     }
 }
 
-/// An implementation of the `fuchsia.process.Launcher protocol using the process_builder crate.
-pub struct ProcessLauncherService;
-
 #[derive(Default, Debug)]
 struct ProcessLauncherState {
     args: Vec<Vec<u8>>,
@@ -63,7 +75,23 @@ struct ProcessLauncherState {
     handles: Vec<fproc::HandleInfo>,
 }
 
-impl ProcessLauncherService {
+/// An implementation of the `fuchsia.process.Launcher` protocol using the `process_builder` crate.
+pub struct ProcessLauncher {
+    inner: Arc<ProcessLauncherInner>,
+}
+
+impl ProcessLauncher {
+    pub fn new() -> Self {
+        Self { inner: Arc::new(ProcessLauncherInner::new()) }
+    }
+
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        vec![HookRegistration {
+            event_type: EventType::RouteBuiltinCapability,
+            callback: self.inner.clone(),
+        }]
+    }
+
     /// Serves an instance of the `fuchsia.process.Launcher` protocol given an appropriate
     /// RequestStream. Returns when the channel backing the RequestStream is closed or an
     /// unrecoverable error, like a failure to read from the stream, occurs.
@@ -219,6 +247,76 @@ impl ProcessLauncherService {
     }
 }
 
+struct ProcessLauncherInner;
+
+impl ProcessLauncherInner {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    async fn on_route_builtin_capability_async<'a>(
+        self: Arc<Self>,
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        match capability {
+            ComponentManagerCapability::LegacyService(capability_path)
+                if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
+            {
+                Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
+                    as Box<dyn ComponentManagerCapabilityProvider>))
+            }
+            _ => Ok(capability_provider),
+        }
+    }
+}
+
+impl Hook for ProcessLauncherInner {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            match event {
+                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_builtin_capability_async(capability, capability_provider.take())
+                        .await?;
+                }
+                _ => {}
+            };
+            Ok(())
+        })
+    }
+}
+
+struct ProcessLauncherCapabilityProvider;
+
+impl ProcessLauncherCapabilityProvider {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ComponentManagerCapabilityProvider for ProcessLauncherCapabilityProvider {
+    fn open(
+        &self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
+        let stream: fproc::LauncherRequestStream = server_end.into_stream().unwrap();
+        fasync::spawn(async move {
+            let result = ProcessLauncher::serve(stream).await;
+            if let Err(e) = result {
+                warn!("ProcessLauncher.serve failed: {}", e);
+            }
+        });
+
+        Box::pin(async { Ok(()) })
+    }
+}
+
 fn koid_to_string(koid: Result<zx::Koid, zx::Status>) -> String {
     koid.map(|j| j.raw_koid().to_string()).unwrap_or("<unknown>".to_string())
 }
@@ -229,6 +327,7 @@ fn koid_to_string(koid: Result<zx::Koid, zx::Status>) -> String {
 mod tests {
     use {
         super::*,
+        crate::model::{testing::mocks, Realm, ResolverRegistry},
         failure::ResultExt,
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
@@ -239,6 +338,7 @@ mod tests {
             directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
         },
         fuchsia_zircon::HandleBased,
+        futures::lock::Mutex,
         std::{fs::File, iter, mem, path::Path},
     };
 
@@ -270,13 +370,40 @@ mod tests {
         }
     }
 
-    fn serve_launcher() -> Result<fproc::LauncherProxy, Error> {
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fproc::LauncherMarker>()?;
-        fasync::spawn_local(
-            ProcessLauncherService::serve(stream)
-                .unwrap_or_else(|e| panic!("Error while serving process launcher: {}", e)),
-        );
-        Ok(proxy)
+    async fn serve_launcher() -> Result<(fproc::LauncherProxy, Arc<ProcessLauncher>), Error> {
+        let process_launcher = Arc::new(ProcessLauncher::new());
+        let hooks = Hooks::new(None);
+        hooks.install(process_launcher.hooks()).await;
+
+        let capability_provider = Arc::new(Mutex::new(None));
+        let capability =
+            ComponentManagerCapability::LegacyService(PROCESS_LAUNCHER_CAPABILITY_PATH.clone());
+
+        let (client, server) = zx::Channel::create()?;
+
+        let realm = {
+            let resolver = ResolverRegistry::new();
+            let runner = Arc::new(mocks::MockRunner::new());
+            let root_component_url = "test:///root".to_string();
+            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+        };
+
+        let event = Event::RouteBuiltinCapability {
+            realm: realm.clone(),
+            capability: capability.clone(),
+            capability_provider: capability_provider.clone(),
+        };
+        hooks.dispatch(&event).await?;
+
+        let capability_provider = capability_provider.lock().await.take();
+        if let Some(capability_provider) = capability_provider {
+            capability_provider.open(0, 0, String::new(), server).await?;
+        }
+
+        let launcher_proxy = ClientEnd::<fproc::LauncherMarker>::new(client)
+            .into_proxy()
+            .expect("failed to create launcher proxy");
+        Ok((launcher_proxy, process_launcher))
     }
 
     fn connect_util(client: &zx::Channel) -> Result<UtilProxy, Error> {
@@ -349,7 +476,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_args() -> Result<(), Error> {
-        let launcher = serve_launcher()?;
+        let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher)?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
@@ -377,7 +504,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_env() -> Result<(), Error> {
-        let launcher = serve_launcher()?;
+        let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher)?;
 
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
@@ -405,7 +532,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
-        let launcher = serve_launcher()?;
+        let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher)?;
 
         let mut randbuf = [0; 8];
@@ -453,7 +580,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn create_without_starting() -> Result<(), Error> {
-        let launcher = serve_launcher()?;
+        let (launcher, _process_launcher) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher)?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];

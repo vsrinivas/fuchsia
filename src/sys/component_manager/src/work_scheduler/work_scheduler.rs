@@ -15,11 +15,11 @@
 
 use {
     crate::{
-        framework::FrameworkCapability,
+        capability::*,
         model::{error::ModelError, hooks::*, Realm},
         work_scheduler::{dispatcher::Dispatcher, work_item::WorkItem},
     },
-    cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
+    cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget},
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys,
@@ -42,8 +42,6 @@ lazy_static! {
         "/svc/fuchsia.sys2.WorkScheduler".try_into().unwrap();
     pub static ref WORK_SCHEDULER_CONTROL_CAPABILITY_PATH: CapabilityPath =
         "/svc/fuchsia.sys2.WorkSchedulerControl".try_into().unwrap();
-    pub static ref ROOT_WORK_SCHEDULER: Arc<Mutex<WorkScheduler>> =
-        Arc::new(Mutex::new(WorkScheduler::new()));
 }
 
 /// A self-managed timer instantiated by `WorkScheduler` to implement the "wakeup" part of its
@@ -120,79 +118,22 @@ pub struct WorkScheduler {
     inner: Arc<WorkSchedulerInner>,
 }
 
-struct WorkSchedulerInner {
-    state: Mutex<WorkSchedulerState>,
-}
-
-impl WorkSchedulerInner {
-    pub fn new() -> Self {
-        Self { state: Mutex::new(WorkSchedulerState::new()) }
-    }
-
-    async fn on_route_capability_async<'a>(
-        self: Arc<Self>,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
-        match capability_decl {
-            FrameworkCapabilityDecl::LegacyService(capability_path)
-                if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
-            {
-                Self::check_for_worker(&*realm).await?;
-                Ok(Some(Box::new(WorkSchedulerCapability::new(
-                    realm.clone(),
-                    WorkScheduler { inner: self.clone() },
-                )) as Box<dyn FrameworkCapability>))
-            }
-            _ => Ok(capability),
-        }
-    }
-
-    async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
-        let realm_state = realm.lock_state().await;
-        let realm_state = realm_state.as_ref().expect("check_for_worker: not resolved");
-        let decl = realm_state.decl();
-        decl.exposes
-            .iter()
-            .find(|&expose| match expose {
-                ExposeDecl::LegacyService(ls) => ls.target_path == *WORKER_CAPABILITY_PATH,
-                _ => false,
-            })
-            .map_or_else(
-                || {
-                    Err(ModelError::capability_discovery_error(format_err!(
-                        "component uses WorkScheduler without exposing Worker: {}",
-                        realm.abs_moniker
-                    )))
-                },
-                |expose| match expose {
-                    ExposeDecl::LegacyService(ls) => match ls.target {
-                        ExposeTarget::Framework => Ok(()),
-                        _ => Err(ModelError::capability_discovery_error(format_err!(
-                            "component exposes Worker, but not as legacy service to framework: {}",
-                            realm.abs_moniker
-                        ))),
-                    },
-                    _ => Err(ModelError::capability_discovery_error(format_err!(
-                        "component exposes Worker, but not as legacy service to framework: {}",
-                        realm.abs_moniker
-                    ))),
-                },
-            )
-    }
-}
-
 impl WorkScheduler {
     pub fn new() -> Self {
         Self { inner: Arc::new(WorkSchedulerInner::new()) }
     }
 
     pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: self.inner.clone(),
-        }]
+        vec![
+            HookRegistration {
+                event_type: EventType::RouteBuiltinCapability,
+                callback: self.inner.clone(),
+            },
+            HookRegistration {
+                event_type: EventType::RouteFrameworkCapability,
+                callback: self.inner.clone(),
+            },
+        ]
     }
 
     pub async fn schedule_work(
@@ -283,31 +224,6 @@ impl WorkScheduler {
         }
 
         self.update_timeout(&mut *state);
-
-        Ok(())
-    }
-
-    pub async fn serve_root_work_scheduler_control(
-        mut stream: fsys::WorkSchedulerControlRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
-            match request {
-                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
-                    let root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
-                    let mut result = root_work_scheduler.get_batch_period().await;
-                    responder.send(&mut result)?;
-                }
-                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
-                    responder,
-                    batch_period,
-                    ..
-                } => {
-                    let root_work_scheduler = ROOT_WORK_SCHEDULER.lock().await;
-                    let mut result = root_work_scheduler.set_batch_period(batch_period).await;
-                    responder.send(&mut result)?;
-                }
-            }
-        }
 
         Ok(())
     }
@@ -449,31 +365,186 @@ impl WorkScheduler {
     }
 }
 
+struct WorkSchedulerInner {
+    state: Mutex<WorkSchedulerState>,
+}
+
+impl WorkSchedulerInner {
+    pub fn new() -> Self {
+        Self { state: Mutex::new(WorkSchedulerState::new()) }
+    }
+
+    async fn on_route_builtin_capability_async<'a>(
+        self: Arc<Self>,
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        match (&capability_provider, capability) {
+            (None, ComponentManagerCapability::LegacyService(capability_path))
+                if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
+            {
+                Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(WorkScheduler {
+                    inner: self.clone(),
+                })) as Box<dyn ComponentManagerCapabilityProvider>))
+            }
+            _ => Ok(capability_provider),
+        }
+    }
+
+    async fn on_route_framework_capability_async<'a>(
+        self: Arc<Self>,
+        realm: Arc<Realm>,
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        match (&capability_provider, capability) {
+            (None, ComponentManagerCapability::LegacyService(capability_path))
+                if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
+            {
+                Self::check_for_worker(&*realm).await?;
+                Ok(Some(Box::new(WorkSchedulerCapabilityProvider::new(
+                    realm.clone(),
+                    WorkScheduler { inner: self.clone() },
+                )) as Box<dyn ComponentManagerCapabilityProvider>))
+            }
+            _ => Ok(capability_provider),
+        }
+    }
+
+    async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
+        let realm_state = realm.lock_state().await;
+        let realm_state = realm_state.as_ref().expect("check_for_worker: not resolved");
+        let decl = realm_state.decl();
+        decl.exposes
+            .iter()
+            .find(|&expose| match expose {
+                ExposeDecl::LegacyService(ls) => ls.target_path == *WORKER_CAPABILITY_PATH,
+                _ => false,
+            })
+            .map_or_else(
+                || {
+                    Err(ModelError::capability_discovery_error(format_err!(
+                        "component uses WorkScheduler without exposing Worker: {}",
+                        realm.abs_moniker
+                    )))
+                },
+                |expose| match expose {
+                    ExposeDecl::LegacyService(ls) => match ls.target {
+                        ExposeTarget::Framework => Ok(()),
+                        _ => Err(ModelError::capability_discovery_error(format_err!(
+                            "component exposes Worker, but not as legacy service to framework: {}",
+                            realm.abs_moniker
+                        ))),
+                    },
+                    _ => Err(ModelError::capability_discovery_error(format_err!(
+                        "component exposes Worker, but not as legacy service to framework: {}",
+                        realm.abs_moniker
+                    ))),
+                },
+            )
+    }
+}
+
 impl Hook for WorkSchedulerInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
-            if let Event::RouteFrameworkCapability { realm, capability_decl, capability } = event {
-                let mut capability = capability.lock().await;
-                *capability = self
-                    .on_route_capability_async(realm.clone(), capability_decl, capability.take())
-                    .await?;
-            }
+            match event {
+                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_builtin_capability_async(capability, capability_provider.take())
+                        .await?;
+                }
+                Event::RouteFrameworkCapability { realm, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_framework_capability_async(
+                            realm.clone(),
+                            capability,
+                            capability_provider.take(),
+                        )
+                        .await?;
+                }
+                _ => {}
+            };
             Ok(())
         })
+    }
+}
+
+/// `ComponentManagerCapabilityProvider` to invoke `WorkSchedulerControl` FIDL API bound to a
+/// particular `WorkScheduler` object.
+struct WorkSchedulerControlCapabilityProvider {
+    work_scheduler: WorkScheduler,
+}
+
+impl WorkSchedulerControlCapabilityProvider {
+    pub fn new(work_scheduler: WorkScheduler) -> Self {
+        WorkSchedulerControlCapabilityProvider { work_scheduler }
+    }
+
+    /// Service `open` invocation via an event loop that dispatches FIDL operations to
+    /// `work_scheduler`.
+    async fn open_async(
+        work_scheduler: WorkScheduler,
+        mut stream: fsys::WorkSchedulerControlRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
+                    let mut result = work_scheduler.get_batch_period().await;
+                    responder.send(&mut result)?;
+                }
+                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
+                    responder,
+                    batch_period,
+                    ..
+                } => {
+                    let mut result = work_scheduler.set_batch_period(batch_period).await;
+                    responder.send(&mut result)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl ComponentManagerCapabilityProvider for WorkSchedulerControlCapabilityProvider {
+    /// Spawn an event loop to service `WorkScheduler` FIDL operations.
+    fn open(
+        &self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
+        let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
+        let work_scheduler = self.work_scheduler.clone();
+        fasync::spawn(async move {
+            let result = Self::open_async(work_scheduler, stream).await;
+            if let Err(e) = result {
+                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
+                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
+            }
+        });
+
+        Box::pin(async { Ok(()) })
     }
 }
 
 /// `Capability` to invoke `WorkScheduler` FIDL API bound to a particular `WorkScheduler` object and
 /// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
 /// observe the same collection of `WorkItem` objects.
-struct WorkSchedulerCapability {
+struct WorkSchedulerCapabilityProvider {
     realm: Arc<Realm>,
     work_scheduler: WorkScheduler,
 }
 
-impl WorkSchedulerCapability {
+impl WorkSchedulerCapabilityProvider {
     pub fn new(realm: Arc<Realm>, work_scheduler: WorkScheduler) -> Self {
-        WorkSchedulerCapability { realm, work_scheduler }
+        WorkSchedulerCapabilityProvider { realm, work_scheduler }
     }
 
     /// Service `open` invocation via an event loop that dispatches FIDL operations to
@@ -505,7 +576,7 @@ impl WorkSchedulerCapability {
     }
 }
 
-impl FrameworkCapability for WorkSchedulerCapability {
+impl ComponentManagerCapabilityProvider for WorkSchedulerCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
     fn open(
         &self,
@@ -522,7 +593,7 @@ impl FrameworkCapability for WorkSchedulerCapability {
             let result = Self::open_async(work_scheduler, realm, stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapability.open failed: {}", e);
+                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
         });
 
@@ -534,7 +605,9 @@ impl FrameworkCapability for WorkSchedulerCapability {
 mod tests {
     use {
         super::*,
-        crate::model::{AbsoluteMoniker, ChildMoniker},
+        crate::model::{testing::mocks, AbsoluteMoniker, ChildMoniker, ResolverRegistry},
+        fidl::endpoints::ClientEnd,
+        fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async::{Executor, Time, WaitState},
         futures::{future::BoxFuture, Future},
     };
@@ -1204,5 +1277,46 @@ mod tests {
             // WorkItem.next_deadline_monotonic = 119 = 9 + (22 * 5).
             vec![TestWorkUnit::new(9, &root, "AT_NINE_PERIODIC_FIVE", 119, Some(5))],
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
+        let work_scheduler = WorkScheduler::new();
+        let hooks = Hooks::new(None);
+        hooks.install(work_scheduler.hooks()).await;
+
+        let capability_provider = Arc::new(Mutex::new(None));
+        let capability = ComponentManagerCapability::LegacyService(
+            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
+        );
+
+        let (client, server) = zx::Channel::create()?;
+
+        let realm = {
+            let resolver = ResolverRegistry::new();
+            let runner = Arc::new(mocks::MockRunner::new());
+            let root_component_url = "test:///root".to_string();
+            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+        };
+        let event = Event::RouteBuiltinCapability {
+            realm: realm.clone(),
+            capability: capability.clone(),
+            capability_provider: capability_provider.clone(),
+        };
+        hooks.dispatch(&event).await?;
+
+        let capability_provider = capability_provider.lock().await.take();
+        if let Some(capability_provider) = capability_provider {
+            capability_provider.open(0, 0, String::new(), server).await?;
+        }
+
+        let work_scheduler_control = ClientEnd::<WorkSchedulerControlMarker>::new(client)
+            .into_proxy()
+            .expect("failed to create launcher proxy");
+        let result = work_scheduler_control.get_batch_period().await;
+        result
+            .expect("failed to use WorkSchedulerControl service")
+            .expect("WorkSchedulerControl.GetBatchPeriod() yielded error");
+        Ok(())
     }
 }

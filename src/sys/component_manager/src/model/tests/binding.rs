@@ -28,13 +28,15 @@ async fn new_model_with(
         use_builtin_vmex: false,
         root_component_url: "".to_string(),
     };
+    let builtin = Arc::new(startup::BuiltinRootCapabilities::new(&startup_args));
     let model = Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Arc::new(mock_runner),
         config: ModelConfig::default(),
-        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
+        builtin_capabilities: builtin.clone(),
     });
+    model.root_realm.hooks.install(builtin.hooks()).await;
     model.root_realm.hooks.install(additional_hooks).await;
     model
 }

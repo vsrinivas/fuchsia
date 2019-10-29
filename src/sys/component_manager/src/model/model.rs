@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{framework::*, model::*, startup::BuiltinRootServices},
+    crate::{framework::*, model::*, startup::BuiltinRootCapabilities},
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -17,7 +17,7 @@ use {
 /// instance tree.
 pub struct ModelParams {
     /// Builtin services that are available in the root realm.
-    pub builtin_services: Arc<BuiltinRootServices>,
+    pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -42,8 +42,8 @@ pub struct Model {
     pub root_realm: Arc<Realm>,
     pub config: ModelConfig,
     /// Builtin services that are available in the root realm.
-    pub builtin_services: Arc<BuiltinRootServices>,
-    pub realm_service_host: Option<RealmServiceHost>,
+    pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
+    pub realm_capability_host: Option<RealmCapabilityHost>,
 }
 
 /// Holds configuration options for the model.
@@ -74,8 +74,8 @@ impl Model {
                 params.root_component_url,
             )),
             config: params.config,
-            builtin_services: params.builtin_services,
-            realm_service_host: None,
+            builtin_capabilities: params.builtin_capabilities,
+            realm_capability_host: None,
         }
     }
 

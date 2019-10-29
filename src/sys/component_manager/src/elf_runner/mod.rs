@@ -6,7 +6,8 @@ use {
     crate::{
         constants::PKG_PATH,
         model::{Runner, RunnerError},
-        startup::{Arguments, BuiltinRootServices},
+        process_launcher::ProcessLauncher,
+        startup::Arguments,
     },
     clonable_error::ClonableError,
     cm_rust::data::DictionaryExt,
@@ -30,7 +31,8 @@ use {
         lock::Mutex,
     },
     library_loader,
-    std::{iter, path::Path, sync::Arc},
+    log::warn,
+    std::{iter, path::Path},
 };
 
 // TODO(fsamuel): We might want to store other things in this struct in the
@@ -388,38 +390,39 @@ impl Runner for ElfRunner {
     }
 }
 
-/// Connects to the appropriate fuchsia.process.Launcher service based on the options provided in
-/// [ProcessLauncherConnector::new].
+/// Connects to the appropriate `fuchsia.process.Launcher` service based on the options provided in
+/// `ProcessLauncherConnector::new`.
 ///
-/// This exists so that callers can make a new connection to fuchsia.process.Launcher for each use
+/// This exists so that callers can make a new connection to `fuchsia.process.Launcher` for each use
 /// because the service is stateful per connection, so it is not safe to share a connection between
 /// multiple asynchronous process launchers.
 ///
-/// If [LibraryOpts::use_builtin_process_launcher] is true, this will connect to the built-in
-/// fuchsia.process.Launcher service using the provided BuiltinRootServices. Otherwise, this connects
+/// If `LibraryOpts::use_builtin_process_launcher` is true, this will connect to the built-in
+/// `fuchsia.process.Launcher` service using the provided `ProcessLauncher`. Otherwise, this connects
 /// to the launcher service under /svc in component_manager's namespace.
 pub struct ProcessLauncherConnector {
-    // If Some(_), connect to the built-in service. Otherwise connect to a launcher from the
-    // namespace.
-    builtin: Option<Arc<BuiltinRootServices>>,
+    use_builtin: bool,
 }
 
 impl ProcessLauncherConnector {
-    pub fn new(args: &Arguments, builtin: Arc<BuiltinRootServices>) -> ProcessLauncherConnector {
-        let builtin = match args.use_builtin_process_launcher {
-            true => Some(builtin),
-            false => None,
-        };
-        ProcessLauncherConnector { builtin }
+    pub fn new(args: &Arguments) -> Self {
+        Self { use_builtin: args.use_builtin_process_launcher }
     }
 
     pub fn connect(&self) -> Result<fproc::LauncherProxy, Error> {
-        let proxy = match &self.builtin {
-            Some(builtin) => builtin
-                .connect_to_service::<fproc::LauncherMarker>()
-                .context("failed to connect to builtin launcher service")?,
-            None => client::connect_to_service::<fproc::LauncherMarker>()
-                .context("failed to connect to external launcher service")?,
+        let proxy = if self.use_builtin {
+            let (proxy, stream) =
+                fidl::endpoints::create_proxy_and_stream::<fproc::LauncherMarker>()?;
+            fasync::spawn(async move {
+                let result = ProcessLauncher::serve(stream).await;
+                if let Err(e) = result {
+                    warn!("ProcessLauncherConnector.connect failed: {}", e);
+                }
+            });
+            proxy
+        } else {
+            client::connect_to_service::<fproc::LauncherMarker>()
+                .context("failed to connect to external launcher service")?
         };
         Ok(proxy)
     }
@@ -511,8 +514,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
-        let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+        let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
 
         // TODO: This test currently results in a bunch of log spew when this test process exits
@@ -550,8 +552,7 @@ mod tests {
             use_builtin_process_launcher: !should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
-        let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+        let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
         runner
             .start_async(start_info)

@@ -302,7 +302,7 @@ mod tests {
         crate::framework::*,
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
-        crate::startup::{Arguments, BuiltinRootServices},
+        crate::startup::{Arguments, BuiltinRootCapabilities},
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
@@ -405,16 +405,17 @@ mod tests {
             resolver.register("test".to_string(), Box::new(mock_resolver));
 
             let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-            let builtin = BuiltinRootServices::new(&args).unwrap();
+            let builtin = Arc::new(BuiltinRootCapabilities::new(&args));
             let model = Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
                 root_default_runner: Arc::new(runner),
                 config: ModelConfig::default(),
-                builtin_services: Arc::new(builtin),
+                builtin_capabilities: builtin.clone(),
             });
-            let realm_service_host = RealmServiceHost::new(model.clone());
-            model.root_realm.hooks.install(realm_service_host.hooks()).await;
+            model.root_realm.hooks.install(builtin.hooks()).await;
+            let realm_capability_host = RealmCapabilityHost::new(model.clone());
+            model.root_realm.hooks.install(realm_capability_host.hooks()).await;
             let test_hook = TestHook::new();
             model.root_realm.hooks.install(test_hook.hooks()).await;
             model.root_realm.hooks.install(extra_hooks).await;
@@ -428,7 +429,7 @@ mod tests {
                     .await
                     .expect(&format!("could not look up {}", realm_moniker));
                 fasync::spawn(async move {
-                    realm_service_host
+                    realm_capability_host
                         .serve(realm, stream)
                         .await
                         .expect("failed serving realm service");
@@ -1226,9 +1227,13 @@ mod tests {
 
         // Register delete child action, and wait for it. Components should be destroyed.
         let realm_container = test.look_up(vec!["container:0"].into()).await;
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("container:0".into()))
-            .await
-            .expect("destroy failed");
+        execute_action(
+            test.model.clone(),
+            realm_root.clone(),
+            Action::DeleteChild("container:0".into()),
+        )
+        .await
+        .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_container).await);
         assert!(is_destroyed(&realm_container, &realm_a).await);
         assert!(is_destroyed(&realm_container, &realm_b).await);
@@ -1844,7 +1849,8 @@ mod tests {
         let child_state = child_state.as_ref().unwrap();
         let child_execution = child_realm.lock_execution().await;
 
-        let found_partial_moniker = parent_state.live_child_realms()
+        let found_partial_moniker = parent_state
+            .live_child_realms()
             .find(|(curr_partial_moniker, _)| **curr_partial_moniker == partial_moniker);
         let found_child_moniker = parent_state.all_child_realms().get(child_moniker);
 

@@ -5,6 +5,7 @@
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "256"]
 
+pub mod capability;
 pub mod directory_broker;
 pub mod elf_runner;
 pub mod framework;

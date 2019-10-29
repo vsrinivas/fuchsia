@@ -9,12 +9,9 @@ use {
         ExposeSource, ExposeTarget, OfferDecl, OfferLegacyServiceDecl, OfferServiceSource,
         OfferTarget, UseDecl, UseLegacyServiceDecl, UseSource,
     },
-    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
-    futures::prelude::*,
     std::{collections::HashMap, convert::TryFrom, path::Path, sync::Arc},
 };
 
@@ -110,17 +107,6 @@ async fn check_use_work_scheduler_control(
     .await;
 }
 
-pub fn work_scheduler_control_builtin_service_fs() -> ServiceFs<ServiceObj<'static, ()>> {
-    let mut builtin_service_fs = ServiceFs::new();
-    builtin_service_fs.add_fidl_service_at(fsys::WorkSchedulerControlMarker::NAME, move |stream| {
-        fasync::spawn(
-            WorkScheduler::serve_root_work_scheduler_control(stream)
-                .unwrap_or_else(|e| panic!("Error while serving work scheduler control: {}", e)),
-        )
-    });
-    builtin_service_fs
-}
-
 ///   a
 ///    \
 ///     b
@@ -159,14 +145,8 @@ async fn use_work_scheduler_with_expose_to_framework() {
             },
         ),
     ];
-    let work_scheduler = WorkScheduler::new();
-    let test = RoutingTest::new_with_hooks(
-        "a",
-        components,
-        work_scheduler.hooks(),
-        default_builtin_service_fs,
-    )
-    .await;
+    let work_scheduler = Arc::new(WorkScheduler::new());
+    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), true).await;
 }
 
@@ -202,14 +182,8 @@ async fn use_work_scheduler_without_expose() {
             },
         ),
     ];
-    let work_scheduler = WorkScheduler::new();
-    let test = RoutingTest::new_with_hooks(
-        "a",
-        components,
-        work_scheduler.hooks(),
-        default_builtin_service_fs,
-    )
-    .await;
+    let work_scheduler = Arc::new(WorkScheduler::new());
+    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -251,14 +225,8 @@ async fn use_work_scheduler_with_expose_to_realm() {
             },
         ),
     ];
-    let work_scheduler = WorkScheduler::new();
-    let test = RoutingTest::new_with_hooks(
-        "a",
-        components,
-        work_scheduler.hooks(),
-        default_builtin_service_fs,
-    )
-    .await;
+    let work_scheduler = Arc::new(WorkScheduler::new());
+    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -300,15 +268,9 @@ async fn use_work_scheduler_control_routed() {
             },
         ),
     ];
-    let work_scheduler = WorkScheduler::new();
+    let work_scheduler = Arc::new(WorkScheduler::new());
 
-    let test = RoutingTest::new_with_hooks(
-        "a",
-        components,
-        work_scheduler.hooks(),
-        work_scheduler_control_builtin_service_fs,
-    )
-    .await;
+    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), true).await;
 }
@@ -351,14 +313,8 @@ async fn use_work_scheduler_control_fail() {
             },
         ),
     ];
-    let work_scheduler = WorkScheduler::new();
-    let test = RoutingTest::new_with_hooks(
-        "a",
-        components,
-        work_scheduler.hooks(),
-        work_scheduler_control_builtin_service_fs,
-    )
-    .await;
+    let work_scheduler = Arc::new(WorkScheduler::new());
+    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), false)
         .await;

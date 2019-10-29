@@ -3,17 +3,44 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        capability::*,
+        model::{error::*, hooks::*},
+    },
+    cm_rust::CapabilityPath,
     failure::Error,
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_security_resource as fsec,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_security_resource as fsec, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
+    lazy_static::lazy_static,
+    log::warn,
+    std::{convert::TryInto, sync::Arc},
 };
 
+lazy_static! {
+    pub static ref VMEX_CAPABILITY_PATH: CapabilityPath =
+        "/svc/fuchsia.process.Vmex".try_into().unwrap();
+}
+
 /// An implementation of fuchsia.security.resource.Vmex protocol.
-pub struct VmexService;
+pub struct VmexService {
+    inner: Arc<VmexServiceInner>,
+}
 
 impl VmexService {
+    pub fn new() -> Self {
+        Self { inner: Arc::new(VmexServiceInner::new()) }
+    }
+
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        vec![HookRegistration {
+            event_type: EventType::RouteBuiltinCapability,
+            callback: self.inner.clone(),
+        }]
+    }
+
     /// Serves an instance of the 'fuchsia.security.resource.Vmex' protocol given an appropriate
     /// RequestStream. Returns when the channel backing the RequestStream is closed or an
     /// unrecoverable error, like failure to acquire the root resource occurs.
@@ -33,9 +60,87 @@ impl VmexService {
     }
 }
 
+struct VmexServiceInner;
+
+impl VmexServiceInner {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    async fn on_route_builtin_capability_async<'a>(
+        self: Arc<Self>,
+        capability: &'a ComponentManagerCapability,
+        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
+    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        match capability {
+            ComponentManagerCapability::LegacyService(capability_path)
+                if *capability_path == *VMEX_CAPABILITY_PATH =>
+            {
+                Ok(Some(Box::new(VmexCapabilityProvider::new())
+                    as Box<dyn ComponentManagerCapabilityProvider>))
+            }
+            _ => Ok(capability_provider),
+        }
+    }
+}
+
+impl Hook for VmexServiceInner {
+    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+        Box::pin(async move {
+            match event {
+                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_builtin_capability_async(capability, capability_provider.take())
+                        .await?;
+                }
+                _ => {}
+            };
+            Ok(())
+        })
+    }
+}
+
+struct VmexCapabilityProvider;
+
+impl VmexCapabilityProvider {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ComponentManagerCapabilityProvider for VmexCapabilityProvider {
+    fn open(
+        &self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
+        let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
+        fasync::spawn(async move {
+            let result = VmexService::serve(stream).await;
+            if let Err(e) = result {
+                warn!("VmexService.open failed: {}", e);
+            }
+        });
+
+        Box::pin(async { Ok(()) })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, fuchsia_zircon::AsHandleRef};
+    use {
+        super::*,
+        crate::model::{testing::mocks, Realm, ResolverRegistry},
+        fidl::endpoints::ClientEnd,
+        fuchsia_async as fasync,
+        fuchsia_zircon::AsHandleRef,
+        fuchsia_zircon_sys as sys,
+        futures::lock::Mutex,
+    };
 
     fn root_resource_available() -> bool {
         let bin = std::env::args().next();
@@ -93,6 +198,47 @@ mod tests {
             resource_info.rights,
             zx::Rights::DUPLICATE | zx::Rights::TRANSFER | zx::Rights::INSPECT
         );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_vmex_service() -> Result<(), Error> {
+        if !root_resource_available() {
+            return Ok(());
+        }
+
+        let vmex_service = Arc::new(VmexService::new());
+        let hooks = Hooks::new(None);
+        hooks.install(vmex_service.hooks()).await;
+
+        let capability_provider = Arc::new(Mutex::new(None));
+        let capability = ComponentManagerCapability::LegacyService(VMEX_CAPABILITY_PATH.clone());
+
+        let (client, server) = zx::Channel::create()?;
+
+        let realm = {
+            let resolver = ResolverRegistry::new();
+            let runner = Arc::new(mocks::MockRunner::new());
+            let root_component_url = "test:///root".to_string();
+            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+        };
+        let event = Event::RouteBuiltinCapability {
+            realm: realm.clone(),
+            capability: capability.clone(),
+            capability_provider: capability_provider.clone(),
+        };
+        hooks.dispatch(&event).await?;
+
+        let capability_provider = capability_provider.lock().await.take();
+        if let Some(capability_provider) = capability_provider {
+            capability_provider.open(0, 0, String::new(), server).await?;
+        }
+
+        let vmex_client = ClientEnd::<fsec::VmexMarker>::new(client)
+            .into_proxy()
+            .expect("failed to create launcher proxy");
+        let vmex_resource = vmex_client.get().await?;
+        assert_ne!(vmex_resource.raw_handle(), sys::ZX_HANDLE_INVALID);
         Ok(())
     }
 }

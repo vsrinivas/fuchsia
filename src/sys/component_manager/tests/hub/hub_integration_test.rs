@@ -41,7 +41,7 @@ async fn create_model(root_component_url: &str) -> Result<Model, Error> {
         use_builtin_vmex: false,
         root_component_url,
     };
-    let model = startup::model_setup(&args).await?;
+    let model = startup::model_setup(&args, vec![]).await?;
     Ok(model)
 }
 

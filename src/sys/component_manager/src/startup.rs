@@ -5,32 +5,26 @@
 use {
     crate::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealmServiceHost,
+        framework::RealmCapabilityHost,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
-        model::{error::ModelError, hub::Hub, Model, ModelConfig, ModelParams, ResolverRegistry},
-        process_launcher::ProcessLauncherService,
-        system_controller,
+        model::{
+            error::ModelError, hooks::*, hub::Hub, Model, ModelConfig, ModelParams,
+            ResolverRegistry,
+        },
+        process_launcher::*,
+        system_controller::*,
         vmex::VmexService,
-        work_scheduler::work_scheduler::WorkScheduler,
+        work_scheduler::work_scheduler::*,
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_process::LauncherMarker,
-    fidl_fuchsia_security_resource::VmexMarker,
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
-    fidl_fuchsia_sys2::{SystemControllerMarker, WorkSchedulerControlMarker},
-    fuchsia_async as fasync,
-    fuchsia_component::{
-        client,
-        server::{ServiceFs, ServiceObjTrait},
-    },
+    fuchsia_component::client,
     fuchsia_runtime::HandleType,
-    fuchsia_zircon as zx,
-    futures::prelude::*,
     log::*,
-    std::{collections::HashSet, path::PathBuf, sync::Arc},
+    std::{path::PathBuf, sync::Arc},
 };
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
@@ -151,170 +145,96 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
     return Ok(Some(loader));
 }
 
-/// Installs a Hub if possible.
-pub async fn install_hub_if_possible(model: &Model) -> Result<(), ModelError> {
-    let hub = Arc::new(Hub::new(model.root_realm.component_url.clone())?);
-    model.root_realm.hooks.install(hub.hooks()).await;
+pub async fn create_hub_if_possible(root_component_url: String) -> Result<Arc<Hub>, ModelError> {
+    let hub = Arc::new(Hub::new(root_component_url)?);
     if let Some(out_dir_handle) =
         fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
     {
         hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, out_dir_handle.into()).await?;
     };
 
-    Ok(())
+    Ok(hub)
 }
 
 /// Serves services built into component_manager and provides methods for connecting to those
 /// services.
-pub struct BuiltinRootServices {
-    services: zx::Channel,
-    available: HashSet<String>,
+pub struct BuiltinRootCapabilities {
+    work_scheduler: Arc<WorkScheduler>,
+    process_launcher: Option<Arc<ProcessLauncher>>,
+    vmex_service: Option<Arc<VmexService>>,
+    system_controller: Arc<SystemController>,
 }
 
-impl BuiltinRootServices {
-    /// Creates a new BuiltinRootservices. The available built-in services depends on the
+impl BuiltinRootCapabilities {
+    /// Creates a new BuiltinRootCapabilities. The available built-in capabilities depends on the
     /// configuration provided in Arguments:
     ///
     /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
     ///   is available.
     /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
     ///   available.
-    pub fn new(args: &Arguments) -> Result<Self, Error> {
-        let (services, available) = Self::serve(args)?;
-        Ok(Self { services, available })
-    }
-
-    /// Creates a new BuiltinRootServices that has the set of services provided in the given
-    /// ServiceFs. Services in the ServiceFs should be at the top level, and _not_ in a `svc`
-    /// sub-directory. Only exists for tests.
-    pub(crate) fn new_with_service_fs<T>(mut service_fs: Box<ServiceFs<T>>) -> Result<Self, Error>
-    where
-        T: ServiceObjTrait<Output = ()> + Send + 'static,
-    {
-        let mut available = HashSet::new();
-        for name in service_fs.host_services_list()?.names {
-            available.insert(name.clone());
-        }
-        let (client, server) = zx::Channel::create().context("Failed to create channel")?;
-        service_fs
-            .serve_connection(server)
-            .context("Failed to service builtin service with custom ServiceFs")?;
-        fasync::spawn(service_fs.collect::<()>());
-        Ok(Self { services: client, available })
-    }
-
-    /// Connect to a built-in FIDL service.
-    pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
-        let (proxy, server) =
-            fidl::endpoints::create_proxy::<S>().context("Failed to create proxy")?;
-        self.connect_channel_to_service_name(S::NAME, server.into_channel())?;
-        Ok(proxy)
-    }
-
-    pub fn connect_channel_to_service_name(
-        &self,
-        path: &str,
-        chan: zx::Channel,
-    ) -> Result<(), Error> {
-        fdio::service_connect_at(&self.services, path, chan)
-            .context("Failed to connect built-in service")?;
-        Ok(())
-    }
-
-    pub fn is_available(&self, service_name: &str) -> bool {
-        self.available.contains(service_name)
-    }
-
-    fn serve(args: &Arguments) -> Result<(zx::Channel, HashSet<String>), Error> {
-        let (client, server) = zx::Channel::create().context("Failed to create channel")?;
-        let mut fs = ServiceFs::new();
-        let mut available = HashSet::new();
-
+    pub fn new(args: &Arguments) -> Self {
+        let mut process_launcher = None;
         if args.use_builtin_process_launcher {
-            available.insert(LauncherMarker::NAME.to_string());
-            fs.add_fidl_service(move |stream| {
-                fasync::spawn(
-                    ProcessLauncherService::serve(stream)
-                        .unwrap_or_else(|e| warn!("Error while serving process launcher: {:?}", e)),
-                )
-            });
+            process_launcher = Some(Arc::new(ProcessLauncher::new()));
         }
+        let mut vmex_service = None;
         if args.use_builtin_vmex {
-            available.insert(VmexMarker::NAME.to_string());
-            fs.add_fidl_service(move |stream| {
-                fasync::spawn(
-                    VmexService::serve(stream)
-                        .unwrap_or_else(|e| warn!("Error while serving vmex service: {:?}", e)),
-                )
-            });
+            vmex_service = Some(Arc::new(VmexService::new()));
         }
+        Self {
+            work_scheduler: Arc::new(WorkScheduler::new()),
+            process_launcher,
+            vmex_service,
+            system_controller: Arc::new(SystemController::new()),
+        }
+    }
 
-        available.insert(WorkSchedulerControlMarker::NAME.to_string());
-        fs.add_fidl_service(move |stream| {
-            fasync::spawn(
-                WorkScheduler::serve_root_work_scheduler_control(stream).unwrap_or_else(|e| {
-                    warn!("Error while serving work scheduler control: {:?}", e)
-                }),
-            )
-        });
-
-        // TODO (fxb/35949) instead of embedding SystemController, model it as a hook
-        available.insert(SystemControllerMarker::NAME.to_string());
-        fs.add_fidl_service(move |stream| {
-            fasync::spawn(
-                system_controller::serve(stream)
-                    .unwrap_or_else(|e| warn!("Error serving system controller: {:?}", e)),
-            )
-        });
-
-        fs.serve_connection(server).context("Failed to serve builtin services")?;
-        fasync::spawn(fs.collect::<()>());
-        Ok((client, available))
+    pub fn hooks(&self) -> Vec<HookRegistration> {
+        let mut all_hooks: Vec<HookRegistration> = vec![];
+        all_hooks.append(&mut self.work_scheduler.hooks());
+        if let Some(process_launcher) = &self.process_launcher {
+            all_hooks.append(&mut process_launcher.hooks());
+        }
+        if let Some(vmex_service) = &self.vmex_service {
+            all_hooks.append(&mut vmex_service.hooks());
+        }
+        all_hooks.append(&mut self.system_controller.hooks());
+        all_hooks
     }
 }
 
 /// Creates and sets up a model with standard parameters. This is easier than setting up the
 /// model manually with `Model::new()`.
-pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
-    let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
-    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+pub async fn model_setup(
+    args: &Arguments,
+    additional_capabilities: Vec<HookRegistration>,
+) -> Result<Model, Error> {
+    let launcher_connector = ProcessLauncherConnector::new(&args);
     let runner = ElfRunner::new(launcher_connector);
     let resolver_registry = available_resolvers()?;
+    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(runner),
         config: ModelConfig::default(),
-        builtin_services: Arc::new(BuiltinRootServices::new(&args).unwrap()),
+        builtin_capabilities: builtin_capabilities.clone(),
     };
     let mut model = Model::new(params);
-    let realm_service_host = RealmServiceHost::new(model.clone());
-    model.root_realm.hooks.install(realm_service_host.hooks()).await;
-    // TODO(geb, fsamuel): model refers to a RealmServiceHost and RealmServiceHost
+    let realm_capability_host = RealmCapabilityHost::new(model.clone());
+    model.root_realm.hooks.install(realm_capability_host.hooks()).await;
+    model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
+    model.root_realm.hooks.install(additional_capabilities).await;
+    // TODO(geb, fsamuel): model refers to a RealmCapabilityHost and RealmCapabilityHost
     // refers to model. We need to break this cycle.
-    model.realm_service_host = Some(realm_service_host);
+    model.realm_capability_host = Some(realm_capability_host);
     Ok(model)
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fidl::endpoints::create_proxy,
-        fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-        fidl_fuchsia_process::{LaunchInfo, LauncherMarker},
-        fuchsia_zircon::AsHandleRef,
-        fuchsia_zircon_sys as sys,
-    };
-
-    fn root_resource_available() -> bool {
-        let bin = std::env::args().next();
-        match bin.as_ref().map(String::as_ref) {
-            Some("/pkg/test/component_manager_tests") => false,
-            Some("/pkg/test/component_manager_boot_env_tests") => true,
-            _ => panic!("Unexpected test binary name {:?}", bin),
-        }
-    }
+    use {super::*, fuchsia_async as fasync};
 
     #[fasync::run_singlethreaded(test)]
     async fn parse_arguments() -> Result<(), Error> {
@@ -374,127 +294,6 @@ mod tests {
                 root_component_url: dummy_url()
             }
         );
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn connect_to_builtin_launcher_service() -> Result<(), Error> {
-        // The built-in process launcher won't work properly in all environments where we run this
-        // test due to zx_process_create being disallowed, but this test doesn't actually need to
-        // launch a process, just check that the launcher is served and we can connect to and
-        // communicate with it.
-        let args = Arguments { use_builtin_process_launcher: true, ..Default::default() };
-        let builtin = BuiltinRootServices::new(&args)?;
-
-        // Try to launch a process with an invalid process name. This will cause a predictable
-        // failure from the launcher, confirming that we can communicate with it.
-        let launcher = builtin.connect_to_service::<LauncherMarker>()?;
-        let job = fuchsia_runtime::job_default().duplicate(zx::Rights::SAME_RIGHTS)?;
-        let mut launch_info =
-            LaunchInfo { name: "ab\0cd".into(), executable: zx::Vmo::create(1)?, job };
-        let (status, process) =
-            launcher.launch(&mut launch_info).await.expect("FIDL call to launcher failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
-        assert_eq!(process, None);
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn connect_to_builtin_vmex_service() -> Result<(), Error> {
-        if !root_resource_available() {
-            return Ok(());
-        }
-        let args = Arguments { use_builtin_vmex: true, ..Default::default() };
-        let builtin = BuiltinRootServices::new(&args)?;
-        let vmex = builtin.connect_to_service::<VmexMarker>()?;
-        let vmex_resource = vmex.get().await?;
-        assert_ne!(vmex_resource.raw_handle(), sys::ZX_HANDLE_INVALID);
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn connect_to_builtin_work_scheduler_control_service() -> Result<(), Error> {
-        let args = Arguments { ..Default::default() };
-        let builtin = BuiltinRootServices::new(&args)?;
-
-        let work_scheduler_control = builtin.connect_to_service::<WorkSchedulerControlMarker>()?;
-        let result = work_scheduler_control.get_batch_period().await;
-        result
-            .expect("failed to use WorkSchedulerControl service")
-            .expect("WorkSchedulerControl.GetBatchPeriod() yielded error");
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn connect_to_builtin_service_with_custom_service_fs() -> Result<(), Error> {
-        let mut builtin_service_fs = ServiceFs::new();
-        builtin_service_fs.add_fidl_service(move |mut stream: EchoRequestStream| {
-            fasync::spawn(async move {
-                while let Some(EchoRequest::EchoString { value, responder }) =
-                    stream.try_next().await.unwrap()
-                {
-                    responder.send(value.as_ref().map(|s| &**s)).unwrap();
-                }
-            });
-        });
-        let builtin =
-            BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs)).unwrap();
-
-        let echo_proxy = builtin.connect_to_service::<EchoMarker>()?;
-        assert_eq!(
-            Some("hippos".to_string()),
-            echo_proxy.echo_string(Some("hippos")).await.expect("failed to echo")
-        );
-
-        let (echo_proxy, echo_server_end) = create_proxy::<EchoMarker>()?;
-        builtin
-            .connect_channel_to_service_name(EchoMarker::NAME, echo_server_end.into_channel())?;
-        assert_eq!(
-            Some("hippos".to_string()),
-            echo_proxy.echo_string(Some("hippos")).await.expect("failed to echo")
-        );
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn connect_to_nonexistent_builtin_service() -> Result<(), Error> {
-        let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-        let builtin = BuiltinRootServices::new(&args)?;
-
-        // connect_to_service should succeed; it doesn't check that the service actually exists.
-        let proxy = builtin.connect_to_service::<EchoMarker>()?;
-
-        // But calls to the service should fail, since it doesn't exist.
-        let res = proxy.echo_string(Some("hippos")).await;
-        let err = res.expect_err("echo_string unexpected succeeded");
-        assert!(err.is_closed(), "Unexpected error: {:?}", err);
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn bad_fidl_input_doesnt_panic() -> Result<(), Error> {
-        let args = Arguments { use_builtin_process_launcher: true, ..Default::default() };
-        let builtin = BuiltinRootServices::new(&args)?;
-
-        // connect to one of the builtin services
-        let proxy = builtin.connect_to_service::<LauncherMarker>()?;
-
-        // unwrap the channel, write some garbage into it, and observe that the channel is closed
-        // and we don't panic.
-        let chan = proxy.into_channel().unwrap();
-
-        // Writing should succeed since it's asynchronous
-        let res = chan.write(&vec![0; 1024], &mut vec![]);
-        assert!(res.is_ok());
-
-        // The channel should be closed with an error since we wrote garbage
-        let mut msg_buf = zx::MessageBuf::new();
-        let res = chan.recv_msg(&mut msg_buf).await;
-        assert!(res.is_err());
-
-        // If we've made it this far we haven't panicked
 
         Ok(())
     }
