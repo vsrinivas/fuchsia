@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::configuration::{ClientConfig, ServerConfig};
-use crate::protocol::{DhcpOption, Message, MessageType, OpCode, ProtocolError};
+use crate::protocol::{
+    DhcpOption, FidlCompatible, Message, MessageType, OpCode, OptionCode, ProtocolError,
+};
 use crate::stash::Stash;
 use failure::{Error, Fail, ResultExt};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
@@ -11,6 +13,7 @@ use fuchsia_zircon::Status;
 use serde_derive::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::convert::TryFrom;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::ops::Fn;
@@ -28,6 +31,7 @@ where
     config: ServerConfig,
     time_provider: F,
     stash: Stash,
+    options_repo: HashMap<OptionCode, DhcpOption>,
 }
 
 /// The default string used by the Server to identify itself to the Stash service.
@@ -163,7 +167,14 @@ where
                 HashMap::new()
             }
         };
-        let mut server = Server { cache, pool: AddressPool::new(), config, time_provider, stash };
+        let mut server = Server {
+            cache,
+            pool: AddressPool::new(),
+            config,
+            time_provider,
+            stash,
+            options_repo: HashMap::new(),
+        };
         server.pool.load_pool(&server.config.managed_addrs);
         Ok(server)
     }
@@ -492,14 +503,90 @@ pub trait ServerDispatcher {
         name: fidl_fuchsia_net_dhcp::ParameterName,
     ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status>;
     /// Updates the stored DHCP option value to the argument.
-    fn dispatch_set_option(&self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status>;
+    fn dispatch_set_option(&mut self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status>;
     /// Updates the stored DHCP server parameter to the argument.
-    fn dispatch_set_parameter(&self, value: fidl_fuchsia_net_dhcp::Parameter)
-        -> Result<(), Status>;
+    fn dispatch_set_parameter(
+        &mut self,
+        value: fidl_fuchsia_net_dhcp::Parameter,
+    ) -> Result<(), Status>;
     /// Retrieves all of the stored DHCP option values.
     fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status>;
     /// Retrieves all of the stored DHCP parameter values.
     fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status>;
+}
+
+impl<F> ServerDispatcher for Server<F>
+where
+    F: Fn() -> i64,
+{
+    fn dispatch_get_option(
+        &self,
+        code: fidl_fuchsia_net_dhcp::OptionCode,
+    ) -> Result<fidl_fuchsia_net_dhcp::Option_, Status> {
+        let opt_code =
+            OptionCode::try_from(code as u8).map_err(|_protocol_error| Status::INVALID_ARGS)?;
+        let option = self.options_repo.get(&opt_code).ok_or(Status::NOT_FOUND)?;
+        let option = option.clone();
+        let fidl_option = option.try_into_fidl().map_err(|protocol_error| {
+            log::warn!(
+                "server dispatcher could not convert dhcp option for fidl transport: {}",
+                protocol_error
+            );
+            Status::INTERNAL
+        })?;
+        Ok(fidl_option)
+    }
+
+    fn dispatch_get_parameter(
+        &self,
+        _name: fidl_fuchsia_net_dhcp::ParameterName,
+    ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status> {
+        unimplemented!()
+    }
+
+    fn dispatch_set_option(&mut self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status> {
+        let option = DhcpOption::try_from_fidl(value).map_err(|protocol_error| {
+            log::warn!(
+                "server dispatcher could not convert fidl argument into dhcp option: {}",
+                protocol_error
+            );
+            Status::INVALID_ARGS
+        })?;
+        let _old = self.options_repo.insert(option.code(), option);
+        Ok(())
+    }
+
+    fn dispatch_set_parameter(
+        &mut self,
+        _value: fidl_fuchsia_net_dhcp::Parameter,
+    ) -> Result<(), Status> {
+        unimplemented!()
+    }
+
+    fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status> {
+        let options = self
+            .options_repo
+            .values()
+            .filter_map(|option| {
+                option
+                    .clone()
+                    .try_into_fidl()
+                    .map_err(|protocol_error| {
+                        log::warn!(
+                        "server dispatcher could not convert dhcp option for fidl transport: {}",
+                        protocol_error
+                    );
+                        Status::INTERNAL
+                    })
+                    .ok()
+            })
+            .collect::<Vec<fidl_fuchsia_net_dhcp::Option_>>();
+        Ok(options)
+    }
+
+    fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status> {
+        unimplemented!()
+    }
 }
 
 /// A cache mapping clients to their configuration data.
@@ -2416,6 +2503,64 @@ pub mod tests {
             server.cache.get(&client_mac).unwrap().expiration,
             server_time_provider() + server_max_lease_time as i64
         );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_get_option_with_unset_option_returns_not_found(
+    ) -> Result<(), Error> {
+        let server = new_test_minimal_server(server_time_provider).await?;
+        let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask);
+        assert_eq!(result, Err(Status::NOT_FOUND));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_get_option_with_set_option_returns_option() -> Result<(), Error>
+    {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let option = || {
+            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: [255, 255, 255, 0],
+            })
+        };
+        server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(option())?);
+        let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)?;
+        assert_eq!(result, option());
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_set_option_returns_unit() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let option = || {
+            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: [255, 255, 255, 0],
+            })
+        };
+        let () = server.dispatch_set_option(option())?;
+        let stored_option: DhcpOption = DhcpOption::try_from_fidl(option())?;
+        let code = stored_option.code();
+        let result = server.options_repo.get(&code);
+        assert_eq!(result, Some(&stored_option));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_list_options_returns_set_options() -> Result<(), Error> {
+        let mut server = new_test_minimal_server(server_time_provider).await?;
+        let mask = || {
+            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: [255, 255, 255, 0],
+            })
+        };
+        let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
+        server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(mask())?);
+        server.options_repo.insert(OptionCode::HostName, DhcpOption::try_from_fidl(hostname())?);
+        let result = server.dispatch_list_options()?;
+        assert_eq!(result.len(), 2);
+        assert!(result.contains(&mask()));
+        assert!(result.contains(&hostname()));
         Ok(())
     }
 }

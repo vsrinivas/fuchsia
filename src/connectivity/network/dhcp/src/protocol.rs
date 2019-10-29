@@ -50,6 +50,8 @@ const THREE_BYTE_LEN: usize = 24;
 pub enum ProtocolError {
     #[fail(display = "invalid buffer length: {}", _0)]
     InvalidBufferLength(usize),
+    #[fail(display = "option not supported in fuchsia.net.dhcp: {:?}", _0)]
+    InvalidFidlOption(DhcpOption),
     #[fail(display = "invalid message type: {}", _0)]
     InvalidMessageType(u8),
     #[fail(display = "invalid netbios over tcpip node type: {}", _0)]
@@ -64,6 +66,8 @@ pub enum ProtocolError {
     MissingOpCode,
     #[fail(display = "missing expected option: {}", _0)]
     MissingOption(OptionCode),
+    #[fail(display = "received unknown fidl option variant")]
+    UnknownFidlOption,
     #[fail(display = "invalid utf-8 after buffer index: {}", _0)]
     Utf8(usize),
 }
@@ -328,16 +332,16 @@ pub enum OptionCode {
     NetBiosOverTcpipScope = 47,
     XWindowSystemFontServer = 48,
     XWindowSystemDisplayManager = 49,
-    RequestedIpAddr = 50,
-    IpAddrLeaseTime = 51,
+    RequestedIpAddress = 50,
+    IpAddressLeaseTime = 51,
     OptionOverload = 52,
     DhcpMessageType = 53,
     ServerIdentifier = 54,
     ParameterRequestList = 55,
     Message = 56,
     MaxDhcpMessageSize = 57,
-    RenewalTime = 58,
-    RebindingTime = 59,
+    RenewalTimeValue = 58,
+    RebindingTimeValue = 59,
     VendorClassIdentifier = 60,
     ClientIdentifier = 61,
     NetworkInformationServicePlusDomain = 64,
@@ -382,7 +386,7 @@ impl fmt::Display for OptionCode {
 /// some control and meta information needed for the operation of the DHCP
 /// protocol but which could not be included in the DHCP header because of
 /// the backwards compatibility requirement with the older BOOTP protocol.
-#[derive(Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum DhcpOption {
     Pad(),
     End(),
@@ -481,6 +485,16 @@ impl<'a> TryInto<Vec<Ipv4Addr>> for AddressBuffer<'a> {
 
 fn slice_buffer(buf: &[u8], upper_bound: usize) -> Result<&[u8], ProtocolError> {
     buf.get(..upper_bound).ok_or(ProtocolError::InvalidBufferLength(buf.len()))
+}
+
+/// Generates a match expression on `$option` which maps each of the supplied `DhcpOption` variants
+/// to their `OptionCode` equivalent.
+macro_rules! option_to_code {
+    ($option:ident, $(DhcpOption::$variant:tt($($v:tt)*)),*) => {
+        match $option {
+            $(DhcpOption::$variant($($v)*) => OptionCode::$variant,)*
+        }
+    };
 }
 
 impl DhcpOption {
@@ -786,7 +800,7 @@ impl DhcpOption {
                 let addrs = AddressBuffer { buffer: &val }.try_into()?;
                 Ok(DhcpOption::StreetTalkDirectoryAssistanceServer(addrs))
             }
-            OptionCode::RequestedIpAddr => {
+            OptionCode::RequestedIpAddress => {
                 let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
                     |std::array::TryFromSliceError { .. }| {
                         ProtocolError::InvalidBufferLength(val.len())
@@ -794,13 +808,13 @@ impl DhcpOption {
                 )?;
                 Ok(DhcpOption::RequestedIpAddress(Ipv4Addr::from(bytes)))
             }
-            OptionCode::IpAddrLeaseTime => Ok(DhcpOption::IpAddressLeaseTime(u32::from_be_bytes(
-                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+            OptionCode::IpAddressLeaseTime => Ok(DhcpOption::IpAddressLeaseTime(
+                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
                     |std::array::TryFromSliceError { .. }| {
                         ProtocolError::InvalidBufferLength(val.len())
                     },
-                )?,
-            ))),
+                )?),
+            )),
             OptionCode::OptionOverload => {
                 let overload = Overload::try_from(
                     *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
@@ -848,20 +862,20 @@ impl DhcpOption {
                     },
                 )?),
             )),
-            OptionCode::RenewalTime => Ok(DhcpOption::RenewalTimeValue(u32::from_be_bytes(
+            OptionCode::RenewalTimeValue => Ok(DhcpOption::RenewalTimeValue(u32::from_be_bytes(
                 <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
                     |std::array::TryFromSliceError { .. }| {
                         ProtocolError::InvalidBufferLength(val.len())
                     },
                 )?,
             ))),
-            OptionCode::RebindingTime => Ok(DhcpOption::RebindingTimeValue(u32::from_be_bytes(
-                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+            OptionCode::RebindingTimeValue => Ok(DhcpOption::RebindingTimeValue(
+                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
                     |std::array::TryFromSliceError { .. }| {
                         ProtocolError::InvalidBufferLength(val.len())
                     },
-                )?,
-            ))),
+                )?),
+            )),
             OptionCode::VendorClassIdentifier => Ok(DhcpOption::VendorClassIdentifier(val)),
             OptionCode::ClientIdentifier => Ok(DhcpOption::ClientIdentifier(val)),
         }
@@ -1010,9 +1024,11 @@ impl DhcpOption {
                 serialize_addresses(OptionCode::StreetTalkDirectoryAssistanceServer, &v, buf)
             }
             DhcpOption::RequestedIpAddress(v) => {
-                serialize_address(OptionCode::RequestedIpAddr, v, buf)
+                serialize_address(OptionCode::RequestedIpAddress, v, buf)
             }
-            DhcpOption::IpAddressLeaseTime(v) => serialize_u32(OptionCode::IpAddrLeaseTime, v, buf),
+            DhcpOption::IpAddressLeaseTime(v) => {
+                serialize_u32(OptionCode::IpAddressLeaseTime, v, buf)
+            }
             DhcpOption::OptionOverload(v) => serialize_enum(OptionCode::OptionOverload, v, buf),
             DhcpOption::TftpServerName(v) => serialize_string(OptionCode::TftpServerName, &v, buf),
             DhcpOption::BootfileName(v) => serialize_string(OptionCode::BootfileName, &v, buf),
@@ -1030,8 +1046,10 @@ impl DhcpOption {
             DhcpOption::MaxDhcpMessageSize(v) => {
                 serialize_u16(OptionCode::MaxDhcpMessageSize, v, buf)
             }
-            DhcpOption::RenewalTimeValue(v) => serialize_u32(OptionCode::RenewalTime, v, buf),
-            DhcpOption::RebindingTimeValue(v) => serialize_u32(OptionCode::RebindingTime, v, buf),
+            DhcpOption::RenewalTimeValue(v) => serialize_u32(OptionCode::RenewalTimeValue, v, buf),
+            DhcpOption::RebindingTimeValue(v) => {
+                serialize_u32(OptionCode::RebindingTimeValue, v, buf)
+            }
             DhcpOption::VendorClassIdentifier(v) => {
                 serialize_bytes(OptionCode::VendorClassIdentifier, &v, buf)
             }
@@ -1039,6 +1057,89 @@ impl DhcpOption {
                 serialize_bytes(OptionCode::ClientIdentifier, &v, buf)
             }
         }
+    }
+
+    /// Returns the `OptionCode` variant corresponding to `self`.
+    pub fn code(&self) -> OptionCode {
+        option_to_code!(
+            self,
+            DhcpOption::Pad(),
+            DhcpOption::End(),
+            DhcpOption::SubnetMask(_),
+            DhcpOption::TimeOffset(_),
+            DhcpOption::Router(_),
+            DhcpOption::TimeServer(_),
+            DhcpOption::NameServer(_),
+            DhcpOption::DomainNameServer(_),
+            DhcpOption::LogServer(_),
+            DhcpOption::CookieServer(_),
+            DhcpOption::LprServer(_),
+            DhcpOption::ImpressServer(_),
+            DhcpOption::ResourceLocationServer(_),
+            DhcpOption::HostName(_),
+            DhcpOption::BootFileSize(_),
+            DhcpOption::MeritDumpFile(_),
+            DhcpOption::DomainName(_),
+            DhcpOption::SwapServer(_),
+            DhcpOption::RootPath(_),
+            DhcpOption::ExtensionsPath(_),
+            DhcpOption::IpForwarding(_),
+            DhcpOption::NonLocalSourceRouting(_),
+            DhcpOption::PolicyFilter(_),
+            DhcpOption::MaxDatagramReassemblySize(_),
+            DhcpOption::DefaultIpTtl(_),
+            DhcpOption::PathMtuAgingTimeout(_),
+            DhcpOption::PathMtuPlateauTable(_),
+            DhcpOption::InterfaceMtu(_),
+            DhcpOption::AllSubnetsLocal(_),
+            DhcpOption::BroadcastAddress(_),
+            DhcpOption::PerformMaskDiscovery(_),
+            DhcpOption::MaskSupplier(_),
+            DhcpOption::PerformRouterDiscovery(_),
+            DhcpOption::RouterSolicitationAddress(_),
+            DhcpOption::StaticRoute(_),
+            DhcpOption::TrailerEncapsulation(_),
+            DhcpOption::ArpCacheTimeout(_),
+            DhcpOption::EthernetEncapsulation(_),
+            DhcpOption::TcpDefaultTtl(_),
+            DhcpOption::TcpKeepaliveInterval(_),
+            DhcpOption::TcpKeepaliveGarbage(_),
+            DhcpOption::NetworkInformationServiceDomain(_),
+            DhcpOption::NetworkInformationServers(_),
+            DhcpOption::NetworkTimeProtocolServers(_),
+            DhcpOption::VendorSpecificInformation(_),
+            DhcpOption::NetBiosOverTcpipNameServer(_),
+            DhcpOption::NetBiosOverTcpipDatagramDistributionServer(_),
+            DhcpOption::NetBiosOverTcpipNodeType(_),
+            DhcpOption::NetBiosOverTcpipScope(_),
+            DhcpOption::XWindowSystemFontServer(_),
+            DhcpOption::XWindowSystemDisplayManager(_),
+            DhcpOption::NetworkInformationServicePlusDomain(_),
+            DhcpOption::NetworkInformationServicePlusServers(_),
+            DhcpOption::MobileIpHomeAgent(_),
+            DhcpOption::SmtpServer(_),
+            DhcpOption::Pop3Server(_),
+            DhcpOption::NntpServer(_),
+            DhcpOption::DefaultWwwServer(_),
+            DhcpOption::DefaultFingerServer(_),
+            DhcpOption::DefaultIrcServer(_),
+            DhcpOption::StreetTalkServer(_),
+            DhcpOption::StreetTalkDirectoryAssistanceServer(_),
+            DhcpOption::RequestedIpAddress(_),
+            DhcpOption::IpAddressLeaseTime(_),
+            DhcpOption::OptionOverload(_),
+            DhcpOption::TftpServerName(_),
+            DhcpOption::BootfileName(_),
+            DhcpOption::DhcpMessageType(_),
+            DhcpOption::ServerIdentifier(_),
+            DhcpOption::ParameterRequestList(_),
+            DhcpOption::Message(_),
+            DhcpOption::MaxDhcpMessageSize(_),
+            DhcpOption::RenewalTimeValue(_),
+            DhcpOption::RebindingTimeValue(_),
+            DhcpOption::VendorClassIdentifier(_),
+            DhcpOption::ClientIdentifier(_)
+        )
     }
 }
 
@@ -1104,6 +1205,440 @@ fn serialize_enum<T: Into<u8>>(code: OptionCode, v: T, buf: &mut Vec<u8>) {
     buf.push(v.into());
 }
 
+/// A type which can be converted to and from a FIDL type `F`.
+pub trait FidlCompatible<F>: Sized {
+    type FromError;
+    type IntoError;
+
+    fn try_from_fidl(fidl: F) -> Result<Self, Self::FromError>;
+    fn try_into_fidl(self) -> Result<F, Self::IntoError>;
+}
+
+/// Utility trait for infallible FIDL conversion.
+pub trait FromFidlExt<F>: FidlCompatible<F, FromError = never::Never> {
+    fn from_fidl(fidl: F) -> Self {
+        match Self::try_from_fidl(fidl) {
+            Ok(slf) => slf,
+            Err(err) => match err {},
+        }
+    }
+}
+/// Utility trait for infallible FIDL conversion.
+pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = never::Never> {
+    fn into_fidl(self) -> F {
+        match self.try_into_fidl() {
+            Ok(fidl) => fidl,
+            Err(err) => match err {},
+        }
+    }
+}
+
+impl<F, C: FidlCompatible<F, IntoError = never::Never>> IntoFidlExt<F> for C {}
+impl<F, C: FidlCompatible<F, FromError = never::Never>> FromFidlExt<F> for C {}
+
+impl FidlCompatible<fidl_fuchsia_net::Ipv4Address> for Ipv4Addr {
+    type FromError = never::Never;
+    type IntoError = never::Never;
+
+    fn try_from_fidl(fidl: fidl_fuchsia_net::Ipv4Address) -> Result<Self, Self::FromError> {
+        Ok(Ipv4Addr::from(fidl.addr))
+    }
+
+    fn try_into_fidl(self) -> Result<fidl_fuchsia_net::Ipv4Address, Self::IntoError> {
+        Ok(fidl_fuchsia_net::Ipv4Address { addr: self.octets() })
+    }
+}
+
+impl FidlCompatible<Vec<fidl_fuchsia_net::Ipv4Address>> for Vec<Ipv4Addr> {
+    type FromError = never::Never;
+    type IntoError = never::Never;
+
+    fn try_from_fidl(fidl: Vec<fidl_fuchsia_net::Ipv4Address>) -> Result<Self, Self::FromError> {
+        Ok(fidl
+            .into_iter()
+            .filter_map(|addr| Ipv4Addr::try_from_fidl(addr).ok())
+            .collect::<Vec<Ipv4Addr>>())
+    }
+
+    fn try_into_fidl(self) -> Result<Vec<fidl_fuchsia_net::Ipv4Address>, Self::IntoError> {
+        Ok(self
+            .into_iter()
+            .filter_map(|addr| addr.try_into_fidl().ok())
+            .collect::<Vec<fidl_fuchsia_net::Ipv4Address>>())
+    }
+}
+
+// TODO(atait): Consider using a macro to reduce/eliminate the boilerplate in these implementations.
+impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
+    type FromError = ProtocolError;
+    type IntoError = ProtocolError;
+
+    fn try_into_fidl(self) -> Result<fidl_fuchsia_net_dhcp::Option_, Self::IntoError> {
+        match self {
+            DhcpOption::Pad() => Err(Self::IntoError::InvalidFidlOption(self)),
+            DhcpOption::End() => Err(Self::IntoError::InvalidFidlOption(self)),
+            DhcpOption::SubnetMask(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(v.into_fidl()))
+            }
+            DhcpOption::TimeOffset(v) => Ok(fidl_fuchsia_net_dhcp::Option_::TimeOffset(v)),
+            DhcpOption::Router(v) => Ok(fidl_fuchsia_net_dhcp::Option_::Router(v.into_fidl())),
+            DhcpOption::TimeServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::TimeServer(v.into_fidl()))
+            }
+            DhcpOption::NameServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NameServer(v.into_fidl()))
+            }
+            DhcpOption::DomainNameServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::DomainNameServer(v.into_fidl()))
+            }
+            DhcpOption::LogServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::LogServer(v.into_fidl()))
+            }
+            DhcpOption::CookieServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::CookieServer(v.into_fidl()))
+            }
+            DhcpOption::LprServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::LprServer(v.into_fidl()))
+            }
+            DhcpOption::ImpressServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::ImpressServer(v.into_fidl()))
+            }
+            DhcpOption::ResourceLocationServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::ResourceLocationServer(v.into_fidl()))
+            }
+            DhcpOption::HostName(v) => Ok(fidl_fuchsia_net_dhcp::Option_::HostName(v)),
+            DhcpOption::BootFileSize(v) => Ok(fidl_fuchsia_net_dhcp::Option_::BootFileSize(v)),
+            DhcpOption::MeritDumpFile(v) => Ok(fidl_fuchsia_net_dhcp::Option_::MeritDumpFile(v)),
+            DhcpOption::DomainName(v) => Ok(fidl_fuchsia_net_dhcp::Option_::DomainName(v)),
+            DhcpOption::SwapServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::SwapServer(v.into_fidl()))
+            }
+            DhcpOption::RootPath(v) => Ok(fidl_fuchsia_net_dhcp::Option_::RootPath(v)),
+            DhcpOption::ExtensionsPath(v) => Ok(fidl_fuchsia_net_dhcp::Option_::ExtensionsPath(v)),
+            DhcpOption::IpForwarding(v) => Ok(fidl_fuchsia_net_dhcp::Option_::IpForwarding(v)),
+            DhcpOption::NonLocalSourceRouting(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NonLocalSourceRouting(v))
+            }
+            DhcpOption::PolicyFilter(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::PolicyFilter(v.into_fidl()))
+            }
+            DhcpOption::MaxDatagramReassemblySize(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::MaxDatagramReassemblySize(v))
+            }
+            DhcpOption::DefaultIpTtl(v) => Ok(fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v)),
+            DhcpOption::PathMtuAgingTimeout(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::PathMtuAgingTimeout(v))
+            }
+            DhcpOption::PathMtuPlateauTable(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::PathMtuPlateauTable(v))
+            }
+            DhcpOption::InterfaceMtu(v) => Ok(fidl_fuchsia_net_dhcp::Option_::InterfaceMtu(v)),
+            DhcpOption::AllSubnetsLocal(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::AllSubnetsLocal(v))
+            }
+            DhcpOption::BroadcastAddress(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::BroadcastAddress(v.into_fidl()))
+            }
+            DhcpOption::PerformMaskDiscovery(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::PerformMaskDiscovery(v))
+            }
+            DhcpOption::MaskSupplier(v) => Ok(fidl_fuchsia_net_dhcp::Option_::MaskSupplier(v)),
+            DhcpOption::PerformRouterDiscovery(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::PerformRouterDiscovery(v))
+            }
+            DhcpOption::RouterSolicitationAddress(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::RouterSolicitationAddress(v.into_fidl()))
+            }
+            DhcpOption::StaticRoute(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::StaticRoute(v.into_fidl()))
+            }
+            DhcpOption::TrailerEncapsulation(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::TrailerEncapsulation(v))
+            }
+            DhcpOption::ArpCacheTimeout(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::ArpCacheTimeout(v))
+            }
+            DhcpOption::EthernetEncapsulation(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::EthernetEncapsulation(v))
+            }
+            DhcpOption::TcpDefaultTtl(v) => Ok(fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v)),
+            DhcpOption::TcpKeepaliveInterval(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveInterval(v))
+            }
+            DhcpOption::TcpKeepaliveGarbage(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveGarbage(v))
+            }
+            DhcpOption::NetworkInformationServiceDomain(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetworkInformationServiceDomain(v))
+            }
+            DhcpOption::NetworkInformationServers(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetworkInformationServers(v.into_fidl()))
+            }
+            DhcpOption::NetworkTimeProtocolServers(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetworkTimeProtocolServers(v.into_fidl()))
+            }
+            DhcpOption::VendorSpecificInformation(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::VendorSpecificInformation(v))
+            }
+            DhcpOption::NetBiosOverTcpipNameServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipNameServer(v.into_fidl()))
+            }
+            DhcpOption::NetBiosOverTcpipDatagramDistributionServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipDatagramDistributionServer(
+                    v.into_fidl(),
+                ))
+            }
+            DhcpOption::NetBiosOverTcpipNodeType(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipNodeType(v.into_fidl()))
+            }
+            DhcpOption::NetBiosOverTcpipScope(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipScope(v))
+            }
+            DhcpOption::XWindowSystemFontServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::XWindowSystemFontServer(v.into_fidl()))
+            }
+            DhcpOption::XWindowSystemDisplayManager(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::XWindowSystemDisplayManager(v.into_fidl()))
+            }
+            DhcpOption::NetworkInformationServicePlusDomain(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NetworkInformationServicePlusDomain(v))
+            }
+            DhcpOption::NetworkInformationServicePlusServers(v) => Ok(
+                fidl_fuchsia_net_dhcp::Option_::NetworkInformationServicePlusServers(v.into_fidl()),
+            ),
+            DhcpOption::MobileIpHomeAgent(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::MobileIpHomeAgent(v.into_fidl()))
+            }
+            DhcpOption::SmtpServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::SmtpServer(v.into_fidl()))
+            }
+            DhcpOption::Pop3Server(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::Pop3Server(v.into_fidl()))
+            }
+            DhcpOption::NntpServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::NntpServer(v.into_fidl()))
+            }
+            DhcpOption::DefaultWwwServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::DefaultWwwServer(v.into_fidl()))
+            }
+            DhcpOption::DefaultFingerServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::DefaultFingerServer(v.into_fidl()))
+            }
+            DhcpOption::DefaultIrcServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::DefaultIrcServer(v.into_fidl()))
+            }
+            DhcpOption::StreetTalkServer(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::StreettalkServer(v.into_fidl()))
+            }
+            DhcpOption::StreetTalkDirectoryAssistanceServer(v) => Ok(
+                fidl_fuchsia_net_dhcp::Option_::StreettalkDirectoryAssistanceServer(v.into_fidl()),
+            ),
+            DhcpOption::RequestedIpAddress(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::IpAddressLeaseTime(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::OptionOverload(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::OptionOverload(v.into_fidl()))
+            }
+            DhcpOption::TftpServerName(v) => Ok(fidl_fuchsia_net_dhcp::Option_::TftpServerName(v)),
+            DhcpOption::BootfileName(v) => Ok(fidl_fuchsia_net_dhcp::Option_::BootfileName(v)),
+            DhcpOption::DhcpMessageType(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::ServerIdentifier(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::ParameterRequestList(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::Message(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::MaxDhcpMessageSize(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::MaxDhcpMessageSize(v))
+            }
+            DhcpOption::RenewalTimeValue(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(v))
+            }
+            DhcpOption::RebindingTimeValue(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::RebindingTimeValue(v))
+            }
+            DhcpOption::VendorClassIdentifier(_) => Err(ProtocolError::InvalidFidlOption(self)),
+            DhcpOption::ClientIdentifier(_) => Err(ProtocolError::InvalidFidlOption(self)),
+        }
+    }
+
+    fn try_from_fidl(v: fidl_fuchsia_net_dhcp::Option_) -> Result<Self, Self::FromError> {
+        match v {
+            fidl_fuchsia_net_dhcp::Option_::SubnetMask(v) => {
+                Ok(DhcpOption::SubnetMask(Ipv4Addr::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TimeOffset(v) => Ok(DhcpOption::TimeOffset(v)),
+            fidl_fuchsia_net_dhcp::Option_::Router(v) => {
+                Ok(DhcpOption::Router(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TimeServer(v) => {
+                Ok(DhcpOption::TimeServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NameServer(v) => {
+                Ok(DhcpOption::NameServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::DomainNameServer(v) => {
+                Ok(DhcpOption::DomainNameServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::LogServer(v) => {
+                Ok(DhcpOption::LogServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::CookieServer(v) => {
+                Ok(DhcpOption::CookieServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::LprServer(v) => {
+                Ok(DhcpOption::LprServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::ImpressServer(v) => {
+                Ok(DhcpOption::ImpressServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::ResourceLocationServer(v) => {
+                Ok(DhcpOption::ResourceLocationServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::HostName(v) => Ok(DhcpOption::HostName(v)),
+            fidl_fuchsia_net_dhcp::Option_::BootFileSize(v) => Ok(DhcpOption::BootFileSize(v)),
+            fidl_fuchsia_net_dhcp::Option_::MeritDumpFile(v) => Ok(DhcpOption::MeritDumpFile(v)),
+            fidl_fuchsia_net_dhcp::Option_::DomainName(v) => Ok(DhcpOption::DomainName(v)),
+            fidl_fuchsia_net_dhcp::Option_::SwapServer(v) => {
+                Ok(DhcpOption::SwapServer(Ipv4Addr::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::RootPath(v) => Ok(DhcpOption::RootPath(v)),
+            fidl_fuchsia_net_dhcp::Option_::ExtensionsPath(v) => Ok(DhcpOption::ExtensionsPath(v)),
+            fidl_fuchsia_net_dhcp::Option_::IpForwarding(v) => Ok(DhcpOption::IpForwarding(v)),
+            fidl_fuchsia_net_dhcp::Option_::NonLocalSourceRouting(v) => {
+                Ok(DhcpOption::NonLocalSourceRouting(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::PolicyFilter(v) => {
+                Ok(DhcpOption::PolicyFilter(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::MaxDatagramReassemblySize(v) => {
+                Ok(DhcpOption::MaxDatagramReassemblySize(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v) => Ok(DhcpOption::DefaultIpTtl(v)),
+            fidl_fuchsia_net_dhcp::Option_::PathMtuAgingTimeout(v) => {
+                Ok(DhcpOption::PathMtuAgingTimeout(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::PathMtuPlateauTable(v) => {
+                Ok(DhcpOption::PathMtuPlateauTable(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::InterfaceMtu(v) => Ok(DhcpOption::InterfaceMtu(v)),
+            fidl_fuchsia_net_dhcp::Option_::AllSubnetsLocal(v) => {
+                Ok(DhcpOption::AllSubnetsLocal(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::BroadcastAddress(v) => {
+                Ok(DhcpOption::BroadcastAddress(Ipv4Addr::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::PerformMaskDiscovery(v) => {
+                Ok(DhcpOption::PerformMaskDiscovery(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::MaskSupplier(v) => Ok(DhcpOption::MaskSupplier(v)),
+            fidl_fuchsia_net_dhcp::Option_::PerformRouterDiscovery(v) => {
+                Ok(DhcpOption::PerformRouterDiscovery(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::RouterSolicitationAddress(v) => {
+                Ok(DhcpOption::RouterSolicitationAddress(Ipv4Addr::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::StaticRoute(v) => {
+                Ok(DhcpOption::StaticRoute(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TrailerEncapsulation(v) => {
+                Ok(DhcpOption::TrailerEncapsulation(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::ArpCacheTimeout(v) => {
+                Ok(DhcpOption::ArpCacheTimeout(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::EthernetEncapsulation(v) => {
+                Ok(DhcpOption::EthernetEncapsulation(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v) => Ok(DhcpOption::TcpDefaultTtl(v)),
+            fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveInterval(v) => {
+                Ok(DhcpOption::TcpKeepaliveInterval(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveGarbage(v) => {
+                Ok(DhcpOption::TcpKeepaliveGarbage(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetworkInformationServiceDomain(v) => {
+                Ok(DhcpOption::NetworkInformationServiceDomain(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetworkInformationServers(v) => {
+                Ok(DhcpOption::NetworkInformationServers(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetworkTimeProtocolServers(v) => {
+                Ok(DhcpOption::NetworkTimeProtocolServers(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::VendorSpecificInformation(v) => {
+                Ok(DhcpOption::VendorSpecificInformation(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipNameServer(v) => {
+                Ok(DhcpOption::NetBiosOverTcpipNameServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipDatagramDistributionServer(v) => {
+                Ok(DhcpOption::NetBiosOverTcpipDatagramDistributionServer(
+                    Vec::<Ipv4Addr>::from_fidl(v),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipNodeType(v) => {
+                Ok(DhcpOption::NetBiosOverTcpipNodeType(NodeType::try_from_fidl(v)?))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipScope(v) => {
+                Ok(DhcpOption::NetBiosOverTcpipScope(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::XWindowSystemFontServer(v) => {
+                Ok(DhcpOption::XWindowSystemFontServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::XWindowSystemDisplayManager(v) => {
+                Ok(DhcpOption::XWindowSystemDisplayManager(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetworkInformationServicePlusDomain(v) => {
+                Ok(DhcpOption::NetworkInformationServicePlusDomain(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NetworkInformationServicePlusServers(v) => {
+                Ok(DhcpOption::NetworkInformationServicePlusServers(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::MobileIpHomeAgent(v) => {
+                Ok(DhcpOption::MobileIpHomeAgent(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::SmtpServer(v) => {
+                Ok(DhcpOption::SmtpServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::Pop3Server(v) => {
+                Ok(DhcpOption::Pop3Server(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::NntpServer(v) => {
+                Ok(DhcpOption::NntpServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::DefaultWwwServer(v) => {
+                Ok(DhcpOption::DefaultWwwServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::DefaultFingerServer(v) => {
+                Ok(DhcpOption::DefaultFingerServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::DefaultIrcServer(v) => {
+                Ok(DhcpOption::DefaultIrcServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::StreettalkServer(v) => {
+                Ok(DhcpOption::StreetTalkServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::StreettalkDirectoryAssistanceServer(v) => {
+                Ok(DhcpOption::StreetTalkDirectoryAssistanceServer(Vec::<Ipv4Addr>::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::OptionOverload(v) => {
+                Ok(DhcpOption::OptionOverload(Overload::from_fidl(v)))
+            }
+            fidl_fuchsia_net_dhcp::Option_::TftpServerName(v) => Ok(DhcpOption::TftpServerName(v)),
+            fidl_fuchsia_net_dhcp::Option_::BootfileName(v) => Ok(DhcpOption::BootfileName(v)),
+            fidl_fuchsia_net_dhcp::Option_::MaxDhcpMessageSize(v) => {
+                Ok(DhcpOption::MaxDhcpMessageSize(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(v) => {
+                Ok(DhcpOption::RenewalTimeValue(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::RebindingTimeValue(v) => {
+                Ok(DhcpOption::RebindingTimeValue(v))
+            }
+            fidl_fuchsia_net_dhcp::Option_::__UnknownVariant { .. } => {
+                Err(ProtocolError::UnknownFidlOption)
+            }
+        }
+    }
+}
+
 /// A NetBIOS over TCP/IP Node Type.
 ///
 /// This enum and the values of its variants corresponds to the DHCP option defined
@@ -1131,6 +1666,30 @@ impl Into<u8> for NodeType {
     }
 }
 
+impl FidlCompatible<fidl_fuchsia_net_dhcp::NodeTypes> for NodeType {
+    type FromError = ProtocolError;
+    type IntoError = never::Never;
+
+    fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::NodeTypes) -> Result<NodeType, Self::FromError> {
+        match fidl {
+            fidl_fuchsia_net_dhcp::NodeTypes::BNode => Ok(NodeType::BNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::PNode => Ok(NodeType::PNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::MNode => Ok(NodeType::MNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::HNode => Ok(NodeType::HNode),
+            other => Err(ProtocolError::InvalidNodeType(other.bits())),
+        }
+    }
+
+    fn try_into_fidl(self) -> Result<fidl_fuchsia_net_dhcp::NodeTypes, Self::IntoError> {
+        match self {
+            NodeType::BNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::BNode),
+            NodeType::PNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::PNode),
+            NodeType::MNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::MNode),
+            NodeType::HNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::HNode),
+        }
+    }
+}
+
 /// The DHCP message fields to use for storing additional options.
 ///
 /// A DHCP client can indicate that it wants to use the File or SName fields of
@@ -1155,6 +1714,29 @@ impl TryFrom<u8> for Overload {
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
         <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidOverload(n))
+    }
+}
+
+impl FidlCompatible<fidl_fuchsia_net_dhcp::OptionOverloadValue> for Overload {
+    type FromError = never::Never;
+    type IntoError = never::Never;
+
+    fn try_from_fidl(
+        fidl: fidl_fuchsia_net_dhcp::OptionOverloadValue,
+    ) -> Result<Self, Self::FromError> {
+        match fidl {
+            fidl_fuchsia_net_dhcp::OptionOverloadValue::File => Ok(Overload::File),
+            fidl_fuchsia_net_dhcp::OptionOverloadValue::Sname => Ok(Overload::SName),
+            fidl_fuchsia_net_dhcp::OptionOverloadValue::Both => Ok(Overload::Both),
+        }
+    }
+
+    fn try_into_fidl(self) -> Result<fidl_fuchsia_net_dhcp::OptionOverloadValue, Self::IntoError> {
+        match self {
+            Overload::File => Ok(fidl_fuchsia_net_dhcp::OptionOverloadValue::File),
+            Overload::SName => Ok(fidl_fuchsia_net_dhcp::OptionOverloadValue::Sname),
+            Overload::Both => Ok(fidl_fuchsia_net_dhcp::OptionOverloadValue::Both),
+        }
     }
 }
 

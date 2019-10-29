@@ -169,11 +169,14 @@ impl ServerDispatcher for CannedDispatcher {
             max: None,
         }))
     }
-    fn dispatch_set_option(&self, _value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status> {
+    fn dispatch_set_option(
+        &mut self,
+        _value: fidl_fuchsia_net_dhcp::Option_,
+    ) -> Result<(), Status> {
         Ok(())
     }
     fn dispatch_set_parameter(
-        &self,
+        &mut self,
         _value: fidl_fuchsia_net_dhcp::Parameter,
     ) -> Result<(), Status> {
         Ok(())
@@ -206,14 +209,20 @@ async fn run_server<S: ServerDispatcher>(
                     ),
                     fidl_fuchsia_net_dhcp::Server_Request::SetOption { value: v, responder: r } => {
                         r.send(
-                            &mut server.borrow().dispatch_set_option(v).map_err(|e| e.into_raw()),
+                            &mut server
+                                .borrow_mut()
+                                .dispatch_set_option(v)
+                                .map_err(|e| e.into_raw()),
                         )
                     }
                     fidl_fuchsia_net_dhcp::Server_Request::SetParameter {
                         value: v,
                         responder: r,
                     } => r.send(
-                        &mut server.borrow().dispatch_set_parameter(v).map_err(|e| e.into_raw()),
+                        &mut server
+                            .borrow_mut()
+                            .dispatch_set_parameter(v)
+                            .map_err(|e| e.into_raw()),
                     ),
                     fidl_fuchsia_net_dhcp::Server_Request::ListOptions { responder: r } => r.send(
                         &mut server.borrow().dispatch_list_options().map_err(|e| e.into_raw()),
