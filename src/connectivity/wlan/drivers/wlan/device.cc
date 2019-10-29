@@ -320,10 +320,10 @@ zx_status_t Device::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   ZX_DEBUG_ASSERT(ifc != nullptr);
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (ethernet_proxy_ != nullptr) {
+  if (ethernet_proxy_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  ethernet_proxy_.reset(new ddk::EthernetIfcProtocolClient(ifc));
+  ethernet_proxy_ = ddk::EthernetIfcProtocolClient(ifc);
   return ZX_OK;
 }
 
@@ -331,7 +331,7 @@ void Device::EthernetImplStop() {
   debugfn();
 
   std::lock_guard<std::mutex> lock(lock_);
-  if (ethernet_proxy_ == nullptr) {
+  if (!ethernet_proxy_.is_valid()) {
     warnf("ethmac not started\n");
   }
   std::lock_guard<std::mutex> guard(packet_queue_lock_);
@@ -341,7 +341,7 @@ void Device::EthernetImplStop() {
     if (packet->peer() == Packet::Peer::kEthernet) {
       auto netbuf = std::move(packet->ext_data());
       ZX_DEBUG_ASSERT(netbuf != std::nullopt);
-      ZX_DEBUG_ASSERT(ethernet_proxy_ != nullptr);
+      ZX_DEBUG_ASSERT(ethernet_proxy_.is_valid());
       if (netbuf != std::nullopt) {
         netbuf->Complete(ZX_ERR_CANCELED);
       }
@@ -351,7 +351,7 @@ void Device::EthernetImplStop() {
       packet_queue_.Enqueue(std::move(packet));
     }
   }
-  ethernet_proxy_.reset();
+  ethernet_proxy_.clear();
 }
 
 void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
@@ -476,8 +476,8 @@ zx_status_t Device::DeliverEthernet(fbl::Span<const uint8_t> eth_frame) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (ethernet_proxy_ != nullptr) {
-    ethernet_proxy_->Recv(eth_frame.data(), eth_frame.size(), 0u);
+  if (ethernet_proxy_.is_valid()) {
+    ethernet_proxy_.Recv(eth_frame.data(), eth_frame.size(), 0u);
   }
   return ZX_OK;
 }
@@ -608,8 +608,8 @@ zx_status_t Device::SetStatus(uint32_t status) {
 
 void Device::SetStatusLocked(uint32_t status) {
   state_->set_online(status == ETHERNET_STATUS_ONLINE);
-  if (ethernet_proxy_ != nullptr) {
-    ethernet_proxy_->Status(status);
+  if (ethernet_proxy_.is_valid()) {
+    ethernet_proxy_.Status(status);
   }
 }
 
@@ -735,7 +735,7 @@ void Device::MainLoop() {
                 // ethernet driver somehow decided to send frame after itself is
                 // stopped, drop them as we cannot return the netbuf via
                 // CompleteTx.
-                if (ethernet_proxy_ == nullptr) {
+                if (!ethernet_proxy_.is_valid()) {
                   continue;
                 }
                 netbuf = std::move(packet->ext_data());

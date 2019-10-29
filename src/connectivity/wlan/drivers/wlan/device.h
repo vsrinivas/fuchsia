@@ -140,7 +140,7 @@ class Device : public DeviceInterface {
   zx_device_t* ethdev_ = nullptr;
 
   WlanmacProxy wlanmac_proxy_;
-  fbl::unique_ptr<ddk::EthernetIfcProtocolClient> ethernet_proxy_;
+  ddk::EthernetIfcProtocolClient ethernet_proxy_{};
 
   wlanmac_info_t wlanmac_info_ = {};
   fbl::RefPtr<DeviceState> state_;
