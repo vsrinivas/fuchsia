@@ -688,7 +688,7 @@ struct SensorAxis {
 // if we ever see mice with more buttons.
 constexpr uint32_t MOUSE_MAX_NUM_BUTTONS = 32u;
 
-constexpr uint32_t MAX_DEVICE_REPORT_COUNT = 128u;
+constexpr uint32_t MAX_DEVICE_REPORT_COUNT = 50u;
 
 constexpr uint32_t MAX_DEVICE_NAME_LENGTH = 256u;
 
@@ -754,7 +754,7 @@ class InputDevice final {
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 143360;
+    static constexpr uint32_t MaxOutOfLine = 56000;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

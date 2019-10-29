@@ -53,7 +53,13 @@ class InputReportInstance : public InstanceDeviceType,
  private:
   fbl::Mutex report_lock_;
   zx::event reports_event_ __TA_GUARDED(report_lock_);
+  // The ring buffer stores the hid reports as they are sent to the instance.
   fbl::RingBuffer<hid_input_report::Report, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_data_
+      __TA_GUARDED(report_lock_);
+  // These two arrays store the information to build the FIDL tables.
+  std::array<hid_input_report::FidlReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_fidl_data_
+      __TA_GUARDED(report_lock_);
+  std::array<llcpp_report::InputReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_
       __TA_GUARDED(report_lock_);
 
   InputReportBase* base_ = nullptr;

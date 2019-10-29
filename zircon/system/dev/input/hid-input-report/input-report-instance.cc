@@ -67,23 +67,16 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer)
 
 void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
   fbl::AutoLock lock(&report_lock_);
-  // These two arrays store the information to build the FIDL tables.
-  std::array<llcpp_report::InputReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports;
-  std::array<hid_input_report::FidlReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_fidl_data;
-
-  // TODO(dgilhooley): |reports_data| can be removed if RingBuffer supports indexing.
-  std::array<hid_input_report::Report, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_data;
 
   size_t index = 0;
   zx_status_t status = ZX_OK;
   while (!reports_data_.empty()) {
-    reports_data[index] = std::move(reports_data_.front());
+    status = hid_input_report::SetFidlReport(reports_data_.front(), &reports_fidl_data_[index]);
     reports_data_.pop();
-    status = hid_input_report::SetFidlReport(reports_data[index], &reports_fidl_data[index]);
     if (status != ZX_OK) {
       break;
     }
-    reports[index] = reports_fidl_data[index].report_builder.view();
+    reports_[index] = reports_fidl_data_[index].report_builder.view();
     index++;
   }
 
@@ -91,7 +84,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
     reports_event_.signal(DEV_STATE_READABLE, 0);
   }
 
-  fidl::VectorView<llcpp_report::InputReport> report_view(reports.data(), index);
+  fidl::VectorView<llcpp_report::InputReport> report_view(reports_.data(), index);
   _completer.Reply(report_view);
 }
 

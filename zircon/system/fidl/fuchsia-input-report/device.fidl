@@ -6,7 +6,7 @@ library fuchsia.input.report;
 
 using zx;
 
-const uint32 MAX_DEVICE_REPORT_COUNT = 128;
+const uint32 MAX_DEVICE_REPORT_COUNT = 50;
 
 /// An |InputDevice| driver represents a single physical input device.
 /// The InputDevice maintains an internal FIFO of |MAX_DEVICE_REPORT_COUNT|
