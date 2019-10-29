@@ -386,6 +386,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Bti:          "Bti",
 	types.Channel:      "Channel",
+	types.DebugLog:     "DebugLog",
 	types.Event:        "Event",
 	types.Eventpair:    "EventPair",
 	types.Exception:    "Exception",
@@ -395,7 +396,6 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Interrupt:    "Interrupt",
 	types.Iommu:        "Iommu",
 	types.Job:          "Job",
-	types.Log:          "Log",
 	types.Pager:        "Pager",
 	types.PciDevice:    "PciDevice",
 	types.Pmt:          "Pmt",

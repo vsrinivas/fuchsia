@@ -45,6 +45,13 @@ static const ::fidl::FidlUnionField Fields23test_name_ExplicitUnion[] = {
 constexpr static inline const ::fidl::FidlCodedUnion* test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields23test_name_ExplicitUnion, 2u, 8u, 24u, "test.name/ExplicitUnion", test_name_ExplicitUnionAltTypePointerTable()));
 
+static const ::fidl::FidlUnionField Fields23test_name_ExplicitUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 12u, 1u),
+    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields23test_name_ExplicitUnion, 2u, 8u, 24u, "test.name/ExplicitUnion", test_name_ExplicitUnionAltTypePointerTable()));
+
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_UnionTable;
@@ -78,6 +85,13 @@ static const ::fidl::FidlUnionField Fields26v1_test_name_ExplicitUnion[] = {
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields26v1_test_name_ExplicitUnion, 2u, 8u, 24u, nullptr, v1_test_name_ExplicitUnionAltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields26v1_test_name_ExplicitUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 4u, 1u),
+    ::fidl::FidlUnionField(&v1_String4294967295nonnullableTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields26v1_test_name_ExplicitUnion, 2u, 8u, 24u, "test.name/ExplicitUnion", v1_test_name_ExplicitUnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields26v1_test_name_ExplicitUnion[] = {
     ::fidl::FidlUnionField(nullptr, 4u, 1u),

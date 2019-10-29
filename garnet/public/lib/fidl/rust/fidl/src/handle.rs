@@ -21,12 +21,12 @@ pub mod fuchsia_handles {
     pub use zx::MessageBuf;
 
     pub use zx::Channel;
+    pub use zx::DebugLog;
     pub use zx::Event;
     pub use zx::EventPair;
     pub use zx::Fifo;
     pub use zx::Interrupt;
     pub use zx::Job;
-    pub use zx::Log;
     pub use zx::Port;
     pub use zx::Process;
     pub use zx::Resource;

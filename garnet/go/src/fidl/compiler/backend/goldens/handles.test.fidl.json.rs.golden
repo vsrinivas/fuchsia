@@ -29,7 +29,7 @@ pub struct Handles {
   pub plain_handle: fidl::Handle,
   pub bti_handle: fidl::Bti,
   pub channel_handle: fidl::Channel,
-  pub debuglog_handle: fidl::Log,
+  pub debuglog_handle: fidl::DebugLog,
   pub event_handle: fidl::Event,
   pub eventpair_handle: fidl::EventPair,
   pub exception_handle: fidl::Exception,
@@ -70,7 +70,7 @@ fidl_struct! {
       offset: 8,
     },
     debuglog_handle {
-      ty: fidl::Log,
+      ty: fidl::DebugLog,
       offset: 12,
     },
     event_handle {

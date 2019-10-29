@@ -184,6 +184,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Bti:          "zx_bti",
 	types.Channel:      "zx_chan",
+	types.DebugLog:     "zx_log",
 	types.Event:        "zx_event",
 	types.Eventpair:    "zx_eventpair",
 	types.Exception:    "zx_exception",
@@ -193,7 +194,6 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Interrupt:    "zx_interrupt",
 	types.Iommu:        "zx_iommu",
 	types.Job:          "zx_job",
-	types.Log:          "zx_log",
 	types.Pager:        "zx_pager",
 	types.PciDevice:    "zx_pcidevice",
 	types.Pmt:          "zx_pmt",

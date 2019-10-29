@@ -512,7 +512,7 @@ var handleTypes = map[types.HandleSubtype]string{
 	types.Channel: "_zx.Channel",
 	types.Event:   "_zx.Event",
 	types.Port:    "_zx.Port",
-	types.Log:     "_zx.Log",
+	types.DebugLog:"_zx.Log",
 	types.Socket:  "_zx.Socket",
 	types.Vmar:    "_zx.VMAR",
 }

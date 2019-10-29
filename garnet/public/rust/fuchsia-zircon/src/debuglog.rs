@@ -12,7 +12,7 @@ use fuchsia_zircon_sys as sys;
 /// An object representing a Zircon 'debuglog' object.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct DebugLog(Handle);
 impl_handle_based!(DebugLog);

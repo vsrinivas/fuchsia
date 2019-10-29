@@ -274,6 +274,18 @@ static const ::fidl::FidlXUnionField Fields41v1_v1_test_name_ExplicitXUnionNulla
 };
 const fidl_type_t v1_v1_test_name_ExplicitXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields41v1_v1_test_name_ExplicitXUnionNullableRef, ::fidl::kNullable, "test.name/ExplicitXUnion", ::fidl::kFlexible));
 
+static const ::fidl::FidlXUnionField Fields27v1_test_name_ExplicitXUnion[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt64Table,1u),
+    ::fidl::FidlXUnionField(&::fidl::internal::kFloat32Table,4u)
+};
+const fidl_type_t v1_test_name_ExplicitXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields27v1_test_name_ExplicitXUnion, ::fidl::kNonnullable, "test.name/ExplicitXUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlXUnionField Fields41v1_v1_test_name_ExplicitXUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt64Table,1u),
+    ::fidl::FidlXUnionField(&::fidl::internal::kFloat32Table,4u)
+};
+const fidl_type_t v1_v1_test_name_ExplicitXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields41v1_v1_test_name_ExplicitXUnionNullableRef, ::fidl::kNullable, "test.name/ExplicitXUnion", ::fidl::kFlexible));
+
 static const ::fidl::FidlStructField Fields18v1_test_name_Empty[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_EmptyAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_EmptyTable = fidl_type_t(::fidl::FidlCodedStruct(Fields18v1_test_name_Empty, 0u, 1u, nullptr, v1_test_name_EmptyAltTypePointerTable()));
