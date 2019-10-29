@@ -369,11 +369,6 @@ void Display::DisplayControllerImplSetDisplayControllerInterface(
 
 zx_status_t Display::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                          size_t offset) {
-  if (image->type != IMAGE_TYPE_SIMPLE) {
-    zxlogf(ERROR, "%s: invalid image type\n", kTag);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   auto color_buffer = std::make_unique<ColorBuffer>();
 
   // Linear images must be pinned.
@@ -432,7 +427,8 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
 
   uint64_t offset = collection_info.buffers[index].vmo_usable_start;
 
-  if (image->type == IMAGE_TYPE_SIMPLE) {
+  if (collection_info.settings.buffer_settings.heap !=
+      fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL) {
     return DisplayControllerImplImportVmoImage(image, std::move(vmo), offset);
   }
 
