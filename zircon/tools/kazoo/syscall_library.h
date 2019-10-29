@@ -331,14 +331,6 @@ class SyscallLibraryLoader {
   static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
 
   static std::unique_ptr<Enum> ConvertBitsOrEnumMember(const rapidjson::Value& json);
-
-  // TODO(syscall-fidl-transition): A temporary measure during transition that
-  // maps the possibly-arbitrary order that the syscalls are in in the JSON IR,
-  // and puts them into the order they are in in syscalls.abigen. This is useful
-  // so that any listing is diffable for comparing output. This is a temporary
-  // assistance for development, and will be removed once transition away from
-  // abigen is complete.
-  static bool MakeSyscallOrderMatchOldDeclarationOrder(SyscallLibrary* library);
 };
 
 #endif  // TOOLS_KAZOO_SYSCALL_LIBRARY_H_

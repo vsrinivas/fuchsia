@@ -53,7 +53,6 @@ function show_if_changed() {
 # then this will note any differences from master vs. the current work.
 if [ -d "/tmp/kazoo-previous/" ]; then
   show_if_changed "arm-asm.S"
-  show_if_changed "arm-asm.S"
   show_if_changed "syscall-category.inc"
   show_if_changed "definitions.json"
   show_if_changed "kernel-branches.S"
