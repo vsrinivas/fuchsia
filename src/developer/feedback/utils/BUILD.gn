@@ -24,6 +24,18 @@ source_set("archive") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("inspect_node_manager") {
+  sources = [
+    "inspect_node_manager.cc",
+    "inspect_node_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("time") {
   sources = [
     "time.cc",

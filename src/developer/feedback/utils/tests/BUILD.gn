@@ -18,6 +18,9 @@ test_package("feedback_utils_tests") {
       name = "archive_unittest"
     },
     {
+      name = "inspect_node_manager_unittest"
+    },
+    {
       name = "time_unittest"
     },
   ]
@@ -32,6 +35,7 @@ test_package("feedback_utils_tests") {
 
   deps = [
     ":archive_unittest",
+    ":inspect_node_manager_unittest",
     ":time_unittest",
   ]
 }
@@ -55,6 +59,23 @@ executable("archive_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("inspect_node_manager_unittest") {
+  testonly = true
+
+  sources = [
+    "inspect_node_manager_unittest.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

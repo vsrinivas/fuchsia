@@ -1,0 +1,99 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
+
+#include <lib/inspect/cpp/vmo/types.h>
+
+#include <map>
+#include <string>
+#include <vector>
+
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
+
+namespace feedback {
+
+// Manage Inspect nodes, allowing access using paths relative to the inspect root. Nodes are
+// created lazily upon request to get a node or one of its children.
+//
+// NOTE: Paths are incredilby strict and a malformed path will cause a CHECK-FAIL. A malformed
+// path is defined as:
+// * being empty
+// * not starting with '/'
+// * contains whitespace
+class InspectNodeManager {
+ public:
+  InspectNodeManager(inspect::Node* root_node) : root_(root_node) {}
+
+  // Get the Inspect node at the provided path, creating nodes along the way if need be.
+  //
+  // The process dies if the path is malformed.
+  inspect::Node* GetOrDie(const std::string& path);
+
+ private:
+  class ManagedNode;
+
+  class ManagedNodeBase {
+   public:
+    // Return true if the current node contains child.
+    bool HasChild(const std::string& child) const;
+
+    // Get a child of the current node. If the child doesn't exist, create it.
+    ManagedNode& GetChild(const std::string& child);
+
+    virtual inspect::Node* GetNode() = 0;
+
+   protected:
+    std::map<std::string, ManagedNode> children_;
+  };
+
+  class ManagedNode : public ManagedNodeBase {
+   public:
+    ManagedNode(inspect::Node node) : node_(std::move(node)) {}
+
+    // Allow moving, disallow copying.
+    ManagedNode(ManagedNode&& other) = default;
+    ManagedNode& operator=(ManagedNode&& other) noexcept;
+    ManagedNode(const ManagedNode& other) = delete;
+    ManagedNode& operator=(const ManagedNode other) = delete;
+
+    inspect::Node* GetNode() override { return &node_; }
+
+   private:
+    inspect::Node node_;
+  };
+
+  class RootManagedNode : public ManagedNodeBase {
+   public:
+    RootManagedNode(inspect::Node* root_node) : node_(root_node) {}
+
+    inspect::Node* GetNode() override { return node_; }
+
+   private:
+    inspect::Node* node_;
+
+    FXL_DISALLOW_COPY_AND_ASSIGN(RootManagedNode);
+  };
+
+  RootManagedNode root_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(InspectNodeManager);
+};
+
+namespace internal {
+
+// Splits a path on '/'.
+//
+// E.g., SplitPathOfDie("/foo/bar/baz") -> {"foo", "bar", "baz"}
+//
+// The process dies if the path is malformed (as defined above).
+std::vector<fxl::StringView> SplitPathOrDie(const std::string& path);
+
+}  // namespace internal
+
+}  // namespace feedback
+
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/inspect_node_manager_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
