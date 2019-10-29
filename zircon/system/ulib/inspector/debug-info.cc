@@ -100,7 +100,6 @@ static void get_name(zx_handle_t handle, char* buf, size_t size) {
 
 static void print_exception_report(FILE* out, const zx_exception_report_t& report,
                                    const zx_thread_state_general_regs* regs) {
-
   inspector::decoded_registers decoded = inspector::decode_registers(regs);
 
   if (report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
@@ -205,8 +204,8 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
 
   // Check if the process is on an exception.
   zx_exception_report_t report;
-  status = thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report),
-                            nullptr, nullptr);
+  status =
+      thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr);
 
   // ZX_OK means the thread is in a valid exception state.
   if (status == ZX_OK) {
@@ -221,8 +220,8 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
       fatal = "";
     }
 
-    fprintf(out, "<== %s: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal,
-            process_name, pid, thread_name, tid);
+    fprintf(out, "<== %s: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal, process_name,
+            pid, thread_name, tid);
     inspector::print_exception_report(out, report, &regs);
 
 #if defined(__x86_64__)
@@ -356,8 +355,9 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
       continue;
 
     // If the thread is in an exception, it was already printed by the previous loop.
-    if (thread_infos[i].state == ZX_THREAD_STATE_BLOCKED_EXCEPTION)
+    if (thread_infos[i].state == ZX_THREAD_STATE_BLOCKED_EXCEPTION) {
       continue;
+    }
 
     zx::thread& child = thread_handles[i];
 

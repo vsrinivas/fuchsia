@@ -127,6 +127,7 @@ group("helper_executables") {
   testonly = true
 
   public_deps = [
+    ":backtrace_request",
     ":debug_test_false",
     ":debug_test_true",
     ":hw_breakpointer",
@@ -137,6 +138,17 @@ group("helper_executables") {
     ":process_loop",
     ":process_spawner",
     ":thread_signals",
+  ]
+}
+
+executable("backtrace_request") {
+  sources = [
+    "backtrace_request.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/backtrace-request",
+    "//zircon/public/lib/zx",
   ]
 }
 

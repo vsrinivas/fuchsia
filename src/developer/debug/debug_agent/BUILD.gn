@@ -277,6 +277,9 @@ test_package("debug_agent_tests") {
   # Test binaries
   binaries += [
     {
+      name = "backtrace_request"
+    },
+    {
       name = "debug_test_false"
     },
     {
