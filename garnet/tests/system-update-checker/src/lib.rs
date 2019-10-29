@@ -95,23 +95,34 @@ impl TestEnv {
 
 struct MockPaver {
     response: Status,
-    was_called_sender: mpsc::UnboundedSender<()>,
-    was_called: Mutex<mpsc::UnboundedReceiver<()>>,
+    set_active_configuration_healthy_was_called_sender: mpsc::UnboundedSender<()>,
+    set_active_configuration_healthy_was_called: Mutex<mpsc::UnboundedReceiver<()>>,
 }
 
 impl MockPaver {
     fn new(response: Status) -> Self {
-        let (was_called_sender, was_called) = mpsc::unbounded();
-        Self { response, was_called_sender, was_called: Mutex::new(was_called) }
+        let (
+            set_active_configuration_healthy_was_called_sender,
+            set_active_configuration_healthy_was_called,
+        ) = mpsc::unbounded();
+        Self {
+            response,
+            set_active_configuration_healthy_was_called_sender,
+            set_active_configuration_healthy_was_called: Mutex::new(
+                set_active_configuration_healthy_was_called,
+            ),
+        }
     }
     async fn run_service(self: Arc<Self>, mut stream: PaverRequestStream) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
                 PaverRequest::SetActiveConfigurationHealthy { responder } => {
-                    self.was_called_sender.unbounded_send(()).expect("mpsc send");
+                    self.set_active_configuration_healthy_was_called_sender
+                        .unbounded_send(())
+                        .expect("mpsc send");
                     responder.send(self.response.clone().into_raw()).expect("send ok");
                 }
-                req => panic!("unhandled paver request: {:?}", req),
+                req => println!("mock Paver ignoring request: {:?}", req),
             }
         }
         Ok(())
@@ -123,8 +134,9 @@ impl MockPaver {
 async fn test_calls_paver_service() {
     let env = TestEnv::new(MockPaver::new(Status::OK));
 
-    let mut was_called = env.proxies.paver.was_called.lock();
-    assert_eq!(was_called.next().await, Some(()));
+    let mut set_active_configuration_healthy_was_called =
+        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
+    assert_eq!(set_active_configuration_healthy_was_called.next().await, Some(()));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -132,8 +144,9 @@ async fn test_calls_paver_service() {
 async fn test_channel_provider_get_current_works_after_paver_service_fails() {
     let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
 
-    let mut was_called = env.proxies.paver.was_called.lock();
-    was_called.next().await;
+    let mut set_active_configuration_healthy_was_called =
+        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
+    set_active_configuration_healthy_was_called.next().await;
 
     assert_eq!(
         env.proxies.channel_provider.get_current().await.expect("get_current"),
@@ -146,8 +159,9 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 async fn test_update_manager_get_state_works_after_paver_service_fails() {
     let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
 
-    let mut was_called = env.proxies.paver.was_called.lock();
-    was_called.next().await;
+    let mut set_active_configuration_healthy_was_called =
+        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
+    set_active_configuration_healthy_was_called.next().await;
 
     let state = env.proxies.update_manager.get_state().await.expect("get_state");
     assert_eq!(state.state, Some(ManagerState::Idle));
