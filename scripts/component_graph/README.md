@@ -22,6 +22,21 @@ python3 -m server
 python3 -m server --help
 >>>>>>> [tools] - Component Graph.
 ```
+## Search Commands
+The component graph search bar supports regex as well as a few useful search
+commands:
+
+The uses command will give you a list of all components that use that particular
+service.
+```
+uses:net.posix.Socket
+```
+
+The offers command will give you the component that offers that particular
+service.
+```
+offers:net.posix.Socket
+```
 
 ## Testing
 ```
