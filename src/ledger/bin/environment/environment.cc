@@ -6,7 +6,6 @@
 
 #include <lib/timekeeper/system_clock.h>
 
-#include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/bin/environment/thread_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -17,7 +16,7 @@
 namespace ledger {
 
 Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
-                         async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
+                         async_dispatcher_t* io_dispatcher,
                          sys::ComponentContext* component_context,
                          std::unique_ptr<coroutine::CoroutineService> coroutine_service,
                          BackoffFactory backoff_factory, NotificationFactory notification_factory,
@@ -28,7 +27,6 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
     : disable_statistics_(disable_statistics),
       dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
-      firebase_api_key_(std::move(firebase_api_key)),
       component_context_(component_context),
       coroutine_service_(std::move(coroutine_service)),
       backoff_factory_(std::move(backoff_factory)),
@@ -58,7 +56,7 @@ std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() { return backoff_fa
 
 std::unique_ptr<Notification> Environment::MakeNotification() { return notification_factory_(); }
 
-EnvironmentBuilder::EnvironmentBuilder() : firebase_api_key_(modular::kFirebaseApiKey) {}
+EnvironmentBuilder::EnvironmentBuilder() = default;
 
 EnvironmentBuilder::~EnvironmentBuilder() = default;
 
@@ -74,11 +72,6 @@ EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_dispatcher_t* dispatcher)
 
 EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_dispatcher_t* io_dispatcher) {
   io_dispatcher_ = io_dispatcher;
-  return *this;
-}
-
-EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(std::string firebase_api_key) {
-  firebase_api_key_ = std::move(firebase_api_key);
   return *this;
 }
 
@@ -145,8 +138,8 @@ Environment EnvironmentBuilder::Build() {
   if (!notification_factory_) {
     notification_factory_ = [] { return std::make_unique<ThreadNotification>(); };
   }
-  return Environment(disable_statistics_, dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
-                     component_context_, std::move(coroutine_service_), std::move(backoff_factory_),
+  return Environment(disable_statistics_, dispatcher_, io_dispatcher_, component_context_,
+                     std::move(coroutine_service_), std::move(backoff_factory_),
                      std::move(notification_factory_), std::move(clock_), std::move(random_),
                      gc_policy_, diff_compatibility_policy_);
 }

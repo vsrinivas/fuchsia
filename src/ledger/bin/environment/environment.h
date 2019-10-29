@@ -27,8 +27,7 @@ class Environment {
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
   using NotificationFactory = fit::function<std::unique_ptr<Notification>()>;
   Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
-              async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
-              sys::ComponentContext* component_context,
+              async_dispatcher_t* io_dispatcher, sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory, NotificationFactory notification_factory,
               std::unique_ptr<timekeeper::Clock> clock, std::unique_ptr<rng::Random> random,
@@ -45,8 +44,6 @@ class Environment {
 
   // Returns the async_dispatcher_t to be used for I/O operations.
   async_dispatcher_t* io_dispatcher() const { return io_dispatcher_; }
-
-  const std::string& firebase_api_key() const { return firebase_api_key_; };
 
   sys::ComponentContext* component_context() const { return component_context_; };
 
@@ -73,9 +70,6 @@ class Environment {
 
   // The async_dispatcher_t to be used for I/O operations.
   async_dispatcher_t* io_dispatcher_;
-
-  // The firebase API key.
-  std::string firebase_api_key_;
 
   sys::ComponentContext* component_context_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
@@ -104,7 +98,6 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetDisableStatistics(bool disable_statistics);
   EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
-  EnvironmentBuilder& SetFirebaseApiKey(std::string firebase_api_key);
   EnvironmentBuilder& SetStartupContext(sys::ComponentContext* component_context);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
@@ -122,7 +115,6 @@ class EnvironmentBuilder {
   bool disable_statistics_ = true;
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;
-  std::string firebase_api_key_;
   sys::ComponentContext* component_context_ = nullptr;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;

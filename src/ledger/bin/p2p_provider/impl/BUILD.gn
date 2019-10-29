@@ -32,7 +32,6 @@ source_set("impl") {
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
-    "//src/ledger/lib/firebase_auth",
     "//src/lib/backoff",
     "//src/lib/callback",
     "//src/lib/component/cpp:deprecated_service_provider",

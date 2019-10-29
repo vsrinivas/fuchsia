@@ -45,7 +45,6 @@ executable("integration") {
     "//src/ledger/bin/testing/overnet",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_memory_diff/cpp",
-    "//src/ledger/lib/firebase_auth/testing",
     "//src/ledger/lib/socket",
     "//src/lib/callback",
     "//src/lib/fsl",

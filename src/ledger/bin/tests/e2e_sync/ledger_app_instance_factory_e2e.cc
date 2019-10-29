@@ -40,7 +40,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
   std::string GetUserId() override;
 
-  SyncParams sync_params_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   cloud_provider_firestore::CloudProviderFactory cloud_provider_factory_;
 
@@ -56,7 +55,6 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
                                                   std::move(ledger_repository_factory),
                                                   std::move(inspect)),
-      sync_params_(sync_params),
       component_context_(sys::ComponentContext::Create()),
       cloud_provider_factory_(component_context_.get(), random, std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
@@ -73,8 +71,7 @@ void LedgerAppInstanceImpl::Init(
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_services.NewRequest();
-  *launch_info.arguments = {"--disable_reporting", "--disable_p2p_sync",
-                            "--firebase_api_key=" + sync_params_.api_key};
+  *launch_info.arguments = {"--disable_reporting", "--disable_p2p_sync"};
   ledger::AppendGarbageCollectionPolicyFlags(kTestingGarbageCollectionPolicy, &launch_info);
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());

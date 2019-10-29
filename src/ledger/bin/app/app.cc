@@ -41,13 +41,11 @@ namespace {
 
 constexpr fxl::StringView kNoStatisticsReportingFlag = "disable_reporting";
 constexpr fxl::StringView kNoPeerToPeerSync = "disable_p2p_sync";
-constexpr fxl::StringView kFirebaseApiKeyFlag = "firebase_api_key";
 
 struct AppParams {
   bool disable_statistics = false;
   bool disable_p2p_sync = false;
   storage::GarbageCollectionPolicy gc_policy = kDefaultGarbageCollectionPolicy;
-  std::string firebase_api_key = "";
 };
 
 struct InspectObjects {
@@ -102,10 +100,6 @@ class App : public ledger_internal::LedgerController {
         "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 
     EnvironmentBuilder builder;
-
-    if (!app_params_.firebase_api_key.empty()) {
-      builder.SetFirebaseApiKey(app_params_.firebase_api_key);
-    }
 
     environment_ =
         std::make_unique<Environment>(builder.SetDisableStatistics(app_params_.disable_statistics)
@@ -168,12 +162,6 @@ int Main(int argc, const char** argv) {
   app_params.disable_statistics = command_line.HasOption(kNoStatisticsReportingFlag);
   app_params.disable_p2p_sync = command_line.HasOption(kNoPeerToPeerSync);
   app_params.gc_policy = GarbageCollectionPolicyFromFlags(command_line);
-  if (command_line.HasOption(kFirebaseApiKeyFlag)) {
-    if (!command_line.GetOptionValue(kFirebaseApiKeyFlag, &app_params.firebase_api_key)) {
-      FXL_LOG(ERROR) << "Unable to retrieve the firebase api key.";
-      return 1;
-    }
-  }
 
   App app(app_params);
   if (!app.Start()) {

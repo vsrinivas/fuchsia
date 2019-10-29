@@ -21,7 +21,6 @@ source_set("sync") {
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",
