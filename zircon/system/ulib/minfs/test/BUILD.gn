@@ -27,12 +27,14 @@ zx_test("minfs-unit") {
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
+    "$zx/third_party/ulib/safemath",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
   configs += [ "$zx/public/gn/config:static-libc++" ]

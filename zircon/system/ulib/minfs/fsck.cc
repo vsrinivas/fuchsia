@@ -8,12 +8,15 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <map>
+#include <optional>
 #include <utility>
 
 #include <fs/journal/format.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 
+#include "lib/fit/string_view.h"
 #include "minfs-private.h"
 
 namespace minfs {
@@ -25,6 +28,57 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
+
+enum class BlockType { DirectBlock = 0, IndirectBlock, DoubleIndirectBlock };
+
+struct BlockInfo {
+  ino_t owner;     // Inode number that maps this block.
+  blk_t offset;    // Offset, in blocks, where this block is.
+  BlockType type;  // What is this block used as.
+};
+
+const std::string kBlockInfoDirectStr("direct");
+const std::string kBlockInfoIndirectStr("indirect");
+const std::string kBlockInfoDoubleIndirectStr("double indirect");
+
+// Given a type of block, returns human readable c-string for the block type.
+std::string BlockTypeToString(BlockType type) {
+  switch (type) {
+    case BlockType::DirectBlock:
+      return kBlockInfoDirectStr;
+    case BlockType::IndirectBlock:
+      return kBlockInfoIndirectStr;
+    case BlockType::DoubleIndirectBlock:
+      return kBlockInfoDoubleIndirectStr;
+    default:
+      ZX_ASSERT(false);
+  }
+}
+
+// Returns the logical block accessed from the "direct" structure within an inode.
+blk_t LogicalBlockDirect(blk_t direct) {
+  ZX_DEBUG_ASSERT(direct < kMinfsDirect);
+  return direct;
+}
+// Returns the logical block accessed from the "indirect" structure within an inode.
+// |direct| refers to the index within the indirect block.
+blk_t LogicalBlockIndirect(blk_t indirect, blk_t direct = 0) {
+  ZX_DEBUG_ASSERT(indirect < kMinfsIndirect);
+  ZX_DEBUG_ASSERT(direct < kMinfsDirectPerIndirect);
+  const blk_t start = kMinfsDirect;
+  return start + (indirect * kMinfsDirectPerIndirect) + direct;
+}
+// Returns the logical block accessed from the "doubly indirect" structure within an inode.
+// |indirect| refers to an index within the doubly_indirect block.
+// |direct| refers to an index within |indirect|.
+blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_t direct = 0) {
+  ZX_DEBUG_ASSERT(doubly_indirect < kMinfsDoublyIndirect);
+  ZX_DEBUG_ASSERT(indirect < kMinfsDirectPerIndirect);
+  ZX_DEBUG_ASSERT(direct < kMinfsDirectPerIndirect);
+  const blk_t start = kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect);
+  return start + (kMinfsDirectPerDindirect * doubly_indirect) +
+         (indirect * kMinfsDirectPerIndirect) + direct;
+}
 
 }  // namespace
 
@@ -63,12 +117,17 @@ class MinfsChecker {
   // bno unallocated.
   zx_status_t GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, blk_t* bno_out);
   zx_status_t CheckDirectory(Inode* inode, ino_t ino, ino_t parent, uint32_t flags);
-  const char* CheckDataBlock(blk_t bno);
+  std::optional<std::string> CheckDataBlock(blk_t bno, BlockInfo block_info);
   zx_status_t CheckFile(Inode* inode, ino_t ino);
 
   fbl::unique_ptr<Minfs> fs_;
   RawBitmap checked_inodes_;
   RawBitmap checked_blocks_;
+
+  // blk_info_ provides reverse lookup capability - a block number is mapped to
+  // a set of BlockInfo. The filesystem is inconsistent if a block has more than
+  // one <inode, offset, type>.
+  std::map<blk_t, std::vector<BlockInfo>> blk_info_;
 
   uint32_t alloc_inodes_;
   uint32_t alloc_blocks_;
@@ -286,22 +345,36 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
   return ZX_OK;
 }
 
-const char* MinfsChecker::CheckDataBlock(blk_t bno) {
+std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo block_info) {
   if (bno == 0) {
-    return "reserved bno";
+    return std::string("reserved bno");
   }
   if (bno >= fs_->Info().block_count) {
-    return "out of range";
+    return std::string("out of range");
   }
   if (!fs_->GetBlockAllocator()->CheckAllocated(bno)) {
-    return "not allocated";
+    return std::string("not allocated");
   }
   if (checked_blocks_.Get(bno, bno + 1)) {
-    return "double-allocated";
+    auto entries = blk_info_[bno].size();
+    // The entries are printed as
+    // "double-allocated"
+    // "  <ino: 4294967295, off: 4294967295 type: DI>\n"
+    std::string str("double-allocated\n");
+    for (size_t i = 0; i < entries; i++) {
+      str.append("  <ino: " + std::to_string(blk_info_[bno][i].owner) +
+                 ", off: " + std::to_string(blk_info_[bno][i].offset) +
+                 " type: " + BlockTypeToString(blk_info_[bno][i].type) + ">\n");
+    }
+    blk_info_[bno].push_back(block_info);
+    return str;
   }
   checked_blocks_.Set(bno, bno + 1);
+  std::vector<BlockInfo> vec;
+  vec.push_back(block_info);
+  blk_info_.insert(std::pair<blk_t, std::vector<BlockInfo>>(bno, vec));
   alloc_blocks_++;
-  return nullptr;
+  return std::nullopt;
 }
 
 zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
@@ -316,9 +389,11 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   // count and sanity-check indirect blocks
   for (unsigned n = 0; n < kMinfsIndirect; n++) {
     if (inode->inum[n]) {
-      const char* msg;
-      if ((msg = CheckDataBlock(inode->inum[n])) != nullptr) {
-        FS_TRACE_WARN("check: ino#%u: indirect block %u(@%u): %s\n", ino, n, inode->inum[n], msg);
+      BlockInfo block_info = {ino, LogicalBlockIndirect(n), BlockType::IndirectBlock};
+      auto msg = CheckDataBlock(inode->inum[n], block_info);
+      if (msg) {
+        FS_TRACE_WARN("check: ino#%u: indirect block %u(@%u): %s\n", ino, n, inode->inum[n],
+                      msg.value().c_str());
         conforming_ = false;
       }
       block_count++;
@@ -328,10 +403,11 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   // count and sanity-check doubly indirect blocks
   for (unsigned n = 0; n < kMinfsDoublyIndirect; n++) {
     if (inode->dinum[n]) {
-      const char* msg;
-      if ((msg = CheckDataBlock(inode->dinum[n])) != nullptr) {
+      BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n), BlockType::DoubleIndirectBlock};
+      auto msg = CheckDataBlock(inode->dinum[n], block_info);
+      if (msg) {
         FS_TRACE_WARN("check: ino#%u: doubly indirect block %u(@%u): %s\n", ino, n, inode->dinum[n],
-                      msg);
+                      msg.value().c_str());
         conforming_ = false;
       }
       block_count++;
@@ -345,9 +421,11 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 
       for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
         if (entry[m]) {
-          if ((msg = CheckDataBlock(entry[m])) != nullptr) {
+          BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n, m), BlockType::IndirectBlock};
+          msg = CheckDataBlock(entry[m], block_info);
+          if (msg) {
             FS_TRACE_WARN("check: ino#%u: indirect block (in dind) %u(@%u): %s\n", ino, m, entry[m],
-                          msg);
+                          msg.value().c_str());
             conforming_ = false;
           }
           block_count++;
@@ -380,9 +458,10 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
     if (bno) {
       next_blk = n + 1;
       block_count++;
-      const char* msg;
-      if ((msg = CheckDataBlock(bno)) != nullptr) {
-        FS_TRACE_WARN("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
+      BlockInfo block_info = {ino, n, BlockType::DirectBlock};
+      auto msg = CheckDataBlock(bno, block_info);
+      if (msg) {
+        FS_TRACE_WARN("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg.value().c_str());
         conforming_ = false;
       }
     }
