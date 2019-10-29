@@ -966,7 +966,7 @@ OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
     "        state:\x1B[32mzx_info_thread_t::state\x1B[0m: "
     "\x1B[34mZX_THREAD_STATE_BLOCKED_EXCEPTION\x1B[0m\n"
     "        "
-    "wait_exception_channel_type:\x1B[32mzx_info_thread_t::wait_exception_port_type\x1B[0m: "
+    "wait_exception_channel_type:\x1B[32mzx_info_thread_t::wait_exception_channel_type\x1B[0m: "
     "\x1B[34mZX_EXCEPTION_CHANNEL_TYPE_THREAD\x1B[0m\n"
     "        cpu_affinity_mask:\x1B[32mzx_cpu_set_t\x1B[0m: {\n"
     "          mask:\x1B[32muint64[]\x1B[0m: "

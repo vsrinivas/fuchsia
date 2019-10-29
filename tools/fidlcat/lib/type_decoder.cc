@@ -939,7 +939,7 @@ void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostrea
       os << ":" << colors.green << "duration" << colors.reset << ": ";
       break;
     case SyscallType::kExceptionChannelType:
-      os << ":" << colors.green << "zx_info_thread_t::wait_exception_port_type" << colors.reset
+      os << ":" << colors.green << "zx_info_thread_t::wait_exception_channel_type" << colors.reset
          << ": ";
       break;
     case SyscallType::kExceptionState:
