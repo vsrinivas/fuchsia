@@ -10,10 +10,13 @@
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/command_line_options.h"
+#include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 using namespace media::audio;
+
+constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
 
 int main(int argc, const char** argv) {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
@@ -29,6 +32,18 @@ int main(int argc, const char** argv) {
   if (!options.is_ok()) {
     return -1;
   }
+
+  auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
+  if (!process_config) {
+    FXL_LOG(INFO) << "No audio_core_config.json; using default configuration";
+    auto default_config = ProcessConfig::Builder()
+                              .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
+                                  VolumeCurve::kDefaultGainForMinVolume))
+                              .Build();
+    process_config = {std::move(default_config)};
+  }
+  FXL_CHECK(process_config);
+  auto config_handle = ProcessConfig::set_instance(std::move(*process_config));
 
   AudioCoreImpl impl(threading_model.get(), std::move(component_context), options.take_value());
   threading_model->RunAndJoinAllThreads();

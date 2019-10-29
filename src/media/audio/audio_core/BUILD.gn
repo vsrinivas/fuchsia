@@ -34,9 +34,9 @@ action_foreach("json_schema_headers") {
   ]
 
   sources = [
+    "schema/audio_core_config_schema.jsx",
     "schema/audio_device_settings_schema.jsx",
     "schema/audio_policy_schema.jsx",
-    "schema/volume_curve_schema.jsx",
   ]
 }
 

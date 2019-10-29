@@ -7,17 +7,18 @@
 
 #include <optional>
 
-#include "src/media/audio/audio_core/volume_curve.h"
+#include "src/media/audio/audio_core/process_config.h"
 
 namespace media::audio {
 
 class ProcessConfigLoader {
  public:
-  // Loads a volume curve from disk, defined according to volume_curve_schema.jsx. The curve is
-  // expected to be correct and defined at build time. This will panic if the curve file is invalid.
+  // Loads a ProcessConfig from disk, defined according to audio_core_config_schema.jsx. The config
+  // is expected to be correct and defined at build time. This will panic if the config file is
+  // invalid.
   //
-  // Returns the curve if the file was present, or std::nullopt if the file was not present.
-  static std::optional<VolumeCurve> LoadVolumeCurveFromDisk(const char* filename);
+  // Returns the ProcessConfig if the file was present, or std::nullopt if the file was not present.
+  static std::optional<ProcessConfig> LoadProcessConfig(const char* filename);
 };
 
 }  // namespace media::audio

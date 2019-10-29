@@ -7,19 +7,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/testing/matchers.h"
+
+using media::audio::testing::VolumeMappingEq;
 using testing::FloatEq;
 using testing::Matcher;
 using testing::Pointwise;
 
 namespace media::audio {
 namespace {
-
-MATCHER(VolumeMappingEq, "Equality matcher for VolumeMapping") {
-  return static_cast<Matcher<float>>(FloatEq(std::get<0>(arg).volume))
-             .MatchAndExplain(std::get<1>(arg).volume, result_listener) &&
-         static_cast<Matcher<float>>(FloatEq(std::get<0>(arg).gain_dbfs))
-             .MatchAndExplain(std::get<1>(arg).gain_dbfs, result_listener);
-}
 
 TEST(ProcessConfigTest, Build) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);

@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/testing/fake_routing.h"
 #include "src/media/audio/audio_core/testing/stub_stream_registry.h"
@@ -42,6 +43,10 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
  protected:
   void SetUp() override {
     testing::ThreadingModelFixture::SetUp();
+
+    auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
+    auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
+    config_handle_ = ProcessConfig::set_instance(process_config);
 
     renderer_ =
         AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &stream_registry_,
@@ -83,6 +88,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   AudioAdmin admin_;
   StreamVolumeManager volume_manager_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
+  ProcessConfig::Handle config_handle_;
 };
 
 constexpr zx::duration kMinLeadTime = zx::nsec(123456789);

@@ -16,17 +16,9 @@
 
 namespace media::audio {
 
-namespace {
-
-constexpr char kDefaultCurveFilename[] = "/config/data/default_volume_curve.json";
-
-const auto kDefaultCurve =
-    ProcessConfigLoader::LoadVolumeCurveFromDisk(kDefaultCurveFilename)
-        .value_or(VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume));
-
-}  // namespace
-
-const VolumeCurve& VolumeCurve::Default() { return {kDefaultCurve}; }
+const VolumeCurve& VolumeCurve::Default() {
+  return ProcessConfig::instance().default_volume_curve();
+}
 
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);

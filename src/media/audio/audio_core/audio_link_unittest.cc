@@ -8,6 +8,11 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/testing/matchers.h"
+
+using ::media::audio::testing::VolumeMappingEq;
+using ::testing::Pointwise;
 
 namespace media::audio {
 namespace {
@@ -49,15 +54,16 @@ TEST(AudioLinkTest, LinkObjectWithVolumeCurve) {
 TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
   const auto no_curve1 = fbl::AdoptRef(new MockObjectNoCurve());
   const auto no_curve2 = fbl::AdoptRef(new MockObjectNoCurve());
+  auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
+  auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
+  auto config_handle = ProcessConfig::set_instance(process_config);
 
   AudioLinkChild link(AudioLink::SourceType::Packet, no_curve1, no_curve2);
   // This passes by not crashing, to ensure we accept this valid case.
 
-  // A reasonable fallback curve should be loaded.
-  EXPECT_FLOAT_EQ(link.volume_curve().VolumeToDb(fuchsia::media::audio::MIN_VOLUME),
-                  fuchsia::media::audio::MUTED_GAIN_DB);
-  EXPECT_FLOAT_EQ(link.volume_curve().VolumeToDb(fuchsia::media::audio::MAX_VOLUME),
-                  Gain::kUnityGainDb);
+  // The default curve should be provided.
+  EXPECT_THAT(link.volume_curve().mappings(),
+              Pointwise(VolumeMappingEq(), default_curve.mappings()));
 }
 
 }  // namespace

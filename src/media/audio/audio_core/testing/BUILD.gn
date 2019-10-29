@@ -12,6 +12,7 @@ source_set("testing") {
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
     "fake_routing.h",
+    "matchers.h",
     "stub_device_registry.h",
     "stub_stream_registry.h",
     "threading_model_fixture.h",

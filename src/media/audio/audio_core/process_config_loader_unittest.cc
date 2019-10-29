@@ -13,34 +13,33 @@ namespace {
 
 constexpr char kTestVolumeCurveFilename[] = "/tmp/volume_curve.json";
 
-TEST(ProcessConfigLoaderTest, LoadVolumeCurve) {
-  static std::string kTestVolumeCurve =
-      R"JSON({
-    "volume_curve": [
-      {
-          "level": 0.0,
-          "db": -160.0
-      },
-      {
-          "level": 1.0,
-          "db": 0.0
-      }
-    ]
-  })JSON";
-  ASSERT_TRUE(
-      files::WriteFile(kTestVolumeCurveFilename, kTestVolumeCurve.data(), kTestVolumeCurve.size()));
+static const std::string kConfigWithVolumeCurve =
+    R"JSON({
+  "volume_curve": [
+    {
+        "level": 0.0,
+        "db": -160.0
+    },
+    {
+        "level": 1.0,
+        "db": 0.0
+    }
+  ]
+})JSON";
 
-  const auto maybe_curve = ProcessConfigLoader::LoadVolumeCurveFromDisk(kTestVolumeCurveFilename);
-  ASSERT_TRUE(maybe_curve.has_value());
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOnlyVolumeCurve) {
+  ASSERT_TRUE(files::WriteFile(kTestVolumeCurveFilename, kConfigWithVolumeCurve.data(),
+                               kConfigWithVolumeCurve.size()));
 
-  const auto& curve = maybe_curve.value();
-  EXPECT_FLOAT_EQ(curve.VolumeToDb(0.0), -160.0);
-  EXPECT_FLOAT_EQ(curve.VolumeToDb(1.0), 0.0);
+  const auto config = ProcessConfigLoader::LoadProcessConfig(kTestVolumeCurveFilename);
+  ASSERT_TRUE(config);
+  EXPECT_FLOAT_EQ(config->default_volume_curve().VolumeToDb(0.0), -160.0);
+  EXPECT_FLOAT_EQ(config->default_volume_curve().VolumeToDb(1.0), 0.0);
 }
 
-TEST(ProcessConfigLoaderTest, NulloptOnMissingVolumeCurve) {
-  const auto maybe_curve = ProcessConfigLoader::LoadVolumeCurveFromDisk("not-present-file");
-  ASSERT_FALSE(maybe_curve.has_value());
+TEST(ProcessConfigLoaderTest, NulloptOnMissingConfig) {
+  const auto config = ProcessConfigLoader::LoadProcessConfig("not-present-file");
+  ASSERT_FALSE(config);
 }
 
 }  // namespace
