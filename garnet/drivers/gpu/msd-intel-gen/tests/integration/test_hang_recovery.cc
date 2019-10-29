@@ -5,10 +5,13 @@
 #define MAGMA_DLOG_ENABLE 1
 
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/inflight_list.h"
@@ -19,25 +22,14 @@ namespace {
 
 constexpr uint32_t kValue = 0xabcddcba;
 
-class TestBase {
- public:
-  TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
-
-  int fd() { return fd_; }
-
-  ~TestBase() { close(fd_); }
-
- private:
-  int fd_;
-};
-
-class TestConnection : public TestBase {
+class TestConnection : public magma::TestDeviceBase {
  public:
   TestConnection() {
-    magma_create_connection(fd(), &connection_);
+    magma_create_connection2(device(), &connection_);
     DASSERT(connection_);
 
-    magma_status_t status = magma_query(fd(), kMsdIntelGenQueryExtraPageCount, &extra_page_count_);
+    magma_status_t status =
+        magma_query2(device(), kMsdIntelGenQueryExtraPageCount, &extra_page_count_);
     if (status != MAGMA_STATUS_OK) {
       DLOG("Failed to query kMsdIntelGenQueryExtraPageCount: %d", status);
       extra_page_count_ = 0;

@@ -5,12 +5,14 @@
 #define MAGMA_DLOG_ENABLE 1
 
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <poll.h>
 
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "helper/platform_device_helper.h"
+#include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
@@ -18,18 +20,6 @@
 #include "magma_vendor_queries.h"
 
 namespace {
-
-class TestBase {
- public:
-  TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
-
-  int fd() { return fd_; }
-
-  ~TestBase() { close(fd_); }
-
- private:
-  int fd_;
-};
 
 enum JobDescriptorType { kJobDescriptorTypeNop = 1 };
 
@@ -45,10 +35,10 @@ struct JobDescriptorHeader {
   uint64_t next_job;
 };
 
-class TestConnection : public TestBase {
+class TestConnection : public magma::TestDeviceBase {
  public:
   TestConnection() {
-    magma_create_connection(fd(), &connection_);
+    magma_create_connection2(device(), &connection_);
     DASSERT(connection_);
 
     magma_create_context(connection_, &context_id_);
@@ -64,7 +54,7 @@ class TestConnection : public TestBase {
   bool SupportsProtectedMode() {
     uint64_t value_out;
     EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_query(fd(), kMsdArmVendorQuerySupportsProtectedMode, &value_out));
+              magma_query2(device(), kMsdArmVendorQuerySupportsProtectedMode, &value_out));
     return !!value_out;
   }
 

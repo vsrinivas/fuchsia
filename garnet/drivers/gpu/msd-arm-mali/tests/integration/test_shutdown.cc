@@ -4,32 +4,21 @@
 
 #include <fcntl.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "helper/platform_device_helper.h"
+#include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 
 namespace {
 
-class TestBase {
+class TestConnection : public magma::TestDeviceBase {
  public:
-  TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
-
-  int fd() { return fd_; }
-
-  ~TestBase() { close(fd_); }
-
- private:
-  int fd_;
-};
-
-class TestConnection : public TestBase {
- public:
-  TestConnection() { magma_create_connection(fd(), &connection_); }
+  TestConnection() { magma_create_connection2(device(), &connection_); }
 
   ~TestConnection() {
     if (connection_)
@@ -79,14 +68,12 @@ static void test_shutdown(uint32_t iters) {
   for (uint32_t i = 0; i < iters; i++) {
     complete_count = 0;
 
-    TestBase test_base;
+    magma::TestDeviceBase test_base;
 
     {
       uint64_t is_supported = 0;
-      fdio_t* fdio = fdio_unsafe_fd_to_io(test_base.fd());
       zx_status_t status = fuchsia_gpu_magma_DeviceQuery(
-          fdio_unsafe_borrow_channel(fdio), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
-      fdio_unsafe_release(fdio);
+          test_base.channel()->get(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
       if (status != ZX_OK || !is_supported) {
         printf("Test restart not supported: status %d is_supported %lu\n", status, is_supported);
         return;
@@ -99,9 +86,7 @@ static void test_shutdown(uint32_t iters) {
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
         // Should replace this with a request to devmgr to restart the driver
-        fdio_t* fdio = fdio_unsafe_fd_to_io(test_base.fd());
-        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(fdio_unsafe_borrow_channel(fdio)));
-        fdio_unsafe_release(fdio);
+        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_base.channel()->get()));
 
         count += kRestartCount;
       }

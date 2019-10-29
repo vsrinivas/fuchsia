@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
+
 #include "gtest/gtest.h"
 #include "platform_handle.h"
 #include "platform_sysmem_connection.h"
@@ -9,7 +12,7 @@
 class TestPlatformSysmemConnection {
  public:
   static void TestCreateBuffer() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -20,7 +23,7 @@ class TestPlatformSysmemConnection {
   }
 
   static void TestSetConstraints() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -68,7 +71,7 @@ class TestPlatformSysmemConnection {
   }
 
   static void TestI420() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -119,7 +122,7 @@ class TestPlatformSysmemConnection {
   }
 
   static void TestIntelTiling() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -160,7 +163,7 @@ class TestPlatformSysmemConnection {
   }
 
   static void TestBuffer() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -190,7 +193,7 @@ class TestPlatformSysmemConnection {
   }
 
   static void TestProtectedBuffer() {
-    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+    auto connection = CreateConnection();
 
     ASSERT_NE(nullptr, connection.get());
 
@@ -225,6 +228,14 @@ class TestPlatformSysmemConnection {
   }
 
  private:
+  static std::unique_ptr<magma_sysmem::PlatformSysmemConnection> CreateConnection() {
+    zx::channel client_end, server_end;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
+    EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_end.release()));
+
+    return magma_sysmem::PlatformSysmemConnection::Import(client_end.release());
+  }
+
   static magma_buffer_format_constraints_t get_standard_buffer_constraints() {
     magma_buffer_format_constraints_t buffer_constraints{};
     buffer_constraints.count = 1;

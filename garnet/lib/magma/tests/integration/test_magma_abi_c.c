@@ -6,6 +6,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>  // for close
+#if defined(__Fuchsia__)
+#include <lib/fdio/directory.h>
+#include <zircon/syscalls.h>
+#endif
 
 #include "magma.h"
 #include "test_magma_abi.h"
@@ -25,25 +29,44 @@ __attribute__((format(printf, 3, 4))) static inline bool printf_return_false(con
 #define DRETF(ret, ...) (ret ? true : printf_return_false(__FILE__, __LINE__, __VA_ARGS__))
 
 bool test_magma_abi_from_c(const char* device_name) {
+#if defined(__Fuchsia__)
+  zx_handle_t client_end, server_end;
+  zx_channel_create(0, &client_end, &server_end);
+
+  zx_status_t zx_status = fdio_service_connect(device_name, server_end);
+  if (zx_status != ZX_OK)
+    return DRETF(false, "fdio_service_connect return %d", zx_status);
+
+  magma_device_t device;
+  magma_status_t status = magma_device_import(client_end, &device);
+  if (status != MAGMA_STATUS_OK)
+    return DRETF(false, "magma_device_import return %d", status);
+#else
   int fd = open(device_name, O_RDONLY);
   if (fd < 0)
     return DRETF(false, "open returned %d", fd);
 
-  uint64_t device_id = 0;
-  magma_status_t status = magma_query(fd, MAGMA_QUERY_DEVICE_ID, &device_id);
+  magma_device_t device;
+  magma_status_t status = magma_device_import(fd, &device);
   if (status != MAGMA_STATUS_OK)
-    return DRETF(false, "magma_query return %d", status);
+    return DRETF(false, "magma_device_import return %d", status);
+#endif
+
+  uint64_t device_id = 0;
+  status = magma_query2(device, MAGMA_QUERY_DEVICE_ID, &device_id);
+  if (status != MAGMA_STATUS_OK)
+    return DRETF(false, "magma_query2 return %d", status);
 
   if (device_id == 0)
     return DRETF(false, "device_id is 0");
 
   magma_connection_t connection;
-  status = magma_create_connection(fd, &connection);
+  status = magma_create_connection2(device, &connection);
   if (status != MAGMA_STATUS_OK)
     return DRETF(false, "magma_create_connection failed: %d", status);
 
   magma_release_connection(connection);
-  close(fd);
+  magma_device_release(device);
 
   return true;
 }

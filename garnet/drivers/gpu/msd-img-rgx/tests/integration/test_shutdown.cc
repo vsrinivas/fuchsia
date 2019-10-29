@@ -4,38 +4,32 @@
 
 #include <fcntl.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "helper/platform_device_helper.h"
+#include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 
 namespace {
 
-class TestBase {
- public:
-  TestBase() {
 #if defined(NO_HARDWARE)
-    fd_ = open("/dev/test/msd-img-rgx-no-hardware", O_RDONLY);
+constexpr const char* kDevicePath = "/dev/test/msd-img-rgx-no-hardware";
 #else
-    fd_ = open("/dev/class/gpu/000", O_RDONLY);
+constexpr const char* kDevicePath = "/dev/class/gpu/000";
 #endif
-  }
 
-  int fd() { return fd_; }
-
-  ~TestBase() { close(fd_); }
-
- private:
-  int fd_;
+class TestBase : public magma::TestDeviceBase {
+ public:
+  TestBase() : magma::TestDeviceBase(kDevicePath) {}
 };
 
 class TestConnection : public TestBase {
  public:
-  TestConnection() { magma_create_connection(fd(), &connection_); }
+  TestConnection() { magma_create_connection2(device(), &connection_); }
 
   ~TestConnection() {
     if (connection_)
@@ -86,9 +80,7 @@ static void test_shutdown(uint32_t iters) {
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
         // Should replace this with a request to devmgr to restart the driver
-        fdio_t* fdio = fdio_unsafe_fd_to_io(test_base.fd());
-        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(fdio_unsafe_borrow_channel(fdio)));
-        fdio_unsafe_release(fdio);
+        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_base.channel()->get()));
 
         count += kRestartCount;
       }

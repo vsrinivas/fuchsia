@@ -98,10 +98,10 @@ class VirtioMagmaTest : public TestWithDevice {
 };
 
 TEST_F(VirtioMagmaTest, HandleQuery) {
-  virtio_magma_query_ctrl_t request{};
-  request.hdr.type = VIRTIO_MAGMA_CMD_QUERY;
+  virtio_magma_query2_ctrl_t request{};
+  request.hdr.type = VIRTIO_MAGMA_CMD_QUERY2;
   request.id = MAGMA_QUERY_DEVICE_ID;
-  virtio_magma_query_resp_t* response = nullptr;
+  virtio_magma_query2_resp_t* response = nullptr;
   uint16_t descriptor_id;
   ASSERT_EQ(DescriptorChainBuilder(out_queue_)
                 .AppendReadableDescriptor(&request, sizeof(request))
@@ -115,7 +115,7 @@ TEST_F(VirtioMagmaTest, HandleQuery) {
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
-  EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_QUERY);
+  EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_QUERY2);
   EXPECT_EQ(response->hdr.flags, 0u);
   EXPECT_GT(response->value_out, 0u);
   EXPECT_EQ(static_cast<magma_status_t>(response->result_return), MAGMA_STATUS_OK);
@@ -124,9 +124,9 @@ TEST_F(VirtioMagmaTest, HandleQuery) {
 TEST_F(VirtioMagmaTest, HandleConnectionMethod) {
   uint64_t connection = 0;
   {  // Create a new connection
-    virtio_magma_create_connection_ctrl_t request{};
-    request.hdr.type = VIRTIO_MAGMA_CMD_CREATE_CONNECTION;
-    virtio_magma_create_connection_resp_t* response = nullptr;
+    virtio_magma_create_connection2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_CREATE_CONNECTION2;
+    virtio_magma_create_connection2_resp_t* response = nullptr;
     uint16_t descriptor_id;
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
                   .AppendReadableDescriptor(&request, sizeof(request))
@@ -140,7 +140,7 @@ TEST_F(VirtioMagmaTest, HandleConnectionMethod) {
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(*response));
-    EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_CREATE_CONNECTION);
+    EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_CREATE_CONNECTION2);
     EXPECT_EQ(response->hdr.flags, 0u);
     EXPECT_GT(response->connection_out, 0u);
     ASSERT_EQ(static_cast<magma_status_t>(response->result_return), MAGMA_STATUS_OK);
@@ -174,9 +174,9 @@ TEST_F(VirtioMagmaTest, HandleExport) {
   uint64_t connection = 0;
   magma_buffer_t buffer{};
   {  // Create a new connection
-    virtio_magma_create_connection_ctrl_t request{};
-    request.hdr.type = VIRTIO_MAGMA_CMD_CREATE_CONNECTION;
-    virtio_magma_create_connection_resp_t* response = nullptr;
+    virtio_magma_create_connection2_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_CREATE_CONNECTION2;
+    virtio_magma_create_connection2_resp_t* response = nullptr;
     uint16_t descriptor_id;
     ASSERT_EQ(DescriptorChainBuilder(out_queue_)
                   .AppendReadableDescriptor(&request, sizeof(request))
@@ -190,7 +190,7 @@ TEST_F(VirtioMagmaTest, HandleExport) {
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(*response));
-    EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_CREATE_CONNECTION);
+    EXPECT_EQ(response->hdr.type, VIRTIO_MAGMA_RESP_CREATE_CONNECTION2);
     EXPECT_EQ(response->hdr.flags, 0u);
     EXPECT_GT(response->connection_out, 0u);
     ASSERT_EQ(static_cast<magma_status_t>(response->result_return), MAGMA_STATUS_OK);

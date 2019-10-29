@@ -23,7 +23,7 @@ class VirtMagmaTest : public ::testing::Test {
  protected:
   VirtMagmaTest() {}
   ~VirtMagmaTest() override {}
-  int device_file_descriptor_;
+  magma_device_t device_ = 0;
   magma_connection_t connection_;
   void* driver_handle_;
   PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_;
@@ -34,20 +34,22 @@ class VirtMagmaTest : public ::testing::Test {
 
 TEST_F(VirtMagmaTest, OpenDevice) {
   static constexpr const char* kDevicePath = "/dev/magma0";
-  device_file_descriptor_ = open(kDevicePath, O_NONBLOCK);
-  ASSERT_GE(device_file_descriptor_, 0)
+  int device_file_descriptor = open(kDevicePath, O_NONBLOCK);
+
+  ASSERT_GE(device_file_descriptor, 0)
       << "Failed to open device " << kDevicePath << " (" << errno << ")";
+  magma_device_import(device_file_descriptor, &device_);
 }
 
 TEST_F(VirtMagmaTest, MagmaQuery) {
   uint64_t device_id = 0;
-  magma_status_t status = magma_query(device_file_descriptor_, MAGMA_QUERY_DEVICE_ID, &device_id);
+  magma_status_t status = magma_query2(device_, MAGMA_QUERY_DEVICE_ID, &device_id);
   EXPECT_EQ(status, MAGMA_STATUS_OK);
   EXPECT_NE(device_id, 0u);
 }
 
 TEST_F(VirtMagmaTest, MagmaCreateConnection) {
-  magma_status_t status = magma_create_connection(device_file_descriptor_, &connection_);
+  magma_status_t status = magma_create_connection2(device_, &connection_);
   EXPECT_EQ(status, MAGMA_STATUS_OK);
   EXPECT_NE(connection_, nullptr);
   magma_release_connection(connection_);
