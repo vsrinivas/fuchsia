@@ -33,9 +33,15 @@ class StreamImpl : public fuchsia::camera2::Stream {
   virtual void ReleaseFrame(uint32_t buffer_id) override;
   void AcknowledgeFrameError() override { binding_.Close(ZX_ERR_UNAVAILABLE); }
   void SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
-                           SetRegionOfInterestCallback callback) override {binding_.Close(ZX_ERR_UNAVAILABLE);}
-  void SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) override {binding_.Close(ZX_ERR_UNAVAILABLE);}
-  void GetImageFormats(GetImageFormatsCallback callback) override {binding_.Close(ZX_ERR_UNAVAILABLE);}
+                           SetRegionOfInterestCallback callback) override {
+    binding_.Close(ZX_ERR_UNAVAILABLE);
+  }
+  void SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) override {
+    binding_.Close(ZX_ERR_UNAVAILABLE);
+  }
+  void GetImageFormats(GetImageFormatsCallback callback) override {
+    binding_.Close(ZX_ERR_UNAVAILABLE);
+  }
 
  private:
   fidl::Binding<fuchsia::camera2::Stream> binding_;

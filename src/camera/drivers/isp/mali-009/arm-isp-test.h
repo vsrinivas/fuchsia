@@ -10,8 +10,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
-#include <memory>
 #include <list>
+#include <memory>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -37,8 +37,7 @@ struct ArmIspRegisterDump {
 class ArmIspDevice;
 
 class ArmIspDeviceTester;
-using IspDeviceTesterType = ddk::Device<ArmIspDeviceTester, ddk::UnbindableNew,
-                                        ddk::Messageable>;
+using IspDeviceTesterType = ddk::Device<ArmIspDeviceTester, ddk::UnbindableNew, ddk::Messageable>;
 
 class ArmIspDeviceTester : public IspDeviceTesterType,
                            public ddk::EmptyProtocol<ZX_PROTOCOL_ISP_TEST> {
