@@ -262,7 +262,9 @@ namespace perfmon {
 // and the kernel.
 
 // Properties of perf data collection on this system.
-struct Arm64PmuProperties : public PmuCommonProperties {};
+struct Arm64PmuProperties {
+  PmuCommonProperties common;
+};
 
 // Configuration data passed from driver to kernel.
 struct Arm64PmuConfig {

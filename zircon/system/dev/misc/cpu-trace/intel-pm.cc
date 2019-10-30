@@ -146,15 +146,16 @@ zx_status_t PerfmonDevice::InitOnce() {
 static bool LbrSupported(const perfmon::PmuHwProperties& props) { return props.lbr_stack_size > 0; }
 
 void PerfmonDevice::InitializeStagingState(StagingState* ss) {
-  ss->max_num_fixed = pmu_hw_properties_.max_num_fixed_events;
-  ss->max_num_programmable = pmu_hw_properties_.max_num_programmable_events;
-  ss->max_num_misc = pmu_hw_properties_.max_num_misc_events;
-  ss->max_fixed_value = (pmu_hw_properties_.max_fixed_counter_width < 64
-                             ? (1ul << pmu_hw_properties_.max_fixed_counter_width) - 1
+  ss->max_num_fixed = pmu_hw_properties_.common.max_num_fixed_events;
+  ss->max_num_programmable = pmu_hw_properties_.common.max_num_programmable_events;
+  ss->max_num_misc = pmu_hw_properties_.common.max_num_misc_events;
+  ss->max_fixed_value = (pmu_hw_properties_.common.max_fixed_counter_width < 64
+                             ? (1ul << pmu_hw_properties_.common.max_fixed_counter_width) - 1
                              : ~0ul);
-  ss->max_programmable_value = (pmu_hw_properties_.max_programmable_counter_width < 64
-                                    ? (1ul << pmu_hw_properties_.max_programmable_counter_width) - 1
-                                    : ~0ul);
+  ss->max_programmable_value =
+      (pmu_hw_properties_.common.max_programmable_counter_width < 64
+           ? (1ul << pmu_hw_properties_.common.max_programmable_counter_width) - 1
+           : ~0ul);
 }
 
 zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, StagingState* ss,

@@ -91,13 +91,13 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
 
 static void DumpHwProperties(const PmuHwProperties& props) {
   zxlogf(INFO, "Performance Monitor Unit configuration for this chipset:\n");
-  zxlogf(INFO, "PMU: version %u\n", props.pm_version);
-  zxlogf(INFO, "PMU: %u fixed events, width %u\n", props.max_num_fixed_events,
-         props.max_fixed_counter_width);
-  zxlogf(INFO, "PMU: %u programmable events, width %u\n", props.max_num_programmable_events,
-         props.max_programmable_counter_width);
-  zxlogf(INFO, "PMU: %u misc events, width %u\n", props.max_num_misc_events,
-         props.max_misc_counter_width);
+  zxlogf(INFO, "PMU: version %u\n", props.common.pm_version);
+  zxlogf(INFO, "PMU: %u fixed events, width %u\n", props.common.max_num_fixed_events,
+         props.common.max_fixed_counter_width);
+  zxlogf(INFO, "PMU: %u programmable events, width %u\n", props.common.max_num_programmable_events,
+         props.common.max_programmable_counter_width);
+  zxlogf(INFO, "PMU: %u misc events, width %u\n", props.common.max_num_misc_events,
+         props.common.max_misc_counter_width);
 #ifdef __x86_64__
   zxlogf(INFO, "PMU: perf_capabilities: 0x%lx\n", props.perf_capabilities);
   zxlogf(INFO, "PMU: lbr_stack_size: %u\n", props.lbr_stack_size);
@@ -143,7 +143,7 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   zxlogf(TRACE, "%s called\n", __func__);
 
   props->api_version = fidl_perfmon::API_VERSION;
-  props->pm_version = pmu_hw_properties_.pm_version;
+  props->pm_version = pmu_hw_properties_.common.pm_version;
   static_assert(perfmon::kMaxNumEvents == fidl_perfmon::MAX_NUM_EVENTS);
   props->max_num_events = fidl_perfmon::MAX_NUM_EVENTS;
 
@@ -151,12 +151,12 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   // further restrictions and limitations.
   // TODO(dje): Something more elaborate can wait for publishing them via
   // some namespace.
-  props->max_num_fixed_events = pmu_hw_properties_.max_num_fixed_events;
-  props->max_fixed_counter_width = pmu_hw_properties_.max_fixed_counter_width;
-  props->max_num_programmable_events = pmu_hw_properties_.max_num_programmable_events;
-  props->max_programmable_counter_width = pmu_hw_properties_.max_programmable_counter_width;
-  props->max_num_misc_events = pmu_hw_properties_.max_num_misc_events;
-  props->max_misc_counter_width = pmu_hw_properties_.max_misc_counter_width;
+  props->max_num_fixed_events = pmu_hw_properties_.common.max_num_fixed_events;
+  props->max_fixed_counter_width = pmu_hw_properties_.common.max_fixed_counter_width;
+  props->max_num_programmable_events = pmu_hw_properties_.common.max_num_programmable_events;
+  props->max_programmable_counter_width = pmu_hw_properties_.common.max_programmable_counter_width;
+  props->max_num_misc_events = pmu_hw_properties_.common.max_num_misc_events;
+  props->max_misc_counter_width = pmu_hw_properties_.common.max_misc_counter_width;
 
   props->flags = fidl_perfmon::PropertyFlags();
 #ifdef __x86_64__
@@ -612,7 +612,7 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
   }
   DumpHwProperties(props);
 
-  if (props.pm_version < perfmon::kMinPmVersion) {
+  if (props.common.pm_version < perfmon::kMinPmVersion) {
     zxlogf(INFO, "%s: PM version %u or above is required\n", __func__, perfmon::kMinPmVersion);
     return ZX_ERR_NOT_SUPPORTED;
   }

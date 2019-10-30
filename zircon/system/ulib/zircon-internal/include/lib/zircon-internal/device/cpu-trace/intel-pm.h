@@ -328,7 +328,9 @@
 namespace perfmon {
 
 // Properties of perf data collection on this system.
-struct X86PmuProperties : public PmuCommonProperties {
+struct X86PmuProperties {
+  PmuCommonProperties common;
+
   // The PERF_CAPABILITIES MSR.
   uint64_t perf_capabilities;
   // The size of the LBR (Last Branch Record) stack.

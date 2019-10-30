@@ -65,28 +65,28 @@ static perfmon::PmuHwProperties GetFakeHwProperties() {
 
 #ifdef __aarch64__
   // VIM2 supports version 3, begin with that.
-  props.pm_version = 3;
+  props.common.pm_version = 3;
   // ARM has one fixed event, the cycle counter.
-  props.max_num_fixed_events = 1;
+  props.common.max_num_fixed_events = 1;
   // The widths here aren't too important.
-  props.max_fixed_counter_width = 64;
-  props.max_num_programmable_events = 1;
-  props.max_programmable_counter_width = 32;
-  props.max_num_misc_events = 0;
-  props.max_misc_counter_width = 0;
+  props.common.max_fixed_counter_width = 64;
+  props.common.max_num_programmable_events = 1;
+  props.common.max_programmable_counter_width = 32;
+  props.common.max_num_misc_events = 0;
+  props.common.max_misc_counter_width = 0;
 #endif
 
 #ifdef __x86_64__
   // Skylake supports version 4, begin with that.
-  props.pm_version = 4;
+  props.common.pm_version = 4;
   // Intel has 3 fixed events: instruction, unhalted reference cycles, and unhalted core cycles.
-  props.max_num_fixed_events = 3;
+  props.common.max_num_fixed_events = 3;
   // The widths here aren't too important.
-  props.max_fixed_counter_width = 32;
-  props.max_num_programmable_events = 1;
-  props.max_programmable_counter_width = 32;
-  props.max_num_misc_events = 1;
-  props.max_misc_counter_width = 32;
+  props.common.max_fixed_counter_width = 32;
+  props.common.max_num_programmable_events = 1;
+  props.common.max_programmable_counter_width = 32;
+  props.common.max_num_misc_events = 1;
+  props.common.max_misc_counter_width = 32;
   props.perf_capabilities = 0;
   props.lbr_stack_size = 0;
 #endif

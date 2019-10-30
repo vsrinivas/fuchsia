@@ -556,13 +556,13 @@ zx_status_t arch_perfmon_get_properties(ArchPmuProperties* props) {
     return ZX_ERR_NOT_SUPPORTED;
 
   *props = {};
-  props->pm_version = perfmon_version;
-  props->max_num_fixed_events = perfmon_num_fixed_counters;
-  props->max_num_programmable_events = perfmon_num_programmable_counters;
-  props->max_num_misc_events = perfmon_num_misc_events;
-  props->max_fixed_counter_width = perfmon_fixed_counter_width;
-  props->max_programmable_counter_width = perfmon_programmable_counter_width;
-  props->max_misc_counter_width = perfmon_misc_counter_width;
+  props->common.pm_version = perfmon_version;
+  props->common.max_num_fixed_events = perfmon_num_fixed_counters;
+  props->common.max_num_programmable_events = perfmon_num_programmable_counters;
+  props->common.max_num_misc_events = perfmon_num_misc_events;
+  props->common.max_fixed_counter_width = perfmon_fixed_counter_width;
+  props->common.max_programmable_counter_width = perfmon_programmable_counter_width;
+  props->common.max_misc_counter_width = perfmon_misc_counter_width;
   props->perf_capabilities = perfmon_capabilities;
   props->lbr_stack_size = perfmon_lbr_stack_size;
 
