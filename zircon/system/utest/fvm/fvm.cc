@@ -168,15 +168,13 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 }
 
 void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
-  ASSERT_OK(ramdisk_rebind(ramdisk_));
   fzl::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
   zx_status_t call_status;
   zx_status_t status;
 
-  status = fuchsia_device_ControllerBind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
-                                         STRLEN(FVM_DRIVER_LIB), &call_status);
-  // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
-  if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
+  status = fuchsia_device_ControllerRebind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
+                                           STRLEN(FVM_DRIVER_LIB), &call_status);
+  if (status != ZX_OK) {
     ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
   }
   ASSERT_OK(call_status);
@@ -1736,6 +1734,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   const partition_entry_t entries[] = {
       {kTestPartName1, 1},
   };
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, 1);
   fd = fvm_device();
   ASSERT_TRUE(fd, "Failed to rebind FVM driver");
@@ -1765,9 +1764,17 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_EQ(status, ZX_OK);
   slices_left--;
 
+  ASSERT_EQ(close(vp_fd.release()), 0);
+  // FVMRebind will cause the rebind on ramdisk block device. The fvm device is child device
+  // to ramdisk block device. Before issuing rebind make sure the fd is released.
   // Rebind the FVM driver, check the extension has succeeded.
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, 1);
   fd = fvm_device();
+
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
+                                        nullptr));
+
   partition_caller.reset(vp_fd.get());
   partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
 
@@ -1800,6 +1807,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_EQ(block_info.block_count * block_info.block_size, kSliceSize * kSliceCount);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, 1);
   fd = fvm_device();
 
@@ -2045,6 +2053,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
       {kTestPartName2, 2},
   };
 
+  // Release FVM device that we opened earlier
+  ASSERT_EQ(close(volume_manager.release().get()), 0);
   FVMRebind(entries, 1);
   volume_manager.reset(fvm_device());
 
@@ -2074,7 +2084,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   const partition_entry_t upgraded_entries[] = {
       {kTestPartName1, 1},
   };
-
+  // Release FVM device that we opened earlier
+  ASSERT_EQ(close(volume_manager.release().get()), 0);
   FVMRebind(upgraded_entries, 1);
   volume_manager.reset(fvm_device());
 
@@ -2085,6 +2096,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   // (It should return an error and have no noticable effect).
   Upgrade(volume_manager, kTestUniqueGUID, kTestUniqueGUID2, ZX_ERR_NOT_FOUND);
 
+  // Release FVM device that we opened earlier
+  ASSERT_EQ(close(volume_manager.release().get()), 0);
   FVMRebind(upgraded_entries, 1);
   volume_manager.reset(fvm_device());
 
@@ -2109,6 +2122,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
       {kTestPartName2, 2},
   };
 
+  // Release FVM device that we opened earlier
+  ASSERT_EQ(close(volume_manager.release().get()), 0);
   FVMRebind(upgraded_entries_both, 2);
   volume_manager.reset(fvm_device());
 
@@ -2138,6 +2153,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   // This should activate the partition.
   Upgrade(volume_manager, kTestUniqueGUID, kTestUniqueGUID, ZX_OK);
 
+  // Release FVM device that we opened earlier
+  ASSERT_EQ(close(volume_manager.release().get()), 0);
   FVMRebind(upgraded_entries_both, 2);
   volume_manager.reset(fvm_device());
 
@@ -2349,7 +2366,7 @@ TEST_F(FvmTest, TestCorruptionOk) {
   const partition_entry_t entries[] = {
       {kTestPartName1, 1},
   };
-
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, 1);
   fd = fvm_device();
 
@@ -2431,7 +2448,7 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   const partition_entry_t entries[] = {
       {kTestPartName1, 1},
   };
-
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, 1);
   fd = fvm_device();
 
@@ -2803,6 +2820,7 @@ TEST_F(FvmTest, TestRandomOpMultithreaded) {
   }
 
   // Rebind the FVM (simulating rebooting)
+  ASSERT_EQ(close(fd.release()), 0);
   FVMRebind(entries, fbl::count_of(entries));
   fd = fvm_device();
 
