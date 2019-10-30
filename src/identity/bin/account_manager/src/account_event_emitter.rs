@@ -96,6 +96,7 @@ impl AccountEventEmitter {
     pub async fn publish<'a>(&'a self, event: &'a AccountEvent) {
         let mut clients_lock = self.clients.lock().await;
         clients_lock.retain(|client| !client.listener.is_closed());
+        self.inspect.active.set(clients_lock.len() as u64);
         let futures = (&*clients_lock)
             .into_iter()
             .map(|client| client.possibly_send(event))
@@ -345,17 +346,13 @@ mod tests {
 
         let request_fut = async move {
             account_event_emitter.publish(&EVENT_ADDED).await; // Normal event
-            {
-                let clients_lock = account_event_emitter.clients.lock().await;
-                assert_eq!(clients_lock.len(), 1); // Listener remains
-            }
+            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1); // Listener remains
             account_event_emitter
         };
         let (_, account_event_emitter) = join(serve_fut, request_fut).await;
 
         // Now the server is dropped, so the new publish should trigger a drop of the client
         account_event_emitter.publish(&EVENT_REMOVED).await;
-        let clients_lock = account_event_emitter.clients.lock().await;
-        assert!(clients_lock.is_empty());
+        assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
     }
 }
