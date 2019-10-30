@@ -89,7 +89,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void Ge2dRemoveTask(uint32_t task_index);
   void Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index);
 
-  void Ge2dSetOutputResolution(uint32_t task_index, uint32_t image_format_index);
+  zx_status_t Ge2dSetOutputResolution(uint32_t task_index, uint32_t new_output_image_format_index);
+
   void Ge2dSetCropRectangle(uint32_t task_index, const crop_rectangle_t* crop);
 
   // Used for unit tests.
@@ -98,9 +99,12 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   zx_status_t StopThread();
 
  protected:
+  enum Ge2dOp { GE2D_OP_SETOUTPUTRES, GE2D_OP_FRAME };
+
   struct TaskInfo {
+    Ge2dOp op;
     Ge2dTask* task;
-    uint32_t input_buffer_index;
+    uint32_t index;
   };
 
   zx::port port_;

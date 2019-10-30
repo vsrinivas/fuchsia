@@ -77,6 +77,12 @@ class GenericTask {
     return buffer.Release();
   }
 
+  // Validates input buffer index.
+  bool IsOutputFormatIndexValid(uint32_t output_format_index) const {
+    return output_format_index < output_image_format_count_;
+  }
+  uint32_t output_format_index() { return cur_output_image_format_index_; }
+  void set_output_format_index(uint32_t new_index) { cur_output_image_format_index_ = new_index; }
   image_format_2_t input_format() { return input_format_; }
   image_format_2_t output_format() {
     return output_image_format_list_[cur_output_image_format_index_];

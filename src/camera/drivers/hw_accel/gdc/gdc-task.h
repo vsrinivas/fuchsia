@@ -11,10 +11,10 @@ namespace gdc {
 class GdcTask : public generictask::GenericTask {
  public:
   // Returns the physical address for the config VMO.
-  zx_paddr_t GetConigVmoPhysAddr() const { return config_vmo_pinned_.region(0).phys_addr; }
+  zx_paddr_t GetConfigVmoPhysAddr() const { return config_vmo_pinned_.region(0).phys_addr; }
 
   // Returns the physical address for the config VMO.
-  uint64_t GetConigVmoPhysSize() const { return config_vmo_pinned_.region(0).size; }
+  uint64_t GetConfigVmoPhysSize() const { return config_vmo_pinned_.region(0).size; }
 
   // Static function to create a task object.
   // |input_buffer_collection|              : Input buffer collection.

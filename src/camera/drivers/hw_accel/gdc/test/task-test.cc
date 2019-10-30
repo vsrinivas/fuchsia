@@ -75,10 +75,14 @@ class TaskTest : public zxtest::Test {
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     frame_ready_ = false;
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
-    EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, input_image_format_,
+    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, input_image_format_,
                                       kWidth, kHeight));
-    EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
+    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
                                       output_image_format_table_[0], kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
+                                      output_image_format_table_[1], kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
+                                      output_image_format_table_[2], kWidth, kHeight));
     zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
         input_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
         buffer_collection_count);
@@ -103,6 +107,8 @@ class TaskTest : public zxtest::Test {
     EXPECT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
     callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
+      EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
+                info->metadata.image_format_index);
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->buffer_id);
     };
     callback_.ctx = this;
@@ -121,11 +127,13 @@ class TaskTest : public zxtest::Test {
     zx::vmo config_vmo;
     EXPECT_OK(config_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &config_vmo));
     uint32_t task_id;
+
     zx_status_t status = gdc_device_->GdcInitTask(&input_buffer_collection_,
                                                   &output_buffer_collection_, &input_image_format_,
                                                   output_image_format_table_, kImageFormatTableSize,
                                                   0, std::move(config_vmo), &callback_, &task_id);
     EXPECT_OK(status);
+    output_image_format_index_ = 0;
 
     // Start the thread.
     EXPECT_OK(gdc_device_->StartThread());
@@ -173,6 +181,7 @@ class TaskTest : public zxtest::Test {
   // Array of output Image formats.
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   std::unique_ptr<GdcDevice> gdc_device_;
+  uint32_t output_image_format_index_;
 
  private:
   std::vector<uint32_t> callback_check_;
@@ -327,6 +336,36 @@ TEST_F(TaskTest, ProcessFrameTest) {
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
+  WaitAndReset();
+  EXPECT_EQ(1, GetCallbackSize());
+
+  ASSERT_OK(gdc_device_->StopThread());
+
+  fake_regs.VerifyAll();
+}
+
+TEST_F(TaskTest, SetOutputResTest) {
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
+
+  SetExpectations(fake_regs);
+
+  zx_status_t status = gdc_device_->GdcSetOutputResolution(task_id, 2);
+  EXPECT_OK(status);
+  output_image_format_index_ = 2;
+  // Valid buffer & task id.
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  // The callback checks that the index of the output format returned matches
+  // what we set it to above.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
 

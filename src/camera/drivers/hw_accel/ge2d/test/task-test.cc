@@ -133,6 +133,8 @@ class TaskTest : public zxtest::Test {
     EXPECT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
     callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
+      EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
+                info->metadata.image_format_index);
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->buffer_id);
     };
     callback_.ctx = this;
@@ -162,6 +164,7 @@ class TaskTest : public zxtest::Test {
         output_image_format_table_, kImageFormatTableSize, 0, &callback_, &task_id);
     EXPECT_OK(status);
     resize_task = task_id;
+    output_image_format_index_ = 0;
 
     // Start the thread.
     EXPECT_OK(ge2d_device_->StartThread());
@@ -189,6 +192,7 @@ class TaskTest : public zxtest::Test {
   // Input Image format.
   image_format_2_t input_image_format_;
   std::unique_ptr<Ge2dDevice> ge2d_device_;
+  uint32_t output_image_format_index_;
 
  private:
   std::vector<uint32_t> callback_check_;
@@ -270,7 +274,7 @@ TEST_F(TaskTest, WatermarkResTest) {
   EXPECT_EQ(format.display_height, kHeight / 4);
 }
 
-TEST_F(TaskTest, OutputResTest) {
+TEST_F(TaskTest, InitOutputResTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   fbl::AllocChecker ac;
   auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
@@ -413,6 +417,37 @@ TEST_F(TaskTest, ProcessFrameTest) {
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
+  WaitAndReset();
+  EXPECT_EQ(1, GetCallbackSize());
+
+  ASSERT_OK(ge2d_device_->StopThread());
+
+  fake_regs.VerifyAll();
+}
+
+TEST_F(TaskTest, SetOutputResTest) {
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  uint32_t resize_task_id;
+  uint32_t watermark_task_id;
+  ASSERT_OK(SetupForFrameProcessing(fake_regs, resize_task_id, watermark_task_id));
+
+  zx_status_t status = ge2d_device_->Ge2dSetOutputResolution(resize_task_id, 2);
+  EXPECT_OK(status);
+  output_image_format_index_ = 2;
+
+  // Valid buffer & task id.
+  status = ge2d_device_->Ge2dProcessFrame(resize_task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  // The callback first tests to make sure the output res index matches what we
+  // changed it to above.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
 

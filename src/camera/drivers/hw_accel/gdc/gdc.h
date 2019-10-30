@@ -42,6 +42,7 @@ constexpr uint64_t kPortKeyIrqMsg = 0x00;
 constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
 }  // namespace
+
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
 using GdcDeviceType = ddk::Device<GdcDevice, ddk::UnbindableNew>;
@@ -77,6 +78,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
   void GdcRemoveTask(uint32_t task_index);
   void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);
+  zx_status_t GdcSetOutputResolution(uint32_t task_index, uint32_t new_output_image_format_index);
 
   // Used for unit tests.
   const ddk::MmioBuffer* gdc_mmio() const { return &gdc_mmio_; }
@@ -84,9 +86,12 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx_status_t StopThread();
 
  protected:
+  enum GdcOp { GDC_OP_FRAME, GDC_OP_SETOUTPUTRES };
+
   struct TaskInfo {
+    GdcOp op;
     GdcTask* task;
-    uint32_t input_buffer_index;
+    uint32_t index;
   };
 
   zx::port port_;

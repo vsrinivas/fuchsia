@@ -83,7 +83,7 @@ protocol Ge2d {
     // for the specified task. This operation is queued to the worker thread to be
     // performed in sequence. Once the output resolution for this Task has changed,
     // callback using the HwAccelCallback, returning the new index of the Image Format.
-    SetOutputResolution(uint32 task_index, uint32 image_format_index);
+    SetOutputResolution(uint32 task_index, uint32 new_output_image_format_index) -> (zx.status s);
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.

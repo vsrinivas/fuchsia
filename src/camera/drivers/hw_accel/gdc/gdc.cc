@@ -119,19 +119,29 @@ void GdcDevice::Stop() {
 
 void GdcDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
-  auto input_buffer_index = info.input_buffer_index;
   // clang-format off
 
   // The way we have our SW instrumented, GDC should never be busy
   // proccessing at this point. Doing a sanity check here to ensure
   // that its not busy processing an image.
-   ZX_ASSERT(!Status::Get().ReadFrom(gdc_mmio()).busy());
+  ZX_ASSERT(!Status::Get().ReadFrom(gdc_mmio()).busy());
+
+  if (info.op == GDC_OP_SETOUTPUTRES) {
+    // TODO: GDC needs an array of config vmos, one corresponding to
+    // an output resolution. Pass an array of config vmos via init,
+    // and add a method to get the config vmo corresponding to the
+    // new format. For now, all we do is switch to the new imageformat.
+    task->set_output_format_index(info.index);
+    // No callback is done after changing output res for GDC.
+    return;
+  }
+  auto input_buffer_index = info.index;
 
   Stop();
 
   // Program the GDC configuration registers.
-  auto size = AxiWordAlign(task->GetConigVmoPhysSize());
-  auto addr = AxiWordAlign(task->GetConigVmoPhysAddr());
+  auto size = AxiWordAlign(task->GetConfigVmoPhysSize());
+  auto addr = AxiWordAlign(task->GetConfigVmoPhysAddr());
   ConfigAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_config_addr(addr)
@@ -248,7 +258,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.frame_status = FRAME_STATUS_OK;
     info.buffer_id = task->GetOutputBufferIndex();
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    info.metadata.image_format_index = 0;  // unused.
+    info.metadata.image_format_index = task->output_format_index();
     task->callback()->frame_ready(task->callback()->ctx, &info);
   }
 }
@@ -271,6 +281,31 @@ int GdcDevice::FrameProcessingThread() {
   return ZX_OK;
 }
 
+zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
+                                              uint32_t new_output_image_format_index) {
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Validate new image format index|.
+  if (!task_entry->second->IsOutputFormatIndexValid(new_output_image_format_index)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  TaskInfo info;
+  info.op = GDC_OP_SETOUTPUTRES;
+  info.task = task_entry->second.get();
+  info.index = new_output_image_format_index;
+
+  // Put the task on queue.
+  fbl::AutoLock lock(&lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
+  return ZX_OK;
+}
+
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
@@ -284,8 +319,9 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffe
   }
 
   TaskInfo info;
+  info.op = GDC_OP_FRAME;
   info.task = task_entry->second.get();
-  info.input_buffer_index = input_buffer_index;
+  info.index = input_buffer_index;
 
   // Put the task on queue.
   fbl::AutoLock lock(&lock_);

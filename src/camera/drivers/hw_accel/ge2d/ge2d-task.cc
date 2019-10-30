@@ -66,8 +66,8 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
   }
   num_input_canvas_ids_ = 0;
   fbl::AllocChecker ac;
-  std::unique_ptr<image_canvas_id_t[]> canvas_ids;
-  canvas_ids = std::unique_ptr<image_canvas_id_t[]>(
+  std::unique_ptr<image_canvas_id_t[]> image_canvas_ids;
+  image_canvas_ids = std::unique_ptr<image_canvas_id_t[]>(
       new (&ac) image_canvas_id_t[input_buffer_collection->buffer_count]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -75,13 +75,17 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
   zx_status_t status;
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; i++) {
     status = AllocCanvasId(input_image_format, input_buffer_collection->buffers[i].vmo,
-                           canvas_ids[i], CANVAS_FLAGS_READ);
+                           image_canvas_ids[i], CANVAS_FLAGS_READ);
     if (status != ZX_OK) {
+      for (uint32_t j = 0; j < i; j++) {
+        canvas_.ops->free(canvas_.ctx, image_canvas_ids[j].canvas_idx[kYComponent]);
+        canvas_.ops->free(canvas_.ctx, image_canvas_ids[j].canvas_idx[kUVComponent]);
+      }
       return status;
     }
   }
   num_input_canvas_ids_ = input_buffer_collection->buffer_count;
-  input_image_canvas_ids_ = move(canvas_ids);
+  input_image_canvas_ids_ = move(image_canvas_ids);
   return ZX_OK;
 }
 
@@ -152,9 +156,23 @@ void Ge2dTask::FreeCanvasIds() {
     canvas_.ops->free(canvas_.ctx, input_image_canvas_ids_[j].canvas_idx[kYComponent]);
     canvas_.ops->free(canvas_.ctx, input_image_canvas_ids_[j].canvas_idx[kUVComponent]);
   }
+  num_input_canvas_ids_ = 0;
   for (auto it = buffer_map_.cbegin(); it != buffer_map_.cend(); ++it) {
     canvas_.ops->free(canvas_.ctx, it->second.canvas_idx[kYComponent]);
     canvas_.ops->free(canvas_.ctx, it->second.canvas_idx[kUVComponent]);
+  }
+}
+
+void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
+  set_output_format_index(new_output_buffer_index);
+  // Re-allocate the Output canvas IDs.
+  image_format_2_t format = output_format();
+  for (auto& it : buffer_map_) {
+    image_canvas_id_t canvas_ids;
+    zx_status_t status =
+        AllocCanvasId(&format, it.first, canvas_ids, CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
+    ZX_ASSERT(status == ZX_OK);
+    it.second = canvas_ids;
   }
 }
 

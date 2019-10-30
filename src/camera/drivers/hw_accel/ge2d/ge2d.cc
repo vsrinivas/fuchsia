@@ -121,6 +121,31 @@ void Ge2dDevice::Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
   ZX_ASSERT(ZX_OK == task->ReleaseOutputBuffer(buffer_index));
 }
 
+zx_status_t Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index,
+                                                uint32_t new_output_image_format_index) {
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Validate new image format index|.
+  if (!task_entry->second->IsOutputFormatIndexValid(new_output_image_format_index)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  TaskInfo info;
+  info.op = GE2D_OP_SETOUTPUTRES;
+  info.task = task_entry->second.get();
+  info.index = new_output_image_format_index;
+
+  // Put the task on queue.
+  fbl::AutoLock lock(&lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
+  return ZX_OK;
+}
+
 zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
@@ -134,8 +159,9 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   }
 
   TaskInfo info;
+  info.op = GE2D_OP_FRAME;
   info.task = task_entry->second.get();
-  info.input_buffer_index = input_buffer_index;
+  info.index = input_buffer_index;
 
   // Put the task on queue.
   fbl::AutoLock lock(&lock_);
@@ -144,14 +170,18 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   return ZX_OK;
 }
 
-void Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index, uint32_t image_format_index) {}
-
 void Ge2dDevice::Ge2dSetCropRectangle(uint32_t task_index, const crop_rectangle_t* crop) {}
 
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
-  __UNUSED auto input_buffer_index = info.input_buffer_index;
 
+  if (info.op == GE2D_OP_SETOUTPUTRES) {
+    // This has to free and reallocate the output buffer canvas ids.
+    task->Ge2dChangeOutputRes(info.index);
+    // No callback is done after changing output res for GDC.
+    return;
+  }
+  __UNUSED auto input_buffer_index = info.index;
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
   if (packet.key == kPortKeyIrqMsg) {
@@ -169,7 +199,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     f_info.frame_status = FRAME_STATUS_OK;
     f_info.buffer_id = task->GetOutputBufferIndex();
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    f_info.metadata.image_format_index = 0;  // unused.
+    f_info.metadata.image_format_index = task->output_format_index();
     task->callback()->frame_ready(task->callback()->ctx, &f_info);
   }
 }

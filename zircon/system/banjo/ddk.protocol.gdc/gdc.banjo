@@ -38,4 +38,9 @@ protocol Gdc {
     // Releases the frame |buffer_index| from the |output_buffer_collection| to be
     // used again by GDC driver again later.
     ReleaseFrame(uint32 task_index, uint32 buffer_index);
+
+    // Set the output resolution.This operation is queued to the worker thread to be
+    // performed in sequence. Once the output resolution for this Task has changed,
+    // callback using the HwAccelCallback, returning the new index of the Image Format.
+    SetOutputResolution(uint32 task_index, uint32 new_output_image_format_index) -> (zx.status s);
 };
