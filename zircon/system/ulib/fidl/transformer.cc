@@ -21,14 +21,18 @@ uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
   }
   switch (type->type_tag) {
     case fidl::kFidlTypePrimitive:
+      __FALLTHROUGH;
     case fidl::kFidlTypeEnum:
+      __FALLTHROUGH;
     case fidl::kFidlTypeBits:
       assert(false && "bug: should not get called");
       return 0;
     case fidl::kFidlTypeStructPointer:
+      __FALLTHROUGH;
     case fidl::kFidlTypeUnionPointer:
       return 8;
     case fidl::kFidlTypeVector:
+      __FALLTHROUGH;
     case fidl::kFidlTypeString:
       return 16;
     case fidl::kFidlTypeStruct:
@@ -46,8 +50,11 @@ uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
     case fidl::kFidlTypeArray:
       return type->coded_array.array_size;
     case fidl::kFidlTypeHandle:
+      __FALLTHROUGH;
     case fidl::kFidlTypeTable:
+      __FALLTHROUGH;
     case fidl::kFidlTypeXUnion:
+      __FALLTHROUGH;
     default:
       assert(false && "TODO!");
       return 0;
@@ -178,8 +185,11 @@ class TransformerBase {
 
     switch (type->type_tag) {
       case fidl::kFidlTypePrimitive:
+        __FALLTHROUGH;
       case fidl::kFidlTypeEnum:
+        __FALLTHROUGH;
       case fidl::kFidlTypeBits:
+        __FALLTHROUGH;
       case fidl::kFidlTypeHandle:
         goto no_transform_just_copy;
       case fidl::kFidlTypeStructPointer: {
@@ -220,6 +230,7 @@ class TransformerBase {
         return TransformVector(src_coded_vector, dst_coded_vector, position);
       }
       case fidl::kFidlTypeTable:
+        __FALLTHROUGH;
       case fidl::kFidlTypeXUnion:
         assert(false && "TODO(apang)");
         return ZX_ERR_BAD_STATE;
