@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/cobalt/bin/system-metrics/activity_listener.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -58,7 +59,8 @@ class SystemMetricsDaemon {
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
-                      std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher);
+                      std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
+                      std::unique_ptr<cobalt::ActivityListener> activity_listener);
 
   void InitializeLogger();
 
@@ -179,6 +181,9 @@ class SystemMetricsDaemon {
   // a vector of temperature readings taken in one minute into Cobalt.
   void LogTemperatureToCobalt();
 
+  // Callback function to be called by ActivityListener to update current_state_
+  void UpdateState(fuchsia::ui::activity::State state) { current_state_ = state; }
+
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
@@ -190,7 +195,15 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
-  std::vector<double> cpu_percentages_;
+  std::unique_ptr<cobalt::ActivityListener> activity_listener_;
+  fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
+  fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
+
+  struct CpuWithActivityState {
+    double cpu_percentage;
+    fuchsia::ui::activity::State state;
+  };
+  std::vector<CpuWithActivityState> cpu_percentages_;
   std::unordered_map<uint32_t, uint32_t> temperature_map_;
   uint32_t temperature_map_size_ = 0;
   // The bucket config is used to calculate the histogram bucket index for a given temperature.

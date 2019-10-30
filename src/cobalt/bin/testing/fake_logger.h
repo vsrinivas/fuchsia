@@ -50,6 +50,10 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
 
   void reset_last_event_code() { last_event_code_ = -1; }
 
+  uint32_t last_event_code_second_position() { return last_event_code_second_position_; }
+
+  void reset_last_event_code_second_position() { last_event_code_second_position_ = -1; }
+
   int64_t last_elapsed_time() { return last_elapsed_time_; }
 
   void reset_last_elapsed_time() { last_elapsed_time_ = -1; }
@@ -75,6 +79,7 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
   void reset() {
     reset_last_metric_id();
     reset_last_event_code();
+    reset_last_event_code_second_position();
     reset_last_elapsed_time();
     reset_last_log_method_invoked();
     reset_call_count();
@@ -84,6 +89,7 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
  private:
   uint32_t last_metric_id_ = -1;
   uint32_t last_event_code_ = -1;
+  uint32_t last_event_code_second_position_ = -1;
   int64_t last_elapsed_time_ = -1;
   LogMethod last_log_method_invoked_ = kOther;
   size_t call_count_ = 0;

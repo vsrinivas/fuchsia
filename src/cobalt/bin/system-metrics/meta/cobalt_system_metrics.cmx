@@ -11,7 +11,8 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.activity.Provider"
         ]
     }
 }

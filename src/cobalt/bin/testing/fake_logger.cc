@@ -104,6 +104,8 @@ zx_status_t FakeLogger_Sync::LogCobaltEvent(CobaltEvent event, Status* out_statu
   call_count_++;
   *out_status = Status::OK;
   last_metric_id_ = event.metric_id;
+  last_event_code_ = event.event_codes.size() > 0 ? event.event_codes[0] : -1;  // first position
+  last_event_code_second_position_ = event.event_codes.size() > 1 ? event.event_codes[1] : -1;
   last_log_method_invoked_ = kLogCobaltEvent;
   return ZX_OK;
 }
@@ -111,6 +113,11 @@ zx_status_t FakeLogger_Sync::LogCobaltEvents(::std::vector<CobaltEvent> events,
                                              Status* out_status) {
   call_count_++;
   last_log_method_invoked_ = kLogCobaltEvents;
+  last_event_code_ =
+      events.back().event_codes.size() > 0 ? events.back().event_codes[0] : -1;  // first position
+  last_event_code_second_position_ =
+      events.back().event_codes.size() > 1 ? events.back().event_codes[1] : -1;
+  last_metric_id_ = events.back().metric_id;
   *out_status = Status::OK;
   event_count_ = events.size();
   logged_events_ = std::move(events);

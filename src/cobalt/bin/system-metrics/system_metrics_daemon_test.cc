@@ -28,7 +28,10 @@ using cobalt::FakeTemperatureFetcherNotSupported;
 using cobalt::LogMethod;
 using cobalt::TemperatureFetchStatus;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
-using fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
+using TimeSinceBoot =
+    fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
+using DeviceState =
+    fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::hours;
@@ -55,7 +58,9 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
             dispatcher(), nullptr, &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::MemoryStatsFetcher>(new FakeMemoryStatsFetcher()),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()))) {}
+            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {}
+
+  void UpdateState(fuchsia::ui::activity::State state) { daemon_->UpdateState(state); }
 
   seconds LogFuchsiaUpPing(seconds uptime) { return daemon_->LogFuchsiaUpPing(uptime); }
 
@@ -89,11 +94,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogMemoryUsage() { return daemon_->LogMemoryUsage(); }
 
-  seconds LogCpuUsage() {
+  seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
+
+  void PrepareForLogCpuUsage() {
     for (int i = 0; i < 59; i++) {
-      daemon_->cpu_percentages_.push_back(static_cast<double>(i));
+      daemon_->cpu_percentages_.push_back(
+          {static_cast<double>(i), fuchsia::ui::activity::State::UNKNOWN});
     }
-    return daemon_->LogCpuUsage();
   }
 
   seconds LogTemperature() {
@@ -111,18 +118,20 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     daemon_->SetTemperatureFetcher(std::move(fetcher));
   }
 
-  FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot GetUpTimeEventCode(
-      const std::chrono::seconds& uptime) {
+  TimeSinceBoot GetUpTimeEventCode(const std::chrono::seconds& uptime) {
     return daemon_->GetUpTimeEventCode(uptime);
   }
 
   void CheckValues(LogMethod expected_log_method_invoked, size_t expected_call_count,
                    uint32_t expected_metric_id, uint32_t expected_last_event_code,
+                   uint32_t expected_last_event_code_second_position = -1,
                    size_t expected_event_count = 0) {
     EXPECT_EQ(expected_log_method_invoked, fake_logger_.last_log_method_invoked());
     EXPECT_EQ(expected_call_count, fake_logger_.call_count());
     EXPECT_EQ(expected_metric_id, fake_logger_.last_metric_id());
     EXPECT_EQ(expected_last_event_code, fake_logger_.last_event_code());
+    EXPECT_EQ(expected_last_event_code_second_position,
+              fake_logger_.last_event_code_second_position());
     EXPECT_EQ(expected_event_count, fake_logger_.event_count());
   }
 
@@ -531,10 +540,16 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPingAndLifeTimeEvents) {
 // does not use FIDL. Does not use the message loop.
 TEST_F(SystemMetricsDaemonTest, LogMemoryUsage) {
   fake_logger_.reset();
+  SetClockToDaemonStartTime();
+  fake_clock_->Increment(seconds(kHour * 3));
   // When LogMemoryUsage() is invoked it should log 10 events
   // for each of the memory breakdowns and return 1 minute.
+  // Call count is 2, both are LogCobaltEvents.
   EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  CheckValues(cobalt::kLogCobaltEvents, 2, -1, -1, 10);
+  CheckValues(
+      cobalt::kLogCobaltEvents, 2, fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId,
+      fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::OtherBytes,
+      TimeSinceBoot::UpOneHour, 10);
 }
 
 // Tests the method LogCpuUsage(). Uses a local FakeLogger_Sync and
@@ -543,8 +558,21 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
   fake_logger_.reset();
   // When LogCpuUsage() is invoked it should log 60 events
   // in 1 FIDL call, and return 1 second.
+  PrepareForLogCpuUsage();
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
-  CheckValues(cobalt::kLogCobaltEvents, 1, -1, -1, 60);
+  // Call count is 1. Just one call to LogCobaltEvents, with 60 events.
+  CheckValues(cobalt::kLogCobaltEvents, 1,
+              fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId,
+              DeviceState::Active, -1 /*no second position event code*/, 60);
+
+  PrepareForLogCpuUsage();
+  UpdateState(fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
+  // Another call to LogCobaltEvents, with 60 events.
+  CheckValues(cobalt::kLogCobaltEvents, 2,
+              fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId, DeviceState::Idle,
+              -1 /*no second position event code*/, 60);
 }
 
 // Tests that temperature_bucket_config_ created will put extreme temperature data into
@@ -633,14 +661,9 @@ TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
 }
 
 TEST_F(SystemMetricsDaemonTest, GetUpTimeEventCode) {
-  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays,
-            GetUpTimeEventCode(seconds(518400)));
-  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays,
-            GetUpTimeEventCode(seconds(600000)));
-  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpThreeDays,
-            GetUpTimeEventCode(seconds(360000)));
-  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwoDays,
-            GetUpTimeEventCode(seconds(172800)));
-  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::Up,
-            GetUpTimeEventCode(seconds(59)));
+  EXPECT_EQ(TimeSinceBoot::UpSixDays, GetUpTimeEventCode(seconds(518400)));
+  EXPECT_EQ(TimeSinceBoot::UpSixDays, GetUpTimeEventCode(seconds(600000)));
+  EXPECT_EQ(TimeSinceBoot::UpThreeDays, GetUpTimeEventCode(seconds(360000)));
+  EXPECT_EQ(TimeSinceBoot::UpTwoDays, GetUpTimeEventCode(seconds(172800)));
+  EXPECT_EQ(TimeSinceBoot::Up, GetUpTimeEventCode(seconds(59)));
 }

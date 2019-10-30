@@ -42,10 +42,10 @@ using cobalt::config::IntegerBucketConfig;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::HistogramBucket;
 using fuchsia::cobalt::Logger_Sync;
+using fuchsia::ui::activity::State;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
-using fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown;
-using fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
-using fuchsia_system_metrics::FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown;
+using TimeSinceBoot =
+    fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::steady_clock;
@@ -71,8 +71,13 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::MemoryStatsFetcher>(new cobalt::MemoryStatsFetcherImpl()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
-          std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl())) {
+          std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl()),
+          std::make_unique<cobalt::ActivityListener>(
+              fit::bind_member(this, &SystemMetricsDaemon::UpdateState))) {
   InitializeLogger();
+  // Connect activity listener to service provider.
+  activity_provider_ = context->svc()->Connect<fuchsia::ui::activity::Provider>();
+  activity_provider_->WatchState(activity_listener_->NewHandle(dispatcher));
 }
 
 SystemMetricsDaemon::SystemMetricsDaemon(
@@ -80,7 +85,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     fuchsia::cobalt::Logger_Sync* logger, std::unique_ptr<cobalt::SteadyClock> clock,
     std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
     std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
-    std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher)
+    std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
+    std::unique_ptr<cobalt::ActivityListener> activity_listener)
     : dispatcher_(dispatcher),
       context_(context),
       logger_(logger),
@@ -88,7 +94,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       clock_(std::move(clock)),
       memory_stats_fetcher_(std::move(memory_stats_fetcher)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
-      temperature_fetcher_(std::move(temperature_fetcher)) {}
+      temperature_fetcher_(std::move(temperature_fetcher)),
+      activity_listener_(std::move(activity_listener)) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
@@ -381,7 +388,7 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   if (!cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
     return std::chrono::minutes(1);
   }
-  cpu_percentages_.push_back(cpu_percentage);
+  cpu_percentages_.push_back({cpu_percentage, current_state_});
   if (cpu_percentages_.size() == 60) {  // Flush every minute.
     LogCpuPercentagesToCobalt();
     // Drop the data even if logging does not succeed.
@@ -392,13 +399,29 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
 
 void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuPercentagesToCobalt");
+  using DeviceState =
+      fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
   std::vector<CobaltEvent> events;
   auto builder =
       CobaltEventBuilder(fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId);
   for (unsigned i = 0; i < cpu_percentages_.size(); i++) {
     // TODO(CB-253) Change to CPU metric type and
     // take away "* 100" if the new metric type supports double.
-    events.push_back(builder.Clone().as_memory_usage(cpu_percentages_[i] * 100));
+    fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState event_code;
+    switch (cpu_percentages_[i].state) {
+      case State::IDLE:
+        event_code = DeviceState::Idle;
+        break;
+      case State::ACTIVE:
+        event_code = DeviceState::Active;
+        break;
+      case State::UNKNOWN:
+        event_code = DeviceState::Unknown;
+        break;
+    }
+    events.push_back(builder.Clone()
+                         .with_event_code(event_code)
+                         .as_memory_usage(cpu_percentages_[i].cpu_percentage * 100));
   }
   // call cobalt FIDL
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
@@ -472,42 +495,42 @@ std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats,
                                                  const std::chrono::seconds& uptime) {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogMemoryUsageToCobalt");
-  typedef FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown Breakdown;
-
+  using MemoryBreakdown =
+      fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown;
   auto builder =
       std::move(CobaltEventBuilder(fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId)
                     .with_event_code_at(1, GetUpTimeEventCode(uptime)));
 
   std::vector<CobaltEvent> events;
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::TotalBytes)
+                       .with_event_code_at(0, MemoryBreakdown::TotalBytes)
                        .as_memory_usage(stats.total_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::UsedBytes)
+                       .with_event_code_at(0, MemoryBreakdown::UsedBytes)
                        .as_memory_usage(stats.total_bytes() - stats.free_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::FreeBytes)
+                       .with_event_code_at(0, MemoryBreakdown::FreeBytes)
                        .as_memory_usage(stats.free_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::VmoBytes)
+                       .with_event_code_at(0, MemoryBreakdown::VmoBytes)
                        .as_memory_usage(stats.vmo_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::KernelFreeHeapBytes)
+                       .with_event_code_at(0, MemoryBreakdown::KernelFreeHeapBytes)
                        .as_memory_usage(stats.free_heap_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::MmuBytes)
+                       .with_event_code_at(0, MemoryBreakdown::MmuBytes)
                        .as_memory_usage(stats.mmu_overhead_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::IpcBytes)
+                       .with_event_code_at(0, MemoryBreakdown::IpcBytes)
                        .as_memory_usage(stats.ipc_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::KernelTotalHeapBytes)
+                       .with_event_code_at(0, MemoryBreakdown::KernelTotalHeapBytes)
                        .as_memory_usage(stats.total_heap_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::WiredBytes)
+                       .with_event_code_at(0, MemoryBreakdown::WiredBytes)
                        .as_memory_usage(stats.wired_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code_at(0, Breakdown::OtherBytes)
+                       .with_event_code_at(0, MemoryBreakdown::OtherBytes)
                        .as_memory_usage(stats.other_bytes()));
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
@@ -518,62 +541,67 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::M
   return;
 }
 
-FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot SystemMetricsDaemon::GetUpTimeEventCode(
-    const std::chrono::seconds& uptime) {
+TimeSinceBoot SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
   if (uptime < std::chrono::minutes(1)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::Up;
+    return TimeSinceBoot::Up;
   } else if (uptime < std::chrono::minutes(30)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneMinute;
+    return TimeSinceBoot::UpOneMinute;
   } else if (uptime < std::chrono::hours(1)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpThirtyMinutes;
+    return TimeSinceBoot::UpThirtyMinutes;
   } else if (uptime < std::chrono::hours(6)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneHour;
+    return TimeSinceBoot::UpOneHour;
   } else if (uptime < std::chrono::hours(12)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixHours;
+    return TimeSinceBoot::UpSixHours;
   } else if (uptime < std::chrono::hours(24)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwelveHours;
+    return TimeSinceBoot::UpTwelveHours;
   } else if (uptime < std::chrono::hours(48)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneDay;
+    return TimeSinceBoot::UpOneDay;
   } else if (uptime < std::chrono::hours(72)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwoDays;
+    return TimeSinceBoot::UpTwoDays;
   } else if (uptime < std::chrono::hours(144)) {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpThreeDays;
+    return TimeSinceBoot::UpThreeDays;
   } else {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays;
+    return TimeSinceBoot::UpSixDays;
   }
 }
 
 void SystemMetricsDaemon::LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats) {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogMemoryUsageToCobalt2");
-  typedef FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown Breakdown;
-
+  using MemoryBreakdown =
+      fuchsia_system_metrics::FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown;
   std::vector<CobaltEvent> events;
   auto builder = CobaltEventBuilder(fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId);
 
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::TotalBytes).as_memory_usage(stats.total_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code(Breakdown::UsedBytes)
+                       .with_event_code(MemoryBreakdown::TotalBytes)
+                       .as_memory_usage(stats.total_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::UsedBytes)
                        .as_memory_usage(stats.total_bytes() - stats.free_bytes()));
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::FreeBytes).as_memory_usage(stats.free_bytes()));
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::VmoBytes).as_memory_usage(stats.vmo_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code(Breakdown::KernelFreeHeapBytes)
+                       .with_event_code(MemoryBreakdown::FreeBytes)
+                       .as_memory_usage(stats.free_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::VmoBytes)
+                       .as_memory_usage(stats.vmo_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::KernelFreeHeapBytes)
                        .as_memory_usage(stats.free_heap_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code(Breakdown::MmuBytes)
+                       .with_event_code(MemoryBreakdown::MmuBytes)
                        .as_memory_usage(stats.mmu_overhead_bytes()));
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::IpcBytes).as_memory_usage(stats.ipc_bytes()));
   events.push_back(builder.Clone()
-                       .with_event_code(Breakdown::KernelTotalHeapBytes)
+                       .with_event_code(MemoryBreakdown::IpcBytes)
+                       .as_memory_usage(stats.ipc_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::KernelTotalHeapBytes)
                        .as_memory_usage(stats.total_heap_bytes()));
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::WiredBytes).as_memory_usage(stats.wired_bytes()));
-  events.push_back(
-      builder.Clone().with_event_code(Breakdown::OtherBytes).as_memory_usage(stats.other_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::WiredBytes)
+                       .as_memory_usage(stats.wired_bytes()));
+  events.push_back(builder.Clone()
+                       .with_event_code(MemoryBreakdown::OtherBytes)
+                       .as_memory_usage(stats.other_bytes()));
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
   if (status != fuchsia::cobalt::Status::OK) {
