@@ -69,6 +69,7 @@ constexpr int kPrecedenceShift = 110;                 // << >>
 constexpr int kPrecedenceAddition = 120;              // + -
 constexpr int kPrecedenceMultiplication = 130;        // * / %
 //constexpr int kPrecedencePointerToMember = 140;     // .* ->*
+constexpr int kPrecedenceRustCast = 140;              // foo as Bar
 constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
 constexpr int kPrecedenceCallAccess = 160;            // () . -> []
 //constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
@@ -131,6 +132,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::CastPrefix,      nullptr,                      -1},                             // kReinterpretCast
     {&ExprParser::CastPrefix,      nullptr,                      -1},                             // kStaticCast
     {&ExprParser::SizeofPrefix,    nullptr,                      -1},                             // kSizeof
+    {nullptr,                      &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
 };
 // clang-format on
 
@@ -686,6 +688,15 @@ fxl::RefPtr<ExprNode> ExprParser::LeftSquareInfix(fxl::RefPtr<ExprNode> left,
   if (has_error())
     return nullptr;
   return fxl::MakeRefCounted<ArrayAccessExprNode>(std::move(left), std::move(inner));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::RustCastInfix(fxl::RefPtr<ExprNode> left,
+                                                const ExprToken& token) {
+  fxl::RefPtr<Type> type = ParseType(fxl::RefPtr<Type>());
+  if (has_error())
+    return nullptr;
+  return fxl::MakeRefCounted<CastExprNode>(
+      CastType::kRust, fxl::MakeRefCounted<TypeExprNode>(std::move(type)), std::move(left));
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {

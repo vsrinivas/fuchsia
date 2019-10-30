@@ -104,6 +104,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> LeftParenPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftParenInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LeftSquareInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
+  fxl::RefPtr<ExprNode> RustCastInfix(fxl::RefPtr<ExprNode> left, const ExprToken& token);
   fxl::RefPtr<ExprNode> LiteralPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> UnaryPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);

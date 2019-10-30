@@ -79,7 +79,11 @@ class ExprParserTest : public testing::Test {
   // Does the parse and returns the string dump of the structure.
   std::string GetParseString(const char* input,
                              NameLookupCallback name_lookup = NameLookupCallback()) {
-    auto root = Parse(input, std::move(name_lookup));
+    return GetParseString(input, ExprLanguage::kC, std::move(name_lookup));
+  }
+
+  std::string GetParseString(const char* input, ExprLanguage lang, NameLookupCallback name_lookup) {
+    auto root = Parse(input, lang, std::move(name_lookup));
     if (!root) {
       // Expect calls to this to parse successfully.
       if (parser_.get())
@@ -706,6 +710,45 @@ TEST_F(ExprParserTest, C_Cast) {
   auto result = Parse("(NotType)a", &TestLookupName);
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, RustCast) {
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as Type", ExprLanguage::kRust, &TestLookupName));
+
+  // TODO(sadmac): The parentheses should be unnecessary but the type parser thinks the && is more
+  // type stuff and takes it. More Rust modality is needed.
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " CAST(Rust)\n"
+      "  TYPE(Type*)\n"
+      "  IDENTIFIER(\"a\")\n"
+      " IDENTIFIER(\"b\")\n",
+      GetParseString("(a as Type*) && b", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type)\n"
+      " ACCESSOR(->)\n"
+      "  ARRAY_ACCESS\n"
+      "   IDENTIFIER(\"a\")\n"
+      "   LITERAL(0)\n"
+      "  b\n",
+      GetParseString("a[0]->b as Type", ExprLanguage::kRust, &TestLookupName));
+
+  // Looks like a cast but it's not a type.
+  auto result = Parse("a as NotType", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
+            parser().err().msg());
+
+  // Rust cast but we're not in rust
+  result = Parse("a as Type", ExprLanguage::kC, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, CppCast) {

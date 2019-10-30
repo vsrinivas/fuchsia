@@ -40,6 +40,13 @@ enum class CastType {
   // types "reinterpret_cast<char*>(0x12343567)" we want the debugger to be able to execute.
   kReinterpret,
 
+  // A Rust-style cast: "foo as bar;".
+  //
+  // The expected behaviors of this type of cast are documented here:
+  //
+  // https://doc.rust-lang.org/nomicon/casts.html
+  kRust,
+
   // Compared to C++, the debugger's implicit cast is so powerful that the only thing that
   // static_cast adds is conversions to derived classes for pointers and references.
   kStatic

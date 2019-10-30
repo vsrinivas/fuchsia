@@ -470,6 +470,8 @@ const char* CastTypeToString(CastType type) {
       return "implicit";
     case CastType::kC:
       return "C";
+    case CastType::kRust:
+      return "Rust";
     case CastType::kReinterpret:
       return "reinterpret_cast";
     case CastType::kStatic:
@@ -484,6 +486,7 @@ ErrOrValue CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType 
   switch (cast_type) {
     case CastType::kImplicit:
       return ImplicitCast(eval_context, source, dest_type, dest_source);
+    case CastType::kRust:  // TODO(sadmac): This is almost correct. Make sure it's exactly correct.
     case CastType::kC: {
       // A C-style cast can do the following things.
       //  - const_cast
