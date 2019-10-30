@@ -94,6 +94,7 @@ struct PartitionInfo {
   uint32_t partition_block_count = {};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;

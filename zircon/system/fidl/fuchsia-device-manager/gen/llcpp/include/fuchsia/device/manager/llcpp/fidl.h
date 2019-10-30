@@ -771,7 +771,9 @@ constexpr uint32_t METADATA_MAX = 8192u;
 constexpr uint32_t MAX_SYSTEM_POWER_STATES = 7u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
 
@@ -1209,10 +1211,10 @@ class DevhostController final {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
 
 struct Coordinator_AddDevice_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -1316,10 +1318,10 @@ struct Coordinator_AddDevice_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
 
 struct Coordinator_AddDeviceInvisible_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -1438,10 +1440,10 @@ constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
 // Maximum number of bytes in a device arguments string.
 constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
 
 struct Coordinator_UnbindDone_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1545,10 +1547,10 @@ struct Coordinator_UnbindDone_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
 
 struct Coordinator_RunCompatibilityTests_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1652,10 +1654,10 @@ struct Coordinator_RunCompatibilityTests_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
 
 struct Coordinator_RemoveDone_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1759,10 +1761,10 @@ struct Coordinator_RemoveDone_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
 
 struct Coordinator_PublishMetadata_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1866,10 +1868,10 @@ struct Coordinator_PublishMetadata_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
 
 struct Coordinator_MakeVisible_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2296,10 +2298,10 @@ struct Coordinator_GetMetadata_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
 
 struct Coordinator_GetMetadataSize_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -2403,10 +2405,10 @@ struct Coordinator_GetMetadataSize_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
 
 struct Coordinator_DirectoryWatch_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2510,10 +2512,10 @@ struct Coordinator_DirectoryWatch_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
 
 struct Coordinator_BindDevice_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2617,10 +2619,10 @@ struct Coordinator_BindDevice_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
 
 struct Coordinator_AddMetadata_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2724,10 +2726,10 @@ struct Coordinator_AddMetadata_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
 
 struct Coordinator_AddCompositeDevice_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2834,11 +2836,17 @@ struct Coordinator_AddCompositeDevice_Result {
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsResponseTable;
 
 // Protocol for controlling devices in a devhost process from the devcoordinator
 class DeviceController final {
@@ -3489,10 +3497,10 @@ class DeviceController final {
 // Maximum number of components that a composite device can have
 constexpr uint32_t COMPONENTS_MAX = 16u;
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_BindInstructionTable;
 
 struct BindInstruction {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_BindInstructionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -3505,11 +3513,11 @@ struct BindInstruction {
   uint32_t arg = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceComponentPartTable;
 
 // A part of a description of a DeviceComponent
 struct DeviceComponentPart {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceComponentPartTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 260;
   [[maybe_unused]]
@@ -3520,11 +3528,11 @@ struct DeviceComponentPart {
   ::fidl::Array<::llcpp::fuchsia::device::manager::BindInstruction, 32> match_program = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceComponentTable;
 
 // A piece of a composite device
 struct DeviceComponent {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceComponentTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4164;
   [[maybe_unused]]
@@ -3540,11 +3548,18 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponse
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
@@ -3560,6 +3575,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDevic
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
 
 // Interface for the devices in devhosts to coordinate with the devcoordinator.
@@ -3988,7 +4004,7 @@ class Coordinator final {
     fidl_message_header_t _hdr;
     int64_t hook_wait_time;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

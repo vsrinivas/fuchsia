@@ -101,10 +101,10 @@ struct UnionSize8Alignment4 {
   };
 };
 
-
+extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 struct SandwichUnionSize8Alignment4 {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -186,10 +186,10 @@ struct UnionSize36Alignment4 {
   };
 };
 
-
+extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 struct SandwichUnionSize36Alignment4 {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 44;
   [[maybe_unused]]
@@ -287,10 +287,10 @@ struct SandwichUnionSize12Alignment4 {
   int32_t after = {};
 };
 
-
+extern "C" const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table;
 
 struct StructSize16Alignment8 {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_StructSize16Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]

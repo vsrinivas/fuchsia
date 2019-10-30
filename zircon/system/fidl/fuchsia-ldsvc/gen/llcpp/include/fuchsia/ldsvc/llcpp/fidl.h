@@ -25,6 +25,8 @@ namespace ldsvc {
 
 class Loader;
 
+extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneResponseTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;

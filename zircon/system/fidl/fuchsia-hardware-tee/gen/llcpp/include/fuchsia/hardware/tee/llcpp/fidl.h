@@ -29,6 +29,7 @@ namespace tee {
 class DeviceConnector;
 
 extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
 
 // Protocol used by the TEE Manager to proxy requests for TEE access to the driver.
 class DeviceConnector final {

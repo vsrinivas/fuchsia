@@ -466,6 +466,7 @@ struct CpuStats {
 };
 
 extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
+extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecResponseTable;
 
 // Acts on behalf of the caller to interact with privileged mexec system call.
 class MexecBroker final {
@@ -924,7 +925,9 @@ class DebugBroker final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 
 // Protocol for retrieving kcounter information.
@@ -1203,7 +1206,9 @@ class Counter final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsResponseTable;
+extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsResponseTable;
 
 // Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for

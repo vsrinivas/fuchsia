@@ -195,6 +195,7 @@ namespace {
 constexpr uint64_t kDevice_GetOsInfo_Ordinal = 0x6d1d83f300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetOsInfo_GenOrdinal = 0x9b65a9e69ce2ff0lu;
+extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_OpenSession_Ordinal = 0x3c7d253d00000000lu;
@@ -213,6 +214,7 @@ constexpr uint64_t kDevice_CloseSession_Ordinal = 0x53bbaea700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_CloseSession_GenOrdinal = 0x7c21cc4c0084d8aflu;
 extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionRequestTable;
+extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionResponseTable;
 
 }  // namespace
 template <>

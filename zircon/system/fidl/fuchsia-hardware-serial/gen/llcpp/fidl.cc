@@ -15,11 +15,13 @@ namespace {
 constexpr uint64_t kDevice_GetClass_Ordinal = 0x6549990f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetClass_GenOrdinal = 0x3d48bbcee248ab8blu;
+extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_GenOrdinal = 0x771a0946f6f87173lu;
+extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace

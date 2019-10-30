@@ -6,6 +6,8 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -25,6 +27,7 @@ class Simple;
 
 extern "C" const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
+extern "C" const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
 
 class Simple final {
@@ -41,6 +44,7 @@ class Simple final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -54,6 +58,7 @@ class Simple final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = EchoResponse;
@@ -69,6 +74,7 @@ class Simple final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };

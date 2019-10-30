@@ -15,6 +15,7 @@ namespace {
 constexpr uint64_t kFtl_Format_Ordinal = 0x34f0c1b900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFtl_Format_GenOrdinal = 0x79751d9c0b48a0d6lu;
+extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 }  // namespace
@@ -166,6 +167,7 @@ namespace {
 constexpr uint64_t kBlock_GetInfo_Ordinal = 0x7279049800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlock_GetInfo_GenOrdinal = 0x79df1a5cdb6cc6a3lu;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBlock_GetStats_Ordinal = 0x73b9275400000000lu;
@@ -177,6 +179,7 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsResponseTable;
 constexpr uint64_t kBlock_GetFifo_Ordinal = 0x63616dbe00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlock_GetFifo_GenOrdinal = 0x507ea563fb50747elu;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBlock_AttachVmo_Ordinal = 0x72df2e6600000000lu;
@@ -188,11 +191,13 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoResponseTable;
 constexpr uint64_t kBlock_CloseFifo_Ordinal = 0x6b4a461300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlock_CloseFifo_GenOrdinal = 0x4dc09acdfa2a2a65lu;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBlock_RebindDevice_Ordinal = 0x2c1ffdb000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlock_RebindDevice_GenOrdinal = 0x5d728cbd5312c9aelu;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTable;
 
 }  // namespace

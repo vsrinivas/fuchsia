@@ -70,10 +70,10 @@ constexpr uint16_t MAX_NUM_TRACES = 64u;
 // The maximum number of supported address ranges.
 constexpr uint16_t MAX_NUM_ADDR_RANGES = 2u;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResponseTable;
 
 struct Controller_Terminate_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -177,10 +177,10 @@ struct Controller_Terminate_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResponseTable;
 
 struct Controller_ReleaseThreadBuffer_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -284,10 +284,10 @@ struct Controller_ReleaseThreadBuffer_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResponseTable;
 
 struct Controller_Initialize_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -391,10 +391,10 @@ struct Controller_Initialize_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResponseTable;
 
 struct Controller_AssignThreadBuffer_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -498,11 +498,11 @@ struct Controller_AssignThreadBuffer_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_BufferStateTable;
 
 // A buffer's runtime state.
 struct BufferState {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_BufferStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -515,10 +515,10 @@ struct BufferState {
   uint64_t capture_end = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResponseTable;
 
 struct Controller_AllocateBuffer_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -622,11 +622,11 @@ struct Controller_AllocateBuffer_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_AddressRangeTable;
 
 // An address range, as [start,end].
 struct AddressRange {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_AddressRangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -675,9 +675,12 @@ struct BufferConfig {
 
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerInitializeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerInitializeResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBufferResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerReleaseThreadBufferRequestTable;
@@ -686,8 +689,14 @@ extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferC
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferStateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferStateResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopResponseTable;
 
 class Controller final {
   Controller() = delete;
@@ -760,7 +769,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -927,7 +936,7 @@ class Controller final {
     uint32_t descriptor;
     uint32_t chunk_num;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

@@ -15,30 +15,36 @@ constexpr uint64_t kFilesystems_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -50,6 +56,8 @@ extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSetAttrResponseTable;
 constexpr uint64_t kFilesystems_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -61,6 +69,7 @@ constexpr uint64_t kFilesystems_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Open_GenOrdinal = 0x2c5044561d685ec0lu;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
@@ -71,16 +80,19 @@ extern "C" const fidl_type_t fuchsia_fshost_FilesystemsUnlinkResponseTable;
 constexpr uint64_t kFilesystems_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rename_Ordinal = 0x4a94b0ac00000000lu;

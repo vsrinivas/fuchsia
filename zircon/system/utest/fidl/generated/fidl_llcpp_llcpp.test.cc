@@ -15,6 +15,7 @@ namespace {
 constexpr uint64_t kLlcpp_Action_Ordinal = 0x46bfc70900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLlcpp_Action_GenOrdinal = 0x63f4dc1b85d88fc2lu;
+extern "C" const fidl_type_t fidl_test_coding_LlcppActionRequestTable;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
 
 }  // namespace

@@ -21,6 +21,7 @@ extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRespons
 constexpr uint64_t kDeviceManager_Seal_Ordinal = 0x3ecfec3100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_GenOrdinal = 0x6b740d57dd46950blu;
+extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
 
 }  // namespace

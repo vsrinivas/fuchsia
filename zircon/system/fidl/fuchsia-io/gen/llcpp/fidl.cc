@@ -15,6 +15,7 @@ constexpr uint64_t kDirectoryWatcher_OnEvent_Ordinal = 0x208bcc9d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryWatcher_OnEvent_GenOrdinal = 0x3937a088fe53412alu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventResponseTable;
 
 }  // namespace
 
@@ -293,30 +294,36 @@ constexpr uint64_t kNode_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_io_NodeCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_io_NodeDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_io_NodeOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_io_NodeSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_io_NodeGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -328,6 +335,8 @@ extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
 constexpr uint64_t kNode_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -1394,30 +1403,36 @@ constexpr uint64_t kFile_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_io_FileCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_io_FileDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_io_FileOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_io_FileSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_io_FileGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -1429,6 +1444,8 @@ extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
 constexpr uint64_t kFile_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -1439,11 +1456,13 @@ extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
 constexpr uint64_t kFile_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Read_GenOrdinal = 0x29b2b7074c95208clu;
+extern "C" const fidl_type_t fuchsia_io_FileReadRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_ReadAt_Ordinal = 0x7c724dc400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_ReadAt_GenOrdinal = 0x6527ee3fbc9c5749lu;
+extern "C" const fidl_type_t fuchsia_io_FileReadAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Write_Ordinal = 0x512e7a000000000lu;
@@ -1467,11 +1486,14 @@ extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
 constexpr uint64_t kFile_Truncate_Ordinal = 0x42ab3a3a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Truncate_GenOrdinal = 0x5ec8f337359a2ddblu;
+extern "C" const fidl_type_t fuchsia_io_FileTruncateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetFlags_Ordinal = 0x6416a3f600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetFlags_GenOrdinal = 0x200be82ca523ab96lu;
+extern "C" const fidl_type_t fuchsia_io_FileGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetFlags_Ordinal = 0x3f23cc7600000000lu;
 [[maybe_unused]]
@@ -3663,30 +3685,36 @@ constexpr uint64_t kDirectory_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_io_DirectorySyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -3698,6 +3726,8 @@ extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
 constexpr uint64_t kDirectory_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -3709,6 +3739,7 @@ constexpr uint64_t kDirectory_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Open_GenOrdinal = 0x2c5044561d685ec0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
@@ -3719,16 +3750,19 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
 constexpr uint64_t kDirectory_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rename_Ordinal = 0x4a94b0ac00000000lu;
@@ -5762,30 +5796,36 @@ constexpr uint64_t kDirectoryAdmin_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -5797,6 +5837,8 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
 constexpr uint64_t kDirectoryAdmin_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -5808,6 +5850,7 @@ constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Open_GenOrdinal = 0x2c5044561d685ec0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
@@ -5818,16 +5861,19 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
 constexpr uint64_t kDirectoryAdmin_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rename_Ordinal = 0x4a94b0ac00000000lu;
@@ -5863,21 +5909,25 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTabl
 constexpr uint64_t kDirectoryAdmin_Unmount_Ordinal = 0x2502275400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unmount_GenOrdinal = 0x7da45d654c35c9a4lu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_UnmountNode_Ordinal = 0x16da38a700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_UnmountNode_GenOrdinal = 0x26b9d90ebe5f93dblu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_QueryFilesystem_Ordinal = 0x66298d9200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_QueryFilesystem_GenOrdinal = 0x4a879480f1d7875dlu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetDevicePath_Ordinal = 0x2ef70eb800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetDevicePath_GenOrdinal = 0x76f2e3c7331f815blu;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 }  // namespace

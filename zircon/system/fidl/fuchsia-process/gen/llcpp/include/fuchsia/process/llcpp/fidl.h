@@ -424,9 +424,13 @@ extern "C" const fidl_type_t fuchsia_process_LauncherLaunchResponseTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingRequestTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingResponseTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsRequestTable;
+extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsResponseTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsRequestTable;
+extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsResponseTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesRequestTable;
+extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesResponseTable;
 extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
+extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesResponseTable;
 
 // A low-level interface for launching processes.
 //

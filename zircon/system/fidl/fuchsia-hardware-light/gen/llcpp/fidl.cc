@@ -21,11 +21,13 @@ extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameResponseTable;
 constexpr uint64_t kLight_GetCount_Ordinal = 0x4e441b4600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetCount_GenOrdinal = 0x3f141dbdbcb1f0felu;
+extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_HasCapability_Ordinal = 0x703098f200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_HasCapability_GenOrdinal = 0x6fb1d40c2effffc9lu;
+extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetSimpleValue_Ordinal = 0x634b636200000000lu;

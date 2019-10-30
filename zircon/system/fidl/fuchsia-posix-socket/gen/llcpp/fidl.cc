@@ -176,30 +176,36 @@ constexpr uint64_t kControl_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_GenOrdinal = 0xffcec215078dea0lu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_GenOrdinal = 0x189d88326c18b519lu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_Ordinal = 0xbd5559a00000000lu;
@@ -211,6 +217,8 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
 constexpr uint64_t kControl_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
@@ -245,11 +253,13 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
 constexpr uint64_t kControl_GetSockName_Ordinal = 0x63c1368200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_GenOrdinal = 0x6f68e0f0d72c2d1dlu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_Ordinal = 0x58787bb600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_GenOrdinal = 0x555a019c03d9820dlu;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_Ordinal = 0x4ba217a700000000lu;

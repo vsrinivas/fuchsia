@@ -16,6 +16,7 @@ constexpr uint64_t kDevice_GetChannel_Ordinal = 0x1ff7011500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x2add7b2741b2d65dlu;
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
 
 }  // namespace
 

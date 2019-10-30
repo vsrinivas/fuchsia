@@ -160,6 +160,7 @@ struct Tty {
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventResponseTable;
 
 // DirectoryWatcher transmits messages from a filesystem server
 // about events happening in the filesystem. Clients can register
@@ -324,12 +325,12 @@ struct Socket {
   ::zx::socket socket = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_io_ServiceTable;
 
 // The default protocol, interface information must be acquired some
 // other way.
 struct Service {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_io_ServiceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -502,10 +503,10 @@ constexpr uint64_t MAX_BUF = 8192u;
 // from Readdir and GetAttr.
 constexpr uint64_t INO_UNKNOWN = 18446744073709551615u;
 
-
+extern "C" const fidl_type_t fuchsia_io_FilesystemInfoTable;
 
 struct FilesystemInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_io_FilesystemInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 96;
   [[maybe_unused]]
@@ -570,11 +571,11 @@ constexpr uint32_t FILE_SIGNAL_WRITABLE = 33554432u;
 // Indicates the file is ready for reading.
 constexpr uint32_t FILE_SIGNAL_READABLE = 16777216u;
 
-
+extern "C" const fidl_type_t fuchsia_io_DirectoryObjectTable;
 
 // The object may be cast to interface 'Directory'.
 struct DirectoryObject {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryObjectTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -855,13 +856,21 @@ struct NodeInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_io_NodeSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsResponseTable;
 
@@ -1003,7 +1012,7 @@ class Node final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1902,16 +1911,26 @@ class Node final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_io_FileSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileReadRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileReadAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteResponseTable;
@@ -1919,7 +1938,10 @@ extern "C" const fidl_type_t fuchsia_io_FileWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileTruncateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
+extern "C" const fidl_type_t fuchsia_io_FileGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_FileGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferRequestTable;
@@ -2063,7 +2085,7 @@ class File final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2124,7 +2146,7 @@ class File final {
     fidl_message_header_t _hdr;
     uint64_t count;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2156,7 +2178,7 @@ class File final {
     uint64_t count;
     uint64_t offset;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2281,7 +2303,7 @@ class File final {
     fidl_message_header_t _hdr;
     uint64_t length;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileTruncateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2298,7 +2320,7 @@ class File final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4004,20 +4026,32 @@ class File final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_io_DirectorySyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameResponseTable;
@@ -4164,7 +4198,7 @@ class Directory final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4273,7 +4307,7 @@ class Directory final {
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6337,20 +6371,32 @@ class Directory final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameResponseTable;
@@ -6362,9 +6408,13 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 // DirectoryAdmin defines a directory which is capable of handling
@@ -6506,7 +6556,7 @@ class DirectoryAdmin final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6615,7 +6665,7 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

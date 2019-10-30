@@ -224,13 +224,21 @@ class Provider final {
 };
 
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
@@ -241,7 +249,9 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
+extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
@@ -394,7 +404,7 @@ class Control final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

@@ -85,6 +85,7 @@ extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 constexpr uint64_t kButtons_Notify_Ordinal = 0x551dd30100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_Notify_GenOrdinal = 0x49f747239d72f910lu;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
 
 }  // namespace

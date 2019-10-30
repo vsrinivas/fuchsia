@@ -14,6 +14,7 @@ namespace {
 constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 0x658708c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kConnectivity_OnNetworkReachable_GenOrdinal = 0x6f099dcaa3ff5b7lu;
+extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 }  // namespace

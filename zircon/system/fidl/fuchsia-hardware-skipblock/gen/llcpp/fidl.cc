@@ -15,6 +15,7 @@ namespace {
 constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 0x61812f6e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_GetPartitionInfo_GenOrdinal = 0xf95442de92af21dlu;
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Read_Ordinal = 0x68e3be6200000000lu;

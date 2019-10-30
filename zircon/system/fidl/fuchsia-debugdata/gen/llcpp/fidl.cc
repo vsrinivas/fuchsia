@@ -15,6 +15,7 @@ constexpr uint64_t kDebugData_Publish_Ordinal = 0x233ab68f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDebugData_Publish_GenOrdinal = 0x32e10c8a45d9312alu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
+extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDebugData_LoadConfig_Ordinal = 0x934ade500000000lu;
 [[maybe_unused]]

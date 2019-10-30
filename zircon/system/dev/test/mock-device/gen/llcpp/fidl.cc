@@ -133,14 +133,19 @@ constexpr uint64_t kMockDeviceThread_PerformActions_Ordinal = 0x4368272e00000000
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_PerformActions_GenOrdinal = 0x1e51d6eb0ce75baclu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_AddDeviceDone_Ordinal = 0x5a75b43900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_AddDeviceDone_GenOrdinal = 0x5f70f15bcdf559belu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_UnbindReplyDone_Ordinal = 0x6c9ed25d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_UnbindReplyDone_GenOrdinal = 0x7cadbb1dcfd931b3lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
 
 }  // namespace
 
@@ -427,11 +432,14 @@ namespace {
 constexpr uint64_t kMockDevice_Bind_Ordinal = 0x7c80f6ec00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Bind_GenOrdinal = 0x61f85ea4a79aaf98lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Release_Ordinal = 0x244f460200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Release_GenOrdinal = 0x3e34cd45b096f7dflu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetProtocol_Ordinal = 0x2260377000000000lu;
 [[maybe_unused]]
@@ -454,11 +462,13 @@ extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceCloseResponseTable;
 constexpr uint64_t kMockDevice_Unbind_Ordinal = 0x4184fddd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Unbind_GenOrdinal = 0x5edfb40dac65de1alu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Read_Ordinal = 0x58b86c9100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Read_GenOrdinal = 0x59a0e040f263ce78lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Write_Ordinal = 0x58d75faa00000000lu;
@@ -470,6 +480,7 @@ extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceWriteResponseTable;
 constexpr uint64_t kMockDevice_GetSize_Ordinal = 0xadc36e600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetSize_GenOrdinal = 0x2fd05ce2a771bba2lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Suspend_Ordinal = 0x3a4dd8cb00000000lu;
@@ -487,20 +498,26 @@ extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceResumeResponseTable;
 constexpr uint64_t kMockDevice_Message_Ordinal = 0x52488df800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Message_GenOrdinal = 0x7a14d769ce9e8b14lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Rxrpc_Ordinal = 0x2e6fd1b900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Rxrpc_GenOrdinal = 0x24f0a836490f4a99lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_AddDeviceDone_Ordinal = 0x10d0aadc00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_AddDeviceDone_GenOrdinal = 0x40fd824a0e920396lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_UnbindReplyDone_Ordinal = 0x4d0946a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_UnbindReplyDone_GenOrdinal = 0x6f057a72a4b6c2e8lu;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
 
 }  // namespace
 template <>

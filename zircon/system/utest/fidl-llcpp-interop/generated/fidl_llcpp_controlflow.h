@@ -6,6 +6,8 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -24,6 +26,11 @@ namespace controlflow {
 
 class ControlFlow;
 
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownRequestTable;
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownResponseTable;
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphRequestTable;
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphResponseTable;
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 // Interface for testing shutdown/epitaphs etc.
@@ -45,6 +52,7 @@ class ControlFlow final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };

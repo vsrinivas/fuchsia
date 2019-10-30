@@ -14,6 +14,8 @@ namespace {
 constexpr uint64_t kLoader_Done_Ordinal = 0x501635da00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Done_GenOrdinal = 0x63ba6b76d3671001lu;
+extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_LoadObject_Ordinal = 0x18d35e6000000000lu;
 [[maybe_unused]]

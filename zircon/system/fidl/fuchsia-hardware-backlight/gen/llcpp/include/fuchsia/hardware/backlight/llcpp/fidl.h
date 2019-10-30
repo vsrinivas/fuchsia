@@ -271,10 +271,10 @@ struct Device_GetStateAbsolute_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
 
 struct Device_SetStateNormalized_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -378,10 +378,10 @@ struct Device_SetStateNormalized_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
 
 struct Device_SetStateAbsolute_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -485,10 +485,10 @@ struct Device_SetStateAbsolute_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
 
 struct Device_GetMaxAbsoluteBrightness_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -592,12 +592,15 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
 
 class Device final {

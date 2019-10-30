@@ -61,11 +61,11 @@ struct AddDeviceAction {
   int32_t expect_status = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_mock_HookInvocationTable;
 
 // A record of the invocation of a hook
 struct HookInvocation {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_HookInvocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -81,11 +81,11 @@ struct HookInvocation {
   uint64_t device_id = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_mock_UnbindReplyActionTable;
 
 // Marker struct for unbind reply action
 struct UnbindReplyAction {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_UnbindReplyActionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -320,6 +320,11 @@ struct Action {
 };
 
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
 
 // Interface for requesting a mock device thread do something.  The mock device implements
 // this interface.  Closing the interface causes the thread to exit.
@@ -347,7 +352,7 @@ class MockDeviceThread final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -361,7 +366,7 @@ class MockDeviceThread final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -544,24 +549,36 @@ class MockDeviceThread final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceWriteResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceSuspendResponseTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceResumeResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneResponseTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
+extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
 
 // Interface for controlling a mock device.  The test suite will implement this interface.
 // Any method that returns a list of actions is interpreted as requesting the corresponding hook
@@ -589,7 +606,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceBindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -605,7 +622,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceReleaseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -727,7 +744,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceUnbindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -759,7 +776,7 @@ class MockDevice final {
     uint64_t count;
     uint64_t off;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -821,7 +838,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceGetSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -913,7 +930,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceMessageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -943,7 +960,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceRxrpcRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -959,7 +976,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -974,7 +991,7 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

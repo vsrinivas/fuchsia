@@ -32,10 +32,10 @@ struct TestDevice_AddDeviceWithPowerArgs_Response;
 struct TestDevice_AddDeviceWithPowerArgs_Result;
 class TestDevice;
 
-
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -139,10 +139,10 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -248,6 +248,7 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 class TestDevice final {

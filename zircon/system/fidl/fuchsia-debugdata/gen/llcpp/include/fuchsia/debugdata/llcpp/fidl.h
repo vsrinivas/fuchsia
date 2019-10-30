@@ -26,6 +26,7 @@ namespace debugdata {
 class DebugData;
 
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
+extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishResponseTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 

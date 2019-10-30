@@ -60,10 +60,10 @@ struct Paver_ReadAsset_Response;
 struct Paver_ReadAsset_Result;
 class Paver;
 
-
+extern "C" const fidl_type_t fuchsia_paver_ReadInfoTable;
 
 struct ReadInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_ReadInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -211,6 +211,7 @@ struct ReadResult {
 
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 // Protocol for streaming the FVM payload.
@@ -593,10 +594,10 @@ struct Paver_WipeVolume_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
 
 struct Paver_QueryConfigurationStatus_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -700,10 +701,10 @@ struct Paver_QueryConfigurationStatus_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
 
 struct Paver_QueryActiveConfiguration_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -914,13 +915,19 @@ struct Paver_ReadAsset_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
@@ -970,7 +977,7 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -986,7 +993,7 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1107,7 +1114,7 @@ class Paver final {
     ::llcpp::fuchsia::paver::Configuration configuration;
     ::llcpp::fuchsia::paver::Asset asset;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverReadAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

@@ -28,10 +28,10 @@ struct TestDevice_AddChildDevice_Response;
 struct TestDevice_AddChildDevice_Result;
 class TestDevice;
 
-
+extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
 
 struct TestDevice_AddChildDevice_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -135,6 +135,7 @@ struct TestDevice_AddChildDevice_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 
 class TestDevice final {

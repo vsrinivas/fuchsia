@@ -28,6 +28,8 @@ class SingleMemberService;
 class MultiHomogeneousMemberService;
 class MultiHeterogeneousMemberService;
 
+extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondResponseTable;
 class SecondProtocol final {
   SecondProtocol() = delete;
  public:
@@ -157,6 +159,8 @@ class SecondProtocol final {
   };
 };
 
+extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
+extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
 class FirstProtocol final {
   FirstProtocol() = delete;
  public:

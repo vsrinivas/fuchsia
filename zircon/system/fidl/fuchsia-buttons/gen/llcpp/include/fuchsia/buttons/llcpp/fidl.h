@@ -35,10 +35,10 @@ enum class ButtonType : uint8_t {
 
 class Buttons;
 
-
+extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
 
 struct Buttons_RegisterNotify_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -146,6 +146,7 @@ extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateResponseTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
 
 // Protocol for other devices to get the state of buttons and register for

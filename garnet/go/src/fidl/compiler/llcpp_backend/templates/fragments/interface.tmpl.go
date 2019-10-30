@@ -10,19 +10,11 @@ class {{ .Name }};
 {{- end }}
 
 {{- define "RequestCodingTable" -}}
-{{- if .LLProps.EncodeRequest -}}
 &{{ .RequestTypeName }}
-{{- else -}}
-nullptr
-{{- end }}
 {{- end }}
 
 {{- define "ResponseCodingTable" -}}
-{{- if .LLProps.DecodeResponse -}}
 &{{ .ResponseTypeName }}
-{{- else -}}
-nullptr
-{{- end }}
 {{- end }}
 
 {{- define "ForwardParams" -}}
@@ -48,12 +40,8 @@ nullptr
 {{- $interface := . }}
 {{ "" }}
   {{- range .Methods }}
-    {{- if .LLProps.EncodeRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
-    {{- end }}
-    {{- if .LLProps.DecodeResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-    {{- end }}
   {{- end }}
 
   {{- /* Trailing line feed after encoding tables. */}}
@@ -485,12 +473,8 @@ namespace {
 [[maybe_unused]]
 constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
   {{- end }}
-  {{- if .LLProps.EncodeRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
-  {{- end }}
-  {{- if .LLProps.DecodeResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-  {{- end }}
 {{- end }}
 
 }  // namespace

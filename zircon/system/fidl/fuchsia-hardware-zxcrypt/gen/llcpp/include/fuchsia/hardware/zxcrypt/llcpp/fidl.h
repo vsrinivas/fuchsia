@@ -27,6 +27,7 @@ class DeviceManager;
 
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
 
 // An interface to the zxcrypt driver, as bound to a single block device with

@@ -589,12 +589,12 @@ class OpResult::Builder {
   ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_tee_UuidTable;
 
 // UUID identifiers are used to identify the TEE Operating System and individual Trusted
 // Applications. This structure matches the UUID type as defined by RFC4122.
 struct Uuid {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_UuidTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -609,12 +609,12 @@ struct Uuid {
   ::fidl::Array<uint8_t, 8> clock_seq_and_node = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_tee_NoneTable;
 
 // An empty parameter type is used as a placeholder for elements in the parameter set that are not
 // used.
 struct None {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_NoneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -625,12 +625,14 @@ struct None {
 
 constexpr uint32_t MAX_PARAMETERSET_COUNT = 4u;
 
+extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceOpenSessionRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceOpenSessionResponseTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceInvokeCommandRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceInvokeCommandResponseTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionRequestTable;
+extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionResponseTable;
 
 class Device final {
   Device() = delete;

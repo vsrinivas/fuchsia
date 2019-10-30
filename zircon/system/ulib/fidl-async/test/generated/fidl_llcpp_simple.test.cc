@@ -21,6 +21,7 @@ extern "C" const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
 constexpr uint64_t kSimple_Close_Ordinal = 0x48270ef100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSimple_Close_GenOrdinal = 0x49b6e6b3b17ebc97lu;
+extern "C" const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
 
 }  // namespace

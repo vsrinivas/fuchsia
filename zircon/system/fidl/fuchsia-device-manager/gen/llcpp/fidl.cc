@@ -584,11 +584,13 @@ constexpr uint64_t kDevhostController_CreateDeviceStub_Ordinal = 0x2d8e104b00000
 [[maybe_unused]]
 constexpr uint64_t kDevhostController_CreateDeviceStub_GenOrdinal = 0x62409c9e94ff9699lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevhostController_CreateDevice_Ordinal = 0x2f6f95b700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevhostController_CreateDevice_GenOrdinal = 0x7dbabaee2c92e2c6lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevhostController_CreateCompositeDevice_Ordinal = 0x358e5a0900000000lu;
 [[maybe_unused]]
@@ -1829,14 +1831,19 @@ constexpr uint64_t kDeviceController_ConnectProxy_Ordinal = 0x582e0d9b00000000lu
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_ConnectProxy_GenOrdinal = 0x72206da90d1f3f2flu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Unbind_Ordinal = 0x72bdd28200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Unbind_GenOrdinal = 0x2d3f793e42cc3fd0lu;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteRemoval_Ordinal = 0x1554eba800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteRemoval_GenOrdinal = 0x25d6d94c85d60771lu;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Suspend_Ordinal = 0x4490901a00000000lu;
 [[maybe_unused]]
@@ -1854,6 +1861,7 @@ constexpr uint64_t kDeviceController_CompleteCompatibilityTests_Ordinal = 0x475e
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_CompleteCompatibilityTests_GenOrdinal = 0x3883342451945549lu;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsResponseTable;
 
 }  // namespace
 template <>
@@ -2540,24 +2548,30 @@ constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 0x65a3b60600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleRemove_GenOrdinal = 0x1bdeb4d5d1f4d21elu;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleUnbindChildren_Ordinal = 0x59a4dcaf00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleUnbindChildren_GenOrdinal = 0x658a6d68027b7139lu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 0x4503c92800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_UnbindDone_GenOrdinal = 0x1337d8a6b92e311clu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDone_Ordinal = 0x2ebb580c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDone_GenOrdinal = 0x2f805bef0a2a3cf7lu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_MakeVisible_Ordinal = 0x52d55e5c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_MakeVisible_GenOrdinal = 0x37d4026fe66cf62blu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_BindDevice_Ordinal = 0x5012286100000000lu;
@@ -2569,6 +2583,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRespons
 constexpr uint64_t kCoordinator_GetTopologicalPath_Ordinal = 0x69b2d39100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_GetTopologicalPath_GenOrdinal = 0x319ccef1252fd6bflu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_LoadFirmware_Ordinal = 0x7ad6a07500000000lu;
@@ -2616,6 +2631,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRes
 constexpr uint64_t kCoordinator_RunCompatibilityTests_Ordinal = 0x167858fb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RunCompatibilityTests_GenOrdinal = 0x634a2580075931b2lu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
 
 }  // namespace

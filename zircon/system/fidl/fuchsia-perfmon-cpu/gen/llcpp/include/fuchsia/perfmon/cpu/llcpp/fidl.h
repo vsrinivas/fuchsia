@@ -251,10 +251,10 @@ struct Config {
   ::fidl::Array<::llcpp::fuchsia::perfmon::cpu::EventConfig, 32> events = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
 
 struct Controller_Start_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -358,10 +358,10 @@ struct Controller_Start_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
 
 struct Controller_StageConfig_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -465,10 +465,10 @@ struct Controller_StageConfig_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
 
 struct Controller_Initialize_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -572,13 +572,13 @@ struct Controller_Initialize_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_AllocationTable;
 
 // The allocation configuration for a data collection run.
 // This is generally the first call to allocate resources for a trace,
 // "trace" is used generically here: == "data collection run".
 struct Allocation {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_AllocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -593,15 +593,24 @@ struct Allocation {
   uint32_t buffer_size_in_pages = {};
 };
 
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateRequestTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartResponseTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopRequestTable;
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopResponseTable;
 
 class Controller final {
   Controller() = delete;
@@ -642,7 +651,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Allocation allocation;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

@@ -40,10 +40,10 @@ struct OwnedChannelDevice_ScheduleWork_Response;
 struct OwnedChannelDevice_ScheduleWork_Result;
 class OwnedChannelDevice;
 
-
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
 
 struct TestDevice_ScheduleWork_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -147,10 +147,10 @@ struct TestDevice_ScheduleWork_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
 
 struct TestDevice_ScheduleWorkDifferentThread_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -361,10 +361,10 @@ struct TestDevice_GetDoneEvent_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
 
 struct TestDevice_GetChannel_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -468,7 +468,7 @@ struct TestDevice_GetChannel_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_LatencyHistogramTable;
 
 // Buckets are arranged as following:
 // [0] => [0ns, 100ns]
@@ -482,7 +482,7 @@ struct TestDevice_GetChannel_Result {
 // [8] => [15us, 30us]
 // [9] => [30us, infinity]
 struct LatencyHistogram {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_LatencyHistogramTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -491,9 +491,13 @@ struct LatencyHistogram {
   ::fidl::Array<uint64_t, 10> buckets = {};
 };
 
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
@@ -522,7 +526,7 @@ class TestDevice final {
     uint32_t batch_size;
     uint32_t num_work_items;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1063,10 +1067,10 @@ class TestDevice final {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
 
 struct OwnedChannelDevice_ScheduleWork_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -1170,6 +1174,7 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
 
 class OwnedChannelDevice final {
@@ -1196,7 +1201,7 @@ class OwnedChannelDevice final {
     uint32_t batch_size;
     uint32_t num_work_items;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

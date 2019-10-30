@@ -16,10 +16,14 @@ namespace {
 constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionRegistered_GenOrdinal = 0x191278425c4a96e8lu;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionsCleared_Ordinal = 0x24319fec00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionsCleared_GenOrdinal = 0x6feab079055dacf1lu;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 
 }  // namespace
 template <>
@@ -252,11 +256,14 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurat
 constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClearFunctions_GenOrdinal = 0x67d9d8086dfab0cblu;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_GenOrdinal = 0x5575723c4674d1d9lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 
 }  // namespace
 template <>

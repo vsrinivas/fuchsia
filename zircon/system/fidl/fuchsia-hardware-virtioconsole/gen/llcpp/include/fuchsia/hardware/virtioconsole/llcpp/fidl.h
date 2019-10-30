@@ -28,6 +28,7 @@ namespace virtioconsole {
 class Device;
 
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
 
 class Device final {
   Device() = delete;

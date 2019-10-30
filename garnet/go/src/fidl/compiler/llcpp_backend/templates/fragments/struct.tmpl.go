@@ -11,14 +11,12 @@ struct {{ .Name }};
 
 {{- define "StructDeclaration" }}
 
-{{ if .NeedsEncodeDecode -}}
 extern "C" const fidl_type_t {{ .TableType }};
-{{- end }}
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
 struct {{ .Name }} {
-  static constexpr const fidl_type_t* Type = {{ if .NeedsEncodeDecode -}} &{{ .TableType }} {{- else -}} nullptr {{- end -}};
+  static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .Size }};
   [[maybe_unused]]

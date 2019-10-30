@@ -156,6 +156,7 @@ struct NameProvider_GetDeviceName_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameRequestTable;
 extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTable;
 
 // Interface for getting device names.
@@ -610,10 +611,10 @@ struct Controller_GetDevicePowerCaps_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResponseTable;
 
 struct Controller_Resume_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Resume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -744,10 +745,10 @@ constexpr uint32_t DEVICE_NAME_MAX = 255u;
 
 extern const char DEFAULT_DEVICE_NAME[];
 
-
+extern "C" const fidl_type_t fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
 
 struct Controller_UpdatePowerStateMapping_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -855,18 +856,31 @@ extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerRebindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerRebindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverLogFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSuspendResponseTable;
@@ -1027,7 +1041,7 @@ class Controller final {
     int32_t status;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1058,7 +1072,7 @@ class Controller final {
     uint32_t clear_flags;
     uint32_t set_flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1120,7 +1134,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     int64_t hook_wait_time;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

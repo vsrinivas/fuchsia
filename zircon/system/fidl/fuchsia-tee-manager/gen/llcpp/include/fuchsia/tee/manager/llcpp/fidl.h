@@ -28,6 +28,7 @@ namespace manager {
 class Provider;
 
 extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
+extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
 
 // Provider provides service access and support to the TEE driver
 // for things like persistent storage, since the TEE may make upward RPC-like

@@ -32,10 +32,10 @@ enum class Capability : uint32_t {
 
 class Light;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_light_RgbTable;
 
 struct Rgb {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_RgbTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
@@ -52,7 +52,9 @@ constexpr uint8_t LIGHT_NAME_LEN = 32u;
 
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueResponseTable;
@@ -135,7 +137,7 @@ class Light final {
     uint32_t index;
     ::llcpp::fuchsia::hardware::light::Capability capability;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightHasCapabilityRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

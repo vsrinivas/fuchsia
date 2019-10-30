@@ -1105,11 +1105,11 @@ constexpr uint32_t TOUCH_MAX_CONTACTS = 10u;
 // if we ever see a sensor with more values.
 constexpr uint32_t SENSOR_MAX_VALUES = 100u;
 
-
+extern "C" const fidl_type_t fuchsia_input_report_RangeTable;
 
 // Describe a |Range| of values.
 struct Range {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_RangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -1183,8 +1183,11 @@ struct DeviceInfo {
   ::fidl::StringView name = {};
 };
 
+extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsEventRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
+extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsResponseTable;
+extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetDescriptorRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
 
 // An |InputDevice| driver represents a single physical input device.

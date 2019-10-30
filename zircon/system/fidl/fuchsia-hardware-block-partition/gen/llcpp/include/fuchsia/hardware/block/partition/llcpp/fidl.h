@@ -31,16 +31,23 @@ namespace partition {
 class Partition;
 struct GUID;
 
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetTypeGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInstanceGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
 
 class Partition final {
@@ -890,10 +897,10 @@ constexpr uint32_t NAME_LENGTH = 128u;
 
 constexpr uint32_t GUID_LENGTH = 16u;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_partition_GUIDTable;
 
 struct GUID {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_GUIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]

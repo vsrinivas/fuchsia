@@ -228,10 +228,6 @@ type StructMember struct {
 	OffsetV1NoEE int
 }
 
-func (s Struct) NeedsEncodeDecode() bool {
-	return s.MaxHandles > 0 || s.MaxOutOfLine > 0 || s.HasPadding
-}
-
 type Interface struct {
 	types.Attributes
 	Namespace             string
@@ -323,10 +319,6 @@ type LLProps struct {
 	LinearizeResponse  bool
 	ClientContext      LLContextProps
 	ServerContext      LLContextProps
-	// EncodeRequest is true if the request needs encoding before being written to the transport.
-	EncodeRequest bool
-	// DecodeResponse is true if the response needs decoding before being cast to LLCPP data type.
-	DecodeResponse bool
 }
 
 type Parameter struct {
@@ -907,8 +899,6 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
 		ClientContext:      m.NewLLContextProps(clientContext),
 		ServerContext:      m.NewLLContextProps(serverContext),
-		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0 || m.RequestPadding || m.RequestFlexible,
-		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0 || m.ResponsePadding || m.ResponseFlexible,
 	}
 }
 

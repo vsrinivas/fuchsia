@@ -25,6 +25,7 @@ namespace audio {
 
 class Device;
 
+extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelResponseTable;
 
 class Device final {

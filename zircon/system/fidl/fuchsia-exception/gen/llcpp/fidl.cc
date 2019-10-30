@@ -74,6 +74,7 @@ constexpr uint64_t kHandler_OnException_Ordinal = 0x7ec50e5a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kHandler_OnException_GenOrdinal = 0x5de09d36098de59elu;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionResponseTable;
 
 }  // namespace
 template <>
@@ -336,16 +337,19 @@ namespace {
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_Ordinal = 0x7bde19d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal = 0x43e1864bf356ef50lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_Ordinal = 0x47ad466f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_GenOrdinal = 0x6ee2df26d6e0444blu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ReleaseProcess_Ordinal = 0x7adea12100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ReleaseProcess_GenOrdinal = 0x76911553fea22b87lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 }  // namespace

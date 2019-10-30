@@ -33,10 +33,10 @@ class Ftl;
 class Block;
 struct BlockInfo;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockStatsTable;
 
 struct BlockStats {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 480;
   [[maybe_unused]]
@@ -55,10 +55,10 @@ struct BlockStats {
   ::llcpp::fuchsia::storage::metrics::CallStat barrier_after = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_VmoIDTable;
 
 struct VmoID {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_VmoIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -69,6 +69,7 @@ struct VmoID {
 
 constexpr uint16_t VMOID_INVALID = 0u;
 
+extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 class Ftl final {
@@ -239,13 +240,17 @@ class Ftl final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetStatsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockGetFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockAttachVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTable;
 
 class Block final {
@@ -858,10 +863,10 @@ constexpr uint32_t FLAG_READONLY = 1u;
 
 constexpr uint32_t FLAG_BOOTPART = 4u;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_BlockInfoTable;
 
 struct BlockInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]

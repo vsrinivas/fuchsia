@@ -29,20 +29,32 @@ class Filesystems;
 class Registry;
 
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenEventTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSetAttrResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsUnlinkResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindResponseTable;
+extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenResponseTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRenameResponseTable;
@@ -190,7 +202,7 @@ class Filesystems final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_fshost_FilesystemsNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -299,7 +311,7 @@ class Filesystems final {
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_fshost_FilesystemsReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

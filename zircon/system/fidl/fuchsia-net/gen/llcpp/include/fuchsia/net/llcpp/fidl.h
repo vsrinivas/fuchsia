@@ -105,6 +105,7 @@ struct Subnet;
 class NameLookup;
 struct Endpoint;
 
+extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 class Connectivity final {
@@ -261,11 +262,11 @@ struct NameLookup_LookupHostname_Response {
   ::fidl::StringView hostname = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_net_MacAddressTable;
 
 // A MAC address used to identify a network interface on the data link layer within the network.
 struct MacAddress {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_net_MacAddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 6;
   [[maybe_unused]]
@@ -371,12 +372,12 @@ struct NameLookup_LookupHostname_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_net_Ipv6AddressTable;
 
 // Ipv6Address is expressed in network byte order, so the most significant byte
 // ("ff" in the address "ff02::1") will be at index 0.
 struct Ipv6Address {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_net_Ipv6AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -385,12 +386,12 @@ struct Ipv6Address {
   ::fidl::Array<uint8_t, 16> addr = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_net_Ipv4AddressTable;
 
 // Ipv4Address is expressed in network byte order, so the most significant byte
 // ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_net_Ipv4AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]

@@ -27,9 +27,13 @@ namespace bus {
 
 class Bus;
 
+extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 class Bus final {

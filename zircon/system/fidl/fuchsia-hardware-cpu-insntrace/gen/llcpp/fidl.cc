@@ -317,17 +317,20 @@ extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerInitialize
 constexpr uint64_t kController_Terminate_Ordinal = 0x720fc32b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Terminate_GenOrdinal = 0x6115092acef4d497lu;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_Ordinal = 0x1226c5d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_GenOrdinal = 0xabef26cf562354flu;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateBuffer_Ordinal = 0x6e2611dd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateBuffer_GenOrdinal = 0x5a0c3fcdcca20055lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AssignThreadBuffer_Ordinal = 0x39f7e62f00000000lu;
 [[maybe_unused]]
@@ -356,20 +359,26 @@ extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferS
 constexpr uint64_t kController_GetChunkHandle_Ordinal = 0x27fbff0900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetChunkHandle_GenOrdinal = 0x11b8b37d81869ea4lu;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_FreeBuffer_Ordinal = 0x3f86f0d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_FreeBuffer_GenOrdinal = 0x6909636959de71c7lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_Ordinal = 0x58e0bb6900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_GenOrdinal = 0x3c92516dbfd4d43blu;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_Ordinal = 0x1cb723ab00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_GenOrdinal = 0x7e33aef68733c1fclu;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopResponseTable;
 
 }  // namespace
 template <>

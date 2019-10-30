@@ -25,10 +25,14 @@ namespace name {
 class Parent;
 class Child;
 
+extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
+extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
+extern "C" const fidl_type_t test_name_ParentTakeChildResponseTable;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
+extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 
 class Parent final {
   Parent() = delete;

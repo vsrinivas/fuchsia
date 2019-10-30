@@ -31,6 +31,10 @@ struct Device_SetConfiguration_Result;
 struct DeviceDescriptor;
 class Device;
 
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 // Events protocol that is used as a callback to inform the client
 // of the completion of various server-side events.
 // This callback interface can be registered using the SetStateChangeListener
@@ -237,10 +241,10 @@ constexpr uint32_t MAX_STRING_DESCRIPTORS = 255u;
 
 constexpr uint32_t MAX_FUNCTION_DESCRIPTORS = 32u;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
 
 struct FunctionDescriptor {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
@@ -253,10 +257,10 @@ struct FunctionDescriptor {
   uint8_t interface_protocol = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
 
 struct Device_SetConfiguration_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -398,7 +402,10 @@ struct DeviceDescriptor {
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 
 class Device final {
   Device() = delete;

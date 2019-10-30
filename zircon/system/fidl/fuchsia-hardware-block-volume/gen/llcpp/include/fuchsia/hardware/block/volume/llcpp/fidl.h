@@ -49,10 +49,10 @@ struct VsliceRange {
   uint64_t count = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerInfoTable;
 
 struct VolumeManagerInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -65,10 +65,10 @@ struct VolumeManagerInfo {
   uint64_t maximum_slice_count = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeInfoTable;
 
 struct VolumeInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
@@ -87,22 +87,33 @@ constexpr uint32_t MAX_SLICE_REQUESTS = 16u;
 
 constexpr uint32_t AllocatePartitionFlagInactive = 1u;
 
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetTypeGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInstanceGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQueryRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQueryResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeExtendRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeExtendResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
 
 class Volume final {
@@ -357,7 +368,7 @@ class Volume final {
     uint64_t start_slice;
     uint64_t slice_count;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeExtendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -388,7 +399,7 @@ class Volume final {
     uint64_t start_slice;
     uint64_t slice_count;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1397,8 +1408,11 @@ class Volume final {
 
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
 
 class VolumeManager final {
@@ -1493,7 +1507,7 @@ class VolumeManager final {
     ::llcpp::fuchsia::hardware::block::partition::GUID old_guid;
     ::llcpp::fuchsia::hardware::block::partition::GUID new_guid;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;

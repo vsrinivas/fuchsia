@@ -25,6 +25,7 @@ namespace test {
 
 class Device;
 
+extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelResponseTable;
 
 class Device final {

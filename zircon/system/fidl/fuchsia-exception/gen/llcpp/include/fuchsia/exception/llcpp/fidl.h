@@ -244,10 +244,10 @@ class ProcessException::Builder {
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 
 struct ProcessLimbo_ReleaseProcess_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -374,6 +374,7 @@ struct ExceptionInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionResponseTable;
 
 // Protocol meant for clients interested in handling exceptions for a
 // particular service.
@@ -702,8 +703,11 @@ struct ProcessLimbo_RetrieveException_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 // Protocol meant for clients interested in obtaining processes that are
@@ -749,7 +753,7 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     uint64_t process_koid;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -779,7 +783,7 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     uint64_t process_koid;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

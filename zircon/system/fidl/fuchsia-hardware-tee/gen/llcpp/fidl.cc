@@ -16,6 +16,7 @@ constexpr uint64_t kDeviceConnector_ConnectTee_Ordinal = 0x5b2280b900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceConnector_ConnectTee_GenOrdinal = 0x37d7bf45f48faed6lu;
 extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
 
 }  // namespace
 

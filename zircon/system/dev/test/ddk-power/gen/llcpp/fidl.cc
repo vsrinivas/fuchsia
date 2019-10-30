@@ -140,6 +140,7 @@ extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPo
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_Ordinal = 0x724b2ef700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_GenOrdinal = 0x15ff1a2b10784103lu;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 }  // namespace

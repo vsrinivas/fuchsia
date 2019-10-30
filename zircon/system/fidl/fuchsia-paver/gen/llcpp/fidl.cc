@@ -92,6 +92,7 @@ extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable
 constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_GenOrdinal = 0x2ccde55366318afalu;
+extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
@@ -597,16 +598,20 @@ namespace {
 constexpr uint64_t kPaver_InitializeAbr_Ordinal = 0x2233bf3300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializeAbr_GenOrdinal = 0x715dddabfb08c8e1lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_GenOrdinal = 0x5517c7c0119ded35lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_GenOrdinal = 0x63a9170989a1efdflu;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationActive_Ordinal = 0x942de4b00000000lu;
 [[maybe_unused]]
@@ -623,11 +628,13 @@ extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRespon
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_GenOrdinal = 0x6b86cae4d01d72c1lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_ReadAsset_Ordinal = 0x4b8e09f500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_ReadAsset_GenOrdinal = 0x30a69bd25198eb0lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;

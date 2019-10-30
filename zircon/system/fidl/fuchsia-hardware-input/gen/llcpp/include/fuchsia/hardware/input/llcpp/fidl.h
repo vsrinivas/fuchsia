@@ -49,7 +49,7 @@ constexpr uint16_t MAX_REPORT_DATA = 8192u;
 
 constexpr uint16_t MAX_DESC_LEN = 8192u;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceIdsTable;
 
 // DeviceIds lets a clients determine the vendor and product id for a device.
 // If the device is real HID device, then the id information
@@ -57,7 +57,7 @@ constexpr uint16_t MAX_DESC_LEN = 8192u;
 // ids in the driver. If the mock HID driver does not assign ids, zeros
 // will be used instead.
 struct DeviceIds {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceIdsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -70,22 +70,32 @@ struct DeviceIds {
   uint32_t version = {};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetDeviceIdsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportIdsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetMaxInputReportSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetTraceIdResponseTable;
 
 class Device final {
   Device() = delete;

@@ -35,6 +35,7 @@ class RootJob;
 class RootJobForInspect;
 class Arguments;
 
+extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
 
 // Protocol for providing the kernel log, writable.
@@ -212,6 +213,7 @@ class WriteOnlyLog final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
 
 // Protocol for providing the kernel log, readable.
@@ -389,6 +391,7 @@ class ReadOnlyLog final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_ItemsGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
 
 // Protocol for retrieving boot item payloads.
@@ -418,7 +421,7 @@ class Items final {
     uint32_t type;
     uint32_t extra;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_boot_ItemsGetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -810,6 +813,7 @@ class FactoryItems final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_RootResourceGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
 
 // Protocol for providing the root resource.
@@ -987,6 +991,7 @@ class RootResource final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_RootJobGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
 
 // Protocol for providing the root job.
@@ -1166,6 +1171,7 @@ class RootJob final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
 
 // Protocol for providing the root job with restricted rights, specifically:
@@ -1344,6 +1350,7 @@ class RootJobForInspect final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetRequestTable;
 extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 
 // Protocol for retrieving boot arguments.

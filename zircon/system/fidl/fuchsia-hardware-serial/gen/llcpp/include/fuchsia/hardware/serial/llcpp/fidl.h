@@ -60,10 +60,10 @@ enum class CharacterWidth : uint8_t {
 struct Config;
 class Device;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_serial_ConfigTable;
 
 struct Config {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_ConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -80,7 +80,9 @@ struct Config {
   uint32_t baud_rate = {};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 class Device final {
@@ -122,7 +124,7 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::serial::Config config;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_DeviceSetConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

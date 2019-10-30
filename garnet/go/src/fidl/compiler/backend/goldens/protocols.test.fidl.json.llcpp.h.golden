@@ -39,10 +39,10 @@ enum class ErrorEnun : uint32_t {
 struct WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
-
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -150,10 +150,10 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
   };
 };
 
-
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -257,10 +257,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   };
 };
 
-
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -269,6 +269,12 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
   uint8_t __reserved = {};
 };
 
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -282,7 +288,7 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -298,7 +304,7 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -312,7 +318,7 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     int64_t result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -327,7 +333,7 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -650,11 +656,21 @@ class ChannelProtocol final {
   };
 };
 
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
@@ -1299,8 +1315,11 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   };
 };
 
+extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {

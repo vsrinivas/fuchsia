@@ -26,10 +26,10 @@ struct CallStatRaw;
 struct CallStat;
 struct FsMetrics;
 
-
+extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatRawTable;
 
 struct CallStatRaw {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_CallStatRawTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
@@ -46,10 +46,10 @@ struct CallStatRaw {
   uint64_t bytes_transferred = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatTable;
 
 struct CallStat {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_CallStatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -60,10 +60,10 @@ struct CallStat {
   ::llcpp::fuchsia::storage::metrics::CallStatRaw failure = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_storage_metrics_FsMetricsTable;
 
 struct FsMetrics {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_FsMetricsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 640;
   [[maybe_unused]]

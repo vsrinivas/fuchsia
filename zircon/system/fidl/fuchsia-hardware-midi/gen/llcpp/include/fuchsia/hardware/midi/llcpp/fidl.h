@@ -26,11 +26,11 @@ namespace midi {
 struct Info;
 class Device;
 
-
+extern "C" const fidl_type_t fuchsia_hardware_midi_InfoTable;
 
 // Describes what type of MIDI device an implementation of Device represents
 struct Info {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -43,6 +43,7 @@ struct Info {
   bool is_source = {};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 class Device final {

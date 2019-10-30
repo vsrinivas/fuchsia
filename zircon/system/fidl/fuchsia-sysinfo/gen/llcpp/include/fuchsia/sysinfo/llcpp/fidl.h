@@ -34,8 +34,11 @@ enum class InterruptControllerType : uint32_t {
 
 struct InterruptControllerInfo;
 
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
 
 class Device final {
@@ -371,10 +374,10 @@ class Device final {
 
 constexpr uint8_t SYSINFO_BOARD_NAME_LEN = 32u;
 
-
+extern "C" const fidl_type_t fuchsia_sysinfo_InterruptControllerInfoTable;
 
 struct InterruptControllerInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_InterruptControllerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]

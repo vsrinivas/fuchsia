@@ -14,16 +14,19 @@ namespace {
 constexpr uint64_t kDevice_GetHypervisorResource_Ordinal = 0x3868a16b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetHypervisorResource_GenOrdinal = 0x71ec9fedac51e7flu;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetBoardName_Ordinal = 0x68768b6d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetBoardName_GenOrdinal = 0x3e5b005c54d54d8alu;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInterruptControllerInfo_Ordinal = 0x5f8bb9e400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInterruptControllerInfo_GenOrdinal = 0x5d276f3ebc0b70b6lu;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
 
 }  // namespace

@@ -25,6 +25,7 @@ namespace coding {
 
 class Llcpp;
 
+extern "C" const fidl_type_t fidl_test_coding_LlcppActionRequestTable;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
 
 class Llcpp final {

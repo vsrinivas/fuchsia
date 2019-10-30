@@ -455,10 +455,10 @@ class Provider final {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_ModeTable;
 
 struct Mode {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ModeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -473,10 +473,10 @@ struct Mode {
   uint32_t flags = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_ImagePlaneTable;
 
 struct ImagePlane {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImagePlaneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -487,10 +487,10 @@ struct ImagePlane {
   uint32_t bytes_per_row = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_ImageConfigTable;
 
 struct ImageConfig {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImageConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
@@ -507,10 +507,10 @@ struct ImageConfig {
   ::fidl::Array<::llcpp::fuchsia::hardware::display::ImagePlane, 4> planes = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_FrameTable;
 
 struct Frame {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_FrameTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -525,10 +525,10 @@ struct Frame {
   uint32_t height = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_CursorInfoTable;
 
 struct CursorInfo {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_CursorInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -565,10 +565,10 @@ struct Info {
   ::fidl::StringView monitor_serial = {};
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
 
 struct Controller_StartCapture_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -672,10 +672,10 @@ struct Controller_StartCapture_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
 
 struct Controller_ReleaseCapture_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -779,10 +779,10 @@ struct Controller_ReleaseCapture_Result {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
 
 struct Controller_ImportImageForCapture_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -902,33 +902,71 @@ struct ClientCompositionOp {
   ::llcpp::fuchsia::hardware::display::ClientCompositionOpcode opcode = {};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncEventTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
 
 // Interface for accessing the display hardware.
@@ -1035,7 +1073,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t image_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1066,7 +1104,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1098,7 +1136,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t layer_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1114,7 +1152,7 @@ class Controller final {
     uint64_t display_id;
     ::llcpp::fuchsia::hardware::display::Mode mode;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1164,7 +1202,7 @@ class Controller final {
     uint64_t layer_id;
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1215,7 +1253,7 @@ class Controller final {
     uint64_t layer_id;
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1232,7 +1270,7 @@ class Controller final {
     int32_t x;
     int32_t y;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1267,7 +1305,7 @@ class Controller final {
     uint64_t wait_event_id;
     uint64_t signal_event_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1390,7 +1428,7 @@ class Controller final {
     uint32_t width;
     uint32_t pixel_format;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1421,7 +1459,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t size;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1468,7 +1506,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t collection_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1498,7 +1536,7 @@ class Controller final {
     uint64_t collection_id;
     ::llcpp::fuchsia::hardware::display::ImageConfig config;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1579,7 +1617,7 @@ class Controller final {
     uint64_t signal_event_id;
     uint64_t image_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerStartCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1609,7 +1647,7 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint64_t image_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
