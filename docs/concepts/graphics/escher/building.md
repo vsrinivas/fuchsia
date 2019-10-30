@@ -30,7 +30,7 @@ Escher can also build on Linux.  In order to do so, you need to:
     ```
     export VULKAN_SDK=$FUCHSIA_DIR/prebuilt/third_party/vulkansdk/linux/x86_64
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VULKAN_SDK/lib
-    export VK_LAYER_PATH=$VULKAN_SDK/etc/explicit_layer.d
+    export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
     ```
 
   * Specify that you want the Escher examples and unit-tests to be built:
