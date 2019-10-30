@@ -88,10 +88,9 @@ class CommonBaseShellPresentationImpl extends Presentation {
       InterfaceHandle<PresentationModeListener> listener) async {}
 
   @override
+  // ignore: override_on_non_overriding_method
   Future<void> registerMediaButtonsListener(
-      InterfaceHandle<MediaButtonsListener> listener) async {
-    await _model.presentation.registerMediaButtonsListener(listener);
-  }
+      InterfaceHandle<MediaButtonsListener> listener) async {}
 }
 
 /// Provides common features needed by all base shells.
