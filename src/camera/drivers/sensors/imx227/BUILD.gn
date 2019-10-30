@@ -8,7 +8,7 @@ import("//build/package.gni")
 driver_module("imx227-driver") {
   output_name = "imx227"
   sources = [
-    "imx227-test.cc",
+    "imx227_tester.cc",
     "imx227.cc",
   ]
   deps = [

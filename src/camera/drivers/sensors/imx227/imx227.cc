@@ -21,8 +21,8 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
-#include "imx227-seq.h"
-#include "imx227-test.h"
+#include "imx227_seq.h"
+#include "imx227_tester.h"
 
 namespace camera {
 
@@ -126,7 +126,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  const init_seq_fmt_t* sequence = kSEQUENCE_TABLE[idx];
+  const InitSeqFmt* sequence = kSEQUENCE_TABLE[idx];
   bool init_command = true;
 
   while (init_command) {

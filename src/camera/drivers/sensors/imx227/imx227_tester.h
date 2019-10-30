@@ -11,7 +11,8 @@
 #include <zxtest/zxtest.h>
 
 namespace camera {
-// |Imx227Devicetester| is spawned by the driver in |imx227.cc|
+
+// |Imx227DeviceTester| is spawned by the driver in |imx227.cc|
 class Imx227Device;
 
 class Imx227DeviceTester : public zxtest::Test {
@@ -19,9 +20,8 @@ class Imx227DeviceTester : public zxtest::Test {
   static zx_status_t RunTests(Imx227Device* device);
 
  protected:
-  // Setup & TearDown
-  void SetUp();
-  void TearDown();
+  void SetUp() override;
+  void TearDown() override;
 };
 
 }  // namespace camera

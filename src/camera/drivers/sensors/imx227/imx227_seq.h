@@ -5,16 +5,18 @@
 #ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_SEQ_H_
 #define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_SEQ_H_
 
-// clang-format off
+#include <stdint.h>
+#include <array>
+#include "ddk/protocol/camerasensor.h"
 
 namespace camera {
 
-typedef struct init_seq_fmt {
+struct InitSeqFmt {
   uint16_t address;
   uint8_t value;
   uint8_t mask;
   uint8_t len;
-} init_seq_fmt_t;
+};
 
 // -----------------------//
 //      INIT SEQUENCES
@@ -26,8 +28,9 @@ constexpr uint8_t kSENSOR_IMX227_SEQUENCE_TESTPATTERN_960M = 2;
 constexpr uint8_t kSENSOR_IMX227_SEQUENCE_1080P_TESTPATTERN = 3;
 constexpr uint8_t kSENSOR_IMX227_SEQUENCE_1080P_PREVIEW = 4;
 constexpr uint8_t kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW = 5;
+constexpr size_t kArraySize = 88;
 
-constexpr init_seq_fmt_t setting_2200_2720_2lane_996mbps_30fps[] = {
+constexpr std::array<InitSeqFmt, kArraySize> setting_2200_2720_2lane_996mbps_30fps = {{
     {0x0136, 0x18, 0xFF, 1},
     {0x0137, 0x00, 0xFF, 1},
     {0xAE20, 0x00, 0xFF, 1},
@@ -116,10 +119,10 @@ constexpr init_seq_fmt_t setting_2200_2720_2lane_996mbps_30fps[] = {
     {0x020E, 0x01, 0xFF, 1},
     {0x020F, 0x00, 0xFF, 1},
     {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
-constexpr init_seq_fmt_t setting_2200_2720_2lane_996mbps_30fps_test_pattern[] =
-    {
+constexpr std::array<InitSeqFmt, kArraySize> setting_2200_2720_2lane_996mbps_30fps_test_pattern =
+    {{
         {0x0136, 0x18, 0xFF, 1},
         {0x0137, 0x00, 0xFF, 1},
         {0xAE20, 0x00, 0xFF, 1},
@@ -204,9 +207,9 @@ constexpr init_seq_fmt_t setting_2200_2720_2lane_996mbps_30fps_test_pattern[] =
         {0x0600, 0x00, 0xFF, 1},
         {0x0601, 0x03, 0xFF, 1},
         {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
-constexpr init_seq_fmt_t setting_2200_2720_2lane_960m_30fps_test_pattern[] = {
+constexpr std::array<InitSeqFmt, kArraySize> setting_2200_2720_2lane_960m_30fps_test_pattern = {{
     {0x0136, 0x18, 0xFF, 1}, {0x0137, 0x00, 0xFF, 1},
     {0xAE20, 0x00, 0xFF, 1}, {0x463B, 0x30, 0xFF, 1},
     {0x463E, 0x05, 0xFF, 1}, {0x4612, 0x66, 0xFF, 1},
@@ -249,10 +252,10 @@ constexpr init_seq_fmt_t setting_2200_2720_2lane_960m_30fps_test_pattern[] = {
     {0x3002, 0x01, 0xFF, 1}, {0x3003, 0x35, 0xFF, 1},
     {0x6259, 0x06, 0xFF, 1}, {0x0600, 0x00, 0xFF, 1},
     {0x0601, 0x03, 0xFF, 1}, {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
-constexpr init_seq_fmt_t setting_1920_1080_2lane_996mbps_30fps_test_pattern[] =
-    {
+constexpr std::array<InitSeqFmt, kArraySize> setting_1920_1080_2lane_996mbps_30fps_test_pattern =
+    {{
         {0x0136, 0x18, 0xFF, 1},
         {0x0137, 0x00, 0xFF, 1},
         {0xAE20, 0x00, 0xFF, 1},
@@ -337,9 +340,9 @@ constexpr init_seq_fmt_t setting_1920_1080_2lane_996mbps_30fps_test_pattern[] =
         {0x0600, 0x00, 0xFF, 1},
         {0x0601, 0x04, 0xFF, 1},
         {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
-constexpr init_seq_fmt_t setting_1920_1080_2lane_996mbps_30fps[] = {
+constexpr std::array<InitSeqFmt, kArraySize> setting_1920_1080_2lane_996mbps_30fps = {{
     {0x0136, 0x18, 0xFF, 1},
     {0x0137, 0x00, 0xFF, 1},
     {0xAE20, 0x00, 0xFF, 1},
@@ -428,9 +431,9 @@ constexpr init_seq_fmt_t setting_1920_1080_2lane_996mbps_30fps[] = {
     {0x020E, 0x01, 0xFF, 1},
     {0x020F, 0x00, 0xFF, 1},
     {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
-constexpr init_seq_fmt_t setting_2400_2720_2lane_996mbps_28fps[] = {
+constexpr std::array<InitSeqFmt, kArraySize> setting_2400_2720_2lane_996mbps_28fps = {{
     {0x0136, 0x18, 0xFF, 1},
     {0x0137, 0x00, 0xFF, 1},
     {0xAE20, 0x00, 0xFF, 1},
@@ -519,22 +522,22 @@ constexpr init_seq_fmt_t setting_2400_2720_2lane_996mbps_28fps[] = {
     {0x020E, 0x01, 0xFF, 1},
     {0x020F, 0x00, 0xFF, 1},
     {0x0000, 0x0000, 0x0000, 0x0000},
-};
+}};
 
 // -----------------------//
 //      SUPPORTED MODES
 // -----------------------//
 
-const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
-    setting_2200_2720_2lane_996mbps_30fps,
-    setting_2200_2720_2lane_996mbps_30fps_test_pattern,
-    setting_2200_2720_2lane_960m_30fps_test_pattern,
-    setting_1920_1080_2lane_996mbps_30fps_test_pattern,
-    setting_1920_1080_2lane_996mbps_30fps,
-    setting_2400_2720_2lane_996mbps_28fps,
+const std::array<const InitSeqFmt*, 6> kSEQUENCE_TABLE = {
+    setting_2200_2720_2lane_996mbps_30fps.data(),
+    setting_2200_2720_2lane_996mbps_30fps_test_pattern.data(),
+    setting_2200_2720_2lane_960m_30fps_test_pattern.data(),
+    setting_1920_1080_2lane_996mbps_30fps_test_pattern.data(),
+    setting_1920_1080_2lane_996mbps_30fps.data(),
+    setting_2400_2720_2lane_996mbps_28fps.data(),
 };
 
-constexpr camera_sensor_mode_t supported_modes[] = {
+constexpr std::array<camera_sensor_mode_t, 3> supported_modes = {{
     {
         // NOTE: SW reference consumes this as (30fps * 256)
         //       We are representing this as fpms.
@@ -589,7 +592,7 @@ constexpr camera_sensor_mode_t supported_modes[] = {
         .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW,
         .bayer = BAYER_RGGB,
     },
-};
+}};
 
 }  // namespace camera
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "imx227-test.h"
+#include "imx227_tester.h"
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
@@ -12,10 +12,8 @@
 namespace camera {
 
 namespace {
-
 constexpr uint32_t kValidSensorMode = 0;
-
-}
+}  // namespace
 
 Imx227Device* g_sensor_device;
 
@@ -53,11 +51,11 @@ TEST_F(Imx227DeviceTester, TestStreamingOn) {
   EXPECT_NE(ZX_OK, g_sensor_device->CameraSensorStartStreaming());
 }
 
-zx_status_t Imx227DeviceTester::RunTests(Imx227Device* sensor) {
-  g_sensor_device = sensor;
+zx_status_t Imx227DeviceTester::RunTests(Imx227Device* device) {
+  g_sensor_device = device;
   const int kArgc = 1;
-  const char* argv[kArgc] = {"imx227-test"};
-  return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv));
+  const char* kArgv = "imx227-test";
+  return RUN_ALL_TESTS(kArgc, const_cast<char**>(&kArgv));
 }
 
 }  // namespace camera
