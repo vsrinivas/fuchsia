@@ -1,0 +1,46 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("fxl_logging") {
+  public_deps = [
+    "//src/lib/fxl:fxl_logging",
+  ]
+}
+
+group("fxl") {
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+group("printers") {
+  testonly = true
+  public_deps = [
+    "//src/lib/fxl:printers",
+  ]
+}
+
+group("fxl_printers") {
+  testonly = true
+
+  public_deps = [
+    ":printers",
+  ]
+}
+
+group("fxl_unittests") {
+  testonly = true
+  public_deps = [
+    "//src/lib/fxl:fxl_unittests",
+  ]
+}
+
+if (is_fuchsia) {
+  group("fxl_tests") {
+    testonly = true
+    public_deps = [
+      "//src/lib/fxl:fxl_tests",
+    ]
+  }
+}

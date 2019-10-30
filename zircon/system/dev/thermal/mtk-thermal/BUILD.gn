@@ -38,8 +38,8 @@ zx_test("mtk-thermal-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.gpio",
+     "$zx/system/banjo/ddk.protocol.composite",
+   "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.scpi",
@@ -52,7 +52,6 @@ zx_test("mtk-thermal-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/mock-function",

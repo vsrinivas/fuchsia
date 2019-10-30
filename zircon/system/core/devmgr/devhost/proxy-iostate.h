@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_HOST_PROXY_IOSTATE_H_
-#define SRC_DEVICES_HOST_PROXY_IOSTATE_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_PROXY_IOSTATE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_PROXY_IOSTATE_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -13,7 +13,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "async-loop-owned-rpc-handler.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
 
 struct zx_device;
 
@@ -42,8 +42,8 @@ struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
 
   const fbl::RefPtr<zx_device> dev;
 };
-void proxy_ios_destroy(const fbl::RefPtr<zx_device>& dev);
+static void proxy_ios_destroy(const fbl::RefPtr<zx_device>& dev);
 
 }  // namespace devmgr
 
-#endif  // SRC_DEVICES_HOST_PROXY_IOSTATE_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_PROXY_IOSTATE_H_

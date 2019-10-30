@@ -47,7 +47,6 @@ zx_test("mt8167-i2c-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",

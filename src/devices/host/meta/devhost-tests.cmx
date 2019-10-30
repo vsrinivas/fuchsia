@@ -1,9 +1,0 @@
-{
-    "program": {
-        "binary": "test/devhost-tests"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
-    }
-}

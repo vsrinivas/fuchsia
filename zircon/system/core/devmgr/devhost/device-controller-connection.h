@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_HOST_DEVICE_CONTROLLER_CONNECTION_H_
-#define SRC_DEVICES_HOST_DEVICE_CONTROLLER_CONNECTION_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVICE_CONTROLLER_CONNECTION_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVICE_CONTROLLER_CONNECTION_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -12,7 +12,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "async-loop-owned-rpc-handler.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
 
 struct zx_device;
 
@@ -82,4 +82,4 @@ struct DevhostRpcReadContext {
 
 }  // namespace devmgr
 
-#endif  // SRC_DEVICES_HOST_DEVICE_CONTROLLER_CONNECTION_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVICE_CONTROLLER_CONNECTION_H_

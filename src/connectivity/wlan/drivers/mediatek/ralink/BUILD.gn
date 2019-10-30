@@ -20,21 +20,21 @@ driver_module("ralink_driver") {
   deps = [
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//src/devices:driver",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
-    "//zircon/system/banjo/ddk.protocol.usb",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

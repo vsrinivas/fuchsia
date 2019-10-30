@@ -240,7 +240,7 @@ source_set("driver_sources") {
   deps = [
     ":core",
     ":debug",
-    "//src/devices:driver",
+    "//zircon/public/lib/driver",
   ]
 
   # The bus target dependencies below are public_deps so that their configs propagate to users of

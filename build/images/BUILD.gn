@@ -640,7 +640,10 @@ action("devmgr_config.txt") {
   # checking for interacting with uninstrumented code.
   sources += [ boot_manifest ]
   args += [
+    "--include=bin/devhost.asan",
     "--include=bin/devhost",
+    "--rewrite=bin/devhost.asan=devmgr.devhost.asan=true",
+    "--rewrite=bin/devhost=devhost.asan.strict=false",
     "--manifest=" + rebase_path(boot_manifest, root_build_dir),
   ]
 }
@@ -703,7 +706,7 @@ generated_file("zxcrypt_config.txt") {
   contents = zxcrypt_key_source
 }
 
-coordinator_label = "//src/devices:devices.bootfs"
+coordinator_label = "//src/devices/coordinator:coordinator.bootfs"
 coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
 coordinator_target_name = get_label_info(coordinator_label, "name")
 coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name

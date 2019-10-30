@@ -51,7 +51,6 @@ zx_test("msm8x53-clk-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",

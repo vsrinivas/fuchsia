@@ -47,7 +47,6 @@ zx_test("goldfish-unittests") {
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/ulib/driver",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]
 }

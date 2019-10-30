@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_HOST_SCHEDULER_PROFILE_H_
-#define SRC_DEVICES_HOST_SCHEDULER_PROFILE_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_SCHEDULER_PROFILE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_SCHEDULER_PROFILE_H_
 
 #include <zircon/types.h>
 
@@ -15,4 +15,4 @@ zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
 
 }  // namespace devmgr
 
-#endif  // SRC_DEVICES_HOST_SCHEDULER_PROFILE_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_SCHEDULER_PROFILE_H_

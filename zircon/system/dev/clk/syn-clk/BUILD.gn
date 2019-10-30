@@ -47,7 +47,6 @@ zx_test("syn-clk-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",

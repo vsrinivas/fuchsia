@@ -46,13 +46,13 @@
 #include <fbl/function.h>
 #include <fs/handler.h>
 
-#include "async-loop-owned-rpc-handler.h"
+#include "../shared/async-loop-owned-rpc-handler.h"
+#include "../shared/env.h"
+#include "../shared/fidl_txn.h"
+#include "../shared/log.h"
 #include "composite-device.h"
 #include "connection-destroyer.h"
 #include "device-controller-connection.h"
-#include "env.h"
-#include "fidl_txn.h"
-#include "log.h"
 #include "main.h"
 #include "proxy-iostate.h"
 #include "scheduler_profile.h"
@@ -505,7 +505,7 @@ void DevfsConnection::HandleRpc(std::unique_ptr<DevfsConnection> conn,
   log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
 }
 
-void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
+static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
   fbl::AutoLock guard(&dev->proxy_ios_lock);
 
   if (dev->proxy_ios) {

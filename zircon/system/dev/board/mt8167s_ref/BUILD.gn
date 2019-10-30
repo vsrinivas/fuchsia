@@ -85,7 +85,6 @@ zx_test("mt8167s_ref-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

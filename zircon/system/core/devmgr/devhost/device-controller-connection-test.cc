@@ -4,15 +4,14 @@
 
 #include "device-controller-connection.h"
 
+#include <fbl/auto_lock.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>
+#include <zxtest/zxtest.h>
 
 #include <thread>
-
-#include <fbl/auto_lock.h>
-#include <zxtest/zxtest.h>
 
 #include "connection-destroyer.h"
 #include "zx-device.h"
@@ -180,8 +179,9 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   } thread_status = INITIAL;
   std::thread synchronous_call_thread([channel = device_local.get(), &thread_status]() {
     auto unowned_channel = zx::unowned_channel(channel);
-    auto result = ::llcpp::fuchsia::device::manager::DeviceController::Call::Unbind(
-        std::move(unowned_channel));
+    auto result =
+        ::llcpp::fuchsia::device::manager::DeviceController::Call::Unbind(
+            std::move(unowned_channel));
     if (!result.ok()) {
       thread_status = WRITE_FAILED;
       return;

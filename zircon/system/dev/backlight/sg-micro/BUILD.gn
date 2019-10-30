@@ -41,7 +41,6 @@ zx_test("sgm37603a-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

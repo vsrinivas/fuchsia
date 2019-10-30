@@ -52,8 +52,8 @@ source_set("core") {
 
   deps = [
     "//garnet/lib/wlan/protocol:protocol",
-    "//src/devices:driver",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
   ]
 
   public_deps = [
@@ -87,8 +87,8 @@ source_set("pcie") {
     ":core",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
-    "//src/devices:driver",
     "//zircon/public/lib/async",
+    "//zircon/public/lib/driver",
   ]
 
   public_deps = [
