@@ -28,6 +28,7 @@ group("tests") {
     "//src/session/realm_management:realm_management_tests",
     "//src/session/session_manager:session_manager_tests",
     "//src/session/session_manager_integration_tests",
+    "//src/session/tools/session_control:session_control_tests",
     "//src/sys/component_manager_for_test",
     "//src/testing/runner",
   ]

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/session_control",
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.session.Launcher",
+            "from": "realm",
+        }
+    ]
+}
