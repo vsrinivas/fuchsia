@@ -1,0 +1,12 @@
+{
+    "program": {
+        "data": "data/spinning_cube"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

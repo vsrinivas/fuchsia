@@ -6,6 +6,7 @@ group("examples") {
   deps = [
     "hello_experiences",
     "localized_flutter_app",
+    "spinning_cube",
   ]
 }
 
