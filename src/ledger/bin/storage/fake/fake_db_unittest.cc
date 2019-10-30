@@ -12,11 +12,18 @@ namespace storage {
 namespace fake {
 namespace {
 
-std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs, async_dispatcher_t* dispatcher) {
-  return std::make_unique<FakeDb>(dispatcher);
-}
+class FakeDbTestFactory : public DbTestFactory {
+ public:
+  FakeDbTestFactory() = default;
 
-INSTANTIATE_TEST_SUITE_P(FakeDbTest, DbTest, testing::Values(&GetDb));
+  std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* /*tmpfs*/,
+                            async_dispatcher_t* dispatcher) override {
+    return std::make_unique<FakeDb>(dispatcher);
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(FakeDbTest, DbTest,
+                         testing::Values([] { return std::make_unique<FakeDbTestFactory>(); }));
 }  // namespace
 }  // namespace fake
 }  // namespace storage

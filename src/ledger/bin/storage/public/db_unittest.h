@@ -19,20 +19,36 @@
 
 namespace storage {
 
+// Factory class for Db parametrized tests. An object of this type is kept alive for the duration of
+// the test.
+class DbTestFactory {
+ public:
+  virtual ~DbTestFactory() = default;
+  virtual std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
+                                    async_dispatcher_t* dispatcher) = 0;
+};
+
 // This class implements Value-Parameterized Abstract Tests for the Db interface.
 //
 // See db_unittest.cc for the actual tests.
 //
-// To run the test suite, implementations need to provide a factory function
-//   std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs, async_dispatcher_t* dispatcher)
+// To run the test suite, implementations need to provide a function for a factory class.
+// class MyDbFactoryTest : public DbTestFactory {
+//  public:
+//   MyDbFactoryTest() = default;
+//   std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
+//                             async_dispatcher_t* dispatcher) override { ... }
+// };
 // and instantiate the test suite with:
-//   INSTANTIATE_TEST_SUITE_P(DbImplTest, DbTest, ::testing::Values(&GetDb));
+//   INSTANTIATE_TEST_SUITE_P(DbImplTest, DbTest, ::testing::Values([] {
+//     return std::make_unique<MyDbFactoryTest>();
+// }));
 class DbTest
     : public ledger::TestWithEnvironment,
-      public ::testing::WithParamInterface<
-          std::function<std::unique_ptr<Db>(scoped_tmpfs::ScopedTmpFS*, async_dispatcher_t*)>> {
+      public ::testing::WithParamInterface<std::function<std::unique_ptr<DbTestFactory>()>> {
  public:
-  DbTest() : db_(GetParam()(&tmpfs_, environment_.dispatcher())) {}
+  DbTest()
+      : db_factory_(GetParam()()), db_(db_factory_->GetDb(&tmpfs_, environment_.dispatcher())) {}
 
  protected:
   void SetUp() override {
@@ -76,6 +92,7 @@ class DbTest
                         fit::function<void(coroutine::CoroutineHandler*)> do_read);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<DbTestFactory> db_factory_;
   std::unique_ptr<Db> db_;
 };
 

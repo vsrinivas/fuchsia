@@ -12,15 +12,22 @@
 namespace storage {
 namespace {
 
-std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs, async_dispatcher_t* dispatcher) {
-  ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
-  auto db = std::make_unique<LevelDb>(dispatcher, db_path);
-  Status status = db->Init();
-  if (status != Status::OK)
-    return nullptr;
-  return std::move(db);
-}
+class LevelDbTestFactory : public DbTestFactory {
+ public:
+  LevelDbTestFactory() = default;
 
-INSTANTIATE_TEST_SUITE_P(LevelDbTest, DbTest, testing::Values(&GetDb));
+  std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
+                            async_dispatcher_t* dispatcher) override {
+    ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
+    auto db = std::make_unique<LevelDb>(dispatcher, db_path);
+    Status status = db->Init();
+    if (status != Status::OK)
+      return nullptr;
+    return std::move(db);
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(LevelDbTest, DbTest,
+                         testing::Values([] { return std::make_unique<LevelDbTestFactory>(); }));
 }  // namespace
 }  // namespace storage
