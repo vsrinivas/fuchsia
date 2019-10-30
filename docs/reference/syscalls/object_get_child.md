@@ -36,10 +36,6 @@ this call.
 If the object is a *Job*, its (immediate) child *Jobs* and the *Processes*
 it contains may be obtained by this call.
 
-If the object is a *Resource*, its (immediate) child *Resources* may be
-obtained by this call.
-
-
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
