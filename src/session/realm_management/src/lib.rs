@@ -14,7 +14,7 @@ use {fidl_fuchsia_io::DirectoryMarker, fidl_fuchsia_sys2 as fsys};
 ///
 /// # Returns
 /// `Ok` if the child is created successfully.
-pub async fn create_child(
+pub async fn create_child_component(
     child_name: &str,
     child_url: &str,
     collection_name: &str,
@@ -45,7 +45,7 @@ pub async fn create_child(
 ///
 /// # Returns
 /// `Ok` if the child was bound successfully.
-pub async fn bind_child(
+pub async fn bind_child_component(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
@@ -72,7 +72,7 @@ pub async fn bind_child(
 ///
 /// # Errors
 /// Returns an error if the child was not destroyed in the realm.
-pub async fn destroy_child(
+pub async fn destroy_child_component(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
@@ -90,7 +90,7 @@ pub async fn destroy_child(
 #[cfg(test)]
 mod tests {
     use {
-        super::{bind_child, create_child, destroy_child},
+        super::{bind_child_component, create_child_component, destroy_child_component},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
@@ -140,7 +140,9 @@ mod tests {
             }
         });
 
-        assert!(create_child(child_name, child_url, child_collection, &realm_proxy).await.is_ok());
+        assert!(create_child_component(child_name, child_url, child_collection, &realm_proxy)
+            .await
+            .is_ok());
     }
 
     /// Tests that a success received when creating a child results in an appropriate result from
@@ -156,7 +158,7 @@ mod tests {
             }
         });
 
-        assert!(create_child("", "", "", &realm_proxy).await.is_ok());
+        assert!(create_child_component("", "", "", &realm_proxy).await.is_ok());
     }
 
     /// Tests that an error received when creating a child results in an appropriate error from
@@ -172,7 +174,7 @@ mod tests {
             }
         });
 
-        assert!(create_child("", "", "", &realm_proxy).await.is_err());
+        assert!(create_child_component("", "", "", &realm_proxy).await.is_err());
     }
 
     /// Tests that `bind_child` results in the appropriate call to `RealmProxy`.
@@ -193,7 +195,7 @@ mod tests {
             }
         });
 
-        assert!(bind_child(child_name, child_collection, &realm_proxy).await.is_ok());
+        assert!(bind_child_component(child_name, child_collection, &realm_proxy).await.is_ok());
     }
 
     /// Tests that a success received when binding a child results in an appropriate result from
@@ -209,7 +211,7 @@ mod tests {
             }
         });
 
-        assert!(bind_child("", "", &realm_proxy).await.is_ok());
+        assert!(bind_child_component("", "", &realm_proxy).await.is_ok());
     }
 
     /// Tests that an error received when binding a child results in an appropriate error from
@@ -225,7 +227,7 @@ mod tests {
             }
         });
 
-        assert!(bind_child("", "", &realm_proxy).await.is_err());
+        assert!(bind_child_component("", "", &realm_proxy).await.is_err());
     }
 
     /// Tests that `destroy_child` results in the appropriate call to `RealmProxy`.
@@ -246,6 +248,6 @@ mod tests {
             }
         });
 
-        assert!(destroy_child(child_name, child_collection, &realm_proxy).await.is_ok());
+        assert!(destroy_child_component(child_name, child_collection, &realm_proxy).await.is_ok());
     }
 }

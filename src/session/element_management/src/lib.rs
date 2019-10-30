@@ -121,17 +121,22 @@ impl ElementManager for SimpleElementManager {
             .component_url
             .ok_or_else(|| ElementManagerError::url_missing(child_name, child_collection))?;
 
-        realm_management::create_child(&child_name, &child_url, child_collection, &self.realm)
+        realm_management::create_child_component(
+            &child_name,
+            &child_url,
+            child_collection,
+            &self.realm,
+        )
+        .await
+        .map_err(|err: fsys::Error| {
+            ElementManagerError::not_created(child_name, child_collection, &child_url, err)
+        })?;
+
+        realm_management::bind_child_component(&child_name, child_collection, &self.realm)
             .await
             .map_err(|err: fsys::Error| {
-                ElementManagerError::not_created(child_name, child_collection, &child_url, err)
-            })?;
-
-        realm_management::bind_child(&child_name, child_collection, &self.realm).await.map_err(
-            |err: fsys::Error| {
                 ElementManagerError::not_bound(child_name, child_collection, &child_url, err)
-            },
-        )?;
+            })?;
 
         Ok(())
     }

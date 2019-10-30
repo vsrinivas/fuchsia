@@ -94,7 +94,7 @@ pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
 /// # Errors
 /// Returns an error if any of the realm operations fail, or the realm is unavailable.
 async fn set_session(session_url: &str, realm: fsys::RealmProxy) -> Result<(), StartupError> {
-    realm_management::destroy_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
+    realm_management::destroy_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
         .await
         .or_else(|err: fsys::Error| match err {
             // Since the intent is simply to clear out the existing session child if it exists,
@@ -110,23 +110,28 @@ async fn set_session(session_url: &str, realm: fsys::RealmProxy) -> Result<(), S
             err,
         })?;
 
-    realm_management::create_child(SESSION_NAME, &session_url, SESSION_CHILD_COLLECTION, &realm)
+    realm_management::create_child_component(
+        SESSION_NAME,
+        &session_url,
+        SESSION_CHILD_COLLECTION,
+        &realm,
+    )
+    .await
+    .map_err(|err| StartupError::NotCreated {
+        name: SESSION_NAME.to_string(),
+        collection: SESSION_CHILD_COLLECTION.to_string(),
+        url: session_url.to_string(),
+        err,
+    })?;
+
+    realm_management::bind_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
         .await
-        .map_err(|err| StartupError::NotCreated {
+        .map_err(|err| StartupError::NotBound {
             name: SESSION_NAME.to_string(),
             collection: SESSION_CHILD_COLLECTION.to_string(),
             url: session_url.to_string(),
             err,
         })?;
-
-    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm).await.map_err(
-        |err| StartupError::NotBound {
-            name: SESSION_NAME.to_string(),
-            collection: SESSION_CHILD_COLLECTION.to_string(),
-            url: session_url.to_string(),
-            err,
-        },
-    )?;
 
     Ok(())
 }
