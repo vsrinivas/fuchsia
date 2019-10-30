@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(dje): wip wip wip
-
-#include "control.h"
+#include "garnet/bin/insntrace/control.h"
 
 #include <fcntl.h>
 #include <link.h>
@@ -26,17 +24,16 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 #include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
 
-#include "garnet/lib/inferior_control/arch.h"
-#include "garnet/lib/inferior_control/arch_x64.h"
-
+#include "garnet/bin/insntrace/config.h"
 #include "garnet/bin/insntrace/ktrace_controller.h"
-#include "garnet/bin/insntrace/server.h"
 #include "garnet/bin/insntrace/utils.h"
 
 namespace insntrace {
@@ -132,29 +129,6 @@ bool InitTrace(const IptConfig& config) {
   return true;
 }
 
-bool InitThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "InitThreadTrace called";
-  FXL_DCHECK(config.mode == Mode::THREAD);
-
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return false;
-  }
-
-  BufferConfig ipt_config;
-  InitIptBufferConfig(&ipt_config, config);
-
-  ::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result;
-  zx_status_t status = ipt->AllocateBuffer(ipt_config, &result);
-  if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AllocateBuffer", status, result.err());
-    return false;
-  }
-
-  thread->set_ipt_buffer(result.response().descriptor);
-  return true;
-}
-
 // This must be called before a process is started so we emit a ktrace
 // process start record for it.
 
@@ -218,40 +192,6 @@ bool StartTrace(const IptConfig& config) {
   return true;
 }
 
-bool StartThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "StartThreadTrace called";
-  FXL_DCHECK(config.mode == Mode::THREAD);
-
-  if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
-    // TODO(dje): For now. This isn't an error in the normal sense.
-    return true;
-  }
-
-  zx::thread thread_handle;
-  zx_status_t status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
-                                           thread_handle.reset_and_get_address());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate thread handle: "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
-
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return false;
-  }
-
-  ::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result result;
-  status = ipt->AssignThreadBuffer(thread->ipt_buffer(), std::move(thread_handle), &result);
-  if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AssignThreadBuffer", status, result.err());
-    return false;
-  }
-
-  return true;
-}
-
 void StopTrace(const IptConfig& config) {
   FXL_LOG(INFO) << "StopTrace called";
   FXL_DCHECK(config.mode == Mode::CPU);
@@ -263,36 +203,6 @@ void StopTrace(const IptConfig& config) {
 
   [[maybe_unused]] zx_status_t status = ipt->Stop();
   FXL_DCHECK(status == ZX_OK);
-}
-
-void StopThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "StopThreadTrace called";
-  FXL_DCHECK(config.mode == Mode::THREAD);
-
-  if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
-    return;
-  }
-
-  zx::thread thread_handle;
-  zx_status_t status = zx_handle_duplicate(thread->handle(), ZX_RIGHT_SAME_RIGHTS,
-                                           thread_handle.reset_and_get_address());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate thread handle: "
-                   << debugger_utils::ZxErrorString(status);
-    return;
-  }
-
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return;
-  }
-
-  ::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result result;
-  status = ipt->ReleaseThreadBuffer(thread->ipt_buffer(), std::move(thread_handle), &result);
-  if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AssignThreadBuffer", status, result.err());
-  }
 }
 
 void StopSidebandDataCollection(const IptConfig& config) {
@@ -357,7 +267,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
     return ZX_ERR_INTERNAL;
   }
 
-  fbl::unique_fd fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
+  fxl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
     FXL_LOG(ERROR) << fxl::StringPrintf("Failed writing file: %s", c_path) << ", "
                    << debugger_utils::ErrnoString(errno);
@@ -451,32 +361,6 @@ void DumpTrace(const IptConfig& config) {
   }
 }
 
-// Write the buffer contents for |thread|.
-// This assumes the thread is stopped.
-
-void DumpThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpThreadTrace called";
-  FXL_DCHECK(config.mode == Mode::THREAD);
-
-  zx_koid_t id = thread->id();
-
-  if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", id);
-    return;
-  }
-
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return;
-  }
-
-  auto status = WriteBufferData(config, ipt, thread->ipt_buffer(), id);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("Dump perf of thread %" PRIu64 ": ", id)
-                   << debugger_utils::ZxErrorString(status);
-  }
-}
-
 void DumpSidebandData(const IptConfig& config) {
   FXL_LOG(INFO) << "DumpSidebandData called";
 
@@ -490,7 +374,7 @@ void DumpSidebandData(const IptConfig& config) {
 
     FILE* f = fopen(cpuid_c_path, "w");
     if (f != nullptr) {
-      inferior_control::DumpArch(f);
+      debugger_utils::x86_feature_debug(f);
       // Also put the mtc_freq value in the cpuid file, it's as good a place
       // for it as any. See intel-pt.h:pt_config.
       // Alternatively this could be added to the ktrace record.
@@ -531,26 +415,6 @@ void ResetTrace(const IptConfig& config) {
 
   // TODO(dje): Nothing to do currently. There use to be. So keep this
   // function around for a bit.
-}
-
-void ResetThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "ResetThreadTrace called";
-  FXL_DCHECK(config.mode == Mode::THREAD);
-
-  if (thread->ipt_buffer() < 0) {
-    FXL_LOG(INFO) << fxl::StringPrintf("Thread %" PRIu64 " has no IPT buffer", thread->id());
-    return;
-  }
-
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return;
-  }
-
-  [[maybe_unused]] zx_status_t status = ipt->FreeBuffer(thread->ipt_buffer());
-  FXL_DCHECK(status == ZX_OK);
-
-  thread->set_ipt_buffer(-1);
 }
 
 // Free all resources associated with the true.

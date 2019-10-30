@@ -9,13 +9,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <cinttypes>
 
 #include <iostream>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
@@ -30,25 +32,22 @@
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/bin/insntrace/config.h"
+#include "garnet/bin/insntrace/control.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
-
-#include "garnet/lib/inferior_control/arch.h"
-#include "garnet/lib/inferior_control/arch_x64.h"
-
-#include "control.h"
-#include "server.h"
-
-static constexpr char ldso_trace_env_var[] = "LD_TRACE";
-static constexpr char ldso_trace_value[] = "1";
 
 // The lower 5 bits of CR3_MATCH MSR are reserved.
 static constexpr uint32_t kCr3MatchReservedMask = 0x1f;
 
 // TODO(dje): Split up into topics, output is long and can scroll off screen.
+//
+// TODO(39631): Support tracing a particular program or individual threads. It's simplest, and
+// consistent with other programs, if the syntax is "insntrace program [argv]". That is why
+// "--control" is a required argument at the moment.
 constexpr char kUsageString[] =
-    "Usage: insntrace [options] program [args...]\n"
-    "       insntrace [options] --control action1 [action2 ...]\n"
+    "Usage: insntrace [options] --control action1 [action2 ...]\n"
     "\n"
     "  program - the path to the executable to run\n"
     "\n"
@@ -415,28 +414,6 @@ static bool ControlIpt(const insntrace::IptConfig& config, const fxl::CommandLin
   return true;
 }
 
-static bool RunProgram(const insntrace::IptConfig& config, const fxl::CommandLine& cl) {
-  debugger_utils::Argv inferior_argv{cl.positional_args().begin(), cl.positional_args().end()};
-  if (inferior_argv.empty()) {
-    FXL_LOG(ERROR) << "Missing program";
-    return false;
-  }
-
-  insntrace::IptServer ipt(config, inferior_argv);
-
-  // We need details of where the program and its dsos are loaded.
-  // This data is obtained from the dynamic linker.
-  // TODO(dje): MG-519: ld.so can't write to files, and the only thing it
-  // can write to at the moment is the kernel debug log.
-  setenv(ldso_trace_env_var, ldso_trace_value, 1);
-
-  auto inferior = new inferior_control::Process(&ipt, &ipt);
-
-  ipt.set_current_process(inferior);
-
-  return ipt.Run();
-}
-
 int main(int argc, char* argv[]) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -449,7 +426,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (cl.HasOption("dump-arch", nullptr)) {
-    inferior_control::DumpArch(stdout);
+    debugger_utils::x86_feature_debug(stdout);
     return EXIT_SUCCESS;
   }
 
@@ -466,7 +443,8 @@ int main(int argc, char* argv[]) {
   if (cl.HasOption("control", nullptr)) {
     success = ControlIpt(config, cl);
   } else {
-    success = RunProgram(config, cl);
+    FXL_LOG(ERROR) << "--control is a required option";
+    return EXIT_FAILURE;
   }
 
   if (!success) {

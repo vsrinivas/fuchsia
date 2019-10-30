@@ -34,21 +34,22 @@ const char* const kResultFileList[] = {
 };
 
 // TODO(35374): Flakey
-TEST(Insntrace, DISABLED_TraceProgram) {
-  zx::job job;
-  ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
+TEST(Insntrace, DISABLED_Control) {
+  zx::job job{};  // -> default job
 
   // A note on file sizes:
   // The default size of the output file is 256K. With 4 cpus that's 1MB
   // which is fine. There is also the ktrace buffer which is 32MB by default.
 
-  zx::process child;
-  std::vector<std::string> argv{kInsntracePath, kInsntracePath, "--help"};
-  ASSERT_EQ(tracing::test::SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
+  std::vector<std::string> start_argv{kInsntracePath, "--control", "init", "start"};
+  ASSERT_TRUE(tracing::test::RunProgramAndWait(job, start_argv, 0, nullptr));
 
-  int64_t return_code;
-  ASSERT_TRUE(tracing::test::WaitAndGetReturnCode(argv[0], child, &return_code));
-  EXPECT_EQ(return_code, 0);
+  // Give tracing something to trace.
+  std::vector<std::string> help_argv{kInsntracePath, "--help"};
+  ASSERT_TRUE(tracing::test::RunProgramAndWait(job, help_argv, 0, nullptr));
+
+  std::vector<std::string> stop_argv{kInsntracePath, "--control", "stop", "dump", "reset"};
+  ASSERT_TRUE(tracing::test::RunProgramAndWait(job, stop_argv, 0, nullptr));
 
   // There's not much more we can do at this point, beyond verifying the
   // expected files exist. Examining them requires the reader-library which

@@ -10,13 +10,13 @@ executable("bin") {
 
   if (current_cpu == "x64") {
     sources = [
+      "config.cc",
+      "config.h",
       "control.cc",
       "control.h",
       "ktrace_controller.cc",
       "ktrace_controller.h",
       "main.cc",
-      "server.cc",
-      "server.h",
       "utils.cc",
       "utils.h",
     ]
@@ -28,9 +28,9 @@ executable("bin") {
 
   deps = [
     "//garnet/lib/debugger_utils",
-    "//garnet/lib/inferior_control",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
+    #"//src/lib/files",
+    #"//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

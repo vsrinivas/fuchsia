@@ -14,10 +14,6 @@
 #include "src/lib/fxl/strings/string_view.h"
 
 #include "garnet/lib/debugger_utils/argv.h"
-#include "garnet/lib/inferior_control/exception_port.h"
-#include "garnet/lib/inferior_control/process.h"
-#include "garnet/lib/inferior_control/server.h"
-#include "garnet/lib/inferior_control/thread.h"
 
 namespace insntrace {
 
@@ -83,43 +79,6 @@ struct IptConfig {
 
   // The path prefix of all of the output files.
   std::string output_path_prefix;
-};
-
-// IptServer implements the main loop, which basically just waits until
-// the inferior exits. The exception port thread does all the heavy lifting
-// when tracing threads.
-//
-// NOTE: This class is generally not thread safe. Care must be taken when
-// calling methods which modify the internal state of a IptServer instance.
-class IptServer final : public inferior_control::Server {
- public:
-  IptServer(const IptConfig& config, const debugger_utils::Argv& argv);
-
-  bool Run() override;
-
- private:
-  bool StartInferior();
-  bool DumpResults();
-
-  // Process::Delegate overrides.
-  void OnThreadStarting(inferior_control::Process* process, inferior_control::Thread* thread,
-                        zx_handle_t eport, const zx_exception_context_t& context) override;
-  void OnThreadExiting(inferior_control::Process* process, inferior_control::Thread* thread,
-                       zx_handle_t eport, const zx_exception_context_t& context) override;
-  void OnProcessTermination(inferior_control::Process* process) override;
-  void OnArchitecturalException(inferior_control::Process* process,
-                                inferior_control::Thread* thread, zx_handle_t eport,
-                                const zx_excp_type_t type,
-                                const zx_exception_context_t& context) override;
-  void OnSyntheticException(inferior_control::Process* process, inferior_control::Thread* thread,
-                            zx_handle_t eport, zx_excp_type_t type,
-                            const zx_exception_context_t& context) override;
-
-  IptConfig config_;
-
-  debugger_utils::Argv inferior_argv_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };
 
 }  // namespace insntrace
