@@ -147,10 +147,7 @@ async fn run_a_test_plan() {
 async fn launch_and_run_echo_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade
-        .run_test(
-            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/echo_test_realm.cm"
-                .to_string(),
-        )
+        .run_test("fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm".to_string())
         .await
         .expect("Running test should not fail");
 
