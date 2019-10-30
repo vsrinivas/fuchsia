@@ -212,11 +212,9 @@ void TablesGenerator::Generate(const coded::EnumType& enum_type) {
   Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
   Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
   Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
-  Emit(&tables_file_, ", &" + validator_func + ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, enum_type.qname);
-  Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, ", &" + validator_func + ", \"");
+  Emit(&tables_file_, enum_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::BitsType& bits_type) {
@@ -227,11 +225,9 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
   Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, bits_type.mask);
-  Emit(&tables_file_, ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, bits_type.qname);
-  Emit(&tables_file_, "));\n\n");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, bits_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
@@ -256,11 +252,9 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, struct_type.size);
-  Emit(&tables_file_, ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, struct_type.qname);
-  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, struct_type.qname);
+  Emit(&tables_file_, "\", ");
   Emit(&tables_file_, AltTableReference(struct_type));
   Emit(&tables_file_, "));\n\n");
 }
@@ -278,9 +272,9 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
   Emit(&tables_file_, NameFields(table_type.coded_name));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  // Emit(&tables_file_, table_type.qname);
-  Emit(&tables_file_, ", nullptr));\n\n");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, table_type.qname);
+  Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
@@ -302,11 +296,9 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
   Emit(&tables_file_, union_type.data_offset);
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, union_type.size);
-  Emit(&tables_file_, ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, union_type.qname);
-  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, union_type.qname);
+  Emit(&tables_file_, "\", ");
   Emit(&tables_file_, AltTableReference(union_type));
   Emit(&tables_file_, "));\n\n");
 }
@@ -326,11 +318,9 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, NameFields(xunion_type.coded_name));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, xunion_type.nullability);
-  Emit(&tables_file_, ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, xunion_type.qname);
-  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, xunion_type.qname);
+  Emit(&tables_file_, "\", ");
   Emit(&tables_file_, xunion_type.strictness);
   Emit(&tables_file_, "));\n\n");
 }
@@ -383,11 +373,9 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, message_type.size);
-  Emit(&tables_file_, ", ");
-  // TODO(fxb/39791): Temporarily avoid generating names.
-  Emit(&tables_file_, "nullptr");
-  // Emit(&tables_file_, message_type.qname);
-  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ", \"");
+  Emit(&tables_file_, message_type.qname);
+  Emit(&tables_file_, "\", ");
   Emit(&tables_file_, AltTableReference(message_type));
   Emit(&tables_file_, "));\n\n");
 }

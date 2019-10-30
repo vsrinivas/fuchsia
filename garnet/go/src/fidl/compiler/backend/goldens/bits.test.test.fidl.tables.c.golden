@@ -10,7 +10,7 @@ extern const fidl_type_t test_name_MyBitsTable;
 
 
 
-const fidl_type_t test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, nullptr));
+const fidl_type_t test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, "test.name/MyBits"));
 
 // Coding tables for v1 wire format.
 
@@ -18,7 +18,7 @@ extern const fidl_type_t v1_test_name_MyBitsTable;
 
 
 
-const fidl_type_t v1_test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, nullptr));
+const fidl_type_t v1_test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, "test.name/MyBits"));
 
 // Old <-> V1 map.
 
