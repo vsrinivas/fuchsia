@@ -50,7 +50,7 @@ success("UnionMigration_SingleVariant") {
         ],
     },
     // TODO(mkember, bprosnitz): Add languages here as they gain support.
-    bindings_allowlist = [go],
+    bindings_allowlist = [go,dart],
 }
 
 success("UnionSize8Alignment4") {
@@ -80,7 +80,7 @@ success("UnionSize8Alignment4") {
                 ],
         },
         // TODO(mkember, bprosnitz): Add languages here as they gain support.
-        bindings_allowlist = [go],
+        bindings_allowlist = [go,dart],
 }
 
 success("UnionSize12Alignment4") {
@@ -110,7 +110,7 @@ success("UnionSize12Alignment4") {
                 ],
         },
         // TODO(mkember, bprosnitz): Add languages here as they gain support.
-        bindings_allowlist = [go],
+        bindings_allowlist = [go,dart],
 }
 
 success("UnionSize24Alignment8") {
@@ -144,7 +144,7 @@ success("UnionSize24Alignment8") {
                 ],
         },
         // TODO(mkember, bprosnitz): Add languages here as they gain support.
-        bindings_allowlist = [go],
+        bindings_allowlist = [go,dart],
 }
 
 success("UnionSize36Alignment4") {
@@ -183,6 +183,6 @@ success("UnionSize36Alignment4") {
                 ],
         },
         // TODO(mkember, bprosnitz): Add languages here as they gain support.
-        bindings_allowlist = [go],
+        bindings_allowlist = [go,dart],
 }
 
