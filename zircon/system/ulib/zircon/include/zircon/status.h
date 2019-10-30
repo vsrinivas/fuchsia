@@ -15,8 +15,8 @@ extern "C" {
 //
 // For example, zx_status_get_string(ZX_ERR_TIMED_OUT) returns the string
 // "ZX_ERR_TIMED_OUT".
-const char* _zx_status_get_string(zx_status_t status);
-const char* zx_status_get_string(zx_status_t status);
+__EXPORT const char* _zx_status_get_string(zx_status_t status);
+__EXPORT const char* zx_status_get_string(zx_status_t status);
 
 #ifdef __cplusplus
 }

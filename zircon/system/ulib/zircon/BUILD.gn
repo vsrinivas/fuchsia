@@ -109,7 +109,6 @@ if (current_toolchain == default_toolchain) {
     ]
 
     configs += [ ":config" ]
-    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
 
     deps = [
       ":generate",
