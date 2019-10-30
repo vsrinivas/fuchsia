@@ -853,6 +853,8 @@ struct Controller_UpdatePowerStateMapping_Result {
 
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerRebindRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerRebindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
@@ -904,6 +906,36 @@ class Controller final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = BindResponse;
+  };
+
+  struct RebindResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRebindResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct RebindRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView driver;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRebindRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = RebindResponse;
   };
 
   struct ScheduleUnbindResponse final {
@@ -1244,6 +1276,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class Rebind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Rebind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver);
+      ~Rebind_Impl() = default;
+      Rebind_Impl(Rebind_Impl&& other) = default;
+      Rebind_Impl& operator=(Rebind_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class ScheduleUnbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1486,6 +1534,7 @@ class Controller final {
 
    public:
     using Bind = Bind_Impl<BindResponse>;
+    using Rebind = Rebind_Impl<RebindResponse>;
     using ScheduleUnbind = ScheduleUnbind_Impl<ScheduleUnbindResponse>;
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
@@ -1516,6 +1565,22 @@ class Controller final {
       ~Bind_Impl() = default;
       Bind_Impl(Bind_Impl&& other) = default;
       Bind_Impl& operator=(Bind_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Rebind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Rebind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+      ~Rebind_Impl() = default;
+      Rebind_Impl(Rebind_Impl&& other) = default;
+      Rebind_Impl& operator=(Rebind_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1767,6 +1832,7 @@ class Controller final {
 
    public:
     using Bind = Bind_Impl<BindResponse>;
+    using Rebind = Rebind_Impl<RebindResponse>;
     using ScheduleUnbind = ScheduleUnbind_Impl<ScheduleUnbindResponse>;
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
@@ -1802,6 +1868,18 @@ class Controller final {
     // Attempt to bind the requested driver to this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Bind Bind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+
+    // This api will unbind all the children of this device and bind the
+    // requested driver. If the driver is empty, it will autobind.
+    // The Rebind will not return until the bind completes.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::Rebind Rebind(::fidl::StringView driver);
+
+    // This api will unbind all the children of this device and bind the
+    // requested driver. If the driver is empty, it will autobind.
+    // The Rebind will not return until the bind completes.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Rebind Rebind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
@@ -1960,6 +2038,18 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
+    // This api will unbind all the children of this device and bind the
+    // requested driver. If the driver is empty, it will autobind.
+    // The Rebind will not return until the bind completes.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::Rebind Rebind(zx::unowned_channel _client_end, ::fidl::StringView driver);
+
+    // This api will unbind all the children of this device and bind the
+    // requested driver. If the driver is empty, it will autobind.
+    // The Rebind will not return until the bind completes.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Rebind Rebind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -2111,6 +2201,11 @@ class Controller final {
     // Attempt to bind the requested driver to this device
     static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
+    // This api will unbind all the children of this device and bind the
+    // requested driver. If the driver is empty, it will autobind.
+    // The Rebind will not return until the bind completes.
+    static ::fidl::DecodeResult<RebindResponse> Rebind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer);
+
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -2189,6 +2284,20 @@ class Controller final {
     using BindCompleter = ::fidl::Completer<BindCompleterBase>;
 
     virtual void Bind(::fidl::StringView driver, BindCompleter::Sync _completer) = 0;
+
+    class RebindCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<RebindResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using RebindCompleter = ::fidl::Completer<RebindCompleterBase>;
+
+    virtual void Rebind(::fidl::StringView driver, RebindCompleter::Sync _completer) = 0;
 
     class ScheduleUnbindCompleterBase : public _Base {
      public:
@@ -2439,6 +2548,8 @@ class Controller final {
    public:
     static void BindRequest(const ::fidl::DecodedMessage<Controller::BindRequest>& _msg);
     static void BindResponse(const ::fidl::DecodedMessage<Controller::BindResponse>& _msg);
+    static void RebindRequest(const ::fidl::DecodedMessage<Controller::RebindRequest>& _msg);
+    static void RebindResponse(const ::fidl::DecodedMessage<Controller::RebindResponse>& _msg);
     static void ScheduleUnbindRequest(const ::fidl::DecodedMessage<Controller::ScheduleUnbindRequest>& _msg);
     static void ScheduleUnbindResponse(const ::fidl::DecodedMessage<Controller::ScheduleUnbindResponse>& _msg);
     static void GetDriverNameRequest(const ::fidl::DecodedMessage<Controller::GetDriverNameRequest>& _msg);
@@ -2569,6 +2680,22 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::BindResponse> : publi
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::BindResponse)
     == ::llcpp::fuchsia::device::Controller::BindResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::BindResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::RebindRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::RebindRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::RebindRequest)
+    == ::llcpp::fuchsia::device::Controller::RebindRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::RebindRequest, driver) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::RebindResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::RebindResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::RebindResponse)
+    == ::llcpp::fuchsia::device::Controller::RebindResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::RebindResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse> : public std::true_type {};

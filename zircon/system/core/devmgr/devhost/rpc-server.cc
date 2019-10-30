@@ -530,6 +530,25 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
   return ZX_OK;
 }
 
+static zx_status_t fidl_DeviceControllerRebind(void* ctx, const char* driver_data,
+                                               size_t driver_count, fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+
+  char drv_libname[fuchsia_device_MAX_DRIVER_PATH_LEN + 1];
+  memcpy(drv_libname, driver_data, driver_count);
+  drv_libname[driver_count] = 0;
+
+  conn->dev->set_rebind_drv_name(drv_libname);
+  zx_status_t status = device_rebind((conn->dev).get());
+  if (status != ZX_OK) {
+    fuchsia_device_ControllerRebind_reply(txn, status);
+  } else {
+    // These will be set, until device is unbound and then bound again.
+    conn->dev->set_rebind_conn(fs::FidlConnection::CopyTxn(txn));
+  }
+  return ZX_OK;
+}
+
 static zx_status_t fidl_DeviceControllerRunCompatibilityTests(void* ctx, int64_t hook_wait_time,
                                                               fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
@@ -696,6 +715,7 @@ static zx_status_t fidl_DeviceControllerDebugResume(void* ctx, fidl_txn_t* txn) 
 
 static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .Bind = fidl_DeviceControllerBind,
+    .Rebind = fidl_DeviceControllerRebind,
     .ScheduleUnbind = fidl_DeviceControllerScheduleUnbind,
     .GetDriverName = fidl_DeviceControllerGetDriverName,
     .GetDeviceName = fidl_DeviceControllerGetDeviceName,

@@ -1492,7 +1492,6 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
     if (drv.never_autoselect) {
       continue;
     }
-
     zx_status_t status = BindDriverToDevice(dev, &drv, autobind);
     if (status == ZX_ERR_ALREADY_BOUND) {
       return status;

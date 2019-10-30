@@ -228,7 +228,14 @@ void devhost_finalize() {
           dev->parent->children.is_empty()) {
         // Clear the wants rebind flag and request the rebind
         dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
-        devhost_device_bind(dev->parent, "");
+        std::string drv = dev->parent->get_rebind_drv_name().value_or("");
+        zx_status_t status = devhost_device_bind(dev->parent, drv.c_str());
+        if (status != ZX_OK) {
+          fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
+          if (dev->take_rebind_conn_and_clear(&conn)) {
+            fuchsia_device_ControllerRebind_reply(conn.Txn(), status);
+          }
+        }
       }
 
       dev->parent.reset();
@@ -488,11 +495,11 @@ zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
   if (!dev->children.is_empty() || dev->has_composite()) {
     // note that we want to be rebound when our children are all gone
     dev->flags |= DEV_FLAG_WANTS_REBIND;
-
     // request that any existing children go away
     devhost_schedule_unbind_children(dev);
   } else {
-    return devhost_device_bind(dev, "");
+    std::string drv = dev->get_rebind_drv_name().value_or("");
+    return devhost_device_bind(dev, drv.c_str());
   }
 
   return ZX_OK;

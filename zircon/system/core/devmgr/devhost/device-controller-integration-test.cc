@@ -6,6 +6,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -105,6 +106,99 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
+}
+
+TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
+  IsolatedDevmgr devmgr;
+  auto args = IsolatedDevmgr::DefaultArgs();
+
+  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
+  ASSERT_OK(status);
+
+  zx::channel dev_channel;
+  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+
+  char libpath[PATH_MAX];
+  int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
+  zx_status_t call_status = ZX_OK;
+  status = fuchsia_device_ControllerRebind(dev_channel.get(), libpath, len, &call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
+
+  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+}
+
+TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
+  using driver_integration_test::IsolatedDevmgr;
+  driver_integration_test::IsolatedDevmgr::Args args;
+  driver_integration_test::IsolatedDevmgr devmgr;
+
+  board_test::DeviceEntry dev = {};
+  dev.vid = PDEV_VID_TEST;
+  dev.pid = PDEV_PID_DEVHOST_TEST;
+  dev.did = 0;
+  args.device_list.push_back(dev);
+
+  zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
+  ASSERT_OK(status);
+
+  fbl::unique_fd test_fd, parent_fd, child_fd;
+  zx::channel parent_channel;
+  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                         "sys/platform/11:0e:0", &test_fd);
+  status = devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd);
+
+  ASSERT_OK(status);
+  status = fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address());
+  ASSERT_OK(status);
+
+  zx_status_t call_status = ZX_OK;
+  // Do not open the child. Otherwise rebind will be stuck.
+  status = fuchsia_device_ControllerRebind(parent_channel.get(), "", 0, &call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
+
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
+      &child_fd));
+}
+
+TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
+  using driver_integration_test::IsolatedDevmgr;
+  driver_integration_test::IsolatedDevmgr::Args args;
+  driver_integration_test::IsolatedDevmgr devmgr;
+
+  board_test::DeviceEntry dev = {};
+  dev.vid = PDEV_VID_TEST;
+  dev.pid = PDEV_PID_DEVHOST_TEST;
+  dev.did = 0;
+  args.device_list.push_back(dev);
+
+  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
+
+  fbl::unique_fd test_fd, parent_fd, child_fd;
+  zx::channel parent_channel;
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                          "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
+  ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
+
+  zx_status_t call_status = ZX_OK;
+  char libpath[PATH_MAX];
+  int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver", "devhost-test-child.so");
+  // Do not open the child. Otherwise rebind will be stuck.
+  ASSERT_OK(fuchsia_device_ControllerRebind(parent_channel.get(), libpath, len, &call_status));
+  ASSERT_OK(call_status);
+
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
+      &child_fd));
 }
 
 // Test binding again, but with different driver

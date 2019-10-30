@@ -488,6 +488,12 @@ constexpr uint64_t kController_Bind_GenOrdinal = 0x3388f12801462769lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kController_Rebind_Ordinal = 0x661b1f200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_Rebind_GenOrdinal = 0x384fb80cbc2782e2lu;
+extern "C" const fidl_type_t fuchsia_device_ControllerRebindRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerRebindResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kController_ScheduleUnbind_Ordinal = 0xd0cd4ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ScheduleUnbind_GenOrdinal = 0x6128ba9d76aff9clu;
@@ -628,6 +634,73 @@ Controller::UnownedResultOf::Bind Controller::Call::Bind(zx::unowned_channel _cl
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Controller::BindResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Controller::ResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  RebindRequest _request = {};
+  _request.driver = std::move(driver);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<RebindRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      Controller::InPlace::Rebind(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Controller::ResultOf::Rebind Controller::SyncClient::Rebind(::fidl::StringView driver) {
+  return ResultOf::Rebind(zx::unowned_channel(this->channel_), std::move(driver));
+}
+
+Controller::ResultOf::Rebind Controller::Call::Rebind(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+  return ResultOf::Rebind(std::move(_client_end), std::move(driver));
+}
+
+template <>
+Controller::UnownedResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < RebindRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<RebindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  RebindRequest _request = {};
+  _request.driver = std::move(driver);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<RebindRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      Controller::InPlace::Rebind(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::Rebind Controller::SyncClient::Rebind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Rebind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::Rebind Controller::Call::Rebind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Rebind(std::move(_client_end), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::RebindResponse> Controller::InPlace::Rebind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer) {
+  Controller::SetTransactionHeaderFor::RebindRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::RebindResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<RebindRequest, RebindResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::RebindResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1577,6 +1650,19 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::BindCompleter::Sync(txn));
       return true;
     }
+    case kController_Rebind_Ordinal:
+    case kController_Rebind_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<RebindRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->Rebind(std::move(message->driver),
+        Interface::RebindCompleter::Sync(txn));
+      return true;
+    }
     case kController_ScheduleUnbind_Ordinal:
     case kController_ScheduleUnbind_GenOrdinal:
     {
@@ -1810,6 +1896,42 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, i
 
 void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<BindResponse> params) {
   Controller::SetTransactionHeaderFor::BindResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Controller::Interface::RebindCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<RebindResponse*>(_write_bytes);
+  Controller::SetTransactionHeaderFor::RebindResponse(
+      ::fidl::DecodedMessage<RebindResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RebindResponse::PrimarySize,
+              RebindResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RebindResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RebindResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < RebindResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<RebindResponse*>(_buffer.data());
+  Controller::SetTransactionHeaderFor::RebindResponse(
+      ::fidl::DecodedMessage<RebindResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RebindResponse::PrimarySize,
+              RebindResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(RebindResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RebindResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::RebindCompleterBase::Reply(::fidl::DecodedMessage<RebindResponse> params) {
+  Controller::SetTransactionHeaderFor::RebindResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2456,6 +2578,13 @@ void Controller::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessa
 }
 void Controller::SetTransactionHeaderFor::BindResponse(const ::fidl::DecodedMessage<Controller::BindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Bind_Ordinal);
+}
+
+void Controller::SetTransactionHeaderFor::RebindRequest(const ::fidl::DecodedMessage<Controller::RebindRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Rebind_Ordinal);
+}
+void Controller::SetTransactionHeaderFor::RebindResponse(const ::fidl::DecodedMessage<Controller::RebindResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Rebind_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::ScheduleUnbindRequest(const ::fidl::DecodedMessage<Controller::ScheduleUnbindRequest>& _msg) {

@@ -14,6 +14,7 @@
 #include <array>
 #include <atomic>
 #include <optional>
+#include <string>
 
 #include <ddk/device-power-states.h>
 #include <ddk/device.h>
@@ -90,6 +91,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   void set_bind_conn(const fs::FidlConnection& conn);
   bool get_bind_conn_and_clear(fs::FidlConnection* conn);
 
+  void set_rebind_conn(const fs::FidlConnection& conn);
+  bool take_rebind_conn_and_clear(fs::FidlConnection* conn);
+  void set_rebind_drv_name(const char* drv_name);
+  std::optional<std::string> get_rebind_drv_name() { return rebind_drv_name_; }
   void PushTestCompatibilityConn(const fs::FidlConnection& conn);
   bool PopTestCompatibilityConn(fs::FidlConnection* conn);
   // Check if this devhost has a device with the given ID, and if so returns a
@@ -212,6 +217,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   fbl::Mutex bind_conn_lock_;
   std::optional<fs::FidlConnection> bind_conn_ TA_GUARDED(bind_conn_lock_);
+
+  fbl::Mutex rebind_conn_lock_;
+  std::optional<fs::FidlConnection> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
+  std::optional<std::string> rebind_drv_name_ = std::nullopt;
 
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
   fbl::Mutex test_compatibility_conn_lock_;

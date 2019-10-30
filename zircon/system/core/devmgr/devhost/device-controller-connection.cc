@@ -37,6 +37,10 @@ zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev,
   if (dev->get_bind_conn_and_clear(&conn)) {
     bind_status = fuchsia_device_ControllerBind_reply(conn.Txn(), status);
   }
+
+  if (dev->take_rebind_conn_and_clear(&conn)) {
+    bind_status = fuchsia_device_ControllerRebind_reply(conn.Txn(), status);
+  }
   return bind_status;
 }
 

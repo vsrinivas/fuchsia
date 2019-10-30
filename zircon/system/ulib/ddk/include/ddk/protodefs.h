@@ -133,7 +133,6 @@ DDK_PROTOCOL_DEF(POWER_IMPL,              110,  "power-impl", PF_NOPUB)
 DDK_PROTOCOL_DEF(USB_PHY,                 111,  "usb-phy", 0)
 DDK_PROTOCOL_DEF(PPP,                     112,  "ppp", 0)
 DDK_PROTOCOL_DEF(NNA,                     113,  "nna", PF_NOPUB)
-
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
 DDK_PROTOCOL_DEF(GPU,                     114, "gpu", 0)
 DDK_PROTOCOL_DEF(RTC,                     115, "rtc", 0)
@@ -145,6 +144,7 @@ DDK_PROTOCOL_DEF(ZXCRYPT,                 120, "zxcrypt", 0)
 DDK_PROTOCOL_DEF(SPI,                     121, "spi", 0)
 DDK_PROTOCOL_DEF(SPI_IMPL,                122, "spi-impl", 0)
 DDK_PROTOCOL_DEF(SECURE_MEM,              123, "securemem", 0)
+DDK_PROTOCOL_DEF(DEVHOST_TEST,            124,  "tdh", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

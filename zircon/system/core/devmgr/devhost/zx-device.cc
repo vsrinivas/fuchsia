@@ -23,6 +23,25 @@ void zx_device::set_bind_conn(const fs::FidlConnection& conn) {
   bind_conn_ = conn;
 }
 
+void zx_device::set_rebind_conn(const fs::FidlConnection& conn) {
+  fbl::AutoLock<fbl::Mutex> lock(&rebind_conn_lock_);
+  rebind_conn_ = conn;
+}
+
+bool zx_device::take_rebind_conn_and_clear(fs::FidlConnection* conn) {
+  fbl::AutoLock<fbl::Mutex> lock(&rebind_conn_lock_);
+  if (!rebind_conn_.has_value()) {
+    return false;
+  }
+  *conn = rebind_conn_.value();
+  rebind_conn_.reset();
+  return true;
+}
+
+void zx_device::set_rebind_drv_name(const char* drv_name) {
+  rebind_drv_name_ = std::string(drv_name);
+}
+
 bool zx_device::get_bind_conn_and_clear(fs::FidlConnection* conn) {
   fbl::AutoLock<fbl::Mutex> lock(&bind_conn_lock_);
   if (!bind_conn_.has_value()) {
