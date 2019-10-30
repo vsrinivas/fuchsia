@@ -33,10 +33,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
     isp_ = fake_isp_.client();
-    controller_protocol_device_ =
-        std::make_unique<ControllerImpl>(isp_, std::move(sysmem_allocator1_));
-    camera_pipeline_manager_ =
-        std::make_unique<CameraPipelineManager>(isp_, std::move(sysmem_allocator2_));
+    controller_protocol_device_ = std::make_unique<ControllerImpl>(fake_ddk::kFakeParent, isp_,
+                                                                   std::move(sysmem_allocator1_));
+    camera_pipeline_manager_ = std::make_unique<CameraPipelineManager>(
+        fake_ddk::kFakeParent, isp_, std::move(sysmem_allocator2_));
   }
 
   void TearDown() override {
@@ -93,7 +93,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     // DS supported streams
     EXPECT_EQ(info->streams_info[1].supported_streams.size(), 1u);
     EXPECT_EQ(info->streams_info[1].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+              fuchsia::camera2::CameraStreamType::MONITORING);
   }
 
   void TestDebugStreamConfigNode() {
@@ -174,6 +174,16 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(NodeType::kOutputStream, output_processing_node->type());
   }
 
+  void TestGdcConfigLoading() {
+    zx_handle_t handle;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, &handle));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, nullptr));
+    EXPECT_EQ(ZX_OK,
+              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p, &handle));
+  }
+
   FakeIsp fake_isp_;
   async::Loop loop_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
@@ -196,5 +206,7 @@ TEST_F(ControllerProtocolTest, ConfigureInputNodeDebugConfig) {
 TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
   TestConfigureOutputNode_DebugConfig();
 }
+
+TEST_F(ControllerProtocolTest, LoadGdcConfig) { TestGdcConfigLoading(); }
 
 }  // namespace camera

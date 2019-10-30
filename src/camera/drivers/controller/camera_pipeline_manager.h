@@ -29,14 +29,18 @@ struct CameraPipelineInfo {
 // requested stream configuration.
 class CameraPipelineManager {
  public:
-  CameraPipelineManager(async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
+  CameraPipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
+                        ddk::IspProtocolClient& isp,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : dispatcher_(dispatcher), isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
+      : device_(device),
+        dispatcher_(dispatcher),
+        isp_(isp),
+        memory_allocator_(std::move(sysmem_allocator)) {}
 
   // For tests.
-  CameraPipelineManager(ddk::IspProtocolClient& isp,
+  CameraPipelineManager(zx_device_t* device, ddk::IspProtocolClient& isp,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
+      : device_(device), isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
 
   zx_status_t ConfigureStreamPipeline(CameraPipelineInfo* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
@@ -64,7 +68,10 @@ class CameraPipelineManager {
   zx_status_t GetBuffers(const InternalConfigNode& producer, CameraPipelineInfo* info,
                          fuchsia::sysmem::BufferCollectionInfo_2* out_buffers);
 
+  zx_status_t LoadGdcConfiguration(const camera::GdcConfig& config_type, zx_handle_t* handle);
+
  private:
+  zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient& isp_;
   ControllerMemoryAllocator memory_allocator_;

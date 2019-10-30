@@ -310,7 +310,7 @@ static InternalConfigNode Gdc1() {
   node.output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
   node.child_nodes.push_back(OutputStreamMLDS());
-  node.gdc_info.config_type = DUMMY_CONFIG_0;
+  node.gdc_info.config_type = GdcConfig::MONITORING_ML;
   node.constraints = Gdc1Constraints();
   node.image_formats = OutputStreamMLDSImageFormats();
   return node;
@@ -391,9 +391,9 @@ static InternalConfigNode Gdc2() {
   node.type = kGdc;
   node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
   node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
+  node.output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING;
   node.child_nodes.push_back(OutputStreamMonitoring());
-  node.gdc_info.config_type = DUMMY_CONFIG_1;
+  node.gdc_info.config_type = GdcConfig::MONITORING_720p;
   node.constraints = Gdc2Constraints();
   node.image_formats = OutputStreamMonitoringImageFormats();
   return node;
@@ -427,7 +427,7 @@ InternalConfigNode MonitorConfigDownScaledRes() {
   node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
   node.output_frame_rate.frames_per_sec_denominator = 1;
   node.input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
-  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::MONITORING);
   node.child_nodes.push_back(Gdc2());
   node.constraints = MonitorConfigDownScaledResConstraints();
   return node;

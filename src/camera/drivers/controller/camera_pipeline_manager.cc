@@ -155,6 +155,49 @@ zx_status_t CameraPipelineManager::ConfigureOutputNode(
   return ZX_OK;
 }
 
+const char* ToString(const camera::GdcConfig& config_type) {
+  switch (config_type) {
+    case GdcConfig::MONITORING_360p:
+      return "config_1152x1440_to_512x384_Crop_Rotate.bin";
+    case GdcConfig::MONITORING_480p:
+      return "config_1152x1440_to_720x540_Crop_Rotate.bin";
+    case GdcConfig::MONITORING_720p:
+      return "config_1152x1440_to_1152x864_Crop_Rotate.bin";
+    case GdcConfig::MONITORING_ML:
+      return "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin";
+    case GdcConfig::VIDEO_CONFERENCE:
+      return "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin";
+    case GdcConfig::VIDEO_CONFERENCE_EXTENDED_FOV:
+      return "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin";
+    case GdcConfig::VIDEO_CONFERENCE_ML:
+      return "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin";
+    case GdcConfig::INVALID:
+    default:
+      return nullptr;
+  }
+}
+
+zx_status_t CameraPipelineManager::LoadGdcConfiguration(const camera::GdcConfig& config_type,
+                                                        zx_handle_t* vmo) {
+  if (config_type == GdcConfig::INVALID) {
+    FX_LOGS(ERROR) << "Invalid GDC configuration type";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (vmo == nullptr) {
+    FX_LOGS(ERROR) << "Invalid VMO pointer";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  size_t size;
+  auto status = load_firmware(device_, ToString(config_type), vmo, &size);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to load the GDC firmware";
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t CameraPipelineManager::CreateGraph(
     CameraPipelineInfo* info, const std::shared_ptr<CameraProcessNode>& parent_node,
     std::shared_ptr<CameraProcessNode>* output_processing_node) {

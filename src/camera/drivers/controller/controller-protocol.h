@@ -27,14 +27,15 @@ const char* kCameraProductName = "Fuchsia Sherlock Camera";
 class ControllerImpl : public fuchsia::camera2::hal::Controller {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerImpl);
-  ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
+  ControllerImpl(zx_device_t* device,
+                 fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                  async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
                  fit::closure on_connection_closed,
                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
-  explicit ControllerImpl(ddk::IspProtocolClient& isp,
+  explicit ControllerImpl(zx_device_t* device, ddk::IspProtocolClient& isp,
                           fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : binding_(nullptr), camera_pipeline_manager_(isp, std::move(sysmem_allocator)) {}
+      : binding_(nullptr), camera_pipeline_manager_(device, isp, std::move(sysmem_allocator)) {}
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
