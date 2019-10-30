@@ -8,6 +8,7 @@ group("sys") {
     "cmc",
     "component_manager",
     "component_test_runner",
+    "pkg",
     "timekeeper",
   ]
 }
@@ -24,6 +25,7 @@ group("tests") {
     "gtest_runner:tests",
     "lib:tests",
     "locate:tests",
+    "pkg:tests",
     "run_test_suite:tests",
     "timekeeper:tests",
   ]
