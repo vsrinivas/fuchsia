@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/power_manager_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "services": []
+    }
+}

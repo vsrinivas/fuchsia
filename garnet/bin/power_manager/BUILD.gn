@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "power_manager"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
+  ]
+}
+
+package("power_manager") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "power_manager"
+
+  meta = [
+    {
+      path = rebase_path("meta/power_manager.cmx")
+      dest = "power_manager.cmx"
+    },
+  ]
+}
+
+test_package("power_manager_tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "power_manager_bin_test"
+    },
+  ]
+}

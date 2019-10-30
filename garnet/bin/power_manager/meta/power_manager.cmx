@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "services": [
+            "fuchsia.ui.activity.Provider",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
