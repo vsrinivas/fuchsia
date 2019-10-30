@@ -93,7 +93,7 @@ zx_status_t sys_clock_get_details(zx_handle_t clock_handle, uint64_t options,
     return status;
   }
 
-  return user_details.copy_array_to_user(&details, sizeof(details));
+  return user_details.reinterpret<zx_clock_details_v1>().copy_to_user(details);
 }
 
 zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
