@@ -21,10 +21,14 @@ protocol Audio {
     CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
                         bool loopback);
 
-    // TODO(perley): migrate users needing this to AudioCore and remove from Audio
+    // TODO(38104): Remove these methods.
+    [Transitional, Deprecated]
     SetSystemMute(bool muted);
+    [Transitional, Deprecated]
     SetSystemGain(float32 gain_db);
+    [Transitional, Deprecated]
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
+    [Transitional, Deprecated]
     SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 };
 

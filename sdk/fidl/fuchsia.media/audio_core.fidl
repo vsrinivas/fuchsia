@@ -115,17 +115,20 @@ protocol AudioCore {
     /// the range -160 db to 0 db, inclusive. This setting is applied to all
     /// audio output devices. Audio input devices are unaffected.
     /// Does not affect System Mute.
+    [Transitional, Deprecated]
     SetSystemGain(float32 gain_db);
 
     /// Sets/clears the systemwide 'Mute' state for audio output devices.
     /// Audio input devices are unaffected. Changes to the System Mute state do
     /// not affect the value of System Gain.
+    [Transitional, Deprecated]
     SetSystemMute(bool muted);
 
     /// Provides current values for systemwide Gain and Mute. When a client
     /// connects to AudioCore, the system immediately sends that client a
     /// SystemGainMuteChanged event with the current system Gain|Mute settings.
     /// Subsequent events will be sent when these Gain|Mute values change.
+    [Transitional, Deprecated]
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
     // TODO(34922): Replace with flexible audio output routing.
