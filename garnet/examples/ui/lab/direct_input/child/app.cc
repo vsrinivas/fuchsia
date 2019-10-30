@@ -12,7 +12,6 @@
 #include <limits>
 #include <string>
 
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "src/lib/fxl/logging.h"
 

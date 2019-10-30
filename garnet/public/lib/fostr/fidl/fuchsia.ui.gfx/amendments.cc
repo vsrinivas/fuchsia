@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iosfwd>
+#include "lib/fostr/fidl/fuchsia.ui.gfx/amendments.h"
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <iostream>
 
 namespace fuchsia {
 namespace ui {

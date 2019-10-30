@@ -53,9 +53,9 @@ test("minimal_input_test") {
   ]
   output_name = "minimal_input_test"
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -79,9 +79,9 @@ test("base_view_ime_test") {
   ]
   output_name = "base_view_ime_test"
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -105,9 +105,9 @@ test("mediabuttons_listener_test") {
   ]
   output_name = "mediabuttons_listener_test"
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",

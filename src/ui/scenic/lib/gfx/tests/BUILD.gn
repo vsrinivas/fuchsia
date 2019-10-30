@@ -63,9 +63,9 @@ source_set("testing_deps") {
   public_deps = [
     ":mocks",
     ":util",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",

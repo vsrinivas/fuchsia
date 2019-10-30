@@ -6,7 +6,7 @@
 
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/ui/input/cpp/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <zircon/errors.h>

@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/input/cpp/formatting.h"
+#include "lib/fostr/fidl/fuchsia.ui.input/amendments.h"
 
 #include <iomanip>
 #include <iostream>
-
-#include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
 

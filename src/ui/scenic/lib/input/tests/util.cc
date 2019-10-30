@@ -4,13 +4,14 @@
 
 #include "src/ui/scenic/lib/input/tests/util.h"
 
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/gtest/test_loop_fixture.h>
+
 #include <unordered_set>
 
 #include <hid/hid.h>
 
-#include "lib/fidl/cpp/clone.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"

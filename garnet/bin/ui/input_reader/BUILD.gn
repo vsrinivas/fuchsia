@@ -12,7 +12,7 @@ source_set("input_reader") {
 
   deps = [
     ":fdio",
-    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
@@ -91,7 +91,7 @@ source_set("device") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
     "//zircon/public/lib/fdio",

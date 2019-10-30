@@ -16,8 +16,8 @@ executable("client") {
   deps = [
     "//garnet/examples/ui/shadertoy/service",
     "//garnet/examples/ui/shadertoy/service/services",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",

@@ -4,8 +4,9 @@
 
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
-#include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
-#include "lib/ui/input/cpp/formatting.h"
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
 

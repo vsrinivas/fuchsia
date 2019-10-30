@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_GEOMETRY_CPP_FORMATTING_H_
-#define LIB_UI_GEOMETRY_CPP_FORMATTING_H_
+#ifndef LIB_FOSTR_FIDL_FUCHSIA_MATH_AMENDMENTS_H_
+#define LIB_FOSTR_FIDL_FUCHSIA_MATH_AMENDMENTS_H_
 
 #include <fuchsia/math/cpp/fidl.h>
 
@@ -13,10 +13,10 @@ namespace fuchsia {
 namespace math {
 
 // NOTE:
-// //garnet/public/lib/fostr/fidl/fuchsia.math generates ostream formatters
-// for this library *except* those formatters that are listed here. The code
-// generator knows which formatters to exclude from the generated code by
-// consulting the 'amendments.json' file in that directory.
+// //garnet/public/lib/fostr/fidl/fuchsia.math automatically generates ostream
+// formatters for fuchsia.math *except* those formatters that are listed here.
+// The code generator knows which formatters to exclude from the generated code
+// by consulting the 'amendments.json' file.
 //
 // If you add or remove formatters from this file, please be sure that the
 // amendments.json file is updated accordingly.
@@ -36,4 +36,4 @@ std::ostream& operator<<(std::ostream& os, const Transform& value);
 }  // namespace math
 }  // namespace fuchsia
 
-#endif  // LIB_UI_GEOMETRY_CPP_FORMATTING_H_
+#endif  // LIB_FOSTR_FIDL_FUCHSIA_MATH_AMENDMENTS_H_

@@ -7,7 +7,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/ui/input/cpp/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>

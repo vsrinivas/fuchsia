@@ -12,7 +12,6 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>

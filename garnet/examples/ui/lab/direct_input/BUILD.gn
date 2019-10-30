@@ -13,9 +13,9 @@ executable("direct_input") {
 
   deps = [
     "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",

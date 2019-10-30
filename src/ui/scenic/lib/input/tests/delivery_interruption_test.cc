@@ -5,7 +5,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>

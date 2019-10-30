@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_INPUT_CPP_FORMATTING_H_
-#define LIB_UI_INPUT_CPP_FORMATTING_H_
-
-#include <iosfwd>
+#ifndef LIB_FOSTR_FIDL_FUCHSIA_UI_INPUT_AMENDMENTS_H_
+#define LIB_FOSTR_FIDL_FUCHSIA_UI_INPUT_AMENDMENTS_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
+#include <iosfwd>
 
 namespace fuchsia {
 namespace ui {
@@ -62,4 +62,4 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::SetParallel
 }  // namespace ui
 }  // namespace fuchsia
 
-#endif  // LIB_UI_INPUT_CPP_FORMATTING_H_
+#endif  // LIB_FOSTR_FIDL_FUCHSIA_UI_INPUT_AMENDMENTS_H_

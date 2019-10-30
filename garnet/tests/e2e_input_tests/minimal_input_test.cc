@@ -9,10 +9,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
@@ -22,8 +22,7 @@
 #include <string>
 #include <vector>
 
-#include <gtest/gtest.h>
-
+#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 
 // NOTE WELL. Run each of these e2e tests in its own executable.  They each

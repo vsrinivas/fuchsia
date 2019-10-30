@@ -9,8 +9,8 @@ source_set("presentation_mode") {
   ]
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/ui/input/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]

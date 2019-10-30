@@ -12,7 +12,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/lib/fxl/logging.h"

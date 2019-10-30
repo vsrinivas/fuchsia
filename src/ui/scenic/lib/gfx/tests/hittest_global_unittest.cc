@@ -7,19 +7,18 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/scenic/cpp/commands.h"
-#include "lib/ui/scenic/cpp/view_token_pair.h"
-#include "sdk/lib/ui/scenic/cpp/resources.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"

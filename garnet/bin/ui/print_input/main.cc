@@ -5,11 +5,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/ui/input/device_state.h>
+#include <lib/ui/input/input_device_impl.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/device_state.h"
-#include "lib/ui/input/input_device_impl.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"

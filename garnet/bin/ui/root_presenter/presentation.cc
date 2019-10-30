@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
-#include <lib/ui/input/cpp/formatting.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include <cmath>
 #include <utility>

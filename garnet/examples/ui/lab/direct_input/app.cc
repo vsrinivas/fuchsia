@@ -7,8 +7,8 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fit/function.h>
+#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
@@ -45,7 +45,8 @@ App::App(async::Loop* loop)
   FXL_LOG(INFO) << "DirectInput - compositor set up";
 
   input_reader_.Start();
-  component_context_->outgoing()->AddPublicService(input_device_registry_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(
+      input_device_registry_bindings_.GetHandler(this));
   FXL_LOG(INFO) << "DirectInput - input set up (Press ESC to quit).";
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
