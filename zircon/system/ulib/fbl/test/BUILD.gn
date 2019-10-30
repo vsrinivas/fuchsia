@@ -16,6 +16,7 @@ zx_test("fbl") {
     "array_tests.cc",
     "auto_call_tests.cc",
     "bitfield_tests.cc",
+    "confine_array_index_tests.cc",
     "forward_tests.cc",
     "function_tests.cc",
     "intrusive_container_tests.cc",

@@ -11,6 +11,7 @@ zx_library("fbl") {
     "fbl/auto_call.h",
     "fbl/auto_lock.h",
     "fbl/condition_variable.h",
+    "fbl/confine_array_index.h",
     "fbl/deleter.h",
     "fbl/function.h",
     "fbl/intrusive_container_utils.h",
