@@ -42,4 +42,18 @@ bool Deserialize(MessageReader* reader, RegisterCategory* type) {
   return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
 }
 
+void Serialize(const AddressRange& range, MessageWriter* writer) {
+  writer->WriteUint64(range.begin());
+  writer->WriteUint64(range.end());
+}
+
+bool Deserialize(MessageReader* reader, AddressRange* range) {
+  uint64_t begin, end;
+  if (!reader->ReadUint64(&begin) || !reader->ReadUint64(&end) || end < begin)
+    return false;
+
+  *range = AddressRange(begin, end);
+  return true;
+}
+
 }  // namespace debug_ipc

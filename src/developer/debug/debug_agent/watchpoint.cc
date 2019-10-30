@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/debug_agent/watchpoint.h"
 
-#include "src/developer/debug/ipc/records_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -74,7 +73,7 @@ bool Watchpoint::WatchpointInstallation::operator<(const WatchpointInstallation&
   if (process_koid != other.process_koid)
     return process_koid < other.process_koid;
 
-  debug_ipc::AddressRangeCompare comparer;
+  debug_ipc::AddressRangeEqualityCmp comparer;
   return comparer(range, other.range);
 }
 

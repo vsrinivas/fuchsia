@@ -503,10 +503,8 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   EXPECT_EQ(initial.breakpoint.locations[0].thread_koid,
             second.breakpoint.locations[0].thread_koid);
   EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
-  EXPECT_EQ(initial.breakpoint.locations[0].address_range.begin,
-            second.breakpoint.locations[0].address_range.begin);
-  EXPECT_EQ(initial.breakpoint.locations[0].address_range.end,
-            second.breakpoint.locations[0].address_range.end);
+  EXPECT_EQ(initial.breakpoint.locations[0].address_range,
+            second.breakpoint.locations[0].address_range);
 }
 
 TEST(Protocol, AddOrChangeBreakpointReply) {

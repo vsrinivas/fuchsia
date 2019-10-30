@@ -29,8 +29,6 @@ static_library("shared") {
     "protocol_helpers.h",
     "records.cc",
     "records.h",
-    "records_utils.cc",
-    "records_utils.h",
     "register_desc.cc",
     "register_desc.h",
     "register_test_support.cc",

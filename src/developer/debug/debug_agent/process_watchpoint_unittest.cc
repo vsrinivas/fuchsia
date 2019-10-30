@@ -25,7 +25,7 @@ class TestProcessDelegate : public Watchpoint::ProcessDelegate {
       : arch_provider_(std::move(arch_provider)) {}
 
   using WatchpointMap = std::multimap<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
-                                      debug_ipc::AddressRangeCompare>;
+                                      debug_ipc::AddressRangeEqualityCmp>;
 
   const WatchpointMap& watchpoint_map() const { return wps_; }
 
@@ -87,8 +87,8 @@ constexpr zx_koid_t kThreadId23 = 0x6;
 constexpr zx_koid_t kThreadId24 = 0x7;
 constexpr zx_koid_t kThreadId25 = 0x8;
 
-constexpr debug_ipc::AddressRange kAddressRange1 = {0x1000, 0x2000};
-constexpr debug_ipc::AddressRange kAddressRange2 = {0x4000, 0x8000};
+const debug_ipc::AddressRange kAddressRange1(0x1000, 0x2000);
+const debug_ipc::AddressRange kAddressRange2(0x4000, 0x8000);
 
 TEST(ProcessWatchpoint, InstallAndRemove) {
   auto arch_provider = std::make_shared<MockArchProvider>();

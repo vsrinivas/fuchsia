@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/address_range.h"
 
 namespace debug_ipc {
 
@@ -222,11 +223,6 @@ struct MemoryBlock {
   std::vector<uint8_t> data;
 };
 
-struct AddressRange {
-  uint64_t begin = 0;
-  uint64_t end = 0;  // Non-inclusive.
-};
-
 struct ProcessBreakpointSettings {
   // Required to be nonzero.
   uint64_t process_koid = 0;
@@ -238,7 +234,7 @@ struct ProcessBreakpointSettings {
   uint64_t address = 0;
 
   // Range is used for watchpoints.
-  AddressRange address_range = {};
+  AddressRange address_range;
 };
 
 // What threads to stop when the breakpoint is hit.

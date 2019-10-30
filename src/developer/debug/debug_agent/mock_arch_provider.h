@@ -9,7 +9,6 @@
 #include <map>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/ipc/records_utils.h"
 
 namespace debug_agent {
 
@@ -39,8 +38,8 @@ class MockArchProvider : public arch::ArchProvider {
   std::map<uint64_t, size_t> bp_installs_;
   std::map<uint64_t, size_t> bp_uninstalls_;
 
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare> wp_installs_;
-  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeCompare> wp_uninstalls_;
+  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_installs_;
+  std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_uninstalls_;
 };
 
 }  // namespace debug_agent

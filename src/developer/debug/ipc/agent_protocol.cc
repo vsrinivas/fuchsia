@@ -17,14 +17,7 @@ bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
       !reader->ReadUint64(&settings->address)) {
     return false;
   }
-
-  uint64_t begin, end;
-  if (!reader->ReadUint64(&begin) || !reader->ReadUint64(&end))
-    return false;
-  settings->address_range.begin = begin;
-  settings->address_range.end = end;
-
-  return true;
+  return Deserialize(reader, &settings->address_range);
 }
 
 bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {

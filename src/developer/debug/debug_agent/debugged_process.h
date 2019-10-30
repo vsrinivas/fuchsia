@@ -16,7 +16,6 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/ipc/protocol.h"
-#include "src/developer/debug/ipc/records_utils.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"

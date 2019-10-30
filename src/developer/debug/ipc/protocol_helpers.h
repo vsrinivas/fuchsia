@@ -11,6 +11,7 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/address_range.h"
 
 namespace debug_ipc {
 
@@ -34,6 +35,9 @@ bool Deserialize(MessageReader* reader, Register* reg);
 
 void Serialize(RegisterCategory type, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat);
+
+void Serialize(const AddressRange& range, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, AddressRange* range);
 
 // Will call Serialize for each element in the vector.
 template <typename T>

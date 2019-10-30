@@ -341,7 +341,7 @@ zx_status_t ArchProvider::InstallWatchpoint(zx::thread* thread,
                      << DebugRegistersToString(debug_regs);
 
   // x64 doesn't support ranges.
-  status = SetupWatchpoint(range.begin, &debug_regs);
+  status = SetupWatchpoint(range.begin(), &debug_regs);
   if (status != ZX_OK)
     return status;
 
@@ -365,7 +365,7 @@ zx_status_t ArchProvider::UninstallWatchpoint(zx::thread* thread,
                      << DebugRegistersToString(debug_regs);
 
   // x64 doesn't support ranges.
-  status = RemoveHWBreakpoint(range.begin, &debug_regs);
+  status = RemoveHWBreakpoint(range.begin(), &debug_regs);
   if (status != ZX_OK)
     return status;
 
