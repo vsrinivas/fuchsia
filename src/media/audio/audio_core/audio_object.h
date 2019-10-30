@@ -87,6 +87,16 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   bool is_audio_renderer() const { return type() == Type::AudioRenderer; }
   bool is_audio_capturer() const { return type() == Type::AudioCapturer; }
 
+  size_t source_link_count() {
+    std::lock_guard<std::mutex> lock(links_lock_);
+    return source_links_.size();
+  }
+
+  size_t dest_link_count() {
+    std::lock_guard<std::mutex> lock(links_lock_);
+    return dest_links_.size();
+  }
+
  protected:
   friend class fbl::RefPtr<AudioObject>;
   explicit AudioObject(Type type) : type_(type) {}
