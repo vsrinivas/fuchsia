@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -e
+
+pushd ../../..
+
+fx ninja -C out/default.zircon \
+  host-x64-linux-clang/obj/tools/fidl/fidlc \
+  host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
+  host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
+
+out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
+
+out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
+      --json /tmp/syscalls.json \
+      --files zircon/syscalls/*.fidl
+
+mkdir -p /tmp/kazoo-output
+
+out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
+  --arm-asm=/tmp/kazoo-output/arm-asm.S \
+  --category=/tmp/kazoo-output/syscall-category.inc \
+  --json=/tmp/kazoo-output/definitions.json \
+  --kernel-branches=/tmp/kazoo-output/kernel-branches.S \
+  --kernel-header=/tmp/kazoo-output/kernel-header.h \
+  --kernel-wrappers=/tmp/kazoo-output/kernel-wrappers.inc \
+  --ktrace=/tmp/kazoo-output/ktrace.inc \
+  --rust=/tmp/kazoo-output/definitions.rs \
+  --syscall-numbers=/tmp/kazoo-output/syscall-numbers.h \
+  --user-header=/tmp/kazoo-output/definitions.h \
+  --vdso-header=/tmp/kazoo-output/vdso-definitions.h \
+  --vdso-wrappers=/tmp/kazoo-output/vdso-wrappers.inc \
+  --x86-asm=/tmp/kazoo-output/x86-asm.S \
+  /tmp/syscalls.json
+
+echo Outputs written to /tmp/kazoo-output/ for manual inspection.
