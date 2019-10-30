@@ -14,8 +14,10 @@ use omaha_client::{
 };
 use std::time::Duration;
 
-// We do periodic update check roughly every 5 hours.
-const PERIODIC_INTERVAL: u64 = 5 * 60 * 60;
+/// We do periodic update check roughly every 5 hours.
+const PERIODIC_INTERVAL: Duration = Duration::from_secs(5 * 60 * 60);
+/// Wait at least one minute before checking for updates after startup.
+const STARTUP_DELAY: Duration = Duration::from_secs(60);
 
 /// The policy implementation for Fuchsia.
 pub struct FuchsiaPolicy;
@@ -28,12 +30,12 @@ impl Policy for FuchsiaPolicy {
         protocol_state: &ProtocolState,
     ) -> UpdateCheckSchedule {
         // Use server dictated interval if exists, otherwise default to 5 hours.
-        let interval = protocol_state
-            .server_dictated_poll_interval
-            .unwrap_or(Duration::from_secs(PERIODIC_INTERVAL));
+        let interval = protocol_state.server_dictated_poll_interval.unwrap_or(PERIODIC_INTERVAL);
         let mut next_update_time = scheduling.last_update_time + interval;
-        if next_update_time < policy_data.current_time {
-            next_update_time = policy_data.current_time;
+        // If the scheduled next update time is in the past or within a minute, set it to one
+        // minute after the current time to avoid checking for updates right after startup.
+        if next_update_time < policy_data.current_time + STARTUP_DELAY {
+            next_update_time = policy_data.current_time + STARTUP_DELAY;
         }
         UpdateCheckSchedule {
             last_update_time: scheduling.last_update_time,
@@ -130,7 +132,6 @@ mod tests {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(1234);
-        let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
         let schedule = UpdateCheckSchedule {
             last_update_time,
             next_update_window_start: SystemTime::UNIX_EPOCH,
@@ -142,6 +143,32 @@ mod tests {
             &schedule,
             &ProtocolState::default(),
         );
+        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let expected = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: next_update_time,
+            next_update_time,
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compute_next_update_time_startup() {
+        let now = clock::now();
+        let policy_data = PolicyData { current_time: now };
+        let last_update_time = now - Duration::from_secs(123456);
+        let schedule = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: SystemTime::UNIX_EPOCH,
+            next_update_time: SystemTime::UNIX_EPOCH,
+        };
+        let result = FuchsiaPolicy::compute_next_update_time(
+            &policy_data,
+            &[],
+            &schedule,
+            &ProtocolState::default(),
+        );
+        let next_update_time = now + STARTUP_DELAY;
         let expected = UpdateCheckSchedule {
             last_update_time,
             next_update_window_start: next_update_time,
@@ -180,8 +207,8 @@ mod tests {
     fn test_update_check_allowed_ok() {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
-        let last_update_time = now - Duration::from_secs(PERIODIC_INTERVAL + 1);
-        let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
+        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL;
         let schedule = UpdateCheckSchedule {
             last_update_time: last_update_time,
             next_update_window_start: next_update_time,
@@ -206,8 +233,8 @@ mod tests {
     fn test_update_check_allowed_too_soon() {
         let now = clock::now();
         let policy_data = PolicyData { current_time: now };
-        let last_update_time = now - Duration::from_secs(PERIODIC_INTERVAL - 1);
-        let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
+        let last_update_time = now - PERIODIC_INTERVAL + Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL;
         let schedule = UpdateCheckSchedule {
             last_update_time: last_update_time,
             next_update_window_start: next_update_time,
