@@ -107,9 +107,50 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void FillPeerSocket() {
+    zx_info_socket_t info;
+    ASSERT_OK(peer_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    size_t tx_buf_available = info.tx_buf_max - info.tx_buf_size;
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[tx_buf_available + 1]);
+    size_t actual;
+    ASSERT_OK(peer_.write(0, buf.get(), tx_buf_available, &actual));
+    ASSERT_EQ(actual, tx_buf_available);
+  }
+
+  void ResetSocket() { peer_.reset(); }
+
  private:
   zx::socket peer_;
   std::vector<CloseCompleter::Async> close_completers_;
+};
+
+template <int sock_type>
+class BaseTest : public ::zxtest::Test {
+  static_assert(sock_type == ZX_SOCKET_STREAM || sock_type == ZX_SOCKET_DATAGRAM);
+
+ public:
+  BaseTest() : server(getClientSocket()) {
+    ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+  }
+  void SetUp() override {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+    ASSERT_OK(loop.StartThread("fake-socket-server"));
+    ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd.reset_and_get_address()));
+  }
+
+ protected:
+  zx::channel client_channel, server_channel;
+  zx::socket client_socket, server_socket;
+  fbl::unique_fd client_fd;
+  Server server;
+
+ private:
+  zx::socket getClientSocket() {
+    createSockets();
+    return std::move(client_socket);
+  }
+  void createSockets() { ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket)); }
 };
 
 static void set_nonblocking_io(int fd) {
@@ -118,32 +159,15 @@ static void set_nonblocking_io(int fd) {
   EXPECT_EQ(fcntl(fd, F_SETFL, flags | O_NONBLOCK), 0, "%s", strerror(errno));
 }
 
-TEST(SocketTest, CloseZXSocketOnTransfer) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-
-  zx::socket client_socket, server_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
-
-  int fd;
-  {
-    // We need a functioning server to create the file descriptor. Since the server retains one end
-    // of the socket, we need to destroy the server before asserting that the socket's peer is
-    // closed.
-    Server server(std::move(client_socket));
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
-    ASSERT_OK(loop.StartThread("fake-socket-server"));
-
-    ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
-  }
-
+using TcpSocketTest = BaseTest<ZX_SOCKET_STREAM>;
+TEST_F(TcpSocketTest, CloseZXSocketOnTransfer) {
   zx_signals_t observed;
   EXPECT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed));
 
   zx_handle_t handle;
-  EXPECT_OK(fdio_fd_transfer(fd, &handle));
-
+  EXPECT_OK(fdio_fd_transfer(client_fd.get(), &handle));
+  // We need to reset the peer socket to trigger the signal ZX_SOCKET_PEER_CLOSED.
+  server.ResetSocket();
   EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
   EXPECT_OK(zx_handle_close(handle));
 }
@@ -153,22 +177,8 @@ TEST(SocketTest, CloseZXSocketOnTransfer) {
 // In this scenario, an attempt to read data for the next segment immediately
 // fails with ZX_ERR_SHOULD_WAIT, and this may lead to bogus EAGAIN even if some
 // data has actually been read.
-TEST(SocketTest, RecvmsgNonblockBoundary) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-
-  zx::socket client_socket, server_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
-
-  Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
-  ASSERT_OK(loop.StartThread("fake-socket-server"));
-
-  int fd;
-  ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
-
-  set_nonblocking_io(fd);
+TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
+  set_nonblocking_io(client_fd.get());
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -192,9 +202,9 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   msg.msg_iov = iov;
   msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
 
-  EXPECT_EQ(recvmsg(fd, &msg, 0), sizeof(data_out));
+  EXPECT_EQ(recvmsg(client_fd.get(), &msg, 0), sizeof(data_out));
 
-  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
+  EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
@@ -202,22 +212,8 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
 // In this scenario, an attempt to send second segment should immediately fail
 // with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
 // rather than failing with EAGAIN.
-TEST(SocketTest, SendmsgNonblockBoundary) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-
-  zx::socket client_socket, server_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
-
-  Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
-  ASSERT_OK(loop.StartThread("fake-socket-server"));
-
-  int fd;
-  ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
-
-  set_nonblocking_io(fd);
+TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
+  set_nonblocking_io(client_fd.get());
 
   const size_t memlength = 65536;
   std::unique_ptr<uint8_t[]> memchunk(new uint8_t[memlength]);
@@ -232,15 +228,8 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   msg.msg_iov = iov;
   msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
 
-  // 1. Keep sending data until socket can take no more.
-  for (;;) {
-    ssize_t count = sendmsg(fd, &msg, 0);
-    if (count < 0) {
-      EXPECT_EQ(errno, EAGAIN, "%s", strerror(errno));
-      break;
-    }
-    EXPECT_GE(count, 0);
-  }
+  // 1. Fill up the client socket.
+  server.FillPeerSocket();
 
   // 2. Consume one segment of the data
   size_t actual;
@@ -248,26 +237,13 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   EXPECT_EQ(memlength, actual);
 
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
-  EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0));
+  EXPECT_EQ((ssize_t)memlength, sendmsg(client_fd.get(), &msg, 0));
 
-  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
+  EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 
-TEST(SocketTest, DatagramSendMsg) {
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-
-  zx::socket client_socket, server_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &client_socket, &server_socket));
-
-  Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
-  ASSERT_OK(loop.StartThread("fake-socket-server"));
-
-  int fd;
-  ASSERT_OK(fdio_fd_create(client_channel.release(), &fd));
-
+using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
+TEST_F(UdpSocketTest, DatagramSendMsg) {
   struct sockaddr_in addr = {};
   socklen_t addrlen = sizeof(addr);
   addr.sin_family = AF_INET;
@@ -284,7 +260,7 @@ TEST(SocketTest, DatagramSendMsg) {
   struct msghdr msg = {};
   size_t actual = 0;
   // sendmsg should accept 0 length payload.
-  EXPECT_EQ(sendmsg(fd, &msg, 0), 0, "%s", strerror(errno));
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), 0, "%s", strerror(errno));
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
   EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), 0);
 
@@ -293,44 +269,20 @@ TEST(SocketTest, DatagramSendMsg) {
   msg.msg_iov = iov.data();
   msg.msg_iovlen = iov.size();
 
-  EXPECT_EQ(sendmsg(fd, &msg, 0), sizeof(buf), "%s", strerror(errno));
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), sizeof(buf), "%s", strerror(errno));
 
   // Expect sendmsg() to fail when msg_namelen is greater than sizeof(struct sockaddr_storage).
   msg.msg_namelen = sizeof(sockaddr_storage) + 1;
-  EXPECT_EQ(sendmsg(fd, &msg, 0), -1);
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), -1);
   EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
 
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
   EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), sizeof(buf));
-  EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
+  EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 
-auto timeout = [](int optname) {
+auto timeout = [](int optname, int client_fd, zx::socket server_socket) {
   ASSERT_TRUE(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
-
-  zx::channel client_channel, server_channel;
-  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-
-  zx::socket client_socket, server_socket;
-  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
-
-  if (optname == SO_SNDTIMEO) {
-    zx_info_socket_t info;
-    ASSERT_OK(client_socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-    size_t tx_buf_available = info.tx_buf_max - info.tx_buf_size;
-    std::unique_ptr<uint8_t[]> buf(new uint8_t[tx_buf_available + 1]);
-    size_t actual;
-    ASSERT_OK(client_socket.write(0, buf.get(), tx_buf_available, &actual));
-    ASSERT_EQ(actual, tx_buf_available);
-  }
-
-  Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
-  ASSERT_OK(loop.StartThread("fake-socket-server"));
-
-  fbl::unique_fd client_fd;
-  ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd.reset_and_get_address()));
 
   // We want this to be a small number so the test is fast, but at least 1
   // second so that we exercise `tv_sec`.
@@ -341,11 +293,11 @@ auto timeout = [](int optname) {
         .tv_sec = sec.count(),
         .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
     };
-    ASSERT_EQ(setsockopt(client_fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s",
+    ASSERT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s",
               strerror(errno));
     struct timeval actual_tv;
     socklen_t optlen = sizeof(actual_tv);
-    ASSERT_EQ(getsockopt(client_fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
+    ASSERT_EQ(getsockopt(client_fd, SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
               strerror(errno));
     ASSERT_EQ(optlen, sizeof(actual_tv));
     ASSERT_EQ(actual_tv.tv_sec, tv.tv_sec);
@@ -367,10 +319,10 @@ auto timeout = [](int optname) {
 
       switch (optname) {
         case SO_RCVTIMEO:
-          ASSERT_EQ(read(client_fd.get(), buf, sizeof(buf)), -1);
+          ASSERT_EQ(read(client_fd, buf, sizeof(buf)), -1);
           break;
         case SO_SNDTIMEO:
-          ASSERT_EQ(write(client_fd.get(), buf, sizeof(buf)), -1);
+          ASSERT_EQ(write(client_fd, buf, sizeof(buf)), -1);
           break;
       }
       ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK, "%s", strerror(errno));
@@ -391,34 +343,38 @@ auto timeout = [](int optname) {
 
   // Remove the timeout
   const struct timeval tv = {};
-  ASSERT_EQ(setsockopt(client_fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s",
-            strerror(errno));
+  ASSERT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
   // Wrap the read/write in a future to enable a timeout. We expect the future
   // to time out.
   {
     const auto fut = std::async(std::launch::async, [&]() {
       switch (optname) {
         case SO_RCVTIMEO:
-          EXPECT_EQ(read(client_fd.get(), buf, sizeof(buf)), 0, "%s", strerror(errno));
+          EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0, "%s", strerror(errno));
           break;
         case SO_SNDTIMEO:
-          EXPECT_EQ(write(client_fd.get(), buf, sizeof(buf)), -1);
+          EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
           ASSERT_EQ(errno, EPIPE, "%s", strerror(errno));
           break;
       }
     });
     EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
 
-    // Destroying the remote end socket should cause the read/write to complete.
-    server_socket.~socket();
+    // Resetting the remote end socket should cause the read/write to complete.
+    server_socket.reset();
     EXPECT_EQ(fut.wait_for(margin), std::future_status::ready);
   }
 
-  ASSERT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
+  ASSERT_EQ(close(client_fd), 0, "%s", strerror(errno));
 };
 
-TEST(TimeoutSockoptsTest, RcvTimeout) { timeout(SO_RCVTIMEO); }
+TEST_F(TcpSocketTest, RcvTimeout) {
+  timeout(SO_RCVTIMEO, client_fd.release(), std::move(server_socket));
+}
 
-TEST(TimeoutSockoptsTest, SndTimeout) { timeout(SO_SNDTIMEO); }
+TEST_F(TcpSocketTest, SndTimeout) {
+  server.FillPeerSocket();
+  timeout(SO_SNDTIMEO, client_fd.release(), std::move(server_socket));
+}
 
 }  // namespace
