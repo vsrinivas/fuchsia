@@ -13,6 +13,9 @@
 
 bool AsmOutput(const SyscallLibrary& library, Writer* writer);
 bool CategoryOutput(const SyscallLibrary& library, Writer* writer);
+bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer);
+bool GoSyscallsStubs(const SyscallLibrary& library, Writer* writer);
+bool GoVdsoOutput(const SyscallLibrary& library, Writer* writer);
 bool JsonOutput(const SyscallLibrary& library, Writer* writer);
 bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer);
 bool KernelHeaderOutput(const SyscallLibrary& library, Writer* writer);

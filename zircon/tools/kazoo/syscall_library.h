@@ -119,12 +119,16 @@ class TypeVector {
 
 class TypeZxBasicAlias {
  public:
-  explicit TypeZxBasicAlias(const std::string& name) : name_("zx_" + name + "_t") {}
+  explicit TypeZxBasicAlias(const std::string& name)
+      : name_("zx_" + name + "_t"),
+        go_name_(std::string(1, static_cast<char>(toupper(name[0]))) + name.substr(1)) {}
 
   const std::string& name() const { return name_; }
+  const std::string& go_name() const { return go_name_; }
 
  private:
   std::string name_;
+  std::string go_name_;
 };
 
 inline const Type& TypeVector::contained_type() const { return *contained_type_; }

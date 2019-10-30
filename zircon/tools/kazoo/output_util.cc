@@ -188,6 +188,77 @@ JsonTypeNameData GetJsonName(const Type& type) {
   return ret;
 }
 
+namespace {
+
+std::string GetGoNameImpl(const Type& type) {
+  struct {
+   public:
+    void operator()(const std::monostate&) { ret = "<TODO!>"; }
+    void operator()(const TypeBool&) { ret = "bool"; }
+    void operator()(const TypeChar&) { ret = "uint8"; }
+    void operator()(const TypeInt32&) { ret = "int32"; }
+    void operator()(const TypeInt64&) { ret = "int64"; }
+    void operator()(const TypeSizeT&) { ret = "uint"; }
+    void operator()(const TypeUint16&) { ret = "uint16"; }
+    void operator()(const TypeUint32&) { ret = "uint32"; }
+    void operator()(const TypeUint64&) { ret = "uint64"; }
+    void operator()(const TypeUint8&) { ret = "uint8"; }
+    void operator()(const TypeUintptrT&) { ret = "uintptr"; }
+    void operator()(const TypeVoid&) { ret = "void"; }
+    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.go_name(); }
+
+    void operator()(const TypeEnum& enm) { ret = enm.enum_data().name(); }
+    void operator()(const TypeHandle& handle) { ret = "Handle"; }
+    void operator()(const TypePointer& pointer) {
+      if (pointer.pointed_to_type().IsVoid()) {
+        ret = "unsafe.Pointer";
+      } else {
+        ret = "*" + GetGoName(pointer.pointed_to_type());
+      }
+    }
+    void operator()(const TypeString&) {
+      ZX_ASSERT(false && "can't convert string directly");
+      ret = "<!>";
+    }
+    void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
+    void operator()(const TypeVector&) {
+      ZX_ASSERT(false && "can't convert vector directly");
+      ret = "<!>";
+    }
+
+    Constness constness;
+    std::string ret;
+  } name_visitor;
+  name_visitor.constness = type.constness();
+  std::visit(name_visitor, type.type_data());
+  return name_visitor.ret;
+}
+
+}  // namespace
+
+std::string GetGoName(const Type& type) {
+  // Most of the "normal" implementation is in GetGoNameImpl(), and then we do a few hacks here to
+  // make it match the previous output of the Go-written tool that parsed abigen directly.
+  // TODO(scottmg|dhobsd): Remove or rationalize these over time.
+  std::string name = GetGoNameImpl(type);
+  if (name == "Futex") return "int32";
+  if (name == "Koid") return "uint64";
+  if (name == "Ticks") return "int64";
+  if (name == "Vm_option") return "VMFlag";
+  if (name == "zx_channel_call_args_t") return "ChannelCallArgs";
+  if (name == "zx_clock_t") return "uint32";
+  if (name == "zx_handle_disposition_t") return "HandleDisposition";
+  if (name == "zx_handle_info_t") return "int";
+  if (name == "zx_port_packet_t") return "int";
+  if (name == "zx_profile_info_t") return "int";
+  if (name == "zx_rights_t") return "Rights";
+  if (name == "zx_smc_parameters_t") return "SMCParameters";
+  if (name == "zx_smc_result_t") return "SMCResult";
+  if (name == "zx_system_powerctl_arg_t") return "int";
+  if (name == "zx_wait_item_t") return "WaitItem";
+  return name;
+}
+
 void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
                     Writer* writer, SignatureNewlineStyle newline_style,
                     std::vector<std::string>* non_nulls) {

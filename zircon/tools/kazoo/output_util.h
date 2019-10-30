@@ -40,6 +40,9 @@ struct JsonTypeNameData {
 // pointer, and the data for the argument attributes, if any.
 JsonTypeNameData GetJsonName(const Type& type);
 
+// Gets a string representing |type| suitable for output to a Go file.
+std::string GetGoName(const Type& type);
+
 enum class SignatureNewlineStyle { kAllOneLine, kOnePerLine };
 
 // Emits a C syscall signature, up to the closing parenthesis of the argument list (but does not

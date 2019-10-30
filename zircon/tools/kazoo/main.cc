@@ -15,6 +15,9 @@ namespace {
 struct CommandLineOptions {
   std::optional<std::string> arm_asm;
   std::optional<std::string> category;
+  std::optional<std::string> go_syscall_arm_asm;
+  std::optional<std::string> go_syscall_stubs;
+  std::optional<std::string> go_syscall_x86_asm;
   std::optional<std::string> json;
   std::optional<std::string> kernel_branches;
   std::optional<std::string> kernel_header;
@@ -42,6 +45,15 @@ constexpr const char kArmAsmHelp[] = R"(  --arm-asm=FILENAME
 
 constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
     The output name for the .inc categories file.)";
+
+constexpr const char kGoSyscallArmAsmHelp[] = R"(  --go-syscall-arm-asm=FILENAME
+    The output name for the Go syscall/zx arm .s file.)";
+
+constexpr const char kGoSyscallStubsHelp[] = R"(  --go-syscall-stubs=FILENAME
+    The output name for the Go syscall/zx stubs .go file.)";
+
+constexpr const char kGoSyscallX86AsmHelp[] = R"(  --go-syscall-x86-asm=FILENAME
+    The output name for the Go syscall/zx x86 .s file.)";
 
 constexpr const char kJsonHelp[] = R"(  --json=FILENAME
     The output name for the .json syscall definitions.)";
@@ -85,6 +97,12 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("arm-asm", 0, kArmAsmHelp, &CommandLineOptions::arm_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
+  parser.AddSwitch("go-syscall-arm-asm", 0, kGoSyscallArmAsmHelp,
+                   &CommandLineOptions::go_syscall_arm_asm);
+  parser.AddSwitch("go-syscall-stubs", 0, kGoSyscallStubsHelp,
+                   &CommandLineOptions::go_syscall_stubs);
+  parser.AddSwitch("go-syscall-x86-asm", 0, kGoSyscallX86AsmHelp,
+                   &CommandLineOptions::go_syscall_x86_asm);
   parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
   parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
@@ -141,6 +159,9 @@ int main(int argc, const char* argv[]) {
   } backends[] = {
       {&options.arm_asm, AsmOutput},
       {&options.category, CategoryOutput},
+      {&options.go_syscall_arm_asm, GoSyscallsAsm},
+      {&options.go_syscall_stubs, GoSyscallsStubs},
+      {&options.go_syscall_x86_asm, GoSyscallsAsm},
       {&options.json, JsonOutput},
       {&options.kernel_branches, KernelBranchesOutput},
       {&options.kernel_header, KernelHeaderOutput},
