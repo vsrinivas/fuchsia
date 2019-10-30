@@ -24,6 +24,7 @@ uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
     case fidl::kFidlTypeEnum:
     case fidl::kFidlTypeBits:
       assert(false && "bug: should not get called");
+      return 0;
     case fidl::kFidlTypeStructPointer:
     case fidl::kFidlTypeUnionPointer:
       return 8;
@@ -221,7 +222,7 @@ class TransformerBase {
       case fidl::kFidlTypeTable:
       case fidl::kFidlTypeXUnion:
         assert(false && "TODO(apang)");
-        // fallthrough until implemented
+        return ZX_ERR_BAD_STATE;
       default:
         return ZX_ERR_BAD_STATE;
     }
