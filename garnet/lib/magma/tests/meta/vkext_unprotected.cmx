@@ -8,7 +8,10 @@
         }
     },
     "program": {
-        "binary": "test/vkext"
+        "args": [
+            "--gtest_filter=-*Protected*"
+        ],
+        "binary": "test/vkext_unprotected"
     },
     "sandbox": {
         "features": [
