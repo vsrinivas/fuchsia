@@ -35,6 +35,9 @@ class EntityProviderRunner;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
+// If sessionmgr_context is provided, services from that context can be exposed to agents.
+// This is used to make the fuchsia::intl::PropertyProvider available, which may not be necessary
+// for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
   AgentRunner(fuchsia::sys::Launcher* launcher,
@@ -42,7 +45,8 @@ class AgentRunner {
               fuchsia::auth::TokenManager* token_manager,
               fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
               EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
-              std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr);
+              std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr,
+              sys::ComponentContext* const sessionmgr_context = nullptr);
   ~AgentRunner();
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
@@ -151,7 +155,15 @@ class AgentRunner {
   // Not owned. This is the parent node to the agent nodes.
   inspect::Node* session_inspect_node_;
 
+  // May be nullptr or empty.
   std::unique_ptr<AgentServiceIndex> agent_service_index_;
+
+  // The sys::ComponentContext in which SessionmgrImpl was launched (also needed by agents).
+  // AgentContext will use this to re-expose services from the "sys" Realm, like
+  // fuchsia::intl::PropertyProvider, to agents.
+  //
+  // This can be a nullptr.
+  sys::ComponentContext* const sessionmgr_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

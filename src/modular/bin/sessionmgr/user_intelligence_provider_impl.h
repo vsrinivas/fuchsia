@@ -5,6 +5,7 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/svc/cpp/service_namespace.h>
@@ -29,7 +30,9 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
           focus_provider_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
-          puppet_master_connector);
+          puppet_master_connector,
+      fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
+          intl_property_provider);
 
   ~UserIntelligenceProviderImpl() override = default;
 
@@ -82,6 +85,7 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
+  fidl::InterfacePtr<fuchsia::intl::PropertyProvider> property_provider_;
 
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
       story_provider_connector_;
@@ -89,6 +93,8 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
       focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
       puppet_master_connector_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
+      intl_property_provider_connector_;
 
   // Framework fuchsia::modular::Agent controllers. Hanging onto these tells the
   // Framework we want the Agents to keep running.

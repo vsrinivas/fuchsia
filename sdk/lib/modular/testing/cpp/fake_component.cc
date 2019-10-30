@@ -61,6 +61,9 @@ std::string FakeComponent::url() const { return args_.url; }
 bool FakeComponent::is_running() const { return !!component_context_; }
 
 sys::ComponentContext* FakeComponent::component_context() { return component_context_.get(); }
+const sys::ComponentContext* FakeComponent::component_context() const {
+  return component_context_.get();
+}
 
 void FakeComponent::Exit(int64_t exit_code, fuchsia::sys::TerminationReason reason) {
   if (intercepted_component_ptr_) {

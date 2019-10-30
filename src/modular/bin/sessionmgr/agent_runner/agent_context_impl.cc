@@ -4,6 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
 
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include <memory>
@@ -175,6 +176,13 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       [this](fidl::InterfaceRequest<fuchsia::modular::AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
+  if (info.sessionmgr_context != nullptr) {
+    service_provider_impl_.AddService<fuchsia::intl::PropertyProvider>(
+        [info](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
+          info.sessionmgr_context->svc()->Connect<fuchsia::intl::PropertyProvider>(
+              std::move(request));
+        });
+  }
   operation_queue_.Add(
       std::make_unique<InitializeCall>(this, info.launcher, std::move(agent_config)));
 }

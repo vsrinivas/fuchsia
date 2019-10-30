@@ -24,6 +24,7 @@ source_set("agent_runner") {
     "//garnet/public/lib/json",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",

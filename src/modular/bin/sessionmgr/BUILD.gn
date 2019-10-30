@@ -223,6 +223,7 @@ source_set("user_intelligence_provider") {
     ":rate_limited_retry",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.bluetooth.le",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/lib/component/cpp",

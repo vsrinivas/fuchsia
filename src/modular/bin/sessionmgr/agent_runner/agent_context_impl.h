@@ -30,6 +30,8 @@ struct AgentContextInfo {
   fuchsia::sys::Launcher* const launcher;
   fuchsia::auth::TokenManager* const token_manager;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
+  // If sessionmgr_context is nullptr, ignore (do not attempt to forward services).
+  sys::ComponentContext* const sessionmgr_context;
 };
 
 // This class manages an agent and its life cycle. AgentRunner owns this class,

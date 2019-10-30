@@ -49,7 +49,6 @@ class MockAdmin : public fuchsia::device::manager::Administrator {
 // story mods get the session's version of the service, even though the test harness's version of
 // the service is still accessible outside of the story/session.
 TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromSessionEnvironment) {
-  fuchsia::modular::testing::TestHarnessSpec spec;
   modular_testing::TestHarnessBuilder builder;
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());

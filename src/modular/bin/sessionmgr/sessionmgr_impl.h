@@ -170,7 +170,22 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // is enforced by basemgr which vends sessions.
   std::string session_id_;
 
-  sys::ComponentContext* const component_context_;
+  // The context in which the Sessionmgr was launched
+  sys::ComponentContext* const sessionmgr_context_;
+
+  // The launcher from the context in which the Sessionmgr was launched. The Sessionmgr will use
+  // this launcher to launch other dependent services such as ledger, cloud provider, etc.
+  fuchsia::sys::LauncherPtr sessionmgr_context_launcher_;
+
+  // The Sessionmgr creates a new environment as a child of its component context's environment.
+  // Story shells and mods are launched within the |session_environment_|. Other services are
+  // launched outside of the |session_environment_| (and in the sessionmgr_context_ environment).
+  // **NOTE: Agents, logically, should be in the |session_environment_| as well, but for legacy
+  // reasons due to hard dependencies on a /data path that does not have "session" uniqueness,
+  // Agents are launched in the |sessionmgr_context_| environment as well. Since Modular services
+  // like this will only support one session anyway, this is acceptable for now, and will be
+  // resolved in Session Framework (replacing Modular).
+  std::unique_ptr<Environment> session_environment_;
 
   fuchsia::modular::session::SessionmgrConfig config_;
 
@@ -195,8 +210,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;
 
-  std::unique_ptr<Environment> session_environment_;
-
   fuchsia::modular::auth::AccountPtr account_;
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> discovermgr_app_;
@@ -208,6 +221,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
+
+  std::unique_ptr<ArgvInjectingLauncher> agent_runner_launcher_;
   AsyncHolder<AgentRunner> agent_runner_;
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;

@@ -77,6 +77,7 @@ class FakeComponent : fuchsia::modular::Lifecycle {
   //
   // Requires: is_running()
   sys::ComponentContext* component_context();
+  const sys::ComponentContext* component_context() const;
 
   // Instructs the component manager that this component is exiting. See
   // documentation for fuchsia.sys.TerminationReason for more details.

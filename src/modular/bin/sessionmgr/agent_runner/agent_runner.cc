@@ -29,7 +29,8 @@ AgentRunner::AgentRunner(
     fuchsia::auth::TokenManager* const token_manager,
     fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner, inspect::Node* session_inspect_node,
-    std::unique_ptr<AgentServiceIndex> agent_service_index)
+    std::unique_ptr<AgentServiceIndex> agent_service_index,
+    sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
       ledger_repository_(ledger_repository),
       token_manager_(token_manager),
@@ -37,7 +38,8 @@ AgentRunner::AgentRunner(
       entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)),
       session_inspect_node_(session_inspect_node),
-      agent_service_index_(std::move(agent_service_index)) {}
+      agent_service_index_(std::move(agent_service_index)),
+      sessionmgr_context_(sessionmgr_context) {}
 
 AgentRunner::~AgentRunner() = default;
 
@@ -114,7 +116,8 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
   ComponentContextInfo component_info = {this, ledger_repository_, entity_provider_runner_};
-  AgentContextInfo info = {component_info, launcher_, token_manager_, user_intelligence_provider_};
+  AgentContextInfo info = {component_info, launcher_, token_manager_, user_intelligence_provider_,
+                           sessionmgr_context_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 

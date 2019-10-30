@@ -319,6 +319,7 @@ executable("stories_share_session_runners_test") {
 
   deps = [
     ":module_with_fake_runner",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",

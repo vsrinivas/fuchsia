@@ -48,10 +48,13 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
         focus_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
-        puppet_master_connector)
+        puppet_master_connector,
+    fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
+        intl_property_provider_connector)
     : story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
-      puppet_master_connector_(std::move(puppet_master_connector)){};
+      puppet_master_connector_(std::move(puppet_master_connector)),
+      intl_property_provider_connector_(std::move(intl_property_provider_connector)){};
 
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
@@ -154,6 +157,12 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
     agent_host->AddService<fuchsia::modular::FocusProvider>(
         [this, url](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
           focus_provider_connector_(std::move(request));
+        });
+
+    service_names.push_back(fuchsia::intl::PropertyProvider::Name_);
+    agent_host->AddService<fuchsia::intl::PropertyProvider>(
+        [this, url](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
+          intl_property_provider_connector_(std::move(request));
         });
   }
 
