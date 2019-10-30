@@ -18,6 +18,8 @@ mod testdata;
 pub(crate) use self::common::*;
 pub(crate) use self::icmpv4::*;
 pub(crate) use self::icmpv6::*;
+#[cfg(test)]
+pub(crate) use self::ndp::*;
 
 use std::cmp;
 use std::convert::{TryFrom, TryInto};

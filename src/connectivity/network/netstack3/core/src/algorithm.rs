@@ -260,7 +260,7 @@ mod port_alloc {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::testutil::{new_fake_crypto_rng, with_fake_rngs};
+        use crate::testutil::{with_fake_rngs, FakeCryptoRng};
 
         /// A mock flow identifier.
         #[derive(Hash)]
@@ -387,7 +387,7 @@ mod port_alloc {
             // test that different Ids can hash to different offsets in internal
             // tables, which increase independently.
             let mock = MockImpl { available: MockAvailable::AllowAll };
-            let mut alloc = PortAlloc::<MockImpl>::new(&mut new_fake_crypto_rng(0));
+            let mut alloc = PortAlloc::<MockImpl>::new(&mut FakeCryptoRng::new_xorshift(0));
             let table_a = alloc.table[0];
             let table_b = alloc.table[1];
             let id_a = MockId(0);
@@ -407,7 +407,7 @@ mod port_alloc {
         #[test]
         fn test_ephemeral_port_random() {
             // test that random ephemeral ports are always in range
-            let mut rng = new_fake_crypto_rng(0);
+            let mut rng = FakeCryptoRng::new_xorshift(0);
             for _ in 0..1000 {
                 let rnd_port = EphemeralPort::<MockImpl>::new_random(&mut rng);
                 assert!(MockImpl::EPHEMERAL_RANGE.contains(&rnd_port.port));

@@ -897,14 +897,11 @@ pub fn get_udp_listener_info<I: Ip, C: UdpContext<I>>(
 mod tests {
     use net_types::ip::{Ipv4, Ipv6};
     use packet::serialize::Buf;
-    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::ip::IpProto;
-    use crate::testutil::{
-        get_other_ip_address, new_fake_crypto_rng, set_logger_for_test, FakeCryptoRng,
-    };
+    use crate::testutil::{get_other_ip_address, set_logger_for_test};
 
     /// The listener data sent through a [`DummyUdpContext`].
     struct ListenData<I: Ip> {
@@ -925,7 +922,6 @@ mod tests {
         state: UdpState<I>,
         listen_data: Vec<ListenData<I>>,
         conn_data: Vec<ConnData<I>>,
-        rng: FakeCryptoRng<XorShiftRng>,
         extra_local_addrs: Vec<I::Addr>,
     }
 
@@ -935,7 +931,6 @@ mod tests {
                 state: Default::default(),
                 listen_data: Default::default(),
                 conn_data: Default::default(),
-                rng: new_fake_crypto_rng(0),
                 extra_local_addrs: Vec::new(),
             }
         }
@@ -968,14 +963,6 @@ mod tests {
 
         fn get_state_mut_with(&mut self, _id: ()) -> &mut UdpState<I> {
             &mut self.get_mut().state
-        }
-    }
-
-    impl<I: Ip> RngContext for DummyContext<I> {
-        type Rng = FakeCryptoRng<XorShiftRng>;
-
-        fn rng(&mut self) -> &mut Self::Rng {
-            &mut self.get_mut().rng
         }
     }
 

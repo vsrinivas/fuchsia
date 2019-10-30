@@ -192,6 +192,37 @@ impl FixedHeader {
     }
 }
 
+/// Provides common access to IPv6 header fields.
+///
+/// `Ipv6Header` provides access to IPv6 header fields as a common
+/// implementation for both [`Ipv6Packet`] and [`Ipv6PacketRaw`].
+pub(crate) trait Ipv6Header {
+    /// Gets a reference to the IPv6 [`FixedHeader`].
+    fn get_fixed_header(&self) -> &FixedHeader;
+
+    /// The Hop Limit.
+    fn hop_limit(&self) -> u8 {
+        self.get_fixed_header().hop_limit
+    }
+
+    /// The Next Header.
+    ///
+    /// `next_header` returns the `IpProto` from the next header field.
+    fn next_header(&self) -> IpProto {
+        IpProto::from(self.get_fixed_header().next_hdr)
+    }
+
+    /// The source IP address.
+    fn src_ip(&self) -> Ipv6Addr {
+        self.get_fixed_header().src_ip
+    }
+
+    /// The destination IP address.
+    fn dst_ip(&self) -> Ipv6Addr {
+        self.get_fixed_header().dst_ip
+    }
+}
+
 /// An IPv6 packet.
 ///
 /// An `Ipv6Packet` shares its underlying memory with the byte slice it was
@@ -202,6 +233,12 @@ pub(crate) struct Ipv6Packet<B> {
     extension_hdrs: Records<B, Ipv6ExtensionHeaderImpl>,
     body: B,
     proto: IpProto,
+}
+
+impl<B: ByteSlice> Ipv6Header for Ipv6Packet<B> {
+    fn get_fixed_header(&self) -> &FixedHeader {
+        &self.fixed_hdr
+    }
 }
 
 impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
@@ -499,13 +536,13 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
     }
 }
 
-/// We were unable to find the start of the body due to a malformed
-/// sequence of extension headers.
+/// We were unable to find the start of the body due to a malformed sequence of
+/// extension headers.
 ///
-/// Since we could not finish parsing extension headers, we were
-/// unable to figure out where the body begins.
-#[derive(Debug)]
-struct UndefinedBodyBoundsError;
+/// Since we could not finish parsing extension headers, we were unable to
+/// figure out where the body begins.
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct UndefinedBodyBoundsError;
 
 pub(crate) struct Ipv6PacketRaw<B> {
     /// A raw packet always contains at least a fully parsed `FixedHeader`.
@@ -527,6 +564,12 @@ pub(crate) struct Ipv6PacketRaw<B> {
     /// value is stored in `proto` as `Some(IpProto)`. Otherwise, `proto` will
     /// be `None`.
     proto: Option<IpProto>,
+}
+
+impl<B: ByteSlice> Ipv6Header for Ipv6PacketRaw<B> {
+    fn get_fixed_header(&self) -> &FixedHeader {
+        &self.fixed_hdr
+    }
 }
 
 impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
@@ -586,6 +629,22 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
         let header_len = self.fixed_hdr.bytes().len() + self.extension_hdrs.len();
         let body_len = self.body.as_ref().map(|b| b.len()).unwrap_or(0);
         ParseMetadata::from_packet(header_len, body_len, 0)
+    }
+}
+
+impl<B: ByteSlice> Ipv6PacketRaw<B> {
+    /// Return the body.
+    ///
+    /// `body` returns [`Ok(MaybeParsed::Complete)`] if the entire body is
+    /// present (as determined by the header's "payload length length" field),
+    /// [`Ok(MaybeParsed::Incomplete)`] if only part of the body is present, or
+    /// [`Err(UndefinedBodyBoundsError)`] if the packet's extension headers
+    /// failed to parse (in which case we can't locate the body's beginning).
+    pub(crate) fn body(&self) -> Result<MaybeParsed<&[u8], &[u8]>, UndefinedBodyBoundsError> {
+        self.body
+            .as_ref()
+            .map(|mp| mp.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref()))
+            .map_err(|e| *e)
     }
 }
 

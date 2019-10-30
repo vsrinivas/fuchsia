@@ -15,7 +15,10 @@ use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4ErrorCode, Icmpv4EventDispatcher};
+use crate::ip::icmp::{
+    IcmpConnId, IcmpEventDispatcher, Icmpv4ErrorCode, Icmpv4EventDispatcher, Icmpv6ErrorCode,
+    Icmpv6EventDispatcher,
+};
 use crate::ip::IpProto;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4};
@@ -62,6 +65,12 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
 
 impl Icmpv4EventDispatcher for BenchmarkEventDispatcher {
     fn receive_icmpv4_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv4ErrorCode) {
+        unimplemented!()
+    }
+}
+
+impl Icmpv6EventDispatcher for BenchmarkEventDispatcher {
+    fn receive_icmpv6_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv6ErrorCode) {
         unimplemented!()
     }
 }

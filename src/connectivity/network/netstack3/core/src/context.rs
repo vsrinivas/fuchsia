@@ -324,8 +324,10 @@ pub(crate) mod testutil {
     use std::time::Duration;
 
     use packet::Buf;
+    use rand_xorshift::XorShiftRng;
 
     use super::*;
+    use crate::testutil::FakeCryptoRng;
     use crate::Instant;
 
     /// A dummy implementation of `Instant` for use in testing.
@@ -640,16 +642,12 @@ pub(crate) mod testutil {
         timers: DummyTimerContext<Id>,
         frames: DummyFrameContext<Meta>,
         counters: DummyCounterContext,
+        rng: FakeCryptoRng<XorShiftRng>,
     }
 
     impl<S: Default, Id, Meta> Default for DummyContext<S, Id, Meta> {
         fn default() -> DummyContext<S, Id, Meta> {
-            DummyContext {
-                state: S::default(),
-                timers: DummyTimerContext::default(),
-                frames: DummyFrameContext::default(),
-                counters: DummyCounterContext::default(),
-            }
+            DummyContext::with_state(S::default())
         }
     }
 
@@ -662,6 +660,7 @@ pub(crate) mod testutil {
                 timers: DummyTimerContext::default(),
                 frames: DummyFrameContext::default(),
                 counters: DummyCounterContext::default(),
+                rng: FakeCryptoRng::new_xorshift(0),
             }
         }
 
@@ -765,6 +764,14 @@ pub(crate) mod testutil {
             frame: SS,
         ) -> Result<(), SS> {
             self.frames.send_frame(metadata, frame)
+        }
+    }
+
+    impl<S, Id, Meta> RngContext for DummyContext<S, Id, Meta> {
+        type Rng = FakeCryptoRng<XorShiftRng>;
+
+        fn rng(&mut self) -> &mut Self::Rng {
+            &mut self.rng
         }
     }
 

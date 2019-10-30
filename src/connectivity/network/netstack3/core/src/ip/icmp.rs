@@ -30,6 +30,7 @@ use crate::wire::icmp::{
     Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
 };
 use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
+use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw, UndefinedBodyBoundsError};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
 /// The default number of ICMP error messages to send per second.
@@ -48,6 +49,19 @@ pub enum Icmpv4ErrorCode {
     Redirect(Icmpv4RedirectCode),
     TimeExceeded(Icmpv4TimeExceededCode),
     ParameterProblem(Icmpv4ParameterProblemCode),
+}
+
+/// An ICMPv6 error type and code.
+///
+/// Each enum variant corresponds to a particular error type, and contains the
+/// possible codes for that error type.
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[allow(missing_docs)]
+pub enum Icmpv6ErrorCode {
+    DestUnreachable(Icmpv6DestUnreachableCode),
+    PacketTooBig,
+    TimeExceeded(Icmpv6TimeExceededCode),
+    ParameterProblem(Icmpv6ParameterProblemCode),
 }
 
 /// A builder for ICMPv4 state.
@@ -187,7 +201,9 @@ impl From<IcmpConnId> for usize {
 
 /// An event dispatcher for the ICMPv4 layer.
 ///
-/// See the `EventDispatcher` trait in the crate root for more details.
+/// See the [`EventDispatcher`] trait in the crate root for more details.
+///
+/// [`EventDispatcher`]: crate::EventDispatcher
 pub trait Icmpv4EventDispatcher {
     /// Receive an ICMP error message related to a previously-sent ICMP echo
     /// request.
@@ -196,14 +212,31 @@ pub trait Icmpv4EventDispatcher {
     /// triggered the error, and `err` is the specific error identified by the
     /// incoming ICMP error message.
     fn receive_icmpv4_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv4ErrorCode) {
-        log_unimplemented!((), "Icmpv4SocketContext::receive_icmp_echo_reply: not implemented");
+        log_unimplemented!((), "Icmpv4EventDispatcher::receive_icmpv4_error: not implemented");
+    }
+}
+
+/// An event dispatcher for the ICMPv6 layer.
+///
+/// See the [`EventDispatcher`] trait in the crate root for more details.
+///
+/// [`EventDispatcher`]: crate::EventDispatcher
+pub trait Icmpv6EventDispatcher {
+    /// Receive an ICMPv6 error message related to a previously-sent ICMP echo
+    /// request.
+    ///
+    /// `seq_num` is the sequence number of the original echo request that
+    /// triggered the error, and `err` is the specific error identified by the
+    /// incoming ICMPv6 error message.
+    fn receive_icmpv6_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv6ErrorCode) {
+        log_unimplemented!((), "Icmpv6EventDispatcher::receive_icmpv6_error: not implemented");
     }
 }
 
 /// An event dispatcher for the ICMP layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait IcmpEventDispatcher<B: BufferMut>: Icmpv4EventDispatcher {
+pub trait IcmpEventDispatcher<B: BufferMut>: Icmpv4EventDispatcher + Icmpv6EventDispatcher {
     /// Receive an ICMP echo reply.
     fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId, _seq_num: u16, _data: B) {
         log_unimplemented!((), "IcmpEventDispatcher::receive_icmp_echo_reply: not implemented");
@@ -236,7 +269,23 @@ pub trait Icmpv4SocketContext {
     /// triggered the error, and `err` is the specific error identified by the
     /// incoming ICMP error message.
     fn receive_icmpv4_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv4ErrorCode) {
-        log_unimplemented!((), "Icmpv4SocketContext::receive_icmp_echo_reply: not implemented");
+        log_unimplemented!((), "Icmpv4SocketContext::receive_icmpv4_error: not implemented");
+    }
+}
+
+/// The execution context for ICMPv6 sockets.
+///
+/// `Icmpv6SocketContext` extends [`IcmpSocketContext`] with ICMPv6-specific
+/// functionality.
+pub trait Icmpv6SocketContext {
+    /// Receive an ICMPv6 error message related to a previously-sent ICMP echo
+    /// request.
+    ///
+    /// `seq_num` is the sequence number of the original echo request that
+    /// triggered the error, and `err` is the specific error identified by the
+    /// incoming ICMP error message.
+    fn receive_icmpv6_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv6ErrorCode) {
+        log_unimplemented!((), "Icmpv6SocketContext::receive_icmpv6_error: not implemented");
     }
 }
 
@@ -249,6 +298,12 @@ impl<I: Ip, B: BufferMut, D: BufferDispatcher<B>> IcmpSocketContext<I, B> for Co
 impl<D: EventDispatcher> Icmpv4SocketContext for Context<D> {
     fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
         self.dispatcher_mut().receive_icmpv4_error(conn, seq_num, err);
+    }
+}
+
+impl<D: EventDispatcher> Icmpv6SocketContext for Context<D> {
+    fn receive_icmpv6_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv6ErrorCode) {
+        self.dispatcher_mut().receive_icmpv6_error(conn, seq_num, err);
     }
 }
 
@@ -348,14 +403,18 @@ pub(crate) trait Icmpv4Context<B: BufferMut>:
 
 /// The execution context for ICMPv6.
 pub(crate) trait Icmpv6Context<B: BufferMut>:
-    IcmpContext<Ipv6, B> + StateContext<Icmpv6State<<Self as InstantContext>::Instant>>
+    IcmpContext<Ipv6, B>
+    + StateContext<Icmpv6State<<Self as InstantContext>::Instant>>
+    + Icmpv6SocketContext
 {
-}
-impl<
-        B: BufferMut,
-        C: IcmpContext<Ipv6, B> + StateContext<Icmpv6State<<Self as InstantContext>::Instant>>,
-    > Icmpv6Context<B> for C
-{
+    /// Receive an ICMPv6 error message.
+    ///
+    /// `original_packet` is the packet that triggered the error. Some of its
+    /// contents - as much as possible without making the encapsulating ICMP
+    /// error larger than the IPv6 minimum MTU - are encapsulated in the error
+    /// message, and provided here so that the error can be associated with a
+    /// transport-layer socket.
+    fn receive_icmpv6_error(&mut self, original_packet: Ipv6PacketRaw<&[u8]>, err: Icmpv6ErrorCode);
 }
 
 /// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
@@ -570,28 +629,6 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
     }
 }
 
-/// Receive an ICMP(v4) error message.
-///
-/// `receive_icmpv4_error` handles an incoming ICMP error message by parsing the
-/// original IPv4 packet and then delegating to the context.
-fn receive_icmpv4_error<
-    B: BufferMut,
-    C: Icmpv4Context<B>,
-    BB: ByteSlice,
-    M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
->(
-    ctx: &mut C,
-    packet: &IcmpPacket<Ipv4, BB, M>,
-    err: Icmpv4ErrorCode,
-) {
-    packet.with_original_packet(|res| match res {
-        Ok(original_packet) => Icmpv4Context::receive_icmpv4_error(ctx, original_packet, err),
-        Err(_) => debug!(
-            "receive_icmpv4_error: Got ICMP error message with unparsable original IPv4 packet"
-        ),
-    })
-}
-
 /// Receive an ICMPv6 packet.
 pub(crate) fn receive_icmpv6_packet<
     B: BufferMut,
@@ -662,6 +699,7 @@ pub(crate) fn receive_icmpv6_packet<
             // was less than the IPv6 minimum mtu (which as per IPv6 RFC 8200,
             // must not happen).
             ctx.update_pmtu_if_less(dst_ip.get(), src_ip, packet_too_big.message().mtu());
+            receive_icmpv6_error(ctx, &packet_too_big, Icmpv6ErrorCode::PacketTooBig);
         }
         Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
             device.expect("MLD messages must come from a device"),
@@ -669,13 +707,66 @@ pub(crate) fn receive_icmpv6_packet<
             dst_ip,
             packet,
         ),
-        Icmpv6Packet::DestUnreachable(_)
-        | Icmpv6Packet::TimeExceeded(_)
-        | Icmpv6Packet::ParameterProblem(_) => log_unimplemented!(
-            (),
-            "ip::icmp::receive_icmpv6_packet: Not implemented for this packet type"
+        Icmpv6Packet::DestUnreachable(dest_unreachable) => receive_icmpv6_error(
+            ctx,
+            &dest_unreachable,
+            Icmpv6ErrorCode::DestUnreachable(dest_unreachable.code()),
+        ),
+        Icmpv6Packet::TimeExceeded(time_exceeded) => receive_icmpv6_error(
+            ctx,
+            &time_exceeded,
+            Icmpv6ErrorCode::TimeExceeded(time_exceeded.code()),
+        ),
+        Icmpv6Packet::ParameterProblem(parameter_problem) => receive_icmpv6_error(
+            ctx,
+            &parameter_problem,
+            Icmpv6ErrorCode::ParameterProblem(parameter_problem.code()),
         ),
     }
+}
+
+/// Receive an ICMP(v4) error message.
+///
+/// `receive_icmpv4_error` handles an incoming ICMP error message by parsing the
+/// original IPv4 packet and then delegating to the context.
+fn receive_icmpv4_error<
+    B: BufferMut,
+    C: Icmpv4Context<B>,
+    BB: ByteSlice,
+    M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
+>(
+    ctx: &mut C,
+    packet: &IcmpPacket<Ipv4, BB, M>,
+    err: Icmpv4ErrorCode,
+) {
+    packet.with_original_packet(|res| match res {
+        Ok(original_packet) => Icmpv4Context::receive_icmpv4_error(ctx, original_packet, err),
+        Err(_) => debug!(
+            "receive_icmpv4_error: Got ICMP error message with unparsable original IPv4 packet"
+        ),
+    })
+}
+
+/// Receive an ICMPv6 error message.
+///
+/// `receive_icmpv6_error` handles an incoming ICMPv6 error message by parsing
+/// the original IPv6 packet and then delegating to the context.
+fn receive_icmpv6_error<
+    B: BufferMut,
+    C: Icmpv6Context<B>,
+    BB: ByteSlice,
+    M: IcmpMessage<Ipv6, BB, Body = OriginalPacket<BB>>,
+>(
+    ctx: &mut C,
+    packet: &IcmpPacket<Ipv6, BB, M>,
+    err: Icmpv6ErrorCode,
+) {
+    packet.with_original_packet(|res| match res {
+        Ok(original_packet) => Icmpv6Context::receive_icmpv6_error(ctx, original_packet, err),
+        Err(_) => debug!(
+            "receive_icmpv6_error: Got ICMPv6 error message with unparsable original IPv6 packet"
+        ),
+    })
 }
 
 /// Send an ICMP(v4) message in response to receiving a packet destined for an
@@ -1430,10 +1521,53 @@ pub(crate) fn receive_icmpv4_socket_error<B: BufferMut, C: Icmpv4Context<B>>(
             let seq = echo_request.message().seq();
             Icmpv4SocketContext::receive_icmpv4_error(ctx, IcmpConnId(conn), seq, err);
         } else {
-            trace!("receive_icmpv4_error: Got ICMPv4 error message for no-longer existant ICMP echo socket");
+            trace!("receive_icmpv4_error: Got ICMPv4 error message for no-longer existent ICMP echo socket");
         }
     } else {
         trace!("receive_icmpv4_error: Got ICMPv4 error message for IPv4 packet with an unspecified destination IP address");
+    }
+}
+
+/// Receive an ICMPv6 error related to an ICMP socket.
+pub(crate) fn receive_icmpv6_socket_error<B: BufferMut, C: Icmpv6Context<B>>(
+    ctx: &mut C,
+    original_packet: Ipv6PacketRaw<&[u8]>,
+    err: Icmpv6ErrorCode,
+) {
+    ctx.increment_counter("receive_icmpv6_socket_error");
+    trace!("receive_icmpv6_socket_error({:?})", err);
+
+    let mut body = match original_packet.body() {
+        Ok(body) => body.into_inner(),
+        Err(UndefinedBodyBoundsError) => {
+            trace!("receive_icmpv6_socket: could not extract original packet's body");
+            // There's nothing we can do in this case, so we just return.
+            return;
+        }
+    };
+
+    let echo_request =
+        if let Ok(echo_request) = body.parse::<IcmpPacketRaw<Ipv6, _, IcmpEchoRequest>>() {
+            echo_request
+        } else {
+            // NOTE: This might just mean that the error message was in response
+            // to a packet that we sent that wasn't an echo request, so we just
+            // silently ignore it.
+            return;
+        };
+
+    if let Some(dst_ip) = SpecifiedAddr::new(original_packet.dst_ip()) {
+        let id = echo_request.message().id();
+        if let Some(conn) =
+            ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
+        {
+            let seq = echo_request.message().seq();
+            Icmpv6SocketContext::receive_icmpv6_error(ctx, IcmpConnId(conn), seq, err);
+        } else {
+            trace!("receive_icmpv6_socket_error: Got ICMPv6 error message for no-longer existant ICMP echo socket");
+        }
+    } else {
+        trace!("receive_icmpv6_socket_error: Got ICMPv6 error message for IPv6 packet with an unspecified destination IP address");
     }
 }
 
@@ -1550,13 +1684,20 @@ mod tests {
     use std::num::NonZeroU16;
     use std::time::Duration;
 
-    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use net_types::{
+        ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+        LinkLocalAddr,
+    };
     use packet::{Buf, Serializer};
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::context::testutil::{DummyContext, DummyInstant};
+    use crate::context::{
+        testutil::{DummyContext, DummyInstant},
+        FrameContext, TimerContext,
+    };
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
+    use crate::ip::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::{receive_ipv4_packet, DummyDeviceId, IpExt};
     use crate::testutil::{
@@ -1564,7 +1705,7 @@ mod tests {
     };
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest,
-        MessageBody,
+        MessageBody, NdpPacket,
     };
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use crate::wire::udp::UdpPacketBuilder;
@@ -1963,12 +2104,26 @@ mod tests {
         err: Icmpv4ErrorCode,
     }
 
+    // The arguments to `Icmpv6Context::receive_icmpv6_error`.
+    #[derive(Debug, PartialEq)]
+    struct ReceiveIcmpv6ErrorArgs {
+        err: Icmpv6ErrorCode,
+    }
+
     // The arguments to `Icmpv4SocketContext::receive_icmpv4_error`.
     #[derive(Debug, PartialEq)]
     struct ReceiveIcmpv4SocketErrorArgs {
         conn: IcmpConnId,
         seq_num: u16,
         err: Icmpv4ErrorCode,
+    }
+
+    // The arguments to `Icmpv6SocketContext::receive_icmpv6_error`.
+    #[derive(Debug, PartialEq)]
+    struct ReceiveIcmpv6SocketErrorArgs {
+        conn: IcmpConnId,
+        seq_num: u16,
+        err: Icmpv6ErrorCode,
     }
 
     #[derive(Default)]
@@ -1994,6 +2149,8 @@ mod tests {
 
     struct DummyIcmpv6Context {
         inner: DummyIcmpContext<Ipv6>,
+        receive_icmpv6_error: Vec<ReceiveIcmpv6ErrorArgs>,
+        receive_icmpv6_socket_error: Vec<ReceiveIcmpv6SocketErrorArgs>,
         icmp_state: Icmpv6State<DummyInstant>,
     }
 
@@ -2012,6 +2169,8 @@ mod tests {
         fn default() -> DummyIcmpv6Context {
             DummyIcmpv6Context {
                 inner: DummyIcmpContext::default(),
+                receive_icmpv6_error: Vec::new(),
+                receive_icmpv6_socket_error: Vec::new(),
                 icmp_state: Icmpv6StateBuilder::default().build(),
             }
         }
@@ -2021,6 +2180,17 @@ mod tests {
         fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
             self.increment_counter("Icmpv4SocketContext::receive_icmpv4_error");
             self.get_mut().receive_icmpv4_socket_error.push(ReceiveIcmpv4SocketErrorArgs {
+                conn,
+                seq_num,
+                err,
+            });
+        }
+    }
+
+    impl Icmpv6SocketContext for Dummyv6Context {
+        fn receive_icmpv6_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv6ErrorCode) {
+            self.increment_counter("Icmpv6SocketContext::receive_icmpv6_error");
+            self.get_mut().receive_icmpv6_socket_error.push(ReceiveIcmpv6SocketErrorArgs {
                 conn,
                 seq_num,
                 err,
@@ -2147,6 +2317,83 @@ mod tests {
         }
     }
 
+    impl<B: BufferMut> Icmpv6Context<B> for Dummyv6Context {
+        fn receive_icmpv6_error(
+            &mut self,
+            original_packet: Ipv6PacketRaw<&[u8]>,
+            err: Icmpv6ErrorCode,
+        ) {
+            self.increment_counter("Icmpv6Context::receive_icmpv6_error");
+            self.get_mut().receive_icmpv6_error.push(ReceiveIcmpv6ErrorArgs { err });
+            if original_packet.next_header() == IpProto::Icmpv6 {
+                receive_icmpv6_socket_error::<B, _>(self, original_packet, err);
+            }
+        }
+    }
+
+    impl NdpPacketHandler<DummyDeviceId> for Dummyv6Context {
+        fn receive_ndp_packet<B: ByteSlice>(
+            &mut self,
+            _device: DummyDeviceId,
+            _src_ip: Ipv6Addr,
+            _dst_ip: SpecifiedAddr<Ipv6Addr>,
+            _packet: NdpPacket<B>,
+        ) {
+            unimplemented!()
+        }
+    }
+
+    impl MldContext for Dummyv6Context {
+        fn get_ipv6_link_local_addr(
+            &self,
+            _device: DummyDeviceId,
+        ) -> Option<LinkLocalAddr<Ipv6Addr>> {
+            unimplemented!()
+        }
+    }
+
+    impl<B: BufferMut> FrameContext<B, MldFrameMetadata<DummyDeviceId>> for Dummyv6Context {
+        fn send_frame<S: Serializer<Buffer = B>>(
+            &mut self,
+            _metadata: MldFrameMetadata<DummyDeviceId>,
+            _frame: S,
+        ) -> Result<(), S> {
+            unimplemented!()
+        }
+    }
+
+    impl StateContext<MldInterface<DummyInstant>, DummyDeviceId> for Dummyv6Context {
+        fn get_state_with(&self, _id: DummyDeviceId) -> &MldInterface<DummyInstant> {
+            unimplemented!()
+        }
+
+        fn get_state_mut_with(&mut self, _id: DummyDeviceId) -> &mut MldInterface<DummyInstant> {
+            unimplemented!()
+        }
+    }
+
+    impl TimerContext<MldReportDelay<DummyDeviceId>> for Dummyv6Context {
+        fn schedule_timer_instant(
+            &mut self,
+            _time: DummyInstant,
+            _id: MldReportDelay<DummyDeviceId>,
+        ) -> Option<DummyInstant> {
+            unimplemented!()
+        }
+
+        fn cancel_timer(&mut self, _id: MldReportDelay<DummyDeviceId>) -> Option<DummyInstant> {
+            unimplemented!()
+        }
+
+        fn cancel_timers_with<F: FnMut(&MldReportDelay<DummyDeviceId>) -> bool>(&mut self, _f: F) {
+            unimplemented!()
+        }
+
+        fn scheduled_instant(&self, _id: MldReportDelay<DummyDeviceId>) -> Option<DummyInstant> {
+            unimplemented!()
+        }
+    }
+
     #[test]
     fn test_receive_icmpv4_error() {
         // Chosen arbitrarily to be a) non-zero (it's easy to accidentally get
@@ -2154,12 +2401,6 @@ mod tests {
         const ICMP_ID: u16 = 0x0F;
         const SEQ_NUM: u16 = 0xF0;
 
-        /// Test that receiving an ICMP error message results in certain
-        /// counters getting incremented
-        ///
-        /// in that error getting passed to
-        /// `Icmpv4Context::receive_icmpv4_error`.
-        ///
         /// Test receiving an ICMP error message.
         ///
         /// Test that receiving an ICMP error message with the given code and
@@ -2221,7 +2462,7 @@ mod tests {
             );
 
             for (ctr, count) in assert_counters {
-                assert_eq!(ctx.get_counter(ctr), *count);
+                assert_eq!(ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
             }
             f(&ctx);
         }
@@ -2445,6 +2686,296 @@ mod tests {
                 );
                 assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
                 assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
+        );
+    }
+
+    #[test]
+    fn test_receive_icmpv6_error() {
+        // Chosen arbitrarily to be a) non-zero (it's easy to accidentally get
+        // the value 0) and, b) different from each other.
+        const ICMP_ID: u16 = 0x0F;
+        const SEQ_NUM: u16 = 0xF0;
+
+        /// Test receiving an ICMPv6 error message.
+        ///
+        /// Test that receiving an ICMP error message with the given code and
+        /// message contents, and containing the given original IPv4 packet,
+        /// results in the counter values in `assert_counters`. After that
+        /// assertion passes, `f` is called on the context so that the caller
+        /// can perform whatever extra validation they want.
+        ///
+        /// The error message will be sent from `DUMMY_CONFIG_V6.remote_ip` to
+        /// `DUMMY_CONFIG_V6.local_ip`. Before the message is sent, an ICMP
+        /// socket will be established with the ID `ICMP_ID`, and
+        /// `test_receive_icmpv6_error_helper` will assert that its `IcmpConnId`
+        /// is 0. This allows the caller to craft the `original_packet` so that
+        /// it should be delivered to this socket.
+        fn test_receive_icmpv6_error_helper<
+            C: Debug,
+            M: for<'a> IcmpMessage<Ipv6, &'a [u8], Code = C> + Debug,
+            F: Fn(&Dummyv6Context),
+        >(
+            original_packet: &mut [u8],
+            code: C,
+            msg: M,
+            assert_counters: &[(&str, usize)],
+            f: F,
+        ) {
+            crate::testutil::set_logger_for_test();
+
+            let mut ctx = Dummyv6Context::default();
+            // NOTE: This assertion is not a correctness requirement. It's just
+            // that the rest of this test assumes that the new connection has ID
+            // 0. If this assertion fails in the future, that isn't necessarily
+            // evidence of a bug; we may just have to update this test to
+            // accomodate whatever new ID allocation scheme is being used.
+            assert_eq!(
+                new_icmp_connection_inner(
+                    &mut ctx.get_mut().icmp_state.conns,
+                    Some(DUMMY_CONFIG_V6.local_ip),
+                    DUMMY_CONFIG_V6.remote_ip,
+                    ICMP_ID
+                )
+                .unwrap(),
+                IcmpConnId(0)
+            );
+
+            receive_icmpv6_packet(
+                &mut ctx,
+                Some(DummyDeviceId),
+                DUMMY_CONFIG_V6.remote_ip.get(),
+                DUMMY_CONFIG_V6.local_ip,
+                Buf::new(original_packet, ..)
+                    .encapsulate(IcmpPacketBuilder::new(
+                        DUMMY_CONFIG_V6.remote_ip,
+                        DUMMY_CONFIG_V6.local_ip,
+                        code,
+                        msg,
+                    ))
+                    .serialize_vec_outer()
+                    .unwrap(),
+            );
+
+            for (ctr, count) in assert_counters {
+                assert_eq!(ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
+            }
+            f(&ctx);
+        }
+        // Test that, when we receive various ICMPv6 error messages, we properly
+        // pass them up to the IP layer and, sometimes, to the transport layer.
+
+        // First, test with an original packet containing an ICMPv6 message.
+        // Since this test mock supports ICMPv6 sockets, this error can be
+        // delivered all the way up the stack.
+
+        // A buffer containing an ICMPv6 echo request with ID `ICMP_ID` and
+        // sequence number `SEQ_NUM` from the local IP to the remote IP. Any
+        // ICMPv6 error message which contains this as its original packet
+        // should be delivered to the socket created in
+        // `test_receive_icmpv6_error_helper`.
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                DUMMY_CONFIG_V6.local_ip,
+                DUMMY_CONFIG_V6.remote_ip,
+                IcmpUnusedCode,
+                IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
+            ))
+            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V6.local_ip,
+                DUMMY_CONFIG_V6.remote_ip,
+                64,
+                IpProto::Icmpv6,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6DestUnreachableCode::NoRoute,
+            IcmpDestUnreachable::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv6_socket_error,
+                    [ReceiveIcmpv6SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6TimeExceededCode::HopLimitExceeded,
+            IcmpTimeExceeded::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::TimeExceeded(Icmpv6TimeExceededCode::HopLimitExceeded);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv6_socket_error,
+                    [ReceiveIcmpv6SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+            Icmpv6ParameterProblem::new(0),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::ParameterProblem(
+                    Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv6_socket_error,
+                    [ReceiveIcmpv6SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        // Second, test with an original packet containing a malformed ICMPv6
+        // packet (we accomplish this by leaving the IP packet's body empty). We
+        // should process this packet in `receive_icmpv6_socket_error`, but we
+        // should go no further - in particular, we should not call
+        // `Icmpv6SocketContext::receive_icmpv6_error`.
+
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V6.local_ip,
+                DUMMY_CONFIG_V6.remote_ip,
+                64,
+                IpProto::Icmpv6,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6DestUnreachableCode::NoRoute,
+            IcmpDestUnreachable::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6TimeExceededCode::HopLimitExceeded,
+            IcmpTimeExceeded::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::TimeExceeded(Icmpv6TimeExceededCode::HopLimitExceeded);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+            Icmpv6ParameterProblem::new(0),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 1),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::ParameterProblem(
+                    Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
+            },
+        );
+
+        // Third, test with an original packet containing a UDP packet. This
+        // allows us to verify that protocol numbers are handled properly by
+        // checking that `receive_icmpv6_socket_error` was NOT called.
+
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V6.local_ip,
+                DUMMY_CONFIG_V6.remote_ip,
+                64,
+                IpProto::Udp,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6DestUnreachableCode::NoRoute,
+            IcmpDestUnreachable::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 0),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6TimeExceededCode::HopLimitExceeded,
+            IcmpTimeExceeded::default(),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 0),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::TimeExceeded(Icmpv6TimeExceededCode::HopLimitExceeded);
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv6_error_helper(
+            buffer.as_mut(),
+            Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+            Icmpv6ParameterProblem::new(0),
+            &[
+                ("Icmpv6Context::receive_icmpv6_error", 1),
+                ("receive_icmpv6_socket_error", 0),
+                ("Icmpv6SocketContext::receive_icmpv6_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv6ErrorCode::ParameterProblem(
+                    Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv6_error, [ReceiveIcmpv6ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv6_socket_error, []);
             },
         );
     }

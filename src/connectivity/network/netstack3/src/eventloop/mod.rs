@@ -118,7 +118,9 @@ use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompati
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
-use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher};
+use netstack3_core::icmp::{
+    IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher, Icmpv6EventDispatcher,
+};
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
     get_all_routes, handle_timeout, initialize_device, receive_frame, remove_device, Context,
@@ -840,6 +842,7 @@ impl TransportLayerEventDispatcher<Ipv4> for EventLoopInner {}
 impl TransportLayerEventDispatcher<Ipv6> for EventLoopInner {}
 
 impl Icmpv4EventDispatcher for EventLoopInner {}
+impl Icmpv6EventDispatcher for EventLoopInner {}
 
 // TODO(rheacock): remove `allow(unused)` once the implementation uses the inputs
 #[allow(unused)]

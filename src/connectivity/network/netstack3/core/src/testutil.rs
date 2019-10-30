@@ -24,7 +24,9 @@ use rand_xorshift::XorShiftRng;
 use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
-use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher};
+use crate::ip::icmp::{
+    IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher, Icmpv6EventDispatcher,
+};
 use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
@@ -91,6 +93,13 @@ pub(crate) mod benchmarks {
 /// This is obviously insecure. Don't use it except in testing!
 pub(crate) struct FakeCryptoRng<R>(R);
 
+impl FakeCryptoRng<XorShiftRng> {
+    /// Creates a new [`FakeCryptoRng<XorShiftRng>`] from a seed.
+    pub(crate) fn new_xorshift(seed: u64) -> FakeCryptoRng<XorShiftRng> {
+        FakeCryptoRng(new_rng(seed))
+    }
+}
+
 impl<R: RngCore> RngCore for FakeCryptoRng<R> {
     fn next_u32(&mut self) -> u32 {
         self.0.next_u32()
@@ -130,11 +139,6 @@ pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
     XorShiftRng::from_seed(bytes)
 }
 
-/// Creates a new deterministic [`FakeCryptoRng`] from a seed.
-pub(crate) fn new_fake_crypto_rng(seed: u64) -> FakeCryptoRng<XorShiftRng> {
-    FakeCryptoRng(new_rng(seed))
-}
-
 /// Creates `iterations` fake RNGs.
 ///
 /// `with_fake_rngs` will create `iterations` different [`FakeCryptoRng`]s and
@@ -144,7 +148,7 @@ pub(crate) fn new_fake_crypto_rng(seed: u64) -> FakeCryptoRng<XorShiftRng> {
 /// happen with certain random number sequences.
 pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u64, f: F) {
     for seed in 0..iterations {
-        f(new_fake_crypto_rng(seed))
+        f(FakeCryptoRng::new_xorshift(seed))
     }
 }
 
@@ -942,6 +946,8 @@ impl<I: Ip> UdpEventDispatcher<I> for DummyEventDispatcher {}
 impl<I: Ip> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
 
 impl Icmpv4EventDispatcher for DummyEventDispatcher {}
+
+impl Icmpv6EventDispatcher for DummyEventDispatcher {}
 
 impl<B: BufferMut> IcmpEventDispatcher<B> for DummyEventDispatcher {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
