@@ -7,7 +7,6 @@ zx_executable("disk-inspect") {
     "main.cc",
   ]
   deps = [
-    "$zx/system/ulib/blobfs",
     "$zx/system/ulib/disk-inspector",
     "$zx/system/ulib/minfs",
   ]

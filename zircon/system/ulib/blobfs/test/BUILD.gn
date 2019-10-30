@@ -26,7 +26,6 @@ zx_test("blobfs-unit") {
     "unit/extent-reserver-test.cc",
     "unit/format-test.cc",
     "unit/get-allocated-regions-test.cc",
-    "unit/inspector-test.cc",
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
     "unit/utils.cc",
