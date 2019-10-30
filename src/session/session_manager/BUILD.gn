@@ -53,6 +53,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//third_party/rust_crates:failure",
   ]
 }

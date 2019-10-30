@@ -19,7 +19,11 @@
         {
             "legacy_service": "/svc/fuchsia.cobalt.LoggerFactory",
             "from": "realm",
-        }
+        },
+        {
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
+            "from": "realm",
+        },
     ],
     // Holds all the sessions this session_manager will create. Capabilities offered to and exposed
     // by sessions should be routed here.

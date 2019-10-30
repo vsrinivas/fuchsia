@@ -11,6 +11,7 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Launch the session which was provided to the session manager at startup.
+    fuchsia_syslog::init_with_tags(&["session_manager"]).expect("Failed to initialize logger.");
     let session_url = startup::get_session_url();
     startup::launch_session(&session_url).await?;
 
