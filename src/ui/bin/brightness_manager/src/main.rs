@@ -32,14 +32,16 @@ const QUICK_SCAN_TIMEOUT_MS: i64 = 100;
 // What constitutes a large change in brightness?
 // This seems small but it is significant and works nicely.
 const LARGE_CHANGE_THRESHOLD_NITS: i32 = 4;
-//TODO(b/38459) This should use the actual max brightness from the driver.
-const MAX_BRIGHTNESS: u16 = 250;
 
 async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), Error> {
     // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
     // that you can ensure it continues serving clients correctly."
-    let backlight = Backlight::new()?;
+    let backlight = Backlight::new().await?;
     let sensor = Sensor::new().await;
+
+    //    let mut backlight_mut = Backlight::new().await?;
+    //    let max_brightness: f64 = backlight_mut.get_max_absolute_brightness().await?;
+    let max_brightness = backlight.get_max_absolute_brightness();
 
     let backlight = Arc::new(Mutex::new(backlight));
     let sensor = Arc::new(Mutex::new(sensor));
@@ -85,8 +87,9 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                 }
 
                 // TODO(b/138455663): remove this when the driver changes.
-                let adjusted_value = convert_to_scaled_value_based_on_max_brightness(value);
-                let nits = num_traits::clamp(adjusted_value, 0, MAX_BRIGHTNESS);
+                let adjusted_value =
+                    convert_to_scaled_value_based_on_max_brightness(value, max_brightness);
+                let nits = num_traits::clamp(adjusted_value, 0, max_brightness as u16);
                 let backlight_clone = backlight.clone();
                 set_brightness_abort_handle =
                     Some(set_brightness(nits, backlight_clone, false).await);
@@ -102,7 +105,10 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                     responder.send(brightness.into()).context("error sending response")?;
                 } else {
                     let brightness = backlight.get_brightness(false).await?;
-                    let brightness = convert_from_scaled_value_based_on_max_brightness(brightness);
+                    let brightness = convert_from_scaled_value_based_on_max_brightness(
+                        brightness,
+                        max_brightness,
+                    );
                     responder.send(brightness.into()).context("error sending response")?;
                 }
                 // TODO(b/138455663): remove this when the driver changes.
@@ -113,16 +119,16 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
     Ok(())
 }
 
-/// Converts from our FIDL's 0.0-1.0 value to backlight's 0-255 value
-fn convert_to_scaled_value_based_on_max_brightness(value: f32) -> u16 {
+/// Converts from our FIDL's 0.0-1.0 value to backlight's 0-max_brightness value
+fn convert_to_scaled_value_based_on_max_brightness(value: f32, max_brightness: f64) -> u16 {
     let value = num_traits::clamp(value, 0.0, 1.0);
-    (value * MAX_BRIGHTNESS as f32) as u16
+    (value * max_brightness as f32) as u16
 }
 
-/// Converts from backlight's 0-255 value to our FIDL's 0.0-1.0 value
-fn convert_from_scaled_value_based_on_max_brightness(value: u16) -> f32 {
-    let value = num_traits::clamp(value, 0, MAX_BRIGHTNESS);
-    value as f32 / MAX_BRIGHTNESS as f32
+/// Converts from backlight's 0-max_brightness value to our FIDL's 0.0-1.0 value
+fn convert_from_scaled_value_based_on_max_brightness(value: u16, max_brightness: f64) -> f32 {
+    let value = num_traits::clamp(value, 0, max_brightness as u16);
+    value as f32 / max_brightness as f32
 }
 
 /// Runs the main auto-brightness code.
@@ -135,12 +141,16 @@ fn start_auto_brightness_task(
     fasync::spawn(
         Abortable::new(
             async move {
+                let max_brightness = {
+                    let backlight = backlight.lock().await;
+                    backlight.get_max_absolute_brightness()
+                };
                 let mut set_brightness_abort_handle = None::<AbortHandle>;
                 // initialize to an impossible number
                 let mut last_nits: i32 = -1000;
                 loop {
                     let sensor = sensor.clone();
-                    let nits = read_sensor_and_get_brightness(sensor).await;
+                    let nits = read_sensor_and_get_brightness(sensor, max_brightness).await;
                     let backlight_clone = backlight.clone();
                     if let Some(handle) = set_brightness_abort_handle {
                         handle.abort();
@@ -163,7 +173,10 @@ fn start_auto_brightness_task(
     abort_handle
 }
 
-async fn read_sensor_and_get_brightness(sensor: Arc<Mutex<dyn SensorControl>>) -> u16 {
+async fn read_sensor_and_get_brightness(
+    sensor: Arc<Mutex<dyn SensorControl>>,
+    max_brightness: f64,
+) -> u16 {
     let lux = {
         // Get the sensor reading in its own mutex block
         let sensor = sensor.lock().await;
@@ -172,21 +185,21 @@ async fn read_sensor_and_get_brightness(sensor: Arc<Mutex<dyn SensorControl>>) -
         let report = fut.await.expect("Could not read from the sensor");
         report.illuminance
     };
-    brightness_curve_lux_to_nits(lux)
+    brightness_curve_lux_to_nits(lux, max_brightness)
 }
 
 /// Sets the appropriate backlight brightness based on the ambient light sensor reading.
 /// This will be a brightness curve but for the time being we know that the sensor
 /// goes from 0 to 800 for the office and the backlight takes 0-255 so we take a simple approach.
 /// TODO(kpt): Fix these values when the drivers change. (b/138455663)
-fn brightness_curve_lux_to_nits(lux: u16) -> u16 {
+fn brightness_curve_lux_to_nits(lux: u16, max_brightness: f64) -> u16 {
     // Office brightness is about 240 lux, we want the screen full on at this level.
     let max_lux = 240;
 
     let lux = num_traits::clamp(lux, 0, max_lux);
-    let nits = (MAX_BRIGHTNESS as f32 * lux as f32 / max_lux as f32) as u16;
+    let nits = (max_brightness * lux as f64 / max_lux as f64) as u16;
     // Minimum brightness of 1 for nighttime viewing.
-    num_traits::clamp(nits, 1, MAX_BRIGHTNESS)
+    num_traits::clamp(nits, 1, max_brightness as u16)
 }
 
 /// Sets the brightness of the backlight to a specific value.
@@ -201,8 +214,8 @@ async fn set_brightness(
         Abortable::new(
             async move {
                 let mut backlight = backlight.lock().await;
+                let max_brightness = backlight.get_max_absolute_brightness();
                 let current_nits = {
-                    //let backlight = backlight.lock().await;
                     let fut = backlight.get_brightness(auto_brightness_on);
                     fut.await.unwrap_or_else(|e| {
                         fx_log_err!("Failed to get backlight: {}. assuming 200", e);
@@ -214,7 +227,14 @@ async fn set_brightness(
                         .set_brightness(nits, auto_brightness_on)
                         .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
                 };
-                set_brightness_slowly(current_nits, nits, set_brightness, 10.millis()).await;
+                set_brightness_slowly(
+                    current_nits,
+                    nits,
+                    set_brightness,
+                    10.millis(),
+                    max_brightness,
+                )
+                .await;
             },
             abort_registration,
         )
@@ -232,11 +252,12 @@ async fn set_brightness_slowly(
     to_nits: u16,
     mut set_brightness: impl FnMut(u16),
     time_per_step: Duration,
+    max_brightness: f64,
 ) {
     let mut current_nits = current_nits;
-    let to_nits = num_traits::clamp(to_nits, 0, MAX_BRIGHTNESS);
-    assert!(to_nits <= MAX_BRIGHTNESS);
-    assert!(current_nits <= MAX_BRIGHTNESS);
+    let to_nits = num_traits::clamp(to_nits, 0, max_brightness as u16);
+    assert!(to_nits <= max_brightness as u16);
+    assert!(current_nits <= max_brightness as u16);
     let difference = to_nits as i16 - current_nits as i16;
     // TODO(kpt): Assume step size of 1, change when driver accepts more values (b/138455166)
     let steps = difference.abs();
@@ -246,7 +267,7 @@ async fn set_brightness_slowly(
         for _i in 0..steps {
             // Don't go below 1 so that we can see it at night.
             current_nits =
-                num_traits::clamp(current_nits as i16 + step_size, 1, MAX_BRIGHTNESS as i16) as u16;
+                num_traits::clamp(current_nits as i16 + step_size, 1, max_brightness as i16) as u16;
             set_brightness(current_nits);
             if time_per_step.into_millis() > 0 {
                 fuchsia_async::Timer::new(time_per_step.after_now()).await;
@@ -254,6 +275,7 @@ async fn set_brightness_slowly(
         }
     }
     // Make sure we get to the correct value, there may be rounding errors
+
     set_brightness(to_nits);
 }
 
@@ -311,6 +333,7 @@ mod tests {
 
     struct MockBacklight {
         value: u16,
+        max_brightness: f64,
     }
 
     #[async_trait]
@@ -323,6 +346,10 @@ mod tests {
             self.value = value;
             Ok(())
         }
+
+        fn get_max_absolute_brightness(&self) -> f64 {
+            self.max_brightness
+        }
     }
 
     fn set_mocks(
@@ -331,7 +358,7 @@ mod tests {
     ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
         let sensor = MockSensor { illuminence: sensor };
         let sensor = Arc::new(Mutex::new(sensor));
-        let backlight = MockBacklight { value: backlight };
+        let backlight = MockBacklight { value: backlight, max_brightness: 250.0 };
         let backlight = Arc::new(Mutex::new(backlight));
         (sensor, backlight)
     }
@@ -342,16 +369,16 @@ mod tests {
 
     #[test]
     fn test_brightness_curve() {
-        assert_eq!(1, brightness_curve_lux_to_nits(0));
-        assert_eq!(1, brightness_curve_lux_to_nits(1));
-        assert_eq!(2, brightness_curve_lux_to_nits(2));
-        assert_eq!(15, brightness_curve_lux_to_nits(15));
-        assert_eq!(16, brightness_curve_lux_to_nits(16));
-        assert_eq!(104, brightness_curve_lux_to_nits(100));
-        assert_eq!(156, brightness_curve_lux_to_nits(150));
-        assert_eq!(208, brightness_curve_lux_to_nits(200));
-        assert_eq!(250, brightness_curve_lux_to_nits(240));
-        assert_eq!(250, brightness_curve_lux_to_nits(300));
+        assert_eq!(1, brightness_curve_lux_to_nits(0, 250.0));
+        assert_eq!(1, brightness_curve_lux_to_nits(1, 250.0));
+        assert_eq!(2, brightness_curve_lux_to_nits(2, 250.0));
+        assert_eq!(15, brightness_curve_lux_to_nits(15, 250.0));
+        assert_eq!(16, brightness_curve_lux_to_nits(16, 250.0));
+        assert_eq!(104, brightness_curve_lux_to_nits(100, 250.0));
+        assert_eq!(156, brightness_curve_lux_to_nits(150, 250.0));
+        assert_eq!(208, brightness_curve_lux_to_nits(200, 250.0));
+        assert_eq!(250, brightness_curve_lux_to_nits(240, 250.0));
+        assert_eq!(250, brightness_curve_lux_to_nits(300, 250.0));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -360,7 +387,7 @@ mod tests {
         let set_brightness = |nits| {
             result.push(nits);
         };
-        set_brightness_slowly(100, 200, set_brightness, 0.millis()).await;
+        set_brightness_slowly(100, 200, set_brightness, 0.millis(), 250.0).await;
         assert_eq!(101, result.len(), "wrong length");
         assert_eq!(101, result[0]);
         assert_eq!(102, result[1]);
@@ -376,7 +403,7 @@ mod tests {
         let set_brightness = |nits| {
             result.push(nits);
         };
-        set_brightness_slowly(100, 0, set_brightness, 0.millis()).await;
+        set_brightness_slowly(100, 0, set_brightness, 0.millis(), 250.0).await;
         assert_eq!(101, result.len(), "wrong length");
         assert_eq!(99, result[0]);
         assert_eq!(98, result[1]);
@@ -392,7 +419,7 @@ mod tests {
         let set_brightness = |nits| {
             result.push(nits);
         };
-        set_brightness_slowly(240, 260, set_brightness, 0.millis()).await;
+        set_brightness_slowly(240, 260, set_brightness, 0.millis(), 250.0).await;
         assert_eq!(11, result.len(), "wrong length");
         assert_eq!(241, result[0]);
         assert_eq!(244, result[3]);
@@ -401,33 +428,33 @@ mod tests {
     }
 
     #[test]
-    fn test_to_scaled_value_based_on_max_brightness() {
-        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(0.0));
-        assert_eq!(125, convert_to_scaled_value_based_on_max_brightness(0.5));
-        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(1.0));
+    fn test_to_old_backlight_value() {
+        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(0.0, 250.0));
+        assert_eq!(125, convert_to_scaled_value_based_on_max_brightness(0.5, 250.0));
+        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(1.0, 250.0));
         // Out of bounds
-        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(-0.5));
-        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(2.0));
+        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(-0.5, 250.0));
+        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(2.0, 250.0));
     }
 
     #[test]
-    fn test_from_scaled_value_based_on_max_brightness() {
-        assert_eq!(0.0, approx(convert_from_scaled_value_based_on_max_brightness(0)));
-        assert_eq!(0.5, approx(convert_from_scaled_value_based_on_max_brightness(127)));
-        assert_eq!(1.0, approx(convert_from_scaled_value_based_on_max_brightness(255)));
+    fn test_from_old_backlight_value() {
+        assert_eq!(0.0, approx(convert_from_scaled_value_based_on_max_brightness(0, 250.0)));
+        assert_eq!(0.5, approx(convert_from_scaled_value_based_on_max_brightness(125, 250.0)));
+        assert_eq!(1.0, approx(convert_from_scaled_value_based_on_max_brightness(250, 250.0)));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_bright() {
         let (sensor, _backlight) = set_mocks(400, 253);
-        let nits = read_sensor_and_get_brightness(sensor).await;
+        let nits = read_sensor_and_get_brightness(sensor, 250.0).await;
         assert_eq!(250, nits);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_low_light() {
         let (sensor, _backlight) = set_mocks(0, 0);
-        let nits = read_sensor_and_get_brightness(sensor).await;
+        let nits = read_sensor_and_get_brightness(sensor, 250.0).await;
         assert_eq!(1, nits);
     }
 

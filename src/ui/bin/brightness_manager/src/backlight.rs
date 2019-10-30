@@ -23,12 +23,36 @@ fn open_backlight() -> Result<BacklightProxy, Error> {
 
 pub struct Backlight {
     proxy: BacklightProxy,
+    max_brightness: f64,
 }
 
 impl Backlight {
-    pub fn new() -> Result<Backlight, Error> {
+    pub async fn new() -> Result<Backlight, Error> {
         let proxy = open_backlight()?;
-        Ok(Backlight { proxy })
+
+        let connection_result = proxy.get_max_absolute_brightness().await;
+        let max_brightness_value = match connection_result {
+            Ok(max_brightness_result) => {
+                let max_value = match max_brightness_result {
+                    Ok(value) => value,
+                    Err(e) => {
+                        println!("Didn't get the max_brightness back, got err {}", e);
+                        250.0
+                    }
+                };
+                max_value
+            }
+            Err(e) => {
+                println!("Didn't connect correctly, got err {}", e);
+                250.0
+            }
+        };
+
+        Ok(Backlight { proxy, max_brightness: max_brightness_value })
+    }
+
+    pub fn get_max_absolute_brightness(&self) -> f64 {
+        self.max_brightness
     }
 
     async fn get(&self, auto_brightness_on: bool) -> Result<u16, Error> {
@@ -41,13 +65,12 @@ impl Backlight {
             let result = self.proxy.get_state_normalized().await?;
             let backlight_info =
                 result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
-            Ok((backlight_info.brightness * 250.0) as u16)
+            Ok((backlight_info.brightness * self.max_brightness) as u16)
         }
     }
 
     fn set(&mut self, nits: u16, auto_brightness_on: bool) -> Result<(), Error> {
         // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
-        // changing this to an async function, requiring further changes in main.rs.
         if auto_brightness_on {
             let _result = self.proxy.set_state_absolute(&mut BacklightState {
                 backlight_on: nits != 0,
@@ -56,7 +79,7 @@ impl Backlight {
         } else {
             let _result = self.proxy.set_state_normalized(&mut BacklightState {
                 backlight_on: nits != 0,
-                brightness: nits as f64 / 250.0,
+                brightness: nits as f64 / self.max_brightness,
             });
         }
         Ok(())
@@ -67,6 +90,7 @@ impl Backlight {
 pub trait BacklightControl: Send {
     async fn get_brightness(&self, auto_brightness_on: bool) -> Result<u16, Error>;
     fn set_brightness(&mut self, value: u16, auto_brightness_on: bool) -> Result<(), Error>;
+    fn get_max_absolute_brightness(&self) -> f64;
 }
 
 #[async_trait]
@@ -76,5 +100,8 @@ impl BacklightControl for Backlight {
     }
     fn set_brightness(&mut self, value: u16, auto_brightness_on: bool) -> Result<(), Error> {
         self.set(value, auto_brightness_on)
+    }
+    fn get_max_absolute_brightness(&self) -> f64 {
+        self.get_max_absolute_brightness()
     }
 }
