@@ -6,8 +6,6 @@ library fuchsia.media;
 
 using fuchsia.sysmem;
 
-//TODO(38522): Remove KEY_ID_SIZE once usages have been removed.
-const uint32 KEY_ID_SIZE = 16;
 const uint32 MAX_KEY_ID_SIZE = 16;
 const uint32 MAX_INIT_VECTOR_SIZE = 16;
 
@@ -344,13 +342,6 @@ const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
 const string ENCRYPTION_SCHEME_CENS = "cens";
 const string ENCRYPTION_SCHEME_CBCS = "cbcs";
 
-/// KeyId
-///
-/// An encryption key identifier.
-struct KeyId {
-    array<uint8>:KEY_ID_SIZE data;
-};
-
 /// SubsampleEntry
 ///
 /// A subsample is a byte range within a sample consisting of a clear byte range
@@ -379,8 +370,8 @@ struct EncryptionPattern {
 /// other than the data stream. It is only necessary to update fields if they
 /// changed, but not an error if the same value is repeated.
 table EncryptedFormat {
-    // TODO(38438): Remove once clients have migrated to scheme.
-    1: string mode;
+    1: reserved;
+    2: reserved;
 
     /// `scheme` specifies which encryption scheme to use, such as
     /// `fuchsia.media.ENCRYPTION_SCHEME_CENC`.
@@ -399,8 +390,8 @@ table EncryptedFormat {
     ///  - It is required to be set prior to delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
-    // TODO(38522): Update type once clients have migrated to key_id_temp.
-    2: KeyId key_id;
+    8: bytes:MAX_KEY_ID_SIZE key_id;
+    // TODO(38522): Remove once clients have migrated back to key_id.
     7: bytes:MAX_KEY_ID_SIZE key_id_temp;
 
     /// `init_vector` is used in combination with a key and a block of content

@@ -78,7 +78,7 @@ auto CreateInputFormatDetails(const std::string& scheme, const std::vector<uint8
       ->crypto()
       .encrypted()
       .set_scheme(scheme)
-      .set_key_id_temp(key_id)
+      .set_key_id(key_id)
       .set_init_vector(init_vector);
 
   return details;

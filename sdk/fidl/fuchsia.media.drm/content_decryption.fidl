@@ -6,13 +6,6 @@ library fuchsia.media.drm;
 
 using fuchsia.media;
 
-// TODO(38438): Remove once consumers have migrated to
-// fuchsia.media.ENCRYPTION_SCHEME
-const string ENCRYPTION_MODE_CENC = "cenc";
-const string ENCRYPTION_MODE_CBC1 = "cbc1";
-const string ENCRYPTION_MODE_CENS = "cens";
-const string ENCRYPTION_MODE_CBCS = "cbcs";
-
 table DecryptorParams {
     /// Requires the decryptor [`fuchsia.media/StreamProcessor`] to only output
     /// to secure buffers.
@@ -111,11 +104,6 @@ protocol ContentDecryptionModule {
     ///   hypothetical key would be for this device if one could be licensed.
     GetKeyStatusForHdcpVersion(string hdcp_version) -> (KeyStatus key_status);
 
-    // TODO(38438): Remove once consumers have migrated to
-    // GetSupportedEncryptionSchemes.
-    [Transitional]
-    GetSupportedEncryptionModes() -> (vector<string> encryption_modes);
-
     /// Queries for the list of supported encryption schemes.
     ///
     /// This returns a list of the supported encryption schemes that the
@@ -126,6 +114,5 @@ protocol ContentDecryptionModule {
     ///
     /// - response `encryption_schemes` a list of the supported encryption
     ///   schemes.
-    [Transitional]
     GetSupportedEncryptionSchemes() -> (vector<string> encryption_schemes);
 };

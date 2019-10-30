@@ -54,12 +54,6 @@ struct LicenseServerMessage {
     fuchsia.mem.Buffer message;
 };
 
-// TODO(38522): Remove once consumers have switched to KeyState.
-struct KeyInfo {
-    fuchsia.media.KeyId key_id;
-    KeyStatus status;
-};
-
 enum KeyStatus {
     /// The key is currently usable for decryption.
     USABLE = 0;
@@ -147,9 +141,6 @@ protocol LicenseSession {
     /// - response `request` a message from the `LicenseSession` that the client
     ///   should send to the license server.
     -> OnLicenseMessageGenerated(LicenseMessage request);
-
-    // TODO(38522): Remove once consumers have switched to OnKeyStatesChanged.
-    -> OnKeysChanged(vector<KeyInfo> key_info);
 
     /// Provides updated key state information.
     ///
