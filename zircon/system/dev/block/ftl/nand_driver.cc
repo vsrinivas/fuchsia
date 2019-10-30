@@ -100,8 +100,7 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
     }
     options.flags = 0;
   } else if (BadBbtReservation()) {
-    zxlogf(WARN, "FTL: Unable to reduce bad block reservation\n");
-    options.max_bad_blocks *= 2;
+    return "Unable to use bad block reservation";
   }
 
   const char* error = CreateNdmVolume(ftl_volume, options);
