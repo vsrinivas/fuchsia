@@ -22,12 +22,14 @@
 #include <stdio.h>
 #include <zircon/listnode.h>
 
+#include <array>
 #include <thread>
 
 #include <ddk/io-buffer.h>
 #include <zxtest/zxtest.h>
 
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
@@ -287,11 +289,24 @@ TEST_F(PcieTest, RxInterrupts) {
   iwl_pcie_rx_free(trans_);
 }
 
-TEST_F(PcieTest, TxInit) {
-  base_params_.num_of_queues = 31;
-  base_params_.max_tfd_queue_size = 256;
-  trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
+class TxTest : public PcieTest {
+  void SetUp() {
+    base_params_.num_of_queues = 31;
+    base_params_.max_tfd_queue_size = 256;
+    trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
 
+    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToThread, &trans_->loop));
+    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
+  }
+
+  void TearDown() {
+    async_loop_quit(trans_->loop);
+    async_loop_join_threads(trans_->loop);
+    iwl_pcie_tx_free(trans_);
+  }
+};
+
+TEST_F(TxTest, Init) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
 
   for (int txq_id = 0; txq_id < base_params_.num_of_queues; txq_id++) {
@@ -300,6 +315,93 @@ TEST_F(PcieTest, TxInit) {
     EXPECT_EQ(queue->write_ptr, 0);
     EXPECT_EQ(queue->read_ptr, 0);
   }
+}
+
+TEST_F(TxTest, HostCommandEmpty) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = 0;
+  hcmd.data[0] = NULL;
+
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+}
+
+TEST_F(TxTest, HostCommandOneFragment) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  uint8_t fragment[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment);
+  hcmd.data[0] = fragment;
+
+  struct iwl_txq* txq = trans_pcie_->txq[trans_pcie_->cmd_queue];
+  int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
+
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+
+  struct iwl_device_cmd* out_cmd =
+      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+  EXPECT_BYTES_EQ(out_cmd->payload, fragment, sizeof(fragment));
+}
+
+TEST_F(TxTest, HostCommandTwoFragments) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  uint8_t fragment1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  uint8_t fragment2[] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment1);
+  hcmd.data[0] = fragment1;
+  hcmd.len[1] = sizeof(fragment2);
+  hcmd.data[1] = fragment2;
+
+  struct iwl_txq* txq = trans_pcie_->txq[trans_pcie_->cmd_queue];
+  int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
+
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+
+  struct iwl_device_cmd* out_cmd =
+      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+  EXPECT_BYTES_EQ(out_cmd->payload, fragment1, sizeof(fragment1));
+  EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment1), fragment2, sizeof(fragment2));
+}
+
+TEST_F(TxTest, HostCommandTooLarge) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  std::array<uint8_t, TFD_MAX_PAYLOAD_SIZE> fragment = {0};
+  struct iwl_host_cmd default_hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  default_hcmd.len[0] = sizeof(fragment);
+  default_hcmd.data[0] = fragment.data();
+
+  struct iwl_host_cmd nocopy_hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  nocopy_hcmd.len[0] = sizeof(fragment);
+  nocopy_hcmd.data[0] = fragment.data();
+  nocopy_hcmd.dataflags[0] = IWL_HCMD_DFL_NOCOPY;
+
+  struct iwl_host_cmd dup_hcmd = {
+      .flags = CMD_ASYNC,
+      .id = ECHO_CMD,
+  };
+  dup_hcmd.len[0] = sizeof(fragment);
+  dup_hcmd.data[0] = fragment.data();
+  dup_hcmd.dataflags[0] = IWL_HCMD_DFL_DUP;
+
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &default_hcmd), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &nocopy_hcmd), ZX_ERR_NO_RESOURCES);
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &dup_hcmd), ZX_ERR_NO_RESOURCES);
 }
 
 class StuckTimerTest : public PcieTest {

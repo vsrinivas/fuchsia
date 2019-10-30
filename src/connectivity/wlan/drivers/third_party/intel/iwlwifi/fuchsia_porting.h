@@ -55,7 +55,8 @@ typedef char* acpi_string;
 #define lower_32_bits(x) (x & 0xffffffff)
 #define upper_32_bits(x) (x >> 32)
 
-#define BITS_PER_LONG (sizeof(long) * 8)
+#define BITS_PER_BYTE 8
+#define BITS_PER_LONG (sizeof(long) * BITS_PER_BYTE)
 
 #define BITS_TO_LONGS(nr) (nr / BITS_PER_LONG)
 

@@ -273,7 +273,8 @@ struct iwl_cmd_meta {
 #define IWL_FIRST_TB_SIZE_ALIGN ROUND_UP(IWL_FIRST_TB_SIZE, 64)
 
 struct iwl_pcie_txq_entry {
-  struct iwl_device_cmd* cmd;
+  // struct iwl_device_cmd* cmd;
+  io_buffer_t cmd;
   struct sk_buff* skb;
   /* buffer to free after command completes */
   const void* free_buf;
@@ -320,7 +321,7 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
  * @trans_pcie: pointer back to transport (for timer)
  * @need_update: indicates need to update read/write index
  * @ampdu: true if this queue is an ampdu queue for an specific RA/TID
- * @wd_timeout: queue watchdog timeout (jiffies) - per queue
+ * @wd_timeout: queue watchdog timeout - per queue
  * @frozen: tx stuck queue timer is frozen
  * @frozen_expiry_remainder: remember how long until the timer fires
  * @bc_tbl: byte count table of the queue (relevant only for gen2 transport)
@@ -360,7 +361,7 @@ struct iwl_txq {
   bool frozen;
   bool ampdu;
   int block;
-  unsigned long wd_timeout;
+  zx_duration_t wd_timeout;
   struct sk_buff_head overflow_q;
   struct iwl_dma_ptr bc_tbl;
 
@@ -687,14 +688,14 @@ void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr);
 int iwl_pcie_tx_stop(struct iwl_trans* trans);
 void iwl_pcie_tx_free(struct iwl_trans* trans);
 bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
-                               const struct iwl_trans_txq_scd_cfg* cfg, unsigned int wdg_timeout);
+                               const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t wdg_timeout);
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int queue, bool configure_scd);
 void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id, bool shared_mode);
 void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq);
 int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_device_cmd* dev_cmd,
                       int txq_id);
 void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans);
-int iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
+zx_status_t iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 void iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, int idx);
 void iwl_pcie_gen2_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq);
 void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb);

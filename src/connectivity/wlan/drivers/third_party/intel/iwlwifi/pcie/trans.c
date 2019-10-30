@@ -1392,11 +1392,8 @@ out:
 }
 
 static void iwl_trans_pcie_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
-#if 0   // NEEDS_PORTING
-    iwl_pcie_reset_ict(trans);
-    iwl_pcie_tx_start(trans, scd_addr);
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+  iwl_pcie_reset_ict(trans);
+  iwl_pcie_tx_start(trans, scd_addr);
 }
 
 void iwl_trans_pcie_handle_stop_rfkill(struct iwl_trans* trans, bool was_in_rfkill) {

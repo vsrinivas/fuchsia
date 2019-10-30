@@ -77,7 +77,7 @@ static void iwl_trans_sim_reclaim(struct iwl_trans* trans, int queue, int ssn,
 
 static bool iwl_trans_sim_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
                                      const struct iwl_trans_txq_scd_cfg* cfg,
-                                     unsigned int queue_wdg_timeout) {
+                                     zx_duration_t queue_wdg_timeout) {
   return false;
 }
 

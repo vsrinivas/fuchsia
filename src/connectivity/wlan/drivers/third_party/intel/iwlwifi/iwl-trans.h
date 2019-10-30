@@ -540,7 +540,7 @@ struct iwl_trans_ops {
   void (*reclaim)(struct iwl_trans* trans, int queue, int ssn, struct sk_buff_head* skbs);
 
   bool (*txq_enable)(struct iwl_trans* trans, int queue, uint16_t ssn,
-                     const struct iwl_trans_txq_scd_cfg* cfg, unsigned int queue_wdg_timeout);
+                     const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t queue_wdg_timeout);
   void (*txq_disable)(struct iwl_trans* trans, int queue, bool configure_scd);
   /* 22000 functions */
   zx_status_t (*txq_alloc)(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid,
@@ -931,20 +931,20 @@ static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
         bool configure_scd) {
     trans->ops->txq_disable(trans, queue, configure_scd);
 }
+#endif  // NEEDS_PORTING
 
-static inline bool
-iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
-                         const struct iwl_trans_txq_scd_cfg* cfg,
-                         unsigned int queue_wdg_timeout) {
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return false;
-    }
+static inline bool iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
+                                            const struct iwl_trans_txq_scd_cfg* cfg,
+                                            unsigned int queue_wdg_timeout) {
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return false;
+  }
 
-    return trans->ops->txq_enable(trans, queue, ssn,
-                                  cfg, queue_wdg_timeout);
+  return trans->ops->txq_enable(trans, queue, ssn, cfg, queue_wdg_timeout);
 }
 
+#if 0   // NEEDS_PORTING
 static inline int
 iwl_trans_get_rxq_dma_data(struct iwl_trans* trans, int queue,
                            struct iwl_trans_rxq_dma_data* data) {
@@ -1003,21 +1003,22 @@ static inline void iwl_trans_txq_enable(struct iwl_trans* trans, int queue,
 
     iwl_trans_txq_enable_cfg(trans, queue, ssn, &cfg, queue_wdg_timeout);
 }
+#endif  // NEEDS_PORTING
 
-static inline
-void iwl_trans_ac_txq_enable(struct iwl_trans* trans, int queue, int fifo,
-                             unsigned int queue_wdg_timeout) {
-    struct iwl_trans_txq_scd_cfg cfg = {
-        .fifo = fifo,
-        .sta_id = -1,
-        .tid = IWL_MAX_TID_COUNT,
-        .frame_limit = IWL_FRAME_LIMIT,
-        .aggregate = false,
-    };
+static inline void iwl_trans_ac_txq_enable(struct iwl_trans* trans, int queue, uint8_t fifo,
+                                           unsigned int queue_wdg_timeout) {
+  struct iwl_trans_txq_scd_cfg cfg = {
+      .fifo = fifo,
+      .sta_id = UINT8_MAX,
+      .tid = IWL_MAX_TID_COUNT,
+      .aggregate = false,
+      .frame_limit = IWL_FRAME_LIMIT,
+  };
 
-    iwl_trans_txq_enable_cfg(trans, queue, 0, &cfg, queue_wdg_timeout);
+  iwl_trans_txq_enable_cfg(trans, queue, 0, &cfg, queue_wdg_timeout);
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_trans_freeze_txq_timer(struct iwl_trans* trans,
         unsigned long txqs,
         bool freeze) {
