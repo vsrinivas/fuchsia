@@ -13,9 +13,7 @@ group("devmgr") {
 # Drivers depend on this (see $standard_environments).
 # It just gets the standard devhost binary into the BOOTFS image.
 group("driver_deps") {
-  data_deps = [
-    "devhost",
-  ]
+  data_deps = []
 }
 
 # Variants can remove that standard "driver_deps" from $implicit_deps and
@@ -28,8 +26,6 @@ foreach(other, toolchain.other_variants) {
 
 foreach(variant, variant_suffixes) {
   group("driver_deps$variant") {
-    data_deps = [
-      "devhost:devhost$variant(${toolchain.label})",
-    ]
+    data_deps = []
   }
 }

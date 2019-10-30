@@ -22,7 +22,6 @@ if (current_cpu != "") {
       "$zx/kernel/target/arm64/board/visalia:visalia-boot-shim-test",
       "$zx/system/core/bootsvc:tests",
       "$zx/system/core/console:console-test",
-      "$zx/system/core/devmgr/devhost:devhost-test",
       "$zx/system/core/devmgr/fshost:block-watcher-test",
       "$zx/system/core/devmgr/fshost:fshost-metrics-test",
       "$zx/system/core/devmgr/fshost:fshost-test",

@@ -76,8 +76,8 @@ executable("syz-executor") {
     "-DGIT_REVISION=\"${GIT_REVISION}\"",
   ]
   deps = [
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
     "//zircon/public/lib/fdio",
   ]
 }

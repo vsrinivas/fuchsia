@@ -4,12 +4,12 @@
 
 static_library("sim-device") {
   sources = [
-    "device.h",
     "device.cc",
+    "device.h",
   ]
 
   deps = [
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
   ]
 }

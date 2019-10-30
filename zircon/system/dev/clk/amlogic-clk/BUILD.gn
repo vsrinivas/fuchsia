@@ -44,6 +44,7 @@ zx_test("amlogic-clk-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",

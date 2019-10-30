@@ -11,11 +11,11 @@
 
 #include <fbl/auto_lock.h>
 
-#include "../shared/env.h"
-#include "../shared/fidl_txn.h"
-#include "../shared/log.h"
 #include "connection-destroyer.h"
 #include "devhost.h"
+#include "env.h"
+#include "fidl_txn.h"
+#include "log.h"
 #include "proxy-iostate.h"
 #include "zx-device.h"
 

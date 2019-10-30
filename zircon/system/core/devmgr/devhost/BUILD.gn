@@ -2,79 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("devhost") {
-  sources = [
-    "main.cc",
-  ]
-  deps = [
-    ":driver",
-  ]
-}
-
-source_set("common") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "api.cc",
-    "composite-device.cc",
-    "connection-destroyer.cc",
-    "core.cc",
-    "devhost-context.cc",
-    "devhost.cc",
-    "device-controller-connection.cc",
-    "proxy-iostate.cc",
-    "rpc-server.cc",
-    "scheduler_profile.cc",
-    "tracing.cc",
-    "zx-device.cc",
-  ]
-
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-device-manager:llcpp",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-scheduler:c",
-    "$zx/system/ulib/async:async-cpp.static",
-    "$zx/system/ulib/async:async-default.static",
-    "$zx/system/ulib/async:static",
-    "$zx/system/ulib/async-loop:async-loop-cpp.static",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/fs:fs-for-driver",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace:trace-driver",
-    "$zx/system/ulib/trace-provider:trace-provider-driver",
-    "$zx/system/ulib/trace-provider:trace-provider-fdio-connect",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxio",
-    "../shared:env",
-  ]
-
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
-}
-
-# "$zx/system/ulib/driver" is an alias for this.
+# THIS IS A DUMMY NO-OP THAT EXPORTS THE REQUIRED SYMBOLS FOR THE ZN BUILD
+# LOOK IN //SRC/DEVICES FOR THE DRIVER. tHIS DRIVER IS NEVER PUT IN THE ZBI
+# AND IS ONLY PROVIDED AS A LINK TARGET.
 zx_library("driver") {
-  sdk = "shared"
-  sdk_publishable = false
-  sdk_headers = []
   shared = true
   static = false
 
-  sources = []
+  sources = [
+    "api.cc",
+  ]
 
   deps = [
-    ":common",
+    "$zx/system/ulib/ddk",
   ]
 
   # Since the tracing support is brought in via an archive, we need explicit
@@ -90,25 +30,4 @@ zx_library("driver") {
     driver_shlib_denylist = []
     driver_shlib_denylist_barrier = []
   }
-}
-
-zx_test("devhost-test") {
-  test_group = "ddk"
-  sources = [
-    "core-test.cc",
-    "device-api-test.cc",
-    "device-controller-connection-test.cc",
-    "device-controller-integration-test.cc",
-    "proxy-iostate-test.cc",
-  ]
-  deps = [
-    ":common",
-    "$zx/system/fidl/fuchsia-device-test:c",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/driver-integration-test",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/zxtest",
-    "../shared:env",
-  ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

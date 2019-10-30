@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
+#ifndef SRC_DEVICES_HOST_DEVHOST_H_
+#define SRC_DEVICES_HOST_DEVHOST_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -28,7 +28,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
-#include "../shared/async-loop-owned-rpc-handler.h"
+#include "async-loop-owned-rpc-handler.h"
 #include "devhost-context.h"
 #include "lock.h"
 #include "zx-device.h"
@@ -274,4 +274,4 @@ async::Loop* DevhostAsyncLoop();
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
+#endif  // SRC_DEVICES_HOST_DEVHOST_H_

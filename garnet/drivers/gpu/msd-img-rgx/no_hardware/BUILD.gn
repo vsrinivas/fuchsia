@@ -28,10 +28,10 @@ source_set("driver_sources") {
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//src/devices/host:driver",
     "//third_party/imgtec-pvr-rgx-km:src_no_hardware",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/driver",
     "//zircon/public/lib/fidl-utils",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

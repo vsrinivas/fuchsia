@@ -47,8 +47,8 @@ source_set("entry") {
     "//garnet/lib/magma/src/magma_util/platform:trace_provider",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//src/devices/host:driver",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
@@ -96,9 +96,9 @@ source_set("test_entry_pci") {
   deps += [
     "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/devices/host:driver",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
   ]
 
   libs = [ "zircon" ]
@@ -129,9 +129,9 @@ source_set("test_entry_pdev") {
   deps += [
     "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/devices/host:driver",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
   ]
 
   libs = [ "zircon" ]

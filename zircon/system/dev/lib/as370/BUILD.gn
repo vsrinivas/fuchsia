@@ -53,6 +53,7 @@ zx_test("audio-dsp-test") {
   deps = [
     "$zx/system/dev/lib/as370",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/mock-function",

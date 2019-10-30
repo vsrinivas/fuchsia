@@ -42,6 +42,7 @@ zx_test("bma253-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/simplehid",

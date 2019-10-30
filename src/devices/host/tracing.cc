@@ -6,10 +6,11 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+
 #include <trace-provider/fdio_connect.h>
 #include <trace-provider/provider.h>
 
-#include "../shared/log.h"
+#include "log.h"
 
 namespace devmgr {
 

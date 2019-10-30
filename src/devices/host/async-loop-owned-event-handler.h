@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_HOST_ASYNC_LOOP_OWNED_EVENT_HANDLER_H_
+#define SRC_DEVICES_HOST_ASYNC_LOOP_OWNED_EVENT_HANDLER_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
@@ -74,3 +75,5 @@ class AsyncLoopOwnedEventHandler {
 };
 
 }  // namespace devmgr
+
+#endif  // SRC_DEVICES_HOST_ASYNC_LOOP_OWNED_EVENT_HANDLER_H_

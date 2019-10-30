@@ -39,26 +39,6 @@ zx_off_t test_get_size(void* ctx) {
   return 42ul;
 }
 
-zx_status_t test_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
-  EXPECT_EQ(ctx, &test_ctx);
-  uint8_t* data = static_cast<uint8_t*>(buf);
-  *data = 0xab;
-  EXPECT_EQ(count, 1);
-  EXPECT_EQ(off, 2);
-  *actual = 3;
-  return ZX_OK;
-}
-
-zx_status_t test_write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
-  EXPECT_EQ(ctx, &test_ctx);
-  const uint8_t* data = static_cast<const uint8_t*>(buf);
-  EXPECT_EQ(*data, 0xab);
-  EXPECT_EQ(count, 1);
-  EXPECT_EQ(off, 2);
-  *actual = 3;
-  return ZX_OK;
-}
-
 TEST(DeviceApiTest, GetProtocol) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));

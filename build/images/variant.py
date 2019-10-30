@@ -8,28 +8,29 @@ import elfinfo
 import glob
 import os
 
-
 # Copied from //zircon/system/public/zircon/driver/binding.h, which see.
-ZIRCON_NOTE_DRIVER = 0x31565244 # DRV1
+ZIRCON_NOTE_DRIVER = 0x31565244  # DRV1
 ZIRCON_DRIVER_IDENT = ('Zircon\0', ZIRCON_NOTE_DRIVER)
 
-LIBCXX_SONAMES = [ 'libc++.so.2', 'libc++abi.so.1', 'libunwind.so.1' ]
+LIBCXX_SONAMES = ['libc++.so.2', 'libc++abi.so.1', 'libunwind.so.1']
 
 
 def binary_info(filename):
     return elfinfo.get_elf_info(filename, [ZIRCON_DRIVER_IDENT])
 
+
 def is_driver(info):
     return bool(info.notes)
 
 
-class variant(
-    namedtuple('variant', [
-        'shared_toolchain', # GN toolchain (and thus build dir subdirectory).
-        'libprefix',        # Prefix on DT_SONAME string.
-        'runtime',          # SONAME of runtime, does not use libprefix.
-        'aux',              # List of (file, group) required if this is used.
-        'has_libcxx',       # True iff toolchain libraries have this variant.
+class variant(namedtuple(
+        'variant',
+    [
+        'shared_toolchain',  # GN toolchain (and thus build dir subdirectory).
+        'libprefix',  # Prefix on DT_SONAME string.
+        'runtime',  # SONAME of runtime, does not use libprefix.
+        'aux',  # List of (file, group) required if this is used.
+        'has_libcxx',  # True iff toolchain libraries have this variant.
     ])):
 
     def matches(self, info, assume=False):
@@ -52,7 +53,7 @@ def make_variant(name, info):
     libprefix = ''
     runtime = None
     # All drivers need devhost; it must be in /boot (group 0).
-    aux = [('bin/devhost', 0)] if is_driver(info) else []
+    aux = []
     has_libcxx = False
     if name is None:
         tc = '%s-shared' % info.cpu.gn
@@ -93,14 +94,12 @@ def deduce_aux_variant(info, install_path):
     pathelts = deduce_from.split('/')
     assert pathelts[0] == 'lib', (
         "Library expected in lib/, not %r: %r for %r" %
-        (deduce_from, info, install_path)
-    )
+        (deduce_from, info, install_path))
     if len(pathelts) == 2:
         return None
     assert len(pathelts) == 3, (
         "Library expected to be lib/variant/libfoo.so, not %r: %r for %r" %
-        (deduce_from, info, install_path)
-    )
+        (deduce_from, info, install_path))
     return make_variant(pathelts[1], info)
 
 
@@ -122,10 +121,11 @@ def find_variant(info, install_path, build_dir=os.path.curdir):
             # call it a variant.
             rel_filename = os.path.relpath(abs_filename, abs_build_dir)
             variant_prefix = info.cpu.gn + '-'
-            subdirs = [subdir
-                       for subdir in os.listdir(build_dir)
-                       if (subdir.startswith(variant_prefix) and
-                           os.path.exists(os.path.join(subdir, rel_filename)))]
+            subdirs = [
+                subdir for subdir in os.listdir(build_dir) if (
+                    subdir.startswith(variant_prefix) and
+                    os.path.exists(os.path.join(subdir, rel_filename)))
+            ]
             files = [os.path.join(subdir, rel_filename) for subdir in subdirs]
             # Rust binaries have multiple links but are not variants.
             # So just ignore a multiply-linked file with no matches.
@@ -133,10 +133,12 @@ def find_variant(info, install_path, build_dir=os.path.curdir):
                 # A variant loadable_module (or driver_module) is actually
                 # built in the variant's -shared toolchain but is also
                 # linked to other variant toolchains.
-                if (len(subdirs) > 1 and
-                    sum(subdir.endswith('-shared') for subdir in subdirs) == 1):
-                    [subdir] = [subdir for subdir in subdirs
-                                if subdir.endswith('-shared')]
+                if (len(subdirs) > 1 and sum(
+                        subdir.endswith('-shared') for subdir in subdirs) == 1):
+                    [subdir] = [
+                        subdir for subdir in subdirs
+                        if subdir.endswith('-shared')
+                    ]
                 else:
                     assert len(files) == 1, (
                         "Multiple hard links to %r: %r" % (info, files))

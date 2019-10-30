@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
+#ifndef SRC_DEVICES_HOST_ZX_DEVICE_H_
+#define SRC_DEVICES_HOST_ZX_DEVICE_H_
 
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -259,4 +259,4 @@ zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_devi
 // one created by device_open).
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags);
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
+#endif  // SRC_DEVICES_HOST_ZX_DEVICE_H_
