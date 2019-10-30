@@ -71,11 +71,6 @@
             "package_name": "ct-logs"
         },
         {
-            "crate_name": "pretty",
-            "crate_type": "lib",
-            "package_name": "pretty"
-        },
-        {
             "crate_name": "data_encoding",
             "crate_type": "lib",
             "package_name": "data-encoding"
@@ -296,6 +291,11 @@
             "package_name": "png"
         },
         {
+            "crate_name": "pretty",
+            "crate_type": "lib",
+            "package_name": "pretty"
+        },
+        {
             "crate_name": "pretty_assertions",
             "crate_type": "lib",
             "package_name": "pretty_assertions"
@@ -374,6 +374,11 @@
             "crate_name": "crypto",
             "crate_type": "lib",
             "package_name": "rust-crypto"
+        },
+        {
+            "crate_name": "rustc_hash",
+            "crate_type": "lib",
+            "package_name": "rustc-hash"
         },
         {
             "crate_name": "rustls",
@@ -761,6 +766,11 @@
             "crate_name": "ring",
             "crate_type": "lib",
             "package_name": "ring"
+        },
+        {
+            "crate_name": "rustc_hash",
+            "crate_type": "lib",
+            "package_name": "rustc-hash"
         },
         {
             "crate_name": "scopeguard",
