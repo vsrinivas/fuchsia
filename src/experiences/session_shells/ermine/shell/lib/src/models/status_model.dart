@@ -24,6 +24,7 @@ class StatusModel implements Inspectable {
   UiStream battery;
   UiStream weather;
   UiStream volume;
+  UiStream bluetooth;
   final StartupContext startupContext;
   final modular.PuppetMasterProxy puppetMaster;
   final AdministratorProxy deviceManager;
@@ -34,6 +35,7 @@ class StatusModel implements Inspectable {
     battery = UiStream(Battery.fromStartupContext(startupContext));
     weather = UiStream(Weather());
     volume = UiStream(Volume.fromStartupContext(startupContext));
+    bluetooth = UiStream(Bluetooth.fromStartupContext(startupContext));
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
@@ -58,6 +60,7 @@ class StatusModel implements Inspectable {
     battery.dispose();
     weather.dispose();
     volume.dispose();
+    battery.dispose();
   }
 
   /// Launch settings mod.

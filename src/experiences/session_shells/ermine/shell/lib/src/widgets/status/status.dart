@@ -46,6 +46,7 @@ class Status extends StatelessWidget {
           _StatusEntry(model.battery),
           _StatusEntry(model.memory),
           _StatusEntry(model.weather),
+          _StatusEntry(model.bluetooth),
         ],
       ),
     );

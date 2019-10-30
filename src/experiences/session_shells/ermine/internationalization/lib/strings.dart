@@ -300,4 +300,10 @@ class Strings {
         desc:
             'A hint appearing in a window for naming a story. This text should not include padding, but now it does.',
       );
+
+  static String get bluetooth => Intl.message(
+        'Bluetooth',
+        name: 'bluetooth',
+        desc: 'The label for the bluetooth settings widget',
+      );
 }

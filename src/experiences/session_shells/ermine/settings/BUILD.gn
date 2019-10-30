@@ -11,6 +11,7 @@ dart_library("settings") {
   sources = [
     "settings.dart",
     "src/battery.dart",
+    "src/bluetooth.dart",
     "src/brightness.dart",
     "src/memory.dart",
     "src/volume.dart",
@@ -18,6 +19,7 @@ dart_library("settings") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
