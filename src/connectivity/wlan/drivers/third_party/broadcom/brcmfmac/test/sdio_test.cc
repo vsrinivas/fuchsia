@@ -40,13 +40,6 @@ bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
           lhs.write == rhs.write && lhs.buf_offset == rhs.buf_offset);
 }
 
-// Stub out the firmware loading from the devhost API.
-zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw, size_t* size) {
-  *fw = ZX_HANDLE_INVALID;
-  *size = 0;
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
   return device_get_metadata(zx_dev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size, actual);
 }

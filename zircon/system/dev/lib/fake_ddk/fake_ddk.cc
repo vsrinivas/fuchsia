@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls/log.h>
 
 #include <utility>
 
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls/log.h>
 #include <zxtest/zxtest.h>
 
 namespace fake_ddk {
@@ -301,6 +301,14 @@ zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t*
 __EXPORT
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
   // This is currently a no-op.
+}
+
+__EXPORT
+zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+  // This is currently a no-op.
+  *fw = ZX_HANDLE_INVALID;
+  *size = 0;
+  return ZX_OK;
 }
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
