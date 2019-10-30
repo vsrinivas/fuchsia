@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/zxdb/common/int128_t.h"
 
 namespace zxdb {
 
@@ -66,7 +67,7 @@ class ExprValueSource {
   // Valid when type_ == kRegister.
   debug_ipc::RegisterID register_id() const { return register_id_; }
 
-  // Number of bits used for bitfields. 0 means use all bits. See bit_shift().
+  // Number of bits used for bitfields. 0 means it is not a bitfield and all bits are used.
   uint32_t bit_size() const { return bit_size_; }
 
   // Number of bits to shift to the left to get the storage location. This is the offset of the low
@@ -99,6 +100,13 @@ class ExprValueSource {
     }
     return ExprValueSource();
   }
+
+  // Writes the |new_value| over some |existing| value, taking into account the bit size and
+  // shift information from this ExprValueSource. The returned value can be used to update the
+  // register or memory for a bitfield.
+  //
+  // This ExprValueSource must be a bitfield (is_bitfield() == true) for this to be called.
+  uint128_t SetBits(uint128_t existing, uint128_t new_value) const;
 
   bool operator==(const ExprValueSource& other) const {
     return type_ == other.type_ && address_ == other.address_ && bit_size_ == other.bit_size_ &&

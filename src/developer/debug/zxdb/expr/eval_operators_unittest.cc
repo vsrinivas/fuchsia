@@ -17,6 +17,8 @@ namespace zxdb {
 
 namespace {
 
+using debug_ipc::RegisterID;
+
 class EvalOperators : public TestWithLoop {
  public:
   EvalOperators() : eval_context_(fxl::MakeRefCounted<MockEvalContext>()) {}
@@ -76,7 +78,7 @@ class EvalOperators : public TestWithLoop {
 
 }  // namespace
 
-TEST_F(EvalOperators, Assignment) {
+TEST_F(EvalOperators, AssignmentMem) {
   auto int32_type = MakeInt32Type();
 
   // The casting test provides most tests for conversions so this test just
@@ -116,6 +118,94 @@ TEST_F(EvalOperators, AssignmentBad) {
   out = SyncEvalBinaryOperator(const_value, ExprTokenType::kEquals, source);
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Can't assign to a constant.", out.err().msg());
+}
+
+TEST_F(EvalOperators, AssignmentFullRegister) {
+  // Assign to a full regular register.
+  auto int64_type = MakeUint64Type();
+  ExprValue dest(static_cast<uint64_t>(0), int64_type, ExprValueSource(RegisterID::kX64_rax));
+
+  constexpr uint64_t kValue = 0x12345678;
+  ExprValue source(kValue);
+
+  ErrOrValue out = SyncEvalBinaryOperator(dest, ExprTokenType::kEquals, source);
+
+  // Written value returned.
+  ASSERT_FALSE(out.has_error());
+  EXPECT_EQ(source, out.value());
+
+  // Register written to target.
+  auto reg_writes = eval_context()->data_provider()->GetRegisterWrites();
+  ASSERT_EQ(1u, reg_writes.size());
+  EXPECT_EQ(RegisterID::kX64_rax, reg_writes[0].first);
+  EXPECT_EQ(source.data(), reg_writes[0].second);
+}
+
+TEST_F(EvalOperators, AssignmentBitfieldRegister) {
+  //                                                             |- AH -|
+  // Byte: 7        6        5        4        3        2        1        0
+  //  RAX: -------- -------- -------- -------- -------- -------- -----==- --------
+  //                                                                  ^^ dest bits
+
+  // Assign to bit #1-2 (next-to-low and the next highest one) of a subregister that's itself 8 bits
+  // from the low but of the rax register.
+  ExprValue dest(static_cast<uint8_t>(0), fxl::RefPtr<Type>(),
+                 ExprValueSource(RegisterID::kX64_ah, 2, 1));
+
+  // Existing register value has each byte numbered. Both reads and writes should be for the
+  // canonical register.
+  eval_context()->data_provider()->AddRegisterValue(RegisterID::kX64_rax, false,
+                                                    std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7});
+
+  constexpr uint8_t kValue = 0x3;  // Set both bits to 1.
+  ExprValue source(kValue);
+
+  ErrOrValue out = SyncEvalBinaryOperator(dest, ExprTokenType::kEquals, source);
+
+  // Written value returned.
+  ASSERT_FALSE(out.has_error());
+  EXPECT_EQ(source, out.value());
+
+  // Register written to target.
+  auto reg_writes = eval_context()->data_provider()->GetRegisterWrites();
+  ASSERT_EQ(1u, reg_writes.size());
+  EXPECT_EQ(RegisterID::kX64_rax, reg_writes[0].first);
+  std::vector<uint8_t> expected{0, 7, 2, 3, 4, 5, 6, 7};  // Set bits 1-2 of byte 1.
+  EXPECT_EQ(expected, reg_writes[0].second);
+}
+
+TEST_F(EvalOperators, AssignmentVectorRegister) {
+  // Writing the next-to-highest 16-bit word fo the 256-bit "ymm0" register. The "224" is
+  // 256 - 16 (unused high word) - 16 (word we're changing).
+  ExprValue dest(static_cast<uint16_t>(0), fxl::RefPtr<Type>(),
+                 ExprValueSource(RegisterID::kX64_ymm0, 16, 224));
+
+  // Existing 512-bit register value has each 16-bit word numbered. Both reads and writes should be
+  // for the canonical register.
+  // clang-format off
+  std::vector<uint8_t> original{ 0, 0,  1, 0,  2, 0,  3, 0,  4, 0,  5, 0,  6, 0,  7, 0,
+                                 8, 0,  9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0,
+                                16, 0, 17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0,
+                                24, 0, 25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0 };
+  eval_context()->data_provider()->AddRegisterValue(RegisterID::kX64_zmm0, false, original);
+  // clang-format on
+
+  constexpr uint16_t kValue = 42;
+  ExprValue source(kValue);
+
+  ErrOrValue out = SyncEvalBinaryOperator(dest, ExprTokenType::kEquals, source);
+
+  // Written value returned.
+  ASSERT_FALSE(out.has_error());
+  EXPECT_EQ(source, out.value());
+
+  // Register written to target.
+  auto reg_writes = eval_context()->data_provider()->GetRegisterWrites();
+  ASSERT_EQ(1u, reg_writes.size());
+  EXPECT_EQ(RegisterID::kX64_zmm0, reg_writes[0].first);
+  std::vector<uint8_t> expected = original;
+  expected[28] = kValue;
+  EXPECT_EQ(expected, reg_writes[0].second);
 }
 
 TEST_F(EvalOperators, IntArithmetic) {

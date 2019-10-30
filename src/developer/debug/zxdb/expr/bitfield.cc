@@ -118,10 +118,6 @@ void WriteBitfieldToMemory(const fxl::RefPtr<EvalContext>& context, const ExprVa
 
   uint128_t value = 0;
   memcpy(&value, &data[0], data.size());
-  value <<= dest.bit_shift();
-
-  uint128_t write_mask = (1ull << dest.bit_size()) - 1;
-  write_mask <<= dest.bit_shift();
 
   // Number of bytes affected by this bitfield.
   size_t byte_size = (dest.bit_size() + dest.bit_shift() + 7) / 8;
@@ -134,23 +130,22 @@ void WriteBitfieldToMemory(const fxl::RefPtr<EvalContext>& context, const ExprVa
   // mask to the agent, so do that.
   context->GetDataProvider()->GetMemoryAsync(
       dest.address(), byte_size,
-      [context, address = dest.address(), value, byte_size, write_mask, cb = std::move(cb)](
+      [context, dest, value, byte_size, cb = std::move(cb)](
           const Err& err, std::vector<uint8_t> original_data) mutable {
         if (err.has_error())
           return cb(err);
         if (original_data.size() != byte_size)  // Short read means invalid address.
-          return cb(Err("Memory at address 0x%" PRIx64 " is invalid.", address));
+          return cb(Err("Memory at address 0x%" PRIx64 " is invalid.", dest.address()));
 
         uint128_t original = 0;
         memcpy(&original, &original_data[0], original_data.size());
 
-        original &= ~write_mask;  // Zero the dest bits we'll write.
-        uint128_t result = original | (value & write_mask);
+        uint128_t result = dest.SetBits(original, value);
 
         // Write out the new data.
         std::vector<uint8_t> new_data(byte_size);
         memcpy(&new_data[0], &result, byte_size);
-        context->GetDataProvider()->WriteMemory(address, std::move(new_data), std::move(cb));
+        context->GetDataProvider()->WriteMemory(dest.address(), std::move(new_data), std::move(cb));
       });
 }
 

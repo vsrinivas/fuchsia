@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
@@ -20,6 +21,9 @@
 
 namespace zxdb {
 
+using debug_ipc::Register;
+using debug_ipc::RegisterCategory;
+
 FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, Location location)
     : Frame(thread->session()),
       thread_(thread),
@@ -27,7 +31,7 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, L
       cfa_(stack_frame.cfa),
       location_(std::move(location)),
       weak_factory_(this) {
-  registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kGeneral)] = stack_frame.regs;
+  registers_[static_cast<size_t>(RegisterCategory::kGeneral)] = stack_frame.regs;
 }
 
 FrameImpl::~FrameImpl() {
@@ -48,12 +52,11 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<debug_ipc::Register>* FrameImpl::GetRegisterCategorySync(
-    debug_ipc::RegisterCategory category) const {
-  FXL_DCHECK(category <= debug_ipc::RegisterCategory::kLast);
+const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory category) const {
+  FXL_DCHECK(category <= RegisterCategory::kLast);
 
   size_t category_index = static_cast<size_t>(category);
-  FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
+  FXL_DCHECK(category_index < static_cast<size_t>(RegisterCategory::kLast));
 
   if (registers_[category_index])
     return &*registers_[category_index];
@@ -61,10 +64,8 @@ const std::vector<debug_ipc::Register>* FrameImpl::GetRegisterCategorySync(
 }
 
 void FrameImpl::GetRegisterCategoryAsync(
-    debug_ipc::RegisterCategory category,
-    fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) {
-  FXL_DCHECK(category < debug_ipc::RegisterCategory::kLast &&
-             category != debug_ipc::RegisterCategory::kNone);
+    RegisterCategory category, fit::function<void(const Err&, const std::vector<Register>&)> cb) {
+  FXL_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
 
   size_t category_index = static_cast<size_t>(category);
   FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
@@ -78,6 +79,14 @@ void FrameImpl::GetRegisterCategoryAsync(
           else
             cb(Err("Frame destroyed before registers could be retrieved."), {});
         });
+    return;
+  }
+
+  // The CPU registers will always refer to the top physical frame so don't fetch them otherwise.
+  if (!IsInTopmostPhysicalFrame()) {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() {
+      cb(Err("This type of register is unavailable in non-topmost stack frames."), {});
+    });
     return;
   }
 
@@ -96,6 +105,42 @@ void FrameImpl::GetRegisterCategoryAsync(
         cb(Err(), std::move(reply.registers));
       });
   return;
+}
+
+void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                              fit::callback<void(const Err&)> cb) {
+  const debug_ipc::RegisterInfo* info = InfoForRegister(id);
+  FXL_DCHECK(info);                      // Should always be a valid register.
+  FXL_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
+
+  if (!IsInTopmostPhysicalFrame()) {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
+      cb(Err("Register %s can't be written when the frame is not the topmost.",
+             debug_ipc::RegisterIDToString(id)));
+    });
+    return;
+  }
+
+  debug_ipc::WriteRegistersRequest request;
+  request.process_koid = thread_->GetProcess()->GetKoid();
+  request.thread_koid = thread_->GetKoid();
+  request.registers.emplace_back(id, data);  // Don't move, used below.
+
+  session()->remote_api()->WriteRegisters(
+      request, [weak_frame = weak_factory_.GetWeakPtr(), data, cb = std::move(cb)](
+                   const Err& err, debug_ipc::WriteRegistersReply reply) mutable {
+        if (err.has_error())
+          return cb(err);  // Transport error.
+
+        if (reply.status != 0) {
+          // Agent error.
+          return cb(Err("Error writing register (%s).", debug_ipc::ZxStatusToString(reply.status)));
+        }
+
+        if (weak_frame)
+          weak_frame->SaveRegisterUpdates(std::move(reply.registers));
+        cb(Err());
+      });
 }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
@@ -124,6 +169,22 @@ void FrameImpl::GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) {
 uint64_t FrameImpl::GetStackPointer() const { return sp_; }
 
 uint64_t FrameImpl::GetCanonicalFrameAddress() const { return cfa_; }
+
+bool FrameImpl::IsInTopmostPhysicalFrame() const {
+  const Stack& stack = GetThread()->GetStack();
+  if (stack.empty())
+    return false;
+
+  // Search for the first physical frame, and return true if it or anything above it matches the
+  // current frame.
+  for (size_t i = 0; i < stack.size(); i++) {
+    if (stack[i] == this)
+      return true;
+    if (!stack[i]->IsInline())
+      break;
+  }
+  return false;
+}
 
 void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())
@@ -211,6 +272,19 @@ bool FrameImpl::EnsureBasePointer() {
   // will have put the result into base_pointer_requests_ before this code is
   // executed.
   return eval_result == DwarfExprEval::Completion::kSync;
+}
+
+void FrameImpl::SaveRegisterUpdates(std::vector<Register> regs) {
+  std::map<RegisterCategory, std::vector<Register>> categorized;
+  for (auto& reg : regs) {
+    RegisterCategory cat = RegisterIDToCategory(reg.id);
+    FXL_DCHECK(cat != RegisterCategory::kNone);
+    categorized[cat].push_back(std::move(reg));
+  }
+
+  // This function replaces entire categories so we want to clear old registers as we go.
+  for (auto& [cat, update] : categorized)
+    registers_[static_cast<size_t>(cat)] = std::move(update);
 }
 
 }  // namespace zxdb

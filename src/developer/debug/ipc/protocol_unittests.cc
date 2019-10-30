@@ -808,11 +808,14 @@ TEST(Protocol, WriteRegistersRequest) {
 TEST(Protocol, WriteRegistersReply) {
   WriteRegistersReply initial = {};
   initial.status = 0x1234u;
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x0, 1));
+  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
 
   WriteRegistersReply second = {};
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   EXPECT_EQ(second.status, initial.status);
+  EXPECT_EQ(second.registers, initial.registers);
 }
 
 // Notifications -----------------------------------------------------------------------------------

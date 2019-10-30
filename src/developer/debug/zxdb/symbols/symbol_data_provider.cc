@@ -28,6 +28,12 @@ void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCall
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), std::vector<uint8_t>()); });
 }
 
+void SymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                                       WriteCallback cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [cb = std::move(cb)]() mutable { cb(NoFrameErr()); });
+}
+
 std::optional<uint64_t> SymbolDataProvider::GetFrameBase() { return std::nullopt; }
 
 void SymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
@@ -43,7 +49,7 @@ void SymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size, GetMemo
 }
 
 void SymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                                     WriteMemoryCallback cb) {
+                                     WriteCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoProcessErr()); });
 }

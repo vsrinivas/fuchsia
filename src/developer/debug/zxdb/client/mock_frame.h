@@ -58,6 +58,8 @@ class MockFrame : public Frame {
   void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
+  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                     fit::callback<void(const Err&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;

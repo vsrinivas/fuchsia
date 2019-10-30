@@ -16,7 +16,10 @@ namespace zxdb {
 // An implementation of SymbolDataProdiver for testing.
 class MockSymbolDataProvider : public SymbolDataProvider {
  public:
-  // Holds a list of time-ordered (address, data) pairs of memory.
+  // An insertion-time ordered list of (register, data) pairs of writes.
+  using RegisterWrites = std::vector<std::pair<debug_ipc::RegisterID, std::vector<uint8_t>>>;
+
+  // Holds a list of time-ordered (address, data) pairs of memory writes.
   using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
 
   MockSymbolDataProvider();
@@ -36,19 +39,22 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
 
-  // Returns the list of all memory written by WriteMemory calls as a series
-  // of (address, data) pairs. The stored list will be cleared by this call.
+  // Returns the list of all memory written by WriteRegister/WriteMemory calls as a series of (dest,
+  // data) pairs. The stored list will be cleared by this call.
+  RegisterWrites GetRegisterWrites() { return std::move(register_writes_); }
   MemoryWrites GetMemoryWrites() { return std::move(memory_writes_); }
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override;
   std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
+  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                     WriteCallback cb) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
-  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb) override;
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override;
 
  private:
   struct RegData {
@@ -66,7 +72,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   MockMemory memory_;
 
-  MemoryWrites memory_writes_;  // Logs calls to WriteMemory().
+  RegisterWrites register_writes_;  // Logs calls to WriteRegister().
+  MemoryWrites memory_writes_;      // Logs calls to WriteMemory().
 
   fxl::WeakPtrFactory<MockSymbolDataProvider> weak_factory_;
 };

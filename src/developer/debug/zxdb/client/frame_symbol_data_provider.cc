@@ -23,6 +23,7 @@ namespace {
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;
+using debug_ipc::RegisterInfo;
 
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
@@ -83,6 +84,20 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
       });
 }
 
+void FrameSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                                            WriteCallback cb) {
+  if (!frame_) {
+    // Frame deleted out from under us.
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
+      cb(Err("The register %s can't be written because the frame was deleted.",
+             debug_ipc::RegisterIDToString(id)));
+    });
+    return;
+  }
+
+  frame_->WriteRegister(id, std::move(data), std::move(cb));
+}
+
 std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
   if (!frame_)
     return std::nullopt;
@@ -103,24 +118,6 @@ uint64_t FrameSymbolDataProvider::GetCanonicalFrameAddress() const {
   if (!frame_)
     return 0;
   return frame_->GetCanonicalFrameAddress();
-}
-
-bool FrameSymbolDataProvider::IsInTopPhysicalFrame() const {
-  if (!frame_)
-    return false;
-  const Stack& stack = frame_->GetThread()->GetStack();
-  if (stack.empty())
-    return false;
-
-  // Search for the first physical frame, and return true if it or anything
-  // above it matches the current frame.
-  for (size_t i = 0; i < stack.size(); i++) {
-    if (stack[i] == frame_)
-      return true;
-    if (!stack[i]->IsInline())
-      break;
-  }
-  return false;
 }
 
 }  // namespace zxdb

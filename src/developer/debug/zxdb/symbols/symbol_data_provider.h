@@ -43,7 +43,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   using GetFrameBaseCallback = fit::callback<void(const Err&, uint64_t value)>;
 
-  using WriteMemoryCallback = fit::callback<void(const Err&)>;
+  using WriteCallback = fit::callback<void(const Err&)>;
 
   virtual debug_ipc::Arch GetArch();
 
@@ -61,6 +61,12 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.
   virtual void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback);
+
+  // Writes the given canonical register ID.
+  //
+  // This must be a canonical register as identified by debug_ipc::RegisterInfo::canonical_id, which
+  // means that it's a whole hardware register and needs no shifting nor masking.
+  virtual void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data, WriteCallback cb);
 
   // Synchronously returns the frame base pointer if possible. As with GetRegister, if this is not
   // available the implementation should call GetFrameBaseAsync().
@@ -87,7 +93,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   // Asynchronously writes to the given memory. The callback will be issued when the write is
   // complete.
-  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb);
+  virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb);
 
  protected:
   FRIEND_MAKE_REF_COUNTED(SymbolDataProvider);

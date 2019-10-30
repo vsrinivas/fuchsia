@@ -511,7 +511,8 @@ bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request, uint32_t
 
 void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
-  writer->WriteUint64(reply.status);
+  writer->WriteUint32(reply.status);
+  Serialize(reply.registers, writer);
 }
 
 // Address space -----------------------------------------------------------------------------------

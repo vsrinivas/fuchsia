@@ -43,6 +43,125 @@ namespace zxdb {
 
 namespace {
 
+using debug_ipc::RegisterCategory;
+using debug_ipc::RegisterID;
+using debug_ipc::RegisterInfo;
+
+// Backend for register assignment that takes the known current value of the destination register
+// as well as the new value (possibly in a subrange) and updates the value. This is updated
+// according to the used bits and shift amount.
+void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
+                                     const ExprValueSource& dest,
+                                     std::vector<uint8_t> existing_data, const RegisterInfo& info,
+                                     const ExprValue& source,
+                                     SymbolDataProvider::WriteCallback cb) {
+  // Here we want to support vector registers so can't always bring the result into a numeric
+  // variable. These large values are always multiples of bytes (not random bit ranges within
+  // bytes). Sometimes bitfields with arbitrary ranges can be brought into registers, but this will
+  // always be normal smaller ones that can be used with numbers.
+  //
+  // These computations assume little-endian.
+  if (dest.bit_shift() % 8 == 0 && dest.bit_size() % 8 == 0) {
+    // Easy case of everything being byte-aligned. This can handle all vector registers.
+
+    // We expect all non-canonical registers to be byte-aligned inside their canonical one.
+    FXL_DCHECK(info.bits % 8 == 0);
+    FXL_DCHECK(info.shift % 8 == 0);
+
+    // In little-endian, the byte shift (from the low bit) just measures from the [0] byte.
+    //
+    // Do these computations in signed numbers because weird symbol data could give
+    // data.size() - offset => negative number.
+    int byte_shift = static_cast<int>((dest.bit_shift() + info.shift) / 8);
+    int byte_length = static_cast<int>((dest.bit_size() + info.bits) / 8);
+
+    // Clamp the range to within the buffer in case anything is corrupted.
+    byte_length = std::min(byte_length, std::max(0, static_cast<int>(existing_data.size()) -
+                                                        byte_shift - byte_length));
+
+    if (byte_length > 0) {
+      memcpy(&existing_data[byte_shift], &source.data()[0], byte_length);
+      context->GetDataProvider()->WriteRegister(info.canonical_id, std::move(existing_data),
+                                                std::move(cb));
+    } else {
+      // Nothing to write, the symbol shifts seem messed up.
+      cb(Err("Could not write register data of %d bytes at offset %d bytes.", byte_length,
+             byte_shift));
+    }
+  } else if (existing_data.size() < sizeof(uint128_t) && source.data().size() < sizeof(uint128_t)) {
+    // Have non-byte-sized shifts, the source is probably a bitfield. This assumes little-endian.
+    uint128_t existing_value = 0;
+    memcpy(&existing_value, &existing_data[0], existing_data.size());
+
+    uint128_t write_value = 0;
+    memcpy(&write_value, &source.data()[0], source.data().size());
+
+    // This ExprValueSource takes into account any non-canonical register shifts on top of what
+    // may already be there.
+    ExprValueSource new_dest(info.canonical_id,
+                             std::max(dest.bit_size(), static_cast<uint32_t>(info.bits)),
+                             dest.bit_shift() + info.shift);
+
+    uint128_t new_value = new_dest.SetBits(existing_value, write_value);
+    memcpy(&existing_data[0], &new_value, existing_data.size());
+
+    context->GetDataProvider()->WriteRegister(info.canonical_id, std::move(existing_data),
+                                              std::move(cb));
+  } else {
+    cb(Err("Can't write bitfield of size %zu to register of size %zu.", source.data().size(),
+           existing_data.size()));
+  }
+}
+
+void DoRegisterAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
+                          const ExprValue& source, EvalCallback cb) {
+  const RegisterInfo* info = debug_ipc::InfoForRegister(dest.register_id());
+  if (!info)
+    return cb(Err("Assignment to invalid register %u.", dest.register_id()));
+
+  // Transforms a register write callback (Err only) to a EvalCallback (ErrOr<ExprValue>).
+  SymbolDataProvider::WriteCallback write_cb = [source,
+                                                cb = std::move(cb)](const Err& err) mutable {
+    if (err.has_error())
+      cb(err);
+    else
+      cb(source);
+  };
+
+  if (info->canonical_id == dest.register_id() && !dest.is_bitfield()) {
+    // Normal register write with no masking or shifting.
+    context->GetDataProvider()->WriteRegister(dest.register_id(), source.data(),
+                                              std::move(write_cb));
+  } else {
+    // This write requires some masking and shifting, and therefore needs the current register
+    // value.
+    context->GetDataProvider()->GetRegisterAsync(
+        info->canonical_id, [context, source, dest, info = *info, write_cb = std::move(write_cb)](
+                                const Err&, std::vector<uint8_t> data) mutable {
+          AssignRegisterWithExistingValue(context, dest, std::move(data), info, source,
+                                          std::move(write_cb));
+        });
+  }
+}
+
+void DoMemoryAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
+                        const ExprValue& source, EvalCallback cb) {
+  // Update the memory with the new data. The result of the expression is the coerced value.
+  auto write_callback = [source, cb = std::move(cb)](const Err& err) mutable {
+    if (err.has_error())
+      cb(err);
+    else
+      cb(source);
+  };
+  if (dest.is_bitfield()) {
+    WriteBitfieldToMemory(context, dest, source.data(), std::move(write_callback));
+  } else {
+    // Normal case for non-bitfields.
+    context->GetDataProvider()->WriteMemory(dest.address(), source.data(),
+                                            std::move(write_callback));
+  }
+}
+
 void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                   const ExprValue& right_value, EvalCallback cb) {
   if (left_value.data().size() == 0)
@@ -56,15 +175,10 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
     return cb(Err("Can't assign to a temporary."));
   if (dest.type() == ExprValueSource::Type::kConstant)
     return cb(Err("Can't assign to a constant."));
-
-  if (dest.type() == ExprValueSource::Type::kConstant) {
+  if (dest.type() == ExprValueSource::Type::kComposite) {
     // TODO(bug 39630) implement composite variable locations.
     return cb(Err("Can't assign to a composite variable location (see bug 39630)."));
   }
-
-  // TODO(bug 39589) implement register assignment.
-  if (dest.type() == ExprValueSource::Type::kRegister)
-    return cb(Err("Assignment to registers is not currently supported."));
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
@@ -73,23 +187,10 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
   if (coerced.has_error())
     return cb(std::move(coerced));
 
-  // Make a copy to avoid ambiguity of copying and moving the value below.
-  std::vector<uint8_t> data = coerced.value().data();
-
-  // Update the memory with the new data. The result of the expression is the coerced value.
-  auto write_callback = [coerced = coerced.take_value(),
-                         cb = std::move(cb)](const Err& err) mutable {
-    if (err.has_error())
-      cb(err);
-    else
-      cb(coerced);
-  };
-  if (dest.is_bitfield()) {
-    WriteBitfieldToMemory(context, dest, std::move(data), std::move(write_callback));
+  if (dest.type() == ExprValueSource::Type::kRegister) {
+    DoRegisterAssignment(context, dest, coerced.value(), std::move(cb));
   } else {
-    // Normal case for non-bitfields.
-    context->GetDataProvider()->WriteMemory(dest.address(), std::move(data),
-                                            std::move(write_callback));
+    DoMemoryAssignment(context, dest, coerced.value(), std::move(cb));
   }
 }
 

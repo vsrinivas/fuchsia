@@ -22,6 +22,8 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
   // SymbolDataProvider implementation:
   std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
+  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                     WriteCallback cb) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
@@ -32,11 +34,6 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
 
   explicit FrameSymbolDataProvider(Frame* frame);
   ~FrameSymbolDataProvider() override;
-
-  // Returns true if the associated frame is the top frame, or it is an inline
-  // frame of the topmost physical frame. This means the thread registers are
-  // be valid for it.
-  bool IsInTopPhysicalFrame() const;
 
   // The associated frame, possibly null if the frame has been disowned.
   Frame* frame_;

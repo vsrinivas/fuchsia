@@ -422,7 +422,9 @@ bool ReadReply(MessageReader* reader, WriteRegistersReply* reply, uint32_t* tran
     return false;
 
   *transaction_id = header.transaction_id;
-  return reader->ReadInt32(&reply->status);
+  if (!reader->ReadInt32(&reply->status))
+    return false;
+  return Deserialize(reader, &reply->registers);
 }
 
 // AddOrChangeBreakpoint ---------------------------------------------------------------------------

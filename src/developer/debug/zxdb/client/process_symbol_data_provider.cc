@@ -95,7 +95,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 }
 
 void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                                            WriteMemoryCallback cb) {
+                                            WriteCallback cb) {
   if (!process_) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(ProcessDestroyedErr()); });

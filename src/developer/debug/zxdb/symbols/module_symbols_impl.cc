@@ -61,7 +61,7 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
       cb(GetContextError(), std::vector<uint8_t>());
     });
   }
-  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb) override {
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(GetContextError()); });
   }

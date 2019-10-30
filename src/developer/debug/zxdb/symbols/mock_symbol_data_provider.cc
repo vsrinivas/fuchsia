@@ -70,6 +70,15 @@ void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
       });
 }
 
+void MockSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                                           WriteCallback cb) {
+  register_writes_.emplace_back(id, std::move(data));
+
+  // Declare success.
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [cb = std::move(cb)]() mutable { cb(Err()); });
+}
+
 std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
 
 void MockSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback callback) {
@@ -94,7 +103,7 @@ void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 }
 
 void MockSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                                         WriteMemoryCallback cb) {
+                                         WriteCallback cb) {
   memory_writes_.emplace_back(address, std::move(data));
 
   // Declare success.

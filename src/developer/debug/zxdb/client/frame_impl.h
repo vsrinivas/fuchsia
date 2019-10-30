@@ -38,6 +38,8 @@ class FrameImpl final : public Frame {
   void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
+  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                     fit::callback<void(const Err&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -47,6 +49,10 @@ class FrameImpl final : public Frame {
   bool IsAmbiguousInlineLocation() const override;
 
  private:
+  // Returns true if this is in the topmsot physical frame. This includes all inline frames
+  // created inside the topmost physical frame.
+  bool IsInTopmostPhysicalFrame() const;
+
   void EnsureSymbolized() const;
 
   // Ensures that the base pointer evaluation has at least started. If this
@@ -55,6 +61,10 @@ class FrameImpl final : public Frame {
   // Callers can add a callback to base_pointer_requests_ to be notified when
   // computation is done.
   bool EnsureBasePointer();
+
+  // Updates the given cached registers. If a register category is represented here, the array will
+  // contain all known registers from that category so entire categories can be overwritten.
+  void SaveRegisterUpdates(std::vector<debug_ipc::Register> regs);
 
   Thread* thread_;
 

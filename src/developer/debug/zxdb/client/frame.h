@@ -77,6 +77,13 @@ class Frame : public ClientObject {
       debug_ipc::RegisterCategory category,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) = 0;
 
+  // Writes to the given register. The register must be a canonical hardware register.
+  //
+  // This will fail if the current frame is not the top physical frame (otherwise it will clobber
+  // the register for the top frame).
+  virtual void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+                             fit::callback<void(const Err&)> cb) = 0;
+
   // The frame base pointer.
   //
   // This is not necessarily the "BP" register. The symbols can specify

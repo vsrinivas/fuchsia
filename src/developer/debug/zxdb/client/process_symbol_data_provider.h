@@ -27,7 +27,7 @@ class ProcessSymbolDataProvider : public SymbolDataProvider {
   // SymbolDataProvider overrides:
   debug_ipc::Arch GetArch() override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
-  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb) override;
+  void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override;
 
  protected:
   FRIEND_MAKE_REF_COUNTED(ProcessSymbolDataProvider);
