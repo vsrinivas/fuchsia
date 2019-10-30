@@ -9,6 +9,9 @@
 
 namespace ktl {
 
+using std::conjunction;
+using std::conjunction_v;
+
 using std::disjunction;
 using std::disjunction_v;
 
@@ -29,6 +32,12 @@ using std::is_pod_v;
 
 using std::is_same;
 using std::is_same_v;
+
+using std::is_standard_layout;
+using std::is_standard_layout_v;
+
+using std::is_trivial;
+using std::is_trivial_v;
 
 using std::is_void;
 using std::is_void_v;

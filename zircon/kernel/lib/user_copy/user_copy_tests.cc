@@ -137,6 +137,19 @@ static_assert(internal::is_copy_out_allowed<SomeTypeWithNoPadding>::value);
 static_assert(internal::is_copy_out_allowed<int>::value);
 static_assert(internal::is_copy_out_allowed<zx_port_packet_t>::value);
 
+// Verify is_copy_out_allowed<T>::value is false when T does not have a standard-layout.
+struct SomeTypeWithNonStandardLayout : SomeTypeWithNoPadding {
+  uint32_t another_field;
+};
+static_assert(!internal::is_copy_out_allowed<SomeTypeWithNonStandardLayout>::value);
+
+// Verify is_copy_out_allowed<T>::value is false when T is not trival.
+struct SomeTypeNonTrivial {
+  SomeTypeNonTrivial(const SomeTypeNonTrivial& other) { another_field = other.another_field; }
+  uint32_t another_field;
+};
+static_assert(!internal::is_copy_out_allowed<SomeTypeNonTrivial>::value);
+
 }  // namespace
 
 #define USER_COPY_UNITTEST(fname) UNITTEST(#fname, fname)

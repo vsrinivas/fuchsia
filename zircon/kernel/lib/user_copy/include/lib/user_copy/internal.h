@@ -42,9 +42,12 @@ inline constexpr size_t type_size<const volatile void>() {
 
 // Generates a type whose ::value is true if |T| is on the copy_to_user exception list.
 //
-// The copy_to_user exception list is a list of kernel ABI types that contain implicit padding, but
-// are allowed to be copied out to usermode. The purpose of this list is to prevent new types with
-// implicit padding from being added while continuing to allow existing code to function.
+// The copy_to_user exception list is a list of kernel ABI types that either have implicit padding,
+// are not trivial (C++'s TrivialType), or don't have a standard-layout (C++'s StandardLayoutType),
+// but are allowed to be copied out to usermode.
+//
+// The purpose of this list is to prevent the use of new types that are not ABI-safe while
+// continuing to allow existing code to function.
 //
 // Eventually, this exception list should be empty.
 template <typename T>
@@ -56,20 +59,28 @@ struct is_on_copy_to_user_exception_list
 
 // Generates a type whose ::value is true if |T| is allowed to be copied out to usermode.
 //
-// The purpose of this type trait is to prevent bugs by restricting the types that may be copied to
-// usermode. Generally speaking, there are two kinds of types allowed.
+// The purpose of this type trait is to ensure a stable ABI and prevent bugs by restricting the
+// types that may be copied to usermode. Generally speaking, there are two kinds of types allowed.
 //
 // 1. void - Used for bulk data transfer between kernel and usermode. Think VMO read/write and IPC.
 //
-// 2. Types with no implict padding (has_unique_object_representations) - Copying types with
-// implicit padding can lead information disclosure bugs because the padding may or may not contain
-// uninitialized data.
+// 2. ABI-safe types. These are types that:
 //
-// Exception: We make an exception for existing ABI types with implicit padding. See
-// |is_on_copy_to_user_exception_list|.
+//   * Are trival and can be trivially copied.
+//
+//   * Have a standard-layout, which ensures their layout won't change from compiler to compiler.
+//
+//   * Have unique object representations, which ensures they do not contain implicit
+//     padding. Copying types with implicit padding can lead information disclosure bugs because the
+//     padding may or may not contain uninitialized data.
+//
+// Exception: We make an exception for existing ABI types that either are not PODs or have implicit
+// padding. See |is_on_copy_to_user_exception_list|.
 template <typename T>
 struct is_copy_out_allowed
-    : ktl::disjunction<ktl::is_void<T>, ktl::has_unique_object_representations<T>,
+    : ktl::disjunction<ktl::is_void<T>,
+                       ktl::conjunction<ktl::is_trivial<T>, ktl::is_standard_layout<T>,
+                                        ktl::has_unique_object_representations<T>>,
                        is_on_copy_to_user_exception_list<T>> {};
 
 }  // namespace internal
