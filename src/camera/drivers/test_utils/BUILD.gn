@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("test_utils") {
-  visibility = [ "//src/camera/*" ]
   public_deps = [
     ":button_checker",
     ":fake-buffer-collection",
