@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "shell-commands"
         ],
         "services": [
             "fuchsia.netstack.Netstack",

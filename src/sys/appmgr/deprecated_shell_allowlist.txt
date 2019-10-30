@@ -10,7 +10,6 @@ fuchsia-pkg://fuchsia.com/format_trace_trace#meta/format_trace_trace.cmx
 fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx
 fuchsia-pkg://fuchsia.com/has_deprecated_shell#meta/has_deprecated_shell.cmx
 fuchsia-pkg://fuchsia.com/has_hub_deprecated_shell#meta/has_hub_deprecated_shell.cmx
-fuchsia-pkg://fuchsia.com/netstack_ifconfig_test#meta/netstack_ifconfig_test.cmx
 fuchsia-pkg://fuchsia.com/run_button_flutter_benchmark#meta/run_button_flutter_benchmark.cmx
 fuchsia-pkg://fuchsia.com/run_return_value_test#meta/run_return_value_test.cmx
 fuchsia-pkg://fuchsia.com/run_simplest_app_benchmark#meta/run_simplest_app_benchmark.cmx

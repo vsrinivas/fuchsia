@@ -87,7 +87,6 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/sshd-host:sshd-host",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/devices/tests/libdriver-integration-test",
-    "//src/connectivity/network/netstack:netstack_gotests",
     "//src/devices/coordinator:coordinator_tests",
   ]
 }
