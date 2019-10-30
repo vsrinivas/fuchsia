@@ -7,8 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_
 
-__BEGIN_CDECLS
-
 /* use the cpu local thread context pointer to store current_thread */
 static inline thread_t* get_current_thread(void) {
 #ifdef __clang__
@@ -29,7 +27,5 @@ static inline void set_current_thread(thread_t* t) {
   __arm_wsr64("tpidr_el1", (uint64_t)&t->arch.thread_pointer_location);
   __isb(ARM_MB_SY);
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_

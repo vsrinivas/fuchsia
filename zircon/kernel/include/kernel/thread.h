@@ -30,8 +30,6 @@
 class OwnedWaitQueue;
 class ThreadDispatcher;
 
-__BEGIN_CDECLS
-
 enum thread_state {
   THREAD_INITIAL = 0,
   THREAD_READY,
@@ -382,6 +380,7 @@ void thread_kill(thread_t* t);
 static inline bool thread_is_signaled(thread_t* t) { return t->signals != 0; }
 
 // Call the arch-specific signal handler.
+extern "C"
 void arch_iframe_process_pending_signals(iframe_t* iframe);
 
 // process pending signals, may never return because of kill signal
@@ -583,10 +582,6 @@ static inline void thread_preempt_set_pending(void) {
   current_thread->preempt_pending = true;
 }
 
-__END_CDECLS
-
-#ifdef __cplusplus
-
 #include <fbl/macros.h>
 
 // AutoReschedDisable is an RAII helper for disabling rescheduling
@@ -631,7 +626,5 @@ class AutoReschedDisable {
  private:
   bool started_ = false;
 };
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_

@@ -10,8 +10,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 
-__BEGIN_CDECLS
-
 static inline thread_t* get_current_thread(void) {
   /* Read directly from gs, rather than via x86_get_percpu()->current_thread,
    * so that this is atomic.  Otherwise, we could context switch between the
@@ -24,7 +22,5 @@ static inline void set_current_thread(thread_t* t) {
   /* See above for why this is a direct gs write */
   x86_write_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET, (uint64_t)t);
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
