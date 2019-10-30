@@ -86,7 +86,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
             auto locations = inspect_deprecated::SyncFindPaths("/hub");
 
             if (locations.empty()) {
-              FX_LOGS(ERROR) << "Failed to find any Inspect location";
+              FX_LOGS(ERROR) << "Failed to find any Inspect locations";
               return fit::error();
             }
 
@@ -96,6 +96,12 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
                 sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
               }
             }
+
+            if (sources.empty()) {
+              FX_LOGS(ERROR) << "Failed to find any non-system-objects Inspect locations";
+              return fit::error();
+            }
+
             return fit::ok(std::move(sources));
           })
           .and_then(
@@ -104,10 +110,6 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
               })
           .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
                         -> fit::result<fuchsia::mem::Buffer> {
-            if (sources.empty()) {
-              return fit::error();
-            }
-
             std::vector<inspect_deprecated::Source> ok_sources;
             for (auto& source : sources) {
               if (source.is_ok()) {
