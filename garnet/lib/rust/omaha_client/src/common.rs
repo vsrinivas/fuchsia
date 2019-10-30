@@ -14,6 +14,7 @@ use futures::lock::Mutex;
 use itertools::Itertools;
 use log::error;
 use serde_derive::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -44,7 +45,7 @@ impl From<Option<protocol::response::DayStart>> for UserCounting {
 
 /// Omaha only supports versions in the form of A.B.C.D, A.B.C, A.B or A.  This is a utility
 /// wrapper around that form of version.
-#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone)]
 pub struct Version(pub Vec<u32>);
 
 impl fmt::Display for Version {
@@ -99,6 +100,38 @@ macro_rules! impl_from {
     }
 }
 impl_from!(&[u32], [u32; 1], [u32; 2], [u32; 3], [u32; 4]);
+
+impl Version {
+    /// Return a slice that trims any trailing 0 from the Vec for comparison.
+    /// This is needed so that "1.0.0" is equal to "1.0".
+    fn key(&self) -> &[u32] {
+        let mut len = self.0.len();
+        while len > 0 && self.0[len - 1] == 0 {
+            len -= 1;
+        }
+        &self.0[..len]
+    }
+}
+
+impl PartialEq for Version {
+    fn eq(&self, other: &Self) -> bool {
+        self.key() == other.key()
+    }
+}
+
+impl Eq for Version {}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.key().cmp(other.key())
+    }
+}
+
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 /// The App struct holds information about an application to perform an update check for.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -442,6 +475,16 @@ mod tests {
     fn test_version_compare() {
         assert!(Version::from([1, 2, 3, 4]) < Version::from([2, 0, 3]));
         assert!(Version::from([1, 2, 3]) < Version::from([1, 2, 3, 4]));
+        assert!(Version::from([1, 0]) == Version::from([1, 0, 0]));
+        assert!(!(Version::from([1, 0]) > Version::from([1, 0, 0])));
+        assert!(!(Version::from([1, 0]) < Version::from([1, 0, 0])));
+        assert!(Version::from([1]) == Version::from([1, 0, 0, 0]));
+        assert!(Version::from([0]) == Version::from([0, 0, 0, 0]));
+        assert!(Version::from([0, 1, 0]) > Version::from([0, 0, 1, 0]));
+        assert!(Version::from([0]) < Version::from([0, 0, 1, 0]));
+        assert!(Version::from([1]) < Version::from([1, 0, 1, 0]));
+        assert!(Version::from([1, 0]) < Version::from([1, 0, 0, 1]));
+        assert!(Version::from([1, 0, 0]) > Version::from([0, 1, 2, 0]));
     }
 
     #[test]
