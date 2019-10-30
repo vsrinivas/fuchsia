@@ -167,12 +167,9 @@ executable("guest_integration_tests_bin") {
 
   sources = [
     "core_tests.cc",
-    "virtio_balloon_tests.cc",
     "virtio_block_tests.cc",
-    "virtio_console_tests.cc",
     "virtio_gpu_tests.cc",
     "virtio_net_tests.cc",
-    "virtio_rng_tests.cc",
     "virtio_vsock_tests.cc",
   ]
 
