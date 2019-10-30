@@ -5,28 +5,28 @@
 // This file contains functions that are shared between host
 // and target implementations of Blobfs.
 
-#ifndef BLOBFS_COMMON_H_
-#define BLOBFS_COMMON_H_
+#pragma once
+
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
+#include <fs/transaction/block_transaction.h>
+#include <zircon/types.h>
 
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <zircon/types.h>
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <blobfs/format.h>
-#include <fbl/algorithm.h>
-#include <fbl/macros.h>
-#include <fs/transaction/block_transaction.h>
 
 namespace blobfs {
 
-// The minimum size of a blob that we will consider for compression. Attempting
-// to compress a blob smaller than this will not result in any size savings, so
-// we can just skip it and save some work.
-constexpr uint64_t kCompressionSizeThresholdBytes = kBlobfsBlockSize;
+// The minimum number of blocks that must be saved by
+// compression to consider on-disk compression before writeback.
+constexpr uint64_t kCompressionMinBlocksSaved = 8;
+constexpr uint64_t kCompressionMinBytesSaved = kCompressionMinBlocksSaved * kBlobfsBlockSize;
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
@@ -64,5 +64,3 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
 }
 
 }  // namespace blobfs
-
-#endif  // BLOBFS_COMMON_H_
