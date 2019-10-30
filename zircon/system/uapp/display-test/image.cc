@@ -4,6 +4,7 @@
 
 #include "image.h"
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -24,10 +25,11 @@
 #include <fbl/algorithm.h>
 
 #include "fuchsia/hardware/display/c/fidl.h"
-#include "fuchsia/sysmem/c/fidl.h"
 #include "utils.h"
 
 static constexpr uint32_t kRenderPeriod = 120;
+
+namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
              uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
@@ -45,54 +47,43 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t 
 Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
                      zx_pixel_format_t format, uint32_t fg_color, uint32_t bg_color,
                      bool use_intel_y_tiling) {
-  zx::channel allocator2_client;
-  zx::channel allocator2_server;
-  zx_status_t status;
-  status = zx::channel::create(0, &allocator2_client, &allocator2_server);
-  if (status != ZX_OK) {
-    return nullptr;
-  }
-  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator2_server.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to connect to sysmem\n");
-    return nullptr;
+  std::unique_ptr<sysmem::Allocator::SyncClient> allocator;
+  {
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK ||
+        fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server.release()) != ZX_OK) {
+      fprintf(stderr, "Failed to connect to sysmem\n");
+      return nullptr;
+    }
+    allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
   }
 
-  zx::channel token_client_1;
-  zx::channel token_server_1;
-  status = zx::channel::create(0, &token_client_1, &token_server_1);
-
-  if (status != ZX_OK) {
-    return nullptr;
+  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token;
+  {
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK ||
+        !allocator->AllocateSharedCollection(std::move(server)).ok()) {
+      fprintf(stderr, "Failed to allocate shared collection\n");
+      return nullptr;
+    }
+    token = std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(client));
   }
-  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
-                                                            token_server_1.release());
-
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to allocate shared collection\n");
-    return nullptr;
-  }
-  zx::channel token_client_2;
-  zx::channel token_server_2;
-  status = zx::channel::create(0, &token_client_2, &token_server_2);
-
-  if (status != ZX_OK) {
-    return nullptr;
-  }
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
-
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to duplicate token\n");
-    return nullptr;
+  zx_handle_t display_token_handle;
+  {
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK ||
+        !token->Duplicate(/*rights_attenuation_mask=*/0xffffffff, std::move(server)).ok()) {
+      fprintf(stderr, "Failed to duplicate token\n");
+      return nullptr;
+    }
+    display_token_handle = client.release();
   }
 
   static uint32_t next_collection_id = INVALID_ID + 1;
 
   uint32_t collection_id = next_collection_id++;
 
-  status = fuchsia_sysmem_BufferCollectionTokenSync(token_client_1.get());
-  if (status != ZX_OK) {
+  if (!token->Sync().ok()) {
     fprintf(stderr, "Failed to sync token\n");
     return nullptr;
   }
@@ -104,16 +95,15 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
 
   fuchsia_hardware_display_ControllerImportBufferCollectionResponse import_rsp = {};
 
-  zx_handle_t handle = token_client_2.release();
   zx_channel_call_args_t import_call = {};
   import_call.wr_bytes = &import_msg;
   import_call.rd_bytes = &import_rsp;
   import_call.wr_num_bytes = sizeof(import_msg);
   import_call.rd_num_bytes = sizeof(import_rsp);
   import_call.wr_num_handles = 1;
-  import_call.wr_handles = &handle;
+  import_call.wr_handles = &display_token_handle;
   uint32_t actual_bytes, actual_handles;
-  status =
+  zx_status_t status =
       zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call, &actual_bytes, &actual_handles);
   if (status != ZX_OK || import_rsp.res != ZX_OK) {
     fprintf(stderr, "Failed to import buffer collection\n");
@@ -148,46 +138,45 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
     return nullptr;
   }
 
-  zx::channel collection_client;
-  zx::channel collection_server;
-  status = zx::channel::create(0, &collection_client, &collection_server);
-
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator2_client.get(), token_client_1.release(), collection_server.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Failed to bind shared collection\n");
-    return nullptr;
+  std::unique_ptr<sysmem::BufferCollection::SyncClient> collection;
+  {
+    zx::channel client, server;
+    if (zx::channel::create(0, &client, &server) != ZX_OK ||
+        !allocator->BindSharedCollection(std::move(*token->mutable_channel()), std::move(server))
+             .ok()) {
+      fprintf(stderr, "Failed to bind shared collection\n");
+      return nullptr;
+    }
+    collection = std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(client));
   }
 
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  sysmem::BufferCollectionConstraints constraints = {};
+  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
   constraints.has_buffer_memory_constraints = true;
-  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
-      constraints.buffer_memory_constraints;
+  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
-  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-      constraints.image_format_constraints[0];
+  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
   if (format == ZX_PIXEL_FORMAT_ARGB_8888 || format == ZX_PIXEL_FORMAT_RGB_x888) {
-    image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
-        .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+    image_constraints.color_space[0] = sysmem::ColorSpace{
+        .type = sysmem::ColorSpaceType::SRGB,
     };
   } else {
-    image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::NV12;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
-        .type = fuchsia_sysmem_ColorSpaceType_REC709,
+    image_constraints.color_space[0] = sysmem::ColorSpace{
+        .type = sysmem::ColorSpaceType::REC709,
     };
   }
   image_constraints.pixel_format.has_format_modifier = true;
   if (use_intel_y_tiling) {
     image_constraints.pixel_format.format_modifier.value =
-        fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
   } else {
-    image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+    image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   }
 
   image_constraints.min_coded_width = width;
@@ -205,31 +194,25 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  status =
-      fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, &constraints);
-  if (status != ZX_OK) {
+  if (!collection->SetConstraints(true, constraints).ok()) {
     fprintf(stderr, "Failed to set local constraints\n");
     return nullptr;
   }
 
-  zx_status_t allocation_status;
-  fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection_info{};
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
-      collection_client.get(), &allocation_status, &buffer_collection_info);
-
-  if (status != ZX_OK) {
+  auto info_result = collection->WaitForBuffersAllocated();
+  if (!info_result.ok() || info_result->status != ZX_OK) {
     fprintf(stderr, "Failed to wait for buffers allocated\n");
     return nullptr;
   }
 
-  status = fuchsia_sysmem_BufferCollectionClose(collection_client.get());
-  if (status != ZX_OK) {
+  if (!collection->Close().ok()) {
     fprintf(stderr, "Failed to close buffer collection\n");
     return nullptr;
   }
 
+  auto& buffer_collection_info = info_result->buffer_collection_info;
   uint32_t buffer_size = buffer_collection_info.settings.buffer_settings.size_bytes;
-  zx::vmo vmo(buffer_collection_info.buffers[0].vmo);
+  zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
   uint32_t stride_pixels =
       buffer_collection_info.settings.image_format_constraints.min_bytes_per_row /
       ZX_PIXEL_FORMAT_BYTES(format);

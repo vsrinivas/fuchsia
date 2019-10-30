@@ -12,7 +12,7 @@ zx_executable("display-test") {
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/fidl/fuchsia-hardware-display:c",
-    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
