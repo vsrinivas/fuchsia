@@ -69,15 +69,6 @@ test_package("magma_abi_conformance_tests") {
   ]
 }
 
-protected_libvulkan_envs = []
-
-# Filter out everything that's not astro or sherlock.
-foreach(env, magma_libvulkan_hardware_envs) {
-  if (env == sherlock_env || env == astro_env) {
-    protected_libvulkan_envs += [ env ]
-  }
-}
-
 test_package("vulkan-tests") {
   deps = [
     "benchmark",
@@ -113,13 +104,7 @@ test_package("vulkan-tests") {
     },
     {
       name = "vkext"
-      dest = "vkext_unprotected"
       environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "vkext"
-      dest = "vkext_protected"
-      environments = protected_libvulkan_envs
     },
     {
       name = "vkcopy"
