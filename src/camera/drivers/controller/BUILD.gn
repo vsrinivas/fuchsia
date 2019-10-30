@@ -2,8 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+
+all_gdc_config_files = [
+  "config_001_2176x2720-to-640x512-RS-YUV420SemiPlanar.bin",
+  "config_001_2240x1792-to-640x512-S-YUV420SemiPlanar.bin",
+  "config_002_1152x1440-to-1440x1152-DKCR-YUV420SemiPlanar.bin",
+  "config_002_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
+  "config_003_2176x2720-to-2240x1792-DKCR-YUV420SemiPlanar.bin",
+  "config_1152x1440_to_1152x864_Crop_Rotate.bin",
+  "config_1152x1440_to_512x384_Crop_Rotate.bin",
+  "config_1152x1440_to_720x540_Crop_Rotate.bin",
+]
 
 driver_module("controller-driver") {
   output_name = "controller"
@@ -14,6 +26,17 @@ driver_module("controller-driver") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
+  foreach(config_file, all_gdc_config_files) {
+    copy("gdc-config" + config_file) {
+      sources = [
+        "//prebuilt/camera/arm/gdc/configs/" + config_file,
+      ]
+      outputs = [
+        "$root_out_dir/firmware/" + config_file,
+      ]
+    }
+  }
 }
 
 source_set("controller-source") {
@@ -72,4 +95,19 @@ package("controller") {
       name = "controller.so"
     },
   ]
+
+  libraries = []
+  foreach(config_file, all_gdc_config_files) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":gdc-config" + config_file + "($shlib_toolchain)",
+    ]
+    libraries += [
+      {
+        name = "firmware/" + config_file
+      },
+    ]
+  }
 }

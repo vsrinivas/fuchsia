@@ -188,7 +188,9 @@ zx_status_t CameraPipelineManager::CreateGraph(
       }
       break;
     }
-    default: { return ZX_ERR_NOT_SUPPORTED; }
+    default: {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
   return ZX_OK;
 }
