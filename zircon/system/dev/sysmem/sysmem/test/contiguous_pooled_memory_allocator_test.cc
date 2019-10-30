@@ -31,9 +31,10 @@ class FakeOwner : public MemoryAllocator::Owner {
 
 class ContiguousPooledSystem : public zxtest::Test {
  public:
-  ContiguousPooledSystem() : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
-      true,  // is_cpu_accessible
-      false) {  // is_ready
+  ContiguousPooledSystem()
+      : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
+                   true,     // is_cpu_accessible
+                   false) {  // is_ready
     // nothing else to do here
   }
 
@@ -122,9 +123,7 @@ TEST_F(ContiguousPooledSystem, SetReady) {
   EXPECT_OK(allocator_.Init());
   EXPECT_FALSE(allocator_.is_ready());
   zx::vmo vmo;
-  // TODO(37686): This should be ZX_ERR_BAD_STATE, but is ZX_OK temporarily until sherlock has
-  // aml-securemem and secmem TA.
-  EXPECT_EQ(ZX_OK, allocator_.Allocate(kVmoSize, &vmo));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, allocator_.Allocate(kVmoSize, &vmo));
   allocator_.set_ready();
   EXPECT_TRUE(allocator_.is_ready());
   EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));

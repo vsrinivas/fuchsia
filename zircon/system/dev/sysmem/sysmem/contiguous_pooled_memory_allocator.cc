@@ -129,9 +129,8 @@ keepGoing:;
 
 zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* parent_vmo) {
   if (!is_ready_) {
-    // TODO(37686): We should be returning ZX_ERR_BAD_STATE in this case.
-    DRIVER_ERROR("temporarily ignoring !is_ready_ (bug 37686) - allocation_name_: %s",
-                 allocation_name_);
+    DRIVER_ERROR("allocation_name_: %s is not ready_, failing", allocation_name_);
+    return ZX_ERR_BAD_STATE;
   }
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
