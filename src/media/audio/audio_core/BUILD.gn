@@ -105,6 +105,7 @@ source_set("audio_core_lib") {
     "driver_utils.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
+    "pipeline_config.h",
     "policy_loader.cc",
     "policy_loader.h",
     "process_config.cc",

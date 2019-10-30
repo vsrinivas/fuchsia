@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -17,9 +18,13 @@ class ProcessConfig;
 class ProcessConfigBuilder {
  public:
   ProcessConfigBuilder& SetDefaultVolumeCurve(VolumeCurve curve);
+  ProcessConfigBuilder& AddOutputStreamEffects(PipelineConfig::MixGroup effects);
+  ProcessConfigBuilder& SetMixEffects(PipelineConfig::MixGroup effects);
+  ProcessConfigBuilder& SetLinearizeEffects(PipelineConfig::MixGroup effects);
   ProcessConfig Build();
 
  private:
+  PipelineConfig pipeline_;
   std::optional<VolumeCurve> default_volume_curve_;
 };
 
@@ -58,14 +63,17 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve) : default_volume_curve_(std::move(curve)) {}
+  ProcessConfig(VolumeCurve curve, PipelineConfig effects)
+      : default_volume_curve_(std::move(curve)), pipeline_(std::move(effects)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
+  const PipelineConfig& pipeline() const { return pipeline_; }
 
  private:
   static std::optional<ProcessConfig> instance_;
 
   VolumeCurve default_volume_curve_;
+  PipelineConfig pipeline_;
 };
 
 }  // namespace media::audio
