@@ -85,17 +85,9 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   void TearDown() override {
-    if (!controller_) {
-      return;
+    if (inspect_test_app_controller_) {
+      TerminateInspectTestApp();
     }
-    controller_->Kill();
-    bool done = false;
-    controller_.events().OnTerminated = [&done](int64_t code,
-                                                fuchsia::sys::TerminationReason reason) {
-      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-      done = true;
-    };
-    RunLoopUntil([&done] { return done; });
   }
 
  protected:
@@ -143,9 +135,10 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
     environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
-    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    environment_->CreateComponent(std::move(launch_info),
+                                  inspect_test_app_controller_.NewRequest());
     bool ready = false;
-    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
   }
 
@@ -274,11 +267,24 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
                 })));
   }
 
+ private:
+  void TerminateInspectTestApp() {
+    inspect_test_app_controller_->Kill();
+    bool is_inspect_test_app_terminated = false;
+    inspect_test_app_controller_.events().OnTerminated =
+        [&is_inspect_test_app_terminated](int64_t code, fuchsia::sys::TerminationReason reason) {
+          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+          is_inspect_test_app_terminated = true;
+        };
+    RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });
+  }
+
+ protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
+  fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 
   std::string test_name_;
 };

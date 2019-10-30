@@ -715,17 +715,9 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
   }
 
   void TearDown() override {
-    if (!controller_) {
-      return;
+    if (inspect_test_app_controller_) {
+      TerminateInspectTestApp();
     }
-    controller_->Kill();
-    bool done = false;
-    controller_.events().OnTerminated = [&done](int64_t code,
-                                                fuchsia::sys::TerminationReason reason) {
-      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-      done = true;
-    };
-    RunLoopUntil([&done] { return done; });
   }
 
  protected:
@@ -744,9 +736,10 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
     environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
-    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    environment_->CreateComponent(std::move(launch_info),
+                                  inspect_test_app_controller_.NewRequest());
     bool ready = false;
-    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
   }
 
@@ -769,12 +762,25 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
     EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
   }
 
+ private:
+  void TerminateInspectTestApp() {
+    inspect_test_app_controller_->Kill();
+    bool is_inspect_test_app_terminated = false;
+    inspect_test_app_controller_.events().OnTerminated =
+        [&is_inspect_test_app_terminated](int64_t code, fuchsia::sys::TerminationReason reason) {
+          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+          is_inspect_test_app_terminated = true;
+        };
+    RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });
+  }
+
+ protected:
   std::unique_ptr<DataProvider> data_provider_;
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
+  fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 };
 
 TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
