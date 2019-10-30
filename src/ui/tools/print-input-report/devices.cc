@@ -25,6 +25,9 @@ zx_status_t PrintInputDescriptor(Printer* printer, llcpp_report::InputDevice::Sy
   if (result->descriptor.has_sensor()) {
     PrintSensorDesc(printer, result->descriptor.sensor());
   }
+  if (result->descriptor.has_touch()) {
+    PrintTouchDesc(printer, result->descriptor.touch());
+  }
   return ZX_OK;
 }
 
@@ -64,6 +67,49 @@ void PrintSensorDesc(Printer* printer, const llcpp_report::SensorDescriptor& sen
   printer->DecreaseIndent();
 }
 
+void PrintTouchDesc(Printer* printer, const llcpp_report::TouchDescriptor& touch_desc) {
+  printer->Print("Touch Descriptor:\n");
+  printer->IncreaseIndent();
+  if (touch_desc.has_touch_type()) {
+    printer->Print("Touch Type: %s\n", printer->TouchTypeToString(touch_desc.touch_type()));
+  }
+  if (touch_desc.has_max_contacts()) {
+    printer->Print("Max Contacts: %ld\n", touch_desc.max_contacts());
+  }
+  if (touch_desc.has_contacts()) {
+    for (size_t i = 0; i < touch_desc.contacts().count(); i++) {
+      const llcpp_report::ContactDescriptor& contact = touch_desc.contacts()[i];
+
+      printer->Print("Contact: %02d\n", i);
+      printer->IncreaseIndent();
+
+      if (contact.has_position_x()) {
+        printer->Print("Position X:\n");
+        printer->PrintAxisIndented(contact.position_x());
+      }
+      if (contact.has_position_y()) {
+        printer->Print("Position Y:\n");
+        printer->PrintAxisIndented(contact.position_y());
+      }
+      if (contact.has_pressure()) {
+        printer->Print("Pressure:\n");
+        printer->PrintAxisIndented(contact.pressure());
+      }
+      if (contact.has_contact_width()) {
+        printer->Print("Contact Width:\n");
+        printer->PrintAxisIndented(contact.contact_width());
+      }
+      if (contact.has_contact_height()) {
+        printer->Print("Contact Height:\n");
+        printer->PrintAxisIndented(contact.contact_height());
+      }
+
+      printer->DecreaseIndent();
+    }
+  }
+  printer->DecreaseIndent();
+}
+
 int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* client,
                      size_t num_reads) {
   // Get the reports event.
@@ -90,6 +136,7 @@ int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* cl
     // Get the report.
     llcpp_report::InputDevice::ResultOf::GetReports result = client->GetReports();
     if (result.status() != ZX_OK) {
+      printer->Print("GetReports FIDL call returned %s\n", zx_status_get_string(result.status()));
       return 1;
     }
 
@@ -102,6 +149,9 @@ int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* cl
       }
       if (report.has_sensor()) {
         PrintSensorReport(printer, report.sensor());
+      }
+      if (report.has_touch()) {
+        PrintTouchReport(printer, report.touch());
       }
       printer->Print("\n");
     }
@@ -130,6 +180,39 @@ void PrintSensorReport(Printer* printer, const llcpp_report::SensorReport& senso
 
   for (size_t i = 0; i < sensor_report.values().count(); i++) {
     printer->Print("Sensor[%02d]: %08d\n", i, sensor_report.values()[i]);
+  }
+}
+
+void PrintTouchReport(Printer* printer, const llcpp_report::TouchReport& touch_report) {
+  if (touch_report.has_contacts()) {
+    for (size_t i = 0; i < touch_report.contacts().count(); i++) {
+      const llcpp_report::ContactReport& contact = touch_report.contacts()[i];
+
+      if (contact.has_contact_id()) {
+        printer->Print("Contact ID: %2ld\n", contact.contact_id());
+      } else {
+        printer->Print("Contact: %2d\n", i);
+      }
+
+      printer->IncreaseIndent();
+      if (contact.has_position_x()) {
+        printer->Print("Position X:     %08ld\n", contact.position_x());
+      }
+      if (contact.has_position_y()) {
+        printer->Print("Position Y:     %08ld\n", contact.position_y());
+      }
+      if (contact.has_pressure()) {
+        printer->Print("Pressure:       %08ld\n", contact.pressure());
+      }
+      if (contact.has_contact_width()) {
+        printer->Print("Contact Width:  %08ld\n", contact.contact_width());
+      }
+      if (contact.has_contact_height()) {
+        printer->Print("Contact Height: %08ld\n", contact.contact_height());
+      }
+
+      printer->DecreaseIndent();
+    }
   }
 }
 

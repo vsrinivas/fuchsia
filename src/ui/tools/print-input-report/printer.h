@@ -65,6 +65,13 @@ const char* const kSensorTypeStrings[] = {
     "LIGHT_GREEN",    "LIGHT_BLUE",
 };
 
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::TouchType::TOUCHSCREEN) == 1);
+// These strings must be ordered based on the enums in fuchsia.input.report/touch.fidl.
+const char* const kTouchTypeStrings[] = {
+    "ERROR",
+    "TOUCHSCREEN",
+};
+
 class Printer {
  public:
   Printer() = default;
@@ -87,6 +94,14 @@ class Printer {
       return kSensorTypeStrings[0];
     }
     return kSensorTypeStrings[unit_index];
+  }
+
+  static const char* TouchTypeToString(::llcpp::fuchsia::input::report::TouchType type) {
+    uint32_t unit_index = static_cast<uint32_t>(type);
+    if (unit_index >= countof(kTouchTypeStrings)) {
+      return kTouchTypeStrings[0];
+    }
+    return kTouchTypeStrings[unit_index];
   }
 
   void PrintAxis(::llcpp::fuchsia::input::report::Axis axis) {

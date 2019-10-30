@@ -282,4 +282,93 @@ TEST_F(PrintInputReport, PrintSensorReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
+TEST_F(PrintInputReport, PrintTouchDescriptor) {
+  hid_input_report::TouchDescriptor touch_desc = {};
+  touch_desc.touch_type = llcpp_report::TouchType::TOUCHSCREEN;
+
+  touch_desc.max_contacts = 100;
+
+  touch_desc.contacts[0].position_x.enabled = true;
+  touch_desc.contacts[0].position_x.range.min = 0;
+  touch_desc.contacts[0].position_x.range.max = 300;
+
+  touch_desc.contacts[0].position_y.enabled = true;
+  touch_desc.contacts[0].position_y.range.min = 0;
+  touch_desc.contacts[0].position_y.range.max = 500;
+
+  touch_desc.contacts[0].pressure.enabled = true;
+  touch_desc.contacts[0].pressure.range.min = 0;
+  touch_desc.contacts[0].pressure.range.max = 100;
+
+  touch_desc.num_contacts = 1;
+
+  hid_input_report::ReportDescriptor desc;
+  desc.descriptor = touch_desc;
+
+  fake_device_->SetDescriptor(desc);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Touch Descriptor:\n",
+      "  Touch Type: TOUCHSCREEN\n",
+      "  Max Contacts: 100\n",
+      "  Contact: 00\n",
+      "    Position X:\n",
+      "      Unit:     NONE\n",
+      "      Min:         0\n",
+      "      Max:       300\n",
+      "    Position Y:\n",
+      "      Unit:     NONE\n",
+      "      Min:         0\n",
+      "      Max:       500\n",
+      "    Pressure:\n",
+      "      Unit:     NONE\n",
+      "      Min:         0\n",
+      "      Max:       100\n",
+  });
+
+  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+}
+
+TEST_F(PrintInputReport, PrintTouchReport) {
+  hid_input_report::TouchReport touch_report = {};
+
+  touch_report.num_contacts = 1;
+
+  touch_report.contacts[0].has_contact_id = true;
+  touch_report.contacts[0].contact_id = 10;
+  touch_report.contacts[0].has_position_x = true;
+  touch_report.contacts[0].position_x = 123;
+
+  touch_report.contacts[0].has_position_y = true;
+  touch_report.contacts[0].position_y = 234;
+
+  touch_report.contacts[0].has_pressure = true;
+  touch_report.contacts[0].pressure = 345;
+
+  touch_report.contacts[0].has_contact_width = true;
+  touch_report.contacts[0].contact_width = 678;
+
+  touch_report.contacts[0].has_contact_height = true;
+  touch_report.contacts[0].contact_height = 789;
+
+  hid_input_report::Report report;
+  report.report = touch_report;
+
+  fake_device_->SetReport(report);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Contact ID: 10\n",
+      "  Position X:     00000123\n",
+      "  Position Y:     00000234\n",
+      "  Pressure:       00000345\n",
+      "  Contact Width:  00000678\n",
+      "  Contact Height: 00000789\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+}
+
 }  // namespace test
