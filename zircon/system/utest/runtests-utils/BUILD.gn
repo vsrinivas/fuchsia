@@ -18,8 +18,9 @@ zx_test("runtests-utils") {
     "$zx/system/ulib/unittest",
   ]
   data_deps = [
-    ":publish-data-helper",
+    ":packaged-publish-data-helper",
     ":test-data",
+    ":test-scripts",
   ]
 }
 
@@ -41,6 +42,19 @@ zx_executable("publish-data-helper") {
   # into summary.json.
 }
 
+resource("packaged-publish-data-helper") {
+  testonly = true
+  deps = [
+    ":publish-data-helper",
+  ]
+  outputs = [
+    "testdata/runtests-utils/publish-data/publish-data-helper",
+  ]
+  sources = [
+    "$target_out_dir/publish-data-helper",
+  ]
+}
+
 generated_resource("test-data") {
   testonly = true
   contents = [ "Hello world!" ]
@@ -48,3 +62,161 @@ generated_resource("test-data") {
     "testdata/runtests-utils/test-data",
   ]
 }
+
+# Generates a build script with a sensible #! depending on what our target is.
+# We used to generate these at runtime, but that design conflicts with our
+# goals around verified execution, so now we pregenerate them and include them
+# as part of a signed package.
+template("runtests_test_script") {
+  forward_variables_from(invoker, "*", ["contents", "subdirectory"])
+  assert(defined(invoker.contents))
+
+  if (!defined(invoker.subdirectory)) {
+    subdirectory = ""
+  } else {
+    subdirectory = "${invoker.subdirectory}/"
+  }
+
+  genfile = "$target_out_dir/testdata/runtests-utils/${subdirectory}${target_name}"
+
+  action("${target_name}.txt") {
+    testonly = true
+    script = "/bin/bash"
+    args = ["-c"]
+    shebang = "#!/boot/bin/sh"
+    args += [
+      "printf '${shebang}\n\n${invoker.contents}\n' > $genfile && chmod a+x $genfile"
+    ]
+    outputs = [
+      "$genfile",
+    ]
+  }
+
+  resource("${target_name}") {
+    testonly = true
+    deps = [
+      ":${target_name}.txt",
+    ]
+    outputs = [
+      "testdata/runtests-utils/${subdirectory}${target_name}",
+    ]
+    sources = [
+      "$genfile",
+    ]
+  }
+}
+
+runtests_test_script("succeed.sh") {
+  contents = "exit 0"
+}
+runtests_test_script("expect-this-success.sh") {
+  contents = "echo Expect this!"
+}
+runtests_test_script("expect-this-failure.sh") {
+  contents = "echo Expect this! 1>&2\nexit 77"
+}
+
+runtests_test_script("a.sh") {
+  contents = ""
+  subdirectory = "runtestsbasicpass"
+}
+
+runtests_test_script("b.sh") {
+  contents = ""
+  subdirectory = "runtestsbasicpass"
+}
+
+runtests_test_script("test-basic-succeed.sh") {
+  contents = "echo Success! \$@"
+  subdirectory = "runtestsbasicfail"
+}
+
+runtests_test_script("test-basic-fail.sh") {
+  contents = "echo Failure!  \$@ 1>&2\nexit 77"
+  subdirectory = "runtestsbasicfail"
+}
+
+runtests_test_script("test-globs-root.sh") {
+  contents = "echo Success! \$@"
+  subdirectory = "testglobs"
+}
+
+runtests_test_script("test-globs-one.sh") {
+  contents = "echo Success! \$@"
+  subdirectory = "testglobs/A/B/C"
+}
+
+runtests_test_script("test-globs-two.sh") {
+  contents = "echo Success! \$@"
+  subdirectory = "testglobs/A/D/C"
+}
+
+runtests_test_script("test-with-output-succeed.sh") {
+  contents = "echo Success! \$@"
+  subdirectory = "testwithoutput"
+}
+
+runtests_test_script("test-with-output-fail.sh") {
+  contents = "echo Failure!  \$@ 1>&2\nexit 77"
+  subdirectory = "testwithoutput"
+}
+
+runtests_test_script("succeed-with-echo.sh") {
+  contents = "echo Success! \$@"
+}
+
+runtests_test_script("test-root-dir.sh") {
+  # Used by RunTestRootDir.
+  contents = "read line < \$TEST_ROOT_DIR/testdata/runtests-utils/test-data\necho \\\"\$line\\\"\n"
+}
+
+runtests_test_script("test-inf-loop.sh") {
+  # Used by RunTestTimeout
+  contents = "while true; do echo \"\"; done"
+}
+
+group("test-scripts") {
+  testonly = true
+  deps = [
+    # Used by RunTestRootDir in fuchsia-run-test.cc
+    ":test-root-dir.sh",
+
+    # Used by RunTestSuccess,
+    # DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs,
+    # RunTestTimeout
+    ":succeed.sh",
+
+    # Used in RunTestTimeout
+    ":test-inf-loop.sh",
+
+    # Used by RunTestSuccessWithStdout
+    ":expect-this-success.sh",
+
+    # Used by RunTestFailureWithStderr
+    ":expect-this-failure.sh",
+
+    # Used by RunTestsWithVerbosity, RunTestsWithArguments, and
+    # DiscoverAndRunTestsFallsBackToDefaultDirs
+    ":succeed-with-echo.sh",
+
+    # Used in an isolated directory by DiscoverAndRunTestsBasicPass
+    ":a.sh",
+    ":b.sh",
+
+    # Used in an isolated directory by DiscoverAndRunTestsBasicFail
+    ":test-basic-succeed.sh",
+    ":test-basic-fail.sh",
+
+    # Used in an isolated tree by DiscoverAndRunTestsWithGlobs
+    ":test-globs-root.sh",
+    ":test-globs-one.sh",
+    ":test-globs-two.sh",
+
+    # Used in an isolated directory by DiscoverAndRunTestsWithOutput and
+    # DiscoverAndRunTestsWithSyslogOutput
+    ":test-with-output-succeed.sh",
+    ":test-with-output-fail.sh",
+
+  ]
+}
+

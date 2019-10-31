@@ -186,21 +186,19 @@ bool TestFileComponentInfoTest() {
   END_TEST;
 }
 
-static ScopedTestFile NewPublishFile(const fbl::String& test_name) {
-  const char* root_dir = getenv("TEST_ROOT_DIR");
-  if (root_dir == nullptr) {
-    root_dir = "";
-  }
-  const fbl::String path = fbl::String::Concat({root_dir, "/bin/publish-data-helper"});
-  return ScopedTestFile(test_name.c_str(), path.c_str());
+static fbl::String PublishDataHelperDir() {
+  return JoinPath(packaged_script_dir(), "publish-data");
+}
+
+static fbl::String PublishDataHelperBin() {
+  return JoinPath(PublishDataHelperDir(), "publish-data-helper");
 }
 
 bool RunTestDontPublishData() {
   BEGIN_TEST;
 
   ScopedTestDir test_dir;
-  fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-  auto file = NewPublishFile(test_name);
+  fbl::String test_name = PublishDataHelperBin();
 
   const char* argv[] = {test_name.c_str(), nullptr};
   std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
@@ -216,8 +214,7 @@ bool RunTestsPublishData() {
   BEGIN_TEST;
 
   ScopedTestDir test_dir;
-  fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-  auto file = NewPublishFile(test_name);
+  fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   const signed char verbosity = 77;
@@ -237,8 +234,7 @@ bool RunDuplicateTestsPublishData() {
   BEGIN_TEST;
 
   ScopedTestDir test_dir;
-  fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-  auto file = NewPublishFile(test_name);
+  fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
   const signed char verbosity = 77;
@@ -260,13 +256,13 @@ bool RunAllTestsPublishData() {
   BEGIN_TEST;
 
   ScopedTestDir test_dir;
-  fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
-  auto file = NewPublishFile(test_name);
+  fbl::String test_containing_dir = PublishDataHelperDir();
+  fbl::String test_name = PublishDataHelperBin();
 
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-1");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
+  const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_containing_dir.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
@@ -317,9 +313,10 @@ bool RunAllTestsPublishData() {
 bool RunTestRootDir() {
   BEGIN_TEST;
 
-  ScopedTestDir test_dir;
-  fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
+  PackagedScriptFile test_script("test-root-dir.sh");
+  fbl::String test_name = test_script.path();
   const char* argv[] = {test_name.c_str(), nullptr};
+  ScopedTestDir test_dir;
 
   // This test should have gotten TEST_ROOT_DIR. Confirm that we can find our
   // artifact in the "testdata/" directory under TEST_ROOT_DIR.
@@ -330,10 +327,6 @@ bool RunTestRootDir() {
 
   // Run a test and confirm TEST_ROOT_DIR gets passed along.
   {
-    const char script_contents[] =
-        "read line < $TEST_ROOT_DIR/testdata/runtests-utils/test-data\n"
-        "echo \"$line\"\n";
-    ScopedScriptFile script(argv[0], script_contents);
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
     std::unique_ptr<Result> result =
         RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);

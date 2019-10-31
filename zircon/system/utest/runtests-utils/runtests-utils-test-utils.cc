@@ -27,19 +27,35 @@ namespace runtests {
 // HELPER CLASSES
 ///////////////////////////////////////////////////////////////////////////////
 
-ScopedScriptFile::ScopedScriptFile(const fbl::StringPiece path, const fbl::StringPiece contents)
-    : path_(path) {
-  const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
+fbl::String packaged_script_dir() {
+  fbl::String test_root_dir(getenv("TEST_ROOT_DIR"));
+  fbl::String all_test_data_dir(JoinPath(test_root_dir, "testdata"));
+  fbl::String runtests_utils_test_data_dir(JoinPath(all_test_data_dir, "runtests-utils"));
+  return runtests_utils_test_data_dir;
+}
+
+PackagedScriptFile::PackagedScriptFile(const fbl::StringPiece path) {
+  fbl::String script_dir = packaged_script_dir();
+  path_ = JoinPath(script_dir, path);
+
+  // Open the file to be sure that it exists.
+  const int fd = open(path_.data(), O_RDONLY);
   ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
-  ZX_ASSERT(sizeof(kScriptShebang) ==
-            static_cast<size_t>(write(fd, kScriptShebang, sizeof(kScriptShebang))));
-  ZX_ASSERT(contents.size() == static_cast<size_t>(write(fd, contents.data(), contents.size())));
   ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));
 }
 
-ScopedScriptFile::~ScopedScriptFile() { remove(path_.data()); }
+PackagedScriptFile::~PackagedScriptFile() {}
 
-fbl::StringPiece ScopedScriptFile::path() const { return path_; }
+fbl::StringPiece PackagedScriptFile::path() const { return path_.ToStringPiece(); }
+
+ScopedStubFile::ScopedStubFile(const fbl::StringPiece path)
+  : path_(path) {
+  const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
+  ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
+  ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));
+}
+
+ScopedStubFile::~ScopedStubFile() { remove(path_.data()); }
 
 ScopedTestFile::ScopedTestFile(const fbl::StringPiece path, const fbl::StringPiece file)
     : path_(path) {
@@ -133,8 +149,9 @@ bool GetOutputFileRelPath(const fbl::StringPiece& output_dir, const fbl::StringP
 
 namespace {
 
-// This ensures that ScopedTestDir and ScopedScriptFile, which we make heavy
-// use of in these tests, are indeed scoped and tear down without error.
+// This ensures that ScopedTestDir, ScopedTestFile, and ScopedStubFile, which we
+// make heavy use of in these tests, are indeed scoped and tear down without
+// error.
 bool ScopedDirsAndFilesAreIndeedScoped() {
   BEGIN_TEST;
 
@@ -147,11 +164,13 @@ bool ScopedDirsAndFilesAreIndeedScoped() {
     EXPECT_EQ(0, NumEntriesInDir(dir.path()));
     {
       fbl::String file_name1 = JoinPath(dir.path(), "a.sh");
-      ScopedScriptFile file1(file_name1, "A");
+      PackagedScriptFile source_file_1("succeed.sh");
+      ScopedTestFile file1(file_name1, source_file_1.path());
+
       EXPECT_EQ(1, NumEntriesInDir(dir.path()));
       {
         fbl::String file_name2 = JoinPath(dir.path(), "b.sh");
-        ScopedScriptFile file2(file_name2, "B");
+        ScopedStubFile file2(file_name2);
         EXPECT_EQ(2, NumEntriesInDir(dir.path()));
       }
       EXPECT_EQ(1, NumEntriesInDir(dir.path()));

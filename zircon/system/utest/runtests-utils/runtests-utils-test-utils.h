@@ -26,23 +26,28 @@ namespace runtests {
 // Root directory of memfs installed for duration of test.
 static constexpr char kMemFsRoot[] = "/test-memfs";
 
-const char kScriptShebang[32] = "#!/boot/bin/sh\n\n";
-
 static constexpr char kExpectedJSONOutputPrefix[] = "{\n  \"tests\": [\n";
 // We don't want to count the null terminator.
 static constexpr size_t kExpectedJSONOutputPrefixSize = sizeof(kExpectedJSONOutputPrefix) - 1;
 
-// Creates a script file with given contents in its constructor and deletes it
-// in its destructor.
-class ScopedScriptFile {
- public:
-  // |path| is the path of the file to be created. Should start with
-  // kMemFsPath. |contents| are the script contents. Shebang line will be
-  // added automatically.
-  ScopedScriptFile(const fbl::StringPiece path, const fbl::StringPiece contents);
-  ~ScopedScriptFile();
-  fbl::StringPiece path() const;
+fbl::String packaged_script_dir();
 
+// Represents a script generated at build time, selected from the appropriate
+// target directory.
+class PackagedScriptFile {
+ public:
+  PackagedScriptFile(const fbl::StringPiece path);
+  ~PackagedScriptFile();
+  fbl::StringPiece path() const;
+ private:
+  fbl::String path_;
+};
+
+// Creates an empty file and deletes it in its destructor.
+class ScopedStubFile {
+ public:
+  ScopedStubFile(const fbl::StringPiece path);
+  ~ScopedStubFile();
  private:
   const fbl::StringPiece path_;
 };
