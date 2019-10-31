@@ -82,6 +82,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kTrue,            kLangAll,  "true"},
     {ExprTokenType::kFalse,           kLangAll,  "false"},
     {ExprTokenType::kConst,           kLangAll,  "const"},
+    {ExprTokenType::kMut,             kLangRust, "mut"},
     {ExprTokenType::kVolatile,        kLangC,    "volatile"},
     {ExprTokenType::kRestrict,        kLangC,    "restrict"},
     {ExprTokenType::kReinterpretCast, kLangC,    "reinterpret_cast"},

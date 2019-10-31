@@ -719,15 +719,21 @@ TEST_F(ExprParserTest, RustCast) {
       " IDENTIFIER(\"a\")\n",
       GetParseString("a as Type", ExprLanguage::kRust, &TestLookupName));
 
-  // TODO(sadmac): The parentheses should be unnecessary but the type parser thinks the && is more
-  // type stuff and takes it. More Rust modality is needed.
   EXPECT_EQ(
       "BINARY_OP(&&)\n"
       " CAST(Rust)\n"
       "  TYPE(Type*)\n"
       "  IDENTIFIER(\"a\")\n"
       " IDENTIFIER(\"b\")\n",
-      GetParseString("(a as Type*) && b", ExprLanguage::kRust, &TestLookupName));
+      GetParseString("a as *Type && b", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "BINARY_OP(&&)\n"
+      " CAST(Rust)\n"
+      "  TYPE(Type*******)\n"
+      "  IDENTIFIER(\"a\")\n"
+      " IDENTIFIER(\"b\")\n",
+      GetParseString("a as &mut &mut && mut &*&Type && b", ExprLanguage::kRust, &TestLookupName));
 
   EXPECT_EQ(
       "CAST(Rust)\n"

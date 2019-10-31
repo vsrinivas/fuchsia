@@ -127,6 +127,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kTrue
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kFalse
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kConst
+    {nullptr,                      nullptr,                      -1},                             // kMut
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kVolatile
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kRestrict
     {&ExprParser::CastPrefix,      nullptr,                      -1},                             // kReinterpretCast
@@ -396,8 +397,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
       default: {
         // Any other token type means we're done. The outer parser will figure out what it means.
-        if (expand_types && result.type) {
-          // When we found a type, add on any trailing modifiers like "*".
+        if (expand_types && result.type && language_ != ExprLanguage::kRust) {
+          // When we found a type, add on any trailing modifiers like "*". Rust doesn't have
+          // trailing modifiers, so skip this for Rust.
           result.type = ParseType(std::move(result.type));
         }
         return result;
@@ -433,7 +435,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 }
 
 fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
-  // The thing we want to parse is:
+  // For C++, the thing we want to parse is:
   //
   //   cv-qualifier := [ "const" ] [ "volatile" ] [ "restrict" ]
   //
@@ -446,17 +448,49 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   // to references and "int & const" while C++ says you can't apply const to the reference itself
   // (it permits only "const int&" or "int const &" which are the same). It also allows "restrict"
   // to be used in invalid places.
+  //
+  // For Rust, the thing we want to parse is:
+  //
+  //   qualifier := "&" | "*" | "mut"
+  //
+  //   type-id = qualifier* type-name
+  //
+  // This is simpler than the C++ case. Rust has some restrictions on how qualifiers appear, and
+  // again we are more permissive, mostly because Rust's mutability constraints aren't important
+  // to the debugger case, so we can afford to be less particular. References and pointers are all
+  // the same in the compiled code, so we interchange them freely.
 
   fxl::RefPtr<Type> type;
   std::vector<DwarfTag> type_qual;
+  size_t pointer_levels = 0;
   if (optional_base) {
+    FXL_DCHECK(language_ != ExprLanguage::kRust);
     // Type name already known, start parsing after it.
     type = std::move(optional_base);
   } else {
-    // Read "const", etc. that comes before the type name.
-    ConsumeCVQualifier(&type_qual);
-    if (has_error())
-      return nullptr;
+    if (language_ == ExprLanguage::kRust) {
+      while (!at_end()) {
+        const ExprToken& token = cur_token();
+        if (token.type() == ExprTokenType::kStar) {
+          pointer_levels++;
+        } else if (token.type() == ExprTokenType::kAmpersand) {
+          pointer_levels++;
+        } else if (token.type() == ExprTokenType::kDoubleAnd) {
+          pointer_levels += 2;
+        } else if (token.type() == ExprTokenType::kMut) {
+          // Ignore mut.
+        } else {
+          // Done with the ptr-operators.
+          break;
+        }
+        Consume();  // Eat the operator token.
+      }
+    } else {
+      // Read "const", etc. that comes before the type name.
+      ConsumeCVQualifier(&type_qual);
+      if (has_error())
+        return nullptr;
+    }
 
     // Read the type name itself.
     if (at_end()) {
@@ -474,6 +508,14 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
       return nullptr;
     }
     type = std::move(parse_result.type);
+
+    for (size_t i = 0; i < pointer_levels; i++) {
+      type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, std::move(type));
+    }
+  }
+
+  if (language_ == ExprLanguage::kRust) {
+    return type;
   }
 
   // Read "const" etc. that comes after the type name. These apply the same as the ones that come
