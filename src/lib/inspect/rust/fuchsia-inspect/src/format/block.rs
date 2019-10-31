@@ -508,12 +508,19 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    // TODO(fxb/39975): Uncomment or delete the next line depending on fxb/40012.
+    // const ZERO_BUFFER: [u8; 2048] = [0; constants::MAX_ORDER_SIZE];
+
     /// Converts a block to a FREE block
     pub fn become_free(&self, next: u32) {
         let mut header = self.read_header();
         header.set_block_type(BlockType::Free.to_u8().unwrap());
         header.set_free_next_index(next);
         self.write_header(header);
+        // TODO(fxb/39975): Uncomment or delete the next lines depending on the resolution of
+        // fxb/40012. They've been verified to pass the Validator test for cleared Free payload.
+        //self.container.write_bytes(utils::offset_for_index(self.index) + 8,
+        //    &Self::ZERO_BUFFER[..utils::payload_size_for_order(self.order())]);
     }
 
     /// Converts a block to an *_ARRAY_VALUE block

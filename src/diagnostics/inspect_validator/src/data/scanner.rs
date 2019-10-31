@@ -11,6 +11,7 @@ use {
         format::{
             block::{ArrayFormat, Block, PropertyFormat},
             block_type::BlockType,
+            constants::{MAX_ORDER_SIZE, MIN_ORDER_SIZE},
         },
         reader as ireader,
     },
@@ -58,19 +59,113 @@ impl TryFrom<&[u8]> for Scanner {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?)
+        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?, bytes)
     }
 }
 
 impl TryFrom<&Vmo> for Scanner {
     type Error = Error;
-    fn try_from(bytes: &Vmo) -> Result<Self, Self::Error> {
-        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?)
+    fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
+        // NOTE: In any context except a controlled test, it's not safe to read the VMO manually -
+        // the contents may differ or even be invalid (mid-update).
+        let size = vmo.get_size()?;
+        let mut buffer = vec![0u8; size as usize];
+        vmo.read(&mut buffer[..], 0)?;
+        Scanner::scan(ireader::snapshot::Snapshot::try_from(vmo)?, &buffer)
     }
 }
 
+fn low_bits(number: u8, n_bits: usize) -> u8 {
+    let n_bits = min(n_bits, 8);
+    let mask = !(0xff_u16 << n_bits) as u8;
+    number & mask
+}
+
+fn high_bits(number: u8, n_bits: usize) -> u8 {
+    let n_bits = min(n_bits, 8);
+    let mask = !(0xff_u16 >> n_bits) as u8;
+    number & mask
+}
+
+const BITS_PER_BYTE: usize = 8;
+
+/// Get size in bytes of a given |order|. Copied from private mod fuchsia-inspect/src/utils.rs
+fn order_to_size(order: usize) -> usize {
+    MIN_ORDER_SIZE << order
+}
+
+// Checks if these bits (start...end) are 0. Restricts the range checked to the given block.
+fn check_zero_bits(
+    buffer: &[u8],
+    block: &Block<&[u8]>,
+    start: usize,
+    end: usize,
+) -> Result<(), Error> {
+    if end < start {
+        bail!("End must be >= start");
+    }
+    let bits_in_block = order_to_size(block.order()) * BITS_PER_BYTE;
+    if start > bits_in_block - 1 {
+        return Ok(());
+    }
+    let end = min(end, bits_in_block - 1);
+    let block_offset = block.index() as usize * MIN_ORDER_SIZE;
+    let low_byte = start / BITS_PER_BYTE;
+    let high_byte = end / BITS_PER_BYTE;
+    let bottom_bits = high_bits(buffer[low_byte + block_offset], 8 - (start % 8));
+    let top_bits = low_bits(buffer[high_byte + block_offset], (end % 8) + 1);
+    if low_byte == high_byte {
+        match bottom_bits & top_bits {
+            0 => return Ok(()),
+            nonzero => bail!(
+                "Bits {}...{} of block type {} at {} have nonzero value {}",
+                start,
+                end,
+                block.block_type_or()?,
+                block.index(),
+                nonzero
+            ),
+        }
+    }
+    if bottom_bits != 0 {
+        bail!(
+            "Non-zero value {} for bits {}.. of block type {} at {}",
+            bottom_bits,
+            start,
+            block.block_type_or()?,
+            block.index()
+        );
+    }
+    if top_bits != 0 {
+        bail!(
+            "Non-zero value {} for bits ..{} of block type {} at {}",
+            top_bits,
+            end,
+            block.block_type_or()?,
+            block.index()
+        );
+    }
+    for byte in low_byte + 1..high_byte {
+        if buffer[byte + block_offset] != 0 {
+            bail!(
+                "Non-zero value {} for byte {} of block type {} at {}",
+                buffer[byte],
+                byte,
+                block.block_type_or()?,
+                block.index()
+            );
+        }
+    }
+    Ok(())
+}
+
+// TODO(fxb/39975): Depending on the resolution of fxb/40012, remove the allow(dead_code) or move
+// this const into mod test.
+#[allow(dead_code)]
+const MAX_BLOCK_BITS: usize = MAX_ORDER_SIZE * BITS_PER_BYTE;
+
 impl Scanner {
-    pub fn scan(snapshot: ireader::snapshot::Snapshot) -> Result<Self, Error> {
+    pub fn scan(snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
         let mut ret = Scanner::new();
         for block in snapshot.scan() {
             match block.block_type_or() {
@@ -82,9 +177,9 @@ impl Scanner {
                 | Ok(BlockType::UintValue)
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
-                | Ok(BlockType::PropertyValue) => ret.process_property(block)?,
-                Ok(BlockType::Extent) => ret.process_extent(block)?,
-                Ok(BlockType::Name) => ret.process_name(block)?,
+                | Ok(BlockType::PropertyValue) => ret.process_property(block, buffer)?,
+                Ok(BlockType::Extent) => ret.process_extent(block, buffer)?,
+                Ok(BlockType::Name) => ret.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => ret.process_tombstone(block)?,
                 Ok(BlockType::LinkValue) => bail!("LinkValue isn't supported yet."),
                 Err(error) => return Err(error),
@@ -193,11 +288,12 @@ impl Scanner {
     // Some blocks' metrics can only be calculated in the context of a tree. Metrics aren't run
     // on those in the process_ functions, but rather while the tree is being built.
 
-    // TODO(cphoenix): Add full pedantic/paranoid checking on all process_ functions.
     // Note: process_ functions are only called from the scan() iterator on the
     // VMO's blocks, so indexes of the blocks themselves will never be duplicated; that's one
     // thing we don't have to verify.
     fn process_free(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+        // TODO(fxb/39975): Uncomment or delete this line depending on the resolution of fxb/40012.
+        // check_zero_bits(buffer, &block, 64, MAX_BLOCK_BITS)?;
         self.metrics.process(block)?;
         Ok(())
     }
@@ -217,7 +313,8 @@ impl Scanner {
         Ok(())
     }
 
-    fn process_extent(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_extent(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+        check_zero_bits(buffer, &block, 36, 63)?;
         self.extents.insert(
             block.index(),
             ScannedExtent {
@@ -229,7 +326,8 @@ impl Scanner {
         Ok(())
     }
 
-    fn process_name(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_name(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+        check_zero_bits(buffer, &block, 20, 63)?;
         self.names.insert(
             block.index(),
             ScannedName { name: block.name_contents()?, metrics: Metrics::analyze(block)? },
@@ -335,7 +433,10 @@ impl Scanner {
         })
     }
 
-    fn process_property(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_property(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+        if block.block_type_or()? == BlockType::ArrayValue {
+            check_zero_bits(buffer, &block, 80, 127)?;
+        }
         let id = block.index();
         let parent = block.parent_index()?;
         let block_type = block.block_type_or()?;
@@ -489,7 +590,11 @@ mod tests {
         crate::*,
         fidl_test_inspect_validate::Number,
         fuchsia_async as fasync,
-        fuchsia_inspect::format::{bitfields::BlockHeader, block_type::BlockType, constants},
+        fuchsia_inspect::format::{
+            bitfields::{BlockHeader, Payload as BlockPayload},
+            block_type::BlockType,
+            constants,
+        },
     };
 
     fn copy_into(source: &[u8], dest: &mut [u8], offset: usize) {
@@ -556,6 +661,10 @@ mod tests {
 
     fn put_header(header: &BlockHeader, buffer: &mut [u8], index: usize) {
         copy_into(&header.value().to_le_bytes(), buffer, index * 16);
+    }
+
+    fn put_payload(payload: &BlockPayload, buffer: &mut [u8], index: usize) {
+        copy_into(&payload.value().to_le_bytes(), buffer, index * 16 + 8);
     }
 
     #[test]
@@ -706,5 +815,168 @@ mod tests {
         puppet1.apply(&mut property2_action).await?;
         puppet2.apply(&mut subproperty2_action).await?;
         Ok(())
+    }
+
+    #[test]
+    fn test_bit_ops() -> Result<(), Error> {
+        assert_eq!(low_bits(0xff, 3), 7);
+        assert_eq!(low_bits(0x04, 3), 4);
+        assert_eq!(low_bits(0xf8, 3), 0);
+        assert_eq!(low_bits(0xab, 99), 0xab);
+        assert_eq!(low_bits(0xff, 0), 0);
+        assert_eq!(high_bits(0xff, 3), 0xe0);
+        assert_eq!(high_bits(0x20, 3), 0x20);
+        assert_eq!(high_bits(0x1f, 3), 0);
+        assert_eq!(high_bits(0xab, 99), 0xab);
+        assert_eq!(high_bits(0xff, 0), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_zero_bits() -> Result<(), Error> {
+        let mut buffer = [0u8; 48];
+        for byte in 0..16 {
+            buffer[byte] = 0xff;
+        }
+        for byte in 32..48 {
+            buffer[byte] = 0xff;
+        }
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 1, 0).is_err());
+            assert!(check_zero_bits(&buffer, &block, 0, 0).is_ok());
+            assert!(check_zero_bits(&buffer, &block, 0, MAX_BLOCK_BITS).is_ok());
+        }
+        // Don't mess with buffer[0]; that defines block size and type.
+        // The block I'm testing (index 1) is in between two all-ones blocks.
+        // Its bytes are thus 16..23 in the buffer.
+        buffer[1 + 16] = 1;
+        // Now bit 8 of the block is 1. Checking any range that includes bit 8 should give an
+        // error (even single-bit 8...8). Other ranges should succeed.
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 8, 8).is_err());
+            assert!(check_zero_bits(&buffer, &block, 8, MAX_BLOCK_BITS).is_err());
+            assert!(check_zero_bits(&buffer, &block, 9, MAX_BLOCK_BITS).is_ok());
+        }
+        buffer[2 + 16] = 0x80;
+        // Now bits 8 and 23 are 1. The range 9...MAX_BLOCK_BITS that succeeded before should fail.
+        // 9...22 and 24...MAX_BLOCK_BITS should succeed. So should 24...63.
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 9, MAX_BLOCK_BITS).is_err());
+            assert!(check_zero_bits(&buffer, &block, 9, 22).is_ok());
+            assert!(check_zero_bits(&buffer, &block, 24, MAX_BLOCK_BITS).is_ok());
+            assert!(check_zero_bits(&buffer, &block, 24, 63).is_ok());
+        }
+        buffer[2 + 16] = 0x20;
+        // Now bits 8 and 21 are 1. This tests bit-checks in the middle of the byte.
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 16, 20).is_ok());
+            assert!(check_zero_bits(&buffer, &block, 21, 21).is_err());
+            assert!(check_zero_bits(&buffer, &block, 22, 63).is_ok());
+        }
+        buffer[7 + 16] = 0x80;
+        // Now bits 8, 21, and 63 are 1. Checking 22...63 should fail; 22...62 should succeed.
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 22, 63).is_err());
+            assert!(check_zero_bits(&buffer, &block, 22, 62).is_ok());
+        }
+        buffer[3 + 16] = 0x10;
+        // Here I'm testing whether 1 bits in the bytes between the ends of the range are also
+        // detected (cause the check to fail) (to make sure my loop doesn't have an off by 1 error).
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
+        }
+        buffer[3 + 16] = 0;
+        buffer[4 + 16] = 0x10;
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
+        }
+        buffer[4 + 16] = 0;
+        buffer[5 + 16] = 0x10;
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
+        }
+        buffer[5 + 16] = 0;
+        buffer[6 + 16] = 0x10;
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
+        }
+        buffer[1 + 16] = 0x81;
+        // Testing whether I can correctly ignore 1 bits within a single byte that are outside
+        // the specified range, and detect 1 bits that are inside the range.
+        {
+            let block = Block::new(&buffer[..], 1);
+            assert!(check_zero_bits(&buffer, &block, 9, 14).is_ok());
+            assert!(check_zero_bits(&buffer, &block, 8, 14).is_err());
+            assert!(check_zero_bits(&buffer, &block, 9, 15).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_reserved_fields() {
+        let mut buffer = [0u8; 4096];
+        // VMO Header block (index 0)
+        const HEADER: usize = 0;
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type(BlockType::Header.to_u8().unwrap());
+        header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
+        header.set_header_version(constants::HEADER_VERSION_NUMBER);
+        put_header(&header, &mut buffer, HEADER);
+        const VALUE: usize = 1;
+        let mut value_header = BlockHeader(0);
+        value_header.set_order(0);
+        value_header.set_block_type(BlockType::NodeValue.to_u8().unwrap());
+        value_header.set_value_name_index(2);
+        value_header.set_value_parent_index(0);
+        put_header(&value_header, &mut buffer, VALUE);
+        // Root's Name block
+        const VALUE_NAME: usize = 2;
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type(BlockType::Name.to_u8().unwrap());
+        header.set_name_length(5);
+        put_header(&header, &mut buffer, VALUE_NAME);
+        copy_into(b"value", &mut buffer, VALUE_NAME * 16 + 8);
+        // Extent block (not linked into tree)
+        const EXTENT: usize = 3;
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type(BlockType::Extent.to_u8().unwrap());
+        header.set_extent_next_index(0);
+        put_header(&header, &mut buffer, EXTENT);
+        // Let's make sure it scans.
+        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n\n>  value ->\n\n\n\n"));
+        // Put garbage in a random FREE block body - should fail.
+        // TODO(fxb/39975): Depending on the resolution of fxb/40012, uncomment or delete this test.
+        //try_byte(&mut buffer, (6, 9), 42, None);
+        // Put garbage in a random FREE block header - should be fine.
+        try_byte(&mut buffer, (6, 7), 42, Some(" root ->\n\n>  value ->\n\n\n\n"));
+        // Put garbage in NAME header - should fail.
+        try_byte(&mut buffer, (VALUE_NAME, 7), 42, None);
+        // Put garbage in EXTENT header - should fail.
+        try_byte(&mut buffer, (EXTENT, 6), 42, None);
+        value_header.set_block_type(BlockType::ArrayValue.to_u8().unwrap());
+        put_header(&value_header, &mut buffer, VALUE);
+        let mut array_subheader = BlockPayload(0);
+        array_subheader.set_array_entry_type(BlockType::IntValue.to_u8().unwrap());
+        array_subheader.set_array_flags(ArrayFormat::Default.to_u8().unwrap());
+        put_payload(&array_subheader, &mut buffer, VALUE);
+        try_byte(&mut buffer, (16, 0), 0, Some(" root ->\n>  value: IntArray([], Default)\n\n"));
+        // Put garbage in reserved part of Array spec, should fail.
+        try_byte(&mut buffer, (VALUE, 12), 42, None);
+        value_header.set_block_type(BlockType::IntValue.to_u8().unwrap());
+        put_header(&value_header, &mut buffer, VALUE);
+        // Now the array spec is just a (large) value; it should succeed.
+        try_byte(&mut buffer, (VALUE, 12), 42, Some(" root ->\n>  value: Int(180388626436)\n\n"));
     }
 }
