@@ -3,15 +3,20 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
 #include <iostream>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -24,6 +29,31 @@
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubGlob[] = "/hub/c/basemgr.cmx/*";
 constexpr char kGetUsage[] = "GetUsage";
+constexpr char kBasemgrRegex[] = "/basemgr.cmx/(\\d+)";
+
+std::string FindDebugServicesForPath(const char* glob_str, const char* regex_str) {
+  glob_t globbuf;
+  FXL_CHECK(glob(glob_str, 0, nullptr, &globbuf) == 0);
+  std::regex name_regex(regex_str);
+  std::string service_path = globbuf.gl_pathv[0];
+  std::smatch match;
+  FXL_CHECK(std::regex_search(service_path, match, name_regex)) << service_path;
+  globfree(&globbuf);
+  return service_path;
+}
+
+void ShutdownBasemgr() {
+  // Get a connection to basemgr in order to shut it down.
+  std::string service_path = FindDebugServicesForPath(kBasemgrHubGlob, kBasemgrRegex);
+
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
+  auto request = basemgr.NewRequest().TakeChannel();
+  if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
+    FXL_LOG(FATAL) << "Could not connect to basemgr service in " << service_path;
+  }
+
+  basemgr->Shutdown();
+}
 
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   // Read the configuration file in from stdin.
@@ -73,12 +103,9 @@ std::string GetConfigFromArgs(fxl::CommandLine command_line) {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  // Check if basemgr already exists, if so suggest killing it.
-  bool exists = files::Glob(kBasemgrHubGlob).size() != 0;
-  if (exists) {
-    std::cerr << "basemgr is already running!" << std::endl
-              << "To kill: `fx shell killall basemgr.cmx`" << std::endl;
-    return 1;
+  bool basemgr_is_running = files::Glob(kBasemgrHubGlob).size() != 0;
+  if (basemgr_is_running) {
+    ShutdownBasemgr();
   }
 
   std::string config_str = "";

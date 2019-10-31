@@ -28,6 +28,7 @@ class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
  protected:
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr_;
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   std::unique_ptr<Logger> logger_;
   modular_testing::TestStoryCommandExecutor test_executor_;
@@ -401,6 +402,19 @@ TEST_F(SessionCtlAppTest, DeleteAllStories) {
 
   EXPECT_FALSE(GetStoryData(story1));
   EXPECT_FALSE(GetStoryData(story2));
+}
+
+TEST_F(SessionCtlAppTest, ShutdownBasemgr) {
+  auto command_line =
+      fxl::CommandLineFromInitializerList({kSessionCtlString, kShutdownBasemgrCommandString});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(
+        kShutdownBasemgrCommandString, command_line, [this](std::string error) {
+          done_ = true;
+          EXPECT_EQ("Could not find a running basemgr. Is it running?", error);
+        });
+  });
 }
 
 }  // namespace

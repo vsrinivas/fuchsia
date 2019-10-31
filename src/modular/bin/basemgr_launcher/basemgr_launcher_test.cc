@@ -76,3 +76,31 @@ TEST_F(BasemgrLauncherTest, BaseShellArg) {
   // Intercepting the component means the right base shell was launched
   RunLoopUntil([&] { return intercepted; });
 }
+
+TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
+  constexpr char kInterceptUrl[] =
+      "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
+
+  // Setup intercepting base shell
+  bool intercepted = false;
+  ASSERT_TRUE(interceptor_.InterceptURL(
+      kInterceptUrl, "",
+      [&intercepted](fuchsia::sys::StartupInfo startup_info,
+                     std::unique_ptr<sys::testing::InterceptedComponent> component) {
+        intercepted = true;
+      }));
+
+  // Create args for basemgr_launcher
+  std::vector<std::string> args({std::string("--base_shell=") + std::string(kInterceptUrl)});
+  RunBasemgrLauncher(std::move(args));
+
+  // Intercepting the component means the right base shell was launched
+  RunLoopUntil([&] { return intercepted; });
+
+  // Ensure that you can run basemgr_launcher again without failure.
+  intercepted = false;
+  args = {std::string("--base_shell=") + std::string(kInterceptUrl)};
+  RunBasemgrLauncher(std::move(args));
+
+  RunLoopUntil([&] { return intercepted; });
+}

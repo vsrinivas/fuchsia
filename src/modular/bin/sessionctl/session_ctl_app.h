@@ -34,7 +34,7 @@ class SessionCtlApp {
   // |dispatcher| The dispatcher which is used to post the command tasks.
   // |on_command_executed| A callback which is called whenever a command has
   // finished executing.
-  explicit SessionCtlApp(fuchsia::modular::internal::BasemgrDebug* const basemgr,
+  explicit SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                          fuchsia::modular::PuppetMaster* const puppet_master,
                          const modular::Logger& logger, async_dispatcher_t* const dispatcher);
 
@@ -57,6 +57,8 @@ class SessionCtlApp {
   void ExecuteRestartSessionCommand(fit::function<void(std::string)> done);
   void ExecuteSelectNextSessionShellCommand(const fxl::CommandLine& command_line,
                                             fit::function<void(std::string)> done);
+  void ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
+                                     fit::function<void(std::string)> done);
 
   // Focus the story to which the mod we are adding belongs.
   fuchsia::modular::StoryCommand MakeFocusStoryCommand();
@@ -87,7 +89,7 @@ class SessionCtlApp {
 
   std::string GenerateMissingFlagString(const std::vector<std::string>& missing_flags);
 
-  fuchsia::modular::internal::BasemgrDebug* const basemgr_;
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr_;
   fuchsia::modular::PuppetMaster* const puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   const fxl::CommandLine command_line_;

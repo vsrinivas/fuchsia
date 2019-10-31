@@ -10,10 +10,13 @@
 
 namespace modular {
 
-SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebug* const basemgr,
+SessionCtlApp::SessionCtlApp(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                              fuchsia::modular::PuppetMaster* const puppet_master,
                              const modular::Logger& logger, async_dispatcher_t* const dispatcher)
-    : basemgr_(basemgr), puppet_master_(puppet_master), logger_(logger), dispatcher_(dispatcher) {}
+    : basemgr_(std::move(basemgr)),
+      puppet_master_(puppet_master),
+      logger_(logger),
+      dispatcher_(dispatcher) {}
 
 void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& command_line,
                                    fit::function<void(std::string error)> done) {
@@ -31,6 +34,8 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
     ExecuteRestartSessionCommand(std::move(done));
   } else if (cmd == kSelectNextSessionCommandString) {
     ExecuteSelectNextSessionShellCommand(command_line, std::move(done));
+  } else if (cmd == kShutdownBasemgrCommandString) {
+    ExecuteShutdownBasemgrCommand(command_line, std::move(done));
   } else {
     done(kGetUsageErrorString);
   }
@@ -193,6 +198,16 @@ void SessionCtlApp::ExecuteSelectNextSessionShellCommand(const fxl::CommandLine&
     logger_.Log(kSelectNextSessionCommandString, std::vector<std::string>());
     done("");
   });
+}
+
+void SessionCtlApp::ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
+                                                  fit::function<void(std::string)> done) {
+  if (basemgr_) {
+    basemgr_->Shutdown();
+    basemgr_.set_error_handler([done = std::move(done)](zx_status_t status) { done(""); });
+    return;
+  }
+  done("Could not find a running basemgr. Is it running?");
 }
 
 fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {

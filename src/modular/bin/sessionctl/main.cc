@@ -112,6 +112,9 @@ restart_session
 next_session_shell
   Toggles to the next defined session shell.
 
+kill_basemgr
+  Shutdown the running instance of basemgr.
+
 help
   Lists the available commands.)";
 }
@@ -182,7 +185,7 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
 }
 
 // Returns true if a guest user was logged in.
-bool LoginAsGuest(bool has_running_sessions, fuchsia::modular::internal::BasemgrDebug* basemgr,
+bool LoginAsGuest(bool has_running_sessions, fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                   modular::Logger logger) {
   if (has_running_sessions) {
     logger.LogError(modular::kLoginGuestCommandString,
@@ -198,11 +201,11 @@ bool LoginAsGuest(bool has_running_sessions, fuchsia::modular::internal::Basemgr
 }
 
 // Returns true if a guest user was logged in.
-bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
+bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                            modular::Logger logger, std::vector<DebugService>* sessions,
                            std::string cmd, bool wait_for_session) {
   std::cout << "Logging in as a guest user in the absence of running sessions." << std::endl;
-  LoginAsGuest(/*has_running_sessions=*/false, basemgr, logger);
+  LoginAsGuest(/*has_running_sessions=*/false, std::move(basemgr), logger);
 
   do {
     // Wait 2 seconds to allow sessionmgr to initialize
@@ -246,7 +249,7 @@ int main(int argc, const char** argv) {
 
   // Continue with log in flow if user issued a login_guest command
   if (cmd == modular::kLoginGuestCommandString) {
-    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), basemgr.get(), logger)) {
+    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), std::move(basemgr), logger)) {
       return 0;
     }
     return 1;
@@ -263,7 +266,7 @@ int main(int argc, const char** argv) {
     bool wait_for_session = command_line.HasOption(modular::kWaitForSessionFlagString);
 
     // Exit here if no sessions were found after logging in a guest user
-    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd, wait_for_session)) {
+    if (!LoginDefaultGuestUser(std::move(basemgr), logger, &sessions, cmd, wait_for_session)) {
       return 1;
     }
   }
@@ -279,7 +282,7 @@ int main(int argc, const char** argv) {
   // To get a PuppetMaster service for a session, use the following code:
   PuppetMasterPtr puppet_master = ConnectToPuppetMaster(sessions[0]);
 
-  modular::SessionCtlApp app(basemgr.get(), puppet_master.get(), logger, loop.dispatcher());
+  modular::SessionCtlApp app(std::move(basemgr), puppet_master.get(), logger, loop.dispatcher());
 
   app.ExecuteCommand(cmd, command_line, [cmd, logger, &loop](std::string error) {
     if (!error.empty()) {
