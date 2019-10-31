@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/session_manager_integration_tests_bin",
+        "binary": "test/session_manager_integration_tests",
         "args": [ "-s", "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm" ],
     },
     "use": [

@@ -24,25 +24,6 @@ TODO(37237): Multiple calls to `run` will not work correctly when launching grap
 
 ## To run the tests
 
-Run `fx shell ifconfig` to find the IP address of the device that will run the test.
+Run `fx set core.x64 --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with //src/session:tests` to include the tests in the build.
 
-Use the following command to launch the set of Session Framework tests defined in `test_plan.json`.
-Tests listed in `test_plan.json` can be v1 or v2 components. Every test included in this list needs
-to expose `/svc/fuchsia.test.Suite`.
-
-This command starts the test_runner which uses component_manager to launch each test as a component.
-Note that these tests are not run in CQ.
-
-```
-FUCHSIA_IPV4_ADDR=<IP OF DEVICE> FUCHSIA_SSH_KEY=.ssh/pkey ./out/default/host_x64/dart-tools/test_runner -p src/session/session_manager_integration_tests/test_plan.json
-```
-
-## Debug tips
-
-If the test hangs after these lines:
-```
-creating sl4f driver
-starting sl4f driver
-```
-
-you may need to reconfigure your network setup.
+Then run `fx run-test session_manager_integration_tests` to launch the tests using the Fuchsia Test Framework. Tests can be v1 or v2 components. Every test included in this list needs to expose `/svc/fuchsia.test.Suite`.
