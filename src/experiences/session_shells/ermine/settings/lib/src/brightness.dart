@@ -68,7 +68,7 @@ class Brightness extends UiSpec {
   }
 
   static Spec _specForAutoBrightness(double value) {
-    return Spec(groups: [
+    return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withIcon(IconValue(codePoint: Icons.brightness_auto.codePoint)),
         Value.withProgress(ProgressValue(value: value, action: progressAction)),
@@ -78,7 +78,7 @@ class Brightness extends UiSpec {
   }
 
   static Spec _specForManualBrightness(double value) {
-    return Spec(groups: [
+    return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withIcon(IconValue(codePoint: Icons.brightness_low.codePoint)),
         Value.withProgress(ProgressValue(value: value, action: progressAction)),

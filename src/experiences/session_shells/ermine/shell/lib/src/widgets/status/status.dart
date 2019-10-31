@@ -10,11 +10,12 @@ import 'package:internationalization/strings.dart';
 import 'package:quickui/uistream.dart';
 
 import '../../models/status_model.dart';
-import 'status_graph.dart';
-import 'status_progress.dart';
+import '../../utils/styles.dart';
+import 'detail_status_entry.dart';
+import 'status_button.dart';
+import 'status_entry.dart';
 
 const kPadding = 12.0;
-const kTitleWidth = 100.0;
 const kRowHeight = 28.0;
 const kItemHeight = 16.0;
 const kIconHeight = 18.0;
@@ -36,193 +37,72 @@ class Status extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(kPadding),
-      child: Column(
-        children: <Widget>[
-          _ManualStatusEntry(model),
-          _StatusEntry(model.brightness),
-          _StatusEntry(model.volume),
-          _StatusEntry(model.battery),
-          _StatusEntry(model.memory),
-          _StatusEntry(model.weather),
-          _StatusEntry(model.bluetooth),
-        ],
-      ),
-    );
-  }
-}
+    // The [PageController] used to switch between main and detail views.
+    final pageController = PageController();
 
-class _StatusEntry extends StatelessWidget {
-  final UiStream uiStream;
+    // Returns the callback to handle [QuickAction] from buttons in spec
+    // available from the provided [uiStream].
+    ValueChanged<Value> _onChange(UiStream uiStream) {
+      return (Value value) {
+        // Check if a button with [QuickAction] was clicked.
+        final action = _actionFromValue(value);
+        if (action & QuickAction.details.$value > 0) {
+          model.detailNotifier.value = uiStream;
 
-  _StatusEntry(this.uiStream) {
-    uiStream.listen();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<Spec>(
-      stream: uiStream.stream,
-      initialData: uiStream.spec,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Offstage();
-        }
-        final spec = snapshot.data;
-        final widgets = _buildFromSpec(spec, uiStream.update);
-        return Container(
-          constraints: BoxConstraints(minHeight: kRowHeight),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: widgets,
-          ),
-        );
-      },
-    );
-  }
-
-// Returns a list of [Row] widgets from the given [Spec].
-// The first row would include title [Text] and may be followed by widgets
-// associated with the [Value] type. A [GridValue] widget is returned in its
-// own row.
-  List<Widget> _buildFromSpec(Spec spec, void Function(Value) update) {
-    // Split the values into lists separated by [GridValue].
-    List<Widget> result = <Widget>[];
-    List<Widget> widgets = <Widget>[];
-
-    for (final group in spec.groups) {
-      for (final value in group.values) {
-        final widget = _buildFromValue(value, update);
-        if (value.$tag == ValueTag.grid) {
-          if (result.isEmpty) {
-            result.add(_buildTitleRow(group.title, widgets.toList()));
-          } else {
-            result.add(_buildValueRow(widgets.toList()));
-          }
-          widgets.clear();
-        }
-        widgets.add(widget);
-      }
-
-      if (widgets.isNotEmpty) {
-        if (result.isEmpty) {
-          result.add(_buildTitleRow(group.title, widgets.toList()));
+          pageController.nextPage(
+            duration: ErmineStyle.kScreenAnimationDuration,
+            curve: ErmineStyle.kScreenAnimationCurve,
+          );
+          uiStream.update(value);
+        } else if (action & QuickAction.cancel.$value > 0 ||
+            action & QuickAction.submit.$value > 0) {
+          model.detailStream?.update(value);
+          pageController.previousPage(
+            duration: ErmineStyle.kScreenAnimationDuration,
+            curve: ErmineStyle.kScreenAnimationCurve,
+          );
+          model.detailNotifier.value = null;
         } else {
-          result.add(_buildValueRow(widgets.toList()));
+          uiStream?.update(value);
         }
-      }
-    }
-    return result;
-  }
-
-  Widget _buildFromValue(Value value, void Function(Value) update) {
-    if (value.$tag == ValueTag.button) {
-      return _buildButton(value.button.label, () => update(value));
-    }
-    if (value.$tag == ValueTag.text) {
-      return Text(value.text.text.toUpperCase());
-    }
-    if (value.$tag == ValueTag.progress) {
-      return SizedBox(
-        height: kItemHeight,
-        width: kProgressBarWidth,
-        child: ProgressBar(
-          value: value.progress.value,
-          onChange: (v) => update(Value.withProgress(
-              ProgressValue(value: v, action: value.progress.action))),
-        ),
-      );
+      };
     }
 
-    if (value.$tag == ValueTag.grid) {
-      int columns = value.grid.columns;
-      int rows = value.grid.values.length ~/ columns;
-      return Container(
-        padding: EdgeInsets.only(left: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: List<Widget>.generate(rows, (row) {
-            return Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List<Widget>.generate(value.grid.columns, (column) {
-                  final index = row * value.grid.columns + column;
-                  return Expanded(
-                    flex: column == 0 ? 2 : 1,
-                    child: Text(
-                      value.grid.values[index].text,
-                      textAlign: column == 0 ? TextAlign.start : TextAlign.end,
-                    ),
-                  );
-                }),
-              ),
-            );
-          }),
-        ),
-      );
-    }
-    if (value.$tag == ValueTag.icon) {
-      return GestureDetector(
-        child: Icon(
-          IconData(
-            value.icon.codePoint,
-            fontFamily: value.icon.fontFamily ?? 'MaterialIcons',
+    return PageView(
+      controller: pageController,
+      physics: NeverScrollableScrollPhysics(),
+      children: <Widget>[
+        SingleChildScrollView(
+          padding: EdgeInsets.all(kPadding),
+          child: Column(
+            children: <Widget>[
+              _ManualStatusEntry(model),
+              for (final uiStream in [
+                model.datetime,
+                model.timezone,
+                model.volume,
+                model.brightness,
+                model.battery,
+                model.memory,
+                model.bluetooth,
+                model.weather,
+              ])
+                StatusEntry(
+                  uiStream: uiStream,
+                  onChange: _onChange(uiStream),
+                  detailNotifier: model.detailNotifier,
+                  // getSpec: spec,
+                ),
+            ],
           ),
-          size: kIconHeight,
         ),
-        onTap: () => update(value),
-      );
-    }
-    if (value.$tag == ValueTag.graph) {
-      return QuickGraph(value: value.graph.value, step: value.graph.step);
-    }
-    return Offstage();
+        DetailStatusEntry(
+          model: model,
+          onChange: _onChange(null),
+        )
+      ],
+    );
   }
-}
-
-Widget _buildValueRow(List<Widget> children) {
-  return Wrap(
-    children: children,
-    alignment: WrapAlignment.end,
-    spacing: kPadding,
-    runSpacing: kPadding,
-  );
-}
-
-Widget _buildTitleRow(String title, List<Widget> children) {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    textBaseline: TextBaseline.alphabetic,
-    children: <Widget>[
-      Container(
-        width: kTitleWidth,
-        child: Text(title.toUpperCase()),
-      ),
-      Expanded(
-        child: _buildValueRow(children),
-      ),
-    ],
-  );
-}
-
-Widget _buildButton(String label, void Function() onTap) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: kItemHeight,
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(vertical: 0, horizontal: 2),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    ),
-  );
 }
 
 class _ManualStatusEntry extends StatelessWidget {
@@ -237,13 +117,37 @@ class _ManualStatusEntry extends StatelessWidget {
       height: kRowHeight,
       child: Row(
         children: <Widget>[
-          _buildButton(Strings.restart, model.restartDevice),
+          StatusButton(Strings.restart, model.restartDevice),
           Padding(padding: EdgeInsets.only(right: kPadding)),
-          _buildButton(Strings.shutdown, model.shutdownDevice),
+          StatusButton(Strings.shutdown, model.shutdownDevice),
           Spacer(),
-          _buildButton(Strings.settings, model.launchSettings),
+          StatusButton(Strings.settings, model.launchSettings),
         ],
       ),
     );
   }
+}
+
+int _actionFromValue(Value value) {
+  switch (value.$tag) {
+    case ValueTag.button:
+      return value.button.action;
+    case ValueTag.number:
+      return value.number.action;
+    case ValueTag.text:
+      return value.text.action;
+    case ValueTag.progress:
+      return value.progress.action;
+    case ValueTag.input:
+      return value.input.action;
+    case ValueTag.icon:
+      return value.input.action;
+    case ValueTag.grid:
+      return 0;
+    case ValueTag.graph:
+      return value.graph.action;
+    case ValueTag.list:
+      return 0;
+  }
+  return 0;
 }

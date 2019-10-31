@@ -51,14 +51,14 @@ class Battery extends UiSpec {
       return null;
     }
     if (value == 100) {
-      return Spec(groups: [
+      return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withIcon(IconValue(codePoint: Icons.battery_full.codePoint)),
           Value.withText(TextValue(text: batteryText)),
         ]),
       ]);
     } else if (charging) {
-      return Spec(groups: [
+      return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withIcon(
               IconValue(codePoint: Icons.battery_charging_full.codePoint)),
@@ -66,14 +66,14 @@ class Battery extends UiSpec {
         ]),
       ]);
     } else if (value <= 10) {
-      return Spec(groups: [
+      return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withIcon(IconValue(codePoint: Icons.battery_alert.codePoint)),
           Value.withText(TextValue(text: batteryText)),
         ]),
       ]);
     } else {
-      return Spec(groups: [
+      return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withText(TextValue(text: batteryText)),
         ]),
@@ -96,7 +96,8 @@ class BatteryModel {
   }) : _binding = binding ?? BatteryInfoWatcherBinding() {
     monitor
       ..watch(_binding.wrap(_BatteryInfoWatcherImpl(this)))
-      ..getBatteryInfo().then(_updateBattery);
+      ..getBatteryInfo().then(_updateBattery)
+      ..ctrl.close();
   }
 
   void dispose() {

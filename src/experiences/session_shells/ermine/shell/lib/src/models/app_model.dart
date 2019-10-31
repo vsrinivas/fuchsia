@@ -205,6 +205,7 @@ class AppModel {
   /// Called when tapped behind Ask bar, quick settings, notifications or the
   /// Escape key was pressed.
   void onCancel() {
+    status.reset();
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;

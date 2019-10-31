@@ -59,7 +59,7 @@ class Volume extends UiSpec {
 
   static Spec _specForVolume(double value) {
     String roundedVolume = (value * 100).round().toString();
-    return Spec(groups: [
+    return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withText(TextValue(text: roundedVolume)),
         Value.withProgress(

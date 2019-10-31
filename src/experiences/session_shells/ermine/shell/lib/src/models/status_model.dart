@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:quickui/uistream.dart';
@@ -25,17 +26,22 @@ class StatusModel implements Inspectable {
   UiStream weather;
   UiStream volume;
   UiStream bluetooth;
+  UiStream datetime;
+  UiStream timezone;
   final StartupContext startupContext;
   final modular.PuppetMasterProxy puppetMaster;
   final AdministratorProxy deviceManager;
+  final ValueNotifier<UiStream> detailNotifier = ValueNotifier<UiStream>(null);
 
   StatusModel({this.startupContext, this.puppetMaster, this.deviceManager}) {
+    datetime = UiStream(Datetime());
+    timezone = UiStream(TimeZone.fromStartupContext(startupContext));
     brightness = UiStream(Brightness.fromStartupContext(startupContext));
     memory = UiStream(Memory.fromStartupContext(startupContext));
     battery = UiStream(Battery.fromStartupContext(startupContext));
-    weather = UiStream(Weather());
     volume = UiStream(Volume.fromStartupContext(startupContext));
     bluetooth = UiStream(Bluetooth.fromStartupContext(startupContext));
+    weather = UiStream(Weather());
   }
 
   factory StatusModel.fromStartupContext(StartupContext startupContext) {
@@ -61,6 +67,19 @@ class StatusModel implements Inspectable {
     weather.dispose();
     volume.dispose();
     battery.dispose();
+    datetime.dispose();
+    timezone.dispose();
+  }
+
+  UiStream get detailStream => detailNotifier.value;
+
+  void reset() {
+    // Send [QuickAction.cancel] to the detail stream if on detail view.
+    detailNotifier.value?.update(Value.withButton(ButtonValue(
+      label: '',
+      action: QuickAction.cancel.$value,
+    )));
+    detailNotifier.value = null;
   }
 
   /// Launch settings mod.

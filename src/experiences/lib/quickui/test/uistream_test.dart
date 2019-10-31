@@ -50,6 +50,7 @@ class TestUi extends UiSpec {
   @override
   void update(Value value) {
     spec = Spec(
+      title: '',
       groups: <Group>[
         Group(title: 'Bar', values: [value]),
       ],
@@ -60,6 +61,6 @@ class TestUi extends UiSpec {
   void dispose() {}
 
   static Spec _build() {
-    return Spec(groups: <Group>[Group(title: 'Foo', values: [])]);
+    return Spec(title: '', groups: <Group>[Group(title: 'Foo', values: [])]);
   }
 }

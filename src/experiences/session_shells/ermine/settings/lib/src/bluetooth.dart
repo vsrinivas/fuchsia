@@ -45,7 +45,7 @@ class Bluetooth extends UiSpec {
   }
 
   static Spec _specForBluetooth(List<TextValue> values) {
-    return Spec(groups: [
+    return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withIcon(IconValue(codePoint: Icons.bluetooth.codePoint)),
         Value.withGrid(GridValue(columns: 1, values: values))

@@ -5,6 +5,8 @@
 export 'src/battery.dart';
 export 'src/bluetooth.dart';
 export 'src/brightness.dart';
+export 'src/datetime.dart';
 export 'src/memory.dart';
+export 'src/timezone.dart';
 export 'src/volume.dart';
 export 'src/weather.dart';

@@ -164,10 +164,28 @@ class Strings {
         desc: 'The short name for the "Weather" label',
       );
 
+  static String get unit => Intl.message(
+        'Unit',
+        name: 'unit',
+        desc: 'The short name for the unit of measurement',
+      );
+
   static String get date => Intl.message(
         'Date',
         name: 'date',
         desc: 'The short name for the "date" label',
+      );
+
+  static String get dateTime => Intl.message(
+        'Date & Time',
+        name: 'dateTime',
+        desc: 'The short name for the "date & time" label',
+      );
+
+  static String get timezone => Intl.message(
+        'Timezone',
+        name: 'timezone',
+        desc: 'The short name for the "timezone" label',
       );
 
   static String get network => Intl.message(

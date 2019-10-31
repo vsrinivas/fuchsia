@@ -13,7 +13,9 @@ dart_library("settings") {
     "src/battery.dart",
     "src/bluetooth.dart",
     "src/brightness.dart",
+    "src/datetime.dart",
     "src/memory.dart",
+    "src/timezone.dart",
     "src/volume.dart",
     "src/weather.dart",
   ]
@@ -23,6 +25,7 @@ dart_library("settings") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
+    "//sdk/fidl/fuchsia.timezone",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
@@ -34,7 +37,9 @@ dart_library("settings") {
 flutter_test("ermine_settings_unittests") {
   sources = [
     "brightness_test.dart",
+    "datetime_test.dart",
     "memory_test.dart",
+    "timezone_test.dart",
   ]
 
   deps = [

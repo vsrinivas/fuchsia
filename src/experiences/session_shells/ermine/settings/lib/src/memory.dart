@@ -48,7 +48,7 @@ class Memory extends UiSpec {
   static Spec _specForMemory(double value, double used, double total) {
     String usedString = (used).toStringAsPrecision(3);
     String totalString = (total).toStringAsPrecision(3);
-    return Spec(groups: [
+    return Spec(title: _memory, groups: [
       Group(title: _memory, values: [
         Value.withProgress(ProgressValue(value: value)),
         Value.withText(TextValue(text: '${usedString}GB / ${totalString}GB')),

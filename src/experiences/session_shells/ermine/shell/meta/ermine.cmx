@@ -29,6 +29,8 @@
             "fuchsia.power.BatteryManager",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.timezone.TimeService",
+            "fuchsia.timezone.Timezone",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
