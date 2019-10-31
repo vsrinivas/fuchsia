@@ -42,7 +42,7 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device,
   }
 
   auto device = std::make_unique<SimDevice>(phy_device, dev_mgr, env);
-  if ((status = device->brcmfmac::Device::Init(device->phy_device_, parent_device)) != ZX_OK) {
+  if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
     return status;
   }
 

@@ -35,7 +35,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  if ((status = device->brcmfmac::Device::Init(device->zxdev(), parent_device)) != ZX_OK) {
+  if ((status = device->brcmfmac::Device::Init()) != ZX_OK) {
     return status;
   }
 
@@ -87,8 +87,6 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   return ZX_OK;
 }
 
-void SdioDevice::DdkRelease() { delete this; }
-
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);
 }
@@ -99,7 +97,7 @@ zx_status_t SdioDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* 
   return load_firmware(zxdev(), path, fw, size);
 }
 
-SdioDevice::SdioDevice(zx_device_t* parent) : ::ddk::Device<SdioDevice>(parent) {}
+SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
 
 SdioDevice::~SdioDevice() {
   DisableDispatcher();

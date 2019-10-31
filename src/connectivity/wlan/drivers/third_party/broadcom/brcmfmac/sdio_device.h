@@ -17,7 +17,6 @@
 #include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <ddktl/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
@@ -25,7 +24,7 @@
 namespace wlan::brcmfmac {
 
 // This class uses the DDKTL classes to manage the lifetime of a brcmfmac driver instance.
-class SdioDevice : public Device, public ::ddk::Device<SdioDevice> {
+class SdioDevice : public Device {
  public:
   // Static factory function for SdioDevice instances. This factory does not return an owned
   // instance, as on successful invocation the instance will have its lifecycle maanged by the
@@ -34,9 +33,6 @@ class SdioDevice : public Device, public ::ddk::Device<SdioDevice> {
 
   SdioDevice(const SdioDevice& device) = delete;
   SdioDevice& operator=(const SdioDevice& other) = delete;
-
-  // DDK interface implementation.
-  void DdkRelease();
 
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;

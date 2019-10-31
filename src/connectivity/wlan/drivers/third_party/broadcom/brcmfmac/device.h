@@ -18,6 +18,7 @@
 #include <lib/async-loop/default.h>
 #include <zircon/types.h>
 
+#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlanphyimpl.h>
 
@@ -26,11 +27,20 @@
 namespace wlan {
 namespace brcmfmac {
 
+class Device;
 class WlanInterface;
 
-class Device : public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
+class Device : public ::ddk::Device<Device>,
+               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
   virtual ~Device();
+
+  // State accessors.
+  brcmf_pub* drvr();
+  const brcmf_pub* drvr() const;
+
+  // ::ddk::Device implementation.
+  void DdkRelease();
 
   // WlanphyImpl interface implementation.
   zx_status_t WlanphyImplQuery(wlanphy_impl_info_t* out_info);
@@ -45,10 +55,10 @@ class Device : public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
   virtual zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) = 0;
 
  protected:
-  Device();
+  explicit Device(zx_device_t* parent);
 
   // Initialize the device-agnostic bits of the device
-  zx_status_t Init(zx_device_t* phy_device, zx_device_t* parent_device);
+  zx_status_t Init();
 
   void DisableDispatcher();
 

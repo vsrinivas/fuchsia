@@ -132,8 +132,6 @@ struct brcmf_rev_info {
 /* Common structure for module and instance linkage */
 struct brcmf_pub {
   zx_device_t* zxdev;
-  zx_device_t* phy_zxdev;
-  zx_device_t* if_zxdev;
   async_dispatcher_t* dispatcher;
   std::recursive_mutex irq_callback_lock;
 

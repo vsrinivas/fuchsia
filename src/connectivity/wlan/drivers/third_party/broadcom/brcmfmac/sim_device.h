@@ -33,7 +33,7 @@ class SimDevice : public Device {
   explicit SimDevice(zx_device_t* phy_device,
                      const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
                      const std::shared_ptr<simulation::Environment>& env)
-      : phy_device_(phy_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
+      : Device(phy_device), phy_device_(phy_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
 
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;

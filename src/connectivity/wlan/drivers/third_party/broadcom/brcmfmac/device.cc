@@ -30,11 +30,14 @@ constexpr uint16_t kApInterfaceId = 1;
 
 }  // namespace
 
-Device::Device() : client_interface_(nullptr), ap_interface_(nullptr) {}
+Device::Device(zx_device_t* parent)
+    : ::ddk::Device<Device>(parent), client_interface_(nullptr), ap_interface_(nullptr) {}
 
 Device::~Device() = default;
 
-zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device) {
+void Device::DdkRelease() { delete this; }
+
+zx_status_t Device::Init() {
   zx_status_t status = ZX_OK;
 
   auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -44,8 +47,7 @@ zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device) {
 
   // Initialize our module-level settings
   auto pub = std::make_unique<brcmf_pub>();
-  pub->phy_zxdev = phy_device;
-  pub->zxdev = parent_device;
+  pub->zxdev = parent();
   pub->dispatcher = dispatcher->dispatcher();
   for (auto& entry : pub->if2bss) {
     entry = BRCMF_BSSIDX_INVALID;
@@ -55,6 +57,10 @@ zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device) {
   dispatcher_ = std::move(dispatcher);
   return ZX_OK;
 }
+
+brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }
+
+const brcmf_pub* Device::drvr() const { return brcmf_pub_.get(); }
 
 zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
   return WlanInterface::Query(brcmf_pub_.get(), out_info);
