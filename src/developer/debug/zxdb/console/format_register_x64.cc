@@ -105,8 +105,9 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
       rows.push_back(DescribeRflags(reg, color));
       if (options.extended)
         rows.push_back(DescribeRflagsExtended(reg, color));
-    } else
+    } else {
       rows.push_back(DescribeRegister(reg, color));
+    }
   }
 
   // Output the tables.

@@ -58,21 +58,23 @@ std::vector<Register> GetRegisters() {
   std::vector<Register> result;
 
   result.push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
-  result.push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
   result.push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
   result.push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
+  // This one is out-of-order to force testing the sorting.
+  result.push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
 
   // Sanity check
   EXPECT_EQ(*(uint8_t*)&(result[0].data[0]), 0x01u);
-  EXPECT_EQ(*(uint16_t*)&(result[1].data[0]), 0x0102u);
-  EXPECT_EQ(*(uint32_t*)&(result[2].data[0]), 0x01020304u);
-  EXPECT_EQ(*(uint64_t*)&(result[3].data[0]), 0x0102030405060708u);
+  EXPECT_EQ(*(uint32_t*)&(result[1].data[0]), 0x01020304u);
+  EXPECT_EQ(*(uint64_t*)&(result[2].data[0]), 0x0102030405060708u);
+  EXPECT_EQ(*(uint16_t*)&(result[3].data[0]), 0x0102u);
 
-  result.push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
   result.push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
   result.push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
   result.push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
   result.push_back(CreateRegister(RegisterID::kX64_xmm4, 16, 16));
+  // This one is out-of-order to force testing the sorting.
+  result.push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
 
   result.push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
   result.push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
@@ -97,7 +99,7 @@ TEST(FormatRegisters, GeneralRegisters) {
   options.categories = {RegisterCategory::kGeneral};
 
   // Force rcx to -2 to test negative integer formatting.
-  Register& rcx = registers[2];
+  Register& rcx = registers[1];
   EXPECT_EQ(RegisterID::kX64_rcx, rcx.id);
   SetRegisterValue(&rcx, static_cast<uint64_t>(-2));
 
@@ -391,12 +393,12 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
   // clang-format off
   EXPECT_EQ(
       "Debug Registers\n"
-      "      dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, SSC=0, LBN=15, BT=0\n"
-      "      dbgbvr0_el1  0xdeadbeefaabbccdd \n"
-      "     dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, SSC=3, LBN=0, BT=15\n"
-      "      dbgbvr0_el1  0xaabbccdd11223344 \n"
       "  id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, WRP=16, CTX_CMP=1, PMSV=15\n"
       "        mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
+      "      dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, SSC=0, LBN=15, BT=0\n"
+      "     dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, SSC=3, LBN=0, BT=15\n"
+      "      dbgbvr0_el1  0xdeadbeefaabbccdd \n"
+      "      dbgbvr0_el1  0xaabbccdd11223344 \n"
       "\n",
       FormatRegisters(options, registers).AsString());
   // clang-format on

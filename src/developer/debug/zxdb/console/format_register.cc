@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include <algorithm>
 #include <map>
 
 #include "src/developer/debug/shared/regex.h"
@@ -89,7 +90,12 @@ OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
   for (const Register& reg : registers)
     categorized[RegisterIDToCategory(reg.id)].push_back(reg);
 
-  for (const auto& [category, cat_regs] : categorized) {
+  for (auto& [category, cat_regs] : categorized) {
+    // Ensure the registers appear in a consistent order.
+    std::sort(cat_regs.begin(), cat_regs.end(), [](const Register& a, const Register& b) {
+      return static_cast<uint32_t>(a.id) < static_cast<uint32_t>(b.id);
+    });
+
     FormatCategory(options, category, cat_regs, &out);
     out.Append("\n");
   }
