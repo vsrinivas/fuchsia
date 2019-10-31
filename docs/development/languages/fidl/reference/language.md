@@ -628,6 +628,9 @@ Xunions are denoted by their declared name (eg. **Value**) and nullability:
         each invocation of the method generates a response from the server.
     *   If only results are declared, the method is referred to as an
         *event*. It then defines an unsolicited message from the server.
+    *   Two-way methods may declare an error type which a server can send
+        instead of the response. This type must be an `int32`, `uint32`, or an
+        `enum` thereof.
 
 *   When a server of a protocol is about to close its side of the channel, it
     may elect to send an **epitaph** message to the client to indicate the
@@ -640,10 +643,14 @@ Xunions are denoted by their declared name (eg. **Value**) and nullability:
 #### Declaration
 
 ```fidl
+enum DivisionError : uint32 {
+    DivideByZero = 1;
+};
+
 protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
     Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder);
+        -> (int32 quotient, int32 remainder) error DivisionError;
     Clear();
     -> OnClear();
 };
