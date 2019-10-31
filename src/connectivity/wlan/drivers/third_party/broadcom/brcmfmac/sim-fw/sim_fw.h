@@ -74,6 +74,7 @@ class SimFirmware {
   explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
 
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
+  int32_t GetPM();
 
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
@@ -162,6 +163,7 @@ class SimFirmware {
   std::array<uint8_t, ETH_ALEN> mac_addr_;
   ScanState scan_state_;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
+  int32_t power_mode_ = -1;  // -1 indicates value has not been set.
   sim_iface_entry_t iface_tbl_[kMaxIfSupported];
 };
 

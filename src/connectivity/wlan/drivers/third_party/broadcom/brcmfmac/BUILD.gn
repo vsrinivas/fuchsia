@@ -213,10 +213,10 @@ source_set("sim") {
     "sim-fw/sim_hw.cc",
     "sim-fw/sim_hw.h",
     "sim.cc",
-    "sim.h",
     "sim_device.cc",
   ]
   public = [
+    "sim.h",
     "sim_device.h",
   ]
   deps = [

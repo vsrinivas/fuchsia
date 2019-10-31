@@ -49,6 +49,10 @@ void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chiprev = 2;
 }
 
+int32_t SimFirmware::GetPM() {
+  return power_mode_;
+}
+
 zx_status_t SimFirmware::BusPreinit() {
   // Currently nothing to do
   return ZX_OK;
@@ -177,6 +181,14 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         return ZX_ERR_INVALID_ARGS;
       }
       default_passive_time_ = *(reinterpret_cast<uint32_t*>(data));
+      break;
+    case BRCMF_C_SET_PM:
+      if (dcmd->len != sizeof(power_mode_)) {
+        BRCMF_ERR("Invalid args size to BRCMF_C_SET_PM (expected %d, saw %d)\n",
+                  sizeof(power_mode_), dcmd->len);
+        return ZX_ERR_INVALID_ARGS;
+      }
+      power_mode_ = *(reinterpret_cast<int32_t*>(data));
       break;
     case BRCMF_C_SET_SCAN_CHANNEL_TIME:
     case BRCMF_C_SET_SCAN_UNASSOC_TIME:

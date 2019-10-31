@@ -4210,7 +4210,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
 
   cfg->scan_request = NULL;
-  cfg->pwr_save = true;
+  cfg->pwr_save = false; // FIXME #37793: should be set per-platform
   cfg->dongle_up = false; /* dongle is not up yet */
   err = brcmf_init_priv_mem(cfg);
   if (err != ZX_OK) {

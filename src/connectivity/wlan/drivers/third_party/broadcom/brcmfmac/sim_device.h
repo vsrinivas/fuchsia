@@ -43,6 +43,8 @@ class SimDevice : public Device {
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
 
+  brcmf_simdev* GetSim();
+
  private:
   std::unique_ptr<brcmf_bus> brcmf_bus_;
   zx_device_t* phy_device_;

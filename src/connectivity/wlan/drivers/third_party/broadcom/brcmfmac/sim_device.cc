@@ -67,6 +67,10 @@ zx_status_t SimDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* s
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+brcmf_simdev* SimDevice::GetSim() {
+  return (brcmf_bus_.get())->bus_priv.sim;
+}
+
 SimDevice::~SimDevice() {
   DisableDispatcher();
   if (fake_dev_mgr_ != nullptr && phy_device_ != nullptr) {
