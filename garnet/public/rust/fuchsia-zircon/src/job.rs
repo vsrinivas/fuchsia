@@ -6,7 +6,8 @@
 
 use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Process, Status, Task, Vmar};
+use crate::{AsHandleRef, Duration, Handle, HandleBased, HandleRef, Process, Status, Task, Vmar};
+use std::convert::Into;
 
 use fuchsia_zircon_sys as sys;
 
@@ -90,6 +91,169 @@ impl Job {
         object_get_info::<JobInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
             .map(|_| info)
     }
+
+    /// Wraps the [zx_job_set_policy](//docs/reference/syscalls/job_set_policy.md) syscall
+    pub fn set_policy(&self, policy: JobPolicy) -> Result<(), Status> {
+        match policy {
+            JobPolicy::Basic(policy_option, policy_set) => {
+                let sys_opt = policy_option.into();
+                let sys_topic = sys::ZX_JOB_POL_BASIC;
+                let sys_pol: Vec<sys::zx_policy_basic> = policy_set
+                    .into_iter()
+                    .map(|(condition, action)| sys::zx_policy_basic {
+                        condition: condition.into(),
+                        policy: action.into(),
+                    })
+                    .collect();
+                let sys_count = sys_pol.len() as u32;
+
+                let sys_pol_ptr = sys_pol.as_ptr();
+                ok(unsafe {
+                    // No handles or values are moved as a result of this call (regardless of
+                    // success), and the values used here are safely dropped when this function
+                    // returns.
+                    sys::zx_job_set_policy(
+                        self.raw_handle(),
+                        sys_opt,
+                        sys_topic,
+                        sys_pol_ptr as *const u8,
+                        sys_count,
+                    )
+                })
+            }
+            JobPolicy::TimerSlack(min_slack_duration, default_mode) => {
+                let sys_opt = sys::ZX_JOB_POL_RELATIVE;
+                let sys_topic = sys::ZX_JOB_POL_TIMER_SLACK;
+                let sys_pol = sys::zx_policy_timer_slack {
+                    min_slack: min_slack_duration.into_nanos(),
+                    default_mode: default_mode.into(),
+                };
+                let sys_count = 1;
+
+                let sys_pol_ptr = &sys_pol as *const sys::zx_policy_timer_slack;
+                ok(unsafe {
+                    // Requires that `self` contains a currently valid handle.
+                    // No handles or values are moved as a result of this call (regardless of
+                    // success), and the values used here are safely dropped when this function
+                    // returns.
+                    sys::zx_job_set_policy(
+                        self.raw_handle(),
+                        sys_opt,
+                        sys_topic,
+                        sys_pol_ptr as *const u8,
+                        sys_count,
+                    )
+                })
+            }
+        }
+    }
+}
+
+/// Represents the [ZX_JOB_POL_RELATIVE and
+/// ZX_JOB_POL_ABSOLUTE](//docs/reference/syscalls/job_set_policy.md) constants
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobPolicyOption {
+    Relative,
+    Absolute,
+}
+
+impl Into<u32> for JobPolicyOption {
+    fn into(self) -> u32 {
+        match self {
+            JobPolicyOption::Relative => sys::ZX_JOB_POL_RELATIVE,
+            JobPolicyOption::Absolute => sys::ZX_JOB_POL_ABSOLUTE,
+        }
+    }
+}
+
+/// Holds a timer policy or a basic policy set for
+/// [zx_job_set_policy](//docs/reference/syscalls/job_set_policy.md)
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobPolicy {
+    Basic(JobPolicyOption, Vec<(JobCondition, JobAction)>),
+    TimerSlack(Duration, JobDefaultTimerMode),
+}
+
+/// Represents the [ZX_POL_*](//docs/reference/syscalls/job_set_policy.md) constants
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobCondition {
+    BadHandle,
+    WrongObject,
+    VmarWx,
+    NewAny,
+    NewVmo,
+    NewChannel,
+    NewEvent,
+    NewEventpair,
+    NewPort,
+    NewSocket,
+    NewFifo,
+    NewTimer,
+    NewProcess,
+    NewProfile,
+    AmbientMarkVmoExec,
+}
+
+impl Into<u32> for JobCondition {
+    fn into(self) -> u32 {
+        match self {
+            JobCondition::BadHandle => sys::ZX_POL_BAD_HANDLE,
+            JobCondition::WrongObject => sys::ZX_POL_WRONG_OBJECT,
+            JobCondition::VmarWx => sys::ZX_POL_VMAR_WX,
+            JobCondition::NewAny => sys::ZX_POL_NEW_ANY,
+            JobCondition::NewVmo => sys::ZX_POL_NEW_VMO,
+            JobCondition::NewChannel => sys::ZX_POL_NEW_CHANNEL,
+            JobCondition::NewEvent => sys::ZX_POL_NEW_EVENT,
+            JobCondition::NewEventpair => sys::ZX_POL_NEW_EVENTPAIR,
+            JobCondition::NewPort => sys::ZX_POL_NEW_PORT,
+            JobCondition::NewSocket => sys::ZX_POL_NEW_SOCKET,
+            JobCondition::NewFifo => sys::ZX_POL_NEW_FIFO,
+            JobCondition::NewTimer => sys::ZX_POL_NEW_TIMER,
+            JobCondition::NewProcess => sys::ZX_POL_NEW_PROCESS,
+            JobCondition::NewProfile => sys::ZX_POL_NEW_PROFILE,
+            JobCondition::AmbientMarkVmoExec => sys::ZX_POL_AMBIENT_MARK_VMO_EXEC,
+        }
+    }
+}
+
+/// Represents the [ZX_POL_ACTION_*](//docs/reference/syscalls/job_set_policy.md) constants
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobAction {
+    Allow,
+    Deny,
+    AllowException,
+    DenyException,
+    Kill,
+}
+
+impl Into<u32> for JobAction {
+    fn into(self) -> u32 {
+        match self {
+            JobAction::Allow => sys::ZX_POL_ACTION_ALLOW,
+            JobAction::Deny => sys::ZX_POL_ACTION_DENY,
+            JobAction::AllowException => sys::ZX_POL_ACTION_ALLOW_EXCEPTION,
+            JobAction::DenyException => sys::ZX_POL_ACTION_DENY_EXCEPTION,
+            JobAction::Kill => sys::ZX_POL_ACTION_KILL,
+        }
+    }
+}
+
+/// Represents the [ZX_TIMER_SLACK_*](//docs/reference/syscalls/job_set_policy.md) constants
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobDefaultTimerMode {
+    Center,
+    Early,
+    Late,
+}
+
+impl Into<u32> for JobDefaultTimerMode {
+    fn into(self) -> u32 {
+        match self {
+            JobDefaultTimerMode::Center => sys::ZX_TIMER_SLACK_CENTER,
+            JobDefaultTimerMode::Early => sys::ZX_TIMER_SLACK_EARLY,
+            JobDefaultTimerMode::Late => sys::ZX_TIMER_SLACK_LATE,
+        }
+    }
 }
 
 impl Task for Job {}
@@ -98,7 +262,10 @@ impl Task for Job {}
 mod tests {
     // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
     // fuchsia_zircon::Job that we need to use.
-    use fuchsia_zircon::{sys, AsHandleRef, JobInfo, Signals, Task, Time};
+    use fuchsia_zircon::{
+        sys, AsHandleRef, Duration, JobAction, JobCondition, JobDefaultTimerMode, JobInfo,
+        JobPolicy, JobPolicyOption, Signals, Task, Time,
+    };
 
     #[test]
     fn info_default() {
@@ -133,5 +300,27 @@ mod tests {
                 debugger_attached: false
             }
         );
+    }
+
+    #[test]
+    fn create_and_set_policy() {
+        let default_job = fuchsia_runtime::job_default();
+        let child_job = default_job.create_child_job().expect("failed to create child job");
+        child_job
+            .set_policy(JobPolicy::Basic(
+                JobPolicyOption::Relative,
+                vec![
+                    (JobCondition::NewChannel, JobAction::Deny),
+                    (JobCondition::NewProcess, JobAction::Allow),
+                    (JobCondition::BadHandle, JobAction::Kill),
+                ],
+            ))
+            .expect("failed to set job basic policy");
+        child_job
+            .set_policy(JobPolicy::TimerSlack(
+                Duration::from_millis(10),
+                JobDefaultTimerMode::Early,
+            ))
+            .expect("failed to set job timer slack policy");
     }
 }

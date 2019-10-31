@@ -664,6 +664,59 @@ struct_decl_macro! {
 
 zx_info_job_t!(zx_info_job_t);
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_policy_basic {
+    pub condition: u32,
+    pub policy: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_policy_timer_slack {
+    pub min_slack: zx_duration_t,
+    pub default_mode: u32,
+}
+
+multiconst!(u32, [
+    // policy options
+    ZX_JOB_POL_RELATIVE = 0;
+    ZX_JOB_POL_ABSOLUTE = 1;
+
+    // policy topic
+    ZX_JOB_POL_BASIC = 0;
+    ZX_JOB_POL_TIMER_SLACK = 1;
+
+    // policy conditions
+    ZX_POL_BAD_HANDLE            = 0;
+    ZX_POL_WRONG_OBJECT          = 1;
+    ZX_POL_VMAR_WX               = 2;
+    ZX_POL_NEW_ANY               = 3;
+    ZX_POL_NEW_VMO               = 4;
+    ZX_POL_NEW_CHANNEL           = 5;
+    ZX_POL_NEW_EVENT             = 6;
+    ZX_POL_NEW_EVENTPAIR         = 7;
+    ZX_POL_NEW_PORT              = 8;
+    ZX_POL_NEW_SOCKET            = 9;
+    ZX_POL_NEW_FIFO              = 10;
+    ZX_POL_NEW_TIMER             = 11;
+    ZX_POL_NEW_PROCESS           = 12;
+    ZX_POL_NEW_PROFILE           = 13;
+    ZX_POL_AMBIENT_MARK_VMO_EXEC = 14;
+
+    // policy actions
+    ZX_POL_ACTION_ALLOW           = 0;
+    ZX_POL_ACTION_DENY            = 1;
+    ZX_POL_ACTION_ALLOW_EXCEPTION = 2;
+    ZX_POL_ACTION_DENY_EXCEPTION  = 3;
+    ZX_POL_ACTION_KILL            = 4;
+
+    // timer slack default modes
+    ZX_TIMER_SLACK_CENTER = 0;
+    ZX_TIMER_SLACK_EARLY  = 1;
+    ZX_TIMER_SLACK_LATE   = 2;
+]);
+
 struct_decl_macro! {
     #[repr(C)]
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
