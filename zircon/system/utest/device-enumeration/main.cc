@@ -163,6 +163,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component", "wifi/brcmfmac-wlanphy",
       "tcs3400-light/tcs-3400/hid-device-000", "sys/platform/05:03:11/clocks",
       "aml-thermal/thermal", "AstroAudio/astro-audio-out", "sys/platform/05:03:13/astro-audio-in",
+      "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
   };
 

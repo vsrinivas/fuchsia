@@ -270,7 +270,7 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  status = DdkAdd("optee-tz");
+  status = DdkAdd("optee-tz", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "optee: Failed to add device\n");
     return status;
