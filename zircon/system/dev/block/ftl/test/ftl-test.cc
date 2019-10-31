@@ -111,6 +111,18 @@ TEST(FtlTest, ReAttach) {
   }
 }
 
+TEST(FtlTest, ReAttachOverflowTest) {
+  FtlShell ftl;
+  ASSERT_TRUE(ftl.Init(kDefaultOptions));
+
+  // Each time we reattach, the global variable NdmSemCount would increase.
+  // We need to make sure we do not overflow the sem_name variable.
+  // See fxb/39772.
+  for (int i = 0; i < 1000; i++) {
+    ASSERT_TRUE(ftl.ReAttach());
+  }
+}
+
 TEST(FtlTest, Format) {
   FtlShell ftl;
   ASSERT_TRUE(ftl.Init(kDefaultOptions));

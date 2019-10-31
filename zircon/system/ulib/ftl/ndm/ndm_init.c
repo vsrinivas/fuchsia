@@ -1099,7 +1099,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   memset(ndm->run_bad_blk, 0xFF, (ndm->max_bad_blks + 1) * sizeof(Pair));
 
   // Create the access semaphore.
-  sprintf(sem_name, "NDM_S%03d", NdmSemCount++);
+  snprintf(sem_name, sizeof(sem_name), "NDM_S%03d", NdmSemCount++);
   ndm->sem = semCreate(sem_name, 1, OS_FIFO);
   if (ndm->sem == NULL) {
     FsError2(NDM_SEM_CRE_ERR, errno);
