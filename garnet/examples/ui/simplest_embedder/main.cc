@@ -79,12 +79,6 @@ int main(int argc, const char** argv) {
         component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
     root_presenter->PresentView(std::move(view_holder_token), presentation.NewRequest());
 
-    fuchsia::ui::gfx::RendererParam param;
-    param.set_shadow_technique(fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME);
-    std::vector<fuchsia::ui::gfx::RendererParam> params;
-    params.push_back(std::move(param));
-    presentation->SetRendererParams(std::move(params));
-
     loop.Run();
   } else if (kUseExamplePresenter) {
     FXL_LOG(INFO) << "Using example presenter.";

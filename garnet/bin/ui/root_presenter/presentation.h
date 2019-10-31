@@ -5,6 +5,11 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_PRESENTATION_H_
 
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
+#include <glm/ext.hpp>
+
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input2/cpp/fidl.h>
@@ -21,11 +26,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/activity_notifier.h"
-#include "garnet/bin/ui/root_presenter/display_rotater.h"
-#include "garnet/bin/ui/root_presenter/display_size_switcher.h"
-#include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
@@ -82,28 +83,16 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
  private:
   enum SessionPresentState { kNoPresentPending, kPresentPending, kPresentPendingAndSceneDirty };
-  friend class DisplayRotater;
-  friend class DisplayUsageSwitcher;
   friend class PerspectiveDemoMode;
-  friend class DisplaySizeSwitcher;
   friend class PresentationSwitcher;
 
   // |Presentation|
-  void EnableClipping(bool enabled) override;
-  void UseOrthographicView() override;
-  void UsePerspectiveView() override;
-  void SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params) override;
-  void SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) override;
-  void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
-  void SetDisplayRotation(float display_rotation_degrees, bool animate) override;
+  void SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params);
   void CaptureKeyboardEventHACK(
       fuchsia::ui::input::KeyboardEvent event_to_capture,
       fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener) override;
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override;
-  void GetPresentationMode(GetPresentationModeCallback callback) override;
-  void SetPresentationModeListener(
-      fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener> listener) override;
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
   void InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) override;
@@ -113,14 +102,11 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   bool ApplyDisplayModelChanges(bool print_log, bool present_changes);
   bool ApplyDisplayModelChangesHelper(bool print_log);
 
+  // Returns the raw pointer coordinates transformed by the current display
+  // rotation.
+  glm::vec2 RotatePointerCoordinates(float x, float y);
+
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
-
-  void SetDisplayUsageWithoutApplyingChanges(fuchsia::ui::policy::DisplayUsage usage_);
-
-  // Returns false if the operation failed (e.g. the requested size is bigger
-  // than the actual display size).
-  bool SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm, float height_in_mm,
-                                                bool print_errors);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
   bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
@@ -168,19 +154,14 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   bool display_model_initialized_ = false;
 
-  DisplayModel display_model_actual_;
-  DisplayModel display_model_simulated_;
+  DisplayModel display_model_;
 
-  // When |display_model_simulated_| or |display_rotation_desired_| changes:
+  // When |display_model_| or |display_rotation_desired_| changes:
   //   * |display_metrics_| must be recalculated.
   //   * |display_rotation_current_| must be updated.
   //   * Transforms on the scene must be updated.
   // This is done by calling ApplyDisplayModelChanges().
   DisplayMetrics display_metrics_;
-
-  // Expressed in degrees.
-  float display_rotation_desired_ = 0.f;
-  float display_rotation_current_ = 0.f;
 
   // At startup, apply a rotation defined in 90 degree increments, just once.
   // Implies resizing of the presentation to adjust to rotated coordinates.
@@ -196,16 +177,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
 
-  // Rotates the display 180 degrees in response to events.
-  DisplayRotater display_rotater_;
-
-  // Toggles through different display usage values.
-  DisplayUsageSwitcher display_usage_switcher_;
-
   PerspectiveDemoMode perspective_demo_mode_;
-
-  // Toggles through different display sizes.
-  DisplaySizeSwitcher display_size_switcher_;
 
   // Toggles through different presentations.
   PresentationSwitcher presentation_switcher_;
@@ -238,12 +210,6 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
     fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   };
   std::vector<PointerCaptureItem> captured_pointerbindings_;
-
-  // Listener for changes in presentation mode.
-  fuchsia::ui::policy::PresentationModeListenerPtr presentation_mode_listener_;
-  // Presentation mode, based on last N measurements
-  fuchsia::ui::policy::PresentationMode presentation_mode_;
-  std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
   MediaButtonsHandler* media_buttons_handler_ = nullptr;
 

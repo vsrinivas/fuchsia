@@ -19,7 +19,6 @@ group("ui") {
     "input",
     "input_reader",
     "present_view",
-    "presentation_mode",
     "print_input",
     "root_presenter",
     "screencap",
@@ -37,7 +36,6 @@ test_package("scenic_tests") {
   deps = [
     "input_reader/tests",
     "present_view/tests",
-    "presentation_mode/tests",
     "root_presenter/tests",
     "//src/ui/scenic/lib/display/tests",
     "//src/ui/scenic/lib/flatland/tests",
@@ -78,10 +76,6 @@ test_package("scenic_tests") {
     },
     {
       name = "input_unittests"
-      environments = basic_envs
-    },
-    {
-      name = "presentation_mode_unittests"
       environments = basic_envs
     },
     {

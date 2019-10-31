@@ -43,12 +43,6 @@ class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
   // |fuchsia::ui::policy::KeyboardCaptureListenerHACK|
   void OnEvent(fuchsia::ui::input::KeyboardEvent event) override;
 
-  void SetNextShadowTechnique();
-
-  void SetShadowTechnique(fuchsia::ui::gfx::ShadowTechnique shadow_technique);
-
-  void ToggleClipping();
-
   // Used to initialize the presentation. Not owned.
   fuchsia::ui::policy::Presenter* const presenter_;
 
@@ -66,11 +60,6 @@ class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
     // Bindings to the presentation service, which is binded to the client on
     // |GetPresentation|.
     fidl::BindingSet<fuchsia::ui::policy::Presentation> bindings;
-
-    // Scenic demos for toggling a presentation's shadow technique and clipping.
-    fuchsia::ui::gfx::ShadowTechnique shadow_technique =
-        fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
-    bool clipping_enabled{};
   } presentation_state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PresentationContainer);

@@ -168,117 +168,13 @@ Presentation::~Presentation() {}
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
-  // Save previous display values. These could have been overridden by earlier
-  // calls to SetDisplayUsage() and SetDisplaySizeInMm(); if not, they will
-  // be unknown or 0.
-  auto previous_display_usage = display_model_simulated_.environment_info().usage;
-
-  auto previous_display_width_in_mm = display_model_simulated_.display_info().width_in_mm;
-  auto previous_display_height_in_mm = display_model_simulated_.display_info().height_in_mm;
-
   // Initialize display model.
   display_configuration::InitializeModelForDisplay(
-      display_info.width_in_px, display_info.height_in_px, &display_model_actual_);
-  display_model_simulated_ = display_model_actual_;
+      display_info.width_in_px, display_info.height_in_px, &display_model_);
 
   display_model_initialized_ = true;
 
-  // Re-set the model with previous values. If they were unknown or 0, the
-  // actual/default values will be used.
-  SetDisplayUsageWithoutApplyingChanges(previous_display_usage);
-  SetDisplaySizeInMmWithoutApplyingChanges(previous_display_width_in_mm,
-                                           previous_display_height_in_mm, true);
-
   ApplyDisplayModelChanges(true, false);
-}
-
-void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
-  uint32_t old_width_in_mm = display_model_simulated_.display_info().width_in_mm;
-  uint32_t old_height_in_mm = display_model_simulated_.display_info().height_in_mm;
-
-  SetDisplaySizeInMmWithoutApplyingChanges(width_in_mm, height_in_mm, true);
-
-  if (display_model_simulated_.display_info().width_in_mm == old_width_in_mm &&
-      display_model_simulated_.display_info().height_in_mm == old_height_in_mm) {
-    // Nothing needs to be changed.
-    return;
-  }
-
-  FXL_LOG(INFO) << "Presentation::SetDisplaySizeInMm: changing display "
-                   "dimensions to "
-                << "width=" << display_model_simulated_.display_info().width_in_mm << "mm, "
-                << "height=" << display_model_simulated_.display_info().height_in_mm << "mm.";
-
-  ApplyDisplayModelChanges(true, true);
-}
-
-void Presentation::SetDisplayRotation(float display_rotation_degrees, bool animate) {
-  display_rotater_.SetDisplayRotation(this, display_rotation_degrees, animate);
-};
-
-bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm, float height_in_mm,
-                                                            bool print_errors) {
-  if (width_in_mm == 0 || height_in_mm == 0) {
-    display_model_simulated_.display_info().width_in_px =
-        display_model_actual_.display_info().width_in_px;
-    display_model_simulated_.display_info().height_in_px =
-        display_model_actual_.display_info().height_in_px;
-    display_model_simulated_.display_info().width_in_mm =
-        display_model_actual_.display_info().width_in_mm;
-    display_model_simulated_.display_info().height_in_mm =
-        display_model_actual_.display_info().height_in_mm;
-    return true;
-  }
-
-  const float kPxPerMm = display_model_actual_.display_info().density_in_px_per_mm;
-  uint32_t width_in_px = width_in_mm * kPxPerMm;
-  uint32_t height_in_px = height_in_mm * kPxPerMm;
-
-  if (width_in_px > display_model_actual_.display_info().width_in_px) {
-    if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
-                        "display width to "
-                     << width_in_mm << ", which is larger than the actual display width "
-                     << display_model_actual_.display_info().width_in_px / kPxPerMm;
-    }
-    return false;
-  }
-  if (height_in_px > display_model_actual_.display_info().height_in_px) {
-    if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
-                        "display height to "
-                     << height_in_mm << ", which is larger than the actual display height "
-                     << display_model_actual_.display_info().height_in_px / kPxPerMm;
-    }
-    return false;
-  }
-
-  display_model_simulated_.display_info().width_in_px = width_in_px;
-  display_model_simulated_.display_info().height_in_px = height_in_px;
-  display_model_simulated_.display_info().width_in_mm = width_in_mm;
-  display_model_simulated_.display_info().height_in_mm = height_in_mm;
-  return true;
-}
-
-void Presentation::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
-  fuchsia::ui::policy::DisplayUsage old_usage = display_model_simulated_.environment_info().usage;
-  SetDisplayUsageWithoutApplyingChanges(usage);
-  if (display_model_simulated_.environment_info().usage == old_usage) {
-    // Nothing needs to be changed.
-    return;
-  }
-
-  ApplyDisplayModelChanges(true, true);
-
-  FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
-                << GetDisplayUsageAsString(display_model_simulated_.environment_info().usage);
-}
-
-void Presentation::SetDisplayUsageWithoutApplyingChanges(fuchsia::ui::policy::DisplayUsage usage) {
-  display_model_simulated_.environment_info().usage =
-      (usage == fuchsia::ui::policy::DisplayUsage::kUnknown)
-          ? display_model_actual_.environment_info().usage
-          : usage;
 }
 
 bool Presentation::ApplyDisplayModelChanges(bool print_log, bool present_changes) {
@@ -294,17 +190,16 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   if (!display_model_initialized_)
     return false;
 
-  DisplayMetrics metrics = display_model_simulated_.GetMetrics();
+  DisplayMetrics metrics = display_model_.GetMetrics();
 
   if (print_log) {
     display_configuration::LogDisplayMetrics(metrics);
   }
 
-  if (display_metrics_ == metrics && display_rotation_desired_ == display_rotation_current_)
+  if (display_metrics_ == metrics)
     return true;
 
   display_metrics_ = metrics;
-  display_rotation_current_ = display_rotation_desired_;
 
   // Layout size
   {
@@ -351,14 +246,13 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
 
   // Rotate
   {
-    glm::quat display_rotation = glm::quat(glm::vec3(
-        0, 0,
-        glm::radians<float>(display_rotation_current_ + display_startup_rotation_adjustment_)));
+    glm::quat display_rotation =
+        glm::quat(glm::vec3(0, 0, glm::radians<float>(display_startup_rotation_adjustment_)));
     view_holder_node_.SetRotation(display_rotation.x, display_rotation.y, display_rotation.z,
                                   display_rotation.w);
   }
 
-  const DisplayModel::DisplayInfo& display_info = display_model_actual_.display_info();
+  const DisplayModel::DisplayInfo& display_info = display_model_.display_info();
 
   // Center everything.
   {
@@ -387,6 +281,37 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
                  static_cast<float>(display_info.height_in_px));
 
   return true;
+}
+
+glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
+  // TODO(SCN-911): This math is messy and hard to understand. Instead, we
+  // should just walk down the layer and scene graph and apply transformations.
+  // On the other hand, this method is only used when capturing touch events,
+  // which is something we intend to deprecate anyway.
+
+  const float anchor_w = display_model_.display_info().width_in_px / 2;
+  const float anchor_h = display_model_.display_info().height_in_px / 2;
+  const int32_t startup_rotation = display_startup_rotation_adjustment_;
+
+  glm::vec4 pointer_coords(x, y, 0.f, 1.f);
+  glm::vec4 rotated_coords = glm::translate(glm::vec3(anchor_w, anchor_h, 0)) *
+                             glm::rotate(glm::radians<float>(-startup_rotation), glm::vec3(0, 0, 1)) *
+                             glm::translate(glm::vec3(-anchor_w, -anchor_h, 0)) * pointer_coords;
+
+
+  if (abs(startup_rotation) % 180 == 90) {
+    // If the aspect ratio is flipped, the origin needs to be adjusted too.
+    int32_t sim_w = static_cast<int32_t>(display_metrics_.width_in_px());
+    int32_t sim_h = static_cast<int32_t>(display_metrics_.height_in_px());
+    float adjust_origin = (sim_w - sim_h) / 2.f;
+    rotated_coords = glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) * rotated_coords;
+  }
+
+  FXL_VLOG(2) << "Pointer coordinates rotated ["
+              << startup_rotation << "]: (" << pointer_coords.x << ", " << pointer_coords.y
+              << ")->(" << rotated_coords.x << ", " << rotated_coords.y << ").";
+
+  return glm::vec2(rotated_coords.x, rotated_coords.y);
 }
 
 void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
@@ -451,8 +376,8 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
 
   ui_input::DeviceState* state = device_states_by_id_[device_id].second.get();
   fuchsia::math::Size size;
-  size.width = display_model_actual_.display_info().width_in_px;
-  size.height = display_model_actual_.display_info().height_in_px;
+  size.width = display_model_.display_info().width_in_px;
+  size.height = display_model_.display_info().height_in_px;
 
   TRACE_FLOW_BEGIN("input", "report_to_device_state", input_report.trace_id);
   state->Update(std::move(input_report), size);
@@ -494,27 +419,6 @@ void Presentation::CapturePointerEventsHACK(
   captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }
 
-void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
-  callback(presentation_mode_);
-}
-
-void Presentation::SetPresentationModeListener(
-    fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener> listener) {
-  if (presentation_mode_listener_) {
-    FXL_LOG(ERROR) << "Cannot listen to presentation mode; already listening.";
-    return;
-  }
-
-  if (presentation_mode_detector_ == nullptr) {
-    const size_t kDetectorHistoryLength = 5;
-    presentation_mode_detector_ =
-        std::make_unique<presentation_mode::Detector>(kDetectorHistoryLength);
-  }
-
-  presentation_mode_listener_.Bind(std::move(listener));
-  FXL_LOG(INFO) << "Presentation mode, now listening.";
-}
-
 // TODO(fxb/36217) Eventually pull this out from Presentation into something
 // else.
 void Presentation::RegisterMediaButtonsListener(
@@ -529,9 +433,7 @@ void Presentation::InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event
 }
 
 bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
-  return display_rotater_.OnEvent(event, this) || display_usage_switcher_.OnEvent(event, this) ||
-         display_size_switcher_.OnEvent(event, this) ||
-         perspective_demo_mode_.OnEvent(event, this) || presentation_switcher_.OnEvent(event, this);
+  return perspective_demo_mode_.OnEvent(event, this) || presentation_switcher_.OnEvent(event, this);
 }
 
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
@@ -587,7 +489,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
       }
 
       glm::vec2 rotated_point =
-          display_rotater_.RotatePointerCoordinates(this, pointer.x, pointer.y);
+          RotatePointerCoordinates(pointer.x, pointer.y);
       for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
         fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
@@ -597,9 +499,9 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
 
         // Adjust pointer origin with simulated screen offset.
         clone.x -=
-            (display_model_actual_.display_info().width_in_px - display_metrics_.width_in_px()) / 2;
+            (display_model_.display_info().width_in_px - display_metrics_.width_in_px()) / 2;
         clone.y -=
-            (display_model_actual_.display_info().height_in_px - display_metrics_.height_in_px()) /
+            (display_model_.display_info().height_in_px - display_metrics_.height_in_px()) /
             2;
 
         // Scale by device pixel density.
@@ -708,34 +610,7 @@ void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputRe
   FXL_DCHECK(device_states_by_id_[device_id].first->descriptor());
   FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
 
-  if (presentation_mode_listener_) {
-    const fuchsia::ui::input::SensorDescriptor* sensor_descriptor =
-        device_states_by_id_[device_id].first->descriptor()->sensor.get();
-    std::pair<bool, fuchsia::ui::policy::PresentationMode> update =
-        presentation_mode_detector_->Update(*sensor_descriptor, std::move(event));
-    if (update.first && update.second != presentation_mode_) {
-      presentation_mode_ = update.second;
-      presentation_mode_listener_->OnModeChanged();
-    }
-  }
-}
-
-void Presentation::EnableClipping(bool enabled) {
-  if (presentation_clipping_enabled_ != enabled) {
-    FXL_LOG(INFO) << "enable clipping: " << (enabled ? "true" : "false");
-    presentation_clipping_enabled_ = enabled;
-    PresentScene();
-  }
-}
-
-void Presentation::UseOrthographicView() {
-  FXL_LOG(INFO) << "Presentation Controller method called: "
-                   "UseOrthographicView!! (not implemented)";
-}
-
-void Presentation::UsePerspectiveView() {
-  FXL_LOG(INFO) << "Presentation Controller method called: "
-                   "UsePerspectiveView!! (not implemented)";
+  // No clients of sensor events at the moment.
 }
 
 void Presentation::PresentScene() {
@@ -749,7 +624,7 @@ void Presentation::PresentScene() {
   // There is no present pending, so we will kick one off.
   session_present_state_ = kPresentPending;
 
-  bool use_clipping = presentation_clipping_enabled_ && perspective_demo_mode_.WantsClipping();
+  bool use_clipping = perspective_demo_mode_.WantsClipping();
   if (renderer_params_override_.clipping_enabled.has_value()) {
     use_clipping = renderer_params_override_.clipping_enabled.value();
   }
@@ -788,7 +663,6 @@ void Presentation::PresentScene() {
       self->session_present_state_ = kNoPresentPending;
 
       scene_dirty |= self->perspective_demo_mode_.UpdateAnimation(self, next_presentation_time);
-      scene_dirty |= self->display_rotater_.UpdateAnimation(self, next_presentation_time);
       if (scene_dirty) {
         self->PresentScene();
       }

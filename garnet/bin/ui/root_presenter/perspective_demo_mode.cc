@@ -30,7 +30,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
-            pointer.y > 0.9f * presenter->display_model_actual_.display_info().height_in_px) {
+            pointer.y > 0.9f * presenter->display_model_.display_info().height_in_px) {
           trackball_pointer_down_ = true;
           trackball_device_id_ = pointer.device_id;
           trackball_pointer_id_ = pointer.pointer_id;
@@ -41,7 +41,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
         // the camera, then update the camera position.
         if (trackball_pointer_down_ && trackball_device_id_ == pointer.device_id &&
             trackball_device_id_ == pointer.device_id) {
-          float rate = -2.5f / presenter->display_model_actual_.display_info().width_in_px;
+          float rate = -2.5f / presenter->display_model_.display_info().width_in_px;
           float change = rate * (pointer.x - trackball_previous_x_);
           trackball_previous_x_ = pointer.x;
 
@@ -112,14 +112,14 @@ float PerspectiveDemoMode::ComputeHalfFov(Presentation* presenter, float zoom) c
   // escher::Camera::NewOrtho() and scenic::gfx::Layer::GetViewingVolume(). For
   // a 1600px height display, this works out to ~76 degrees.
   float max_half_fov =
-      atan(presenter->display_model_actual_.display_info().height_in_px * 0.5f / 1010.f);
+      atan(presenter->display_model_.display_info().height_in_px * 0.5f / 1010.f);
 
   return glm::lerp(kMinHalfFov, max_half_fov, zoom);
 }
 
 void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param, float zoom_param) {
-  const float half_width = presenter->display_model_actual_.display_info().width_in_px * 0.5f;
-  const float half_height = presenter->display_model_actual_.display_info().height_in_px * 0.5f;
+  const float half_width = presenter->display_model_.display_info().width_in_px * 0.5f;
+  const float half_height = presenter->display_model_.display_info().height_in_px * 0.5f;
 
   // Always look at the middle of the stage.
   const float target[3] = {half_width, half_height, 0};
@@ -180,9 +180,9 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter, uint64_t pres
       case kAnimateToOrthographic: {
         animation_state_ = kOrthographic;
 
-        const float half_width = presenter->display_model_actual_.display_info().width_in_px * 0.5f;
+        const float half_width = presenter->display_model_.display_info().width_in_px * 0.5f;
         const float half_height =
-            presenter->display_model_actual_.display_info().height_in_px * 0.5f;
+            presenter->display_model_.display_info().height_in_px * 0.5f;
 
         // Always look at the middle of the stage.
         const float target[3] = {half_width, half_height, 0};
