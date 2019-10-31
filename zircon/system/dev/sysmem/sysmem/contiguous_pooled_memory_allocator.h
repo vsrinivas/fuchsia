@@ -48,6 +48,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void DumpPoolStats();
   Owner* const parent_device_{};
   const char* const allocation_name_{};
+  char child_name_[ZX_MAX_NAME_LEN] = {};
   zx::vmo contiguous_vmo_;
   RegionAllocator region_allocator_;
   // From parent_vmo handle to std::unique_ptr<>

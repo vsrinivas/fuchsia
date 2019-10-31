@@ -16,7 +16,11 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_d
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
       size_(size),
       is_cpu_accessible_(is_cpu_accessible),
-      is_ready_(is_ready) {}
+      is_ready_(is_ready) {
+  snprintf(child_name_, sizeof(child_name_), "%s-child", allocation_name_);
+  // Ensure NUL-terminated.
+  child_name_[sizeof(child_name_) - 1] = 0;
+}
 
 zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx::vmo local_contiguous_vmo;
@@ -153,10 +157,9 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
     return status;
   }
 
-  // If you see a sysmem-contig VMO you should know that it doesn't actually
+  // If you see a Sysmem*-child VMO you should know that it doesn't actually
   // take up any space, because the same memory is backed by contiguous_vmo_.
-  const char* kSysmemContig = "sysmem-contig";
-  status = result_parent_vmo.set_property(ZX_PROP_NAME, kSysmemContig, strlen(kSysmemContig));
+  status = result_parent_vmo.set_property(ZX_PROP_NAME, child_name_, strlen(child_name_));
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed vmo.set_property(ZX_PROP_NAME, ...): %d", status);
     return status;

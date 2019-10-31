@@ -31,9 +31,10 @@ class FakeOwner : public MemoryAllocator::Owner {
 
 class ContiguousPooledSystem : public zxtest::Test {
  public:
-  ContiguousPooledSystem() : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
-      true,  // is_cpu_accessible
-      false) {  // is_ready
+  ContiguousPooledSystem()
+      : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount,
+                   true,     // is_cpu_accessible
+                   false) {  // is_ready
     // nothing else to do here
   }
 
@@ -57,7 +58,7 @@ TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
   zx::vmo vmo;
   EXPECT_OK(allocator_.Allocate(kVmoSize, &vmo));
   EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
-  EXPECT_EQ(0u, strcmp("sysmem-contig", name));
+  EXPECT_EQ(0u, strcmp("test-pool-child", name));
 }
 
 TEST_F(ContiguousPooledSystem, Full) {
