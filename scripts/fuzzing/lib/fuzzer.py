@@ -240,7 +240,7 @@ class Fuzzer(object):
         pid = -1
         sym = None
         artifacts = []
-        pid_pattern = re.compile(r'==([0-9]*)==')
+        pid_pattern = re.compile(r'^==([0-9]+)==')
         mut_pattern = re.compile(r'^MS: [0-9]*')  # Fuzzer::DumpCurrentUnit
         art_pattern = re.compile(r'Test unit written to data/(\S*)')
         for line in iter(fd_in.readline, ''):
