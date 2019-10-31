@@ -68,8 +68,8 @@ def main(argv):
         ]
         content['sandbox']['services'] += [
             'fuchsia.sysmem.Allocator',
-            'fuchsia.vulkan.loader.Loader',
             'fuchsia.tracing.provider.Registry',
+            'fuchsia.vulkan.loader.Loader',
         ]
 
     # Accessing the framebuffer requires this device driver
@@ -83,6 +83,11 @@ def main(argv):
         content['facets'] = {
             'fuchsia.test':
                 {
+                    'injected-services':
+                        {
+                            "fuchsia.tracing.provider.Register":
+                                "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                        },
                     'system-services':
                         [
                             "fuchsia.sysmem.Allocator",
