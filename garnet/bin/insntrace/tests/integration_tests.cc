@@ -33,8 +33,7 @@ const char* const kResultFileList[] = {
     "/tmp/ptout.ptlist",
 };
 
-// TODO(35374): Flakey
-TEST(Insntrace, DISABLED_Control) {
+TEST(Insntrace, Control) {
   zx::job job{};  // -> default job
 
   // A note on file sizes:
