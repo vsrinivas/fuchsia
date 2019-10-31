@@ -10,9 +10,18 @@ group("audio") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":audio",
+    "//src/media/audio:tests",
+    "//src/media/audio/virtual_audio_service",
+  ]
+}
+
 group("audio_config") {
   testonly = true
   deps = [
-    "//src/media/audio/config"
+    "//src/media/audio/config",
   ]
 }
