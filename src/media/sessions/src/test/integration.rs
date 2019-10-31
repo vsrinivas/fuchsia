@@ -9,6 +9,7 @@ use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::stream::TryStreamExt;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
@@ -275,7 +276,9 @@ async fn player_disconnection_propagates() -> Result<()> {
 
     drop(player);
     watcher.wait_for_removal().await?;
-    assert!(session.play().is_err());
+    let session_channel =
+        session.into_channel().expect("Taking channel from proxy").into_zx_channel();
+    session_channel.wait_handle(zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)?;
 
     Ok(())
 }

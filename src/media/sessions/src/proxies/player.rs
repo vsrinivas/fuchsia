@@ -223,11 +223,11 @@ impl Player {
     }
 
     /// Disconnects all proxied clients. Returns when all clients are disconnected.
-    pub async fn disconnect_proxied_clients(&mut self) {
+    pub fn disconnect_proxied_clients<'a>(&'a mut self) -> impl Future<Output = ()> + 'a {
         for server in self.server_handles.drain(0..) {
             server.abort();
         }
-        self.server_wait_group.wait().await;
+        self.server_wait_group.wait()
     }
 
     fn options_satisfied(&self) -> WatchOptions {
