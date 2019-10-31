@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_
+#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_
 
-#include <fbl/string.h>
-#include <fbl/vector.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/pixelformat.h>
 
-#include "fuchsia/hardware/display/c/fidl.h"
+#include <fbl/string.h>
+#include <fbl/vector.h>
 
 class Display {
  public:
-  Display(fuchsia_hardware_display_Info* info);
+  Display(const ::llcpp::fuchsia::hardware::display::Info& info);
 
-  void Init(zx_handle_t dc_handle);
+  void Init(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc);
 
   zx_pixel_format_t format() const { return pixel_formats_[format_idx_]; }
-  fuchsia_hardware_display_Mode mode() const { return modes_[mode_idx_]; }
-  fuchsia_hardware_display_CursorInfo cursor() const { return cursors_[0]; }
+  ::llcpp::fuchsia::hardware::display::Mode mode() const { return modes_[mode_idx_]; }
+  ::llcpp::fuchsia::hardware::display::CursorInfo cursor() const { return cursors_[0]; }
   uint64_t id() const { return id_; }
 
   bool set_format_idx(uint32_t idx) {
@@ -43,10 +44,12 @@ class Display {
 
   uint64_t id_;
   fbl::Vector<zx_pixel_format_t> pixel_formats_;
-  fbl::Vector<fuchsia_hardware_display_Mode> modes_;
-  fbl::Vector<fuchsia_hardware_display_CursorInfo> cursors_;
+  fbl::Vector<::llcpp::fuchsia::hardware::display::Mode> modes_;
+  fbl::Vector<::llcpp::fuchsia::hardware::display::CursorInfo> cursors_;
 
   fbl::String manufacturer_name_;
   fbl::String monitor_name_;
   fbl::String monitor_serial_;
 };
+
+#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_

@@ -8,10 +8,10 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/display/controller.h>
+//#include <ddk/protocol/display/controller.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 
 #include "display.h"
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "image.h"
 
 typedef struct custom_layer {
@@ -20,8 +20,8 @@ typedef struct custom_layer {
 
   bool done;
 
-  frame_t src;
-  frame_t dest;
+  ::llcpp::fuchsia::hardware::display::Frame src;
+  ::llcpp::fuchsia::hardware::display::Frame dest;
 
   image_import_t import_info[2];
 } custom_layer_t;
@@ -29,13 +29,15 @@ typedef struct custom_layer {
 // A layer whose output can appear on multiple displays.
 class VirtualLayer {
  public:
+  typedef ::llcpp::fuchsia::hardware::display::Controller Controller;
+
   explicit VirtualLayer(Display* display);
   explicit VirtualLayer(const fbl::Vector<Display>& displays, bool tiled = true);
 
   virtual ~VirtualLayer() {}
 
   // Finish initializing the layer. All Set* methods should be called before this.
-  virtual bool Init(zx_handle_t channel) = 0;
+  virtual bool Init(Controller::SyncClient* dc) = 0;
 
   // Steps the local layout state to frame_num.
   virtual void StepLayout(int32_t frame_num) = 0;
@@ -44,7 +46,7 @@ class VirtualLayer {
   virtual bool WaitForReady() = 0;
 
   // Sets the current layout to the display contorller.
-  virtual void SendLayout(zx_handle_t channel) = 0;
+  virtual void SendLayout(Controller::SyncClient* dc) = 0;
 
   // Renders the current frame (and signals the fence if necessary).
   virtual void Render(int32_t frame_num) = 0;
@@ -56,7 +58,7 @@ class VirtualLayer {
         return layers_[i].id;
       }
     }
-    return INVALID_ID;
+    return ::llcpp::fuchsia::hardware::display::invalidId;
   }
 
   // Gets the ID of the image on the given display.
@@ -85,8 +87,8 @@ class VirtualLayer {
   }
 
  protected:
-  custom_layer_t* CreateLayer(zx_handle_t dc_handle);
-  void SetLayerImages(zx_handle_t handle, bool alt_image);
+  custom_layer_t* CreateLayer(Controller::SyncClient* dc);
+  void SetLayerImages(Controller::SyncClient* dc, bool alt_image);
 
   fbl::Vector<Display*> displays_;
   fbl::Vector<custom_layer_t> layers_;
@@ -131,10 +133,10 @@ class PrimaryLayer : public VirtualLayer {
   void SetImageFormat(uint32_t image_format) { image_format_ = image_format; }
   void SetIntelYTiling(bool enable) { intel_y_tiling_ = enable; }
 
-  bool Init(zx_handle_t channel) override;
+  bool Init(Controller::SyncClient* dc) override;
   void StepLayout(int32_t frame_num) override;
   bool WaitForReady() override;
-  void SendLayout(zx_handle_t channel) override;
+  void SendLayout(Controller::SyncClient* channel) override;
   void Render(int32_t frame_num) override;
 
   uint64_t image_id(uint64_t display_id) const override {
@@ -143,20 +145,21 @@ class PrimaryLayer : public VirtualLayer {
         return layers_[i].import_info[alt_image_].id;
       }
     }
-    return INVALID_ID;
+    return ::llcpp::fuchsia::hardware::display::invalidId;
   }
 
  private:
-  void SetLayerPositions(zx_handle_t handle);
+  void SetLayerPositions(Controller::SyncClient* dc);
   bool Wait(uint32_t idx);
   void InitImageDimens();
 
   uint32_t image_width_ = 0;
   uint32_t image_height_ = 0;
   uint32_t image_format_ = 0;
-  frame_t src_frame_ = {};
-  frame_t dest_frame_ = {};
-  uint8_t rotation_ = fuchsia_hardware_display_Transform_IDENTITY;
+  ::llcpp::fuchsia::hardware::display::Frame src_frame_ = {};
+  ::llcpp::fuchsia::hardware::display::Frame dest_frame_ = {};
+  typedef ::llcpp::fuchsia::hardware::display::Transform Transform;
+  Transform rotation_ = Transform::IDENTITY;
   bool layer_flipping_ = false;
   bool pan_src_ = false;
   bool pan_dest_ = false;
@@ -177,9 +180,9 @@ class CursorLayer : public VirtualLayer {
   explicit CursorLayer(Display* display);
   explicit CursorLayer(const fbl::Vector<Display>& displays);
 
-  bool Init(zx_handle_t channel) override;
+  bool Init(Controller::SyncClient* dc) override;
   void StepLayout(int32_t frame_num) override;
-  void SendLayout(zx_handle_t channel) override;
+  void SendLayout(Controller::SyncClient* dc) override;
 
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}
@@ -190,7 +193,7 @@ class CursorLayer : public VirtualLayer {
         return layers_[i].import_info[0].id;
       }
     }
-    return INVALID_ID;
+    return ::llcpp::fuchsia::hardware::display::invalidId;
   }
 
  private:
@@ -205,13 +208,15 @@ class ColorLayer : public VirtualLayer {
   explicit ColorLayer(Display* display);
   explicit ColorLayer(const fbl::Vector<Display>& displays);
 
-  bool Init(zx_handle_t channel) override;
+  bool Init(Controller::SyncClient* dc) override;
 
-  void SendLayout(zx_handle_t channel) override {}
+  void SendLayout(Controller::SyncClient* dc) override {}
   void StepLayout(int32_t frame_num) override {}
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}
-  uint64_t image_id(uint64_t display_id) const override { return INVALID_ID; }
+  uint64_t image_id(uint64_t display_id) const override {
+    return ::llcpp::fuchsia::hardware::display::invalidId;
+  }
   virtual bool is_done() const override { return true; }
 };
 

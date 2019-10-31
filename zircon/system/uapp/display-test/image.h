@@ -5,12 +5,11 @@
 #ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
 #define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
-
-#include "fuchsia/hardware/display/c/fidl.h"
 
 #define TILE_PIXEL_WIDTH 32u
 #define TILE_PIXEL_HEIGHT 32u
@@ -31,9 +30,9 @@ typedef struct image_import {
 
 class Image {
  public:
-  static Image* Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
-                       zx_pixel_format_t format, uint32_t fg_color, uint32_t bg_color,
-                       bool use_intel_y_tiling);
+  static Image* Create(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
+                       uint32_t width, uint32_t height, zx_pixel_format_t format, uint32_t fg_color,
+                       uint32_t bg_color, bool use_intel_y_tiling);
 
   void Render(int32_t prev_step, int32_t step_num);
 
@@ -43,8 +42,9 @@ class Image {
   uint32_t stride() { return stride_; }
   zx_pixel_format_t format() { return format_; }
 
-  void GetConfig(fuchsia_hardware_display_ImageConfig* config_out);
-  bool Import(zx_handle_t dc_handle, image_import_t* import_out);
+  void GetConfig(::llcpp::fuchsia::hardware::display::ImageConfig* config_out);
+  bool Import(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
+              image_import_t* import_out);
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,

@@ -4,6 +4,7 @@
 
 #include "image.h"
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -24,12 +25,12 @@
 #include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "utils.h"
 
 static constexpr uint32_t kRenderPeriod = 120;
 
 namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace fhd = ::llcpp::fuchsia::hardware::display;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
              uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
@@ -44,7 +45,7 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t 
       bg_color_(bg_color),
       use_intel_y_tiling_(use_intel_y_tiling) {}
 
-Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
+Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t height,
                      zx_pixel_format_t format, uint32_t fg_color, uint32_t bg_color,
                      bool use_intel_y_tiling) {
   std::unique_ptr<sysmem::Allocator::SyncClient> allocator;
@@ -79,61 +80,25 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
     display_token_handle = client.release();
   }
 
-  static uint32_t next_collection_id = INVALID_ID + 1;
-
+  static uint32_t next_collection_id = fhd::invalidId + 1;
   uint32_t collection_id = next_collection_id++;
-
   if (!token->Sync().ok()) {
     fprintf(stderr, "Failed to sync token\n");
     return nullptr;
   }
-  fuchsia_hardware_display_ControllerImportBufferCollectionRequest import_msg = {};
-  fidl_init_txn_header(&import_msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerImportBufferCollectionOrdinal);
-  import_msg.collection_id = collection_id;
-  import_msg.collection_token = FIDL_HANDLE_PRESENT;
-
-  fuchsia_hardware_display_ControllerImportBufferCollectionResponse import_rsp = {};
-
-  zx_channel_call_args_t import_call = {};
-  import_call.wr_bytes = &import_msg;
-  import_call.rd_bytes = &import_rsp;
-  import_call.wr_num_bytes = sizeof(import_msg);
-  import_call.rd_num_bytes = sizeof(import_rsp);
-  import_call.wr_num_handles = 1;
-  import_call.wr_handles = &display_token_handle;
-  uint32_t actual_bytes, actual_handles;
-  zx_status_t status =
-      zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call, &actual_bytes, &actual_handles);
-  if (status != ZX_OK || import_rsp.res != ZX_OK) {
+  auto import_result = dc->ImportBufferCollection(collection_id, zx::channel(display_token_handle));
+  if (!import_result.ok() || import_result->res != ZX_OK) {
     fprintf(stderr, "Failed to import buffer collection\n");
     return nullptr;
   }
 
-  fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequest constraints_msg = {};
-  fidl_init_txn_header(&constraints_msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsOrdinal);
-  constraints_msg.config.pixel_format = format;
-  constraints_msg.config.height = height;
-  constraints_msg.config.width = width;
-  if (use_intel_y_tiling) {
-    constraints_msg.config.type = 2;  // IMAGE_TYPE_Y_LEGACY
-  } else {
-    constraints_msg.config.type = IMAGE_TYPE_SIMPLE;
-  }
-  // Planes aren't initialized because they're determined once sysmem has
-  // allocated the image.
-  constraints_msg.collection_id = collection_id;
-
-  fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponse constraints_rsp = {};
-  zx_channel_call_args_t constraints_call = {};
-  constraints_call.wr_bytes = &constraints_msg;
-  constraints_call.rd_bytes = &constraints_rsp;
-  constraints_call.wr_num_bytes = sizeof(constraints_msg);
-  constraints_call.rd_num_bytes = sizeof(constraints_rsp);
-  status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &constraints_call, &actual_bytes,
-                           &actual_handles);
-  if (status != ZX_OK || constraints_rsp.res != ZX_OK) {
+  fhd::ImageConfig image_config = {};
+  image_config.pixel_format = format;
+  image_config.height = height;
+  image_config.width = width;
+  image_config.type = use_intel_y_tiling ? 2 : IMAGE_TYPE_SIMPLE;
+  auto set_constraints_result = dc->SetBufferCollectionConstraints(collection_id, image_config);
+  if (!set_constraints_result.ok() || set_constraints_result->res != ZX_OK) {
     fprintf(stderr, "Failed to set constraints\n");
     return nullptr;
   }
@@ -321,7 +286,7 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
   }
 }
 
-void Image::GetConfig(fuchsia_hardware_display_ImageConfig* config_out) {
+void Image::GetConfig(fhd::ImageConfig* config_out) {
   config_out->height = height_;
   config_out->width = width_;
   config_out->pixel_format = format_;
@@ -330,7 +295,7 @@ void Image::GetConfig(fuchsia_hardware_display_ImageConfig* config_out) {
   } else {
     config_out->type = 2;  // IMAGE_TYPE_Y_LEGACY
   }
-  memset(config_out->planes, 0, sizeof(config_out->planes));
+  config_out->planes = {};
   config_out->planes[0].byte_offset = 0;
   config_out->planes[0].bytes_per_row = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
   if (config_out->pixel_format == ZX_PIXEL_FORMAT_NV12) {
@@ -339,9 +304,9 @@ void Image::GetConfig(fuchsia_hardware_display_ImageConfig* config_out) {
   }
 }
 
-bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
+bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   for (int i = 0; i < 2; i++) {
-    static int event_id = INVALID_ID + 1;
+    static int event_id = fhd::invalidId + 1;
     zx_handle_t e1, e2;
     if (zx_event_create(0, &e1) != ZX_OK ||
         zx_handle_duplicate(e1, ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
@@ -349,50 +314,23 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
       return false;
     }
 
-    fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg = {};
-    fidl_init_txn_header(&import_evt_msg.hdr, 0,
-                         fuchsia_hardware_display_ControllerImportEventOrdinal);
-    import_evt_msg.id = event_id++;
-    import_evt_msg.event = FIDL_HANDLE_PRESENT;
-
-    if (zx_channel_write(dc_handle, 0, &import_evt_msg, sizeof(import_evt_msg), &e2, 1) != ZX_OK) {
-      printf("Failed to send import message\n");
-      return false;
-    }
+    info_out->events[i] = e1;
+    info_out->event_ids[i] = event_id;
+    dc->ImportEvent(zx::event(e2), event_id++);
 
     if (i != WAIT_EVENT) {
       zx_object_signal(e1, 0, ZX_EVENT_SIGNALED);
     }
-
-    info_out->events[i] = e1;
-    info_out->event_ids[i] = import_evt_msg.id;
   }
 
-  fuchsia_hardware_display_ControllerImportImageRequest import_msg = {};
-  fidl_init_txn_header(&import_msg.hdr, 0, fuchsia_hardware_display_ControllerImportImageOrdinal);
-  GetConfig(&import_msg.image_config);
-  import_msg.collection_id = collection_id_;
-  import_msg.index = 0;
-
-  fuchsia_hardware_display_ControllerImportImageResponse import_rsp = {};
-  zx_channel_call_args_t import_call = {};
-  import_call.wr_bytes = &import_msg;
-  import_call.rd_bytes = &import_rsp;
-  import_call.wr_num_bytes = sizeof(import_msg);
-  import_call.rd_num_bytes = sizeof(import_rsp);
-  uint32_t actual_bytes, actual_handles;
-  if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call, &actual_bytes,
-                      &actual_handles) != ZX_OK) {
-    printf("Failed to make import call\n");
-    return false;
-  }
-
-  if (import_rsp.res != ZX_OK) {
+  fhd::ImageConfig image_config;
+  GetConfig(&image_config);
+  auto import_result = dc->ImportImage(image_config, collection_id_, /*index=*/0);
+  if (!import_result.ok() || import_result->res != ZX_OK) {
     printf("Failed to import image\n");
     return false;
   }
-
-  info_out->id = import_rsp.image_id;
+  info_out->id = import_result->image_id;
 
   return true;
 }

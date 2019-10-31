@@ -8,27 +8,29 @@
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
-Display::Display(fuchsia_hardware_display_Info* info) {
-  id_ = info->id;
+namespace fhd = ::llcpp::fuchsia::hardware::display;
 
-  auto pixel_format = reinterpret_cast<int32_t*>(info->pixel_format.data);
-  for (unsigned i = 0; i < info->pixel_format.count; i++) {
+Display::Display(const fhd::Info& info) {
+  id_ = info.id;
+
+  auto pixel_format = reinterpret_cast<const int32_t*>(info.pixel_format.data());
+  for (unsigned i = 0; i < info.pixel_format.count(); i++) {
     pixel_formats_.push_back(pixel_format[i]);
   }
 
-  auto mode = reinterpret_cast<fuchsia_hardware_display_Mode*>(info->modes.data);
-  for (unsigned i = 0; i < info->modes.count; i++) {
+  auto mode = reinterpret_cast<const fhd::Mode*>(info.modes.data());
+  for (unsigned i = 0; i < info.modes.count(); i++) {
     modes_.push_back(mode[i]);
   }
 
-  auto cursors = reinterpret_cast<fuchsia_hardware_display_CursorInfo*>(info->cursor_configs.data);
-  for (unsigned i = 0; i < info->cursor_configs.count; i++) {
+  auto cursors = reinterpret_cast<const fhd::CursorInfo*>(info.cursor_configs.data());
+  for (unsigned i = 0; i < info.cursor_configs.count(); i++) {
     cursors_.push_back(cursors[i]);
   }
 
-  manufacturer_name_ = fbl::String(info->manufacturer_name.data);
-  monitor_name_ = fbl::String(info->monitor_name.data);
-  monitor_serial_ = fbl::String(info->monitor_serial.data);
+  manufacturer_name_ = fbl::String(info.manufacturer_name.data());
+  monitor_name_ = fbl::String(info.monitor_name.data());
+  monitor_serial_ = fbl::String(info.monitor_serial.data());
 }
 
 void Display::Dump() {
@@ -57,28 +59,17 @@ void Display::Dump() {
   printf("\n");
 }
 
-void Display::Init(zx_handle_t dc_handle) {
+void Display::Init(fhd::Controller::SyncClient* dc) {
   if (mode_idx_ != 0) {
-    fuchsia_hardware_display_ControllerSetDisplayModeRequest set_mode_msg = {};
-    fidl_init_txn_header(&set_mode_msg.hdr, 0,
-                         fuchsia_hardware_display_ControllerSetDisplayModeOrdinal);
-    set_mode_msg.display_id = id_;
-    set_mode_msg.mode = modes_[mode_idx_];
-    ZX_ASSERT(zx_channel_write(dc_handle, 0, &set_mode_msg, sizeof(set_mode_msg), nullptr, 0) ==
-              ZX_OK);
+    ZX_ASSERT(dc->SetDisplayMode(id_, modes_[mode_idx_]).ok());
   }
 
   if (grayscale_) {
-    fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest cc_msg = {};
-    fidl_init_txn_header(&cc_msg.hdr, 0,
-                         fuchsia_hardware_display_ControllerSetDisplayColorConversionOrdinal);
-    cc_msg.display_id = id_;
-    cc_msg.postoffsets[0] = nanf("post");
-    cc_msg.preoffsets[0] = nanf("pre");
-    float grayscale[9] = {
+    ::fidl::Array<float, 3> preoffsets = {nanf("pre"), 0, 0};
+    ::fidl::Array<float, 3> postoffsets = {nanf("post"), 0, 0};
+    ::fidl::Array<float, 9> grayscale = {
         .2126f, .7152f, .0722f, .2126f, .7152f, .0722f, .2126f, .7152f, .0722f,
     };
-    memcpy(cc_msg.coefficients, grayscale, sizeof(grayscale));
-    ZX_ASSERT(zx_channel_write(dc_handle, 0, &cc_msg, sizeof(cc_msg), NULL, 0) == ZX_OK);
+    ZX_ASSERT(dc->SetDisplayColorConversion(id_, preoffsets, grayscale, postoffsets).ok());
   }
 }

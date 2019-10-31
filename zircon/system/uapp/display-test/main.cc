@@ -18,23 +18,24 @@
 
 #include <memory>
 
-#include <ddk/protocol/display/controller.h>
+//#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
 #include "display.h"
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "virtual-layer.h"
 
+namespace fhd = ::llcpp::fuchsia::hardware::display;
+
 static zx_handle_t device_handle;
-static zx_handle_t dc_handle;
+static std::unique_ptr<fhd::Controller::SyncClient> dc;
 static bool has_ownership;
 
 static bool wait_for_driver_event(zx_time_t deadline) {
   zx_handle_t observed;
   uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  if (zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
+  if (zx_object_wait_one(dc->channel().get(), signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
     printf("Wait failed\n");
     return false;
   }
@@ -68,64 +69,51 @@ static bool bind_display(fbl::Vector<Display>* displays) {
   }
 
   fzl::FdioCaller caller(std::move(fd));
-  zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
-  if (fidl_status != ZX_OK) {
-    printf("Failed to call service handle %d (%s)\n", fidl_status,
-           zx_status_get_string(fidl_status));
+  auto open_response = fhd::Provider::Call::OpenController(
+      caller.channel(), std::move(device_server), std::move(dc_server));
+  if (!open_response.ok()) {
+    printf("Failed to call service handle %d (%s)\n", open_response.status(),
+           open_response.error());
     return false;
   }
-  if (status != ZX_OK) {
-    printf("Failed to open controller %d (%s)\n", status, zx_status_get_string(status));
+  if (open_response->s != ZX_OK) {
+    printf("Failed to open controller %d (%s)\n", open_response->s,
+           zx_status_get_string(open_response->s));
     return false;
   }
 
-  dc_handle = dc_client.release();
+  dc = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
   device_handle = device_client.release();
 
   uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
   while (displays->is_empty()) {
-    printf("Wating for display\n");
-    if (!wait_for_driver_event(ZX_TIME_INFINITE)) {
-      return false;
-    }
-
-    printf("Querying display\n");
-    if (msg.Read(dc_handle, 0) != ZX_OK) {
-      printf("Read failed\n");
-      return false;
-    }
-
-    if (msg.ordinal() == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
-      const char* err_msg;
-      if (msg.Decode(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable, &err_msg) !=
-          ZX_OK) {
-        printf("Fidl decode error %lu %s\n", msg.ordinal(), err_msg);
-        return false;
-      }
-
-      auto changes = reinterpret_cast<fuchsia_hardware_display_ControllerDisplaysChangedEvent*>(
-          msg.bytes().data());
-      auto display_info = reinterpret_cast<fuchsia_hardware_display_Info*>(changes->added.data);
-
-      for (unsigned i = 0; i < changes->added.count; i++) {
-        displays->push_back(Display(display_info + i));
-      }
-    } else if (msg.ordinal() == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal) {
-      has_ownership =
-          ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
-              ->has_ownership;
-    } else {
-      printf("Got unexpected message %lu\n", msg.ordinal());
+    printf("Waiting for display\n");
+    if (ZX_OK !=
+        dc->HandleEvents({
+            .displays_changed =
+                [&displays](::fidl::VectorView<fhd::Info> added,
+                            ::fidl::VectorView<uint64_t> removed) {
+                  for (size_t i = 0; i < added.count(); i++) {
+                    displays->push_back(Display(added[i]));
+                  }
+                  return ZX_OK;
+                },
+            .vsync = [](uint64_t display_id, uint64_t timestamp,
+                        ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
+            .client_ownership_change =
+                [](bool owns) {
+                  has_ownership = owns;
+                  return ZX_OK;
+                },
+            .unknown = []() { return ZX_ERR_STOP; },
+        })) {
+      printf("Got unexpected message\n");
       return false;
     }
   }
 
-  fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync = {};
-  fidl_init_txn_header(&enable_vsync.hdr, 0, fuchsia_hardware_display_ControllerEnableVsyncOrdinal);
-  enable_vsync.enable = true;
-  if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
+  if (!dc->EnableVsync(true).ok()) {
     printf("Failed to enable vsync\n");
     return false;
   }
@@ -151,7 +139,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   for (auto& layer : layers) {
     uint64_t id = layer->id(display.id());
-    if (id != INVALID_ID) {
+    if (id != fhd::invalidId) {
       new_layers.push_back(id);
     }
   }
@@ -168,26 +156,8 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   if (layer_change) {
     current_layers->swap(new_layers);
-
-    uint32_t size =
-        static_cast<int32_t>(sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
-                             FIDL_ALIGN(sizeof(uint64_t) * current_layers->size()));
-    uint8_t fidl_bytes[size];
-
-    auto set_layers_msg =
-        reinterpret_cast<fuchsia_hardware_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
-    fidl_init_txn_header(&set_layers_msg->hdr, 0,
-                         fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal);
-    set_layers_msg->layer_ids.count = current_layers->size();
-    set_layers_msg->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-    set_layers_msg->display_id = display.id();
-
-    auto layer_list = reinterpret_cast<uint64_t*>(set_layers_msg + 1);
-    for (auto layer_id : *current_layers) {
-      *(layer_list++) = layer_id;
-    }
-
-    if (zx_channel_write(dc_handle, 0, fidl_bytes, size, nullptr, 0) != ZX_OK) {
+    if (!dc->SetDisplayLayers(display.id(), {current_layers->data(), current_layers->size()})
+             .ok()) {
       printf("Failed to set layers\n");
       return false;
     }
@@ -196,45 +166,22 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 }
 
 bool apply_config() {
-  fuchsia_hardware_display_ControllerCheckConfigRequest check_msg = {};
-  uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  check_msg.discard = false;
-  fidl_init_txn_header(&check_msg.hdr, 0, fuchsia_hardware_display_ControllerCheckConfigOrdinal);
-  zx_channel_call_args_t check_call = {};
-  check_call.wr_bytes = &check_msg;
-  check_call.rd_bytes = check_resp_bytes;
-  check_call.wr_num_bytes = sizeof(check_msg);
-  check_call.rd_num_bytes = sizeof(check_resp_bytes);
-  uint32_t actual_bytes, actual_handles;
-  zx_status_t status;
-  if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &check_call, &actual_bytes,
-                                &actual_handles)) != ZX_OK) {
-    printf("Failed to make check call: %d (%s)\n", status, zx_status_get_string(status));
+  auto result = dc->CheckConfig(false);
+  if (!result.ok()) {
+    printf("Failed to make check call: %d (%s)\n", result.status(), result.error());
     return false;
   }
 
-  fidl::Message msg(fidl::BytePart(check_resp_bytes, ZX_CHANNEL_MAX_MSG_BYTES, actual_bytes),
-                    fidl::HandlePart());
-  const char* err_msg;
-  if (msg.Decode(&fuchsia_hardware_display_ControllerCheckConfigResponseTable, &err_msg) != ZX_OK) {
-    return false;
-  }
-  auto check_rsp =
-      reinterpret_cast<fuchsia_hardware_display_ControllerCheckConfigResponse*>(msg.bytes().data());
-
-  if (check_rsp->res != fuchsia_hardware_display_ConfigResult_OK) {
-    printf("Config not valid (%d)\n", check_rsp->res);
-    auto* arr = static_cast<fuchsia_hardware_display_ClientCompositionOp*>(check_rsp->ops.data);
-    for (unsigned i = 0; i < check_rsp->ops.count; i++) {
-      printf("Client composition op (display %ld, layer %ld): %d\n", arr[i].display_id,
-             arr[i].layer_id, arr[i].opcode);
+  if (result->res != fhd::ConfigResult::OK) {
+    printf("Config not valid (%d)\n", static_cast<uint32_t>(result->res));
+    for (const auto& op : result->ops) {
+      printf("Client composition op (display %ld, layer %ld): %hhu\n", op.display_id, op.layer_id,
+             static_cast<uint8_t>(op.opcode));
     }
     return false;
   }
 
-  fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg = {};
-  fidl_init_txn_header(&apply_msg.hdr, 0, fuchsia_hardware_display_ControllerApplyConfigOrdinal);
-  if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
+  if (!dc->ApplyConfig().ok()) {
     printf("Apply failed\n");
     return false;
   }
@@ -242,67 +189,41 @@ bool apply_config() {
 }
 
 zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
-  zx_time_t deadline = has_ownership ? zx_clock_get_monotonic() + ZX_MSEC(100) : ZX_TIME_INFINITE;
-  if (!wait_for_driver_event(deadline)) {
-    return ZX_ERR_STOP;
-  }
+  fhd::Controller::EventHandlers handlers = {
+      .displays_changed =
+          [](::fidl::VectorView<fhd::Info>, ::fidl::VectorView<uint64_t>) {
+            printf("Display disconnected\n");
+            return ZX_ERR_STOP;
+          },
+      .vsync =
+          [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images) {
+            for (auto& layer : layers) {
+              uint64_t id = layer->image_id(display_id);
+              if (id == 0) {
+                continue;
+              }
+              for (auto image_id : images) {
+                if (image_id == id) {
+                  layer->set_frame_done(display_id);
+                }
+              }
+            }
 
-  uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
-  if (msg.Read(dc_handle, 0) != ZX_OK) {
-    printf("Read failed\n");
-    return ZX_ERR_STOP;
-  }
-
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-  uint64_t ordinal = msg.ordinal();
-  if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
-      ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
-    printf("Display disconnected\n");
-    return ZX_ERR_STOP;
-  } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
-             ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
-    printf("Ownership change\n");
-    has_ownership =
-        ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
-            ->has_ownership;
-    return ZX_ERR_NEXT;
-  } else if (ordinal == fuchsia_hardware_display_ControllerVsyncOrdinal ||
-             ordinal == fuchsia_hardware_display_ControllerVsyncGenOrdinal) {
-    // Nothing.
-  } else {
-    printf("Unknown ordinal %lu\n", ordinal);
-    return ZX_ERR_STOP;
-  }
-
-  const char* err_msg;
-  if (msg.Decode(&fuchsia_hardware_display_ControllerVsyncEventTable, &err_msg) != ZX_OK) {
-    printf("Fidl decode error %s\n", err_msg);
-    return ZX_ERR_STOP;
-  }
-
-  auto vsync = reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(msg.bytes().data());
-  uint64_t* image_ids = reinterpret_cast<uint64_t*>(vsync->images.data);
-
-  for (auto& layer : layers) {
-    uint64_t id = layer->image_id(vsync->display_id);
-    if (id == 0) {
-      continue;
-    }
-    for (unsigned i = 0; i < vsync->images.count; i++) {
-      if (image_ids[i] == layer->image_id(vsync->display_id)) {
-        layer->set_frame_done(vsync->display_id);
-      }
-    }
-  }
-
-  for (auto& layer : layers) {
-    if (!layer->is_done()) {
-      return ZX_ERR_NEXT;
-    }
-  }
-  return ZX_OK;
+            for (auto& layer : layers) {
+              if (!layer->is_done()) {
+                return ZX_ERR_NEXT;
+              }
+            }
+            return ZX_OK;
+          },
+      .client_ownership_change =
+          [](bool owned) {
+            has_ownership = owned;
+            return ZX_ERR_NEXT;
+          },
+      .unknown = []() { return ZX_ERR_STOP; },
+  };
+  return dc->HandleEvents(std::move(handlers));
 }
 
 int main(int argc, const char* argv[]) {
@@ -522,14 +443,14 @@ int main(int argc, const char* argv[]) {
 
   printf("Initializing layers\n");
   for (auto& layer : layers) {
-    if (!layer->Init(dc_handle)) {
+    if (!layer->Init(dc.get())) {
       printf("Layer init failed\n");
       return -1;
     }
   }
 
   for (auto& display : displays) {
-    display.Init(dc_handle);
+    display.Init(dc.get());
   }
 
   printf("Starting rendering\n");
@@ -545,7 +466,7 @@ int main(int argc, const char* argv[]) {
       }
 
       layer->clear_done();
-      layer->SendLayout(dc_handle);
+      layer->SendLayout(dc.get());
     }
 
     for (unsigned i = 0; i < displays.size(); i++) {
@@ -567,14 +488,12 @@ int main(int argc, const char* argv[]) {
 
     zx_status_t status;
     while ((status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
-      // wait again
     }
     ZX_ASSERT(status == ZX_OK);
   }
 
   printf("Done rendering\n");
 
-  zx_handle_close(dc_handle);
   zx_handle_close(device_handle);
 
   return 0;

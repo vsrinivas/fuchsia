@@ -7,10 +7,14 @@
 #include <math.h>
 #include <stdio.h>
 
-#include <ddk/protocol/display/controller.h>
+//#include <ddk/protocol/display/controller.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
+
 #include <fbl/algorithm.h>
 
 #include "utils.h"
+
+namespace fhd = ::llcpp::fuchsia::hardware::display;
 
 static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
@@ -28,7 +32,8 @@ static uint32_t get_fg_color() {
 }
 
 // Checks if two rectangles intersect, and if so, returns their intersection.
-static bool compute_intersection(const frame_t& a, const frame_t& b, frame_t* intersection) {
+static bool compute_intersection(const fhd::Frame& a, const fhd::Frame& b,
+                                 fhd::Frame* intersection) {
   uint32_t left = fbl::max(a.x_pos, b.x_pos);
   uint32_t right = fbl::min(a.x_pos + a.width, b.x_pos + b.width);
   uint32_t top = fbl::max(a.y_pos, b.y_pos);
@@ -73,31 +78,16 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays, bool tiled) {
   }
 }
 
-custom_layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
+custom_layer_t* VirtualLayer::CreateLayer(fhd::Controller::SyncClient* dc) {
   layers_.push_back(custom_layer_t());
   layers_[layers_.size() - 1].active = false;
 
-  fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg = {};
-  fidl_init_txn_header(&create_layer_msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerCreateLayerOrdinal);
-
-  fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp = {};
-  zx_channel_call_args_t call_args = {};
-  call_args.wr_bytes = &create_layer_msg;
-  call_args.rd_bytes = &create_layer_rsp;
-  call_args.wr_num_bytes = sizeof(create_layer_msg);
-  call_args.rd_num_bytes = sizeof(create_layer_rsp);
-  uint32_t actual_bytes, actual_handles;
-  if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args, &actual_bytes, &actual_handles) !=
-      ZX_OK) {
+  auto result = dc->CreateLayer();
+  if (!result.ok() || result->res != ZX_OK) {
     printf("Creating layer failed\n");
     return nullptr;
   }
-  if (create_layer_rsp.res != ZX_OK) {
-    printf("Creating layer failed\n");
-    return nullptr;
-  }
-  layers_[layers_.size() - 1].id = create_layer_rsp.layer_id;
+  layers_[layers_.size() - 1].id = result->layer_id;
 
   return &layers_[layers_.size() - 1];
 }
@@ -112,7 +102,7 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors)
   SetImageDimens(width_, height_);
 }
 
-bool PrimaryLayer::Init(zx_handle_t dc_handle) {
+bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
   if ((displays_.size() > 1 || rotates_) && scaling_) {
     printf("Unsupported config\n");
     return false;
@@ -120,11 +110,11 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
   uint32_t fg_color = get_fg_color();
   uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
 
-  images_[0] = Image::Create(dc_handle, image_width_, image_height_, image_format_, fg_color,
-                             bg_color, intel_y_tiling_);
+  images_[0] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
+                             intel_y_tiling_);
   if (layer_flipping_) {
-    images_[1] = Image::Create(dc_handle, image_width_, image_height_, image_format_, fg_color,
-                               bg_color, intel_y_tiling_);
+    images_[1] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
+                               intel_y_tiling_);
   } else {
     images_[0]->Render(-1, -1);
   }
@@ -134,42 +124,34 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
   }
 
   for (unsigned i = 0; i < displays_.size(); i++) {
-    custom_layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc);
     if (layer == nullptr) {
       return false;
     }
 
-    if (!images_[0]->Import(dc_handle, &layer->import_info[0])) {
+    if (!images_[0]->Import(dc, &layer->import_info[0])) {
       return false;
     }
     if (layer_flipping_) {
-      if (!images_[1]->Import(dc_handle, &layer->import_info[1])) {
+      if (!images_[1]->Import(dc, &layer->import_info[1])) {
         return false;
       }
     } else {
       zx_object_signal(layer->import_info[alt_image_].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
     }
 
-    fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest config = {};
-    fidl_init_txn_header(&config.hdr, 0,
-                         fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal);
-    config.layer_id = layer->id;
-    images_[0]->GetConfig(&config.image_config);
-
-    if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
+    fhd::ImageConfig image_config;
+    images_[0]->GetConfig(&image_config);
+    auto set_config_result = dc->SetLayerPrimaryConfig(layer->id, image_config);
+    if (!set_config_result.ok()) {
       printf("Setting layer config failed\n");
       return false;
     }
 
-    fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_config = {};
-    fidl_init_txn_header(&alpha_config.hdr, 0,
-                         fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal);
-    alpha_config.layer_id = layer->id;
-    alpha_config.mode = alpha_enable_ ? fuchsia_hardware_display_AlphaMode_HW_MULTIPLY
-                                      : fuchsia_hardware_display_AlphaMode_DISABLE;
-    alpha_config.val = alpha_val_;
-
-    if (zx_channel_write(dc_handle, 0, &alpha_config, sizeof(alpha_config), nullptr, 0) != ZX_OK) {
+    auto set_alpha_result = dc->SetLayerPrimaryAlpha(
+        layer->id, alpha_enable_ ? fhd::AlphaMode::HW_MULTIPLY : fhd::AlphaMode::DISABLE,
+        alpha_val_);
+    if (!set_alpha_result.ok()) {
       printf("Setting layer alpha config failed\n");
       return false;
     }
@@ -177,10 +159,10 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
 
   StepLayout(0);
   if (!layer_flipping_) {
-    SetLayerImages(dc_handle, false);
+    SetLayerImages(dc, false);
   }
   if (!(pan_src_ || pan_dest_)) {
-    SetLayerPositions(dc_handle);
+    SetLayerPositions(dc);
   }
 
   return true;
@@ -200,16 +182,16 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
   if (rotates_) {
     switch ((frame_num / kRotationPeriod) % 4) {
       case 0:
-        rotation_ = fuchsia_hardware_display_Transform_IDENTITY;
+        rotation_ = fhd::Transform::IDENTITY;
         break;
       case 1:
-        rotation_ = fuchsia_hardware_display_Transform_ROT_90;
+        rotation_ = fhd::Transform::ROT_90;
         break;
       case 2:
-        rotation_ = fuchsia_hardware_display_Transform_ROT_180;
+        rotation_ = fhd::Transform::ROT_180;
         break;
       case 3:
-        rotation_ = fuchsia_hardware_display_Transform_ROT_270;
+        rotation_ = fhd::Transform::ROT_270;
         break;
     }
 
@@ -220,7 +202,7 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     }
   }
 
-  frame_t display = {};
+  fhd::Frame display = {};
   for (unsigned i = 0; i < displays_.size(); i++) {
     display.height = displays_[i]->mode().vertical_resolution;
     display.width = displays_[i]->mode().horizontal_resolution;
@@ -241,8 +223,7 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     // Calculate the portion of the dest frame which shows up on this display
     if (compute_intersection(display, dest_frame_, &layers_[i].dest)) {
       // Find the subset of the src region which shows up on this display
-      if (rotation_ == fuchsia_hardware_display_Transform_IDENTITY ||
-          rotation_ == fuchsia_hardware_display_Transform_ROT_180) {
+      if (rotation_ == fhd::Transform::IDENTITY || rotation_ == fhd::Transform::ROT_180) {
         if (!scaling_) {
           layers_[i].src.x_pos = src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
           layers_[i].src.y_pos = src_frame_.y_pos;
@@ -280,12 +261,12 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
   }
 }
 
-void PrimaryLayer::SendLayout(zx_handle_t channel) {
+void PrimaryLayer::SendLayout(fhd::Controller::SyncClient* dc) {
   if (layer_flipping_) {
-    SetLayerImages(channel, alt_image_);
+    SetLayerImages(dc, alt_image_);
   }
   if (scaling_ || pan_src_ || pan_dest_) {
-    SetLayerPositions(channel);
+    SetLayerPositions(dc);
   }
 }
 
@@ -301,44 +282,19 @@ void PrimaryLayer::Render(int32_t frame_num) {
   }
 }
 
-void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
-  fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest msg = {};
-  fidl_init_txn_header(&msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal);
-
+void PrimaryLayer::SetLayerPositions(fhd::Controller::SyncClient* dc) {
   for (auto& layer : layers_) {
-    msg.layer_id = layer.id;
-    msg.transform = rotation_;
-
-    msg.src_frame.width = layer.src.width;
-    msg.src_frame.height = layer.src.height;
-    msg.src_frame.x_pos = layer.src.x_pos;
-    msg.src_frame.y_pos = layer.src.y_pos;
-
-    msg.dest_frame.width = layer.dest.width;
-    msg.dest_frame.height = layer.dest.height;
-    msg.dest_frame.x_pos = layer.dest.x_pos;
-    msg.dest_frame.y_pos = layer.dest.y_pos;
-
-    if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {
-      ZX_ASSERT(false);
-    }
+    ZX_ASSERT(dc->SetLayerPrimaryPosition(layer.id, rotation_, layer.src, layer.dest).ok());
   }
 }
 
-void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
-  fuchsia_hardware_display_ControllerSetLayerImageRequest msg = {};
-  fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_display_ControllerSetLayerImageOrdinal);
-
+void VirtualLayer::SetLayerImages(fhd::Controller::SyncClient* dc, bool alt_image) {
   for (auto& layer : layers_) {
-    msg.layer_id = layer.id;
-    msg.image_id = layer.import_info[alt_image].id;
-    msg.wait_event_id = layer.import_info[alt_image].event_ids[WAIT_EVENT];
-    msg.signal_event_id = layer.import_info[alt_image].event_ids[SIGNAL_EVENT];
+    const auto& image = layer.import_info[alt_image];
+    auto result = dc->SetLayerImage(layer.id, image.id, image.event_ids[WAIT_EVENT],
+                                    image.event_ids[SIGNAL_EVENT]);
 
-    if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {
-      ZX_ASSERT(false);
-    }
+    ZX_ASSERT(result.ok());
   }
 }
 
@@ -366,70 +322,56 @@ CursorLayer::CursorLayer(Display* display) : VirtualLayer(display) {}
 
 CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {}
 
-bool CursorLayer::Init(zx_handle_t dc_handle) {
-  fuchsia_hardware_display_CursorInfo info = displays_[0]->cursor();
+bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
+  fhd::CursorInfo info = displays_[0]->cursor();
   uint32_t bg_color = 0xffffffff;
-  image_ = Image::Create(dc_handle, info.width, info.height, info.pixel_format, get_fg_color(),
-                         bg_color, false);
+  image_ = Image::Create(dc, info.width, info.height, info.pixel_format, get_fg_color(), bg_color,
+                         false);
   if (!image_) {
     return false;
   }
   image_->Render(-1, -1);
 
   for (unsigned i = 0; i < displays_.size(); i++) {
-    custom_layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc);
     if (layer == nullptr) {
       return false;
     }
 
     layer->active = true;
-    if (!image_->Import(dc_handle, &layer->import_info[0])) {
+    if (!image_->Import(dc, &layer->import_info[0])) {
       return false;
     }
     zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
 
-    fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest config = {};
-    fidl_init_txn_header(&config.hdr, 0,
-                         fuchsia_hardware_display_ControllerSetLayerCursorConfigOrdinal);
-    config.layer_id = layer->id;
-    config.image_config.height = info.height;
-    config.image_config.width = info.width;
-    config.image_config.pixel_format = info.pixel_format;
-    config.image_config.type = IMAGE_TYPE_SIMPLE;
-
-    if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
+    fhd::ImageConfig image_config = {};
+    image_config.height = info.height;
+    image_config.width = info.width;
+    image_config.pixel_format = info.pixel_format;
+    image_config.type = fhd::typeSimple;
+    auto result = dc->SetLayerCursorConfig(layer->id, image_config);
+    if (!result.ok()) {
       printf("Setting layer config failed\n");
       return false;
     }
   }
 
-  SetLayerImages(dc_handle, false);
+  SetLayerImages(dc, false);
 
   return true;
 }
 
 void CursorLayer::StepLayout(int32_t frame_num) {
-  fuchsia_hardware_display_CursorInfo info = displays_[0]->cursor();
+  fhd::CursorInfo info = displays_[0]->cursor();
 
   x_pos_ = interpolate(width_ + info.width, frame_num, kDestFrameBouncePeriod) - info.width;
   y_pos_ = interpolate(height_ + info.height, frame_num, kDestFrameBouncePeriod) - info.height;
 }
 
-void CursorLayer::SendLayout(zx_handle_t dc_handle) {
-  fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest msg = {};
-  fidl_init_txn_header(&msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerSetLayerCursorPositionOrdinal);
-
+void CursorLayer::SendLayout(fhd::Controller::SyncClient* dc) {
   uint32_t display_start = 0;
   for (unsigned i = 0; i < displays_.size(); i++) {
-    msg.layer_id = layers_[i].id;
-    msg.x = x_pos_ - display_start;
-    msg.y = y_pos_;
-
-    if (zx_channel_write(dc_handle, 0, &msg, sizeof(msg), nullptr, 0) != ZX_OK) {
-      ZX_ASSERT(false);
-    }
-
+    ZX_ASSERT(dc->SetLayerCursorPosition(layers_[i].id, x_pos_ - display_start, y_pos_).ok());
     display_start += displays_[i]->mode().horizontal_resolution;
   }
 }
@@ -438,9 +380,9 @@ ColorLayer::ColorLayer(Display* display) : VirtualLayer(display) {}
 
 ColorLayer::ColorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {}
 
-bool ColorLayer::Init(zx_handle_t dc_handle) {
+bool ColorLayer::Init(fhd::Controller::SyncClient* dc) {
   for (unsigned i = 0; i < displays_.size(); i++) {
-    custom_layer_t* layer = CreateLayer(dc_handle);
+    custom_layer_t* layer = CreateLayer(dc);
     if (layer == nullptr) {
       return false;
     }
@@ -450,22 +392,14 @@ bool ColorLayer::Init(zx_handle_t dc_handle) {
     constexpr uint32_t kColorLayerFormat = ZX_PIXEL_FORMAT_ARGB_8888;
     uint32_t kColorLayerColor = get_fg_color();
 
-    uint32_t size = sizeof(fuchsia_hardware_display_ControllerSetLayerColorConfigRequest) +
-                    FIDL_ALIGN(ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat));
+    uint32_t size = FIDL_ALIGN(ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat));
     uint8_t data[size];
+    *reinterpret_cast<uint32_t*>(data) = kColorLayerColor;
 
-    auto config =
-        reinterpret_cast<fuchsia_hardware_display_ControllerSetLayerColorConfigRequest*>(data);
-    fidl_init_txn_header(&config->hdr, 0,
-                         fuchsia_hardware_display_ControllerSetLayerColorConfigOrdinal);
-    config->layer_id = layer->id;
-    config->pixel_format = kColorLayerFormat;
-    config->color_bytes.count = ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat);
-    config->color_bytes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+    auto result = dc->SetLayerColorConfig(layer->id, kColorLayerFormat,
+                                          ::fidl::VectorView<uint8_t>(data, size));
 
-    *reinterpret_cast<uint32_t*>(config + 1) = kColorLayerColor;
-
-    if (zx_channel_write(dc_handle, 0, data, size, nullptr, 0) != ZX_OK) {
+    if (!result.ok()) {
       printf("Setting layer config failed\n");
       return false;
     }
