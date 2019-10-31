@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Cprng {
+protocol cprng {
     [Internal]
     cprng_draw_once() -> (status status, vector_void buffer);
 

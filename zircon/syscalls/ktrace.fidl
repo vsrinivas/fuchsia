@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Ktrace {
+protocol ktrace {
     // TODO(scottmg): This is another one where it's:
     //   (handle, data, offset, data_size)
     // rather than:

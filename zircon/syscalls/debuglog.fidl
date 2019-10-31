@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Debuglog {
+protocol debuglog {
     // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     debuglog_create(handle<resource> resource, uint32 options)

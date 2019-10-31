@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Guest {
+protocol guest {
     /// Create a guest.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.
     guest_create(handle<resource> resource, uint32 options)

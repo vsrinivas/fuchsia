@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Cache {
+protocol cache {
     /// Flush CPU data and/or instruction caches.
     [Vdsocall]
     cache_flush(const_voidptr addr, usize size, uint32 options) -> (status status);

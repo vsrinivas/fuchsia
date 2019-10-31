@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Exception {
+protocol exception {
     /// Create a handle for the exception's thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
     exception_get_thread(handle<exception> handle) -> (status status, handle<thread> out);

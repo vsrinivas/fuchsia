@@ -14,7 +14,7 @@ struct WaitItem {
 };
 
 [Transport = "Syscall"]
-protocol Object {
+protocol object {
     /// Wait for signals on an object.
     /// Rights: handle must have ZX_RIGHT_WAIT.
     [Blocking]

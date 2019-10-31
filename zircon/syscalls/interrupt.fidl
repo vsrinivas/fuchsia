@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Interrupt {
+protocol interrupt {
     /// Create an interrupt object.
     /// Rights: src_obj must have resource kind ZX_RSRC_KIND_IRQ.
     interrupt_create(handle<resource> src_obj, uint32 src_num, uint32 options)

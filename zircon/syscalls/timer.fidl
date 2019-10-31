@@ -6,9 +6,9 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Timer {
+protocol timer {
     /// Create a timer.
-    timer_create(uint32 options, clock clock_id) -> (status status, handle<timer> out);
+    timer_create(uint32 options, Clock clock_id) -> (status status, handle<timer> out);
 
     /// Start a timer.
     /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.

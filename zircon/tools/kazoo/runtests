@@ -37,4 +37,33 @@ out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   --x86-asm=/tmp/kazoo-output/x86-asm.S \
   /tmp/syscalls.json
 
+grep TODO! /tmp/kazoo-output/* || true
+
 echo Outputs written to /tmp/kazoo-output/ for manual inspection.
+
+function show_if_changed() {
+  if ! cmp --quiet "/tmp/kazoo-previous/$1" "/tmp/kazoo-output/$1"
+  then
+    echo "CHANGED: $1"
+    p4merge "/tmp/kazoo-previous/$1" "/tmp/kazoo-output/$1" &
+  fi
+}
+
+# If you `mv /tmp/kazoo-output /tmp/kazoo-previous` for a build at origin/master,
+# then this will note any differences from master vs. the current work.
+if [ -d "/tmp/kazoo-previous/" ]; then
+  show_if_changed "arm-asm.S"
+  show_if_changed "arm-asm.S"
+  show_if_changed "syscall-category.inc"
+  show_if_changed "definitions.json"
+  show_if_changed "kernel-branches.S"
+  show_if_changed "kernel-header.h"
+  show_if_changed "kernel-wrappers.inc"
+  show_if_changed "ktrace.inc"
+  show_if_changed "definitions.rs"
+  show_if_changed "syscall-numbers.h"
+  show_if_changed "definitions.h"
+  show_if_changed "vdso-definitions.h"
+  show_if_changed "vdso-wrappers.inc"
+  show_if_changed "x86-asm.S"
+fi

@@ -10,7 +10,7 @@ using zx;
 // annotations at the method).
 
 using const_futexptr = int32;
-using futex = int32;
+using Futex = int32;
 using mutable_uint32 = uint32;
 using mutable_vector_void = vector<byte>;
 using optional_signals = signals;
@@ -18,7 +18,7 @@ using signals = uint32;
 using time = int64;
 using usize = uint64;
 using vector_void_u32size = vector<byte>;
-enum clock : uint32 {
+enum Clock : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
@@ -30,7 +30,7 @@ protocol Selection {
     // Special futex handling.
     FutexRequeue(const_futexptr value_ptr,
                  uint32 wake_count,
-                 futex current_value,
+                 Futex current_value,
                  const_futexptr requeue_ptr,
                  uint32 requeue_count,
                  handle new_requeue_owner) ->
@@ -62,5 +62,5 @@ protocol Selection {
         (zx.status status);
 
     // Handling of enums.
-    ClockGet(clock clock_id) -> (zx.status status, time out);
+    ClockGet(Clock clock_id) -> (zx.status status, time out);
 };

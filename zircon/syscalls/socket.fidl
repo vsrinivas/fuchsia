@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Socket {
+protocol socket {
     /// Create a socket.
     socket_create(uint32 options) -> (status status, handle out0, handle out1);
 

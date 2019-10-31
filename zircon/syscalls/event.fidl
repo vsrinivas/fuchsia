@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Event {
+protocol event {
     /// Create an event.
     event_create(uint32 options) -> (status status, handle<event> out);
 };

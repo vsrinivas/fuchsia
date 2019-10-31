@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Debug {
+protocol debug {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     debug_read(handle<resource> handle) -> (status status, string buffer, usize actual);
 

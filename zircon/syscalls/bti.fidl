@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Bti {
+protocol bti {
     /// Create a new bus transaction initiator.
     /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
     // TODO(ZX-2967): This is an unusual rights spec.

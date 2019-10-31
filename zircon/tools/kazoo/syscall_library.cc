@@ -97,7 +97,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     const std::string full_name(type_alias->operator[]("name").GetString());
     ZX_ASSERT(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
     const std::string name = full_name.substr(3);
-    if (name == "duration" || name == "futex" || name == "koid" || name == "paddr" ||
+    if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
         name == "rights" || name == "signals" || name == "status" || name == "time" ||
         name == "ticks" || name == "vaddr" || name == "VmOption") {
       return Type(TypeZxBasicAlias(CamelToSnake(name)));
@@ -355,6 +355,7 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
   }
 
   // TODO: Load struct, union, usings and return one of them here!
+  ZX_ASSERT_MSG(false, "unhandled TypeFromIdentifier for %s", id.c_str());
   return Type();
 }
 

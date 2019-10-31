@@ -38,7 +38,7 @@ struct HandleDisposition {
 };
 
 [Transport = "Syscall"]
-protocol Channel {
+protocol channel {
     /// Create a channel.
     channel_create(uint32 options) -> (status status, handle out0, handle out1);
 

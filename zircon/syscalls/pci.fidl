@@ -63,7 +63,7 @@ struct PciInitArg {
 };
 
 [Transport = "Syscall"]
-protocol Pci {
+protocol pci {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     pci_get_nth_device(handle<resource> handle, uint32 index)
         -> (status status, PcieDeviceInfo out_info, handle out_handle);

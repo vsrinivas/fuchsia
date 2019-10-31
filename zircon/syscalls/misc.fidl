@@ -10,7 +10,7 @@ library zz;
 // generator to exclude putting "Misc" in the name.
 [Transport = "Syscall",
 NoProtocolPrefix]
-protocol Misc {
+protocol misc {
     /// High resolution sleep.
     /// Rights: None.
     [Blocking]

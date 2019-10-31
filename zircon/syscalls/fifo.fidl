@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Fifo {
+protocol fifo {
     /// Create a fifo.
     fifo_create(usize elem_count, usize elem_size, uint32 options)
         -> (status status, handle<fifo> out0, handle<fifo> out1);

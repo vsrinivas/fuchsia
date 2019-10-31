@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Process {
+protocol process {
     /// Exits the currently running process.
     [Noreturn]
     process_exit(int64 retcode);

@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Pager {
+protocol pager {
     /// Create a new pager object.
     /// Rights: None.
     pager_create(uint32 options) -> (status status, handle<pager> out);

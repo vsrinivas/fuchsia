@@ -10,7 +10,7 @@ using VmOption = uint32;
 // TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
 
 [Transport = "Syscall"]
-protocol Vmar {
+protocol vmar {
     /// Allocate a new subregion.
     /// Rights: If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
     /// Rights: If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.

@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Vmo {
+protocol vmo {
     /// Create a VM object.
     vmo_create(uint64 size, uint32 options) -> (status status, handle<vmo> out);
 

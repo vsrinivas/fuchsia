@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Vcpu {
+protocol vcpu {
     /// Create a VCPU.
     /// Rights: guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.
     vcpu_create(handle<guest> guest, uint32 options, vaddr entry) -> (status status, handle<vcpu> out);

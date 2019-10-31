@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Task {
+protocol task {
     // TODO(scottmg): Need something like handle<task> in this file to mean {job, process, thread}.
     // Or otherwise some way to express multiple options for constraints on inputs in this protocol.
 

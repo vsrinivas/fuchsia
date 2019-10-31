@@ -23,7 +23,7 @@ struct SystemPowerctlArg {
 };
 
 [Transport = "Syscall"]
-protocol System {
+protocol system {
     [Const, Vdsocall]
     system_get_dcache_line_size() -> (uint32 size);
 

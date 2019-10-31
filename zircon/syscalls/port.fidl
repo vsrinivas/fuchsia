@@ -127,7 +127,7 @@ struct PortPacket {
 };
 
 [Transport = "Syscall"]
-protocol Port {
+protocol port {
     /// Create an IO port.
     port_create(uint32 options) -> (status status, handle<port> out);
 

@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Thread {
+protocol thread {
     /// Terminate the current running thread.
     [Noreturn]
     thread_exit();

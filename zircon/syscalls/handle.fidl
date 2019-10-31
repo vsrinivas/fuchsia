@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Handle {
+protocol handle {
     /// Close a handle.
     /// Rights: None.
     handle_close(handle handle) -> (status status);

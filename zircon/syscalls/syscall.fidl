@@ -6,7 +6,7 @@
 library zz;
 
 [Transport = "Syscall"]
-protocol Syscall {
+protocol syscall {
     syscall_test_0() -> (status status);
 
     [TestCategory1]

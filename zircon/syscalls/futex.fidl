@@ -7,17 +7,17 @@ library zz;
 
 // TODO(scottmg): This is approximately right, but will need to match the
 // current definition of zx_futex_t (atomic_int in some #if branches).
-using futex = int32;
+using Futex = int32;
 
 // TODO(scottmg): The futex is unusual in that by virtue of being an int,
 // sometimes it's passed by pointer, and sometimes by value.
 
 [Transport = "Syscall"]
-protocol Futex {
+protocol futex {
     /// Wait on a futex.
     /// Rights: None.
     [Blocking]
-    futex_wait(const_futexptr value_ptr, futex current_value, handle new_futex_owner, time deadline)
+    futex_wait(const_futexptr value_ptr, Futex current_value, handle new_futex_owner, time deadline)
         -> (status status);
 
     /// Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
@@ -28,7 +28,7 @@ protocol Futex {
     /// Rights: None.
     futex_requeue(const_futexptr value_ptr,
                   uint32 wake_count,
-                  futex current_value,
+                  Futex current_value,
                   const_futexptr requeue_ptr,
                   uint32 requeue_count,
                   handle new_requeue_owner)
@@ -41,7 +41,7 @@ protocol Futex {
     /// Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
     /// Rights: None.
     futex_requeue_single_owner(const_futexptr value_ptr,
-                               futex current_value,
+                               Futex current_value,
                                const_futexptr requeue_ptr,
                                uint32 requeue_count,
                                handle new_requeue_owner)
