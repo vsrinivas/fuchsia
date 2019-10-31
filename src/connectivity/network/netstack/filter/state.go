@@ -31,6 +31,7 @@ type Key struct {
 type State struct {
 	transProto tcpip.TransportProtocolNumber
 	dir        Direction
+	nic        tcpip.NICID
 	lanAddr    tcpip.Address
 	lanPort    uint16
 	gwyAddr    tcpip.Address
@@ -429,7 +430,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 			if s.rsvdPort != 0 {
 				// Release the reserved port.
 				netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, 0)
+				pm.ReleasePort(netProtos, s.transProto, s.rsvdAddr, s.rsvdPort, s.nic)
 			}
 		}
 		for k, s := range ss.lanToExt {
@@ -458,7 +459,7 @@ func (ss *States) getState(dir Direction, transProto tcpip.TransportProtocolNumb
 	}
 }
 
-func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, origAddr tcpip.Address, origPort uint16, rsvdAddr tcpip.Address, rsvdPort uint16, isNAT bool, isRDR bool, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) *State {
+func (ss *States) createState(dir Direction, nic tcpip.NICID, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16, origAddr tcpip.Address, origPort uint16, rsvdAddr tcpip.Address, rsvdPort uint16, isNAT bool, isRDR bool, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) *State {
 	var srcEp, dstEp *endpoint
 	var createTime, expireTime time.Time
 	var dataLen uint16

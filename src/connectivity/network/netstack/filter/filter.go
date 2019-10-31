@@ -172,6 +172,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 
 	var nat *NAT
 	var origAddr tcpip.Address
+	var nicID tcpip.NICID
 
 	if dir == Outgoing {
 		if nat = f.matchNAT(header.ICMPv4ProtocolNumber, srcAddr); nat != nil {
@@ -179,6 +180,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 			// The original values are saved in origAddr.
 			origAddr = srcAddr
 			srcAddr = nat.newSrcAddr
+			nicID = nat.nic
 			rewritePacketICMPv4(srcAddr, true, hdr, transportHeader)
 		}
 	}
@@ -186,6 +188,9 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 	// TODO: Add interface parameter.
 	rm := f.matchMain(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0)
 	if rm != nil {
+		if rm.nic != 0 {
+			nicID = rm.nic
+		}
 		if rm.log {
 			syslog.InfoTf(tag, "%v %v %v %v %v", rm.action, dir, "icmp", srcAddr, dstAddr)
 		}
@@ -201,7 +206,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil {
-		f.states.createState(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, hdr, transportHeader, payload)
+		f.states.createState(dir, nicID, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass
@@ -253,6 +258,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	var origPort uint16
 	var newAddr tcpip.Address
 	var newPort uint16
+	var nicID tcpip.NICID // TODO: nicID should be initialized rather than relying on a match.
 
 	switch dir {
 	case Incoming:
@@ -264,6 +270,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			dstAddr = rdr.newDstAddr
 			origPort = dstPort
 			dstPort = rdr.newDstPort(dstPort)
+			nicID = rdr.nic
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
@@ -279,7 +286,8 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, false, 0)
+			nicID = nat.nic
+			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, false, nat.nic)
 			if e != nil {
 				syslog.VLogTf(syslog.TraceVerbosity, tag, "ReservePort: %v", e)
 				return Drop
@@ -290,6 +298,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			srcAddr = newAddr
 			origPort = srcPort
 			srcPort = newPort
+			nicID = nat.nic
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "NAT: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, srcAddr, srcPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
@@ -303,6 +312,9 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	// TODO: Add interface parameter.
 	rm := f.matchMain(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort)
 	if rm != nil {
+		if rm.nic != 0 {
+			nicID = rm.nic
+		}
 		if rm.log {
 			syslog.InfoTf(tag, "%v %v %v %v:%v %v:%v",
 				rm.action, dir, "udp", srcAddr, srcPort, dstAddr, dstPort)
@@ -333,7 +345,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
+		f.states.createState(dir, nicID, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass
@@ -385,6 +397,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	var origPort uint16
 	var newAddr tcpip.Address
 	var newPort uint16
+	var nicID tcpip.NICID // TODO: nicID should be initalized rather than relying on a match.
 
 	switch dir {
 	case Incoming:
@@ -395,6 +408,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			dstAddr = rdr.newDstAddr
 			origPort = dstPort
 			dstPort = rdr.newDstPort(dstPort)
+			nicID = rdr.nic
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketTCPv4(dstAddr, dstPort, false, hdr, transportHeader)
@@ -408,7 +422,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, false, 0)
+			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, false, nicID)
 			if e != nil {
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "ReservePort: %v", e)
 				return Drop
@@ -419,6 +433,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			srcAddr = newAddr
 			origPort = srcPort
 			srcPort = newPort
+			nicID = nat.nic
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketTCPv4(srcAddr, srcPort, true, hdr, transportHeader)
@@ -460,7 +475,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	}
 	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
-		f.states.createState(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
+		f.states.createState(dir, nicID, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, hdr, transportHeader, payload)
 	}
 
 	return Pass

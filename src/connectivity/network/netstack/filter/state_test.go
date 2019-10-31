@@ -80,6 +80,7 @@ func TestFindStateICMPv4(t *testing.T) {
 			if s == nil {
 				s = ss.createState(
 					test.dir,
+					0, // nic
 					header.ICMPv4ProtocolNumber,
 					srcAddr,
 					0, // srcPort
@@ -195,6 +196,7 @@ func TestFindStateUDP(t *testing.T) {
 			if s == nil {
 				s = ss.createState(
 					test.dir,
+					0, // nic
 					header.UDPProtocolNumber,
 					srcAddr,
 					srcPort,
@@ -530,6 +532,7 @@ func TestFindStateTCPv4(t *testing.T) {
 			if s == nil {
 				s = ss.createState(
 					test.dir,
+					0, // nic
 					header.TCPProtocolNumber,
 					srcAddr,
 					srcPort,
