@@ -24,7 +24,6 @@ impl<T> FusedFuture for Pending<T> {
 /// # Examples
 ///
 /// ```ignore
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
@@ -45,4 +44,7 @@ impl<T> Future for Pending<T> {
     fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<T> {
         Poll::Pending
     }
+}
+
+impl<T> Unpin for Pending<T> {
 }

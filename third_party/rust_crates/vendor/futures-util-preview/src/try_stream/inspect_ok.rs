@@ -61,7 +61,7 @@ where
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -74,7 +74,11 @@ where
     }
 }
 
-impl<St: TryStream + FusedStream, F> FusedStream for InspectOk<St, F> {
+impl<St, F> FusedStream for InspectOk<St, F>
+where
+    St: TryStream + FusedStream,
+    F: FnMut(&St::Ok),
+{
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
     }
@@ -95,6 +99,10 @@ where
             .stream()
             .try_poll_next(cx)
             .map(|opt| opt.map(|res| res.map(|e| inspect(e, self.as_mut().f()))))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

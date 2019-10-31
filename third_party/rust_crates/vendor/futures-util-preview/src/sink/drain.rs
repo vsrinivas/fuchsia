@@ -1,7 +1,7 @@
+use crate::never::Never;
 use core::marker::PhantomData;
 use core::pin::Pin;
 use futures_core::task::{Context, Poll};
-use futures_core::never::Never;
 use futures_sink::Sink;
 
 /// Sink for the [`drain`] function.
@@ -18,7 +18,6 @@ pub struct Drain<T> {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::sink::{self, SinkExt};
 ///
@@ -29,6 +28,8 @@ pub struct Drain<T> {
 pub fn drain<T>() -> Drain<T> {
     Drain { marker: PhantomData }
 }
+
+impl<T> Unpin for Drain<T> {}
 
 impl<T> Sink<T> for Drain<T> {
     type Error = Never;

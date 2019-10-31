@@ -2,6 +2,7 @@ use crate::task::AtomicWaker;
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
+use core::fmt;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 use alloc::sync::Arc;
@@ -29,12 +30,11 @@ impl<Fut> Abortable<Fut> where Fut: Future {
     /// Example:
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{ready, Abortable, AbortHandle, Aborted};
+    /// use futures::future::{Abortable, AbortHandle, Aborted};
     ///
     /// let (abort_handle, abort_registration) = AbortHandle::new_pair();
-    /// let future = Abortable::new(ready(2), abort_registration);
+    /// let future = Abortable::new(async { 2 }, abort_registration);
     /// abort_handle.abort();
     /// assert_eq!(future.await, Err(Aborted));
     /// # });
@@ -70,12 +70,11 @@ impl AbortHandle {
     /// Example:
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{ready, Abortable, AbortHandle, Aborted};
+    /// use futures::future::{Abortable, AbortHandle, Aborted};
     ///
     /// let (abort_handle, abort_registration) = AbortHandle::new_pair();
-    /// let future = Abortable::new(ready(2), abort_registration);
+    /// let future = Abortable::new(async { 2 }, abort_registration);
     /// abort_handle.abort();
     /// assert_eq!(future.await, Err(Aborted));
     /// # });
@@ -125,6 +124,15 @@ pub fn abortable<Fut>(future: Fut) -> (Abortable<Fut>, AbortHandle)
 /// Indicator that the `Abortable` future was aborted.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Aborted;
+
+impl fmt::Display for Aborted {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "`Abortable` future has been aborted")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Aborted {}
 
 impl<Fut> Future for Abortable<Fut> where Fut: Future {
     type Output = Result<Fut::Output, Aborted>;

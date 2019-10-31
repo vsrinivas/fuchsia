@@ -46,6 +46,18 @@ impl<T> Compat01As03<T> {
     pub fn get_ref(&self) -> &T {
         self.inner.get_ref()
     }
+
+    /// Get a mutable reference to 0.1 Future, Stream, AsyncRead or AsyncWrite object contained
+    /// within.
+    pub fn get_mut(&mut self) -> &mut T {
+        self.inner.get_mut()
+    }
+
+    /// Consume this wrapper to return the underlying 0.1 Future, Stream, AsyncRead, or
+    /// AsyncWrite object.
+    pub fn into_inner(self) -> T {
+        self.inner.into_inner()
+    }
 }
 
 /// Extension trait for futures 0.1 [`Future`](futures_01::future::Future)
@@ -56,7 +68,6 @@ pub trait Future01CompatExt: Future01 {
     /// [`Future<Output = Result<T, E>>`](futures_core::future::Future).
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// # // TODO: These should be all using `futures::compat`, but that runs up against Cargo
     /// # // feature issues
@@ -83,7 +94,6 @@ pub trait Stream01CompatExt: Stream01 {
     /// [`Stream<Item = Result<T, E>>`](futures_core::stream::Stream).
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::StreamExt;
     /// use futures_util::compat::Stream01CompatExt;
@@ -112,7 +122,6 @@ pub trait Sink01CompatExt: Sink01 {
     /// [`Sink<T, Error = E>`](futures_sink::Sink).
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::{sink::SinkExt, stream::StreamExt};
     /// use futures_util::compat::{Stream01CompatExt, Sink01CompatExt};
@@ -205,6 +214,16 @@ impl<S, SinkItem> Compat01As03Sink<S, SinkItem> {
     /// Get a reference to 0.1 Sink object contained within.
     pub fn get_ref(&self) -> &S {
         self.inner.get_ref()
+    }
+
+    /// Get a mutable reference to 0.1 Sink contained within.
+    pub fn get_mut(&mut self) -> &mut S {
+        self.inner.get_mut()
+    }
+
+    /// Consume this wrapper to return the underlying 0.1 Sink.
+    pub fn into_inner(self) -> S {
+        self.inner.into_inner()
     }
 }
 
@@ -349,9 +368,9 @@ unsafe impl UnsafeNotify01 for NotifyWaker {
 #[cfg(feature = "io-compat")]
 mod io {
     use super::*;
-    use futures_io::{
-        AsyncRead as AsyncRead03, AsyncWrite as AsyncWrite03, Initializer,
-    };
+    #[cfg(feature = "read_initializer")]
+    use futures_io::Initializer;
+    use futures_io::{AsyncRead as AsyncRead03, AsyncWrite as AsyncWrite03};
     use std::io::Error;
     use tokio_io::{AsyncRead as AsyncRead01, AsyncWrite as AsyncWrite01};
 
@@ -361,7 +380,8 @@ mod io {
         /// [`AsyncRead`](futures_io::AsyncRead).
         ///
         /// ```
-        /// #![feature(async_await, impl_trait_in_bindings)]
+        /// #![feature(impl_trait_in_bindings)]
+        /// # #![allow(incomplete_features)]
         /// # futures::executor::block_on(async {
         /// use futures::io::AsyncReadExt;
         /// use futures_util::compat::AsyncRead01CompatExt;
@@ -390,7 +410,6 @@ mod io {
         /// [`AsyncWrite`](futures_io::AsyncWrite).
         ///
         /// ```
-        /// #![feature(async_await, impl_trait_in_bindings)]
         /// # futures::executor::block_on(async {
         /// use futures::io::AsyncWriteExt;
         /// use futures_util::compat::AsyncWrite01CompatExt;
@@ -414,6 +433,7 @@ mod io {
     impl<W: AsyncWrite01> AsyncWrite01CompatExt for W {}
 
     impl<R: AsyncRead01> AsyncRead03 for Compat01As03<R> {
+        #[cfg(feature = "read_initializer")]
         unsafe fn initializer(&self) -> Initializer {
             // check if `prepare_uninitialized_buffer` needs zeroing
             if self.inner.get_ref().prepare_uninitialized_buffer(&mut [1]) {

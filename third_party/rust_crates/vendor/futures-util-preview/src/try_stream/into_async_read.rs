@@ -2,13 +2,13 @@ use crate::try_stream::TryStreamExt;
 use core::pin::Pin;
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
-use futures_io::{AsyncRead, AsyncBufRead};
+use futures_io::{AsyncRead, AsyncWrite, AsyncBufRead};
 use std::cmp;
 use std::io::{Error, Result};
 
-/// An `AsyncRead` for the [`into_async_read`](super::TryStreamExt::into_async_read) combinator.
+/// Reader for the [`into_async_read`](super::TryStreamExt::into_async_read) method.
 #[derive(Debug)]
-#[must_use = "streams do nothing unless polled"]
+#[must_use = "readers do nothing unless polled"]
 pub struct IntoAsyncRead<St>
 where
     St: TryStream<Error = Error> + Unpin,
@@ -100,15 +100,43 @@ where
     }
 }
 
+impl<St> AsyncWrite for IntoAsyncRead<St>
+where
+    St: TryStream<Error = Error> + AsyncWrite + Unpin,
+    St::Ok: AsRef<[u8]>,
+{
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8]
+    ) -> Poll<Result<usize>> {
+        Pin::new( &mut self.stream ).poll_write( cx, buf )
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<Result<()>> {
+        Pin::new( &mut self.stream ).poll_flush( cx )
+    }
+
+    fn poll_close(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>
+    ) -> Poll<Result<()>> {
+        Pin::new( &mut self.stream ).poll_close( cx )
+    }
+}
+
 impl<St> AsyncBufRead for IntoAsyncRead<St>
 where
     St: TryStream<Error = Error> + Unpin,
     St::Ok: AsRef<[u8]>,
 {
-    fn poll_fill_buf<'a>(
-        mut self: Pin<&'a mut Self>,
+    fn poll_fill_buf(
+        mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<Result<&'a [u8]>> {
+    ) -> Poll<Result<&[u8]>> {
         while let ReadState::PendingChunk = self.state {
             match ready!(self.stream.try_poll_next_unpin(cx)) {
                 Some(Ok(chunk)) => {

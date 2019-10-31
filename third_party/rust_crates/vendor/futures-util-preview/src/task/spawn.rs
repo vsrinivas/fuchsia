@@ -33,7 +33,6 @@ pub trait SpawnExt: Spawn {
     /// today. Feel free to use this method in the meantime.
     ///
     /// ```
-    /// #![feature(async_await)]
     /// use futures::executor::ThreadPool;
     /// use futures::task::SpawnExt;
     ///
@@ -58,7 +57,6 @@ pub trait SpawnExt: Spawn {
     /// resolves to the output of the spawned future.
     ///
     /// ```
-    /// #![feature(async_await)]
     /// use futures::executor::ThreadPool;
     /// use futures::future;
     /// use futures::task::SpawnExt;
@@ -112,7 +110,6 @@ pub trait LocalSpawnExt: LocalSpawn {
     /// today. Feel free to use this method in the meantime.
     ///
     /// ```
-    /// #![feature(async_await)]
     /// use futures::executor::LocalPool;
     /// use futures::task::LocalSpawnExt;
     ///
@@ -138,15 +135,13 @@ pub trait LocalSpawnExt: LocalSpawn {
     /// resolves to the output of the spawned future.
     ///
     /// ```
-    /// #![feature(async_await)]
     /// use futures::executor::LocalPool;
-    /// use futures::future;
     /// use futures::task::LocalSpawnExt;
     ///
     /// let mut executor = LocalPool::new();
     /// let mut spawner = executor.spawner();
     ///
-    /// let future = future::ready(1);
+    /// let future = async { 1 };
     /// let join_handle_fut = spawner.spawn_local_with_handle(future).unwrap();
     /// assert_eq!(executor.run_until(join_handle_fut), 1);
     /// ```

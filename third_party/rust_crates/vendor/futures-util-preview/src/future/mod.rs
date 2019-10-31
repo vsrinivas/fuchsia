@@ -4,17 +4,14 @@
 //! including the `FutureExt` trait which adds methods to `Future` types.
 
 use core::pin::Pin;
-use futures_core::future::Future;
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-#[cfg(feature = "alloc")]
-use futures_core::future::{BoxFuture, LocalBoxFuture};
 
-// re-export for `select!`
-#[doc(hidden)]
-pub use futures_core::future::FusedFuture;
+pub use futures_core::future::{FusedFuture, Future};
+#[cfg(feature = "alloc")]
+pub use futures_core::future::{BoxFuture, LocalBoxFuture};
 
 // Primitive futures
 mod lazy;
@@ -129,11 +126,10 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
-    /// let future = future::ready(1);
+    /// let future = async { 1 };
     /// let new_future = future.map(|x| x + 3);
     /// assert_eq!(new_future.await, 4);
     /// # });
@@ -161,12 +157,11 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
-    /// let future_of_1 = future::ready(1);
-    /// let future_of_4 = future_of_1.then(|x| future::ready(x + 3));
+    /// let future_of_1 = async { 1 };
+    /// let future_of_4 = future_of_1.then(|x| async move { x + 3 });
     /// assert_eq!(future_of_4.await, 4);
     /// # });
     /// ```
@@ -187,15 +182,14 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
     /// let x = 6;
     /// let future = if x < 10 {
-    ///     future::ready(true).left_future()
+    ///     async { true }.left_future()
     /// } else {
-    ///     future::ready(false).right_future()
+    ///     async { false }.right_future()
     /// };
     ///
     /// assert_eq!(future.await, true);
@@ -217,15 +211,14 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
     /// let x = 6;
     /// let future = if x > 10 {
-    ///     future::ready(true).left_future()
+    ///     async { true }.left_future()
     /// } else {
-    ///     future::ready(false).right_future()
+    ///     async { false }.right_future()
     /// };
     ///
     /// assert_eq!(future.await, false);
@@ -246,12 +239,11 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     /// use futures::stream::StreamExt;
     ///
-    /// let future = future::ready(17);
+    /// let future = async { 17 };
     /// let stream = future.into_stream();
     /// let collected: Vec<_> = stream.collect().await;
     /// assert_eq!(collected, vec![17]);
@@ -280,11 +272,10 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
-    /// let nested_future = future::ready(future::ready(1));
+    /// let nested_future = async { async { 1 } };
     /// let future = nested_future.flatten();
     /// assert_eq!(future.await, 1);
     /// # });
@@ -310,13 +301,12 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream_items = vec![17, 18, 19];
-    /// let future_of_a_stream = future::ready(stream::iter(stream_items));
+    /// let future_of_a_stream = async { stream::iter(stream_items) };
     ///
     /// let stream = future_of_a_stream.flatten_stream();
     /// let list: Vec<_> = stream.collect().await;
@@ -363,11 +353,10 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
-    /// let future = future::ready(1);
+    /// let future = async { 1 };
     /// let new_future = future.inspect(|&x| println!("about to resolve: {}", x));
     /// assert_eq!(new_future.await, 1);
     /// # });
@@ -398,7 +387,6 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future::{self, FutureExt, Ready};
     ///
@@ -431,11 +419,10 @@ pub trait FutureExt: Future {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     ///
-    /// let future = future::ready(6);
+    /// let future = async { 6 };
     /// let shared1 = future.shared();
     /// let shared2 = shared1.clone();
     ///
@@ -449,13 +436,12 @@ pub trait FutureExt: Future {
     /// // synchronous function to better illustrate the cross-thread aspect of
     /// // the `shared` combinator.
     ///
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, FutureExt};
+    /// use futures::future::FutureExt;
     /// use futures::executor::block_on;
     /// use std::thread;
     ///
-    /// let future = future::ready(6);
+    /// let future = async { 6 };
     /// let shared1 = future.shared();
     /// let shared2 = shared1.clone();
     /// let join_handle = thread::spawn(move || {
@@ -492,6 +478,9 @@ pub trait FutureExt: Future {
     }
 
     /// Wrap the future in a Box, pinning it.
+    ///
+    /// This method is only available when the `std` or `alloc` feature of this
+    /// library is activated, and it is activated by default.
     #[cfg(feature = "alloc")]
     fn boxed<'a>(self) -> BoxFuture<'a, Self::Output>
         where Self: Sized + Send + 'a
@@ -502,6 +491,9 @@ pub trait FutureExt: Future {
     /// Wrap the future in a Box, pinning it.
     ///
     /// Similar to `boxed`, but without the `Send` requirement.
+    ///
+    /// This method is only available when the `std` or `alloc` feature of this
+    /// library is activated, and it is activated by default.
     #[cfg(feature = "alloc")]
     fn boxed_local<'a>(self) -> LocalBoxFuture<'a, Self::Output>
         where Self: Sized + 'a
@@ -530,6 +522,54 @@ pub trait FutureExt: Future {
         where Self: Unpin
     {
         Pin::new(self).poll(cx)
+    }
+
+    /// Evaluates and consumes the future, returning the resulting output if
+    /// the future is ready after the first call to `Future::poll`.
+    ///
+    /// If `poll` instead returns `Poll::Pending`, `None` is returned.
+    ///
+    /// This method is useful in cases where immediacy is more important than
+    /// waiting for a result. It is also convenient for quickly obtaining
+    /// the value of a future that is known to always resolve immediately.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use futures::prelude::*;
+    /// use futures::{future::ready, future::pending};
+    /// let future_ready = ready("foobar");
+    /// let future_pending = pending::<&'static str>();
+    ///
+    /// assert_eq!(future_ready.now_or_never(), Some("foobar"));
+    /// assert_eq!(future_pending.now_or_never(), None);
+    /// ```
+    ///
+    /// In cases where it is absolutely known that a future should always
+    /// resolve immediately and never return `Poll::Pending`, this method can
+    /// be combined with `expect()`:
+    ///
+    /// ```
+    /// # use futures::{prelude::*, future::ready};
+    /// let future_ready = ready("foobar");
+    ///
+    /// assert_eq!(future_ready.now_or_never().expect("Future not ready"), "foobar");
+    /// ```
+    fn now_or_never(mut self) -> Option<Self::Output>
+        where Self: Sized
+    {
+        let noop_waker = crate::task::noop_waker();
+        let mut cx = Context::from_waker(&noop_waker);
+
+        // SAFETY: This is safe because this method consumes the future, so `poll` is
+        //         only going to be called once. Thus it doesn't matter to us if the
+        //         future is `Unpin` or not.
+        let pinned = unsafe { Pin::new_unchecked(&mut self) };
+
+        match pinned.poll(&mut cx) {
+            Poll::Ready(x) => Some(x),
+            _ => None,
+        }
     }
 }
 

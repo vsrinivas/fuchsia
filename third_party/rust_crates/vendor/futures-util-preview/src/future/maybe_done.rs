@@ -27,12 +27,11 @@ impl<Fut: Future + Unpin> Unpin for MaybeDone<Fut> {}
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 /// use futures::pin_mut;
 ///
-/// let future = future::maybe_done(future::ready(5));
+/// let future = future::maybe_done(async { 5 });
 /// pin_mut!(future);
 /// assert_eq!(future.as_mut().take_output(), None);
 /// let () = future.as_mut().await;
@@ -50,7 +49,7 @@ impl<Fut: Future> MaybeDone<Fut> {
     /// future has been completed and [`take_output`](MaybeDone::take_output)
     /// has not yet been called.
     #[inline]
-    pub fn output_mut<'a>(self: Pin<&'a mut Self>) -> Option<&'a mut Fut::Output> {
+    pub fn output_mut(self: Pin<&mut Self>) -> Option<&mut Fut::Output> {
         unsafe {
             let this = self.get_unchecked_mut();
             match this {

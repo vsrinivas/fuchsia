@@ -76,7 +76,7 @@ impl<St, Fut, F> SkipWhile<St, Fut, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -89,9 +89,13 @@ impl<St, Fut, F> SkipWhile<St, Fut, F>
     }
 }
 
-impl<St: Stream + FusedStream, Fut, F> FusedStream for SkipWhile<St, Fut, F> {
+impl<St, Fut, F> FusedStream for SkipWhile<St, Fut, F>
+    where St: FusedStream,
+          F: FnMut(&St::Item) -> Fut,
+          Fut: Future<Output = bool>,
+{
     fn is_terminated(&self) -> bool {
-        self.stream.is_terminated()
+        self.pending_item.is_none() && self.stream.is_terminated()
     }
 }
 
@@ -130,6 +134,16 @@ impl<St, Fut, F> Stream for SkipWhile<St, Fut, F>
                 return Poll::Ready(Some(item))
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let pending_len = if self.pending_item.is_some() { 1 } else { 0 };
+        let (_, upper) = self.stream.size_hint();
+        let upper = match upper {
+            Some(x) => x.checked_add(pending_len),
+            None => None,
+        };
+        (0, upper) // can't know a lower bound, due to the predicate
     }
 }
 

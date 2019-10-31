@@ -9,7 +9,7 @@ use {
     bytes::{Buf, BufMut},
     futures::{
         future::Future,
-        io::{AsyncRead, AsyncWrite, Initializer},
+        io::{AsyncRead, AsyncWrite},
         ready,
         stream::Stream,
         task::{Context, Poll},
@@ -276,12 +276,6 @@ impl TcpStream {
 }
 
 impl AsyncRead for TcpStream {
-    unsafe fn initializer(&self) -> Initializer {
-        // This is safe because `zx::Socket::read` does not examine
-        // the buffer before reading into it.
-        Initializer::nop()
-    }
-
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,

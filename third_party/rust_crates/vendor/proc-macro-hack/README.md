@@ -11,7 +11,7 @@ statements or expressions.
 This crate implements an alternative type of procedural macro that can be
 invoked in statement or expression position.
 
-This approach works with any stable or nightly Rust version 1.30+.
+This approach works with any stable or nightly Rust version 1.31+.
 
 ## Defining procedural macros
 

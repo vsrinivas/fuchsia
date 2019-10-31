@@ -23,7 +23,7 @@ impl<F> ElemState<F>
 where
     F: Future,
 {
-    fn pending_pin_mut<'a>(self: Pin<&'a mut Self>) -> Option<Pin<&'a mut F>> {
+    fn pending_pin_mut(self: Pin<&mut Self>) -> Option<Pin<&mut F>> {
         // Safety: Basic enum pin projection, no drop + optionally Unpin based
         // on the type of this variant
         match unsafe { self.get_unchecked_mut() } {
@@ -102,9 +102,8 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
-/// use futures::future::{join_all};
+/// use futures::future::join_all;
 ///
 /// async fn foo(i: u32) -> u32 { i }
 ///

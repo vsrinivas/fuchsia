@@ -132,10 +132,9 @@ impl LocalPool {
     ///
     /// ```
     /// use futures::executor::LocalPool;
-    /// use futures::future::ready;
     ///
     /// let mut pool = LocalPool::new();
-    /// # let my_app  = ready(());
+    /// # let my_app  = async {};
     ///
     /// // run tasks in the pool until `my_app` completes, by default spawning
     /// // further tasks back onto the pool
@@ -330,8 +329,13 @@ impl<S: Stream + Unpin> BlockingStream<S> {
 
 impl<S: Stream + Unpin> Iterator for BlockingStream<S> {
     type Item = S::Item;
+
     fn next(&mut self) -> Option<Self::Item> {
         LocalPool::new().run_until(self.stream.next())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

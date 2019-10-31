@@ -11,10 +11,10 @@
 
 #![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_core")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.19/futures_core")]
 
-#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
-compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
+#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "unstable")))]
+compile_error!("The `cfg-target-has-atomic` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -28,9 +28,6 @@ pub mod stream;
 #[macro_use]
 pub mod task;
 #[doc(hidden)] pub use self::task::Poll;
-
-pub mod never;
-#[doc(hidden)] pub use self::never::Never;
 
 #[doc(hidden)]
 pub mod core_reexport {

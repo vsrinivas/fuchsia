@@ -1,4 +1,6 @@
 use futures_core::task::{Context, Poll};
+#[cfg(feature = "read_initializer")]
+use futures_io::Initializer;
 use futures_io::{AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, IoSlice, IoSliceMut, SeekFrom};
 use std::{fmt, io};
 use std::pin::Pin;
@@ -106,8 +108,10 @@ impl<T> io::Read for AllowStdIo<T> where T: io::Read {
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         self.0.read_vectored(bufs)
     }
-    // TODO: implement the `initializer` fn when it stabilizes.
-    // See rust-lang/rust #42788
+    #[cfg(feature = "read_initializer")]
+    unsafe fn initializer(&self) -> Initializer {
+        self.0.initializer()
+    }
     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> io::Result<usize> {
         self.0.read_to_end(buf)
     }
@@ -130,6 +134,11 @@ impl<T> AsyncRead for AllowStdIo<T> where T: io::Read {
         -> Poll<io::Result<usize>>
     {
         Poll::Ready(Ok(try_with_interrupt!(self.0.read_vectored(bufs))))
+    }
+
+    #[cfg(feature = "read_initializer")]
+    unsafe fn initializer(&self) -> Initializer {
+        self.0.initializer()
     }
 }
 
@@ -157,8 +166,8 @@ impl<T> io::BufRead for AllowStdIo<T> where T: io::BufRead {
 }
 
 impl<T> AsyncBufRead for AllowStdIo<T> where T: io::BufRead {
-    fn poll_fill_buf<'a>(mut self: Pin<&'a mut Self>, _: &mut Context<'_>)
-        -> Poll<io::Result<&'a [u8]>>
+    fn poll_fill_buf(mut self: Pin<&mut Self>, _: &mut Context<'_>)
+        -> Poll<io::Result<&[u8]>>
     {
         let this: *mut Self = &mut *self as *mut _;
         Poll::Ready(Ok(try_with_interrupt!(unsafe { &mut *this }.0.fill_buf())))

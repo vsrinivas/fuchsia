@@ -8,6 +8,8 @@
 //! All items of this library are only available when the `std` feature of this
 //! library is activated, and it is activated by default.
 
+#![cfg_attr(feature = "read_initializer", feature(read_initializer))]
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
@@ -17,7 +19,10 @@
 
 #![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_io")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.19/futures_io")]
+
+#[cfg(all(feature = "read_initializer", not(feature = "unstable")))]
+compile_error!("The `read_initializer` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
 #[cfg(feature = "std")]
 mod if_std {
@@ -25,7 +30,6 @@ mod if_std {
     use std::io;
     use std::ops::DerefMut;
     use std::pin::Pin;
-    use std::ptr;
     use std::task::{Context, Poll};
 
     // Re-export some types from `std::io` so that users don't have to deal
@@ -40,45 +44,9 @@ mod if_std {
         SeekFrom as SeekFrom,
     };
 
-    /// A type used to conditionally initialize buffers passed to `AsyncRead`
-    /// methods, modeled after `std`.
-    #[derive(Debug)]
-    pub struct Initializer(bool);
-
-    impl Initializer {
-        /// Returns a new `Initializer` which will zero out buffers.
-        #[inline]
-        pub fn zeroing() -> Initializer {
-            Initializer(true)
-        }
-
-        /// Returns a new `Initializer` which will not zero out buffers.
-        ///
-        /// # Safety
-        ///
-        /// This method may only be called by `AsyncRead`ers which guarantee
-        /// that they will not read from the buffers passed to `AsyncRead`
-        /// methods, and that the return value of the method accurately reflects
-        /// the number of bytes that have been written to the head of the buffer.
-        #[inline]
-        pub unsafe fn nop() -> Initializer {
-            Initializer(false)
-        }
-
-        /// Indicates if a buffer should be initialized.
-        #[inline]
-        pub fn should_initialize(&self) -> bool {
-            self.0
-        }
-
-        /// Initializes a buffer if necessary.
-        #[inline]
-        pub fn initialize(&self, buf: &mut [u8]) {
-            if self.should_initialize() {
-                unsafe { ptr::write_bytes(buf.as_mut_ptr(), 0, buf.len()) }
-            }
-        }
-    }
+    #[cfg(feature = "read_initializer")]
+    #[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
+    pub use io::Initializer as Initializer;
 
     /// Read bytes asynchronously.
     ///
@@ -99,6 +67,7 @@ mod if_std {
         /// This method is `unsafe` because and `AsyncRead`er could otherwise
         /// return a non-zeroing `Initializer` from another `AsyncRead` type
         /// without an `unsafe` block.
+        #[cfg(feature = "read_initializer")]
         #[inline]
         unsafe fn initializer(&self) -> Initializer {
             Initializer::zeroing()
@@ -319,8 +288,8 @@ mod if_std {
         /// `Interrupted`.  Implementations must convert `WouldBlock` into
         /// `Poll::Pending` and either internally retry or convert
         /// `Interrupted` into another error kind.
-        fn poll_fill_buf<'a>(self: Pin<&'a mut Self>, cx: &mut Context<'_>)
-            -> Poll<Result<&'a [u8]>>;
+        fn poll_fill_buf(self: Pin<&mut Self>, cx: &mut Context<'_>)
+            -> Poll<Result<&[u8]>>;
 
         /// Tells this buffer that `amt` bytes have been consumed from the buffer,
         /// so they should no longer be returned in calls to [`poll_read`].
@@ -342,6 +311,7 @@ mod if_std {
 
     macro_rules! deref_async_read {
         () => {
+            #[cfg(feature = "read_initializer")]
             unsafe fn initializer(&self) -> Initializer {
                 (**self).initializer()
             }
@@ -373,6 +343,7 @@ mod if_std {
         P: DerefMut + Unpin,
         P::Target: AsyncRead,
     {
+        #[cfg(feature = "read_initializer")]
         unsafe fn initializer(&self) -> Initializer {
             (**self).initializer()
         }
@@ -390,12 +361,11 @@ mod if_std {
         }
     }
 
-    /// `unsafe` because the `io::Read` type must not access the buffer
-    /// before reading data into it.
-    macro_rules! unsafe_delegate_async_read_to_stdio {
+    macro_rules! delegate_async_read_to_stdio {
         () => {
+            #[cfg(feature = "read_initializer")]
             unsafe fn initializer(&self) -> Initializer {
-                Initializer::nop()
+                io::Read::initializer(self)
             }
 
             fn poll_read(mut self: Pin<&mut Self>, _: &mut Context<'_>, buf: &mut [u8])
@@ -413,19 +383,11 @@ mod if_std {
     }
 
     impl AsyncRead for &[u8] {
-        unsafe_delegate_async_read_to_stdio!();
-    }
-
-    impl AsyncRead for io::Repeat {
-        unsafe_delegate_async_read_to_stdio!();
-    }
-
-    impl AsyncRead for io::Empty {
-        unsafe_delegate_async_read_to_stdio!();
+        delegate_async_read_to_stdio!();
     }
 
     impl<T: AsRef<[u8]> + Unpin> AsyncRead for io::Cursor<T> {
-        unsafe_delegate_async_read_to_stdio!();
+        delegate_async_read_to_stdio!();
     }
 
     macro_rules! deref_async_write {
@@ -547,10 +509,6 @@ mod if_std {
         delegate_async_write_to_stdio!();
     }
 
-    impl AsyncWrite for io::Sink {
-        delegate_async_write_to_stdio!();
-    }
-
     macro_rules! deref_async_seek {
         () => {
             fn poll_seek(mut self: Pin<&mut Self>, cx: &mut Context<'_>, pos: SeekFrom)
@@ -597,8 +555,8 @@ mod if_std {
 
     macro_rules! deref_async_buf_read {
         () => {
-            fn poll_fill_buf<'a>(self: Pin<&'a mut Self>, cx: &mut Context<'_>)
-                -> Poll<Result<&'a [u8]>>
+            fn poll_fill_buf(self: Pin<&mut Self>, cx: &mut Context<'_>)
+                -> Poll<Result<&[u8]>>
             {
                 Pin::new(&mut **self.get_mut()).poll_fill_buf(cx)
             }
@@ -622,8 +580,8 @@ mod if_std {
         P: DerefMut + Unpin,
         P::Target: AsyncBufRead,
     {
-        fn poll_fill_buf<'a>(self: Pin<&'a mut Self>, cx: &mut Context<'_>)
-            -> Poll<Result<&'a [u8]>>
+        fn poll_fill_buf(self: Pin<&mut Self>, cx: &mut Context<'_>)
+            -> Poll<Result<&[u8]>>
         {
             self.get_mut().as_mut().poll_fill_buf(cx)
         }
@@ -635,8 +593,8 @@ mod if_std {
 
     macro_rules! delegate_async_buf_read_to_stdio {
         () => {
-            fn poll_fill_buf<'a>(self: Pin<&'a mut Self>, _: &mut Context<'_>)
-                -> Poll<Result<&'a [u8]>>
+            fn poll_fill_buf(self: Pin<&mut Self>, _: &mut Context<'_>)
+                -> Poll<Result<&[u8]>>
             {
                 Poll::Ready(io::BufRead::fill_buf(self.get_mut()))
             }
@@ -648,10 +606,6 @@ mod if_std {
     }
 
     impl AsyncBufRead for &[u8] {
-        delegate_async_buf_read_to_stdio!();
-    }
-
-    impl AsyncBufRead for io::Empty {
         delegate_async_buf_read_to_stdio!();
     }
 

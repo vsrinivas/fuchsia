@@ -201,12 +201,10 @@ fn read_to_end_internal<R: AsyncRead + Unpin>(
     let ret;
     loop {
         if g.len == g.buf.len() {
-            unsafe {
-                g.buf.reserve(32);
-                let capacity = g.buf.capacity();
-                g.buf.set_len(capacity);
-                r.initializer().initialize(&mut g.buf[g.len..]);
-            }
+            g.buf.reserve(32);
+            let capacity = g.buf.capacity();
+            // FIXME: don't zero when a sound `std::mem::freeze` or similar exists
+            g.buf.resize(capacity, 0);
         }
 
         match ready!(Pin::new(&mut *r).poll_read(cx, &mut g.buf[g.len..])) {

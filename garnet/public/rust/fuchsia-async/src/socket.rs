@@ -4,7 +4,7 @@
 
 use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
 use fuchsia_zircon::{self as zx, AsHandleRef, Signals};
-use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
+use futures::io::{self, AsyncRead, AsyncWrite};
 use futures::{
     future::poll_fn,
     stream::Stream,
@@ -283,12 +283,6 @@ impl fmt::Debug for Socket {
 }
 
 impl AsyncRead for Socket {
-    unsafe fn initializer(&self) -> Initializer {
-        // This is safe because `zx::Socket::read` does not examine
-        // the buffer before reading into it.
-        Initializer::nop()
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -317,12 +311,6 @@ impl AsyncWrite for Socket {
 }
 
 impl<'a> AsyncRead for &'a Socket {
-    unsafe fn initializer(&self) -> Initializer {
-        // This is safe because `zx::Socket::read` does not examine
-        // the buffer before reading into it.
-        Initializer::nop()
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

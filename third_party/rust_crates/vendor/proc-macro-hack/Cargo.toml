@@ -11,25 +11,26 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "proc-macro-hack"
-version = "0.5.7"
+version = "0.5.11"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Procedural macros in expression position"
 readme = "README.md"
 categories = ["development-tools::procedural-macro-helpers"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/proc-macro-hack"
 
 [lib]
 proc-macro = true
 [dependencies.proc-macro2]
-version = "0.4.19"
+version = "1.0"
 
 [dependencies.quote]
-version = "0.6.8"
+version = "1.0"
 
 [dependencies.syn]
-version = "0.15.14"
+version = "1.0.5"
 [dev-dependencies.demo-hack]
 version = "0.0.5"
 

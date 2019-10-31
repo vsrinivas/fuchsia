@@ -1,5 +1,6 @@
+use core::cmp;
 use core::pin::Pin;
-use futures_core::stream::Stream;
+use futures_core::stream::{Stream, FusedStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
@@ -46,7 +47,7 @@ impl<St: Stream> Take<St> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -78,6 +79,31 @@ impl<St> Stream for Take<St>
             }
             Poll::Ready(next)
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.remaining == 0 {
+            return (0, Some(0));
+        }
+
+        let (lower, upper) = self.stream.size_hint();
+
+        let lower = cmp::min(lower, self.remaining as usize);
+
+        let upper = match upper {
+            Some(x) if x < self.remaining as usize => Some(x),
+            _ => Some(self.remaining as usize)
+        };
+
+        (lower, upper)
+    }
+}
+
+impl<St> FusedStream for Take<St>
+    where St: FusedStream,
+{
+    fn is_terminated(&self) -> bool {
+        self.remaining == 0 || self.stream.is_terminated()
     }
 }
 

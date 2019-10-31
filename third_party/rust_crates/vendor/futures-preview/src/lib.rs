@@ -22,6 +22,7 @@
 //! completion, but *do not block* the thread running them.
 
 #![cfg_attr(feature = "cfg-target-has-atomic", feature(cfg_target_has_atomic))]
+#![cfg_attr(feature = "read_initializer", feature(read_initializer))]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -32,13 +33,16 @@
 
 #![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.19/futures")]
 
-#[cfg(all(feature = "async-await", not(feature = "nightly")))]
-compile_error!("The `async-await` feature requires the `nightly` feature as an explicit opt-in to unstable features");
+#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "unstable")))]
+compile_error!("The `cfg-target-has-atomic` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
-#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
-compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
+#[cfg(all(feature = "bilock", not(feature = "unstable")))]
+compile_error!("The `bilock` feature requires the `unstable` feature as an explicit opt-in to unstable features");
+
+#[cfg(all(feature = "read_initializer", not(feature = "unstable")))]
+compile_error!("The `read_initializer` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
 #[doc(hidden)] pub use futures_core::core_reexport;
 
@@ -62,18 +66,20 @@ compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` featu
 
 #[doc(hidden)] pub use futures_core::task::Poll;
 
-#[doc(hidden)] pub use futures_core::never::Never;
+#[doc(hidden)] pub use futures_util::never::Never;
 
 // Macro reexports
 pub use futures_core::ready; // Readiness propagation
 pub use futures_util::pin_mut;
-#[cfg(feature = "async-await")]
-pub use futures_util::{
-    // Async-await
-    join, try_join, pending, poll,
-};
-
 #[cfg(feature = "std")]
+#[cfg(feature = "async-await")]
+pub use futures_util::{pending, poll}; // Async-await
+
+#[cfg_attr(
+    feature = "cfg-target-has-atomic",
+    cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+)]
+#[cfg(feature = "alloc")]
 pub mod channel {
     //! Cross-task communication.
     //!
@@ -86,10 +92,13 @@ pub mod channel {
     //!   channel for sending values between tasks, analogous to the
     //!   similarly-named structure in the standard library.
     //!
-    //! This module is only available when the `std` feature of this
+    //! This module is only available when the `std` or `alloc` feature of this
     //! library is activated, and it is activated by default.
 
-    pub use futures_channel::{oneshot, mpsc};
+    pub use futures_channel::oneshot;
+
+    #[cfg(feature = "std")]
+    pub use futures_channel::mpsc;
 }
 
 #[cfg(feature = "compat")]
@@ -206,7 +215,7 @@ pub mod future {
     };
 
     #[cfg(feature = "alloc")]
-    pub use futures_core::future::BoxFuture;
+    pub use futures_core::future::{BoxFuture, LocalBoxFuture};
 
     pub use futures_util::future::{
         lazy, Lazy,
@@ -269,7 +278,7 @@ pub mod future {
 pub mod io {
     //! Asynchronous I/O.
     //!
-    //! This module is the asynchronous version of `std::io`. It defines two
+    //! This module is the asynchronous version of `std::io`. It defines four
     //! traits, [`AsyncRead`](crate::io::AsyncRead),
     //! [`AsyncWrite`](crate::io::AsyncWrite),
     //! [`AsyncSeek`](crate::io::AsyncSeek), and
@@ -293,24 +302,36 @@ pub mod io {
 
     pub use futures_io::{
         AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, Error, ErrorKind,
-        Initializer, IoSlice, IoSliceMut, Result, SeekFrom,
+        IoSlice, IoSliceMut, Result, SeekFrom,
     };
+
+    #[cfg(feature = "read_initializer")]
+    pub use futures_io::Initializer;
 
     pub use futures_util::io::{
         AsyncReadExt, AsyncWriteExt, AsyncSeekExt, AsyncBufReadExt, AllowStdIo,
-        BufReader, BufWriter, Close, CopyInto, CopyBufInto, Flush, Lines, Read,
-        ReadExact, ReadHalf, ReadLine, ReadToEnd, ReadUntil, ReadVectored, Seek,
-        Window, Write, WriteAll, WriteHalf, WriteVectored,
+        BufReader, BufWriter, Chain, Close, CopyInto, CopyBufInto, empty, Empty,
+        Flush, IntoSink, Lines, Read, ReadExact, ReadHalf, ReadLine, ReadToEnd,
+        ReadToString, ReadUntil, ReadVectored, repeat, Repeat, Seek, sink, Sink,
+        Take, Window, Write, WriteAll, WriteHalf, WriteVectored,
     };
 }
 
-#[cfg(feature = "std")]
+#[cfg_attr(
+    feature = "cfg-target-has-atomic",
+    cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
+)]
+#[cfg(feature = "alloc")]
 pub mod lock {
     //! Futures-powered synchronization primitives.
     //!
-    //! This module is only available when the `std` feature of this
+    //! This module is only available when the `std` or `alloc` feature of this
     //! library is activated, and it is activated by default.
 
+    #[cfg(feature = "bilock")]
+    pub use futures_util::lock::{BiLock, BiLockAcquire, BiLockGuard, ReuniteError};
+
+    #[cfg(feature = "std")]
     pub use futures_util::lock::{Mutex, MutexLockFuture, MutexGuard};
 }
 
@@ -390,7 +411,7 @@ pub mod stream {
     };
 
     #[cfg(feature = "alloc")]
-    pub use futures_core::stream::BoxStream;
+    pub use futures_core::stream::{BoxStream, LocalBoxStream};
 
     pub use futures_util::stream::{
         iter, Iter,
@@ -441,8 +462,8 @@ pub mod stream {
         TryStreamExt,
         AndThen, ErrInto, MapOk, MapErr, OrElse,
         InspectOk, InspectErr,
-        TryNext, TryForEach, TryFilterMap,
-        TryCollect, TryFold, TrySkipWhile,
+        TryNext, TryForEach, TryFilter, TryFilterMap, TryFlatten,
+        TryCollect, TryConcat, TryFold, TrySkipWhile,
         IntoStream,
     };
 
@@ -491,7 +512,7 @@ pub mod task {
         cfg(all(target_has_atomic = "cas", target_has_atomic = "ptr"))
     )]
     #[cfg(feature = "alloc")]
-    pub use futures_util::task::{WakerRef, waker_ref, ArcWake};
+    pub use futures_util::task::{waker, waker_ref, WakerRef, ArcWake};
 
     #[cfg_attr(
         feature = "cfg-target-has-atomic",
@@ -505,27 +526,56 @@ pub mod never {
     //!
     //! Values of this type can never be created and will never exist.
 
-    pub use futures_core::never::Never;
+    pub use futures_util::never::Never;
 }
 
-// `select!` re-export --------------------------------------
+// proc-macro re-export --------------------------------------
 
+#[cfg(feature = "std")]
 #[cfg(feature = "async-await")]
 #[doc(hidden)]
-pub use futures_util::rand_reexport;
+pub use futures_util::async_await;
 
+#[cfg(feature = "std")]
 #[cfg(feature = "async-await")]
 #[doc(hidden)]
-pub mod inner_select {
+pub mod inner_macro {
+    pub use futures_util::join;
+    pub use futures_util::try_join;
     pub use futures_util::select;
 }
 
+#[cfg(feature = "std")]
+#[cfg(feature = "async-await")]
+futures_util::document_join_macro! {
+    #[macro_export]
+    macro_rules! join { // replace `::futures_util` with `::futures` as the crate path
+        ($($tokens:tt)*) => {
+            $crate::inner_macro::join! {
+                futures_crate_path ( ::futures )
+                $( $tokens )*
+            }
+        }
+    }
+
+    #[macro_export]
+    macro_rules! try_join { // replace `::futures_util` with `::futures` as the crate path
+        ($($tokens:tt)*) => {
+            $crate::inner_macro::try_join! {
+                futures_crate_path ( ::futures )
+                $( $tokens )*
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
 #[cfg(feature = "async-await")]
 futures_util::document_select_macro! {
     #[macro_export]
     macro_rules! select { // replace `::futures_util` with `::futures` as the crate path
         ($($tokens:tt)*) => {
-            $crate::inner_select::select! {
+            $crate::inner_macro::select! {
                 futures_crate_path ( ::futures )
                 $( $tokens )*
             }

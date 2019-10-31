@@ -1,5 +1,5 @@
 use crate::stream::Fuse;
-use futures_core::stream::Stream;
+use futures_core::stream::{Stream, FusedStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
@@ -58,7 +58,7 @@ impl<St: Stream> Chunks<St> where St: Stream {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream().get_pin_mut()
     }
 
@@ -104,6 +104,23 @@ impl<St: Stream> Stream for Chunks<St> {
                 }
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let chunk_len = if self.items.is_empty() { 0 } else { 1 };
+        let (lower, upper) = self.stream.size_hint();
+        let lower = lower.saturating_add(chunk_len);
+        let upper = match upper {
+            Some(x) => x.checked_add(chunk_len),
+            None => None,
+        };
+        (lower, upper)
+    }
+}
+
+impl<St: FusedStream> FusedStream for Chunks<St> {
+    fn is_terminated(&self) -> bool {
+        self.stream.is_terminated() && self.items.is_empty()
     }
 }
 

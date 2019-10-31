@@ -200,7 +200,7 @@ impl<Fut> FuturesUnordered<Fut> {
     }
 
     /// Returns an iterator that allows modifying each future in the set.
-    pub fn iter_pin_mut<'a>(self: Pin<&'a mut Self>) -> IterPinMut<'a, Fut> {
+    pub fn iter_pin_mut(self: Pin<&mut Self>) -> IterPinMut<'_, Fut> {
         IterPinMut {
             task: self.head_all,
             len: self.len(),
@@ -426,6 +426,11 @@ impl<Fut: Future> Stream for FuturesUnordered<Fut> {
                 }
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
     }
 }
 

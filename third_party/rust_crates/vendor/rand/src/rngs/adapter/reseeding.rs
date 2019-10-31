@@ -12,7 +12,7 @@
 
 use core::mem::size_of;
 
-use rand_core::{RngCore, CryptoRng, SeedableRng, Error};
+use rand_core::{RngCore, CryptoRng, SeedableRng, Error, ErrorKind};
 use rand_core::block::{BlockRngCore, BlockRng};
 
 /// A wrapper around any PRNG that implements [`BlockRngCore`], that adds the
@@ -24,7 +24,7 @@ use rand_core::block::{BlockRngCore, BlockRng};
 /// - After `clone()`, the clone will be reseeded on first use.
 /// - After a process is forked, the RNG in the child process is reseeded within
 ///   the next few generated values, depending on the block size of the
-///   underlying PRNG. For ChaCha and Hc128 this is a maximum of
+///   underlying PRNG. For [`ChaChaCore`] and [`Hc128Core`] this is a maximum of
 ///   15 `u32` values before reseeding.
 /// - After the PRNG has generated a configurable number of random bytes.
 ///
@@ -57,21 +57,30 @@ use rand_core::block::{BlockRngCore, BlockRng};
 /// # Example
 ///
 /// ```
+/// # extern crate rand;
+/// # extern crate rand_chacha;
+/// # fn main() {
 /// use rand::prelude::*;
-/// use rand_chacha::ChaCha20Core; // Internal part of ChaChaRng that
+/// use rand_chacha::ChaChaCore; // Internal part of ChaChaRng that
 ///                              // implements BlockRngCore
 /// use rand::rngs::OsRng;
 /// use rand::rngs::adapter::ReseedingRng;
 ///
-/// let prng = ChaCha20Core::from_entropy();
-/// let mut reseeding_rng = ReseedingRng::new(prng, 0, OsRng);
+/// let prng = ChaChaCore::from_entropy();
+// FIXME: it is better to use EntropyRng as reseeder, but that doesn't implement
+// clone yet.
+/// let reseeder = OsRng::new().unwrap();
+/// let mut reseeding_rng = ReseedingRng::new(prng, 0, reseeder);
 ///
 /// println!("{}", reseeding_rng.gen::<u64>());
 ///
 /// let mut cloned_rng = reseeding_rng.clone();
 /// assert!(reseeding_rng.gen::<u64>() != cloned_rng.gen::<u64>());
+/// # }
 /// ```
 ///
+/// [`ChaChaCore`]: rand_chacha::ChaChaCore
+/// [`Hc128Core`]: rand_hc::Hc128Core
 /// [`BlockRngCore`]: rand_core::block::BlockRngCore
 /// [`ReseedingRng::new`]: ReseedingRng::new
 /// [`reseed()`]: ReseedingRng::reseed
@@ -234,13 +243,21 @@ where R: BlockRngCore + SeedableRng,
         let num_bytes =
             results.as_ref().len() * size_of::<<R as BlockRngCore>::Item>();
 
-        if let Err(e) = self.reseed() {
-            warn!("Reseeding RNG failed: {}", e);
-            let _ = e;
-        }
-        self.fork_counter = global_fork_counter;
+        let threshold = if let Err(e) = self.reseed() {
+            let delay = match e.kind {
+                ErrorKind::Transient => num_bytes as i64,
+                kind @ _ if kind.should_retry() => self.threshold >> 8,
+                _ => self.threshold,
+            };
+            warn!("Reseeding RNG delayed reseeding by {} bytes due to \
+                   error from source: {}", delay, e);
+            delay
+        } else {
+            self.fork_counter = global_fork_counter;
+            self.threshold
+        };
 
-        self.bytes_until_reseed = self.threshold - num_bytes as i64;
+        self.bytes_until_reseed = threshold - num_bytes as i64;
         self.inner.generate(results);
     }
 }
@@ -265,11 +282,12 @@ where R: BlockRngCore + SeedableRng + CryptoRng,
       Rsdr: RngCore + CryptoRng {}
 
 
-#[cfg(all(unix, not(target_os="emscripten")))]
+#[cfg(all(feature="std", unix, not(target_os="emscripten")))]
 mod fork {
-    use core::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-    #[allow(deprecated)]  // Required for compatibility with Rust < 1.24.
-    use core::sync::atomic::{ATOMIC_USIZE_INIT, ATOMIC_BOOL_INIT};
+    extern crate libc;
+
+    use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+    use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 
     // Fork protection
     //
@@ -283,14 +301,12 @@ mod fork {
     // don't update `fork_counter`, so a reseed is attempted as soon as
     // possible.
 
-    #[allow(deprecated)]
     static RESEEDING_RNG_FORK_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
     pub fn get_fork_counter() -> usize {
         RESEEDING_RNG_FORK_COUNTER.load(Ordering::Relaxed)
     }
 
-    #[allow(deprecated)]
     static FORK_HANDLER_REGISTERED: AtomicBool = ATOMIC_BOOL_INIT;
 
     extern fn fork_handler() {
@@ -307,7 +323,7 @@ mod fork {
     }
 }
 
-#[cfg(not(all(unix, not(target_os="emscripten"))))]
+#[cfg(not(all(feature="std", unix, not(target_os="emscripten"))))]
 mod fork {
     pub fn get_fork_counter() -> usize { 0 }
     pub fn register_fork_handler() {}
@@ -316,27 +332,25 @@ mod fork {
 
 #[cfg(test)]
 mod test {
-    use crate::{Rng, SeedableRng};
-    use crate::rngs::std::Core;
-    use crate::rngs::mock::StepRng;
+    use {Rng, SeedableRng};
+    use rand_chacha::ChaChaCore;
+    use rngs::mock::StepRng;
     use super::ReseedingRng;
 
     #[test]
     fn test_reseeding() {
         let mut zero = StepRng::new(0, 0);
-        let rng = Core::from_rng(&mut zero).unwrap();
-        let thresh = 1; // reseed every time the buffer is exhausted
-        let mut reseeding = ReseedingRng::new(rng, thresh, zero);
+        let rng = ChaChaCore::from_rng(&mut zero).unwrap();
+        let mut reseeding = ReseedingRng::new(rng, 32*4, zero);
 
-        // RNG buffer size is [u32; 64]
-        // Debug is only implemented up to length 32 so use two arrays
-        let mut buf = ([0u32; 32], [0u32; 32]);
-        reseeding.fill(&mut buf.0);
-        reseeding.fill(&mut buf.1);
+        // Currently we only support for arrays up to length 32.
+        // TODO: cannot generate seq via Rng::gen because it uses different alg
+        let mut buf = [0u32; 32]; // Needs to be a multiple of the RNGs result
+                                  // size to test exactly.
+        reseeding.fill(&mut buf);
         let seq = buf;
         for _ in 0..10 {
-            reseeding.fill(&mut buf.0);
-            reseeding.fill(&mut buf.1);
+            reseeding.fill(&mut buf);
             assert_eq!(buf, seq);
         }
     }
@@ -344,7 +358,7 @@ mod test {
     #[test]
     fn test_clone_reseeding() {
         let mut zero = StepRng::new(0, 0);
-        let rng = Core::from_rng(&mut zero).unwrap();
+        let rng = ChaChaCore::from_rng(&mut zero).unwrap();
         let mut rng1 = ReseedingRng::new(rng, 32*4, zero);
 
         let first: u32 = rng1.gen();

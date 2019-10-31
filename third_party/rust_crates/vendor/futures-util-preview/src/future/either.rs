@@ -69,7 +69,7 @@ where
 impl<A, B> FusedFuture for Either<A, B>
 where
     A: FusedFuture,
-    B: FusedFuture,
+    B: FusedFuture<Output = A::Output>,
 {
     fn is_terminated(&self) -> bool {
         match self {
@@ -99,7 +99,7 @@ where
 impl<A, B> FusedStream for Either<A, B>
 where
     A: FusedStream,
-    B: FusedStream,
+    B: FusedStream<Item = A::Item>,
 {
     fn is_terminated(&self) -> bool {
         match self {
@@ -160,9 +160,10 @@ mod if_std {
     use super::Either;
     use core::pin::Pin;
     use core::task::{Context, Poll};
+    #[cfg(feature = "read_initializer")]
+    use futures_io::Initializer;
     use futures_io::{
-        AsyncBufRead, AsyncRead, AsyncSeek, AsyncWrite, Initializer, IoSlice, IoSliceMut, Result,
-        SeekFrom,
+        AsyncBufRead, AsyncRead, AsyncSeek, AsyncWrite, IoSlice, IoSliceMut, Result, SeekFrom,
     };
 
     impl<A, B> AsyncRead for Either<A, B>
@@ -170,6 +171,7 @@ mod if_std {
         A: AsyncRead,
         B: AsyncRead,
     {
+        #[cfg(feature = "read_initializer")]
         unsafe fn initializer(&self) -> Initializer {
             match self {
                 Either::Left(x) => x.initializer(),
@@ -278,10 +280,10 @@ mod if_std {
         A: AsyncBufRead,
         B: AsyncBufRead,
     {
-        fn poll_fill_buf<'a>(
-            self: Pin<&'a mut Self>,
+        fn poll_fill_buf(
+            self: Pin<&mut Self>,
             cx: &mut Context<'_>,
-        ) -> Poll<Result<&'a [u8]>> {
+        ) -> Poll<Result<&[u8]>> {
             unsafe {
                 match self.get_unchecked_mut() {
                     Either::Left(x) => Pin::new_unchecked(x).poll_fill_buf(cx),

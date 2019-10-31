@@ -26,10 +26,13 @@
 //!
 //! [Monty Hall Problem]: https://en.wikipedia.org/wiki/Monty_Hall_problem
 
-#![cfg(feature = "std")]
+#![cfg(feature="std")]
 
-use rand::distributions::{Distribution, Uniform};
+
+extern crate rand;
+
 use rand::Rng;
+use rand::distributions::{Distribution, Uniform};
 
 struct SimulationResult {
     win: bool,
@@ -37,7 +40,8 @@ struct SimulationResult {
 }
 
 // Run a single simulation of the Monty Hall problem.
-fn simulate<R: Rng>(random_door: &Uniform<u32>, rng: &mut R) -> SimulationResult {
+fn simulate<R: Rng>(random_door: &Uniform<u32>, rng: &mut R)
+                    -> SimulationResult {
     let car = random_door.sample(rng);
 
     // This is our initial choice

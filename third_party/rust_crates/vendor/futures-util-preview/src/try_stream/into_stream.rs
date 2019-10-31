@@ -40,7 +40,7 @@ impl<St> IntoStream<St> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -53,7 +53,7 @@ impl<St> IntoStream<St> {
     }
 }
 
-impl<St: FusedStream> FusedStream for IntoStream<St> {
+impl<St: TryStream + FusedStream> FusedStream for IntoStream<St> {
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
     }
@@ -68,6 +68,10 @@ impl<St: TryStream> Stream for IntoStream<St> {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         self.stream().try_poll_next(cx)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

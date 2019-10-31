@@ -3,9 +3,9 @@
 //! This module contains a number of functions for working with `Stream`s,
 //! including the `StreamExt` trait which adds methods to `Stream` types.
 
+use crate::future::Either;
 use core::pin::Pin;
 use futures_core::future::Future;
-use futures_core::stream::{FusedStream, Stream};
 #[cfg(feature = "sink")]
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
@@ -13,7 +13,10 @@ use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-use crate::future::Either;
+
+pub use futures_core::stream::{FusedStream, Stream};
+#[cfg(feature = "alloc")]
+pub use futures_core::stream::{BoxStream, LocalBoxStream};
 
 mod iter;
 pub use self::iter::{iter, Iter};
@@ -178,7 +181,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -212,7 +214,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -245,7 +246,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -287,7 +287,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -323,7 +322,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
@@ -356,15 +354,12 @@ pub trait StreamExt: Stream {
     ///
     /// # Examples
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=10);
-    /// let evens = stream.filter_map(|x| {
-    ///     let ret = if x % 2 == 0 { Some(x + 1) } else { None };
-    ///     future::ready(ret)
+    /// let evens = stream.filter_map(|x| async move {
+    ///     if x % 2 == 0 { Some(x + 1) } else { None }
     /// });
     ///
     /// assert_eq!(vec![3, 5, 7, 9, 11], evens.collect::<Vec<_>>().await);
@@ -391,13 +386,11 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let stream = stream::iter(1..=3);
-    /// let stream = stream.then(|x| future::ready(x + 3));
+    /// let stream = stream.then(|x| async move { x + 3 });
     ///
     /// assert_eq!(vec![4, 5, 6], stream.collect::<Vec<_>>().await);
     /// # });
@@ -418,7 +411,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::stream::StreamExt;
@@ -455,7 +447,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::stream::StreamExt;
@@ -495,13 +486,11 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let number_stream = stream::iter(0..6);
-    /// let sum = number_stream.fold(0, |acc, x| future::ready(acc + x));
+    /// let sum = number_stream.fold(0, |acc, x| async move { acc + x });
     /// assert_eq!(sum.await, 15);
     /// # });
     /// ```
@@ -518,7 +507,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::stream::StreamExt;
@@ -563,7 +551,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
@@ -593,7 +580,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
@@ -629,7 +615,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt};
@@ -680,7 +665,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -691,7 +675,7 @@ pub trait StreamExt: Stream {
     ///
     /// let fut = stream::iter(vec![rx1, rx2, rx3]).for_each_concurrent(
     ///     /* limit */ 2,
-    ///     async move |rx| {
+    ///     |rx| async move {
     ///         rx.await.unwrap();
     ///     }
     /// );
@@ -726,7 +710,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -749,7 +732,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -765,7 +747,7 @@ pub trait StreamExt: Stream {
     }
 
     /// Fuse a stream such that [`poll_next`](Stream::poll_next) will never
-    /// again be called once it has finished. This method can be used t turn
+    /// again be called once it has finished. This method can be used to turn
     /// any `Stream` into a `FusedStream`.
     ///
     /// Normally, once a stream has returned [`None`] from
@@ -817,22 +799,20 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, StreamExt};
     ///
     /// let mut stream = stream::iter(1..5);
     ///
     /// let sum = stream.by_ref()
     ///                 .take(2)
-    ///                 .fold(0, |a, b| future::ready(a + b))
+    ///                 .fold(0, |a, b| async move { a + b })
     ///                 .await;
     /// assert_eq!(sum, 3);
     ///
     /// // You can use the stream again
     /// let sum = stream.take(2)
-    ///                 .fold(0, |a, b| future::ready(a + b))
+    ///                 .fold(0, |a, b| async move { a + b })
     ///                 .await;
     /// assert_eq!(sum, 7);
     /// # });
@@ -863,7 +843,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -894,8 +873,21 @@ pub trait StreamExt: Stream {
     /// This method is only available when the `std` or `alloc` feature of this
     /// library is activated, and it is activated by default.
     #[cfg(feature = "alloc")]
-    fn boxed(self) -> Pin<Box<Self>>
-        where Self: Sized
+    fn boxed<'a>(self) -> BoxStream<'a, Self::Item>
+        where Self: Sized + Send + 'a
+    {
+        Box::pin(self)
+    }
+
+    /// Wrap the stream in a Box, pinning it.
+    ///
+    /// Similar to `boxed`, but without the `Send` requirement.
+    ///
+    /// This method is only available when the `std` or `alloc` feature of this
+    /// library is activated, and it is activated by default.
+    #[cfg(feature = "alloc")]
+    fn boxed_local<'a>(self) -> LocalBoxStream<'a, Self::Item>
+        where Self: Sized + 'a
     {
         Box::pin(self)
     }
@@ -940,7 +932,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt};
@@ -981,7 +972,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -1002,13 +992,12 @@ pub trait StreamExt: Stream {
         Zip::new(self, other)
     }
 
-    /// Adapter for chaining two stream.
+    /// Adapter for chaining two streams.
     ///
     /// The resulting stream emits elements from the first stream, and when
     /// first stream reaches the end, emits the elements from the second stream.
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, StreamExt};
     ///
@@ -1074,9 +1063,9 @@ pub trait StreamExt: Stream {
     /// exhausted, sending each item to the sink. It will complete once the
     /// stream is exhausted, the sink has received and flushed all items, and
     /// the sink is closed. Note that neither the original stream nor provided
-    /// sink will be output by this future.  Pass the sink by `Pin<&mut S>`
+    /// sink will be output by this future. Pass the sink by `Pin<&mut S>`
     /// (for example, via `forward(&mut sink)` inside an `async` fn/block) in
-    /// order to preserve access to the Sink.
+    /// order to preserve access to the `Sink`.
     #[cfg(feature = "sink")]
     fn forward<S>(self, sink: S) -> Forward<Self, S>
     where
@@ -1174,7 +1163,6 @@ pub trait StreamExt: Stream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::{future, select};
     /// use futures::stream::{StreamExt, FuturesUnordered};

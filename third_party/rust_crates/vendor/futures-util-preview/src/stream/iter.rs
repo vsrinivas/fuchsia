@@ -18,7 +18,6 @@ impl<I> Unpin for Iter<I> {}
 /// simply always calls `iter.next()` and returns that.
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::stream::{self, StreamExt};
 ///
@@ -41,5 +40,9 @@ impl<I> Stream for Iter<I>
 
     fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<I::Item>> {
         Poll::Ready(self.iter.next())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
     }
 }

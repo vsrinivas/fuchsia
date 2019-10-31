@@ -4,12 +4,13 @@ use futures_core::future::{Future, FutureObj};
 use futures_core::task::{Context, Poll, Spawn, SpawnError};
 use futures_util::future::FutureExt;
 use futures_util::task::{ArcWake, waker_ref};
+use std::cmp;
+use std::fmt;
 use std::io;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::fmt;
 
 /// A general-purpose thread pool for scheduling tasks that poll futures to
 /// completion.
@@ -95,22 +96,12 @@ impl ThreadPool {
     pub fn run<F: Future>(&mut self, f: F) -> F::Output {
         crate::LocalPool::new().run_until(f)
     }
-}
 
-impl Spawn for ThreadPool {
-    fn spawn_obj(
-        &mut self,
-        future: FutureObj<'static, ()>,
-    ) -> Result<(), SpawnError> {
-        (&*self).spawn_obj(future)
-    }
-}
-
-impl Spawn for &ThreadPool {
-    fn spawn_obj(
-        &mut self,
-        future: FutureObj<'static, ()>,
-    ) -> Result<(), SpawnError> {
+    /// Spawns a future that will be run to completion.
+    ///
+    /// > **Note**: This method is similar to `Spawn::spawn_obj`, except that
+    /// >           it is guaranteed to always succeed.
+    pub fn spawn_obj_ok(&self, future: FutureObj<'static, ()>) {
         let task = Task {
             future,
             wake_handle: Arc::new(WakeHandle {
@@ -120,6 +111,46 @@ impl Spawn for &ThreadPool {
             exec: self.clone(),
         };
         self.state.send(Message::Run(task));
+    }
+
+    /// Spawns a task that polls the given future with output `()` to
+    /// completion.
+    ///
+    /// ```
+    /// use futures::executor::ThreadPool;
+    ///
+    /// let pool = ThreadPool::new().unwrap();
+    ///
+    /// let future = async { /* ... */ };
+    /// pool.spawn_ok(future);
+    /// ```
+    ///
+    /// > **Note**: This method is similar to `SpawnExt::spawn`, except that
+    /// >           it is guaranteed to always succeed.
+    pub fn spawn_ok<Fut>(&self, future: Fut)
+    where
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        self.spawn_obj_ok(FutureObj::new(Box::new(future)))
+    }
+}
+
+impl Spawn for ThreadPool {
+    fn spawn_obj(
+        &mut self,
+        future: FutureObj<'static, ()>,
+    ) -> Result<(), SpawnError> {
+        self.spawn_obj_ok(future);
+        Ok(())
+    }
+}
+
+impl Spawn for &ThreadPool {
+    fn spawn_obj(
+        &mut self,
+        future: FutureObj<'static, ()>,
+    ) -> Result<(), SpawnError> {
+        self.spawn_obj_ok(future);
         Ok(())
     }
 }
@@ -173,7 +204,7 @@ impl ThreadPoolBuilder {
     /// See the other methods on this type for details on the defaults.
     pub fn new() -> ThreadPoolBuilder {
         ThreadPoolBuilder {
-            pool_size: num_cpus::get(),
+            pool_size: cmp::max(1, num_cpus::get()),
             stack_size: 0,
             name_prefix: None,
             after_start: None,
@@ -183,7 +214,7 @@ impl ThreadPoolBuilder {
 
     /// Set size of a future ThreadPool
     ///
-    /// The size of a thread pool is the number of worker threads spawned.  By
+    /// The size of a thread pool is the number of worker threads spawned. By
     /// default, this is equal to the number of CPU cores.
     pub fn pool_size(&mut self, size: usize) -> &mut Self {
         self.pool_size = size;

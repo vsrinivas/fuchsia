@@ -1,7 +1,7 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::pin::Pin;
-use futures_core::stream::Stream;
+use futures_core::stream::{Stream, FusedStream};
 use futures_core::task::{Context, Poll};
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
@@ -71,7 +71,7 @@ where
     }
 
     /// Get a pinned mutable reference to the inner sink.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut Si> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut Si> {
         self.sink()
     }
 
@@ -113,6 +113,7 @@ where
     }
 }
 
+// Forwarding impl of Stream from the underlying sink
 impl<S, Item, U, St, F> Stream for WithFlatMap<S, Item, U, St, F>
 where
     S: Stream + Sink<Item>,
@@ -120,11 +121,27 @@ where
     St: Stream<Item = Result<Item, S::Error>>,
 {
     type Item = S::Item;
+
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<S::Item>> {
         self.sink().poll_next(cx)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.sink.size_hint()
+    }
+}
+
+impl<S, Item, U, St, F> FusedStream for WithFlatMap<S, Item, U, St, F>
+where
+    S: FusedStream + Sink<Item>,
+    F: FnMut(U) -> St,
+    St: Stream<Item = Result<Item, S::Error>>,
+{
+    fn is_terminated(&self) -> bool {
+        self.sink.is_terminated()
     }
 }
 

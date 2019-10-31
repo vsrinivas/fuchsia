@@ -1,7 +1,7 @@
 use core::fmt;
 use core::pin::Pin;
 use futures_core::future::TryFuture;
-use futures_core::stream::{Stream, TryStream};
+use futures_core::stream::{Stream, TryStream, FusedStream};
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
@@ -65,7 +65,7 @@ impl<St, Fut, F> OrElse<St, Fut, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -102,6 +102,27 @@ impl<St, Fut, F> Stream for OrElse<St, Fut, F>
         let e = ready!(self.as_mut().future().as_pin_mut().unwrap().try_poll(cx));
         self.as_mut().future().set(None);
         Poll::Ready(Some(e))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let future_len = if self.future.is_some() { 1 } else { 0 };
+        let (lower, upper) = self.stream.size_hint();
+        let lower = lower.saturating_add(future_len);
+        let upper = match upper {
+            Some(x) => x.checked_add(future_len),
+            None => None,
+        };
+        (lower, upper)
+    }
+}
+
+impl<St, Fut, F> FusedStream for OrElse<St, Fut, F>
+    where St: TryStream + FusedStream,
+          F: FnMut(St::Error) -> Fut,
+          Fut: TryFuture<Ok = St::Ok>,
+{
+    fn is_terminated(&self) -> bool {
+        self.future.is_none() && self.stream.is_terminated()
     }
 }
 

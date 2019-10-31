@@ -13,11 +13,11 @@
 [package]
 edition = "2018"
 name = "futures-preview"
-version = "0.3.0-alpha.17"
+version = "0.3.0-alpha.19"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "An implementation of futures and streams featuring zero allocations,\ncomposability, and iterator-like interfaces.\n"
 homepage = "https://rust-lang-nursery.github.io/futures-rs"
-documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures"
+documentation = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.19/futures"
 readme = "../README.md"
 keywords = ["futures", "async", "future"]
 categories = ["asynchronous"]
@@ -29,42 +29,41 @@ all-features = true
 [lib]
 name = "futures"
 [dependencies.futures-channel-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 features = ["sink"]
 default-features = false
 
 [dependencies.futures-core-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 default-features = false
 
 [dependencies.futures-executor-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 default-features = false
 
 [dependencies.futures-io-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 default-features = false
 
 [dependencies.futures-sink-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 default-features = false
 
 [dependencies.futures-util-preview]
-version = "=0.3.0-alpha.17"
+version = "=0.3.0-alpha.19"
 features = ["sink"]
 default-features = false
 
 [features]
-alloc = ["futures-core-preview/alloc", "futures-sink-preview/alloc", "futures-util-preview/alloc"]
-async-await = ["futures-util-preview/async-await", "futures-util-preview/select-macro"]
-cfg-target-has-atomic = ["futures-core-preview/cfg-target-has-atomic", "futures-util-preview/cfg-target-has-atomic"]
+alloc = ["futures-core-preview/alloc", "futures-sink-preview/alloc", "futures-channel-preview/alloc", "futures-util-preview/alloc"]
+async-await = ["futures-util-preview/async-await", "futures-util-preview/join-macro", "futures-util-preview/select-macro"]
+bilock = ["futures-util-preview/bilock"]
+cfg-target-has-atomic = ["futures-core-preview/cfg-target-has-atomic", "futures-channel-preview/cfg-target-has-atomic", "futures-util-preview/cfg-target-has-atomic"]
 compat = ["std", "futures-util-preview/compat"]
 default = ["std"]
 io-compat = ["compat", "futures-util-preview/io-compat"]
-nightly = ["futures-core-preview/nightly", "futures-util-preview/nightly"]
+read_initializer = ["futures-io-preview/read_initializer", "futures-util-preview/read_initializer"]
 std = ["alloc", "futures-core-preview/std", "futures-executor-preview/std", "futures-io-preview/std", "futures-sink-preview/std", "futures-util-preview/std", "futures-util-preview/io", "futures-util-preview/channel"]
-[badges.appveyor]
-repository = "rust-lang-nursery/futures-rs"
-
+unstable = ["futures-core-preview/unstable", "futures-channel-preview/unstable", "futures-io-preview/unstable", "futures-util-preview/unstable"]
 [badges.travis-ci]
 repository = "rust-lang-nursery/futures-rs"

@@ -57,7 +57,7 @@ impl<St, F> Inspect<St, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -70,7 +70,10 @@ impl<St, F> Inspect<St, F>
     }
 }
 
-impl<St: Stream + FusedStream, F> FusedStream for Inspect<St, F> {
+impl<St, F> FusedStream for Inspect<St, F>
+    where St: FusedStream,
+          F: FnMut(&St::Item),
+{
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
     }
@@ -97,6 +100,10 @@ impl<St, F> Stream for Inspect<St, F>
             .stream()
             .poll_next(cx)
             .map(|opt| opt.map(|e| inspect(e, self.as_mut().f())))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

@@ -22,7 +22,6 @@ pub trait Executor01CompatExt: Executor01<Executor01Future> +
     /// futures 0.3 [`Spawn`](futures_core::task::Spawn).
     ///
     /// ```
-    /// #![feature(async_await)]
     /// use futures::task::SpawnExt;
     /// use futures::future::{FutureExt, TryFutureExt};
     /// use futures_util::compat::Executor01CompatExt;
@@ -66,8 +65,8 @@ pub struct Executor01As03<Ex> {
 }
 
 impl<Ex> Spawn03 for Executor01As03<Ex>
-where Ex: Executor01<Executor01Future>,
-      Ex: Clone + Send + 'static,
+where
+    Ex: Executor01<Executor01Future> + Clone + Send + 'static,
 {
     fn spawn_obj(
         &mut self,

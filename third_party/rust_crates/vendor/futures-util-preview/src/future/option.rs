@@ -1,7 +1,7 @@
 //! Definition of the `Option` (optional step) combinator
 
 use core::pin::Pin;
-use futures_core::future::Future;
+use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -12,11 +12,10 @@ use pin_utils::unsafe_pinned;
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
-/// use futures::future::{self, OptionFuture};
+/// use futures::future::OptionFuture;
 ///
-/// let mut a: OptionFuture<_> = Some(future::ready(123)).into();
+/// let mut a: OptionFuture<_> = Some(async { 123 }).into();
 /// assert_eq!(a.await, Some(123));
 ///
 /// a = None.into();
@@ -43,6 +42,15 @@ impl<F: Future> Future for OptionFuture<F> {
         match self.option().as_pin_mut() {
             Some(x) => x.poll(cx).map(Some),
             None => Poll::Ready(None),
+        }
+    }
+}
+
+impl<F: FusedFuture> FusedFuture for OptionFuture<F> {
+    fn is_terminated(&self) -> bool {
+        match &self.option {
+            Some(x) => x.is_terminated(),
+            None => true,
         }
     }
 }

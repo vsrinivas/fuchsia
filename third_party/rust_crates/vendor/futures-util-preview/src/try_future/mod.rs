@@ -4,13 +4,14 @@
 //! including the `FutureExt` trait which adds methods to `Future` types.
 
 use core::pin::Pin;
-use futures_core::future::TryFuture;
 use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
 #[cfg(feature = "sink")]
 use futures_sink::Sink;
 
 #[cfg(feature = "compat")] use crate::compat::Compat;
+
+pub use futures_core::future::TryFuture;
 
 mod try_join;
 pub use self::try_join::{
@@ -135,11 +136,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Ok::<i32, i32>(1));
+    /// let future = async { Ok::<i32, i32>(1) };
     /// let future = future.map_ok(|x| x + 3);
     /// assert_eq!(future.await, Ok(4));
     /// # });
@@ -149,11 +149,10 @@ pub trait TryFutureExt: TryFuture {
     /// effect:
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Err::<i32, i32>(1));
+    /// let future = async { Err::<i32, i32>(1) };
     /// let future = future.map_ok(|x| x + 3);
     /// assert_eq!(future.await, Err(1));
     /// # });
@@ -183,11 +182,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Err::<i32, i32>(1));
+    /// let future = async { Err::<i32, i32>(1) };
     /// let future = future.map_err(|x| x + 3);
     /// assert_eq!(future.await, Err(4));
     /// # });
@@ -197,11 +195,10 @@ pub trait TryFutureExt: TryFuture {
     /// no effect:
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Ok::<i32, i32>(1));
+    /// let future = async { Ok::<i32, i32>(1) };
     /// let future = future.map_err(|x| x + 3);
     /// assert_eq!(future.await, Ok(1));
     /// # });
@@ -228,11 +225,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future_err_u8 = future::ready(Err::<(), u8>(1));
+    /// let future_err_u8 = async { Err::<(), u8>(1) };
     /// let future_err_i32 = future_err_u8.err_into::<i32>();
     /// # });
     /// ```
@@ -258,12 +254,11 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Ok::<i32, i32>(1));
-    /// let future = future.and_then(|x| future::ready(Ok::<i32, i32>(x + 3)));
+    /// let future = async { Ok::<i32, i32>(1) };
+    /// let future = future.and_then(|x| async move { Ok::<i32, i32>(x + 3) });
     /// assert_eq!(future.await, Ok(4));
     /// # });
     /// ```
@@ -272,12 +267,11 @@ pub trait TryFutureExt: TryFuture {
     /// effect:
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Err::<i32, i32>(1));
-    /// let future = future.and_then(|x| future::ready(Err::<i32, i32>(x + 3)));
+    /// let future = async { Err::<i32, i32>(1) };
+    /// let future = future.and_then(|x| async move { Err::<i32, i32>(x + 3) });
     /// assert_eq!(future.await, Err(1));
     /// # });
     /// ```
@@ -304,12 +298,11 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Err::<i32, i32>(1));
-    /// let future = future.or_else(|x| future::ready(Err::<i32, i32>(x + 3)));
+    /// let future = async { Err::<i32, i32>(1) };
+    /// let future = future.or_else(|x| async move { Err::<i32, i32>(x + 3) });
     /// assert_eq!(future.await, Err(4));
     /// # });
     /// ```
@@ -318,12 +311,11 @@ pub trait TryFutureExt: TryFuture {
     /// no effect:
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Ok::<i32, i32>(1));
-    /// let future = future.or_else(|x| future::ready(Ok::<i32, i32>(x + 3)));
+    /// let future = async { Ok::<i32, i32>(1) };
+    /// let future = future.or_else(|x| async move { Ok::<i32, i32>(x + 3) });
     /// assert_eq!(future.await, Ok(1));
     /// # });
     /// ```
@@ -345,11 +337,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
-    /// let future = future::ok::<_, ()>(1);
+    /// let future = async { Ok::<_, ()>(1) };
     /// let new_future = future.inspect_ok(|&x| println!("about to resolve: {}", x));
     /// assert_eq!(new_future.await, Ok(1));
     /// # });
@@ -371,11 +362,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
-    /// let future = future::err::<(), _>(1);
+    /// let future = async { Err::<(), _>(1) };
     /// let new_future = future.inspect_err(|&x| println!("about to error: {}", x));
     /// assert_eq!(new_future.await, Err(1));
     /// # });
@@ -400,13 +390,12 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     /// use futures::stream::{self, TryStreamExt};
     ///
     /// let stream_items = vec![17, 18, 19].into_iter().map(Ok);
-    /// let future_of_a_stream = future::ok::<_, ()>(stream::iter(stream_items));
+    /// let future_of_a_stream = async { Ok::<_, ()>(stream::iter(stream_items)) };
     ///
     /// let stream = future_of_a_stream.try_flatten_stream();
     /// let list = stream.try_collect::<Vec<_>>().await;
@@ -434,11 +423,10 @@ pub trait TryFutureExt: TryFuture {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
-    /// use futures::future::{self, TryFutureExt};
+    /// use futures::future::TryFutureExt;
     ///
     /// # futures::executor::block_on(async {
-    /// let future = future::ready(Err::<(), &str>("Boom!"));
+    /// let future = async { Err::<(), &str>("Boom!") };
     /// let future = future.unwrap_or_else(|_| ());
     /// assert_eq!(future.await, ());
     /// # });
@@ -474,7 +462,7 @@ pub trait TryFutureExt: TryFuture {
     /// # type T = i32;
     /// # type E = ();
     /// fn make_try_future() -> impl TryFuture<Ok = T, Error = E> { // ... }
-    /// # futures::future::ready(Ok::<i32, ()>(1))
+    /// # async { Ok::<i32, ()>(1) }
     /// # }
     /// fn take_future(future: impl Future<Output = Result<T, E>>) { /* ... */ }
     ///

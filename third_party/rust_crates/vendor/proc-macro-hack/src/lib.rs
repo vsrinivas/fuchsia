@@ -127,16 +127,13 @@
 #![cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 
 extern crate proc_macro;
-extern crate proc_macro2;
-extern crate quote;
-extern crate syn;
-
-use std::fmt::Write;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
+use std::fmt::Write;
+use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{braced, bracketed, parenthesized, parse_macro_input, token, Ident, Token};
+use syn::{braced, bracketed, parenthesized, parse_macro_input, token, Ident, LitInt, Token};
 
 type Visibility = Option<Token![pub]>;
 
@@ -186,6 +183,7 @@ impl Parse for Export {
         let attrs = input.call(parse_attributes)?;
         let vis: Visibility = input.parse()?;
         input.parse::<Token![use]>()?;
+        input.parse::<Option<Token![::]>>()?;
         let from: Ident = input.parse()?;
         input.parse::<Token![::]>()?;
 
@@ -208,7 +206,12 @@ impl Parse for Export {
         }
 
         input.parse::<Token![;]>()?;
-        Ok(Export { attrs, vis, from, macros })
+        Ok(Export {
+            attrs,
+            vis,
+            from,
+            macros,
+        })
     }
 }
 
@@ -273,11 +276,13 @@ pub fn proc_macro_hack(
 mod kw {
     syn::custom_keyword!(derive);
     syn::custom_keyword!(fake_call_site);
+    syn::custom_keyword!(internal_macro_calls);
     syn::custom_keyword!(support_nested);
 }
 
 struct ExportArgs {
     support_nested: bool,
+    internal_macro_calls: u16,
     fake_call_site: bool,
 }
 
@@ -285,6 +290,7 @@ impl Parse for ExportArgs {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut args = ExportArgs {
             support_nested: false,
+            internal_macro_calls: 0,
             fake_call_site: false,
         };
 
@@ -293,6 +299,11 @@ impl Parse for ExportArgs {
             if ahead.peek(kw::support_nested) {
                 input.parse::<kw::support_nested>()?;
                 args.support_nested = true;
+            } else if ahead.peek(kw::internal_macro_calls) {
+                input.parse::<kw::internal_macro_calls>()?;
+                input.parse::<Token![=]>()?;
+                let calls = input.parse::<LitInt>()?.base10_parse()?;
+                args.internal_macro_calls = calls;
             } else if ahead.peek(kw::fake_call_site) {
                 input.parse::<kw::fake_call_site>()?;
                 args.fake_call_site = true;
@@ -413,7 +424,11 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
     };
     let crate_prefix = vis.map(|_| quote!($crate::));
     let enum_variant = if args.support_nested {
-        quote!(Nested)
+        if args.internal_macro_calls == 0 {
+            quote!(Nested)
+        } else {
+            format_ident!("Nested{}", args.internal_macro_calls).to_token_stream()
+        }
     } else {
         quote!(Value)
     };
@@ -437,8 +452,9 @@ fn expand_export(export: Export, args: ExportArgs) -> TokenStream {
             };
 
             let proc_macro_call = if args.support_nested {
+                let extra_bangs = (0..args.internal_macro_calls).map(|_| quote!(!));
                 quote! {
-                    #crate_prefix #dispatch! { ($($proc_macro)*) }
+                    #crate_prefix #dispatch! { ($($proc_macro)*) #(#extra_bangs)* }
                 }
             } else {
                 quote! {
@@ -523,7 +539,8 @@ fn expand_define(define: Define) -> TokenStream {
                 _ => unimplemented!(),
             };
             let variant = braces.next().unwrap(); // `Value` or `Nested`
-            let support_nested = variant.to_string() == "Nested";
+            let varname = variant.to_string();
+            let support_nested = varname.starts_with("Nested");
             braces.next().unwrap(); // `=`
 
             let mut parens = match braces.next().unwrap() {
@@ -571,7 +588,12 @@ fn expand_define(define: Define) -> TokenStream {
                 #dummy::TokenTree::Ident(
                     #dummy::Ident::new(
                         &if support_nested {
-                            format!("proc_macro_call_{}", count_bangs(inner))
+                            let extra_bangs = if varname == "Nested" {
+                                0
+                            } else {
+                                varname["Nested".len()..].parse().unwrap()
+                            };
+                            format!("proc_macro_call_{}", extra_bangs + count_bangs(inner))
                         } else {
                             String::from("proc_macro_call")
                         },
@@ -602,25 +624,24 @@ fn expand_define(define: Define) -> TokenStream {
 }
 
 fn actual_proc_macro_name(conceptual: &Ident) -> Ident {
-    let actual_name = format!("proc_macro_hack_{}", conceptual);
-    Ident::new(&actual_name, Span::call_site())
+    format_ident!("proc_macro_hack_{}", conceptual)
 }
 
 fn dispatch_macro_name(conceptual: &Ident) -> Ident {
-    let dispatch = format!("proc_macro_call_{}", conceptual);
-    Ident::new(&dispatch, Span::call_site())
+    format_ident!("proc_macro_call_{}", conceptual)
 }
 
 fn call_site_macro_name(conceptual: &Ident) -> Ident {
-    let dispatch = format!("proc_macro_fake_call_site_{}", conceptual);
-    Ident::new(&dispatch, Span::call_site())
+    format_ident!("proc_macro_fake_call_site_{}", conceptual)
 }
 
 fn dummy_name_for_export(export: &Export) -> String {
     let mut dummy = String::new();
-    write!(dummy, "_{}{}", export.from.to_string().len(), export.from).unwrap();
+    let from = export.from.unraw().to_string();
+    write!(dummy, "_{}{}", from.len(), from).unwrap();
     for m in &export.macros {
-        write!(dummy, "_{}{}", m.name.to_string().len(), m.name).unwrap();
+        let name = m.name.unraw().to_string();
+        write!(dummy, "_{}{}", name.len(), name).unwrap();
     }
     dummy
 }

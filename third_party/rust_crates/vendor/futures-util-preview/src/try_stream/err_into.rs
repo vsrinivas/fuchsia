@@ -43,7 +43,7 @@ impl<St, E> ErrInto<St, E> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -56,7 +56,11 @@ impl<St, E> ErrInto<St, E> {
     }
 }
 
-impl<St: FusedStream, E> FusedStream for ErrInto<St, E> {
+impl<St, E> FusedStream for ErrInto<St, E>
+where
+    St: TryStream + FusedStream,
+    St::Error: Into<E>,
+{
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
     }
@@ -75,6 +79,10 @@ where
     ) -> Poll<Option<Self::Item>> {
         self.stream().try_poll_next(cx)
             .map(|res| res.map(|some| some.map_err(Into::into)))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

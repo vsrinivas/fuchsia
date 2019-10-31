@@ -46,7 +46,7 @@ impl<St: Stream> Skip<St> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -80,6 +80,18 @@ impl<St: Stream> Stream for Skip<St> {
         }
 
         self.as_mut().stream().poll_next(cx)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lower, upper) = self.stream.size_hint();
+
+        let lower = lower.saturating_sub(self.remaining as usize);
+        let upper = match upper {
+            Some(x) => Some(x.saturating_sub(self.remaining as usize)),
+            None => None,
+        };
+
+        (lower, upper)
     }
 }
 

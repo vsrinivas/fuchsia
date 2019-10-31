@@ -56,11 +56,11 @@ impl<St1, St2> Select<St1, St2> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut St1>, Pin<&'a mut St2>)
-        where St1: Unpin, St2: Unpin,
-    {
-        let Self { stream1, stream2, .. } = self.get_mut();
-        (Pin::new(stream1.get_mut()), Pin::new(stream2.get_mut()))
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> (Pin<&mut St1>, Pin<&mut St2>) {
+        unsafe {
+            let Self { stream1, stream2, .. } = self.get_unchecked_mut();
+            (Pin::new_unchecked(stream1).get_pin_mut(), Pin::new_unchecked(stream2).get_pin_mut())
+        }
     }
 
     /// Consumes this combinator, returning the underlying streams.
@@ -72,7 +72,10 @@ impl<St1, St2> Select<St1, St2> {
     }
 }
 
-impl<St1, St2> FusedStream for Select<St1, St2> {
+impl<St1, St2> FusedStream for Select<St1, St2>
+    where St1: Stream,
+          St2: Stream<Item = St1::Item>
+{
     fn is_terminated(&self) -> bool {
         self.stream1.is_terminated() && self.stream2.is_terminated()
     }

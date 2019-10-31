@@ -68,7 +68,7 @@ impl<St, Fut, F> Then<St, Fut, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -81,7 +81,11 @@ impl<St, Fut, F> Then<St, Fut, F>
     }
 }
 
-impl<St: FusedStream, Fut, F> FusedStream for Then<St, Fut, F> {
+impl<St, Fut, F> FusedStream for Then<St, Fut, F>
+    where St: FusedStream,
+          F: FnMut(St::Item) -> Fut,
+          Fut: Future,
+{
     fn is_terminated(&self) -> bool {
         self.future.is_none() && self.stream.is_terminated()
     }
@@ -110,6 +114,17 @@ impl<St, Fut, F> Stream for Then<St, Fut, F>
         let e = ready!(self.as_mut().future().as_pin_mut().unwrap().poll(cx));
         self.as_mut().future().set(None);
         Poll::Ready(Some(e))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let future_len = if self.future.is_some() { 1 } else { 0 };
+        let (lower, upper) = self.stream.size_hint();
+        let lower = lower.saturating_add(future_len);
+        let upper = match upper {
+            Some(x) => x.checked_add(future_len),
+            None => None,
+        };
+        (lower, upper)
     }
 }
 

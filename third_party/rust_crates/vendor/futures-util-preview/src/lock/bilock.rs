@@ -1,21 +1,16 @@
 //! Futures-powered synchronization primitives.
-#![allow(unused)]
 
+#[cfg(feature = "bilock")]
 use futures_core::future::Future;
 use futures_core::task::{Context, Poll, Waker};
 use core::cell::UnsafeCell;
 use core::fmt;
-use core::mem;
 use core::ops::{Deref, DerefMut};
 use core::pin::Pin;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
-#[cfg(feature = "std")]
-use std::any::Any;
-#[cfg(feature = "std")]
-use std::error::Error;
 
 /// A type of futures-powered synchronization primitive which is a mutex between
 /// two possible owners.
@@ -35,6 +30,9 @@ use std::error::Error;
 /// example a TCP stream could be both a reader and a writer or a framing layer
 /// could be both a stream and a sink for messages. A `BiLock` enables splitting
 /// these two and then using each independently in a futures-powered fashion.
+///
+/// This type is only available when the `bilock` feature of this
+/// library is activated.
 #[derive(Debug)]
 pub struct BiLock<T> {
     arc: Arc<Inner<T>>,
@@ -140,6 +138,7 @@ impl<T> BiLock<T> {
     /// `BiLockGuard<T>`.
     ///
     /// Note that the returned future will never resolve to an error.
+    #[cfg(feature = "bilock")]
     pub fn lock(&self) -> BiLockAcquire<'_, T> {
         BiLockAcquire {
             bilock: self,
@@ -149,11 +148,12 @@ impl<T> BiLock<T> {
     /// Attempts to put the two "halves" of a `BiLock<T>` back together and
     /// recover the original value. Succeeds only if the two `BiLock<T>`s
     /// originated from the same call to `BiLock::new`.
+    #[cfg(any(feature = "bilock", feature = "sink"))]
     pub fn reunite(self, other: Self) -> Result<T, ReuniteError<T>>
     where
         T: Unpin,
     {
-        if &*self.arc as *const _ == &*other.arc as *const _ {
+        if Arc::ptr_eq(&self.arc, &other.arc) {
             drop(other);
             let inner = Arc::try_unwrap(self.arc)
                 .ok()
@@ -182,6 +182,7 @@ impl<T> BiLock<T> {
     }
 }
 
+#[cfg(any(feature = "bilock", feature = "sink"))]
 impl<T: Unpin> Inner<T> {
     unsafe fn into_value(mut self) -> T {
         self.value.take().unwrap().into_inner()
@@ -213,7 +214,7 @@ impl<T> fmt::Display for ReuniteError<T> {
 }
 
 #[cfg(feature = "std")]
-impl<T: Any> Error for ReuniteError<T> {}
+impl<T: core::any::Any> std::error::Error for ReuniteError<T> {}
 
 /// Returned RAII guard from the `poll_lock` method.
 ///
@@ -255,6 +256,7 @@ impl<T> Drop for BiLockGuard<'_, T> {
 
 /// Future returned by `BiLock::lock` which will resolve when the lock is
 /// acquired.
+#[cfg(feature = "bilock")]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 #[derive(Debug)]
 pub struct BiLockAcquire<'a, T> {
@@ -262,8 +264,10 @@ pub struct BiLockAcquire<'a, T> {
 }
 
 // Pinning is never projected to fields
+#[cfg(feature = "bilock")]
 impl<T> Unpin for BiLockAcquire<'_, T> {}
 
+#[cfg(feature = "bilock")]
 impl<'a, T> Future for BiLockAcquire<'a, T> {
     type Output = BiLockGuard<'a, T>;
 

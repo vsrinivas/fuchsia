@@ -1,8 +1,8 @@
 //! Combinators and utilities for working with `Future`s, `Stream`s, `Sink`s,
 //! and the `AsyncRead` and `AsyncWrite` traits.
 
-#![cfg_attr(feature = "async-await", feature(async_await))]
 #![cfg_attr(feature = "cfg-target-has-atomic", feature(cfg_target_has_atomic))]
+#![cfg_attr(feature = "read_initializer", feature(read_initializer))]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms, unreachable_pub)]
@@ -12,13 +12,16 @@
 
 #![doc(test(attr(deny(warnings), allow(dead_code, unused_assignments, unused_variables))))]
 
-#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.17/futures_util")]
+#![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.19/futures_util")]
 
-#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "nightly")))]
-compile_error!("The `cfg-target-has-atomic` feature requires the `nightly` feature as an explicit opt-in to unstable features");
+#[cfg(all(feature = "cfg-target-has-atomic", not(feature = "unstable")))]
+compile_error!("The `cfg-target-has-atomic` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
-#[cfg(all(feature = "async-await", not(feature = "nightly")))]
-compile_error!("The `async-await` feature requires the `nightly` feature as an explicit opt-in to unstable features");
+#[cfg(all(feature = "bilock", not(feature = "unstable")))]
+compile_error!("The `bilock` feature requires the `unstable` feature as an explicit opt-in to unstable features");
+
+#[cfg(all(feature = "read_initializer", not(feature = "unstable")))]
+compile_error!("The `read_initializer` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -30,20 +33,15 @@ extern crate futures_core;
 pub use futures_core::ready;
 pub use pin_utils::pin_mut;
 
+#[cfg(feature = "std")]
 #[cfg(feature = "async-await")]
 #[macro_use]
 #[doc(hidden)]
 pub mod async_await;
+#[cfg(feature = "std")]
 #[cfg(feature = "async-await")]
 #[doc(hidden)]
 pub use self::async_await::*;
-
-#[cfg(feature = "select-macro")]
-#[doc(hidden)]
-pub mod rand_reexport { // used by select!
-    #[doc(hidden)]
-    pub use rand::{prelude::SliceRandom, thread_rng};
-}
 
 #[doc(hidden)]
 pub use futures_core::core_reexport;
@@ -109,6 +107,9 @@ pub mod sink;
 #[doc(hidden)] pub use crate::sink::SinkExt;
 
 pub mod task;
+
+pub mod never;
+#[doc(hidden)] pub use crate::never::Never;
 
 #[cfg(feature = "compat")]
 pub mod compat;

@@ -7,17 +7,17 @@ use futures_01::{
     AsyncSink as AsyncSink01, Sink as Sink01, StartSend as StartSend01,
 };
 use futures_core::{
-    task::{
-        self as task03,
-        RawWaker,
-        RawWakerVTable,
-    },
+    task::{RawWaker, RawWakerVTable},
     TryFuture as TryFuture03,
     TryStream as TryStream03,
 };
 #[cfg(feature = "sink")]
 use futures_sink::Sink as Sink03;
-use crate::task::{ArcWake as ArcWake03, WakerRef};
+use crate::task::{
+    self as task03,
+    ArcWake as ArcWake03,
+    WakerRef,
+};
 #[cfg(feature = "sink")]
 use std::marker::PhantomData;
 use std::{
@@ -49,11 +49,6 @@ pub struct CompatSink<T, Item> {
 }
 
 impl<T> Compat<T> {
-    /// Returns the inner item.
-    pub fn into_inner(self) -> T {
-        self.inner
-    }
-
     /// Creates a new [`Compat`].
     ///
     /// For types which implement appropriate futures `0.3`
@@ -68,21 +63,42 @@ impl<T> Compat<T> {
     pub fn get_ref(&self) -> &T {
         &self.inner
     }
-}
 
-#[cfg(feature = "sink")]
-impl<T, Item> CompatSink<T, Item> {
+    /// Get a mutable reference to 0.3 Future, Stream, AsyncRead, or AsyncWrite object
+    /// contained within.
+    pub fn get_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
     /// Returns the inner item.
     pub fn into_inner(self) -> T {
         self.inner
     }
+}
 
+#[cfg(feature = "sink")]
+impl<T, Item> CompatSink<T, Item> {
     /// Creates a new [`CompatSink`].
     pub fn new(inner: T) -> Self {
         CompatSink {
             inner,
             _phantom: PhantomData,
         }
+    }
+
+    /// Get a reference to 0.3 Sink contained within.
+    pub fn get_ref(&self) -> &T {
+        &self.inner
+    }
+
+    /// Get a mutable reference to 0.3 Sink contained within.
+    pub fn get_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
+    /// Returns the inner item.
+    pub fn into_inner(self) -> T {
+        self.inner
     }
 }
 
@@ -164,7 +180,6 @@ impl Current {
 
     fn as_waker(&self) -> WakerRef<'_> {
         unsafe fn ptr_to_current<'a>(ptr: *const ()) -> &'a Current {
-            #[allow(clippy::cast_ptr_alignment)]
             &*(ptr as *const Current)
         }
         fn current_to_ptr(current: &Current) -> *const () {
@@ -176,7 +191,7 @@ impl Current {
             // FIXME: remove `transmute` when a `Waker` -> `RawWaker` conversion
             // function is landed in `core`.
             mem::transmute::<task03::Waker, RawWaker>(
-                Arc::new(ptr_to_current(ptr).clone()).into_waker()
+                task03::waker(Arc::new(ptr_to_current(ptr).clone()))
             )
         }
         unsafe fn drop(_: *const ()) {}
@@ -186,9 +201,9 @@ impl Current {
 
         let ptr = current_to_ptr(self);
         let vtable = &RawWakerVTable::new(clone, wake, wake, drop);
-        unsafe {
-            WakerRef::new(task03::Waker::from_raw(RawWaker::new(ptr, vtable)))
-        }
+        WakerRef::new_unowned(std::mem::ManuallyDrop::new(unsafe {
+            task03::Waker::from_raw(RawWaker::new(ptr, vtable))
+        }))
     }
 }
 
@@ -247,6 +262,7 @@ mod io {
     }
 
     impl<R: AsyncRead03 + Unpin> AsyncRead01 for Compat<R> {
+        #[cfg(feature = "read_initializer")]
         unsafe fn prepare_uninitialized_buffer(&self, buf: &mut [u8]) -> bool {
             let initializer = self.inner.initializer();
             let does_init = initializer.should_initialize();

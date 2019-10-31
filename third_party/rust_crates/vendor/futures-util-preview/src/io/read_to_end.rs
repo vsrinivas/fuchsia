@@ -11,13 +11,19 @@ use std::vec::Vec;
 pub struct ReadToEnd<'a, R: ?Sized + Unpin> {
     reader: &'a mut R,
     buf: &'a mut Vec<u8>,
+    start_len: usize,
 }
 
 impl<R: ?Sized + Unpin> Unpin for ReadToEnd<'_, R> {}
 
 impl<'a, R: AsyncRead + ?Sized + Unpin> ReadToEnd<'a, R> {
     pub(super) fn new(reader: &'a mut R, buf: &'a mut Vec<u8>) -> Self {
-        ReadToEnd { reader, buf }
+        let start_len = buf.len();
+        Self {
+            reader,
+            buf,
+            start_len,
+        }
     }
 }
 
@@ -38,11 +44,12 @@ impl Drop for Guard<'_> {
 //
 // Because we're extending the buffer with uninitialized data for trusted
 // readers, we need to make sure to truncate that if any of this panics.
-fn read_to_end_internal<R: AsyncRead + ?Sized>(
+pub(super) fn read_to_end_internal<R: AsyncRead + ?Sized>(
     mut rd: Pin<&mut R>,
     cx: &mut Context<'_>,
     buf: &mut Vec<u8>,
-) -> Poll<io::Result<()>> {
+    start_len: usize,
+) -> Poll<io::Result<usize>> {
     let mut g = Guard { len: buf.len(), buf };
     let ret;
     loop {
@@ -51,13 +58,13 @@ fn read_to_end_internal<R: AsyncRead + ?Sized>(
                 g.buf.reserve(32);
                 let capacity = g.buf.capacity();
                 g.buf.set_len(capacity);
-                rd.initializer().initialize(&mut g.buf[g.len..]);
+                super::initialize(&rd, &mut g.buf[g.len..]);
             }
         }
 
         match ready!(rd.as_mut().poll_read(cx, &mut g.buf[g.len..])) {
             Ok(0) => {
-                ret = Poll::Ready(Ok(()));
+                ret = Poll::Ready(Ok(g.len - start_len));
                 break;
             }
             Ok(n) => g.len += n,
@@ -74,10 +81,10 @@ fn read_to_end_internal<R: AsyncRead + ?Sized>(
 impl<A> Future for ReadToEnd<'_, A>
     where A: AsyncRead + ?Sized + Unpin,
 {
-    type Output = io::Result<()>;
+    type Output = io::Result<usize>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
-        read_to_end_internal(Pin::new(&mut this.reader), cx, this.buf)
+        read_to_end_internal(Pin::new(&mut this.reader), cx, this.buf, this.start_len)
     }
 }

@@ -8,11 +8,12 @@
 
 use futures_core::future::Future;
 use futures_core::stream::Stream;
-use futures_sink::Sink;
 use crate::future::Either;
 
 #[cfg(feature = "compat")]
 use crate::compat::CompatSink;
+
+pub use futures_sink::Sink;
 
 mod close;
 pub use self::close::Close;
@@ -89,7 +90,6 @@ pub trait SinkExt<Item>: Sink<Item> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::sink::SinkExt;

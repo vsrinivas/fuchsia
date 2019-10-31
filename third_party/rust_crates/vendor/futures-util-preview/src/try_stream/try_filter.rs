@@ -75,7 +75,7 @@ impl<St, Fut, F> TryFilter<St, Fut, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -128,6 +128,16 @@ impl<St, Fut, F> Stream for TryFilter<St, Fut, F>
                 return Poll::Ready(Some(Ok(item)));
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let pending_len = if self.pending_fut.is_some() { 1 } else { 0 };
+        let (_, upper) = self.stream.size_hint();
+        let upper = match upper {
+            Some(x) => x.checked_add(pending_len),
+            None => None,
+        };
+        (0, upper) // can't know a lower bound, due to the predicate
     }
 }
 

@@ -1,5 +1,4 @@
 #![recursion_limit="128"]
-#![feature(async_await)]
 
 use futures::{Poll, pending, pin_mut, poll, join, try_join, select};
 use futures::channel::{mpsc, oneshot};
@@ -175,7 +174,7 @@ fn join_size() {
         let ready2 = future::ready(0i32);
         join!(ready1, ready2)
     };
-    assert_eq!(::std::mem::size_of_val(&fut), 32);
+    assert_eq!(::std::mem::size_of_val(&fut), 28);
 }
 
 #[test]
@@ -191,24 +190,22 @@ fn try_join_size() {
         let ready2 = future::ready(Ok::<i32, i32>(0));
         try_join!(ready1, ready2)
     };
-    assert_eq!(::std::mem::size_of_val(&fut), 32);
+    assert_eq!(::std::mem::size_of_val(&fut), 28);
 }
-
 
 #[test]
 fn join_doesnt_require_unpin() {
     let _ = async {
-        let x = async {};
-        let y = async {};
-        join!(x, y)
+        join!(async {}, async {})
     };
 }
 
 #[test]
 fn try_join_doesnt_require_unpin() {
     let _ = async {
-        let x = async { Ok::<(), ()>(()) };
-        let y = async { Ok::<(), ()>(()) };
-        try_join!(x, y)
+        try_join!(
+            async { Ok::<(), ()>(()) },
+            async { Ok::<(), ()>(()) },
+        )
     };
 }

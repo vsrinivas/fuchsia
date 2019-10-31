@@ -49,7 +49,7 @@ impl<F: Stream + std::marker::Unpin> Stream for FusePending<F> {
     }
 }
 
-impl<F> FusedStream for FusePending<F> {
+impl<F: Stream + Unpin> FusedStream for FusePending<F> {
     fn is_terminated(&self) -> bool {
         false
     }

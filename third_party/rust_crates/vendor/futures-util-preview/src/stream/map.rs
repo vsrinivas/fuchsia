@@ -57,7 +57,7 @@ impl<St, T, F> Map<St, F>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream()
     }
 
@@ -70,7 +70,10 @@ impl<St, T, F> Map<St, F>
     }
 }
 
-impl<St: FusedStream, F> FusedStream for Map<St, F> {
+impl<St, F, T> FusedStream for Map<St, F>
+    where St: FusedStream,
+          F: FnMut(St::Item) -> T,
+{
     fn is_terminated(&self) -> bool {
         self.stream.is_terminated()
     }
@@ -90,6 +93,10 @@ impl<St, F, T> Stream for Map<St, F>
             .stream()
             .poll_next(cx)
             .map(|opt| opt.map(|x| self.as_mut().f()(x)))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.stream.size_hint()
     }
 }
 

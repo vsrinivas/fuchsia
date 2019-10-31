@@ -1,4 +1,5 @@
 use crate::stream::{StreamExt, Fuse};
+use core::cmp;
 use core::pin::Pin;
 use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{Context, Poll};
@@ -14,6 +15,7 @@ pub struct Zip<St1: Stream, St2: Stream> {
     queued2: Option<St2::Item>,
 }
 
+#[allow(clippy::type_repetition_in_bounds)] // https://github.com/rust-lang/rust-clippy/issues/4323
 impl<St1, St2> Unpin for Zip<St1, St2>
 where
     St1: Stream,
@@ -57,11 +59,11 @@ impl<St1: Stream, St2: Stream> Zip<St1, St2> {
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut St1>, Pin<&'a mut St2>)
-        where St1: Unpin, St2: Unpin,
-    {
-        let Self { stream1, stream2, .. } = self.get_mut();
-        (Pin::new(stream1.get_mut()), Pin::new(stream2.get_mut()))
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> (Pin<&mut St1>, Pin<&mut St2>) {
+        unsafe {
+            let Self { stream1, stream2, .. } = self.get_unchecked_mut();
+            (Pin::new_unchecked(stream1).get_pin_mut(), Pin::new_unchecked(stream2).get_pin_mut())
+        }
     }
 
     /// Consumes this combinator, returning the underlying streams.
@@ -112,5 +114,30 @@ impl<St1, St2> Stream for Zip<St1, St2>
         } else {
             Poll::Pending
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let queued1_len = if self.queued1.is_some() { 1 } else { 0 };
+        let queued2_len = if self.queued2.is_some() { 1 } else { 0 };
+        let (stream1_lower, stream1_upper) = self.stream1.size_hint();
+        let (stream2_lower, stream2_upper) = self.stream2.size_hint();
+
+        let stream1_lower = stream1_lower.saturating_add(queued1_len);
+        let stream2_lower = stream2_lower.saturating_add(queued2_len);
+
+        let lower = cmp::min(stream1_lower, stream2_lower);
+
+        let upper = match (stream1_upper, stream2_upper) {
+            (Some(x), Some(y)) => {
+                let x = x.saturating_add(queued1_len);
+                let y = y.saturating_add(queued2_len);
+                Some(cmp::min(x, y))
+            }
+            (Some(x), None) => x.checked_add(queued1_len),
+            (None, Some(y)) => y.checked_add(queued2_len),
+            (None, None) => None
+        };
+
+        (lower, upper)
     }
 }

@@ -9,16 +9,16 @@ pub use core::future::Future;
 mod future_obj;
 pub use self::future_obj::{FutureObj, LocalFutureObj, UnsafeFutureObj};
 
-#[cfg(feature = "alloc")]
 /// An owned dynamically typed [`Future`] for use in cases where you can't
 /// statically type your result or need to add some indirection.
+#[cfg(feature = "alloc")]
 pub type BoxFuture<'a, T> = Pin<alloc::boxed::Box<dyn Future<Output = T> + Send + 'a>>;
 
-#[cfg(feature = "alloc")]
 /// `BoxFuture`, but without the `Send` requirement.
+#[cfg(feature = "alloc")]
 pub type LocalBoxFuture<'a, T> = Pin<alloc::boxed::Box<dyn Future<Output = T> + 'a>>;
 
-/// A `Future` or `TryFuture` which tracks whether or not the underlying future
+/// A future which tracks whether or not the underlying future
 /// should no longer be polled.
 ///
 /// `is_terminated` will return `true` if a future should no longer be polled.
@@ -26,12 +26,12 @@ pub type LocalBoxFuture<'a, T> = Pin<alloc::boxed::Box<dyn Future<Output = T> + 
 /// `Poll::Ready`. However, `is_terminated` may also return `true` if a future
 /// has become inactive and can no longer make progress and should be ignored
 /// or dropped rather than being `poll`ed again.
-pub trait FusedFuture {
+pub trait FusedFuture: Future {
     /// Returns `true` if the underlying future should no longer be polled.
     fn is_terminated(&self) -> bool;
 }
 
-impl<F: FusedFuture + ?Sized> FusedFuture for &mut F {
+impl<F: FusedFuture + ?Sized + Unpin> FusedFuture for &mut F {
     fn is_terminated(&self) -> bool {
         <F as FusedFuture>::is_terminated(&**self)
     }
@@ -47,9 +47,17 @@ where
     }
 }
 
+mod private_try_future {
+    use super::Future;
+
+    pub trait Sealed {}
+
+    impl<F, T, E> Sealed for F where F: ?Sized + Future<Output = Result<T, E>> {}
+}
+
 /// A convenience for futures that return `Result` values that includes
 /// a variety of adapters tailored to such futures.
-pub trait TryFuture {
+pub trait TryFuture: Future + private_try_future::Sealed {
     /// The type of successful values yielded by this future
     type Ok;
 
@@ -84,7 +92,7 @@ mod if_alloc {
     use alloc::boxed::Box;
     use super::*;
 
-    impl<F: FusedFuture + ?Sized> FusedFuture for Box<F> {
+    impl<F: FusedFuture + ?Sized + Unpin> FusedFuture for Box<F> {
         fn is_terminated(&self) -> bool {
             <F as FusedFuture>::is_terminated(&**self)
         }

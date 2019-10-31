@@ -1,5 +1,5 @@
-use futures_core::future::Future;
-use futures_core::stream::Stream;
+use futures_core::future::{Future, FusedFuture};
+use futures_core::stream::{Stream, FusedStream};
 use futures_io::{self as io, AsyncBufRead, AsyncRead, AsyncWrite};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::{
@@ -47,7 +47,7 @@ impl<T> InterleavePending<T> {
 
     /// Acquires a pinned mutable reference to the underlying I/O object that
     /// this adaptor is wrapping.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut T> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut T> {
         self.project().0
     }
 
@@ -56,7 +56,7 @@ impl<T> InterleavePending<T> {
         self.inner
     }
 
-    fn project<'a>(self: Pin<&'a mut Self>) -> (Pin<&'a mut T>, &'a mut bool) {
+    fn project(self: Pin<&mut Self>) -> (Pin<&mut T>, &mut bool) {
         unsafe {
             let this = self.get_unchecked_mut();
             (Pin::new_unchecked(&mut this.inner), &mut this.pended)
@@ -85,6 +85,12 @@ impl<Fut: Future> Future for InterleavePending<Fut> {
     }
 }
 
+impl<Fut: FusedFuture> FusedFuture for InterleavePending<Fut> {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_terminated()
+    }
+}
+
 impl<St: Stream> Stream for InterleavePending<St> {
     type Item = St::Item;
 
@@ -103,6 +109,16 @@ impl<St: Stream> Stream for InterleavePending<St> {
             *self.pended() = true;
             Poll::Pending
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<Fut: FusedStream> FusedStream for InterleavePending<Fut> {
+    fn is_terminated(&self) -> bool {
+        self.inner.is_terminated()
     }
 }
 
@@ -185,10 +201,10 @@ impl<R: AsyncRead> AsyncRead for InterleavePending<R> {
 }
 
 impl<R: AsyncBufRead> AsyncBufRead for InterleavePending<R> {
-    fn poll_fill_buf<'a>(
-        self: Pin<&'a mut Self>,
+    fn poll_fill_buf(
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<io::Result<&'a [u8]>> {
+    ) -> Poll<io::Result<&[u8]>> {
         let (reader, pended) = self.project();
         if *pended {
             let next = reader.poll_fill_buf(cx);

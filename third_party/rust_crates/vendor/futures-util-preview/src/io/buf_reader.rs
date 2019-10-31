@@ -1,5 +1,7 @@
 use futures_core::task::{Context, Poll};
-use futures_io::{AsyncBufRead, AsyncRead, AsyncSeek, Initializer, IoSliceMut, SeekFrom};
+#[cfg(feature = "read_initializer")]
+use futures_io::Initializer;
+use futures_io::{AsyncBufRead, AsyncRead, AsyncSeek, IoSliceMut, SeekFrom};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::io::{self, Read};
 use std::pin::Pin;
@@ -48,7 +50,7 @@ impl<R: AsyncRead> BufReader<R> {
         unsafe {
             let mut buffer = Vec::with_capacity(capacity);
             buffer.set_len(capacity);
-            inner.initializer().initialize(&mut buffer);
+            super::initialize(&inner, &mut buffer);
             Self {
                 inner,
                 buf: buffer.into_boxed_slice(),
@@ -75,7 +77,7 @@ impl<R: AsyncRead> BufReader<R> {
     /// Gets a pinned mutable reference to the underlying reader.
     ///
     /// It is inadvisable to directly read from the underlying reader.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut R> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut R> {
         self.inner()
     }
 
@@ -166,16 +168,17 @@ impl<R: AsyncRead> AsyncRead for BufReader<R> {
     }
 
     // we can't skip unconditionally because of the large buffer case in read.
+    #[cfg(feature = "read_initializer")]
     unsafe fn initializer(&self) -> Initializer {
         self.inner.initializer()
     }
 }
 
 impl<R: AsyncRead> AsyncBufRead for BufReader<R> {
-    fn poll_fill_buf<'a>(
-        self: Pin<&'a mut Self>,
+    fn poll_fill_buf(
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-    ) -> Poll<io::Result<&'a [u8]>> {
+    ) -> Poll<io::Result<&[u8]>> {
         let Self { inner, buf, cap, pos } = unsafe { self.get_unchecked_mut() };
         let mut inner = unsafe { Pin::new_unchecked(inner) };
 

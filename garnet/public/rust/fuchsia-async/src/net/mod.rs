@@ -11,7 +11,7 @@ mod udp;
 pub use self::udp::*;
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
+use futures::io::{self, AsyncRead, AsyncWrite};
 use futures::task::{AtomicWaker, Context};
 use futures::{ready, Poll};
 use libc;
@@ -242,12 +242,6 @@ impl<T: AsRawFd> AsRawFd for EventedFd<T> {
 }
 
 impl<T: AsRawFd + Read> AsyncRead for EventedFd<T> {
-    unsafe fn initializer(&self) -> Initializer {
-        // This is safe because `zx::Socket::read` does not examine
-        // the buffer before reading into it.
-        Initializer::nop()
-    }
-
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -300,12 +294,6 @@ where
     T: AsRawFd,
     for<'b> &'b T: Read,
 {
-    unsafe fn initializer(&self) -> Initializer {
-        // This is safe because `zx::Socket::read` does not examine
-        // the buffer before reading into it.
-        Initializer::nop()
-    }
-
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

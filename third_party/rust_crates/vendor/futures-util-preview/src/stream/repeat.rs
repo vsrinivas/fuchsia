@@ -1,5 +1,5 @@
 use core::pin::Pin;
-use futures_core::stream::Stream;
+use futures_core::stream::{Stream, FusedStream};
 use futures_core::task::{Context, Poll};
 
 /// Stream for the [`repeat`] function.
@@ -16,7 +16,6 @@ pub struct Repeat<T> {
 /// available memory as it tries to just fill up all RAM.
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::stream::{self, StreamExt};
 ///
@@ -39,5 +38,17 @@ impl<T> Stream for Repeat<T>
 
     fn poll_next(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Poll::Ready(Some(self.item.clone()))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (usize::max_value(), None)
+    }
+}
+
+impl<T> FusedStream for Repeat<T>
+    where T: Clone,
+{
+    fn is_terminated(&self) -> bool {
+        false
     }
 }

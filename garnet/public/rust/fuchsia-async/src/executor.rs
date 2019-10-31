@@ -364,7 +364,7 @@ impl Executor {
     }
 
     fn singlethreaded_main_task_wake(&self) -> Waker {
-        Arc::new(SingleThreadedMainTaskWake(self.inner.clone())).into_waker()
+        futures::task::waker(Arc::new(SingleThreadedMainTaskWake(self.inner.clone())))
     }
 
     /// Run a single future to completion on a single thread.

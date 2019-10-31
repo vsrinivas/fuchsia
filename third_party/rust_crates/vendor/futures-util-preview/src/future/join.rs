@@ -3,7 +3,7 @@
 use crate::future::{MaybeDone, maybe_done};
 use core::fmt;
 use core::pin::Pin;
-use futures_core::future::Future;
+use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{Context, Poll};
 use pin_utils::unsafe_pinned;
 use super::assert_future;
@@ -62,6 +62,14 @@ macro_rules! generate {
                 }
             }
         }
+
+        impl<$($Fut: FusedFuture),*> FusedFuture for $Join<$($Fut),*> {
+            fn is_terminated(&self) -> bool {
+                $(
+                    self.$Fut.is_terminated()
+                ) && *
+            }
+        }
     )*)
 }
 
@@ -90,12 +98,11 @@ generate! {
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
-/// let a = future::ready(1);
-/// let b = future::ready(2);
+/// let a = async { 1 };
+/// let b = async { 2 };
 /// let pair = future::join(a, b);
 ///
 /// assert_eq!(pair.await, (1, 2));
@@ -115,13 +122,12 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
-/// let a = future::ready(1);
-/// let b = future::ready(2);
-/// let c = future::ready(3);
+/// let a = async { 1 };
+/// let b = async { 2 };
+/// let c = async { 3 };
 /// let tuple = future::join3(a, b, c);
 ///
 /// assert_eq!(tuple.await, (1, 2, 3));
@@ -145,14 +151,13 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
-/// let a = future::ready(1);
-/// let b = future::ready(2);
-/// let c = future::ready(3);
-/// let d = future::ready(4);
+/// let a = async { 1 };
+/// let b = async { 2 };
+/// let c = async { 3 };
+/// let d = async { 4 };
 /// let tuple = future::join4(a, b, c, d);
 ///
 /// assert_eq!(tuple.await, (1, 2, 3, 4));
@@ -168,7 +173,6 @@ where
     Fut1: Future,
     Fut2: Future,
     Fut3: Future,
-    Fut3: Future,
     Fut4: Future,
 {
     Join4::new(future1, future2, future3, future4)
@@ -179,15 +183,14 @@ where
 /// # Examples
 ///
 /// ```
-/// #![feature(async_await)]
 /// # futures::executor::block_on(async {
 /// use futures::future;
 ///
-/// let a = future::ready(1);
-/// let b = future::ready(2);
-/// let c = future::ready(3);
-/// let d = future::ready(4);
-/// let e = future::ready(5);
+/// let a = async { 1 };
+/// let b = async { 2 };
+/// let c = async { 3 };
+/// let d = async { 4 };
+/// let e = async { 5 };
 /// let tuple = future::join5(a, b, c, d, e);
 ///
 /// assert_eq!(tuple.await, (1, 2, 3, 4, 5));

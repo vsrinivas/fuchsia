@@ -76,7 +76,7 @@ where
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream().get_pin_mut()
     }
 
@@ -121,6 +121,17 @@ where
         } else {
             Poll::Pending
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let queue_len = self.in_progress_queue.len();
+        let (lower, upper) = self.stream.size_hint();
+        let lower = lower.saturating_add(queue_len);
+        let upper = match upper {
+            Some(x) => x.checked_add(queue_len),
+            None => None,
+        };
+        (lower, upper)
     }
 }
 

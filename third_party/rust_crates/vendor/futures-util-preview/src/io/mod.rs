@@ -9,15 +9,34 @@
 //! This module is only available when the `io` and `std` features of this
 //! library is activated, and it is activated by default.
 
-pub use futures_io::{
-    AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, IoSlice, IoSliceMut, SeekFrom,
-};
+#[cfg(feature = "io-compat")]
+use crate::compat::Compat;
+use std::ptr;
 
-#[cfg(feature = "io-compat")] use crate::compat::Compat;
+pub use futures_io::{
+    AsyncRead, AsyncWrite, AsyncSeek, AsyncBufRead, Error, ErrorKind,
+    IoSlice, IoSliceMut, Result, SeekFrom,
+};
+#[cfg(feature = "read_initializer")]
+pub use futures_io::Initializer;
 
 // used by `BufReader` and `BufWriter`
 // https://github.com/rust-lang/rust/blob/master/src/libstd/sys_common/io.rs#L1
 const DEFAULT_BUF_SIZE: usize = 8 * 1024;
+
+/// Initializes a buffer if necessary.
+///
+/// A buffer is always initialized if `read_initializer` feature is disabled.
+#[inline]
+unsafe fn initialize<R: AsyncRead>(_reader: &R, buf: &mut [u8]) {
+    #[cfg(feature = "read_initializer")]
+    {
+        if !_reader.initializer().should_initialize() {
+            return;
+        }
+    }
+    ptr::write_bytes(buf.as_mut_ptr(), 0, buf.len())
+}
 
 mod allow_std;
 pub use self::allow_std::AllowStdIo;
@@ -28,11 +47,20 @@ pub use self::buf_reader::BufReader;
 mod buf_writer;
 pub use self::buf_writer::BufWriter;
 
+mod chain;
+pub use self::chain::Chain;
+
+mod close;
+pub use self::close::Close;
+
 mod copy_into;
 pub use self::copy_into::CopyInto;
 
 mod copy_buf_into;
 pub use self::copy_buf_into::CopyBufInto;
+
+mod empty;
+pub use self::empty::{empty, Empty};
 
 mod flush;
 pub use self::flush::Flush;
@@ -60,17 +88,26 @@ pub use self::read_line::ReadLine;
 mod read_to_end;
 pub use self::read_to_end::ReadToEnd;
 
+mod read_to_string;
+pub use self::read_to_string::ReadToString;
+
 mod read_until;
 pub use self::read_until::ReadUntil;
 
-mod close;
-pub use self::close::Close;
+mod repeat;
+pub use self::repeat::{repeat, Repeat};
 
 mod seek;
 pub use self::seek::Seek;
 
+mod sink;
+pub use self::sink::{sink, Sink};
+
 mod split;
 pub use self::split::{ReadHalf, WriteHalf};
+
+mod take;
+pub use self::take::Take;
 
 mod window;
 pub use self::window::Window;
@@ -86,6 +123,38 @@ pub use self::write_all::WriteAll;
 
 /// An extension trait which adds utility methods to `AsyncRead` types.
 pub trait AsyncReadExt: AsyncRead {
+    /// Creates an adaptor which will chain this stream with another.
+    ///
+    /// The returned `AsyncRead` instance will first read all bytes from this object
+    /// until EOF is encountered. Afterwards the output is equivalent to the
+    /// output of `next`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use futures::io::AsyncReadExt;
+    /// use std::io::Cursor;
+    ///
+    /// let reader1 = Cursor::new([1, 2, 3, 4]);
+    /// let reader2 = Cursor::new([5, 6, 7, 8]);
+    ///
+    /// let mut reader = reader1.chain(reader2);
+    /// let mut buffer = Vec::new();
+    ///
+    /// // read the value into a Vec.
+    /// reader.read_to_end(&mut buffer).await?;
+    /// assert_eq!(buffer, [1, 2, 3, 4, 5, 6, 7, 8]);
+    /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
+    /// ```
+    fn chain<R>(self, next: R) -> Chain<Self, R>
+    where
+        Self: Sized,
+        R: AsyncRead,
+    {
+        Chain::new(self, next)
+    }
+
     /// Creates a future which copies all the bytes from one object to another.
     ///
     /// The returned future will copy all the bytes read from this `AsyncRead` into the
@@ -98,7 +167,6 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::{AsyncReadExt, AsyncWriteExt};
     /// use std::io::Cursor;
@@ -130,7 +198,6 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -175,7 +242,6 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -192,7 +258,6 @@ pub trait AsyncReadExt: AsyncRead {
     /// ## EOF is hit before `buf` is filled
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::{self, Cursor};
@@ -216,10 +281,11 @@ pub trait AsyncReadExt: AsyncRead {
 
     /// Creates a future which will read all the bytes from this `AsyncRead`.
     ///
+    /// On success the total number of bytes read is returned.
+    ///
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -227,8 +293,9 @@ pub trait AsyncReadExt: AsyncRead {
     /// let mut reader = Cursor::new([1, 2, 3, 4]);
     /// let mut output = Vec::with_capacity(4);
     ///
-    /// reader.read_to_end(&mut output).await?;
+    /// let bytes = reader.read_to_end(&mut output).await?;
     ///
+    /// assert_eq!(bytes, 4);
     /// assert_eq!(output, vec![1, 2, 3, 4]);
     /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
     /// ```
@@ -241,6 +308,35 @@ pub trait AsyncReadExt: AsyncRead {
         ReadToEnd::new(self, buf)
     }
 
+    /// Creates a future which will read all the bytes from this `AsyncRead`.
+    ///
+    /// On success the total number of bytes read is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use futures::io::AsyncReadExt;
+    /// use std::io::Cursor;
+    ///
+    /// let mut reader = Cursor::new(&b"1234"[..]);
+    /// let mut buffer = String::with_capacity(4);
+    ///
+    /// let bytes = reader.read_to_string(&mut buffer).await?;
+    ///
+    /// assert_eq!(bytes, 4);
+    /// assert_eq!(buffer, String::from("1234"));
+    /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
+    /// ```
+    fn read_to_string<'a>(
+        &'a mut self,
+        buf: &'a mut String,
+    ) -> ReadToString<'a, Self>
+        where Self: Unpin,
+    {
+        ReadToString::new(self, buf)
+    }
+
     /// Helper method for splitting this read/write object into two halves.
     ///
     /// The two halves returned implement the `AsyncRead` and `AsyncWrite`
@@ -249,7 +345,6 @@ pub trait AsyncReadExt: AsyncRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncReadExt;
     /// use std::io::Cursor;
@@ -278,6 +373,32 @@ pub trait AsyncReadExt: AsyncRead {
         split::split(self)
     }
 
+    /// Creates an AsyncRead adapter which will read at most `limit` bytes
+    /// from the underlying reader.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use futures::io::AsyncReadExt;
+    /// use std::io::Cursor;
+    ///
+    /// let reader = Cursor::new(&b"12345678"[..]);
+    /// let mut buffer = [0; 5];
+    ///
+    /// let mut take = reader.take(4);
+    /// let n = take.read(&mut buffer).await?;
+    ///
+    /// assert_eq!(n, 4);
+    /// assert_eq!(&buffer, b"1234\0");
+    /// # Ok::<(), Box<dyn std::error::Error>>(()) }).unwrap();
+    /// ```
+    fn take(self, limit: u64) -> Take<Self>
+        where Self: Sized
+    {
+        Take::new(self, limit)
+    }
+
     /// Wraps an [`AsyncRead`] in a compatibility wrapper that allows it to be
     /// used as a futures 0.1 / tokio-io 0.1 `AsyncRead`. If the wrapped type
     /// implements [`AsyncWrite`] as well, the result will also implement the
@@ -301,7 +422,6 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::{AllowStdIo, AsyncWriteExt};
     /// use std::io::{BufWriter, Cursor};
@@ -363,7 +483,6 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncWriteExt;
     /// use std::io::Cursor;
@@ -403,7 +522,6 @@ pub trait AsyncWriteExt: AsyncWrite {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncWriteExt;
     /// use futures::stream::{self, StreamExt};
@@ -459,7 +577,6 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::{AsyncBufReadExt, AsyncWriteExt};
     /// use std::io::Cursor;
@@ -499,7 +616,6 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncBufReadExt;
     /// use std::io::Cursor;
@@ -562,7 +678,6 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncBufReadExt;
     /// use std::io::Cursor;
@@ -613,7 +728,6 @@ pub trait AsyncBufReadExt: AsyncBufRead {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::io::AsyncBufReadExt;
     /// use futures::stream::StreamExt;

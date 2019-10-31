@@ -5,11 +5,12 @@
 
 use core::pin::Pin;
 use futures_core::future::{Future, TryFuture};
-use futures_core::stream::TryStream;
 use futures_core::task::{Context, Poll};
 
 #[cfg(feature = "compat")]
 use crate::compat::Compat;
+
+pub use futures_core::stream::TryStream;
 
 mod and_then;
 pub use self::and_then::AndThen;
@@ -46,6 +47,9 @@ pub use self::try_filter::TryFilter;
 
 mod try_filter_map;
 pub use self::try_filter_map::TryFilterMap;
+
+mod try_flatten;
+pub use self::try_flatten::TryFlatten;
 
 mod try_collect;
 pub use self::try_collect::TryCollect;
@@ -88,7 +92,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -114,7 +117,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -140,7 +142,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -294,7 +295,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     ///
@@ -326,7 +326,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
@@ -361,7 +360,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
@@ -396,7 +394,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
@@ -408,7 +405,7 @@ pub trait TryStreamExt: TryStream {
     /// let stream = stream::iter(vec![rx1, rx2, rx3]);
     /// let fut = stream.map(Ok).try_for_each_concurrent(
     ///     /* limit */ 2,
-    ///     async move |rx| {
+    ///     |rx| async move {
     ///         let res: Result<(), oneshot::Canceled> = rx.await;
     ///         res
     ///     }
@@ -452,7 +449,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::stream::TryStreamExt;
@@ -494,7 +490,6 @@ pub trait TryStreamExt: TryStream {
     ///
     /// # Examples
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::future;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
@@ -533,17 +528,17 @@ pub trait TryStreamExt: TryStream {
     ///
     /// # Examples
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
+    /// use futures::pin_mut;
     ///
     /// let stream = stream::iter(vec![Ok(1i32), Ok(6i32), Err("error")]);
-    /// let mut halves = stream.try_filter_map(|x| {
+    /// let halves = stream.try_filter_map(|x| async move {
     ///     let ret = if x % 2 == 0 { Some(x / 2) } else { None };
-    ///     future::ready(Ok(ret))
+    ///     Ok(ret)
     /// });
     ///
+    /// pin_mut!(halves);
     /// assert_eq!(halves.next().await, Some(Ok(3)));
     /// assert_eq!(halves.next().await, Some(Err("error")));
     /// # })
@@ -556,6 +551,51 @@ pub trait TryStreamExt: TryStream {
         TryFilterMap::new(self, f)
     }
 
+    /// Flattens a stream of streams into just one continuous stream.
+    ///
+    /// If this stream's elements are themselves streams then this combinator
+    /// will flatten out the entire stream to one long chain of elements. Any
+    /// errors are passed through without looking at them, but otherwise each
+    /// individual stream will get exhausted before moving on to the next.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use futures::channel::mpsc;
+    /// use futures::stream::{StreamExt, TryStreamExt};
+    /// use std::thread;
+    ///
+    /// let (tx1, rx1) = mpsc::unbounded();
+    /// let (tx2, rx2) = mpsc::unbounded();
+    /// let (tx3, rx3) = mpsc::unbounded();
+    ///
+    /// thread::spawn(move || {
+    ///     tx1.unbounded_send(Ok(1)).unwrap();
+    /// });
+    /// thread::spawn(move || {
+    ///     tx2.unbounded_send(Ok(2)).unwrap();
+    ///     tx2.unbounded_send(Err(3)).unwrap();
+    /// });
+    /// thread::spawn(move || {
+    ///     tx3.unbounded_send(Ok(rx1)).unwrap();
+    ///     tx3.unbounded_send(Ok(rx2)).unwrap();
+    ///     tx3.unbounded_send(Err(4)).unwrap();
+    /// });
+    ///
+    /// let mut stream = rx3.try_flatten();
+    /// assert_eq!(stream.next().await, Some(Ok(1)));
+    /// assert_eq!(stream.next().await, Some(Ok(2)));
+    /// assert_eq!(stream.next().await, Some(Err(3)));
+    /// # });
+    /// ```
+    fn try_flatten(self) -> TryFlatten<Self>
+        where Self::Ok: TryStream,
+              <Self::Ok as TryStream>::Error: From<Self::Error>,
+              Self: Sized,
+    {
+        TryFlatten::new(self)
+    }
 
     /// Attempt to execute an accumulating asynchronous computation over a
     /// stream, collecting all the values into one final result.
@@ -573,17 +613,15 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
-    /// use futures::future;
     /// use futures::stream::{self, TryStreamExt};
     ///
     /// let number_stream = stream::iter(vec![Ok::<i32, i32>(1), Ok(2)]);
-    /// let sum = number_stream.try_fold(0, |acc, x| future::ready(Ok(acc + x)));
+    /// let sum = number_stream.try_fold(0, |acc, x| async move { Ok(acc + x) });
     /// assert_eq!(sum.await, Ok(3));
     ///
     /// let number_stream_with_err = stream::iter(vec![Ok::<i32, i32>(1), Err(2), Ok(1)]);
-    /// let sum = number_stream_with_err.try_fold(0, |acc, x| future::ready(Ok(acc + x)));
+    /// let sum = number_stream_with_err.try_fold(0, |acc, x| async move { Ok(acc + x) });
     /// assert_eq!(sum.await, Err(2));
     /// # })
     /// ```
@@ -610,7 +648,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
     /// use futures::stream::TryStreamExt;
@@ -658,7 +695,6 @@ pub trait TryStreamExt: TryStream {
     ///
     /// Results are returned in the order of completion:
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::oneshot;
     /// use futures::stream::{self, StreamExt, TryStreamExt};
@@ -682,16 +718,14 @@ pub trait TryStreamExt: TryStream {
     ///
     /// Errors from the underlying stream itself are propagated:
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::channel::mpsc;
-    /// use futures::future;
     /// use futures::stream::{StreamExt, TryStreamExt};
     ///
     /// let (sink, stream_of_futures) = mpsc::unbounded();
     /// let mut buffered = stream_of_futures.try_buffer_unordered(10);
     ///
-    /// sink.unbounded_send(Ok(future::ready(Ok(7i32))))?;
+    /// sink.unbounded_send(Ok(async { Ok(7i32) }))?;
     /// assert_eq!(buffered.next().await, Some(Ok(7i32)));
     ///
     /// sink.unbounded_send(Err("error in the stream"))?;
@@ -726,7 +760,6 @@ pub trait TryStreamExt: TryStream {
     /// Wraps a [`TryStream`] into a stream compatible with libraries using
     /// futures 0.1 `Stream`. Requires the `compat` feature to be enabled.
     /// ```
-    /// #![feature(async_await)]
     /// use futures::future::{FutureExt, TryFutureExt};
     /// # let (tx, rx) = futures::channel::oneshot::channel();
     ///
@@ -765,7 +798,6 @@ pub trait TryStreamExt: TryStream {
     /// # Examples
     ///
     /// ```
-    /// #![feature(async_await)]
     /// # futures::executor::block_on(async {
     /// use futures::stream::{self, TryStreamExt};
     /// use futures::io::AsyncReadExt;

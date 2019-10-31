@@ -60,7 +60,7 @@ impl<St> TryBufferUnordered<St>
     ///
     /// Note that care must be taken to avoid tampering with the state of the
     /// stream which may otherwise confuse this combinator.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Pin<&'a mut St> {
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut St> {
         self.stream().get_pin_mut().get_pin_mut()
     }
 
@@ -84,7 +84,7 @@ impl<St> Stream for TryBufferUnordered<St>
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         // First up, try to spawn off as many futures as possible by filling up
-        // our slab of futures. Propagate errors from the stream immediately.
+        // our queue of futures. Propagate errors from the stream immediately.
         while self.in_progress_queue.len() < self.max {
             match self.as_mut().stream().poll_next(cx)? {
                 Poll::Ready(Some(fut)) => self.as_mut().in_progress_queue().push(fut.into_future()),

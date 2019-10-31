@@ -3,6 +3,7 @@ use core::pin::Pin;
 use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
 use futures_core::task::{Context, Poll};
+use pin_utils::unsafe_pinned;
 
 /// Future for the [`into_future`](super::StreamExt::into_future) method.
 #[derive(Debug)]
@@ -14,6 +15,8 @@ pub struct StreamFuture<St> {
 impl<St: Stream + Unpin> Unpin for StreamFuture<St> {}
 
 impl<St: Stream + Unpin> StreamFuture<St> {
+    unsafe_pinned!(stream: Option<St>);
+
     pub(super) fn new(stream: St) -> StreamFuture<St> {
         StreamFuture { stream: Some(stream) }
     }
@@ -53,8 +56,8 @@ impl<St: Stream + Unpin> StreamFuture<St> {
     /// implementation of `Future::poll` consumes the underlying stream during polling
     /// in order to return it to the caller of `Future::poll` if the stream yielded
     /// an element.
-    pub fn get_pin_mut<'a>(self: Pin<&'a mut Self>) -> Option<Pin<&'a mut St>> {
-        Pin::new(&mut self.get_mut().stream).as_pin_mut()
+    pub fn get_pin_mut(self: Pin<&mut Self>) -> Option<Pin<&mut St>> {
+        self.stream().as_pin_mut()
     }
 
     /// Consumes this combinator, returning the underlying stream.
@@ -71,7 +74,7 @@ impl<St: Stream + Unpin> StreamFuture<St> {
     }
 }
 
-impl<St> FusedFuture for StreamFuture<St> {
+impl<St: Stream + Unpin> FusedFuture for StreamFuture<St> {
     fn is_terminated(&self) -> bool {
         self.stream.is_none()
     }
