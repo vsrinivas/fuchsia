@@ -29,6 +29,7 @@ group("lib") {
     "mt8167",
     "operation",
     "ot-radio",
+    "pci",
     "qcom",
     "scsi",
     "usb",

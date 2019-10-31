@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/pci/root.h>
 #include <stdio.h>
 
 #include <acpica/acpi.h>
@@ -11,7 +12,6 @@
 #include "acpi-private.h"
 #include "methods.h"
 #include "pci.h"
-#include "pciroot.h"
 #include "resources.h"
 
 #define PCI_HID ((char*)"PNP0A03")
@@ -269,7 +269,8 @@ static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level
  * @return ZX_OK on success
  */
 static zx_status_t find_pci_legacy_irq_mapping(zx_pci_init_arg_t* arg) {
-  unsigned int map_len = sizeof(arg->dev_pin_to_global_irq) / (sizeof(**(arg->dev_pin_to_global_irq)));
+  unsigned int map_len =
+      sizeof(arg->dev_pin_to_global_irq) / (sizeof(**(arg->dev_pin_to_global_irq)));
   for (unsigned int i = 0; i < map_len; ++i) {
     uint32_t* flat_map = (uint32_t*)&arg->dev_pin_to_global_irq;
     flat_map[i] = ZX_PCI_NO_IRQ_MAPPING;

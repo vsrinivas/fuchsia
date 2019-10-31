@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-#include "pciroot.h"
-
 #include <endian.h>
 #include <inttypes.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/i2c.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+#include <lib/pci/root.h>
 
 #include <memory>
 

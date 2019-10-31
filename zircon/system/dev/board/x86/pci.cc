@@ -5,6 +5,7 @@
 #include "pci.h"
 
 #include <inttypes.h>
+#include <lib/pci/root.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -21,7 +22,7 @@
 
 #include "acpi-private.h"
 #include "methods.h"
-#include "pciroot.h"
+#include "pci.h"
 #include "resources.h"
 
 // This file contains the implementation for the code supporting the in-progress userland

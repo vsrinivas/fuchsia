@@ -27,7 +27,6 @@
 #include "methods.h"
 #include "nhlt.h"
 #include "pci.h"
-#include "pciroot.h"
 #include "power.h"
 #include "resources.h"
 #include "sysmem.h"
