@@ -8,18 +8,13 @@
 
 static constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 
-// This is a locally administered MAC address (first byte 0x02) mixed with the
-// Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
-// and the guest gets 00:00:00 for the last three octets.
-static constexpr uint8_t kGuestMacAddress[6] = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00};
-
 VirtioNet::VirtioNet(const PhysMem& phys_mem)
     : VirtioComponentDevice(phys_mem, VIRTIO_NET_F_MAC,
                             fit::bind_member(this, &VirtioNet::ConfigureQueue),
                             fit::bind_member(this, &VirtioNet::Ready)) {}
 
-zx_status_t VirtioNet::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                             async_dispatcher_t* dispatcher) {
+zx_status_t VirtioNet::Start(const zx::guest& guest, const MacAddress mac_address,
+                             fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioNetUrl,
@@ -41,7 +36,7 @@ zx_status_t VirtioNet::Start(const zx::guest& guest, fuchsia::sys::Launcher* lau
   std::lock_guard<std::mutex> lock(device_config_.mutex);
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
-  memcpy(config_.mac, kGuestMacAddress, sizeof(config_.mac));
+  memcpy(config_.mac, mac_address.data(), sizeof(config_.mac));
 
   return ZX_OK;
 }
