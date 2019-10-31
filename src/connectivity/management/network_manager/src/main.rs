@@ -11,6 +11,8 @@ extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
 
+mod event;
+mod event_worker;
 mod eventloop;
 mod fidl_worker;
 mod overnet_worker;
@@ -26,5 +28,7 @@ fn main() -> Result<(), failure::Error> {
     let mut executor = fuchsia_async::Executor::new()?;
 
     let eventloop = EventLoop::new()?;
-    executor.run_singlethreaded(eventloop.run())
+    let r = executor.run_singlethreaded(eventloop.run());
+    warn!("Network Manager ended: {:?}", r);
+    r
 }

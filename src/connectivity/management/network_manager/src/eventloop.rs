@@ -33,6 +33,7 @@
 //! * Modifies the router state byt accessinc netcfg.
 //! * Updates local state.
 
+use crate::event::Event;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
@@ -69,56 +70,37 @@ macro_rules! internal_error {
     };
 }
 
-/// The events that can trigger an action in the event loop.
-pub enum Event {
-    /// A request from the fuchsia.router.config Admin FIDL interface
-    FidlRouterAdminEvent(RouterAdminRequest),
-    /// A request from the fuchsia.router.config State FIDL interface
-    FidlRouterStateEvent(RouterStateRequest),
-    /// An event coming from fuchsia.net.stack.
-    StackEvent(<fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item),
-    /// An event coming from fuchsia.netstack.
-    NetstackEvent(<fidl_fuchsia_netstack::NetstackEventStream as futures::Stream>::Item),
-}
-
 /// The event loop.
 pub struct EventLoop {
-    event_recv: Option<mpsc::UnboundedReceiver<Event>>,
+    event_recv: mpsc::UnboundedReceiver<Event>,
     device: DeviceState,
 }
 
 impl EventLoop {
     pub fn new() -> Result<Self, Error> {
+        let netcfg = NetCfg::new()?;
+        let packet_filter = PacketFilter::start()
+            .context("network_manager failed to start packet filter!")
+            .unwrap();
+        let mut device = DeviceState::new(netcfg, packet_filter);
+
+        let streams = device.take_event_streams();
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
         let fidl_worker = crate::fidl_worker::FidlWorker;
         let _ = fidl_worker.spawn(event_send.clone());
         let overnet_worker = crate::overnet_worker::OvernetWorker;
         let _r = overnet_worker.spawn(event_send.clone());
-        let netcfg = NetCfg::new()?;
-        let packet_filter = PacketFilter::start()
-            .context("network_manager failed to start packet filter!")
-            .unwrap();
+        let event_worker = crate::event_worker::EventWorker;
+        event_worker.spawn(streams, event_send.clone());
 
-        Ok(EventLoop {
-            event_recv: Some(event_recv),
-            device: DeviceState::new(netcfg, packet_filter),
-        })
+        Ok(EventLoop { event_recv, device })
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
         self.device.populate_state().await?;
 
-        let streams = self.device.take_event_streams();
-        let mut select_stream = futures::stream::select(
-            futures::stream::select(
-                self.event_recv.take().unwrap(),
-                streams.0.map(Event::StackEvent),
-            ),
-            streams.1.map(Event::NetstackEvent),
-        );
-
         loop {
-            match select_stream.next().await {
+            match self.event_recv.next().await {
                 Some(Event::FidlRouterAdminEvent(req)) => {
                     self.handle_fidl_router_admin_request(req).await;
                 }
@@ -132,32 +114,18 @@ impl EventLoop {
         }
     }
 
-    async fn handle_stack_event(
-        &mut self,
-        event: <fidl_fuchsia_net_stack::StackEventStream as futures::Stream>::Item,
-    ) {
-        match event {
-            Ok(evt) => self
-                .device
-                .update_state_for_stack_event(evt)
-                .await
-                .unwrap_or_else(|err| warn!("error updating state: {:?}", err)),
-            Err(err) => warn!("error from stack observer: {:?}", err),
-        }
+    async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {
+        self.device
+            .update_state_for_stack_event(event)
+            .await
+            .unwrap_or_else(|err| warn!("error updating state: {:?}", err));
     }
 
-    async fn handle_netstack_event(
-        &mut self,
-        event: <fidl_fuchsia_netstack::NetstackEventStream as futures::Stream>::Item,
-    ) {
-        match event {
-            Ok(evt) => self
-                .device
-                .update_state_for_netstack_event(evt)
-                .await
-                .unwrap_or_else(|err| warn!("error updating state: {:?}", err)),
-            Err(err) => warn!("error from netstack observer: {:?}", err),
-        }
+    async fn handle_netstack_event(&mut self, event: fidl_fuchsia_netstack::NetstackEvent) {
+        self.device
+            .update_state_for_netstack_event(event)
+            .await
+            .unwrap_or_else(|err| warn!("error updating state: {:?}", err));
     }
 
     async fn handle_fidl_router_admin_request(&mut self, req: RouterAdminRequest) {

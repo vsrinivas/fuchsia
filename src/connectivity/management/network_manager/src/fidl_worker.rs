@@ -5,7 +5,7 @@
 //! Implementation of fuchsia.router.config
 
 use {
-    crate::eventloop::Event,
+    crate::event::Event,
     failure::Error,
     fidl_fuchsia_router_config::{RouterAdminRequestStream, RouterStateRequestStream},
     fuchsia_async as fasync,

@@ -5,7 +5,7 @@
 //! Provides overnet support for network manager.
 
 use {
-    crate::eventloop::Event,
+    crate::event::Event,
     crate::fidl_worker::FidlWorker,
     failure::Error,
     fidl::endpoints::{create_request_stream, RequestStream, ServiceMarker},
