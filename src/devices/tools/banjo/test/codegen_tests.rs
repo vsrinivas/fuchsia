@@ -333,29 +333,6 @@ mod cpp {
     );
 }
 
-mod abigen {
-    use super::*;
-
-    // Note that .abigen.out is used to avoid unnecessarily requiring an "API
-    // Review" bit on Gerrit.
-
-    codegen_test!(empty, AbigenBackend, ["banjo/empty.test.banjo"], "abigen/empty.abigen.out");
-
-    codegen_test!(
-        abigen_protocol_basic,
-        AbigenBackend,
-        ["banjo/abigen-protocol-basic.test.banjo"],
-        "abigen/abigen-protocol-basic.abigen.out"
-    );
-
-    codegen_test!(
-        abigen_protocol_markup,
-        AbigenBackend,
-        ["banjo/abigen-protocol-markup.test.banjo"],
-        "abigen/abigen-protocol-markup.abigen.out"
-    );
-}
-
 mod fidlcat {
     use super::*;
 
@@ -368,43 +345,6 @@ mod fidlcat {
         FidlcatBackend,
         ["../zx.banjo", "banjo/api.test.banjo"],
         "fidlcat/api.fidlcat.out"
-    );
-}
-
-mod kernel {
-    use super::*;
-    use banjo_lib::backends::KernelSubtype;
-
-    codegen_test!(
-        trace_empty,
-        KernelBackend,
-        ["banjo/empty.test.banjo"],
-        "kernel/trace-empty.inc",
-        KernelSubtype::Trace
-    );
-
-    codegen_test!(
-        trace_basic,
-        KernelBackend,
-        ["banjo/abigen-protocol-basic.test.banjo"],
-        "kernel/trace-basic.inc",
-        KernelSubtype::Trace
-    );
-
-    codegen_test!(
-        numbers_empty,
-        KernelBackend,
-        ["banjo/empty.test.banjo"],
-        "kernel/numbers-empty.h",
-        KernelSubtype::Numbers
-    );
-
-    codegen_test!(
-        numbers_basic,
-        KernelBackend,
-        ["banjo/abigen-protocol-basic.test.banjo"],
-        "kernel/numbers-basic.h",
-        KernelSubtype::Numbers
     );
 }
 

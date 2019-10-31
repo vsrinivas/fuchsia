@@ -26,9 +26,7 @@ enum BackendName {
     Rust,
     Json,
     Ast,
-    Abigen,
     Fidlcat,
-    Kernel(backends::KernelSubtype),
     Syzkaller,
 }
 
@@ -44,14 +42,11 @@ impl FromStr for BackendName {
             "rust" => Ok(BackendName::Rust),
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
-            "abigen" => Ok(BackendName::Abigen),
             "fidlcat" => Ok(BackendName::Fidlcat),
-            "kernelnumbers" => Ok(BackendName::Kernel(backends::KernelSubtype::Numbers)),
-            "kerneltrace" => Ok(BackendName::Kernel(backends::KernelSubtype::Trace)),
             "syzkaller" => Ok(BackendName::Syzkaller),
             _ => Err(format!(
                 "Unrecognized backend for banjo. Current valid ones are: \
-                 C, Cpp, CppMock, Rust, Ast, Abigen, Fidlcat, KernelNumbers, KernelTrace"
+                 C, Cpp, CppMock, Rust, Ast, Fidlcat"
             )),
         }
     }
@@ -179,9 +174,7 @@ fn main() -> Result<(), Error> {
         BackendName::C => Box::new(CBackend::new(&mut output)),
         BackendName::Cpp(subtype) => Box::new(CppBackend::new(&mut output, subtype)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
-        BackendName::Abigen => Box::new(AbigenBackend::new(&mut output)),
         BackendName::Fidlcat => Box::new(FidlcatBackend::new(&mut output)),
-        BackendName::Kernel(subtype) => Box::new(KernelBackend::new(&mut output, subtype)),
         BackendName::Syzkaller => Box::new(SyzkallerBackend::new(&mut output)),
         e => {
             eprintln!("{:?} backend is not yet implemented", e);

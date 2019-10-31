@@ -5,17 +5,14 @@
 use {crate::ast::BanjoAst, failure::Error, std::io};
 
 pub use self::{
-    abigen::AbigenBackend, ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype,
-    fidlcat::FidlcatBackend, kernel::KernelBackend, kernel::KernelSubtype,
+    ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, fidlcat::FidlcatBackend,
     syzkaller::SyzkallerBackend,
 };
 
-mod abigen;
 mod ast;
 mod c;
 mod cpp;
 mod fidlcat;
-mod kernel;
 mod syzkaller;
 mod util;
 
