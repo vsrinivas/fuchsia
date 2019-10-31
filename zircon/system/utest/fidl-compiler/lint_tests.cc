@@ -150,6 +150,7 @@ using bar as baz;
 
 BEGIN_TEST_CASE(lint_test)
 RUN_TEST(const_names_bad)
+RUN_TEST(const_names_kconst)
 RUN_TEST(const_names_good)
 RUN_TEST(protocol_names_bad)
 RUN_TEST(protocol_names_good)
