@@ -35,12 +35,12 @@ to the Normal Memory, Outer Write-back non-transient Read and Write allocate, In
 Write-back non-transient Read and Write allocate memory attributes
 
 **ZX_CACHE_POLICY_UNCACHED** - Disable caching. On Aarch64 this corresponds to
-the Device-nGnRE memory attributes.
+the Device-nGnRnE memory attributes.
 
 **ZX_CACHE_POLICY_UNCACHED_DEVICE** - Disable cache and treat as device memory.
 This is architecture dependent and may be equivalent to
 **ZX_CACHE_POLICY_UNCACHED** on some architectures. On Aarch64 this corresponds to
-the Device-nGnRnE memory attributes.
+the Device-nGnRE memory attributes.
 
 **ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining. On Aarch64
 this corresponds to the Normal memory, uncached memory attributes.
