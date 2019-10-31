@@ -13,7 +13,10 @@ import 'package:simple_browser/src/models/tabs_action.dart';
 void main() {
   // Add a tab, and see that there is 1 tab
   test('add 1 tab', () async {
-    final tb = TabsBloc(tabFactory: () => 'a', disposeTab: (tab) => tab.dispose());
+    final tb = TabsBloc(
+      tabFactory: () => 'a',
+      disposeTab: (tab) => tab.dispose(),
+    );
     await _newTab(tb);
 
     expect(tb.tabs.length, 1, reason: "doesn't have 1 tab");
@@ -22,7 +25,10 @@ void main() {
   // Add 2 tabs, see that there are 2 tabs and that focus is on the second
   test('add 2 tabs', () async {
     TabsBloc tb;
-    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.length}', disposeTab: (tab) => tab.dispose());
+    tb = TabsBloc(
+      tabFactory: () => 'tab ${tb.tabs.length}',
+      disposeTab: (tab) => tab.dispose(),
+    );
     await _newTab(tb);
     await _newTab(tb);
 
@@ -37,7 +43,10 @@ void main() {
   // Add 2 tabs, focs on the first, see that the focus is on the first, and its value one is correct
   test('add 2 tabs and focus on first tab', () async {
     TabsBloc tb;
-    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.length}', disposeTab: (tab) => tab.dispose());
+    tb = TabsBloc(
+      tabFactory: () => 'tab ${tb.tabs.length}',
+      disposeTab: (tab) => tab.dispose(),
+    );
     await _newTab(tb);
     await _newTab(tb);
     await _focusTab(tb, tb.tabs.first);

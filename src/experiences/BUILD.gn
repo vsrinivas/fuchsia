@@ -18,7 +18,16 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    ":dart_target_tests",
     ":dart_unittests",
+  ]
+}
+
+# Dart tests which can run on target
+group("dart_target_tests") {
+  testonly = true
+  public_deps = [
+    "bin:dart_target_tests",
   ]
 }
 
