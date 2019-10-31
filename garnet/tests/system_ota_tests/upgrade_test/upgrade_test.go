@@ -142,6 +142,9 @@ func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, buildID stri
 	}
 
 	build, err := c.BuildArchive().GetBuildByID(buildID, outputDir)
+	if err != nil {
+		t.Fatalf("failed to find build %s: %s", buildID, err)
+	}
 
 	repo, err := build.GetPackageRepository()
 	if err != nil {
