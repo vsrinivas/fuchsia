@@ -233,8 +233,13 @@ class Performance {
   /// A helper function that converts the results to the catapult format.
   ///
   /// Returns the converted benchmark result [File].
-  Future<File> convertResults(String converterPath, File result,
-      Map<String, String> environment) async {
+  ///
+  /// TODO(fxb/23091): Remove the uploadToCatapultDashboard argument once all
+  /// the performance tests are moved over to using SL4F and this argument is
+  /// unused.
+  Future<File> convertResults(
+      String converterPath, File result, Map<String, String> environment,
+      {bool uploadToCatapultDashboard = true}) async {
     _log.info('Converting the results into the catapult format');
 
     var bot = '', logurl = '', master = '', timestamp = 0;
@@ -280,8 +285,13 @@ class Performance {
 
     final resultsPath = result.absolute.path;
     assert(resultsPath.endsWith('.fuchsiaperf.json'));
+    // The infra recipe looks for the filename extension '.catapult_json',
+    // so uploading to the Catapult performance dashboard is disabled if we
+    // use a different extension.
+    final catapultExtension =
+        uploadToCatapultDashboard ? '.catapult_json' : '.catapult_json_disabled';
     final outputFileName = resultsPath.replaceFirst(
-        RegExp(r'\.fuchsiaperf\.json$'), '.catapult_json');
+        RegExp(r'\.fuchsiaperf\.json$'), catapultExtension);
 
     final List<String> args = [
       '--input',

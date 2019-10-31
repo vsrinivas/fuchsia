@@ -15,6 +15,8 @@ dart_test("perf_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  non_dart_deps = [ ":runtime_deps" ]
+
   environments = [
     # Runs on "main" builders (try and ci) in NUC environments.
     {
@@ -22,6 +24,26 @@ dart_test("perf_test") {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
     },
+  ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [
+    "$root_out_dir/catapult_converter",
+  ]
+
+  outputs = [
+    "$_data_dir/{{source_file_part}}",
+  ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/catapult_converter" ]
+  }
+
+  deps = [
+    "//garnet/bin/catapult_converter:converter_bin",
   ]
 }
 
