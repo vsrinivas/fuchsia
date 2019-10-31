@@ -9,6 +9,9 @@
 #ifndef LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 #define LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 
+#include <stdint.h>
+#include <zircon/types.h>
+
 namespace perfmon {
 
 // H/W properties used by common code.
