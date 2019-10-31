@@ -292,10 +292,12 @@ ELF PLT breakpoints for system calls
   This will apply the breakpoint to every library's PLT entry for
   "zx_debug_write".
 
-See also
+Other breakpoint commands
 
-  "help breakpoint": To list or select breakpoints.
-  "help clear": To delete breakpoints.
+  "breakpoint" / "bp": List or select breakpoints.
+  "clear": To delete breakpoints.
+  "disable": Disable a breakpoint off without deleting it.
+  "enable": Enable a previously-disabled breakpoint.
 
 Examples
 

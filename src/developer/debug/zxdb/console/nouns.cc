@@ -512,6 +512,13 @@ Options
       breakpoint applies to. A symbolic breakpoint can apply to many processes
       and can expand to more than one address in a process.
 
+Other breakpoint commands
+
+  "break": Create a breakpoint.
+  "clear": Delete a breakpoint.
+  "disable": Disable a breakpoint off without deleting it.
+  "enable": Enable a previously-disabled breakpoint.
+
 Examples
 
   bp
