@@ -24,8 +24,8 @@ rustc_library("lib") {
   edition = "2018"
 
   visibility = [
-    "//src/session/session_manager/*",
-    "//src/session/session_manager_integration_tests/*",
+    "//src/session/bin/session_manager/*",
+    "//src/session/tests/session_manager/*",
   ]
 
   deps = [
@@ -38,7 +38,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/argh",
-    "//src/session/realm_management",
+    "//src/session/lib/realm_management",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
@@ -95,7 +95,7 @@ unittest_package("session_manager_tests") {
 config_data("session_manager.config") {
   for_pkg = "sysmgr"
   sources = [
-    "//src/session/session_manager/meta/session_manager.config",
+    "//src/session/bin/session_manager/meta/session_manager.config",
   ]
   outputs = [
     "session_manager.config",

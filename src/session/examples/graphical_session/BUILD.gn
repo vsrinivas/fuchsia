@@ -5,6 +5,13 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("all") {
+  deps = [
+    ":graphical_session",
+    "//src/ui/scenic:scenic_pkg",
+  ]
+}
+
 rustc_binary("graphical_session_bin") {
   name = "graphical_session"
   edition = "2018"

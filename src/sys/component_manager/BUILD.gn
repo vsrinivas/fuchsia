@@ -15,7 +15,7 @@ rustc_library("lib") {
 
   # Only for internal use.
   visibility = [
-    "//src/session/component_manager/*",
+    "//src/session/*",
     "//src/sys/component_manager/*",
     "//src/sys/component_manager_for_test/*",
   ]

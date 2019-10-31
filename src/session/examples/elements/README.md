@@ -65,7 +65,7 @@ session manager's CML file.
 Then run the following commands:
 
 ```$sh
-fx set core.x64 --with //src/session:session_framework --with //src/session:examples
+fx set core.x64 --with-base=//src/session:all
 fx build
 fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
 ```

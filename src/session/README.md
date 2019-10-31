@@ -3,7 +3,7 @@
 ## Build a configuration that boots into a session
 
 ```
-fx set core.x64 --with-base=//src/session:session_framework,//src/session:examples,//src/session/session_manager:session_manager.config,//src/ui/scenic:scenic_pkg
+fx set core.x64 --with-base=//src/session,//src/session/bin/session_manager:session_manager.config
 fx build
 fx reboot
 ```

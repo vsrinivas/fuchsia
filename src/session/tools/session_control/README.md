@@ -6,7 +6,13 @@ manager and send it commands.
 In order to use the tool, you must include the following in your `fx set`:
 
 ```
---with //src/session:tools
+--with //src/session/tools:all
+```
+
+or, for all of the session related code:
+
+```
+--with-base=//src/session:all
 ```
 
 ## Example Usage

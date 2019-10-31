@@ -13,7 +13,7 @@ rustc_binary("simple_element_bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//src/session/examples/elements/fidl:session_examples-rustc",
+    "//src/session/fidl:session_examples-rustc",
     "//third_party/rust_crates:failure",
   ]
 }

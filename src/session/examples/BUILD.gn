@@ -4,14 +4,12 @@
 
 group("all") {
   deps = [
-    "//src/session/tools/session_control",
+    "//src/session/examples/elements",
+    "//src/session/examples/graphical_session:all",
   ]
 }
 
+# Placeholder for adding unit tests for example sessions and related components.
 group("tests") {
   testonly = true
-
-  deps = [
-    "//src/session/tools/session_control:session_control_tests",
-  ]
 }

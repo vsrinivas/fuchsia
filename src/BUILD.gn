@@ -29,6 +29,7 @@ group("src") {
     "media",
     "modular",
     "recovery",
+    "session",
     "speech",
     "storage",
     "sys",

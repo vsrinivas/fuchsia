@@ -17,7 +17,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
-    "//src/session/session_manager:lib",
+    "//src/session/bin/session_manager:lib",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",

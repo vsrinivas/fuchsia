@@ -17,7 +17,7 @@ rustc_library("element_management") {
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/session/realm_management",
+    "//src/session/lib/realm_management",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

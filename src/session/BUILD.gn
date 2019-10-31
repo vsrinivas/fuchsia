@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This group includes all the dependencies necessary to run Session Framework and its tests.
-group("session_framework") {
+group("session") {
   deps = [
-    "//src/session/component_manager:component_manager_sfw",
-    "//src/session/element_management",
-    "//src/session/session_manager",
+    "//src/session/bin:all",
+    "//src/session/examples:all",
+    "//src/session/lib:all",
+    "//src/session/tools:all",
   ]
 }
 
@@ -15,8 +15,7 @@ group("examples") {
   testonly = true
 
   deps = [
-    "//src/session/examples/elements",
-    "//src/session/examples/graphical_session",
+    "//src/session/examples:all",
   ]
 }
 
@@ -24,13 +23,10 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/session/component_manager:component_manager_sfw",
-    "//src/session/element_management:element_management_tests",
-    "//src/session/realm_management:realm_management_tests",
-    "//src/session/session_manager:session_manager_tests",
-    "//src/session/session_manager_integration_tests",
-    "//src/session/tools/session_control:session_control_tests",
-    "//src/sys/component_manager_for_test",
-    "//src/testing/runner",
+    "//src/session/bin:tests",
+    "//src/session/examples:tests",
+    "//src/session/lib:tests",
+    "//src/session/tests:all",
+    "//src/session/tools:tests",
   ]
 }
