@@ -45,8 +45,8 @@ source_set("intl_property_provider_impl") {
 
   public_deps = [
     ":fidl",
-    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.setui",
   ]
 }
 
@@ -62,7 +62,7 @@ executable("intl_property_provider_impl_test_bin") {
     ":intl_property_provider_impl",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.deprecatedtimezone",
+    "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",

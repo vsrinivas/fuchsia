@@ -4,11 +4,14 @@
 
 #include "intl_property_provider_impl.h"
 
+#include <fuchsia/intl/cpp/fidl.h>
+
 #include <iterator>
 
 #include <src/lib/icu_data/cpp/icu_data.h>
 #include <src/modular/lib/fidl/clone.h>
 
+#include "fuchsia/setui/cpp/fidl.h"
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "locale_util.h"
 #include "src/lib/fxl/macros.h"
@@ -26,7 +29,6 @@ using fuchsia::intl::Profile;
 using fuchsia::intl::TemperatureUnit;
 using fuchsia::intl::TimeZoneId;
 using fuchsia::modular::intl::internal::RawProfileData;
-using icu::UnicodeString;
 using intl::ExpandLocaleId;
 using intl::ExtractBcp47CalendarId;
 using intl::LocaleIdToIcuLocale;
@@ -125,23 +127,37 @@ fit::result<Profile, zx_status_t> GenerateProfile(const modular::RawProfileData&
   return fit::ok(std::move(profile));
 }
 
+// Extracts just the timezone ID from the setting object.  If the setting is not
+// well-formed or valid, an empty string is returned.
+std::string TimeZoneIdFrom(fuchsia::setui::SettingsObject setting) {
+  if (setting.setting_type != fuchsia::setui::SettingType::TIME_ZONE) {
+    // Should never happen since the Watch/Listen protocol ensures the setting matches.
+    return "";
+  }
+  const auto* timezone = setting.data.time_zone_value().current.get();
+  if (timezone == nullptr || timezone->id.empty()) {
+    // Weird data in the timezone field causes us to not update anything.
+    return "";
+  }
+  return timezone->id;
+}
+
 }  // namespace
 
-IntlPropertyProviderImpl::IntlPropertyProviderImpl(
-    fuchsia::deprecatedtimezone::TimezonePtr time_zone_client)
+IntlPropertyProviderImpl::IntlPropertyProviderImpl(fuchsia::setui::SetUiServicePtr setui_client)
     : intl_profile_(std::nullopt),
       raw_profile_data_(std::nullopt),
-      time_zone_client_(std::move(time_zone_client)),
-      tz_watcher_binding_(this) {
+      setui_client_(std::move(setui_client)),
+      setting_listener_binding_(this) {
   Start();
 }
 
 // static
 std::unique_ptr<IntlPropertyProviderImpl> IntlPropertyProviderImpl::Create(
     const std::shared_ptr<sys::ServiceDirectory>& incoming_services) {
-  fuchsia::deprecatedtimezone::TimezonePtr time_zone_client =
-      incoming_services->Connect<fuchsia::deprecatedtimezone::Timezone>();
-  return std::make_unique<IntlPropertyProviderImpl>(std::move(time_zone_client));
+  fuchsia::setui::SetUiServicePtr setui_client =
+      incoming_services->Connect<fuchsia::setui::SetUiService>();
+  return std::make_unique<IntlPropertyProviderImpl>(std::move(setui_client));
 }
 
 fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> IntlPropertyProviderImpl::GetHandler(
@@ -162,16 +178,6 @@ void IntlPropertyProviderImpl::GetProfile(
   FX_VLOGS(1) << "Received GetProfile request";
   get_profile_queue_.push(std::move(callback));
   ProcessGetProfileQueue();
-}
-
-void IntlPropertyProviderImpl::OnTimezoneOffsetChange(std::string time_zone_id) {
-  FX_VLOGS(1) << "Incoming time zone changed to " << time_zone_id;
-  // TODO(kpozin): When there are multiple update sources, we might want some
-  // sort of "mark dirty" behavior that will coalesce actual recalculations of
-  // of the Profile, instead going through the whole process on every change.
-  RawProfileData new_profile_data = CloneStruct(*raw_profile_data_);
-  new_profile_data.time_zone_ids = {TimeZoneId{.id = time_zone_id}};
-  UpdateRawData(new_profile_data);
 }
 
 zx_status_t IntlPropertyProviderImpl::InitializeIcuIfNeeded() {
@@ -196,23 +202,29 @@ void IntlPropertyProviderImpl::LoadInitialValues() {
     UpdateRawData(new_data);
 
     // TODO: Consider setting some other error handler for non-initial errors.
-    time_zone_client_.set_error_handler(nullptr);
+    setui_client_.set_error_handler(nullptr);
     StartSettingsWatchers();
   };
 
-  time_zone_client_.set_error_handler(
-      [set_initial_data](zx_status_t status) { set_initial_data(kDefaultTimeZoneId); });
+  setui_client_.set_error_handler([set_initial_data](zx_status_t status __attribute__((unused))) {
+    set_initial_data(kDefaultTimeZoneId);
+  });
 
-  time_zone_client_->GetTimezoneId(
-      [set_initial_data](std::string timezone_id) { set_initial_data(timezone_id); });
+  auto watch_callback = [set_initial_data](fuchsia::setui::SettingsObject setting) {
+    std::string timezone_id = TimeZoneIdFrom(std::move(setting));
+    if (timezone_id.empty()) {
+      return;
+    }
+    set_initial_data(timezone_id);
+  };
+
+  setui_client_->Watch(fuchsia::setui::SettingType::TIME_ZONE, watch_callback);
 }
 
-zx_status_t IntlPropertyProviderImpl::StartSettingsWatchers() {
-  // TODO(MF-168): Watch other settings.
-  fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher> handle;
-  tz_watcher_binding_.Bind(handle.NewRequest());
-  time_zone_client_->Watch(std::move(handle));
-  return ZX_OK;
+void IntlPropertyProviderImpl::StartSettingsWatchers() {
+  fidl::InterfaceHandle<fuchsia::setui::SettingListener> handle;
+  setting_listener_binding_.Bind(handle.NewRequest());
+  setui_client_->Listen(fuchsia::setui::SettingType::TIME_ZONE, std::move(handle));
 }
 
 fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal() {
@@ -245,6 +257,16 @@ bool IntlPropertyProviderImpl::UpdateRawData(modular::RawProfileData& new_raw_da
     return true;
   }
   return false;
+}
+
+void IntlPropertyProviderImpl::Notify(fuchsia::setui::SettingsObject setting) {
+  std::string timezone_id = TimeZoneIdFrom(std::move(setting));
+  if (timezone_id.empty()) {
+    return;
+  }
+  RawProfileData new_profile_data = CloneStruct(*raw_profile_data_);
+  new_profile_data.time_zone_ids = {TimeZoneId{.id = std::move(timezone_id)}};
+  UpdateRawData(new_profile_data);
 }
 
 void IntlPropertyProviderImpl::NotifyOnChange() {

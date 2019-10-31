@@ -5,9 +5,9 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 
-#include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/intl/internal/cpp/fidl.h>
+#include <fuchsia/setui/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/result.h>
@@ -16,21 +16,23 @@
 
 #include <sdk/lib/sys/cpp/component_context.h>
 
+
 namespace modular {
 
 // Implementation of `fuchsia.intl.PropertyProvider`.
 //
 // Serves an up-to-date `fuchsia.intl.Profile`, based on watched user settings.
-class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider,
-                                 fuchsia::deprecatedtimezone::TimezoneWatcher {
+class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui::SettingListener {
  public:
-  IntlPropertyProviderImpl(fuchsia::deprecatedtimezone::TimezonePtr time_zone_client);
+  explicit IntlPropertyProviderImpl(fuchsia::setui::SetUiServicePtr setui_client);
 
   // Create an instance of `IntlPropertyProviderImpl`, after using the given `ServiceDirectory` to
   // connect to all of the provider's service dependencies.
   static std::unique_ptr<IntlPropertyProviderImpl> Create(
       const std::shared_ptr<sys::ServiceDirectory>& incoming_services);
 
+  // Returns the client-side handler for `fuchsia.intl.PropertyProvider`, based on either the
+  // dispatcher that is passed in (e.g. for testing), or the default thread-local dispatcher.
   fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> GetHandler(
       async_dispatcher_t* dispatcher = nullptr);
 
@@ -42,8 +44,11 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider,
   // `fuchsia.intl.PropertyProvider`
   void GetProfile(fuchsia::intl::PropertyProvider::GetProfileCallback callback) override;
 
-  // `fuchsia.deprecatedtimezone.TimezoneWatcher`
-  void OnTimezoneOffsetChange(std::string time_zone_id) override;
+  // Called every time the `setui` calls on the listener.  The settings object corresponds to
+  // the setting type that is registered with `setui.Listen`.
+  //
+  // `fuchsia.setui.SettingListener`
+  void Notify(fuchsia::setui::SettingsObject settings) override;
 
  private:
   // Load initial ICU data if this hasn't been done already.
@@ -53,11 +58,11 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider,
   // initialized with.
   zx_status_t InitializeIcuIfNeeded();
 
+  // Start watching changes in user preferences.
+  void StartSettingsWatchers();
+
   // Load the initial profiles values from user preferences and defaults.
   void LoadInitialValues();
-
-  // Start watching user preferences.
-  zx_status_t StartSettingsWatchers();
 
   // Get a clone of the current `Profile` if available. If the raw data has not yet been
   // initialized, returns `ZX_ERR_SHOULD_WAIT`. Other errors are also possible, e.g.
@@ -82,14 +87,17 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider,
   // A snapshot of the assembled intl `Profile`.
   std::optional<fuchsia::intl::Profile> intl_profile_;
 
-  // Raw data that will be used to assemble the `Profile`.
+  // Raw data that will be used to assemble the `Profile`.  Initially empty, and remains empty
+  // until a first successful read result comes in from `setui`.
   std::optional<fuchsia::modular::intl::internal::RawProfileData> raw_profile_data_;
 
   fidl::BindingSet<fuchsia::intl::PropertyProvider> property_provider_bindings_;
 
-  // TODO(MF-168): Add SetUI service client
-  fuchsia::deprecatedtimezone::TimezonePtr time_zone_client_;
-  fidl::Binding<fuchsia::deprecatedtimezone::TimezoneWatcher> tz_watcher_binding_;
+  fuchsia::setui::SetUiServicePtr setui_client_;
+
+  // A FIDL connection to the `setui.SettingListener` endpoint which will be called by the 
+  // `setui` server to deliver the `Notify` for a setting.
+  fidl::Binding<fuchsia::setui::SettingListener> setting_listener_binding_;
 
   // Queue of pending requests
   std::queue<fuchsia::intl::PropertyProvider::GetProfileCallback> get_profile_queue_;
