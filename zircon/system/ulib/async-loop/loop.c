@@ -9,6 +9,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/async/irq.h>
+#include <lib/async/paged_vmo.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
 #include <lib/async/trap.h>
@@ -36,6 +37,12 @@ static zx_status_t async_loop_set_guest_bell_trap(async_dispatcher_t* dispatcher
                                                   zx_vaddr_t addr, size_t length);
 static zx_status_t async_loop_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
 static zx_status_t async_loop_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
+static zx_status_t async_loop_create_paged_vmo(async_dispatcher_t* async,
+                                               async_paged_vmo_t* paged_vmo, uint32_t options,
+                                               zx_handle_t pager, uint64_t vmo_size,
+                                               zx_handle_t* vmo_out);
+static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* dispatcher,
+                                               async_paged_vmo_t* paged_vmo);
 
 static const async_ops_t async_loop_ops = {
     .version = ASYNC_OPS_V2,
@@ -53,6 +60,8 @@ static const async_ops_t async_loop_ops = {
     .v2 = {
         .bind_irq = async_loop_bind_irq,
         .unbind_irq = async_loop_unbind_irq,
+        .create_paged_vmo = async_loop_create_paged_vmo,
+        .detach_paged_vmo = async_loop_detach_paged_vmo,
     }};
 
 typedef struct thread_record {
@@ -85,14 +94,15 @@ typedef struct async_loop {
   _Atomic async_loop_state_t state;
   atomic_uint active_threads;  // number of active dispatch threads
 
-  mtx_t lock;               // guards the lists and the dispatching tasks flag
-  bool dispatching_tasks;   // true while the loop is busy dispatching tasks
-  list_node_t wait_list;    // most recently added first
-  list_node_t task_list;    // pending tasks, earliest deadline first
-  list_node_t due_list;     // due tasks, earliest deadline first
-  list_node_t thread_list;  // earliest created thread first
-  list_node_t irq_list;     // list of IRQs
-  bool timer_armed;         // true if timer has been set and has not fired yet
+  mtx_t lock;                  // guards the lists and the dispatching tasks flag
+  bool dispatching_tasks;      // true while the loop is busy dispatching tasks
+  list_node_t wait_list;       // most recently added first
+  list_node_t task_list;       // pending tasks, earliest deadline first
+  list_node_t due_list;        // due tasks, earliest deadline first
+  list_node_t thread_list;     // earliest created thread first
+  list_node_t irq_list;        // list of IRQs
+  list_node_t paged_vmo_list;  // most recently added first
+  bool timer_armed;            // true if timer has been set and has not fired yet
 } async_loop_t;
 
 static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline);
@@ -108,6 +118,9 @@ static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
                                                        async_guest_bell_trap_t* trap,
                                                        zx_status_t status,
                                                        const zx_packet_guest_bell_t* bell);
+static zx_status_t async_loop_dispatch_paged_vmo(async_loop_t* loop, async_paged_vmo_t* paged_vmo,
+                                                 zx_status_t status,
+                                                 const zx_packet_page_request_t* page_request);
 static void async_loop_wake_threads(async_loop_t* loop);
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task);
 static void async_loop_restart_timer_locked(async_loop_t* loop);
@@ -135,6 +148,14 @@ static inline async_task_t* node_to_task(list_node_t* node) {
 
 static inline async_irq_t* node_to_irq(list_node_t* node) { return FROM_NODE(async_irq_t, node); }
 
+static inline list_node_t* paged_vmo_to_node(async_paged_vmo_t* paged_vmo) {
+  return TO_NODE(async_paged_vmo_t, paged_vmo);
+}
+
+static inline async_paged_vmo_t* node_to_paged_vmo(list_node_t* node) {
+  return FROM_NODE(async_paged_vmo_t, node);
+}
+
 zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop) {
   ZX_DEBUG_ASSERT(out_loop);
   ZX_DEBUG_ASSERT(config != NULL);
@@ -160,6 +181,7 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
   list_initialize(&loop->task_list);
   list_initialize(&loop->due_list);
   list_initialize(&loop->thread_list);
+  list_initialize(&loop->paged_vmo_list);
 
   zx_status_t status =
       zx_port_create(config->irq_support ? ZX_PORT_BIND_TO_INTERRUPT : 0, &loop->port);
@@ -218,6 +240,10 @@ void async_loop_shutdown(async_loop_t* loop) {
   while ((node = list_remove_head(&loop->irq_list))) {
     async_irq_t* task = node_to_irq(node);
     async_loop_dispatch_irq(loop, task, ZX_ERR_CANCELED, NULL);
+  }
+  while ((node = list_remove_head(&loop->paged_vmo_list))) {
+    async_paged_vmo_t* paged_vmo = node_to_paged_vmo(node);
+    async_loop_dispatch_paged_vmo(loop, paged_vmo, ZX_ERR_CANCELED, NULL);
   }
 
   if (loop->config.make_default_for_current_thread) {
@@ -293,6 +319,11 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
     if (packet.type == ZX_PKT_TYPE_INTERRUPT) {
       async_irq_t* irq = (void*)(uintptr_t)packet.key;
       return async_loop_dispatch_irq(loop, irq, packet.status, &packet.interrupt);
+    }
+    // Handle pager packets.
+    if (packet.type == ZX_PKT_TYPE_PAGE_REQUEST) {
+      async_paged_vmo_t* paged_vmo = (void*)(uintptr_t)packet.key;
+      return async_loop_dispatch_paged_vmo(loop, paged_vmo, packet.status, &packet.page_request);
     }
   }
 
@@ -401,6 +432,16 @@ static zx_status_t async_loop_dispatch_packet(async_loop_t* loop, async_receiver
   // Invoke the handler.  Note that it might destroy itself.
   async_loop_invoke_prologue(loop);
   receiver->handler((async_dispatcher_t*)loop, receiver, status, data);
+  async_loop_invoke_epilogue(loop);
+  return ZX_OK;
+}
+
+static zx_status_t async_loop_dispatch_paged_vmo(async_loop_t* loop, async_paged_vmo_t* paged_vmo,
+                                                 zx_status_t status,
+                                                 const zx_packet_page_request_t* page_request) {
+  // Invoke the handler.  Note that it might destroy itself.
+  async_loop_invoke_prologue(loop);
+  paged_vmo->handler((async_dispatcher_t*)loop, paged_vmo, status, page_request);
   async_loop_invoke_epilogue(loop);
   return ZX_OK;
 }
@@ -600,6 +641,42 @@ static zx_status_t async_loop_set_guest_bell_trap(async_dispatcher_t* async,
                       status == ZX_ERR_WRONG_TYPE,
                   "zx_guest_set_trap: status=%d", status);
   }
+  return status;
+}
+
+static zx_status_t async_loop_create_paged_vmo(async_dispatcher_t* async,
+                                               async_paged_vmo_t* paged_vmo, uint32_t options,
+                                               zx_handle_t pager, uint64_t vmo_size,
+                                               zx_handle_t* vmo_out) {
+  async_loop_t* loop = (async_loop_t*)async;
+  if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  zx_status_t status =
+      zx_pager_create_vmo(pager, options, loop->port, (uintptr_t)paged_vmo, vmo_size, vmo_out);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  list_add_head(&loop->paged_vmo_list, paged_vmo_to_node(paged_vmo));
+  return ZX_OK;
+}
+
+static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* async,
+                                               async_paged_vmo_t* paged_vmo) {
+  list_node_t* node = paged_vmo_to_node(paged_vmo);
+  if (!list_in_list(node)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_status_t status = zx_pager_detach_vmo(paged_vmo->pager, paged_vmo->vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // NOTE: the client owns the VMO and is responsible for freeing it.
+  list_delete(node);
   return status;
 }
 

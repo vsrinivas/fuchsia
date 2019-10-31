@@ -21,6 +21,7 @@ typedef struct async_wait async_wait_t;
 typedef struct async_task async_task_t;
 typedef struct async_receiver async_receiver_t;
 typedef struct async_irq async_irq_t;
+typedef struct async_paged_vmo async_paged_vmo_t;
 
 // Private state owned by the asynchronous dispatcher.
 // This allows the dispatcher to associate a small amount of state with pending
@@ -99,10 +100,13 @@ typedef struct async_ops {
                                        async_guest_bell_trap_t* trap, zx_handle_t guest,
                                        zx_vaddr_t addr, size_t length);
   } v1;
-
   struct v2 {
     zx_status_t (*bind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
     zx_status_t (*unbind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
+    zx_status_t (*create_paged_vmo)(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
+                                    uint32_t options, zx_handle_t pager, uint64_t vmo_size,
+                                    zx_handle_t* vmo_out);
+    zx_status_t (*detach_paged_vmo)(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo);
   } v2;
 } async_ops_t;
 

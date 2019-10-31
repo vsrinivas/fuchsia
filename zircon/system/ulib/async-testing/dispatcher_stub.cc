@@ -39,30 +39,47 @@ zx_status_t stub_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest
       ->SetGuestBellTrap(trap, *zx::unowned_guest(guest), addr, length);
 }
 
-static zx_status_t stub_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+zx_status_t stub_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
   return static_cast<DispatcherStub*>(dispatcher)->BindIrq(irq);
 }
 
-static zx_status_t stub_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+zx_status_t stub_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
   return static_cast<DispatcherStub*>(dispatcher)->UnbindIrq(irq);
 }
 
-const async_ops_t g_stub_ops = {.version = ASYNC_OPS_V2,
-                                .reserved = 0,
-                                .v1 =
-                                    {
-                                        .now = stub_now,
-                                        .begin_wait = stub_begin_wait,
-                                        .cancel_wait = stub_cancel_wait,
-                                        .post_task = stub_post_task,
-                                        .cancel_task = stub_cancel_task,
-                                        .queue_packet = stub_queue_packet,
-                                        .set_guest_bell_trap = stub_set_guest_bell_trap,
-                                    },
-                                .v2 = {
-                                    .bind_irq = stub_bind_irq,
-                                    .unbind_irq = stub_unbind_irq,
-                                }};
+zx_status_t stub_create_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
+                                  uint32_t options, zx_handle_t pager, uint64_t vmo_size,
+                                  zx_handle_t* vmo_out) {
+  return static_cast<DispatcherStub*>(dispatcher)
+      ->CreatePagedVmo(paged_vmo, pager, options, vmo_size, vmo_out);
+}
+
+zx_status_t stub_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo) {
+  return static_cast<DispatcherStub*>(dispatcher)->DetachPagedVmo(paged_vmo);
+}
+
+const async_ops_t g_stub_ops = {
+    .version = ASYNC_OPS_V2,
+    .reserved = 0,
+    .v1 =
+        {
+            .now = stub_now,
+            .begin_wait = stub_begin_wait,
+            .cancel_wait = stub_cancel_wait,
+            .post_task = stub_post_task,
+            .cancel_task = stub_cancel_task,
+            .queue_packet = stub_queue_packet,
+            .set_guest_bell_trap = stub_set_guest_bell_trap,
+        },
+    .v2 =
+        {
+
+            .bind_irq = stub_bind_irq,
+            .unbind_irq = stub_unbind_irq,
+            .create_paged_vmo = stub_create_paged_vmo,
+            .detach_paged_vmo = stub_detach_paged_vmo,
+        },
+};
 
 }  // namespace
 
@@ -92,5 +109,15 @@ zx_status_t DispatcherStub::SetGuestBellTrap(async_guest_bell_trap_t* trap, cons
 zx_status_t DispatcherStub::BindIrq(async_irq_t* irq) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t DispatcherStub::UnbindIrq(async_irq_t* irq) { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t DispatcherStub::CreatePagedVmo(async_paged_vmo_t* paged_vmo, zx_handle_t pager,
+                                           uint32_t options, uint64_t vmo_size,
+                                           zx_handle_t* vmo_out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t DispatcherStub::DetachPagedVmo(async_paged_vmo_t* paged_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 }  // namespace async

@@ -32,6 +32,9 @@ struct DispatcherStub : public async_dispatcher_t {
                                        zx_vaddr_t addr, size_t length);
   virtual zx_status_t BindIrq(async_irq_t* irq);
   virtual zx_status_t UnbindIrq(async_irq_t* irq);
+  virtual zx_status_t CreatePagedVmo(async_paged_vmo_t* paged_vmo, zx_handle_t pager,
+                                     uint32_t options, uint64_t vmo_size, zx_handle_t* vmo_out);
+  virtual zx_status_t DetachPagedVmo(async_paged_vmo_t* paged_vmo);
 };
 
 }  // namespace async

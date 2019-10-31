@@ -9,6 +9,7 @@ zx_library("async") {
   sdk_publishable = true
   sdk_headers = [
     "lib/async/dispatcher.h",
+    "lib/async/paged_vmo.h",
     "lib/async/receiver.h",
     "lib/async/task.h",
     "lib/async/time.h",
@@ -34,6 +35,7 @@ zx_library("async-cpp") {
   sdk_publishable = true
   sdk_headers = [
     "lib/async/cpp/executor.h",
+    "lib/async/cpp/paged_vmo.h",
     "lib/async/cpp/receiver.h",
     "lib/async/cpp/task.h",
     "lib/async/cpp/time.h",
@@ -53,6 +55,7 @@ zx_library("async-cpp") {
   sources = [
     "executor.cc",
     "irq.cc",
+    "paged_vmo.cc",
     "receiver.cc",
     "task.cc",
     "trap.cc",

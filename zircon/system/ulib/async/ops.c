@@ -49,3 +49,20 @@ zx_status_t async_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
   }
   return dispatcher->ops->v2.unbind_irq(dispatcher, irq);
 }
+
+zx_status_t async_create_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
+                                   uint32_t options, zx_handle_t pager, uint64_t vmo_size,
+                                   zx_handle_t* vmo_out) {
+  if (dispatcher->ops->version < ASYNC_OPS_V2) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return dispatcher->ops->v2.create_paged_vmo(dispatcher, paged_vmo, options, pager, vmo_size,
+                                              vmo_out);
+}
+
+zx_status_t async_detach_paged_vmo(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo) {
+  if (dispatcher->ops->version < ASYNC_OPS_V2) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return dispatcher->ops->v2.detach_paged_vmo(dispatcher, paged_vmo);
+}
