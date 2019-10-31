@@ -36,7 +36,7 @@ int usage(void) {
   fprintf(stderr, " -v|--verbose                  Verbose mode\n");
   fprintf(stderr,
           " -s|--fvm_data_slices SLICES   If block device is on top of a FVM,\n"
-          "                               the filesystem will have at least SLICES slices "
+          "                               the filesystem will have at least SLICES slices\n"
           "                               allocated for data.\n");
   fprintf(stderr, " values for 'filesystem' include:\n");
   for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
