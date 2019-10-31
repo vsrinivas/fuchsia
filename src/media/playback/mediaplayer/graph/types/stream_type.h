@@ -29,6 +29,7 @@ class StreamType {
   static const char kMediaEncodingUnsupported[];
 
   static const char kAudioEncodingAac[];
+  static const char kAudioEncodingAacLatm[];
   static const char kAudioEncodingAmrNb[];
   static const char kAudioEncodingAmrWb[];
   static const char kAudioEncodingAptX[];

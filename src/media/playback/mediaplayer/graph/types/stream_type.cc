@@ -15,6 +15,7 @@ namespace media_player {
 const char StreamType::kMediaEncodingUnsupported[] = "fuchsia.media.unsupported";
 
 const char StreamType::kAudioEncodingAac[] = "fuchsia.media.aac";
+const char StreamType::kAudioEncodingAacLatm[] = "fuchsia.media.aaclatm";
 const char StreamType::kAudioEncodingAmrNb[] = "fuchsia.media.amrnb";
 const char StreamType::kAudioEncodingAmrWb[] = "fuchsia.media.amrwb";
 const char StreamType::kAudioEncodingAptX[] = "fuchsia.media.aptx";

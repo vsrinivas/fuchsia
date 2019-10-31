@@ -32,7 +32,8 @@ void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
 
   AVCodec* ffmpeg_decoder = avcodec_find_decoder(av_codec_context->codec_id);
   if (ffmpeg_decoder == nullptr) {
-    FXL_LOG(ERROR) << "couldn't find decoder context";
+    FXL_LOG(ERROR) << "couldn't find decoder context "
+                   << avcodec_get_name(av_codec_context->codec_id);
     callback(nullptr);
     return;
   }

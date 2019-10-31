@@ -37,6 +37,7 @@ union MediumSpecificStreamType {
 
 /// Audio encodings.
 const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
+const string AUDIO_ENCODING_AACLATM = "fuchsia.media.aaclatm";
 const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
 const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
 const string AUDIO_ENCODING_APTX = "fuchsia.media.aptx";

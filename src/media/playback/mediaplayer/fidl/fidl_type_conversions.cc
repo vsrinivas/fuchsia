@@ -30,6 +30,8 @@ static constexpr uint32_t kYv12FourCc = make_fourcc('Y', 'V', '1', '2');
 
 bool KnownEncodingsMatch() {
   return !strcmp(media_player::StreamType::kAudioEncodingAac, fuchsia::media::AUDIO_ENCODING_AAC) &&
+         !strcmp(media_player::StreamType::kAudioEncodingAacLatm,
+                 fuchsia::media::AUDIO_ENCODING_AACLATM) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrNb,
                  fuchsia::media::AUDIO_ENCODING_AMRNB) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrWb,

@@ -171,6 +171,8 @@ const char* EncodingFromCodecId(AVCodecID from) {
   switch (from) {
     case AV_CODEC_ID_AAC:
       return StreamType::kAudioEncodingAac;
+    case AV_CODEC_ID_AAC_LATM:
+      return StreamType::kAudioEncodingAacLatm;
     case AV_CODEC_ID_AMR_NB:
       return StreamType::kAudioEncodingAmrNb;
     case AV_CODEC_ID_AMR_WB:
@@ -206,7 +208,7 @@ const char* EncodingFromCodecId(AVCodecID from) {
     case AV_CODEC_ID_VP9:
       return StreamType::kVideoEncodingVp9;
     default:
-      FXL_LOG(WARNING) << "unsupported codec_id " << from;
+      FXL_LOG(WARNING) << "unsupported codec_id " << avcodec_get_name(from);
       return StreamType::kMediaEncodingUnsupported;
   }
 }
@@ -384,6 +386,8 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAac) {
     codec_id = AV_CODEC_ID_AAC;
+  } else if (stream_type.encoding() == StreamType::kAudioEncodingAacLatm) {
+    codec_id = AV_CODEC_ID_AAC_LATM;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAmrNb) {
     codec_id = AV_CODEC_ID_AMR_NB;
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAmrWb) {
