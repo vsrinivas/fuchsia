@@ -393,8 +393,7 @@ bool VulkanTest::Exec(
   }
   if (allocation_status != ZX_OK) {
     if (use_protected_memory_) {
-      DLOG("Protected memory may not be availabe, skipping\n");
-      return true;
+      return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
     }
     return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
   }
@@ -640,10 +639,6 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
     return DRETF(false, "WaitForBuffersAllocated failed: %d", status);
   }
   if (allocation_status != ZX_OK) {
-    if (use_protected_memory_) {
-      DLOG("Protected memory may not be available, skipping\n");
-      return true;
-    }
     return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
   }
   status = sysmem_collection->Close();
@@ -806,10 +801,7 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
   VulkanTest test;
   test.set_use_protected_memory(true);
   ASSERT_TRUE(test.Initialize());
-  if (!test.device_supports_protected_memory()) {
-    DLOG("No protected memory support, skipping test");
-    return;
-  }
+  ASSERT_TRUE(test.device_supports_protected_memory());
   ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), false));
 }
 
@@ -817,10 +809,7 @@ TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
   VulkanTest test;
   test.set_use_protected_memory(true);
   ASSERT_TRUE(test.Initialize());
-  if (!test.device_supports_protected_memory()) {
-    DLOG("No protected memory support, skipping test");
-    return;
-  }
+  ASSERT_TRUE(test.device_supports_protected_memory());
   ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, true, GetParam(), true));
 }
 
@@ -842,10 +831,7 @@ TEST(VulkanExtensionTest, BufferCollectionProtectedBuffer) {
   VulkanTest test;
   test.set_use_protected_memory(true);
   ASSERT_TRUE(test.Initialize());
-  if (!test.device_supports_protected_memory()) {
-    DLOG("No protected memory support, skipping test");
-    return;
-  }
+  ASSERT_TRUE(test.device_supports_protected_memory());
   ASSERT_TRUE(test.ExecBuffer(16384));
 }
 
