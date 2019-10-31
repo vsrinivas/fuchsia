@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//src/graphics/lib/compute/gn/build_settings.gni")
+
+# Raw Spinel Rust bindings that offer little more than just access to Spinel's
+# C types.
+rustc_library("spinel-rs-sys") {
+  name = "spinel-rs-sys"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:vk-sys",
+  ]
+  non_rust_deps = [
+    # We want to depend on the Spinel headers to trigger the hash check.
+    "//src/graphics/lib/compute/spinel:spinel_headers",
+  ]
+
+  # Check whether Spinel header files have changed. If so, the
+  # spinel.c-api files needs to be updated:
+  #
+  #   $ ../scripts/hash_dir.py ../spinel/include > spinel.c-api
+  #
+  # This change will then need to be approved by one of the OWNERS in
+  # of this library.
+  exec_script(
+    "${graphics_compute_dir}/scripts/hash_dir.py",
+    [
+      rebase_path("${graphics_compute_dir}/spinel/include"),
+      "--compare",
+      rebase_path("spinel.c-api"),
+    ]
+  )
+}
+
+unittest_package("spinel-rs-sys-tests") {
+  deps = [
+    ":spinel-rs-sys_test",
+  ]
+  tests = [
+    {
+      name = "spinel_rs_sys_lib_test"
+    },
+  ]
+}

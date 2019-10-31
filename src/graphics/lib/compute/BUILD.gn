@@ -16,6 +16,7 @@ group("compute") {
     "spinel",
     "spinel-mold",
     "spinel-rs",
+    "spinel-rs-sys",
     "spinel/platforms/vk",
     "tests/vk/vk_subgroup_info",  # TODO: Not a test, move to tools/
   ]
@@ -48,6 +49,7 @@ group("tests") {
     "mold:mold-tests",
     "spinel-mold:spinel-mold-tests",
     "spinel-rs:spinel-rs-tests",
+    "spinel-rs-sys:spinel-rs-sys-tests",
   ]
 
   # NOTE: All dependencies here are run in continuous integration, but our
