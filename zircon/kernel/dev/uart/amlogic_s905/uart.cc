@@ -113,7 +113,11 @@ static interrupt_eoi uart_irq(void* arg) {
   /* read interrupt status and mask */
   while ((UARTREG(base, S905_UART_STATUS) & S905_UART_STATUS_RXCOUNT_MASK) > 0) {
     if (cbuf_space_avail(&uart_rx_buf) == 0) {
-      break;
+      // Drop the data if our buffer is full
+      // NOTE: This breaks flow control, but allows
+      // serial to work when disconnecting/reconnecting the cable.
+      __UNUSED char c = static_cast<char>(UARTREG(base, S905_UART_RFIFO));
+      continue;
     }
     char c = static_cast<char>(UARTREG(base, S905_UART_RFIFO));
     cbuf_write_char(&uart_rx_buf, c);
