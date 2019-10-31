@@ -302,7 +302,8 @@ fn basic_double() -> Trial {
     Trial {
         name: "Basic Double".into(),
         steps: vec![Step::new(vec![
-            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::DoubleT(1.0)),
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint",
+                                     value: Number::DoubleT(1.0)),
             set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
             subtract_number!(id: 5, value: Number::DoubleT(std::f64::MIN/10_f64)),
             set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
@@ -312,12 +313,19 @@ fn basic_double() -> Trial {
     }
 }
 
+fn array_indexes_to_test() -> Vec<u64> {
+    let mut ret: Vec<u64> = (0..200).collect();
+    ret.push(1000);
+    ret.push(10000);
+    ret.push(std::u64::MAX);
+    ret
+}
+
 fn basic_int_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 5, name: "int", slots: 5,
                                        type: NumberType::Int)];
-    // TODO(cphoenix): Once the fix lands, test lots of values.
-    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
-        actions.push(array_add!(id: 5, index: *index, value: Number::IntT(7 + *index as i64)));
+    for index in array_indexes_to_test().iter() {
+        actions.push(array_add!(id: 5, index: *index, value: Number::IntT(7)));
         actions.push(array_subtract!(id: 5, index: *index, value: Number::IntT(3)));
         actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
     }
@@ -328,8 +336,8 @@ fn basic_int_array() -> Trial {
 fn basic_uint_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 6, name: "uint", slots: 5,
                                        type: NumberType::Uint)];
-    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
-        actions.push(array_add!(id: 6, index: *index, value: Number::UintT(11 + *index as u64)));
+    for index in array_indexes_to_test().iter() {
+        actions.push(array_add!(id: 6, index: *index, value: Number::UintT(11)));
         actions.push(array_subtract!(id: 6, index: *index, value: Number::UintT(3)));
         actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
     }
@@ -340,8 +348,8 @@ fn basic_uint_array() -> Trial {
 fn basic_double_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 4, name: "float", slots: 5,
                                        type: NumberType::Double)];
-    for index in [0u64, 2, 4, 5, 6, 12, 120, 12000].iter() {
-        actions.push(array_add!(id: 4, index: *index, value: Number::DoubleT(2.0 + *index as f64)));
+    for index in array_indexes_to_test().iter() {
+        actions.push(array_add!(id: 4, index: *index, value: Number::DoubleT(2.0)));
         actions.push(array_subtract!(id: 4, index: *index, value: Number::DoubleT(3.5)));
         actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));
     }
@@ -413,7 +421,6 @@ fn double_histogram_ops_trial() -> Trial {
                                 floor: std::f64::consts::PI, initial_step: 2.0,
                                 step_multiplier: 4.0, buckets: 3, type: DoubleT),
     ];
-    // TODO(cphoenix): What about NAN and +/- INFINITY?
     for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
         push_ops(&mut actions, *value);
     }
