@@ -377,7 +377,7 @@ mod tests {
                 enabled: true,
                 name: "loopback".to_string(),
                 id: hal::PortId::from(1),
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             }),
             PortType::Loopback
         );
@@ -387,7 +387,7 @@ mod tests {
                 enabled: true,
                 name: "ethernet/eth0".to_string(),
                 id: hal::PortId::from(1),
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             }),
             PortType::Ethernet
         );
@@ -397,7 +397,7 @@ mod tests {
                 enabled: true,
                 name: "ethernet/wlan".to_string(),
                 id: hal::PortId::from(1),
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             }),
             PortType::WiFi
         );
@@ -407,7 +407,7 @@ mod tests {
                 enabled: true,
                 name: "br0".to_string(),
                 id: hal::PortId::from(1),
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             }),
             PortType::SVI
         );
@@ -550,7 +550,7 @@ mod tests {
                 name: "ifname".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             None,
         );
@@ -563,7 +563,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             None,
         );
@@ -587,7 +587,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             None,
         );
@@ -616,7 +616,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             None,
         );
@@ -645,7 +645,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
                 gateway: Some("2.2.3.1".parse().unwrap()),
@@ -682,7 +682,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
                 gateway: Some("1.2.3.1".parse().unwrap()),
@@ -719,7 +719,7 @@ mod tests {
                 name: "ethernet/eth0".to_string(),
                 addr: None,
                 enabled: false,
-                dhcp_client_enabled: None,
+                dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
                 gateway: Some("fe80::2aad:3fe0:7436:5677".parse().unwrap()),

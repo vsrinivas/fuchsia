@@ -169,7 +169,7 @@ impl DeviceState {
 
     /// Update internal state with information about an LIF that was added externally.
     fn notify_lif_added(&mut self, iface: hal::Interface) -> error::Result<()> {
-        if iface.addr.is_none() {
+        if !iface.get_address().is_some() {
             return Ok(());
         }
         let port = iface.id;
@@ -182,9 +182,9 @@ impl DeviceState {
             vec![iface.id],
             0, // vlan
             Some(lifmgr::LIFProperties {
-                address: iface.addr,
+                dhcp: iface.dhcp_client_enabled,
+                address: iface.get_address(),
                 enabled: true,
-                ..Default::default()
             }),
         )
         .or_else(|e| {
@@ -194,7 +194,11 @@ impl DeviceState {
         self.lif_manager.add_lif(&l).or_else(|e| {
             self.port_manager.release_port(port);
             Err(e)
-        })
+        })?;
+        // TODO(guzt): This should ideally compare metrics or be manually settable when there are
+        // multiple WAN ports.
+        iface.get_address().map(|addr| self.service_manager.set_global_ip_nat(addr, port));
+        Ok(())
     }
 
     /// Populate state based on lower layers.
@@ -787,10 +791,16 @@ mod tests {
         assert_eq!(d.lif_manager.all_lifs().count(), 0);
     }
 
-    fn net_interface(port: u32, addr: [u8; 4]) -> netstack::NetInterface {
+    fn net_interface_with_flags(
+        port: u32,
+        addr: [u8; 4],
+        dhcp: bool,
+        enabled: bool,
+    ) -> netstack::NetInterface {
         netstack::NetInterface {
             id: port,
-            flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+            flags: if enabled { netstack::NET_INTERFACE_FLAG_UP } else { 0 }
+                | if dhcp { netstack::NET_INTERFACE_FLAG_DHCP } else { 0 },
             features: 0,
             configuration: 0,
             name: port.to_string(),
@@ -802,8 +812,11 @@ mod tests {
         }
     }
 
+    fn net_interface(port: u32, addr: [u8; 4]) -> netstack::NetInterface {
+        net_interface_with_flags(port, addr, true, true)
+    }
+
     #[fuchsia_async::run_until_stalled(test)]
-    #[ignore]
     async fn test_update_state_for_netstack_event() {
         let mut device_state = DeviceState::new(
             hal::NetCfg::new().unwrap(),
@@ -832,23 +845,28 @@ mod tests {
             .await
             .is_ok());
         // Port 5 should now be marked used.
-        assert!(!device_state.port_manager.port_available(&hal::PortId::from(5)).unwrap());
+        assert!(
+            !device_state.port_manager.port_available(&hal::PortId::from(5)).unwrap(),
+            "lif at port {:?}: {:?}",
+            5,
+            device_state.lif_manager.lif_at_port(5.into())
+        );
         // Assert that network manager now knows about this new interface.
         {
             let lifs: Vec<&lifmgr::LIF> = device_state.lifs(LIFType::WAN).collect();
             assert_eq!(lifs.len(), 1);
             assert_eq!(lifs[0].pid().to_u64(), 5);
+            // Also make sure that it is set as the NAT global IP.
             assert_eq!(
-                lifs[0].properties().address.as_ref().unwrap().address,
-                IpAddr::from([1, 2, 3, 4])
+                device_state.service_manager.get_nat_config().global_ip,
+                Some(LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 })
             );
         }
 
-        // Netstack informs network manager of update to interface at port 5 and a new interface
-        // at port 4.
+        // Netstack informs network manager of a new interface at port 4.
         assert!(device_state
             .update_state_for_netstack_event(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [2, 3, 4, 5]), net_interface(4, [3, 4, 5, 6])],
+                interfaces: vec![net_interface(4, [3, 4, 5, 6])],
             },)
             .await
             .is_ok());
@@ -856,17 +874,8 @@ mod tests {
         // interface.
         {
             let lifs: Vec<&lifmgr::LIF> = device_state.lifs(LIFType::WAN).collect();
-            assert_eq!(lifs.len(), 2);
-            let lif5 = lifs.iter().find(|lif| lif.pid().to_u64() == 5).unwrap();
-            assert_eq!(
-                lif5.properties().address.as_ref().unwrap().address,
-                IpAddr::from([2, 3, 4, 5])
-            );
-            let lif4 = lifs.iter().find(|lif| lif.pid().to_u64() == 4).unwrap();
-            assert_eq!(
-                lif4.properties().address.as_ref().unwrap().address,
-                IpAddr::from([3, 4, 5, 6])
-            );
+            lifs.iter().find(|lif| lif.pid().to_u64() == 5).unwrap();
+            lifs.iter().find(|lif| lif.pid().to_u64() == 4).unwrap();
         }
     }
 
@@ -883,7 +892,10 @@ mod tests {
         });
         assert!(device_state
             .update_state_for_netstack_event(netstack::NetstackEvent::OnInterfacesChanged {
-                interfaces: vec![net_interface(5, [0, 0, 0, 0])],
+                interfaces: vec![
+                    net_interface_with_flags(5, [0, 0, 0, 0], false, true),
+                    net_interface_with_flags(5, [0, 0, 0, 0], true, false),
+                ],
             },)
             .await
             .is_ok());

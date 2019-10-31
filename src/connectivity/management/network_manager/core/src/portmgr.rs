@@ -93,7 +93,8 @@ impl PortManager {
         false
     }
 
-    /// Checks if the port is currently in use by a valid interface.
+    /// Checks if the port is currently in use by a valid interface. Returns None if no such port
+    /// exists.
     #[cfg(test)]
     pub fn port_available(&self, port: &PortId) -> Option<bool> {
         self.ports

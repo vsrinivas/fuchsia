@@ -127,12 +127,31 @@ pub struct Port {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum InterfaceAddressSource {
+    Unknown,
+    Static,
+    Dhcp,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct InterfaceAddress {
+    address: LifIpAddr,
+    source: InterfaceAddressSource,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct Interface {
     pub id: PortId,
     pub name: String,
-    pub addr: Option<LifIpAddr>,
+    pub addr: Option<InterfaceAddress>,
     pub enabled: bool,
-    pub dhcp_client_enabled: Option<bool>,
+    pub dhcp_client_enabled: bool,
+}
+
+impl Interface {
+    pub fn get_address(&self) -> Option<LifIpAddr> {
+        self.addr.as_ref().map(|a| a.address.clone())
+    }
 }
 
 fn address_is_valid_unicast(addr: &IpAddr) -> bool {
@@ -159,12 +178,15 @@ impl From<&InterfaceInfo> for Interface {
                     } => address_is_valid_unicast(&IpAddr::from(*addr)),
                     _ => false,
                 })
-                .map(|addr| addr.into()),
+                .map(|addr| InterfaceAddress {
+                    address: addr.into(),
+                    source: InterfaceAddressSource::Unknown,
+                }),
             enabled: match iface.properties.administrative_status {
                 stack::AdministrativeStatus::Enabled => true,
                 stack::AdministrativeStatus::Disabled => false,
             },
-            dhcp_client_enabled: None,
+            dhcp_client_enabled: false,
         }
     }
 }
@@ -179,20 +201,24 @@ fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
 
 impl From<netstack::NetInterface> for Interface {
     fn from(iface: netstack::NetInterface) -> Self {
-        let addr = if iface.flags & netstack::NET_INTERFACE_FLAG_DHCP != 0 {
-            None
-        } else {
-            valid_unicast_address_or_none(LifIpAddr {
-                address: to_ip_addr(iface.addr),
-                prefix: subnet_mask_to_prefix_length(iface.netmask),
-            })
-        };
+        let dhcp = iface.flags & netstack::NET_INTERFACE_FLAG_DHCP != 0;
+        let addr = valid_unicast_address_or_none(LifIpAddr {
+            address: to_ip_addr(iface.addr),
+            prefix: subnet_mask_to_prefix_length(iface.netmask),
+        });
         Interface {
             id: PortId(iface.id.into()),
             name: iface.name,
-            addr,
+            addr: addr.map(|a| InterfaceAddress {
+                address: a,
+                source: if dhcp {
+                    InterfaceAddressSource::Dhcp
+                } else {
+                    InterfaceAddressSource::Static
+                },
+            }),
             enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
-            dhcp_client_enabled: Some((iface.flags & netstack::NET_INTERFACE_FLAG_DHCP) != 0),
+            dhcp_client_enabled: dhcp,
         }
     }
 }
@@ -200,8 +226,8 @@ impl From<netstack::NetInterface> for Interface {
 impl Into<LIFProperties> for Interface {
     fn into(self) -> LIFProperties {
         LIFProperties {
-            dhcp: self.dhcp_client_enabled.unwrap_or_default(),
-            address: self.addr,
+            dhcp: self.dhcp_client_enabled,
+            address: self.get_address(),
             enabled: self.enabled,
         }
     }
@@ -502,9 +528,10 @@ mod tests {
         Interface {
             id: 42.into(),
             name: "test/interface/info".to_string(),
-            addr: addr,
+            addr: addr
+                .map(|a| InterfaceAddress { address: a, source: InterfaceAddressSource::Unknown }),
             enabled: true,
-            dhcp_client_enabled: None,
+            dhcp_client_enabled: false,
         }
     }
 
@@ -551,7 +578,10 @@ mod tests {
         let iface: Interface = (&info).into();
         assert_eq!(iface.name, "test/interface/info");
         assert_eq!(iface.enabled, true);
-        assert_eq!(iface.addr, Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 }));
+        assert_eq!(
+            iface.get_address(),
+            Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 })
+        );
         assert_eq!(iface.id.to_u64(), 42);
     }
 
@@ -636,9 +666,12 @@ mod tests {
             Interface {
                 id: PortId(5),
                 name: "test_if".to_string(),
-                addr: None,
+                addr: Some(InterfaceAddress {
+                    address: LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 },
+                    source: InterfaceAddressSource::Dhcp
+                }),
                 enabled: true,
-                dhcp_client_enabled: Some(true),
+                dhcp_client_enabled: true,
             }
         )
     }
