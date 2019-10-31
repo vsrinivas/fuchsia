@@ -36,6 +36,7 @@ fidl_union! {
     Field {
       ty: i32,
       offset: 4,
+      xunion_ordinal: 1868605377,
     },
   ],
   size: 8,
@@ -58,11 +59,14 @@ fidl_struct! {
   members: [
     field {
       ty: i32,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
   ],
-  size: 4,
-  align: 4,
+  size_old: 4,
+  align_old: 4,
+  size_v1: 4,
+  align_v1: 4,
 }
 
 /// table comment #1
@@ -214,7 +218,7 @@ impl futures::Stream for InterfaceEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			0x136d200d00000000 | 0x914c226136244ed => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					InterfaceEvent::OnEvent {}
 				))
@@ -353,7 +357,7 @@ impl futures::Stream for InterfaceRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x3f43684c00000000 | 0x60e700e002995ef8 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = InterfaceControlHandle {
 						inner: this.inner.clone(),
 					};

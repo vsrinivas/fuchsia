@@ -28,12 +28,15 @@ fidl_struct! {
   {{- range .Members }}
     {{ .Name }} {
       ty: {{ .Type }},
-      offset: {{ .Offset }},
+      offset_old: {{ .OffsetOld }},
+      offset_v1: {{ .OffsetV1 }},
     },
   {{- end }}
   ],
-  size: {{ .Size }},
-  align: {{ .Alignment }},
+  size_old: {{ .SizeOld }},
+  align_old: {{ .AlignmentOld }},
+  size_v1: {{ .SizeV1 }},
+  align_v1: {{ .AlignmentV1 }},
 }
 {{- else }}
 

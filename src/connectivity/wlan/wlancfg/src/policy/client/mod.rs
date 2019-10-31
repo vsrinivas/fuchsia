@@ -838,10 +838,11 @@ mod tests {
 
         // Verify Epitaph was received.
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder, EpitaphBody};
-        let (_, tail): (_, &[u8]) =
+        let (header, tail) =
             decode_transaction_header(buffer.bytes()).expect("failed decoding header");
         let mut msg = Decodable::new_empty();
-        Decoder::decode_into::<EpitaphBody>(tail, &mut [], &mut msg).expect("failed decoding body");
+        Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
+            .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
         assert!(chan.is_closed());
     }

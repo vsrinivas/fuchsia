@@ -49,12 +49,18 @@ impl Commit {
             read_buffer(buf, data)?;
             let mut serialized_commits = cloud::Commits { commits: vec![] };
 
-            fidl::encoding::Decoder::decode_into(&data, &mut [], &mut serialized_commits).map_err(
-                |err| {
-                    err.client_error(Status::ArgumentError)
-                        .with_explanation("couldn't decode commits from FIDL data")
-                },
-            )?;
+            // This is OK because ledger interfaces do not use static unions.
+            let context = fidl::encoding::Context { unions_use_xunion_format: true };
+            fidl::encoding::Decoder::decode_with_context(
+                &context,
+                &data,
+                &mut [],
+                &mut serialized_commits,
+            )
+            .map_err(|err| {
+                err.client_error(Status::ArgumentError)
+                    .with_explanation("couldn't decode commits from FIDL data")
+            })?;
             serialized_commits
                 .commits
                 .into_iter()

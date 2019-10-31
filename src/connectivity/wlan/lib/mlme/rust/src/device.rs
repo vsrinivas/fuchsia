@@ -158,9 +158,10 @@ impl FakeDevice {
             .read(&mut buf)
             .map_err(|status| Error::Status(format!("error reading MLME message"), status))?;
 
-        let (_, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
+        let (header, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
         let mut msg = Decodable::new_empty();
-        Decoder::decode_into(tail, &mut [], &mut msg).expect("error decoding MLME message");
+        Decoder::decode_into(&header, tail, &mut [], &mut msg)
+            .expect("error decoding MLME message");
         Ok(msg)
     }
 

@@ -56,19 +56,24 @@ fidl_struct! {
   members: [
     a {
       ty: i64,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     b {
       ty: i64,
-      offset: 8,
+      offset_old: 8,
+      offset_v1: 8,
     },
     c {
       ty: i64,
-      offset: 16,
+      offset_old: 16,
+      offset_v1: 16,
     },
   ],
-  size: 24,
-  align: 8,
+  size_old: 24,
+  align_old: 8,
+  size_v1: 24,
+  align_v1: 8,
 }
 
 
@@ -302,14 +307,14 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			0x697fd73200000000 | 0x42e90e9a86944b3 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					WithAndWithoutRequestResponseEvent::OnEmptyResponse {}
 				))
 			}
 			0x7a47120700000000 | 0x2a9767b3ae6c2b09 => {
 				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					WithAndWithoutRequestResponseEvent::OnWithResponse {ret: out_tuple,}
 				))
@@ -482,7 +487,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x1e03f87500000000 | 0x3931f96bc77fba8 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -491,7 +496,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				0x4df6dbd500000000 | 0x706ec7bd335005f9 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -504,7 +509,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				0x668d7f800000000 | 0x4625ad5934067a48 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -517,7 +522,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				0x19c2137100000000 | 0x46e5095902913025 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -526,7 +531,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				0x76f2397300000000 | 0x180c481d4a15967 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -539,7 +544,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				0x1973292000000000 | 0x553860267eceec0 => {
 					let mut req: (String) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithAndWithoutRequestResponseControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -1485,7 +1490,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x4f3c32be00000000 | 0x592157d505db2bcf => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithErrorSyntaxControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -1498,7 +1503,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 				}
 				0x7b58113900000000 | 0x20cf80ad7d9b60be => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithErrorSyntaxControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -1511,7 +1516,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 				}
 				0x4c95de1f00000000 | 0x3fcd36560f812e7f => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = WithErrorSyntaxControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -2112,7 +2117,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			0x1c78c20200000000 | 0x2558b206a254d8a0 => {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					ChannelProtocolEvent::EventA {a: out_tuple.0,b: out_tuple.1,}
 				))
@@ -2263,7 +2268,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x556693d200000000 | 0x1b1e059b3f02bffc => {
 					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -2272,7 +2277,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 				}
 				0xac6551b00000000 | 0x5db17a61464744a3 => {
 					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -2285,7 +2290,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 				}
 				0x4b02e28600000000 | 0x36caa6fff7569577 => {
 					let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
 						inner: this.inner.clone(),
 					};

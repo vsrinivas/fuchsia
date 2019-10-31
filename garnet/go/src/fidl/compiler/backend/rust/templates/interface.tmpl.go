@@ -261,7 +261,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 					{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					{{ $interface.Name }}Event::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Response -}}
@@ -448,7 +448,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 							{{- end -}}
 						{{- end -}}
 					) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = {{ $interface.Name }}ControlHandle {
 						inner: this.inner.clone(),
 					};

@@ -7,9 +7,15 @@
 use {
     crate::handle::{Handle, HandleBased, MessageBuf},
     crate::{Error, Result},
+    bitflags::bitflags,
     byteorder::{ByteOrder, LittleEndian},
     fuchsia_zircon_status as zx_status,
-    std::{cell::RefCell, mem, ptr, str, u32, u64},
+    std::{
+        cell::RefCell,
+        mem, ptr, str,
+        sync::atomic::{AtomicBool, Ordering},
+        u32, u64,
+    },
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -117,14 +123,25 @@ pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
 /// The current wire format magic number
 pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 
-/// Context for encoding and decoding.
-// TODO(mkember): Store a flag here to represent whether unions are encoded
-// as xunions on the wire.
-#[derive(Debug)]
-pub struct Context {}
+/// Global flag indicating whether to encode unions using the xunion format.
+/// This only exists for compatibility tests. Nothing else should change it.
+// TODO(fxb/40023) Remove this once the union-to-xunion migration is complete.
+#[doc(hidden)]
+pub static ENCODE_UNIONS_USING_XUNION_FORMAT: AtomicBool = AtomicBool::new(false);
 
-/// Context to use by default.
-const DEFAULT_CONTEXT: Context = Context {};
+/// Context for encoding and decoding.
+///
+/// WARNING: Do not construct this directly unless you know what you're doing.
+/// FIDL uses `Context` to coordinate soft migrations, so improper uses of it
+/// could result in ABI breakage.
+#[derive(Clone, Copy, Debug)]
+pub struct Context {
+    /// True if unions are encoded with the xunion format. For encoding, this is
+    /// chosen up front when creating the context. For decoding, this is set by
+    /// a flag in the transaction header. In FIDL IR, this corresponds to the
+    /// "old" format when false and the "v1" format when true.
+    pub unions_use_xunion_format: bool,
+}
 
 /// Encoding state
 #[derive(Debug)]
@@ -184,21 +201,38 @@ impl<'a> Encoder<'a> {
         handles: &'a mut Vec<Handle>,
         x: &mut T,
     ) -> Result<()> {
+        let context = Context {
+            unions_use_xunion_format: ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed),
+        };
+        Self::encode_with_context(&context, buf, handles, x)
+    }
+
+    /// FIDL2-encodes `x` into the provided data and handle buffers, using the
+    /// specified encoding context.
+    ///
+    /// WARNING: Do not call this directly unless you know what you're doing.
+    /// FIDL uses `Context` to coordinate soft migrations, so improper uses of
+    /// this function could result in ABI breakage.
+    pub fn encode_with_context<T: Encodable + ?Sized>(
+        context: &Context,
+        buf: &'a mut Vec<u8>,
+        handles: &'a mut Vec<Handle>,
+        x: &mut T,
+    ) -> Result<()> {
         fn prepare_for_encoding<'a>(
+            context: &Context,
             buf: &'a mut Vec<u8>,
             handles: &'a mut Vec<Handle>,
             ty_inline_size: usize,
-            context: Context,
         ) -> Encoder<'a> {
             let inline_size = round_up_to_align(ty_inline_size, 8);
             buf.truncate(0);
             buf.resize(inline_size, 0);
             handles.truncate(0);
-            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context }
+            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context: *context }
         }
 
-        let context = DEFAULT_CONTEXT;
-        let mut encoder = prepare_for_encoding(buf, handles, x.inline_size(&context), context);
+        let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
         x.encode(&mut encoder)
     }
 
@@ -235,7 +269,7 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// Returns the inline alignment of an object of type `Target` for this decoder.
+    /// Returns the inline alignment of an object of type `Target` for this encoder.
     pub fn inline_align_of<Target: Encodable>(&self) -> usize {
         <Target as Layout>::inline_align(&self.context)
     }
@@ -294,16 +328,38 @@ impl<'a> Encoder<'a> {
             self.handles.push(take_handle(handle));
         }
     }
+
+    /// Returns the encoder's context.
+    pub fn context(&self) -> &Context {
+        &self.context
+    }
 }
 
 impl<'a> Decoder<'a> {
-    /// FIDL2-decodes a value of type `T` from the provided data and handle buffers.
+    /// FIDL2-decodes a value of type `T` from the provided data and handle
+    /// buffers. Assumes the buffers came from inside a transaction message
+    /// wrapped by `header`.
     pub fn decode_into<T: Decodable>(
+        header: &TransactionHeader,
         buf: &'a [u8],
         handles: &'a mut [Handle],
         value: &mut T,
     ) -> Result<()> {
-        let context = DEFAULT_CONTEXT;
+        Self::decode_with_context(&header.decoding_context(), buf, handles, value)
+    }
+
+    /// FIDL2-decodes a value of type `T` from the provided data and handle
+    /// buffers, using the specified context.
+    ///
+    /// WARNING: Do not call this directly unless you know what you're doing.
+    /// FIDL uses `Context` to coordinate soft migrations, so improper uses of
+    /// this function could result in ABI breakage.
+    pub fn decode_with_context<T: Decodable>(
+        context: &Context,
+        buf: &'a [u8],
+        handles: &'a mut [Handle],
+        value: &mut T,
+    ) -> Result<()> {
         let out_of_line_offset = round_up_to_align(T::inline_size(&context), 8);
         if buf.len() < out_of_line_offset {
             return Err(Error::OutOfRange);
@@ -318,7 +374,7 @@ impl<'a> Decoder<'a> {
             out_of_line_buf,
             initial_out_of_line_buf_len: out_of_line_buf.len(),
             handles,
-            context,
+            context: *context,
         };
         value.decode(&mut decoder)?;
         if decoder.out_of_line_buf.len() != 0 {
@@ -479,6 +535,11 @@ impl<'a> Decoder<'a> {
     pub fn skip_tail_padding<Target: Decodable>(&mut self, start_pos: usize) -> Result<()> {
         debug_assert!(start_pos <= self.inline_pos());
         self.skip_padding(self.inline_size_of::<Target>() - (self.inline_pos() - start_pos))
+    }
+
+    /// Returns the decoder's context.
+    pub fn context(&self) -> &Context {
+        &self.context
     }
 }
 
@@ -1555,19 +1616,30 @@ macro_rules! fidl_struct {
         members: [$(
             $member_name:ident {
                 ty: $member_ty:ty,
-                offset: $member_offset:expr,
+                offset_old: $member_offset_old:expr,
+                offset_v1: $member_offset_v1:expr,
             },
         )*],
-        size: $size:expr,
-        align: $align:expr,
+        size_old: $size_old:expr,
+        align_old: $align_old:expr,
+        size_v1: $size_v1:expr,
+        align_v1: $align_v1:expr,
     ) => {
         impl $crate::encoding::Layout for $name {
-            fn inline_align(_context: &$crate::encoding::Context) -> usize {
-                $align
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    $align_v1
+                } else {
+                    $align_old
+                }
             }
 
-            fn inline_size(_context: &$crate::encoding::Context) -> usize {
-                $size
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    $size_v1
+                } else {
+                    $size_old
+                }
             }
         }
 
@@ -1577,13 +1649,18 @@ macro_rules! fidl_struct {
                     let mut cur_offset = 0;
                     $(
                         // Skip to the start of the next field
-                        encoder.padding($member_offset - cur_offset)?;
-                        cur_offset = $member_offset;
+                        let member_offset = if encoder.context().unions_use_xunion_format {
+                            $member_offset_v1
+                        } else {
+                            $member_offset_old
+                        };
+                        encoder.padding(member_offset - cur_offset)?;
+                        cur_offset = member_offset;
                         $crate::fidl_encode!(&mut self.$member_name, encoder)?;
                         cur_offset += encoder.inline_size_of::<$member_ty>();
                     )*
                     // Skip to the end of the struct's size
-                    encoder.padding($size - cur_offset)?;
+                    encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -1604,14 +1681,19 @@ macro_rules! fidl_struct {
                     $(
                         // Skip to the start of the next field
                         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                        decoder.next_slice($member_offset - cur_offset)?;
-                        cur_offset = $member_offset;
+                        let member_offset = if decoder.context().unions_use_xunion_format {
+                            $member_offset_v1
+                        } else {
+                            $member_offset_old
+                        };
+                        decoder.next_slice(member_offset - cur_offset)?;
+                        cur_offset = member_offset;
                         $crate::fidl_decode!(&mut self.$member_name, decoder)?;
                         cur_offset += decoder.inline_size_of::<$member_ty>();
                     )*
                     // Skip to the end of the struct's size
                     // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                    decoder.next_slice($size - cur_offset)?;
+                    decoder.next_slice(decoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -1866,16 +1948,100 @@ macro_rules! fidl_table {
 
 // Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
 // tag field will always be same size as E in the case of results
-fn result_align<O: Layout>(context: &Context) -> usize {
+fn union_result_align<O: Layout>(context: &Context) -> usize {
     std::cmp::max(O::inline_align(context), <u32 as Layout>::inline_align(context))
 }
 
-fn result_field_offset<O: Layout>(context: &Context) -> usize {
-    round_up_to_align(<u32 as Layout>::inline_size(context), result_align::<O>(context))
+fn union_result_field_offset<O: Layout>(context: &Context) -> usize {
+    round_up_to_align(<u32 as Layout>::inline_size(context), union_result_align::<O>(context))
 }
 
-fn result_field_padding<O: Layout>(context: &Context) -> usize {
-    result_field_offset::<O>(context) - <u32 as Layout>::inline_size(context)
+fn union_result_field_padding<O: Layout>(context: &Context) -> usize {
+    union_result_field_offset::<O>(context) - <u32 as Layout>::inline_size(context)
+}
+
+// Size of union is the size of the tag field plus the size of the largest
+// option including padding necessary to satisfy its alignment requirements.
+fn union_result_inline_size<O: Layout>(context: &Context) -> usize {
+    <u32 as Layout>::inline_size(context)
+        + union_result_field_padding::<O>(context)
+        + std::cmp::max(O::inline_size(context), <u32 as Layout>::inline_size(context))
+}
+
+/// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
+pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u32, u32, u32)> {
+    let mut ordinal: u32 = 0;
+    ordinal.decode(decoder)?;
+
+    let mut _reserved: u32 = 0;
+    _reserved.decode(decoder)?;
+
+    let mut num_bytes: u32 = 0;
+    num_bytes.decode(decoder)?;
+
+    let mut num_handles: u32 = 0;
+    num_handles.decode(decoder)?;
+
+    let mut present: u64 = 0;
+    present.decode(decoder)?;
+    if present != ALLOC_PRESENT_U64 {
+        return Err(Error::Invalid);
+    }
+
+    Ok((ordinal, num_bytes, num_handles))
+}
+
+/// Decodes a `Result` type from xunion bytes.
+/// Assumes Ok and Err use ordinals 1 and 2, respectively.
+fn decode_result_from_xunion<O, E>(
+    result: &mut std::result::Result<O, E>,
+    decoder: &mut Decoder,
+) -> Result<()>
+where
+    O: Decodable,
+    E: Decodable,
+{
+    let (ordinal, _, _) = decode_xunion_inline_portion(decoder)?;
+    let member_inline_size = match ordinal {
+        1 => decoder.inline_size_of::<O>(),
+        2 => decoder.inline_size_of::<E>(),
+        _ => return Err(Error::UnknownUnionTag),
+    };
+    decoder.read_out_of_line(member_inline_size, |decoder| {
+        decoder.recurse(|decoder| {
+            match ordinal {
+                1 => {
+                    if let Ok(_) = result {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *result = Ok(fidl_new_empty!(O));
+                    }
+                    if let Ok(val) = result {
+                        val.decode(decoder)?;
+                    } else {
+                        unreachable!()
+                    }
+                }
+                2 => {
+                    if let Err(_) = result {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *result = Err(fidl_new_empty!(E));
+                    }
+                    if let Err(val) = result {
+                        val.decode(decoder)?;
+                    } else {
+                        unreachable!()
+                    }
+                }
+                // Should be unreachable, since we already checked above.
+                ordinal => panic!("unexpected ordinal {:?}", ordinal),
+            }
+            Ok(())
+        })
+    })
 }
 
 impl<O, E> Layout for std::result::Result<O, E>
@@ -1884,15 +2050,19 @@ where
     E: Layout,
 {
     fn inline_align(context: &Context) -> usize {
-        result_align::<O>(context)
+        if context.unions_use_xunion_format {
+            8
+        } else {
+            union_result_align::<O>(context)
+        }
     }
 
     fn inline_size(context: &Context) -> usize {
-        // Size of union is the size of the tag field plus the size of the largest
-        // option including padding necessary to satisfy its alignment requirements.
-        <u32 as Layout>::inline_size(context)
-            + result_field_padding::<O>(context)
-            + std::cmp::max(O::inline_size(context), <u32 as Layout>::inline_size(context))
+        if context.unions_use_xunion_format {
+            24
+        } else {
+            union_result_inline_size::<O>(context)
+        }
     }
 }
 
@@ -1902,6 +2072,26 @@ where
     E: Decodable + Encodable,
 {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        if encoder.context.unions_use_xunion_format {
+            match self {
+                Ok(val) => {
+                    // Encode success ordinal
+                    1u32.encode(encoder)?;
+                    // Padding
+                    0u32.encode(encoder)?;
+                    encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))?;
+                }
+                Err(val) => {
+                    // Encode error ordinal
+                    2u32.encode(encoder)?;
+                    // Padding
+                    0u32.encode(encoder)?;
+                    encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))?;
+                }
+            }
+            return Ok(());
+        }
+
         let start_pos = encoder.offset;
 
         match self {
@@ -1910,7 +2100,7 @@ where
                 0u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(result_field_padding::<O>(&encoder.context))?;
+                encoder.next_slice(union_result_field_padding::<O>(&encoder.context))?;
 
                 // Encode success value
                 val.encode(encoder)?;
@@ -1924,7 +2114,7 @@ where
                 1u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(result_field_padding::<O>(&encoder.context))?;
+                encoder.next_slice(union_result_field_padding::<O>(&encoder.context))?;
 
                 // Encode Error value
                 val.encode(encoder)?;
@@ -1948,12 +2138,16 @@ where
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        if decoder.context().unions_use_xunion_format {
+            return decode_result_from_xunion(self, decoder);
+        }
+
         let start_pos = decoder.inline_pos();
 
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-        decoder.next_slice(result_field_padding::<O>(&decoder.context))?;
+        decoder.next_slice(union_result_field_padding::<O>(&decoder.context))?;
 
         match tag {
             0 => {
@@ -2007,6 +2201,7 @@ macro_rules! fidl_union {
             $member_name:ident {
                 ty: $member_ty:ty,
                 offset: $member_offset:expr,
+                xunion_ordinal: $member_xunion_ordinal:expr,
             },
         )*],
         size: $size:expr,
@@ -2020,9 +2215,8 @@ macro_rules! fidl_union {
         }
 
         impl $name {
-            #[allow(irrefutable_let_patterns)]
+            #[allow(irrefutable_let_patterns, unused)]
             fn member_index(&self) -> u32 {
-                #![allow(unused)]
                 let mut index = 0;
                 $(
                     if let $name::$member_name(_) = self {
@@ -2032,15 +2226,89 @@ macro_rules! fidl_union {
                 )*
                 panic!("unreachable union member")
             }
+
+            fn ordinal(&self) -> u32 {
+                match self {
+                    $(
+                        $name::$member_name(_) => $member_xunion_ordinal,
+                    )*
+                }
+            }
+
+            fn decode_from_xunion(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                #![allow(irrefutable_let_patterns)]
+                let (ordinal, _, _) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
+                let member_inline_size = match ordinal {
+                    $(
+                        $member_xunion_ordinal => decoder.inline_size_of::<$member_ty>(),
+                    )*
+                    _ => return Err($crate::Error::UnknownUnionTag),
+                };
+                decoder.read_out_of_line(member_inline_size, |decoder| {
+                    decoder.recurse(|decoder| {
+                        match ordinal {
+                            $(
+                                $member_xunion_ordinal => {
+                                    if let $name::$member_name(_) = self {
+                                        // Do nothing, read the value into the object
+                                    } else {
+                                        // Initialize `self` to the right variant
+                                        *self = $name::$member_name(
+                                            $crate::fidl_new_empty!($member_ty)
+                                        );
+                                    }
+                                    if let $name::$member_name(val) = self {
+                                        $crate::fidl_decode!(val, decoder)?;
+                                    } else {
+                                        unreachable!()
+                                    }
+                                }
+                            )*
+                            // Should be unreachable, since we already checked above.
+                            ordinal => panic!("unexpected ordinal {:?}", ordinal)
+                        }
+                        Ok(())
+                    })
+                })
+            }
         }
 
         impl $crate::encoding::Layout for $name {
-            fn inline_align(_context: &$crate::encoding::Context) -> usize { $align }
-            fn inline_size(_context: &$crate::encoding::Context) -> usize { $size }
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    8
+                } else {
+                    $align
+                }
+            }
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    24
+                } else {
+                    $size
+                }
+            }
         }
 
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                if encoder.context().unions_use_xunion_format {
+                    let mut ordinal = self.ordinal();
+                    // Encode tag
+                    $crate::fidl_encode!(&mut ordinal, encoder)?;
+                    // Reserved
+                    $crate::fidl_encode!(&mut 0u32, encoder)?;
+                    encoder.recurse(|encoder| {
+                        match self {
+                            $(
+                                $name::$member_name ( val ) =>
+                                    $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
+                            )*
+                        }
+                    })?;
+                    return Ok(());
+                }
+
                 let mut member_index = self.member_index();
                 // Encode tag
                 $crate::fidl_encode!(&mut member_index, encoder)?;
@@ -2074,6 +2342,10 @@ macro_rules! fidl_union {
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 #![allow(unused)]
+                if decoder.context().unions_use_xunion_format {
+                    return self.decode_from_xunion(decoder);
+                }
+
                 let mut tag: u32 = 0;
                 $crate::fidl_decode!(&mut tag, decoder)?;
                 decoder.recurse(|decoder| {
@@ -2205,27 +2477,9 @@ macro_rules! fidl_xunion {
                 )?
             }
 
-            #[allow(irrefutable_let_patterns)]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
-                #![allow(unused)]
-                let mut ordinal: u32 = 0;
-                $crate::fidl_decode!(&mut ordinal, decoder)?;
-
-                let mut _reserved: u32 = 0;
-                $crate::fidl_decode!(&mut _reserved, decoder)?;
-
-                let mut num_bytes: u32 = 0;
-                $crate::fidl_decode!(&mut num_bytes, decoder)?;
-
-                let mut num_handles: u32 = 0;
-                $crate::fidl_decode!(&mut num_handles, decoder)?;
-
-                let mut present: u64 = 0;
-                $crate::fidl_decode!(&mut present, decoder)?;
-                if present != $crate::encoding::ALLOC_PRESENT_U64 {
-                    return Err($crate::Error::Invalid);
-                }
-
+                #![allow(irrefutable_let_patterns, unused)]
+                let (ordinal, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
                 let member_inline_size = match ordinal {
                     $(
                         $member_ordinal => decoder.inline_size_of::<$member_ty>(),
@@ -2331,23 +2585,60 @@ fidl_struct! {
     members: [
         tx_id {
             ty: u32,
-            offset: 0,
+            offset_old: 0,
+            offset_v1: 0,
         },
         flags {
             ty: [u8; 3],
-            offset: 4,
+            offset_old: 4,
+            offset_v1: 4,
         },
         magic_number {
             ty: u8,
-            offset: 7,
+            offset_old: 7,
+            offset_v1: 7,
         },
         ordinal {
             ty: u64,
-            offset: 8, // Save 64 bits for id, even though it's only 32 bits
+            offset_old: 8, // Save 64 bits for id, even though it's only 32 bits
+            offset_v1: 8,
         },
     ],
-    size: 16,
-    align: 8,
+    size_old: 16,
+    align_old: 8,
+    size_v1: 16,
+    align_v1: 8,
+}
+
+bitflags! {
+    /// Bitflags type for transaction header flags.
+    pub struct HeaderFlags: u32 {
+        /// Indicates that unions in the transaction message body are encoded
+        /// using the xunion format.
+        const UNIONS_USE_XUNION_FORMAT = 1 << 0;
+    }
+}
+
+impl TransactionHeader {
+    /// Returns the header's flags as a `HeaderFlags` value.
+    ///
+    /// The result will only contain bits listed in the `HeaderFlags`
+    /// definition. Thus, `header.set_flags(header.flags())` is not a no-op.
+    pub fn flags(&self) -> HeaderFlags {
+        HeaderFlags::from_bits_truncate(LittleEndian::read_u24(&self.flags))
+    }
+
+    /// Sets the header's flags from a `HeaderFlags` value.
+    pub fn set_flags(&mut self, flags: HeaderFlags) {
+        LittleEndian::write_u24(&mut self.flags, flags.bits);
+    }
+
+    /// Returns the context to use for decoding the message body associated with this header.
+    pub fn decoding_context(&self) -> Context {
+        Context {
+            unions_use_xunion_format: self.flags().contains(HeaderFlags::UNIONS_USE_XUNION_FORMAT),
+        }
+    }
 }
 
 /// Transactional FIDL message
@@ -2381,22 +2672,25 @@ impl<T: Decodable> Decodable for TransactionMessage<'_, T> {
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         self.header.decode(decoder)?;
+        decoder.context = self.header.decoding_context();
         (*self.body).decode(decoder)?;
         Ok(())
     }
 }
 
-/// Decode the transaction header from a message.
+/// Decodes the transaction header from a message.
 /// Returns the header and a reference to the tail of the message.
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
-    let header_len = <TransactionHeader as Layout>::inline_size(&DEFAULT_CONTEXT);
+    // The header doesn't contain unions, so the context flag doesn't matter.
+    let context = Context { unions_use_xunion_format: false };
+    let header_len = <TransactionHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
     }
     let (header_bytes, body_bytes) = bytes.split_at(header_len);
     let handles = &mut [];
-    Decoder::decode_into(header_bytes, handles, &mut header)?;
+    Decoder::decode_with_context(&context, header_bytes, handles, &mut header)?;
     Ok((header, body_bytes))
 }
 
@@ -2566,31 +2860,36 @@ mod test {
     use super::*;
     use std::{f32, f64, fmt, i64, u64};
 
+    pub const CONTEXTS: &[&Context] = &[
+        &Context { unions_use_xunion_format: false },
+        &Context { unions_use_xunion_format: true },
+    ];
+
     macro_rules! inline_size {
-        ($type:ty) => {
-            <$type as Layout>::inline_size(&DEFAULT_CONTEXT)
+        ($type:ty, $context:expr) => {
+            <$type as Layout>::inline_size($context)
         };
     }
 
     macro_rules! inline_align {
-        ($type:ty) => {
-            <$type as Layout>::inline_align(&DEFAULT_CONTEXT)
+        ($type:ty, $context:expr) => {
+            <$type as Layout>::inline_align($context)
         };
     }
 
-    pub fn encode_decode<T: Encodable + Decodable>(start: &mut T) -> T {
+    pub fn encode_decode<T: Encodable + Decodable>(ctx: &Context, start: &mut T) -> T {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, start).expect("Encoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, start).expect("Encoding failed");
         let mut out = T::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         out
     }
 
-    fn encode_assert_bytes<T: Encodable>(mut data: T, encoded_bytes: &[u8]) {
+    fn encode_assert_bytes<T: Encodable>(ctx: &Context, mut data: T, encoded_bytes: &[u8]) {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut data).expect("Encoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut data).expect("Encoding failed");
         assert_eq!(&**buf, encoded_bytes);
     }
 
@@ -2598,7 +2897,9 @@ mod test {
     where
         T: Encodable + Decodable + PartialEq + fmt::Debug,
     {
-        assert_eq!(cloned, encode_decode(&mut x));
+        for ctx in CONTEXTS {
+            assert_eq!(cloned, encode_decode(ctx, &mut x));
+        }
     }
 
     macro_rules! identities { ($($x:expr,)*) => { $(
@@ -2623,11 +2924,13 @@ mod test {
 
     #[test]
     fn encode_decode_nan() {
-        let nan32 = encode_decode(&mut f32::NAN);
-        assert!(nan32.is_nan());
+        for ctx in CONTEXTS {
+            let nan32 = encode_decode(ctx, &mut f32::NAN);
+            assert!(nan32.is_nan());
 
-        let nan64 = encode_decode(&mut f64::NAN);
-        assert!(nan64.is_nan());
+            let nan64 = encode_decode(ctx, &mut f64::NAN);
+            assert!(nan64.is_nan());
+        }
     }
 
     #[test]
@@ -2713,10 +3016,12 @@ mod test {
                 Okay {
                     ty: u64,
                     offset: 8,
+                    xunion_ordinal: 1,
                 },
                 Error {
                     ty: u32,
                     offset: 8,
+                    xunion_ordinal: 2,
                 },
             ],
             size: 16,
@@ -2726,13 +3031,49 @@ mod test {
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
         let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
+        let ctx = &Context { unions_use_xunion_format: false };
 
-        Encoder::encode(buf, handle_buf, &mut OkayOrError::Okay(42u64)).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, Ok(42));
 
-        Encoder::encode(buf, handle_buf, &mut OkayOrError::Error(3u32)).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Err(3));
+    }
+
+    #[test]
+    fn result_and_xunion_compat() {
+        fidl_xunion! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+            name: OkayOrError,
+            members: [
+                Okay {
+                    ty: u64,
+                    ordinal: 1,
+                },
+                Error {
+                    ty: u32,
+                    ordinal: 2,
+                },
+            ],
+        };
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
+        let ctx = &Context { unions_use_xunion_format: true };
+
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(out, Ok(42));
+
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, Err(3));
     }
 
@@ -2745,10 +3086,12 @@ mod test {
                 Okay {
                     ty: (),
                     offset: 4,
+                    xunion_ordinal: 1,
                 },
                 Error {
                     ty: i32,
                     offset: 4,
+                    xunion_ordinal: 2,
                 },
             ],
             size: 8,
@@ -2757,41 +3100,48 @@ mod test {
 
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
+        let ctx = &Context { unions_use_xunion_format: false };
 
         // result to union
-        Encoder::encode(buf, handle_buf, &mut Ok::<(), i32>(())).expect("Encoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut Ok::<(), i32>(()))
+            .expect("Encoding failed");
         let mut out = OkayOrError::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, OkayOrError::Okay(()));
 
-        Encoder::encode(buf, handle_buf, &mut Err::<(), i32>(5)).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut Err::<(), i32>(5))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, OkayOrError::Error(5));
 
         // union to result
         let mut out: std::result::Result<(), i32> = Decodable::new_empty();
-        Encoder::encode(buf, handle_buf, &mut OkayOrError::Okay(())).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(()))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, Ok(()));
 
-        Encoder::encode(buf, handle_buf, &mut OkayOrError::Error(3i32)).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3i32))
+            .expect("Encoding failed");
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
         assert_eq!(out, Err(3));
     }
 
     #[test]
     fn encode_decode_result() {
-        let mut test_result: std::result::Result<String, u32> = Ok("fuchsia".to_string());
-        let mut test_result_err: std::result::Result<String, u32> = Err(5);
+        for ctx in CONTEXTS {
+            let mut test_result: std::result::Result<String, u32> = Ok("fuchsia".to_string());
+            let mut test_result_err: std::result::Result<String, u32> = Err(5);
 
-        match encode_decode(&mut test_result) {
-            Ok(ref out_str) if "fuchsia".to_string() == *out_str => {}
-            x => panic!("unexpected decoded value {:?}", x),
-        }
+            match encode_decode(ctx, &mut test_result) {
+                Ok(ref out_str) if "fuchsia".to_string() == *out_str => {}
+                x => panic!("unexpected decoded value {:?}", x),
+            }
 
-        match &encode_decode(&mut test_result_err) {
-            Err(err_code) if *err_code == 5 => {}
-            x => panic!("unexpected decoded value {:?}", x),
+            match &encode_decode(ctx, &mut test_result_err) {
+                Err(err_code) if *err_code == 5 => {}
+                x => panic!("unexpected decoded value {:?}", x),
+            }
         }
     }
 
@@ -2799,28 +3149,30 @@ mod test {
     fn encode_decode_result_array() {
         use std::result::Result;
 
-        {
-            let mut input: [Result<_, u32>; 2] = [Ok("a".to_string()), Ok("bcd".to_string())];
-            match encode_decode(&mut input) {
-                [Ok(ref ok1), Ok(ref ok2)]
-                    if *ok1 == "a".to_string() && *ok2 == "bcd".to_string() => {}
-                x => panic!("unexpected decoded value {:?}", x),
+        for ctx in CONTEXTS {
+            {
+                let mut input: [Result<_, u32>; 2] = [Ok("a".to_string()), Ok("bcd".to_string())];
+                match encode_decode(ctx, &mut input) {
+                    [Ok(ref ok1), Ok(ref ok2)]
+                        if *ok1 == "a".to_string() && *ok2 == "bcd".to_string() => {}
+                    x => panic!("unexpected decoded value {:?}", x),
+                }
             }
-        }
 
-        {
-            let mut input: [Result<String, u32>; 2] = [Err(7), Err(42)];
-            match encode_decode(&mut input) {
-                [Err(ref err1), Err(ref err2)] if *err1 == 7 && *err2 == 42 => {}
-                x => panic!("unexpected decoded value {:?}", x),
+            {
+                let mut input: [Result<String, u32>; 2] = [Err(7), Err(42)];
+                match encode_decode(ctx, &mut input) {
+                    [Err(ref err1), Err(ref err2)] if *err1 == 7 && *err2 == 42 => {}
+                    x => panic!("unexpected decoded value {:?}", x),
+                }
             }
-        }
 
-        {
-            let mut input = [Ok("abc".to_string()), Err(42)];
-            match encode_decode(&mut input) {
-                [Ok(ref ok1), Err(ref err2)] if *ok1 == "abc".to_string() && *err2 == 42 => {}
-                x => panic!("unexpected decoded value {:?}", x),
+            {
+                let mut input = [Ok("abc".to_string()), Err(42)];
+                match encode_decode(ctx, &mut input) {
+                    [Ok(ref ok1), Err(ref err2)] if *ok1 == "abc".to_string() && *err2 == 42 => {}
+                    x => panic!("unexpected decoded value {:?}", x),
+                }
             }
         }
     }
@@ -2834,23 +3186,27 @@ mod test {
         let mut v: Result<String, u32> = Err(5);
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut v).expect("Encoding failed");
+        let ctx = &Context { unions_use_xunion_format: false };
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut v).expect("Encoding failed");
 
         // Try to corrupt the second byte of padding after the Err() value content.
-        let break_pos = inline_align!(Result<String, u32>) + inline_size!(u32) + 1;
+        let break_pos = inline_align!(Result<String, u32>, ctx) + inline_size!(u32, ctx) + 1;
         buf[break_pos] = 10;
 
-        let res =
-            Decoder::decode_into(buf, handle_buf, &mut v).expect_err("Decoded broken padding");
+        let res = Decoder::decode_with_context(ctx, buf, handle_buf, &mut v)
+            .expect_err("Decoded broken padding");
         match res {
             Error::NonZeroPadding { padding_start, non_zero_pos } => {
                 // This check is fragile, as it is trying to mimic what array encoders/decoders do.
                 // If this fails after you update the array encoding, please update the check as
                 // well.
-                assert_eq!(padding_start, inline_align!(Result<String, u32>) + inline_size!(u32));
+                assert_eq!(
+                    padding_start,
+                    inline_align!(Result<String, u32>, ctx) + inline_size!(u32, ctx)
+                );
                 assert_eq!(non_zero_pos, break_pos);
             }
-            _ => panic!("decode_into failed with: {}", res),
+            _ => panic!("decode_with_context failed with: {}", res),
         }
     }
 
@@ -2864,18 +3220,19 @@ mod test {
         let mut v: Vec<Result<String, u32>> = vec![Err(5)];
         let buf = &mut Vec::new();
         let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut v).expect("Encoding failed");
+        let ctx = &Context { unions_use_xunion_format: false };
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut v).expect("Encoding failed");
 
         // Try to corrupt the second byte of padding after the Err() value content. The object
         // itself is in the out_of_line area, which follows the inlnie size of the vector.
-        let break_pos = inline_size!(Vec<Result<String, u32>>)
-            + inline_align!(Result<String, u32>)
-            + inline_size!(u32)
+        let break_pos = inline_size!(Vec<Result<String, u32>>, ctx)
+            + inline_align!(Result<String, u32>, ctx)
+            + inline_size!(u32, ctx)
             + 1;
         buf[break_pos] = 10;
 
-        let res =
-            Decoder::decode_into(buf, handle_buf, &mut v).expect_err("Decoded broken padding");
+        let res = Decoder::decode_with_context(ctx, buf, handle_buf, &mut v)
+            .expect_err("Decoded broken padding");
         match res {
             Error::NonZeroPadding { padding_start, non_zero_pos } => {
                 // This check is fragile, as it is trying to mimic what array encoders/decoders do.
@@ -2883,13 +3240,13 @@ mod test {
                 // well.
                 assert_eq!(
                     padding_start,
-                    inline_size!(Vec<Result<String, u32>>)
-                        + inline_align!(Result<String, u32>)
-                        + inline_size!(u32)
+                    inline_size!(Vec<Result<String, u32>>, ctx)
+                        + inline_align!(Result<String, u32>, ctx)
+                        + inline_size!(u32, ctx)
                 );
                 assert_eq!(non_zero_pos, break_pos);
             }
-            _ => panic!("decode_into failed with: {}", res),
+            _ => panic!("decode_with_context failed with: {}", res),
         }
     }
 
@@ -2902,28 +3259,32 @@ mod test {
                 Num {
                     ty: u64,
                     offset: 8,
+                    xunion_ordinal: 1,
                 },
                 Str {
                     ty: String,
                     offset: 8,
+                    xunion_ordinal: 2,
                 },
             ],
             size: 24,
             align: 8,
         };
 
-        // These need to be manually compared because of missing `PartialEq` impls.
-        for num in vec![0, 255, 256] {
-            match encode_decode(&mut NumOrStr::Num(num)) {
-                NumOrStr::Num(out_num) if num == out_num => {}
-                x => panic!("unexpected decoded value {:?}", x),
+        for ctx in CONTEXTS {
+            // These need to be manually compared because of missing `PartialEq` impls.
+            for num in vec![0, 255, 256] {
+                match encode_decode(ctx, &mut NumOrStr::Num(num)) {
+                    NumOrStr::Num(out_num) if num == out_num => {}
+                    x => panic!("unexpected decoded value {:?}", x),
+                }
             }
-        }
 
-        for string in vec![String::new(), "hello world!".to_string()] {
-            match &encode_decode(&mut NumOrStr::Str(string.clone())) {
-                NumOrStr::Str(out_str) if out_str == &string => {}
-                x => panic!("unexpected decoded value {:?}", x),
+            for string in vec![String::new(), "hello world!".to_string()] {
+                match &encode_decode(ctx, &mut NumOrStr::Str(string.clone())) {
+                    NumOrStr::Str(out_str) if out_str == &string => {}
+                    x => panic!("unexpected decoded value {:?}", x),
+                }
             }
         }
     }
@@ -2939,95 +3300,113 @@ mod test {
         members: [
             byte {
                 ty: u8,
-                offset: 0,
+                offset_old: 0,
+                offset_v1: 0,
             },
             bignum {
                 ty: u64,
-                offset: 8,
+                offset_old: 8,
+                offset_v1: 8,
             },
             string {
                 ty: String,
-                offset: 16,
+                offset_old: 16,
+                offset_v1: 16,
             },
         ],
-        size: 32,
-        align: 8,
+        size_old: 32,
+        align_old: 8,
+        size_v1: 32,
+        align_v1: 8,
     }
 
     #[test]
     fn encode_decode_struct() {
-        let out_foo = encode_decode(&mut Some(Box::new(Foo {
-            byte: 5,
-            bignum: 22,
-            string: "hello world".to_string(),
-        })))
-        .expect("should be some");
+        for ctx in CONTEXTS {
+            let out_foo = encode_decode(
+                ctx,
+                &mut Some(Box::new(Foo { byte: 5, bignum: 22, string: "hello world".to_string() })),
+            )
+            .expect("should be some");
 
-        assert_eq!(out_foo.byte, 5);
-        assert_eq!(out_foo.bignum, 22);
-        assert_eq!(out_foo.string, "hello world");
+            assert_eq!(out_foo.byte, 5);
+            assert_eq!(out_foo.bignum, 22);
+            assert_eq!(out_foo.string, "hello world");
 
-        let out_foo: Option<Box<Foo>> = encode_decode(&mut Box::new(None));
-        assert!(out_foo.is_none());
+            let out_foo: Option<Box<Foo>> = encode_decode(ctx, &mut Box::new(None));
+            assert!(out_foo.is_none());
+        }
     }
 
     #[test]
     fn encode_decode_tuple() {
-        let mut start: (&mut u8, &mut u64, &mut String) = (&mut 5, &mut 10, &mut "foo".to_string());
-        let mut out: (u8, u64, String) = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut start: (&mut u8, &mut u64, &mut String) =
+                (&mut 5, &mut 10, &mut "foo".to_string());
+            let mut out: (u8, u64, String) = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
 
-        assert_eq!(*start.0, out.0);
-        assert_eq!(*start.1, out.1);
-        assert_eq!(*start.2, out.2);
+            assert_eq!(*start.0, out.0);
+            assert_eq!(*start.1, out.1);
+            assert_eq!(*start.2, out.2);
+        }
     }
 
     #[test]
     fn encode_decode_struct_as_tuple() {
-        let mut start = Foo { byte: 5, bignum: 10, string: "foo".to_string() };
-        let mut out: (u8, u64, String) = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut start = Foo { byte: 5, bignum: 10, string: "foo".to_string() };
+            let mut out: (u8, u64, String) = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
 
-        assert_eq!(start.byte, out.0);
-        assert_eq!(start.bignum, out.1);
-        assert_eq!(start.string, out.2);
+            assert_eq!(start.byte, out.0);
+            assert_eq!(start.bignum, out.1);
+            assert_eq!(start.string, out.2);
+        }
     }
 
     #[test]
     fn encode_decode_tuple_as_struct() {
-        let mut start = (&mut 5u8, &mut 10u64, &mut "foo".to_string());
-        let mut out: Foo = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut start = (&mut 5u8, &mut 10u64, &mut "foo".to_string());
+            let mut out: Foo = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut start).expect("Encoding failed");
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding failed");
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut start)
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
 
-        assert_eq!(*start.0, out.byte);
-        assert_eq!(*start.1, out.bignum);
-        assert_eq!(*start.2, out.string);
+            assert_eq!(*start.0, out.byte);
+            assert_eq!(*start.1, out.bignum);
+            assert_eq!(*start.2, out.string);
+        }
     }
 
     #[test]
     fn encode_decode_tuple_msg() {
-        let mut body_start = (&mut "foo".to_string(), &mut 5);
-        let mut body_out: (String, u8) = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut body_start = (&mut "foo".to_string(), &mut 5);
+            let mut body_out: (String, u8) = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut body_start).unwrap();
-        Decoder::decode_into(buf, handle_buf, &mut body_out).unwrap();
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut body_start).unwrap();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut body_out).unwrap();
 
-        assert_eq!(body_start.0, &mut body_out.0);
-        assert_eq!(body_start.1, &mut body_out.1);
+            assert_eq!(body_start.0, &mut body_out.0);
+            assert_eq!(body_start.1, &mut body_out.1);
+        }
     }
 
     pub struct MyTable {
@@ -3096,61 +3475,74 @@ mod test {
 
     #[test]
     fn encode_decode_table_none() {
-        let table_none = encode_decode::<Option<MyTable>>(&mut None);
-        assert!(table_none.is_none());
+        for ctx in CONTEXTS {
+            let table_none = encode_decode::<Option<MyTable>>(ctx, &mut None);
+            assert!(table_none.is_none());
+        }
     }
 
     #[test]
     fn table_encode_prefix_decode_full() {
-        let mut table_prefix_in = TablePrefix { num: Some(5), num_none: None };
-        let mut table_out: MyTable = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut table_prefix_in = TablePrefix { num: Some(5), num_none: None };
+            let mut table_out: MyTable = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut table_prefix_in).unwrap();
-        Decoder::decode_into(buf, handle_buf, &mut table_out).unwrap();
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_prefix_in).unwrap();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_out).unwrap();
 
-        assert_eq!(table_out.num, Some(5));
-        assert_eq!(table_out.num_none, None);
-        assert_eq!(table_out.string, None);
-        assert_eq!(table_out.handle, None);
+            assert_eq!(table_out.num, Some(5));
+            assert_eq!(table_out.num_none, None);
+            assert_eq!(table_out.string, None);
+            assert_eq!(table_out.handle, None);
+        }
     }
 
     #[test]
     fn table_encode_omits_none_tail() {
-        // "None" fields at the tail of a table shouldn't be encoded at all.
-        let mut table_in = MyTable {
-            num: Some(5),
-            // These fields should all be omitted in the encoded repr,
-            // allowing decoding of the prefix to succeed.
-            num_none: None,
-            string: None,
-            handle: None,
-        };
-        let mut table_prefix_out: TablePrefix = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            // "None" fields at the tail of a table shouldn't be encoded at all.
+            let mut table_in = MyTable {
+                num: Some(5),
+                // These fields should all be omitted in the encoded repr,
+                // allowing decoding of the prefix to succeed.
+                num_none: None,
+                string: None,
+                handle: None,
+            };
+            let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut table_in).unwrap();
-        Decoder::decode_into(buf, handle_buf, &mut table_prefix_out).unwrap();
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out).unwrap();
 
-        assert_eq!(table_prefix_out.num, Some(5));
-        assert_eq!(table_prefix_out.num_none, None);
+            assert_eq!(table_prefix_out.num, Some(5));
+            assert_eq!(table_prefix_out.num_none, None);
+        }
     }
 
     #[test]
     fn table_decode_fails_on_unrecognized_tail() {
-        let mut table_in =
-            MyTable { num: Some(5), num_none: None, string: Some("foo".to_string()), handle: None };
-        let mut table_prefix_out: TablePrefix = Decodable::new_empty();
+        for ctx in CONTEXTS {
+            let mut table_in = MyTable {
+                num: Some(5),
+                num_none: None,
+                string: Some("foo".to_string()),
+                handle: None,
+            };
+            let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut table_in).unwrap();
-        let err = Decoder::decode_into(buf, handle_buf, &mut table_prefix_out).unwrap_err();
-        match err {
-            Error::UnknownTableField => {}
-            err => panic!("unexpected error decoding: {:?}", err),
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
+            let err = Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out)
+                .unwrap_err();
+            match err {
+                Error::UnknownTableField => {}
+                err => panic!("unexpected error decoding: {:?}", err),
+            }
         }
     }
 
@@ -3217,7 +3609,13 @@ mod test {
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ];
-        encode_assert_bytes(SimpleTable { x: Some(42), y: Some(67) }, simple_table_with_xy)
+        for ctx in CONTEXTS {
+            encode_assert_bytes(
+                ctx,
+                SimpleTable { x: Some(42), y: Some(67) },
+                simple_table_with_xy,
+            );
+        }
     }
 
     #[test]
@@ -3237,7 +3635,9 @@ mod test {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ];
-        encode_assert_bytes(SimpleTable { x: None, y: Some(67) }, simple_table_with_y)
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, SimpleTable { x: None, y: Some(67) }, simple_table_with_y);
+        }
     }
 
     #[test]
@@ -3254,10 +3654,17 @@ mod test {
             104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
             27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
         ];
-        encode_assert_bytes(
-            TableWithStringAndVector { foo: Some("hello".to_string()), bar: Some(27), baz: None },
-            table_with_string_and_vector_hello_27,
-        )
+        for ctx in CONTEXTS {
+            encode_assert_bytes(
+                ctx,
+                TableWithStringAndVector {
+                    foo: Some("hello".to_string()),
+                    bar: Some(27),
+                    baz: None,
+                },
+                table_with_string_and_vector_hello_27,
+            );
+        }
     }
 
     #[test]
@@ -3267,7 +3674,9 @@ mod test {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
         ];
 
-        encode_assert_bytes(SimpleTable { x: None, y: None }, empty_table)
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, SimpleTable { x: None, y: None }, empty_table);
+        }
     }
 
     #[derive(Debug, PartialEq)]
@@ -3279,11 +3688,14 @@ mod test {
         members: [
             x {
                 ty: u64,
-                offset: 0,
+                offset_old: 0,
+                offset_v1: 0,
             },
         ],
-        size: 8,
-        align: 8,
+        size_old: 8,
+        align_old: 8,
+        size_v1: 8,
+        align_v1: 8,
     }
 
     // Ensure single-variant union compiles (no irrefutable pattern errors).
@@ -3294,6 +3706,7 @@ mod test {
             B {
                 ty: bool,
                 offset: 0,
+                xunion_ordinal: 1,
             },
         ],
         size: 8,
@@ -3319,22 +3732,27 @@ mod test {
             I32 {
                 ty: i32,
                 offset: 4,
+                xunion_ordinal: 1,
             },
             I64 {
                 ty: i64,
                 offset: 8,
+                xunion_ordinal: 2,
             },
             S {
                 ty: Int64Struct,
                 offset: 8,
+                xunion_ordinal: 3,
             },
             Os {
                 ty: Option<Box<Int64Struct>>,
                 offset: 8,
+                xunion_ordinal: 4,
             },
             Str {
                 ty: String,
                 offset: 8,
+                xunion_ordinal: 5,
             },
         ],
         size: 24,
@@ -3393,6 +3811,29 @@ mod test {
     }
 
     #[test]
+    fn union_encoded_as_xunion_based_on_context() {
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: false },
+            SimpleUnion::I64(3),
+            &[
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union tag + padding
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            ],
+        );
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: true },
+            SimpleUnion::I64(3),
+            &[
+                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion ordinal
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
+            ],
+        );
+    }
+
+    #[test]
     fn xunion_golden_u() {
         let xunion_u_bytes = &[
             0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
@@ -3401,18 +3842,30 @@ mod test {
             0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
         ];
 
-        encode_assert_bytes(TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes);
-        encode_assert_bytes(TestSampleXUnionStrict::U(0xdeadbeef), xunion_u_bytes);
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, TestSampleXUnion::U(0xdeadbeef), xunion_u_bytes);
+            encode_assert_bytes(ctx, TestSampleXUnionStrict::U(0xdeadbeef), xunion_u_bytes);
 
-        // The nullable representation Option<Box<T>> has the same layout.
-        encode_assert_bytes(Some(Box::new(TestSampleXUnion::U(0xdeadbeef))), xunion_u_bytes);
-        encode_assert_bytes(Some(Box::new(TestSampleXUnionStrict::U(0xdeadbeef))), xunion_u_bytes);
+            // The nullable representation Option<Box<T>> has the same layout.
+            encode_assert_bytes(
+                ctx,
+                Some(Box::new(TestSampleXUnion::U(0xdeadbeef))),
+                xunion_u_bytes,
+            );
+            encode_assert_bytes(
+                ctx,
+                Some(Box::new(TestSampleXUnionStrict::U(0xdeadbeef))),
+                xunion_u_bytes,
+            );
+        }
     }
 
     #[test]
     fn xunion_golden_null() {
-        encode_assert_bytes(None::<Box<TestSampleXUnion>>, &[0; 24]);
-        encode_assert_bytes(None::<Box<TestSampleXUnionStrict>>, &[0; 24]);
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, None::<Box<TestSampleXUnion>>, &[0; 24]);
+            encode_assert_bytes(ctx, None::<Box<TestSampleXUnionStrict>>, &[0; 24]);
+        }
     }
 
     #[test]
@@ -3430,6 +3883,7 @@ mod test {
         ];
 
         encode_assert_bytes(
+            &Context { unions_use_xunion_format: false },
             TestSampleXUnion::Su(SimpleUnion::Str("hello".to_string())),
             xunion_su_bytes,
         )
@@ -3437,40 +3891,48 @@ mod test {
 
     #[test]
     fn encode_decode_transaction_msg() {
-        let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
-        let body = "hello".to_string();
+        for ctx in CONTEXTS {
+            let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+            let body = "hello".to_string();
 
-        let start = &mut TransactionMessage { header, body: &mut body.clone() };
+            let start = &mut TransactionMessage { header, body: &mut body.clone() };
 
-        let (buf, handles) = (&mut vec![], &mut vec![]);
-        Encoder::encode(buf, handles, start).expect("Encoding failed");
+            let (buf, handles) = (&mut vec![], &mut vec![]);
+            Encoder::encode_with_context(ctx, buf, handles, start).expect("Encoding failed");
 
-        let (out_header, out_buf) =
-            decode_transaction_header(&**buf).expect("Decoding header failed");
-        assert_eq!(header, out_header);
+            let (out_header, out_buf) =
+                decode_transaction_header(&**buf).expect("Decoding header failed");
+            assert_eq!(header, out_header);
 
-        let mut body_out = String::new();
-        Decoder::decode_into(out_buf, handles, &mut body_out).expect("Decoding body failed");
-        assert_eq!(body, body_out);
+            let mut body_out = String::new();
+            Decoder::decode_into(&header, out_buf, handles, &mut body_out)
+                .expect("Decoding body failed");
+            assert_eq!(body, body_out);
+        }
     }
 
     #[test]
     fn array_of_arrays() {
-        let mut input = &mut [&mut [1u32, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
-        let (bytes, handles) = (&mut vec![], &mut vec![]);
-        assert!(Encoder::encode(bytes, handles, &mut input).is_ok());
+        for ctx in CONTEXTS {
+            let mut input = &mut [&mut [1u32, 2, 3, 4, 5], &mut [5, 4, 3, 2, 1]];
+            let (bytes, handles) = (&mut vec![], &mut vec![]);
+            assert!(Encoder::encode_with_context(ctx, bytes, handles, &mut input).is_ok());
 
-        let mut output = <[[u32; 5]; 2]>::new_empty();
-        Decoder::decode_into(bytes, handles, &mut output).expect(
-            format!(
-                "Array decoding failed\n\
-                 bytes: {:X?}",
-                bytes
-            )
-            .as_str(),
-        );
+            let mut output = <[[u32; 5]; 2]>::new_empty();
+            Decoder::decode_with_context(ctx, bytes, handles, &mut output).expect(
+                format!(
+                    "Array decoding failed\n\
+                     bytes: {:X?}",
+                    bytes
+                )
+                .as_str(),
+            );
 
-        assert_eq!(input, output.iter_mut().map(|v| v.as_mut()).collect::<Vec<_>>().as_mut_slice());
+            assert_eq!(
+                input,
+                output.iter_mut().map(|v| v.as_mut()).collect::<Vec<_>>().as_mut_slice()
+            );
+        }
     }
 
     #[test]
@@ -3507,33 +3969,46 @@ mod test {
             ],
         }
 
-        let mut input = TestSampleXUnion::U(1);
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut input)
-            .expect("Encoding TestSampleXUnionExpanded failed");
+        for ctx in CONTEXTS {
+            let mut input = TestSampleXUnion::U(1);
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut input)
+                .expect("Encoding TestSampleXUnionExpanded failed");
 
-        let mut strict_xunion = StrictBoolXUnion::new_empty();
-        let err = Decoder::decode_into(buf, handle_buf, &mut strict_xunion)
-            .expect_err("Decoding StrictBoolXUnion unexpectedly succeeded");
-        match err {
-            Error::UnknownUnionTag => (),
-            _ => panic!("Unexpected kind of error"),
+            let mut strict_xunion = StrictBoolXUnion::new_empty();
+            let err = Decoder::decode_with_context(ctx, buf, handle_buf, &mut strict_xunion)
+                .expect_err("Decoding StrictBoolXUnion unexpectedly succeeded");
+            match err {
+                Error::UnknownUnionTag => (),
+                _ => panic!("Unexpected kind of error"),
+            }
         }
     }
 
     #[test]
     fn extra_data_is_disallowed() {
-        let mut output = ();
-        match Decoder::decode_into(&[0], &mut [], &mut output).expect_err("bytes") {
-            Error::ExtraBytes => {}
-            e => panic!("expected ExtraBytes, found {:?}", e),
+        for ctx in CONTEXTS {
+            let mut output = ();
+            match Decoder::decode_with_context(ctx, &[0], &mut [], &mut output).expect_err("bytes")
+            {
+                Error::ExtraBytes => {}
+                e => panic!("expected ExtraBytes, found {:?}", e),
+            }
+            match Decoder::decode_with_context(ctx, &[], &mut [Handle::invalid()], &mut output)
+                .expect_err("handles")
+            {
+                Error::ExtraHandles => {}
+                e => panic!("expected ExtraHandles, found {:?}", e),
+            }
         }
-        match Decoder::decode_into(&[], &mut [Handle::invalid()], &mut output).expect_err("handles")
-        {
-            Error::ExtraHandles => {}
-            e => panic!("expected ExtraHandles, found {:?}", e),
-        }
+    }
+
+    #[test]
+    fn encode_default_context() {
+        let buf = &mut Vec::new();
+        Encoder::encode(buf, &mut Vec::new(), &mut 1u8).expect("Encoding failed");
+        assert_eq!(&**buf, &[1u8, 0, 0, 0, 0, 0, 0, 0]);
     }
 }
 
@@ -3548,101 +4023,114 @@ mod zx_test {
 
     #[test]
     fn encode_handle() {
-        let mut handle = Handle::from(zx::Port::create().expect("Port creation failed"));
-        let raw_handle = handle.raw_handle();
+        for ctx in CONTEXTS {
+            let mut handle = Handle::from(zx::Port::create().expect("Port creation failed"));
+            let raw_handle = handle.raw_handle();
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut handle).expect("Encoding failed");
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut handle)
+                .expect("Encoding failed");
 
-        assert!(handle.is_invalid());
+            assert!(handle.is_invalid());
 
-        let mut handle_out = Handle::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut handle_out).expect("Decoding failed");
+            let mut handle_out = Handle::new_empty();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut handle_out)
+                .expect("Decoding failed");
 
-        assert_eq!(raw_handle, handle_out.raw_handle());
+            assert_eq!(raw_handle, handle_out.raw_handle());
+        }
     }
 
     #[test]
     fn encode_decode_table() {
-        // create a random handle to encode and then decode.
-        let handle = zx::Vmo::create(1024).expect("vmo creation failed");
-        let raw_handle = handle.raw_handle();
-        let mut starting_table = MyTable {
-            num: Some(5),
-            num_none: None,
-            string: Some("foo".to_string()),
-            handle: Some(handle.into_handle()),
-        };
-        let table_out = encode_decode(&mut starting_table);
-        assert_eq!(table_out.num, Some(5));
-        assert_eq!(table_out.num_none, None);
-        assert_eq!(table_out.string, Some("foo".to_string()));
-        assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+        for ctx in CONTEXTS {
+            // create a random handle to encode and then decode.
+            let handle = zx::Vmo::create(1024).expect("vmo creation failed");
+            let raw_handle = handle.raw_handle();
+            let mut starting_table = MyTable {
+                num: Some(5),
+                num_none: None,
+                string: Some("foo".to_string()),
+                handle: Some(handle.into_handle()),
+            };
+            let table_out = encode_decode(ctx, &mut starting_table);
+            assert_eq!(table_out.num, Some(5));
+            assert_eq!(table_out.num_none, None);
+            assert_eq!(table_out.string, Some("foo".to_string()));
+            assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+        }
     }
 
     #[test]
     fn encode_decode_table_some() {
-        // create a random handle to encode and then decode.
-        let handle = zx::Vmo::create(1024).expect("vmo creation failed");
-        let raw_handle = handle.raw_handle();
-        let mut starting_table = Some(MyTable {
-            num: Some(5),
-            num_none: None,
-            string: Some("foo".to_string()),
-            handle: Some(handle.into_handle()),
-        });
-        let table_out = encode_decode(&mut starting_table);
-        let table_out = table_out.expect("table was None");
-        assert_eq!(table_out.num, Some(5));
-        assert_eq!(table_out.num_none, None);
-        assert_eq!(table_out.string, Some("foo".to_string()));
-        assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+        for ctx in CONTEXTS {
+            // create a random handle to encode and then decode.
+            let handle = zx::Vmo::create(1024).expect("vmo creation failed");
+            let raw_handle = handle.raw_handle();
+            let mut starting_table = Some(MyTable {
+                num: Some(5),
+                num_none: None,
+                string: Some("foo".to_string()),
+                handle: Some(handle.into_handle()),
+            });
+            let table_out = encode_decode(ctx, &mut starting_table);
+            let table_out = table_out.expect("table was None");
+            assert_eq!(table_out.num, Some(5));
+            assert_eq!(table_out.num_none, None);
+            assert_eq!(table_out.string, Some("foo".to_string()));
+            assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
+        }
     }
 
     #[test]
     fn flexible_xunion_unknown_variant_transparent_passthrough() {
-        let handle = Handle::from(zx::Port::create().expect("Port creation failed"));
-        let raw_handle = handle.raw_handle();
+        for ctx in CONTEXTS {
+            let handle = Handle::from(zx::Port::create().expect("Port creation failed"));
+            let raw_handle = handle.raw_handle();
 
-        let mut input = TestSampleXUnionExpanded::SomethinElse(handle);
-        // encode expanded and decode as xunion w/ missing variant
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut input)
-            .expect("Encoding TestSampleXUnionExpanded failed");
+            let mut input = TestSampleXUnionExpanded::SomethinElse(handle);
+            // encode expanded and decode as xunion w/ missing variant
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut input)
+                .expect("Encoding TestSampleXUnionExpanded failed");
 
-        let mut intermediate_missing_variant = TestSampleXUnion::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut intermediate_missing_variant)
-            .expect("Decoding TestSampleXUnion failed");
+            let mut intermediate_missing_variant = TestSampleXUnion::new_empty();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut intermediate_missing_variant)
+                .expect("Decoding TestSampleXUnion failed");
 
-        // Ensure we've recorded the unknown variant
-        if let TestSampleXUnion::__UnknownVariant { .. } = intermediate_missing_variant {
-            // ok
-        } else {
-            panic!("unexpected variant")
-        }
+            // Ensure we've recorded the unknown variant
+            if let TestSampleXUnion::__UnknownVariant { .. } = intermediate_missing_variant {
+                // ok
+            } else {
+                panic!("unexpected variant")
+            }
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        Encoder::encode(buf, handle_buf, &mut intermediate_missing_variant)
-            .expect("encoding unknown variant failed");
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut intermediate_missing_variant)
+                .expect("encoding unknown variant failed");
 
-        let mut out = TestSampleXUnionExpanded::new_empty();
-        Decoder::decode_into(buf, handle_buf, &mut out).expect("Decoding final output failed");
+            let mut out = TestSampleXUnionExpanded::new_empty();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out)
+                .expect("Decoding final output failed");
 
-        if let TestSampleXUnionExpanded::SomethinElse(handle_out) = out {
-            assert_eq!(raw_handle, handle_out.raw_handle());
-        } else {
-            panic!("wrong final variant")
+            if let TestSampleXUnionExpanded::SomethinElse(handle_out) = out {
+                assert_eq!(raw_handle, handle_out.raw_handle());
+            } else {
+                panic!("wrong final variant")
+            }
         }
     }
 
     #[test]
     fn encode_epitaph() {
-        assert_eq!(
-            EpitaphBody { error: zx::Status::UNAVAILABLE },
-            encode_decode(&mut EpitaphBody { error: zx::Status::UNAVAILABLE })
-        );
+        for ctx in CONTEXTS {
+            assert_eq!(
+                EpitaphBody { error: zx::Status::UNAVAILABLE },
+                encode_decode(ctx, &mut EpitaphBody { error: zx::Status::UNAVAILABLE })
+            );
+        }
     }
 }

@@ -18,15 +18,18 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-use fidl::{Error, encoding::{Decodable, Decoder, Encoder}};
+use fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}};
 use fidl_conformance as conformance;
+
+const OLD_CONTEXT: &Context = &Context { unions_use_xunion_format: false };
+const V1_CONTEXT: &Context = &Context { unions_use_xunion_format: true };
 
 {{ range .EncodeSuccessCases }}
 #[test]
 fn test_{{ .Name }}_encode() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
-	Encoder::encode(bytes, &mut Vec::new(), value).unwrap();
+	Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value).unwrap();
 	assert_eq!(*bytes, &[{{ .Bytes }}][..]);
 }
 {{ end }}
@@ -36,7 +39,7 @@ fn test_{{ .Name }}_encode() {
 fn test_{{ .Name }}_decode() {
 	let value = &mut {{ .ValueType }}::new_empty();
 	let bytes = &mut [{{ .Bytes }}];
-	Decoder::decode_into(bytes, &mut [], value).unwrap();
+	Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value).unwrap();
 	assert_eq!(*value, {{ .Value }});
 }
 {{ end }}
@@ -46,7 +49,7 @@ fn test_{{ .Name }}_decode() {
 fn test_{{ .Name }}_encode_failure() {
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
-	match Encoder::encode(bytes, &mut Vec::new(), value) {
+	match Encoder::encode_with_context({{ .Context }}, bytes, &mut Vec::new(), value) {
 		Err({{ .ErrorCode }} { .. }) => (),
 		Err(err) => panic!("unexpected error: {}", err),
 		Ok(_) => panic!("unexpected successful encoding"),
@@ -59,7 +62,7 @@ fn test_{{ .Name }}_encode_failure() {
 fn test_{{ .Name }}_decode_failure() {
 	let value = &mut {{ .ValueType }}::new_empty();
 	let bytes = &mut [{{ .Bytes }}];
-	match Decoder::decode_into(bytes, &mut [], value) {
+	match Decoder::decode_with_context({{ .Context }}, bytes, &mut [], value) {
 		Err({{ .ErrorCode }} { .. }) => (),
 		Err(err) => panic!("unexpected error: {}", err),
 		Ok(_) => panic!("unexpected successful decoding"),
@@ -76,19 +79,19 @@ type tmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Value, Bytes string
+	Name, Context, Value, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, ValueType, Value, Bytes string
+	Name, Context, ValueType, Value, Bytes string
 }
 
 type encodeFailureCase struct {
-	Name, Value, ErrorCode string
+	Name, Context, Value, ErrorCode string
 }
 
 type decodeFailureCase struct {
-	Name, ValueType, Bytes, ErrorCode string
+	Name, Context, ValueType, Bytes, ErrorCode string
 }
 
 // Generate generates Rust tests.
@@ -118,6 +121,17 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	return tmpl.Execute(wr, input)
 }
 
+func encodingContext(wireFormat gidlir.WireFormat) string {
+	switch wireFormat {
+	case gidlir.OldWireFormat:
+		return "OLD_CONTEXT"
+	case gidlir.V1WireFormat:
+		return "V1_CONTEXT"
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
+	}
+}
+
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
@@ -129,9 +143,10 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 			continue
 		}
 		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-			Name:  fidlcommon.ToSnakeCase(encodeSuccess.Name),
-			Value: visit(encodeSuccess.Value, decl),
-			Bytes: bytesBuilder(encodeSuccess.Bytes),
+			Name:    fidlcommon.ToSnakeCase(encodeSuccess.Name),
+			Context: encodingContext(encodeSuccess.WireFormat),
+			Value:   visit(encodeSuccess.Value, decl),
+			Bytes:   bytesBuilder(encodeSuccess.Bytes),
 		})
 	}
 	return encodeSuccessCases, nil
@@ -149,6 +164,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		}
 		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 			Name:      fidlcommon.ToSnakeCase(decodeSuccess.Name),
+			Context:   encodingContext(decodeSuccess.WireFormat),
 			ValueType: rustType(decodeSuccess.Value.(gidlir.Object).Name),
 			Value:     visit(decodeSuccess.Value, decl),
 			Bytes:     bytesBuilder(decodeSuccess.Bytes),
@@ -173,6 +189,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		}
 		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 			Name:      fidlcommon.ToSnakeCase(encodeFailure.Name),
+			Context:   encodingContext(encodeFailure.WireFormat),
 			Value:     visit(encodeFailure.Value, decl),
 			ErrorCode: errorCode,
 		})
@@ -189,6 +206,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		}
 		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 			Name:      fidlcommon.ToSnakeCase(decodeFailure.Name),
+			Context:   encodingContext(decodeFailure.WireFormat),
 			ValueType: rustType(decodeFailure.Type),
 			Bytes:     bytesBuilder(decodeFailure.Bytes),
 			ErrorCode: errorCode,

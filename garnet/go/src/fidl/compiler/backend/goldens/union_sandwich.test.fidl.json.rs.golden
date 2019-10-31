@@ -31,6 +31,7 @@ fidl_union! {
     Variant {
       ty: u32,
       offset: 4,
+      xunion_ordinal: 551421578,
     },
   ],
   size: 8,
@@ -44,6 +45,7 @@ fidl_union! {
     Variant {
       ty: [u8; 6],
       offset: 4,
+      xunion_ordinal: 1305904317,
     },
   ],
   size: 12,
@@ -57,6 +59,7 @@ fidl_union! {
     Variant {
       ty: StructSize16Alignment8,
       offset: 8,
+      xunion_ordinal: 711125680,
     },
   ],
   size: 24,
@@ -70,6 +73,7 @@ fidl_union! {
     Variant {
       ty: [u8; 32],
       offset: 4,
+      xunion_ordinal: 1000405696,
     },
   ],
   size: 36,
@@ -88,19 +92,24 @@ fidl_struct! {
   members: [
     before {
       ty: u32,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     union {
       ty: UnionSize8Alignment4,
-      offset: 4,
+      offset_old: 4,
+      offset_v1: 8,
     },
     after {
       ty: u32,
-      offset: 12,
+      offset_old: 12,
+      offset_v1: 32,
     },
   ],
-  size: 16,
-  align: 4,
+  size_old: 16,
+  align_old: 4,
+  size_v1: 40,
+  align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -115,19 +124,24 @@ fidl_struct! {
   members: [
     before {
       ty: u32,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     union {
       ty: UnionSize12Alignment4,
-      offset: 4,
+      offset_old: 4,
+      offset_v1: 8,
     },
     after {
       ty: i32,
-      offset: 16,
+      offset_old: 16,
+      offset_v1: 32,
     },
   ],
-  size: 20,
-  align: 4,
+  size_old: 20,
+  align_old: 4,
+  size_v1: 40,
+  align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -141,15 +155,19 @@ fidl_struct! {
   members: [
     f1 {
       ty: u64,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     f2 {
       ty: u64,
-      offset: 8,
+      offset_old: 8,
+      offset_v1: 8,
     },
   ],
-  size: 16,
-  align: 8,
+  size_old: 16,
+  align_old: 8,
+  size_v1: 16,
+  align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -164,19 +182,24 @@ fidl_struct! {
   members: [
     before {
       ty: u32,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     union {
       ty: UnionSize24Alignment8,
-      offset: 8,
+      offset_old: 8,
+      offset_v1: 8,
     },
     after {
       ty: u32,
-      offset: 32,
+      offset_old: 32,
+      offset_v1: 32,
     },
   ],
-  size: 40,
-  align: 8,
+  size_old: 40,
+  align_old: 8,
+  size_v1: 40,
+  align_v1: 8,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -191,17 +214,22 @@ fidl_struct! {
   members: [
     before {
       ty: u32,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
     union {
       ty: UnionSize36Alignment4,
-      offset: 4,
+      offset_old: 4,
+      offset_v1: 8,
     },
     after {
       ty: u32,
-      offset: 40,
+      offset_old: 40,
+      offset_v1: 32,
     },
   ],
-  size: 44,
-  align: 4,
+  size_old: 44,
+  align_old: 4,
+  size_v1: 40,
+  align_v1: 8,
 }

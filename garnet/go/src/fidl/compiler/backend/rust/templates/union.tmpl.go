@@ -14,6 +14,7 @@ fidl_union! {
     {{ .Name }} {
       ty: {{ .Type.Decl }},
       offset: {{ .Offset }},
+      xunion_ordinal: {{ .XUnionOrdinal }},
     },
   {{- end }}
   ],

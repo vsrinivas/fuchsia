@@ -1186,8 +1186,7 @@ where
                 Ok(())
             }
             (StreamType::Channel, Some(bytes)) => {
-                let mut msg = ZirconChannelMessage { bytes: Vec::new(), handles: Vec::new() };
-                fidl::encoding::Decoder::decode_into(bytes, &mut [], &mut msg)?;
+                let mut msg = decode_fidl::<ZirconChannelMessage>(bytes)?;
                 let mut handles = Vec::new();
                 for unbound in msg.handles.into_iter() {
                     let bound = match unbound {

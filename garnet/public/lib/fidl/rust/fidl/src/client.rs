@@ -30,14 +30,9 @@ use fuchsia_zircon::AsHandleRef;
 
 fn decode_transaction_body<D: Decodable>(mut buf: MessageBuf) -> Result<D, Error> {
     let (bytes, handles) = buf.split_mut();
+    let (header, body_bytes) = decode_transaction_header(bytes)?;
     let mut output = D::new_empty();
-    // Even though we only return the body, it's important to decode the entire
-    // message because flags in the header can affect decoding of the body.
-    Decoder::decode_into(
-        bytes,
-        handles,
-        &mut TransactionMessage { header: TransactionHeader::new_empty(), body: &mut output },
-    )?;
+    Decoder::decode_into(&header, body_bytes, handles, &mut output)?;
     Ok(output)
 }
 
@@ -482,7 +477,7 @@ impl ClientInner {
                 // epitaph.
                 let handles = &mut [];
                 let mut epitaph_body = EpitaphBody::new_empty();
-                Decoder::decode_into(&body_bytes, handles, &mut epitaph_body)?;
+                Decoder::decode_into(&header, &body_bytes, handles, &mut epitaph_body)?;
                 *epitaph_lock = Some(epitaph_body.error);
                 // The task that calls this method also has its Waker woken. This could be
                 // optimized by excluding this task, but since this occurs on channel close,
@@ -689,7 +684,7 @@ pub mod sync {
                 return Err(Error::UnexpectedSyncResponse);
             }
             let mut output = D::new_empty();
-            Decoder::decode_into(body_bytes, handles, &mut output)?;
+            Decoder::decode_into(&header, body_bytes, handles, &mut output)?;
             Ok(output)
         }
     }

@@ -162,14 +162,14 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			0x577495a100000000 | 0x15e4293098574a7 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					SwitchingOrdinalsEvent::EventOrdinalFifteen {}
 				))
 			}
 			0x7fec464e00000000 | 0x47107cabe23f6510 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					SwitchingOrdinalsEvent::EventOnlyGeneratedOrdinal {}
 				))
@@ -333,7 +333,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x7784636700000000 | 0x254f3bdfa9d3dcab => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -342,7 +342,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 				}
 				0x27c9581f00000000 | 0x163a45fcac049f5b => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {
 						inner: this.inner.clone(),
 					};

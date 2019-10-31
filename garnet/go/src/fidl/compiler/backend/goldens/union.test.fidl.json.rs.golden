@@ -31,14 +31,17 @@ fidl_union! {
     Primitive {
       ty: i32,
       offset: 8,
+      xunion_ordinal: 910042901,
     },
     StringNeedsConstructor {
       ty: String,
       offset: 8,
+      xunion_ordinal: 891204917,
     },
     VectorStringAlsoNeedsConstructor {
       ty: Vec<String>,
       offset: 8,
+      xunion_ordinal: 1452916587,
     },
   ],
   size: 24,
@@ -52,6 +55,7 @@ fidl_union! {
     FieldCollisionTag {
       ty: i32,
       offset: 4,
+      xunion_ordinal: 1574011787,
     },
   ],
   size: 8,
@@ -65,10 +69,12 @@ fidl_union! {
     Primitive {
       ty: i32,
       offset: 8,
+      xunion_ordinal: 1,
     },
     StringNeedsConstructor {
       ty: String,
       offset: 8,
+      xunion_ordinal: 3,
     },
   ],
   size: 24,

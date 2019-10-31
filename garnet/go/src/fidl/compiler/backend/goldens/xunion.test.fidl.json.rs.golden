@@ -133,11 +133,14 @@ fidl_struct! {
   members: [
     x1 {
       ty: Option<Box<OlderSimpleUnion>>,
-      offset: 0,
+      offset_old: 0,
+      offset_v1: 0,
     },
   ],
-  size: 24,
-  align: 8,
+  size_old: 24,
+  align_old: 8,
+  size_v1: 24,
+  align_v1: 8,
 }
 
 
@@ -389,7 +392,7 @@ impl futures::Stream for TestProtocolRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x71a1b4b700000000 | 0x2b158c786064d0de => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = TestProtocolControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -402,7 +405,7 @@ impl futures::Stream for TestProtocolRequestStream {
 				}
 				0x3959ff0900000000 | 0x5ecf85aadd137696 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = TestProtocolControlHandle {
 						inner: this.inner.clone(),
 					};

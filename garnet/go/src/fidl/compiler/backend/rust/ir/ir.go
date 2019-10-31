@@ -99,21 +99,28 @@ type Union struct {
 
 type UnionMember struct {
 	types.Attributes
-	Derives derives
-	OGType  types.Type
-	Type    Type
-	Name    string
-	Offset  int
+	Derives       derives
+	OGType        types.Type
+	Type          Type
+	Name          string
+	Offset        int
+	XUnionOrdinal int
 }
 
 type Struct struct {
 	types.Attributes
-	ECI       EncodedCompoundIdentifier
-	Derives   derives
-	Name      string
-	Members   []StructMember
-	Size      int
-	Alignment int
+	ECI     EncodedCompoundIdentifier
+	Derives derives
+	Name    string
+	Members []StructMember
+	// Store size and alignment for Old and V1 versions of the wire format. The
+	// numbers will be different if the struct contains a union within it. Only
+	// structs have this information because fidl::encoding only uses these
+	// precalculated numbers for structs and unions.
+	SizeOld      int
+	AlignmentOld int
+	SizeV1       int
+	AlignmentV1  int
 }
 
 type StructMember struct {
@@ -121,7 +128,8 @@ type StructMember struct {
 	OGType       types.Type
 	Type         string
 	Name         string
-	Offset       int
+	OffsetOld    int
+	OffsetV1     int
 	HasDefault   bool
 	DefaultValue string
 }
@@ -785,7 +793,8 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 		Type:         memberType.Decl,
 		OGType:       val.Type,
 		Name:         compileSnakeIdentifier(val.Name),
-		Offset:       val.Offset,
+		OffsetOld:    val.FieldShapeOld.Offset,
+		OffsetV1:     val.FieldShapeV1.Offset,
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
 	}
@@ -794,12 +803,14 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       name,
-		Members:    []StructMember{},
-		Size:       val.Size,
-		Alignment:  val.Alignment,
+		Attributes:   val.Attributes,
+		ECI:          val.Name,
+		Name:         name,
+		Members:      []StructMember{},
+		SizeOld:      val.TypeShapeOld.InlineSize,
+		AlignmentOld: val.TypeShapeOld.Alignment,
+		SizeV1:       val.TypeShapeV1.InlineSize,
+		AlignmentV1:  val.TypeShapeV1.Alignment,
 	}
 
 	for _, v := range val.Members {
@@ -841,11 +852,12 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
-		Attributes: val.Attributes,
-		OGType:     val.Type,
-		Type:       c.compileType(val.Type, false),
-		Name:       compileCamelIdentifier(val.Name),
-		Offset:     val.Offset,
+		Attributes:    val.Attributes,
+		OGType:        val.Type,
+		Type:          c.compileType(val.Type, false),
+		Name:          compileCamelIdentifier(val.Name),
+		Offset:        val.Offset,
+		XUnionOrdinal: val.XUnionOrdinal,
 	}
 }
 

@@ -252,7 +252,7 @@ impl futures::Stream for FirstProtocolRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0x2838a83100000000 | 0x580cbd0d43ccbe3b => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = FirstProtocolControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -562,7 +562,7 @@ impl futures::Stream for SecondProtocolRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				0xd09c00f00000000 | 0x5785f9c1f2aece21 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
 					let control_handle = SecondProtocolControlHandle {
 						inner: this.inner.clone(),
 					};

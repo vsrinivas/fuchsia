@@ -254,7 +254,9 @@ async fn process_incoming_inner(
         .map(|r| r.ok_or_else(|| failure::format_err!("Stream closed before greeting received")));
     let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
     let mut greeting = StreamSocketGreeting::empty();
-    fidl::encoding::Decoder::decode_into(frame.as_mut(), &mut [], &mut greeting)?;
+    // This is OK because overnet interfaces do not use static unions.
+    let context = fidl::encoding::Context { unions_use_xunion_format: true };
+    fidl::encoding::Decoder::decode_with_context(&context, frame.as_mut(), &mut [], &mut greeting)?;
 
     let node_id = match greeting {
         StreamSocketGreeting { magic_string: None, .. } => failure::bail!(

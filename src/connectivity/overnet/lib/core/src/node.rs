@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        coding::decode_fidl,
         labels::{NodeId, NodeLinkId},
         node_table::{LinkDescription, NodeDescription, NodeStateCallback, NodeTable},
         router::{
@@ -607,9 +608,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                 break greeting;
             }
         };
-        let mut greeting = StreamSocketGreeting::empty();
-        fidl::encoding::Decoder::decode_into(greeting_bytes.as_mut(), &mut [], &mut greeting)?;
-
+        let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())?;
         let node_id = match greeting {
             StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
                 "Required magic string '{}' not present in greeting",
