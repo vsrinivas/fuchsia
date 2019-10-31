@@ -13,18 +13,18 @@ import("//build/testing/platforms.gni")
 # Parameters
 #
 #   name (required)
-#     [string] The test's target name.
+#     [string] The test name.
 #
-#   path (required)
-#     [string]: The path on the target OS at which the test will be installed.
+#   path (optional)
+#     [string]: The path on the target OS at which the test will be installed. If
+#     unset, command is required.
 #
-#   target (optional)
-#     [string]: The test's target name.
-#     TODO(olivernewman): make this required and change the form of "name".
+#   target (required)
+#     [string]: The test target.
 #
 #   command (optional)
-#     [list of strings]: Command to invoke to run the test. If unset, path will be
-#     invoked upon execution.
+#     [list of strings]: Command to invoke to run the test. If unset, path is
+#     required and will be invoked upon execution.
 #
 #   package_url (optional)
 #     [string] In the case of a fuchsia test, this describes the packaged test
@@ -53,9 +53,7 @@ import("//build/testing/platforms.gni")
 template("test_spec") {
   assert(defined(invoker.name), "name must be defined.")
 
-  # TODO(olivernewman): Stop accepting install_path
-  assert(defined(invoker.path) || defined(invoker.install_path) ||
-             defined(invoker.command),
+  assert(defined(invoker.path) || defined(invoker.command),
          "path or command must be defined.")
   forward_variables_from(invoker,
                          [
@@ -240,24 +238,12 @@ template("test_spec") {
       forward_variables_from(invoker,
                              [
                                "command",
+                               "name",
                                "path",
                                "package_url",
                              ])
-      name = get_label_info(":${invoker.name}", "label_no_toolchain")
+      label = get_label_info(":${invoker.target}", "label_with_toolchain")
 
-      # TODO(olivernewman): Make target a required param and always use it
-      # instead of name for setting the label.
-      if (defined(invoker.target)) {
-        label = get_label_info(":${invoker.target}", "label_with_toolchain")
-      } else {
-        label = get_label_info(":${invoker.name}", "label_with_toolchain")
-      }
-
-      # TODO(olivernewman): Get rid of install_path entirely after topaz passes
-      # path instead.
-      if (defined(invoker.install_path)) {
-        path = invoker.install_path
-      }
       if (defined(path)) {
         if (is_linux || is_mac) {
           # Trim leading //.
