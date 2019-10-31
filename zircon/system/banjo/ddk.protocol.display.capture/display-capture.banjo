@@ -28,12 +28,18 @@ protocol DisplayCaptureImpl {
     /// used for capture. Returns out_capture_handle which maps to the allocated
     /// resource
     ImportImageForCapture(ZxUnownedHandle collection, uint32 index)
-        -> (zx.status s, uint64 out_capture_handle);
+        -> (zx.status s, uint64 capture_handle);
 
     /// Starts capture into the resource mapped by capture_handle (non-blocking)
+    /// Only one active capture is allowed at a time.
     StartCapture(uint64 capture_handle) -> (zx.status s);
 
-    /// Releases resources allocated by capture_handle
+    /// Releases resources allocated by capture_handle.
+    /// Releasing resources from an active capture is not allowed and will cause
+    /// unexpected behavior.
     ReleaseCapture(uint64 capture_handle) -> (zx.status s);
+
+    /// Returns true if capture is completed. False otherwise.
+    IsCaptureCompleted() -> (bool b);
 };
 

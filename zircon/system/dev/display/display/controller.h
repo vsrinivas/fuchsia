@@ -18,6 +18,7 @@
 #include <memory>
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/display/capture.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/i2cimpl.h>
@@ -75,6 +76,7 @@ using ControllerParent =
     ddk::Device<Controller, ddk::UnbindableNew, ddk::Openable, ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
+                   public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
  public:
   Controller(zx_device_t* parent);
@@ -99,6 +101,7 @@ class Controller : public ControllerParent,
   zx_status_t DisplayControllerInterfaceGetAudioFormat(uint64_t display_id, uint32_t fmt_idx,
                                                        audio_stream_format_range_t* fmt_out);
 
+  void DisplayCaptureInterfaceOnCaptureComplete();
   void OnClientDead(ClientProxy* client);
   void SetVcMode(uint8_t mode);
   void ShowActiveDisplay();
@@ -107,6 +110,7 @@ class Controller : public ControllerParent,
                    uint32_t client_id);
 
   void ReleaseImage(Image* image);
+  void ReleaseCaptureImage(Image* image);
 
   // Calling GetPanelConfig requires holding |mtx()|, and it must be held
   // for as long as |edid| and |params| are retained.
@@ -124,6 +128,12 @@ class Controller : public ControllerParent,
                              const char** monitor_serial) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
+  ddk::DisplayCaptureImplProtocolClient* dc_capture() {
+    if (dc_capture_.is_valid()) {
+      return &dc_capture_;
+    }
+    return nullptr;
+  }
   async::Loop& loop() { return loop_; }
   bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
   mtx_t* mtx() { return &mtx_; }
@@ -163,6 +173,7 @@ class Controller : public ControllerParent,
   async::Loop loop_;
   thrd_t loop_thread_;
   ddk::DisplayControllerImplProtocolClient dc_;
+  ddk::DisplayCaptureImplProtocolClient dc_capture_;
   ddk::I2cImplProtocolClient i2c_;
 };
 

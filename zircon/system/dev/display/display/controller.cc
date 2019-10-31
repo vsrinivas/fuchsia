@@ -4,7 +4,9 @@
 
 #include "controller.h"
 
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <utility>
@@ -13,11 +15,13 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/display/capture.h>
 #include <ddk/trace/event.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/display/capture.h>
 #include <fbl/auto_lock.h>
 
 #include "client.h"
-#include "fuchsia/hardware/display/c/fidl.h"
 
 namespace {
 
@@ -412,6 +416,26 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
   task.release()->Post(loop_.dispatcher());
 }
 
+void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
+  std::unique_ptr<async::Task> task = std::make_unique<async::Task>();
+  fbl::AutoLock lock(&mtx_);
+  task->set_handler([this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+    if (status == ZX_OK) {
+      fbl::AutoLock lock(&mtx_);
+      if (vc_client_ && vc_ready_) {
+        vc_client_->OnCaptureComplete();
+      }
+      if (primary_client_ && primary_ready_) {
+        primary_client_->OnCaptureComplete();
+      }
+    } else {
+      zxlogf(ERROR, "Failed to dispatch capture complete task %d\n", status);
+    }
+    delete task;
+  });
+  task.release()->Post(loop_.dispatcher());
+}
+
 void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                                           const uint64_t* handles,
                                                           size_t handle_count) {
@@ -664,6 +688,12 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
 
 void Controller::ReleaseImage(Image* image) { dc_.ReleaseImage(&image->info()); }
 
+void Controller::ReleaseCaptureImage(Image* image) {
+  if (dc_capture_.is_valid() && image != nullptr) {
+    dc_capture_.ReleaseCapture(reinterpret_cast<uint64_t>(&image->info()));
+  }
+}
+
 void Controller::SetVcMode(uint8_t vc_mode) {
   fbl::AutoLock lock(&mtx_);
   vc_mode_ = vc_mode;
@@ -875,6 +905,12 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // optional display controller capture protocol client
+  dc_capture_ = ddk::DisplayCaptureImplProtocolClient(parent_);
+  if (!dc_capture_.is_valid()) {
+    zxlogf(WARN, "Display Capture not supported by this platform\n");
+  }
+
   i2c_ = ddk::I2cImplProtocolClient(parent_);
 
   status = loop_.StartThread("display-client-loop", &loop_thread_);
@@ -890,6 +926,9 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   __UNUSED auto ptr = device_ptr->release();
 
   dc_.SetDisplayControllerInterface(this, &display_controller_interface_protocol_ops_);
+  if (dc_capture_.is_valid()) {
+    dc_capture_.SetDisplayCaptureInterface(this, &display_capture_interface_protocol_ops_);
+  }
 
   return ZX_OK;
 }

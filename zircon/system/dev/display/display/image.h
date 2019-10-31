@@ -5,16 +5,18 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
 
-#include <ddk/protocol/display/controller.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <atomic>
 
+#include <ddk/protocol/display/controller.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+
 #include "fence.h"
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "id-map.h"
 
 namespace display {
@@ -29,6 +31,7 @@ typedef struct image_node {
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
  public:
   Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px);
+  Image(Controller* controller, const image_t& info);
   ~Image();
 
   image_t& info() { return info_; }
@@ -102,6 +105,9 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // the next vsync. This is distinct from presenting_ due to multiplexing the display between
   // multiple clients. Only accessed under the controller mutex.
   bool retiring_ = false;
+
+  // flag used to distinguish between an image used for display vs capture
+  bool capture_image_ = false;
 
   const zx::vmo vmo_;
 };

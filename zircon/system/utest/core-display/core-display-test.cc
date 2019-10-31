@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/message.h>
@@ -21,6 +23,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <memory>
 
 #include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
@@ -30,41 +33,73 @@
 
 #include "lib/fidl/llcpp/vector_view.h"
 #include "lib/zx/event.h"
+#include "lib/zx/handle.h"
+#include "lib/zx/time.h"
 #include "zircon/errors.h"
 #include "zircon/fidl.h"
+#include "zircon/rights.h"
 #include "zircon/time.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
+namespace sysinfo = ::llcpp::fuchsia::sysinfo;
+namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 namespace {
+
+constexpr uint64_t kEventId = 13;
+constexpr uint32_t kCollectionId = 12;
+constexpr uint64_t kInvalidId = 34;
 
 class CoreDisplayTest : public zxtest::Test {
  public:
   void SetUp() override;
+  void TearDown() override;
+  void SetCaptureSupported(bool enable) { capture_supported_ = enable; }
+  bool IsCaptureSupported() { return capture_supported_; }
+  void ImportEvent();
+  void CreateToken();
+  void DuplicateAndImportToken();
+  void ImportBufferCollection();
+  void SetBufferConstraints();
+  void FinalizeClientConstraints();
+  uint64_t ImportCaptureImage();
+  zx_status_t StartCapture(uint64_t id, uint64_t e = kEventId);
+  zx_status_t WaitForEvent();
+  zx_status_t ReleaseCapture(uint64_t id);
+  void CaptureSetup();
+
   std::unique_ptr<fhd::Controller::SyncClient> dc_client_;
+  std::unique_ptr<sysinfo::Device::SyncClient> sysinfo_;
+  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
+  zx::event client_event_;
+  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token_;
+  std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
 
  private:
   zx::channel device_client_channel_;
   zx::channel dc_client_channel_;
+  zx::channel sysinfo_client_channel_;
+  zx::channel sysmem_client_channel_;
   fzl::FdioCaller caller_;
   fbl::Vector<fhd::Info> displays_;
+  bool capture_supported_ = false;
 };
 
 void CoreDisplayTest::SetUp() {
   zx::channel device_server_channel;
   fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
   zx_status_t status = zx::channel::create(0, &device_server_channel, &device_client_channel_);
-  EXPECT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   zx::channel dc_server_channel;
   status = zx::channel::create(0, &dc_server_channel, &dc_client_channel_);
-  EXPECT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   caller_.reset(std::move(fd));
   auto open_status = fhd::Provider::Call::OpenController(
       caller_.channel(), std::move(device_server_channel), std::move(dc_server_channel));
-  EXPECT_TRUE(open_status.ok());
-  EXPECT_EQ(ZX_OK, open_status.value().s);
+  ASSERT_TRUE(open_status.ok());
+  ASSERT_EQ(ZX_OK, open_status.value().s);
 
   dc_client_ = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel_));
 
@@ -88,19 +123,204 @@ void CoreDisplayTest::SetUp() {
         .unknown = []() { return ZX_ERR_STOP; }});
     ASSERT_FALSE(status != ZX_OK && status != ZX_ERR_NEXT);
   } while (!has_display);
+
+  // get sysmem
+  zx::channel sysmem_server_channel;
+  status = zx::channel::create(0, &sysmem_server_channel, &sysmem_client_channel_);
+  ASSERT_OK(status);
+  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server_channel.release());
+  ASSERT_OK(status);
+  sysmem_allocator_ =
+      std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client_channel_));
+
+  // determine is capture is supported or not
+  zx::channel sysinfo_server_channel_;
+  status = zx::channel::create(0, &sysinfo_server_channel_, &sysinfo_client_channel_);
+  ASSERT_OK(status);
+
+  sysinfo_ = std::make_unique<sysinfo::Device::SyncClient>(std::move(sysinfo_client_channel_));
+
+  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  fbl::unique_fd sysinfo_fd(open(kSysInfoPath, O_RDWR));
+  if (!sysinfo_fd) {
+    SetCaptureSupported(false);
+    return;
+  }
+  fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
+  auto result = sysinfo::Device::Call::GetBoardName(caller_sysinfo.channel());
+  if (!result.ok() || result.value().status != ZX_OK) {
+    SetCaptureSupported(false);
+    return;
+  }
+  printf("Found board %s\n", result.value().name.data());
+  if (!strcmp(result.value().name.data(), "qemu")) {
+    SetCaptureSupported(true);
+  } else {
+    SetCaptureSupported(false);
+  }
+}
+
+void CoreDisplayTest::TearDown() {
+  if (collection_) {
+    collection_->Close();
+  }
+  sysmem_allocator_.reset();
+}
+
+void CoreDisplayTest::ImportEvent() {
+  // First, import signal event to get notified when capture buffer has valid data
+  zx::event e2;
+  auto status = zx::event::create(0, &client_event_);
+  ASSERT_OK(status);
+  status = client_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2);
+  ASSERT_OK(status);
+  auto event_status = dc_client_->ImportEvent(std::move(e2), kEventId);
+  ASSERT_TRUE(event_status.ok());
+}
+
+void CoreDisplayTest::CreateToken() {
+  // Create token and keep the client
+  zx::channel token_server;
+  zx::channel token_client;
+  auto status = zx::channel::create(0, &token_server, &token_client);
+  ASSERT_OK(status);
+
+  token_ = std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(token_client));
+
+  // Pass token server to sysmem allocator
+  auto alloc_status = sysmem_allocator_->AllocateSharedCollection(std::move(token_server));
+  ASSERT_TRUE(alloc_status.ok());
+}
+
+void CoreDisplayTest::DuplicateAndImportToken() {
+  // Duplicate the token, to be passed to the display controller
+  zx::channel token_dup_client;
+  zx::channel token_dup_server;
+  auto status = zx::channel::create(0, &token_dup_server, &token_dup_client);
+  ASSERT_OK(status);
+  sysmem::BufferCollectionToken::SyncClient display_token(std::move(token_dup_client));
+  auto dup_res = token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
+  ASSERT_TRUE(dup_res.ok());
+  ASSERT_OK(dup_res.status());
+  // sync token
+  token_->Sync();
+
+  auto import_resp = dc_client_->ImportBufferCollection(
+      kCollectionId, std::move(*display_token.mutable_channel()));
+  ASSERT_TRUE(import_resp.ok());
+  ASSERT_OK(import_resp.value().res);
+}
+
+void CoreDisplayTest::SetBufferConstraints() {
+  fhd::ImageConfig image_config = {};
+  image_config.type = IMAGE_TYPE_CAPTURE;
+  auto constraints_resp = dc_client_->SetBufferCollectionConstraints(kCollectionId, image_config);
+  ASSERT_TRUE(constraints_resp.ok());
+  ASSERT_OK(constraints_resp.value().res);
+}
+
+void CoreDisplayTest::FinalizeClientConstraints() {
+  // now that we have provided all that's needed to the display controllers, we can
+  // return our token, set our own constraints and for allocation
+  // Before that, we need to create a channel to communicate with the buffer collection
+  zx::channel collection_client;
+  zx::channel collection_server;
+  auto status = zx::channel::create(0, &collection_server, &collection_client);
+  ASSERT_OK(status);
+  auto bind_resp = sysmem_allocator_->BindSharedCollection(std::move(*token_->mutable_channel()),
+                                                           std::move(collection_server));
+  ASSERT_OK(bind_resp.status());
+
+  // token has been returned. Let's set contraints
+  sysmem::BufferCollectionConstraints constraints = {};
+  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = false;
+  constraints.image_format_constraints_count = 1;
+  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] = sysmem::ColorSpace{
+      .type = sysmem::ColorSpaceType::SRGB,
+  };
+  image_constraints.min_coded_width = 0;
+  image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_coded_height = 0;
+  image_constraints.max_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_bytes_per_row = 0;
+  image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+  image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.layers = 1;
+  image_constraints.coded_width_divisor = 1;
+  image_constraints.coded_height_divisor = 1;
+  image_constraints.bytes_per_row_divisor = 1;
+  image_constraints.start_offset_divisor = 1;
+  image_constraints.display_width_divisor = 1;
+  image_constraints.display_height_divisor = 1;
+
+  collection_ =
+      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection_client));
+  auto collection_resp = collection_->SetConstraints(true, constraints);
+  ASSERT_OK(collection_resp.status());
+
+  // Token return and constraints set. Wait for allocation
+  auto wait_resp = collection_->WaitForBuffersAllocated();
+  ASSERT_OK(wait_resp.status());
+}
+
+uint64_t CoreDisplayTest::ImportCaptureImage() {
+  // Make the buffer available for capture
+  fhd::ImageConfig capture_cfg = {};  // will contain a handle
+  auto importcap_resp = dc_client_->ImportImageForCapture(capture_cfg, kCollectionId, 0);
+  if (importcap_resp.status() != ZX_OK) {
+    return INVALID_ID;
+  }
+  return importcap_resp.value().result.response().image_id;
+}
+
+zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) {
+  auto startcap_resp = dc_client_->StartCapture(e, id);
+  return (startcap_resp.value().result.err());
+}
+
+zx_status_t CoreDisplayTest::ReleaseCapture(uint64_t id) {
+  auto releasecap_resp = dc_client_->ReleaseCapture(id);
+  return (releasecap_resp.value().result.err());
+}
+
+zx_status_t CoreDisplayTest::WaitForEvent() {
+  uint32_t observed;
+  auto event_res =
+      client_event_.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(1)), &observed);
+  if (event_res == ZX_OK) {
+    client_event_.signal(ZX_EVENT_SIGNALED, 0);
+  }
+  return event_res;
+}
+
+void CoreDisplayTest::CaptureSetup() {
+  // First, import signal event to get notified when capture buffer has valid data
+  ImportEvent();
+  CreateToken();
+  DuplicateAndImportToken();
+
+  // Need to set constraints for allocation to occur
+  SetBufferConstraints();
+
+  // Pass back our own token and set our constraints so buffers can be allocated
+  FinalizeClientConstraints();
 }
 
 TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
   // Setup connects to display controller. Make sure we can't bound again
   fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
-  // EXPECT_GE(fd, 0);
   zx::channel device_server, device_client;
   zx_status_t status = zx::channel::create(0, &device_server, &device_client);
-  EXPECT_EQ(status, ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
 
   zx::channel dc_server, dc_client;
   status = zx::channel::create(0, &dc_server, &dc_client);
-  EXPECT_EQ(status, ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
 
   fzl::FdioCaller caller(std::move(fd));
   auto open_status = fhd::Provider::Call::OpenController(caller.channel(), std::move(device_server),
@@ -113,8 +333,8 @@ TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
 // allocate VMO function.
 TEST_F(CoreDisplayTest, ImportVmoImage) {
   auto alloc_status = dc_client_->AllocateVmo(1024 * 600 * 4);
-  EXPECT_TRUE(alloc_status.ok());
-  EXPECT_EQ(ZX_OK, alloc_status.value().res);
+  ASSERT_TRUE(alloc_status.ok());
+  ASSERT_EQ(ZX_OK, alloc_status.value().res);
 
   fhd::ImageConfig image_config = {};
   image_config.type = IMAGE_TYPE_SIMPLE;
@@ -132,6 +352,179 @@ TEST_F(CoreDisplayTest, CreateLayer) {
   EXPECT_TRUE(resp.ok());
   EXPECT_EQ(ZX_OK, resp.value().res);
   EXPECT_EQ(1, resp.value().layer_id);
+}
+
+TEST_F(CoreDisplayTest, CaptureClientDeadAfterStart) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  // Make the buffer available for capture
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  ASSERT_OK(StartCapture(id));
+
+  // close client before capture completes
+  dc_client_->mutable_channel()->reset();
+}
+
+TEST_F(CoreDisplayTest, CaptureFull) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  // Make the buffer available for capture
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  ASSERT_OK(StartCapture(id));
+
+  // wait for signal
+  EXPECT_OK(WaitForEvent());
+
+  // stop capture
+  ASSERT_OK(ReleaseCapture(id));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, MultipleCaptureFull) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  // Make the buffer available for capture
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  for (int i = 0; i < 10; i++) {
+    ASSERT_OK(StartCapture(id));
+
+    // wait for signal
+    EXPECT_OK(WaitForEvent());
+  }
+
+  // stop capture
+  ASSERT_OK(ReleaseCapture(id));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, CaptureReleaseAfterStart) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  // Make the buffer available for capture
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  ASSERT_OK(StartCapture(id));
+  EXPECT_OK(ReleaseCapture(id));
+
+  // This will still get delivered
+  EXPECT_OK(WaitForEvent());
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, InvalidStartCaptureId) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(kInvalidId));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, InvalidStartEventId) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  // Make the buffer available for capture
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(id, kInvalidId));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, MultipleCapture) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  uint64_t id = ImportCaptureImage();
+  ASSERT_NE(INVALID_ID, id);
+
+  ASSERT_OK(StartCapture(id));
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, StartCapture(id));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, InvalidReleaseCaptureId) {
+  if (!IsCaptureSupported()) {
+    printf("Test Skipped (capture not supported)\n");
+    return;
+  }
+
+  CaptureSetup();
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, ReleaseCapture(kInvalidId));
+
+  // done. Close sysmem
+  dc_client_->ReleaseBufferCollection(kCollectionId);
+}
+
+TEST_F(CoreDisplayTest, CaptureNotSupported) {
+  if (IsCaptureSupported()) {
+    printf("Test Skipped\n");
+    return;
+  }
+  fhd::ImageConfig image_config = {};
+  auto import_resp = dc_client_->ImportImageForCapture(image_config, 0, 0);
+  EXPECT_TRUE(import_resp.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, import_resp.value().result.err());
+
+  auto start_resp = dc_client_->StartCapture(0, 0);
+  EXPECT_TRUE(start_resp.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, start_resp.value().result.err());
+
+  auto release_resp = dc_client_->ReleaseCapture(0);
+  EXPECT_TRUE(release_resp.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, release_resp.value().result.err());
 }
 
 TEST_F(CoreDisplayTest, CreateLayerNoResource) {

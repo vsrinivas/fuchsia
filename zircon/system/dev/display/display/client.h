@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -13,7 +14,10 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <zircon/assert.h>
+#include <zircon/fidl.h>
 #include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <memory>
@@ -25,7 +29,6 @@
 
 #include "controller.h"
 #include "fence.h"
-#include "fuchsia/hardware/display/c/fidl.h"
 #include "id-map.h"
 #include "image.h"
 
@@ -149,6 +152,7 @@ class Client : private FenceCallback {
 
   bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
   uint32_t id() const { return id_; }
+  void CaptureCompleted();
 
  private:
   void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
@@ -220,9 +224,20 @@ class Client : private FenceCallback {
       const fuchsia_hardware_display_ControllerReleaseBufferCollectionRequest* req,
       fidl::Builder* resp_builder, const fidl_type_t** resp_table);
 
+  void HandleImportImageForCapture(
+      const fuchsia_hardware_display_ControllerImportImageForCaptureRequest* req,
+      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+
+  void HandleStartCapture(const fuchsia_hardware_display_ControllerStartCaptureRequest* req,
+                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+
+  void HandleReleaseCapture(const fuchsia_hardware_display_ControllerReleaseCaptureRequest* req,
+                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
   bool CleanUpImage(Image* image);
+  void CleanUpCaptureImage();
 
   Controller* controller_;
   ClientProxy* proxy_;
@@ -231,9 +246,10 @@ class Client : private FenceCallback {
   const uint32_t id_;
 
   zx_handle_t server_handle_;
-  uint64_t next_image_id_ = 1;  // Only INVALID_ID == 0 is invalid
-
+  uint64_t next_image_id_ = 1;         // Only INVALID_ID == 0 is invalid
+  uint64_t next_capture_image_id = 1;  // Only INVALID_ID == 0 is invalid
   Image::Map images_;
+  Image::Map capture_images_;
   DisplayConfig::Map configs_;
   bool pending_config_valid_ = false;
   bool is_owner_ = false;
@@ -271,6 +287,13 @@ class Client : private FenceCallback {
   bool CheckConfig(fidl::Builder* resp_builder);
 
   fbl::RefPtr<FenceReference> GetFence(uint64_t id);
+
+  uint64_t GetActiveCaptureImage() { return current_capture_image_; }
+
+  // Capture related book keeping
+  uint64_t capture_fence_id_ = INVALID_ID;
+  uint64_t current_capture_image_ = INVALID_ID;
+  uint64_t pending_capture_release_image_ = INVALID_ID;
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
@@ -297,12 +320,18 @@ class ClientProxy : public ClientParent {
                          const uint64_t* displays_removed, size_t removed_count);
   void SetOwnership(bool is_owner);
   void ReapplyConfig();
+  zx_status_t OnCaptureComplete();
 
   // Requires holding controller_->mtx() lock
   void EnableVsync(bool enable) {
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     enable_vsync_ = enable;
+  }
+
+  void EnableCapture(bool enable) {
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+    enable_capture_ = enable;
   }
   void OnClientDead();
   void Close();
@@ -318,6 +347,7 @@ class ClientProxy : public ClientParent {
   zx::channel server_channel_;
   Client handler_;
   bool enable_vsync_ = false;
+  bool enable_capture_ = false;
 
   // This variable is used to limit the number of errors logged in case of channel oom error
   static constexpr uint32_t kChannelOomPrintFreq = 600;  // 1 per 10 seconds (assuming 60fps)

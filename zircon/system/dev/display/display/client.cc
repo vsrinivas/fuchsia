@@ -4,6 +4,7 @@
 
 #include "client.h"
 
+#include <fuchsia/hardware/display/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/edid/edid.h>
@@ -11,15 +12,22 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/image-format/image_format.h>
+#include <lib/zx/channel.h>
 #include <math.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/pixelformat.h>
+#include <zircon/types.h>
 
 #include <utility>
 
 #include <ddk/debug.h>
+#include <ddk/protocol/display/controller.h>
 #include <ddk/trace/event.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #define BEGIN_TABLE_CASE if (false) {
 #define SELECT_TABLE_CASE(NAME)                                       \
@@ -70,6 +78,9 @@ zx_status_t decode_message(fidl::Message* msg) {
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
+  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImageForCapture);
+  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerStartCapture);
+  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseCapture);
 }
 if (!table) {
   zxlogf(INFO, "Unknown fidl ordinal %lu\n", ordinal);
@@ -200,6 +211,9 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
   HANDLE_REQUEST_CASE(ImportBufferCollection);
   HANDLE_REQUEST_CASE(ReleaseBufferCollection);
   HANDLE_REQUEST_CASE(SetBufferCollectionConstraints);
+  HANDLE_REQUEST_CASE(ImportImageForCapture);
+  HANDLE_REQUEST_CASE(StartCapture);
+  HANDLE_REQUEST_CASE(ReleaseCapture);
 }
 else if (ordinal == fuchsia_hardware_display_ControllerAllocateVmoOrdinal ||
          ordinal == fuchsia_hardware_display_ControllerAllocateVmoGenOrdinal) {
@@ -1163,6 +1177,149 @@ void Client::HandleGetSingleBufferFramebuffer(
   resp->stride = stride;
 }
 
+void Client::HandleImportImageForCapture(
+    const fuchsia_hardware_display_ControllerImportImageForCaptureRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+  auto resp = resp_builder->New<fuchsia_hardware_display_ControllerImportImageForCaptureResponse>();
+  *resp_table = &fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+
+  // Ensure display driver supports/implements capture.
+  if (controller_->dc_capture() == nullptr) {
+    resp->result.tag = fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_NOT_SUPPORTED;
+    return;
+  }
+
+  // Ensure a previously imported collection id is being used for import.
+  auto it = collection_map_.find(req->collection_id);
+  if (it == collection_map_.end()) {
+    resp->result.tag = fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  // Check whether buffer has already been allocated for the requested collection id.
+  zx::channel& collection = it->second.driver;
+  zx_status_t status2;
+  zx_status_t status =
+      fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection.get(), &status2);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    resp->result.tag = fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_SHOULD_WAIT;
+    return;
+  }
+
+  // capture_image will contain a handle that will be used by display driver to trigger
+  // capture start/release.
+  image_t capture_image = {};
+  status = controller_->dc_capture()->ImportImageForCapture(collection.get(), req->index,
+                                                            &capture_image.handle);
+  if (status == ZX_OK) {
+    auto release_image = fbl::MakeAutoCall([this, &capture_image]() {
+      controller_->dc_capture()->ReleaseCapture(capture_image.handle);
+    });
+
+    fbl::AllocChecker ac;
+    auto image = fbl::AdoptRef(new (&ac) Image(controller_, capture_image));
+    if (!ac.check()) {
+      resp->result.tag = fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTag_err;
+      resp->result.err = ZX_ERR_NO_MEMORY;
+      return;
+    }
+    image->id = next_capture_image_id++;
+    resp->result.response.image_id = image->id;
+    release_image.cancel();
+    capture_images_.insert(std::move(image));
+  } else {
+    resp->result.tag = fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTag_err;
+    resp->result.err = status;
+    return;
+  }
+}
+
+void Client::HandleStartCapture(const fuchsia_hardware_display_ControllerStartCaptureRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+  auto resp = resp_builder->New<fuchsia_hardware_display_ControllerStartCaptureResponse>();
+  *resp_table = &fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+
+  // Ensure display driver supports/implements capture.
+  if (controller_->dc_capture() == nullptr) {
+    resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_NOT_SUPPORTED;
+    return;
+  }
+
+  // Don't start capture if one is in progress
+  if (current_capture_image_ != INVALID_ID) {
+    resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_SHOULD_WAIT;
+    return;
+  }
+
+  // Ensure we have a capture fence for the request signal event.
+  auto signal_fence = GetFence(req->signal_event_id);
+  if (signal_fence == nullptr) {
+    resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  // Ensure we are capturing into a valid image buffer
+  auto image = capture_images_.find(req->image_id);
+  if (!image.IsValid()) {
+    zxlogf(ERROR, "Invalid Capture Image ID requested for capture\n");
+    resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  capture_fence_id_ = req->signal_event_id;
+  auto status = controller_->dc_capture()->StartCapture(image->info().handle);
+  if (status == ZX_OK) {
+    fbl::AutoLock lock(controller_->mtx());
+    proxy_->EnableCapture(true);
+  } else {
+    resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
+    resp->result.err = status;
+  }
+
+  // keep track of currently active capture image
+  current_capture_image_ = req->image_id;
+}
+
+void Client::HandleReleaseCapture(
+    const fuchsia_hardware_display_ControllerReleaseCaptureRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+  auto resp = resp_builder->New<fuchsia_hardware_display_ControllerReleaseCaptureResponse>();
+  *resp_table = &fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
+
+  // Ensure display driver supports/implements capture
+  if (controller_->dc_capture() == nullptr) {
+    resp->result.tag = fuchsia_hardware_display_Controller_ReleaseCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_NOT_SUPPORTED;
+    return;
+  }
+
+  // Ensure we are releasing a valid image buffer
+  auto image = capture_images_.find(req->image_id);
+  if (!image.IsValid()) {
+    zxlogf(ERROR, "Invalid Capture Image ID requested for release\n");
+    resp->result.tag = fuchsia_hardware_display_Controller_ReleaseCapture_ResultTag_err;
+    resp->result.err = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  // Make sure we are not releasing an active capture.
+  if (current_capture_image_ == req->image_id) {
+    // we have an active capture. Release it when capture is completed
+    zxlogf(WARN, "Capture is active. Will release after capture is complete\n");
+    pending_capture_release_image_ = current_capture_image_;
+  } else {
+    // release image now
+    capture_images_.erase(image);
+  }
+}
+
 bool Client::CheckConfig(fidl::Builder* resp_builder) {
   const display_config_t* configs[configs_.size()];
   layer_t* layers[layers_.size()];
@@ -1675,6 +1832,24 @@ void Client::OnRefForFenceDead(Fence* fence) {
   }
 }
 
+void Client::CaptureCompleted() {
+  auto signal_fence = GetFence(capture_fence_id_);
+  if (signal_fence != nullptr) {
+    signal_fence->Signal();
+  }
+  proxy_->EnableCapture(false);
+
+  // release any pending capture images
+  if (pending_capture_release_image_ == current_capture_image_) {
+    auto image = capture_images_.find(pending_capture_release_image_);
+    if (image.IsValid()) {
+      capture_images_.erase(image);
+    }
+    pending_capture_release_image_ = INVALID_ID;
+  }
+  current_capture_image_ = INVALID_ID;
+}
+
 void Client::TearDown() {
   ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN ||
                   controller_->current_thread_is_loop());
@@ -1693,6 +1868,7 @@ void Client::TearDown() {
   server_handle_ = ZX_HANDLE_INVALID;
 
   CleanUpImage(nullptr);
+  CleanUpCaptureImage();
 
   // Use a temporary list to prevent double locking when resetting
   fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
@@ -1777,6 +1953,24 @@ bool Client::CleanUpImage(Image* image) {
   return current_config_change;
 }
 
+void Client::CleanUpCaptureImage() {
+  if (current_capture_image_ != INVALID_ID) {
+    // There is an active capture. Need to wait for that to stop before
+    // releasing the resources
+    // 200ms should be plenty of time for capture to complete
+    int64_t timeout = 200;  // unit in ms
+    while (!controller_->dc_capture()->IsCaptureCompleted() && timeout--) {
+      zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+    }
+    // Timeout is fatal since capture never completed and hardware is in unknown state
+    ZX_ASSERT(timeout > 0);
+    auto image = capture_images_.find(current_capture_image_);
+    if (image.IsValid()) {
+      capture_images_.erase(image);
+    }
+  }
+}
+
 zx_status_t Client::Init(zx_handle_t server_handle) {
   zx_status_t status;
 
@@ -1854,6 +2048,14 @@ void ClientProxy::ReapplyConfig() {
     delete task;
   });
   task->Post(controller_->loop().dispatcher());
+}
+
+zx_status_t ClientProxy::OnCaptureComplete() {
+  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  if (enable_capture_) {
+    handler_.CaptureCompleted();
+  }
+  return ZX_OK;
 }
 
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,

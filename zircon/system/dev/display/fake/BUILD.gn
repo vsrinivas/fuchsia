@@ -17,6 +17,7 @@ static_library("fake-lib") {
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.display.capture",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-platform-device",

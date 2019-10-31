@@ -4,28 +4,34 @@
 
 #include "image.h"
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
+#include <lib/zx/handle.h>
 
 #include <atomic>
 #include <utility>
+
+#include <ddk/debug.h>
+#include <ddk/trace/event.h>
 
 #include "controller.h"
 
 namespace display {
 
-Image::Image(Controller* controller, const image_t& image_config, zx::vmo handle,
-             uint32_t stride_px)
-    : info_(image_config),
-      stride_px_(stride_px),
-      controller_(controller),
-      vmo_(std::move(handle)) {}
+Image::Image(Controller* controller, const image_t& info, zx::vmo handle, uint32_t stride_px)
+    : info_(info), stride_px_(stride_px), controller_(controller), vmo_(std::move(handle)) {
+  capture_image_ = false;
+}
+Image::Image(Controller* controller, const image_t& info) : info_(info), controller_(controller) {
+  capture_image_ = true;
+}
 
 Image::~Image() {
-  ZX_DEBUG_ASSERT(!std::atomic_load(&in_use_));
-  ZX_DEBUG_ASSERT(!list_in_list(&node.link));
-
-  controller_->ReleaseImage(this);
+  if (!capture_image_) {
+    ZX_DEBUG_ASSERT(!std::atomic_load(&in_use_));
+    ZX_DEBUG_ASSERT(!list_in_list(&node.link));
+    controller_->ReleaseImage(this);
+  } else {
+    controller_->ReleaseCaptureImage(this);
+  }
 }
 
 void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
