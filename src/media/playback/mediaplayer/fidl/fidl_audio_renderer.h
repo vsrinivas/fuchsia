@@ -74,6 +74,8 @@ class FidlAudioRenderer : public AudioRenderer {
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   fuchsia::media::AudioRendererPtr audio_renderer_;
   bool renderer_responding_ = false;
+  bool input_connection_ready_ = false;
+  fit::closure when_input_connection_ready_;
   media::TimelineRate pts_rate_;
   int64_t last_supplied_pts_ns_ = Packet::kNoPts;
   int64_t last_departed_pts_ns_ = Packet::kNoPts;

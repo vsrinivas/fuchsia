@@ -105,6 +105,13 @@ void FakeAudioRenderer::DiscardAllPacketsNoReply() {
 }
 
 void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
+  if (vmo_mapper_.start() == nullptr) {
+    FXL_LOG(ERROR) << "Play called with no buffer added";
+    expected_ = false;
+    binding_.Unbind();
+    return;
+  }
+
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     reference_time = zx::clock::get_monotonic().get();
   }
@@ -132,6 +139,13 @@ void FakeAudioRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) 
 }
 
 void FakeAudioRenderer::Pause(PauseCallback callback) {
+  if (vmo_mapper_.start() == nullptr) {
+    FXL_LOG(ERROR) << "Pause called with no buffer added";
+    expected_ = false;
+    binding_.Unbind();
+    return;
+  }
+
   int64_t reference_time = zx::clock::get_monotonic().get();
   int64_t media_time = timeline_function_(reference_time);
   timeline_function_ = media::TimelineFunction(media_time, reference_time, 0, 1);

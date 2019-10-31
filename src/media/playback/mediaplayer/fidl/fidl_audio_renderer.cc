@@ -40,6 +40,11 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
   min_lead_time_ns_ = kDefaultMinLeadTime;
   target_lead_time_ns_ = min_lead_time_ns_ + kTargetLeadTimeDeltaNs;
 
+  audio_renderer_.set_error_handler([](zx_status_t status){
+    // TODO(dalesat): Report this to the graph.
+    FXL_LOG(FATAL) << "AudioRenderer connection closed.";
+  });
+
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_ns) {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
     renderer_responding_ = true;
@@ -116,6 +121,13 @@ void FidlAudioRenderer::OnInputConnectionReady(size_t input_index) {
   FXL_DCHECK(vmos.size() == 1);
   audio_renderer_->AddPayloadBuffer(
       0, vmos.front()->Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP));
+
+  input_connection_ready_ = true;
+
+  if (when_input_connection_ready_) {
+    when_input_connection_ready_();
+    when_input_connection_ready_ = nullptr;
+  }
 }
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
@@ -295,13 +307,21 @@ void FidlAudioRenderer::SetTimelineFunction(media::TimelineFunction timeline_fun
   FXL_DCHECK(timeline_function.subject_delta() == 0 ||
              (timeline_function.subject_delta() == 1 && timeline_function.reference_delta() == 1));
 
-  Renderer::SetTimelineFunction(timeline_function, std::move(callback));
+  when_input_connection_ready_ = [this, timeline_function,
+                                  callback = std::move(callback)]() mutable {
+    Renderer::SetTimelineFunction(timeline_function, std::move(callback));
 
-  if (timeline_function.subject_delta() == 0) {
-    audio_renderer_->PauseNoReply();
-  } else {
-    int64_t presentation_time = from_ns(timeline_function.subject_time());
-    audio_renderer_->PlayNoReply(timeline_function.reference_time(), presentation_time);
+    if (timeline_function.subject_delta() == 0) {
+      audio_renderer_->PauseNoReply();
+    } else {
+      int64_t presentation_time = from_ns(timeline_function.subject_time());
+      audio_renderer_->PlayNoReply(timeline_function.reference_time(), presentation_time);
+    }
+  };
+
+  if (input_connection_ready_) {
+    when_input_connection_ready_();
+    when_input_connection_ready_ = nullptr;
   }
 }
 
