@@ -41,9 +41,11 @@ struct ChildNodeInfo {
 class CameraProcessNode {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(CameraProcessNode);
-  CameraProcessNode(NodeType type, fuchsia_sysmem_BufferCollectionInfo output_buffer_collection)
+  CameraProcessNode(NodeType type, fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+                    fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection)
       : type_(type),
-        old_output_buffer_collection_(output_buffer_collection),
+        output_buffer_collection_(std::move(output_buffer_collection)),
+        old_output_buffer_collection_(old_output_buffer_collection),
         callback_{OnFrameAvailable, this},
         enabled_(false) {}
 

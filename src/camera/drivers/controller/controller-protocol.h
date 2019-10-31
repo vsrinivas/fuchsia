@@ -10,6 +10,7 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
 
 #include "camera_pipeline_manager.h"
@@ -30,12 +31,14 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   ControllerImpl(zx_device_t* device,
                  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                  async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
-                 fit::closure on_connection_closed,
+                 ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
   explicit ControllerImpl(zx_device_t* device, ddk::IspProtocolClient& isp,
+                          ddk::GdcProtocolClient& gdc,
                           fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : binding_(nullptr), camera_pipeline_manager_(device, isp, std::move(sysmem_allocator)) {}
+      : binding_(nullptr),
+        camera_pipeline_manager_(device, isp, gdc, std::move(sysmem_allocator)) {}
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,

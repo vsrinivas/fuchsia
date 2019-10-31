@@ -30,17 +30,19 @@ struct CameraPipelineInfo {
 class CameraPipelineManager {
  public:
   CameraPipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
-                        ddk::IspProtocolClient& isp,
+                        ddk::IspProtocolClient& isp, ddk::GdcProtocolClient& gdc,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device),
         dispatcher_(dispatcher),
         isp_(isp),
+        gdc_(gdc),
         memory_allocator_(std::move(sysmem_allocator)) {}
 
   // For tests.
   CameraPipelineManager(zx_device_t* device, ddk::IspProtocolClient& isp,
+                        ddk::GdcProtocolClient& gdc,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : device_(device), isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
+      : device_(device), isp_(isp), gdc_(gdc), memory_allocator_(std::move(sysmem_allocator)) {}
 
   zx_status_t ConfigureStreamPipeline(CameraPipelineInfo* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
@@ -56,6 +58,7 @@ class CameraPipelineManager {
   zx_status_t ConfigureOutputNode(const std::shared_ptr<CameraProcessNode>& parent_node,
                                   const InternalConfigNode* node,
                                   std::shared_ptr<CameraProcessNode>* output_processing_node);
+
   // Create the stream pipeline graph
   zx_status_t CreateGraph(CameraPipelineInfo* info,
                           const std::shared_ptr<CameraProcessNode>& parent_node,
@@ -74,6 +77,7 @@ class CameraPipelineManager {
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient& isp_;
+  __UNUSED ddk::GdcProtocolClient& gdc_;
   ControllerMemoryAllocator memory_allocator_;
   std::shared_ptr<CameraProcessNode> full_resolution_stream_;
 };

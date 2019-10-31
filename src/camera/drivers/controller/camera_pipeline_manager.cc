@@ -25,7 +25,7 @@ const InternalConfigNode* CameraPipelineManager::GetNextNodeInPipeline(
 }
 
 // Temporary code to convert into buffercollectioninfo
-static void ConvertToBufferCollectionInfo(
+static zx_status_t ConvertToBufferCollectionInfo(
     fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection,
     fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection) {
   old_buffer_collection->buffer_count = buffer_collection->buffer_count;
@@ -44,11 +44,19 @@ static void ConvertToBufferCollectionInfo(
   old_buffer_collection->format.image.planes[0].bytes_per_row =
       buffer_collection->settings.image_format_constraints.max_bytes_per_row;
   for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    old_buffer_collection->vmos[i] = buffer_collection->buffers[i].vmo.release();
+    // We duplicate the handles since we need to new version
+    // as well to send it to GDC
+    zx::vmo vmo;
+    auto status = buffer_collection->buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to dup VMO";
+      return status;
+    }
+    old_buffer_collection->vmos[i] = vmo.release();
   }
   old_buffer_collection->vmo_size = buffer_collection->settings.buffer_settings.size_bytes;
-
   // End of temporary code
+  return ZX_OK;
 }
 
 // NOTE: This API currently supports only debug config
@@ -71,6 +79,7 @@ zx_status_t CameraPipelineManager::GetBuffers(
   // TODO(braval): Not needed at the moment so returning ZX_ERR_NOT_SUPPORTED;
   return ZX_ERR_NOT_SUPPORTED;
 }
+
 zx_status_t CameraPipelineManager::ConfigureInputNode(
     CameraPipelineInfo* info, std::shared_ptr<CameraProcessNode>* out_processing_node) {
   uint8_t isp_stream_type;
@@ -93,8 +102,8 @@ zx_status_t CameraPipelineManager::ConfigureInputNode(
   ConvertToBufferCollectionInfo(&buffers, &old_buffer_collection);
 
   // Create Input Node
-  auto processing_node =
-      std::make_shared<camera::CameraProcessNode>(info->node.type, old_buffer_collection);
+  auto processing_node = std::make_shared<camera::CameraProcessNode>(
+      info->node.type, std::move(buffers), old_buffer_collection);
   if (!processing_node) {
     FX_LOGS(ERROR) << "Failed to create ISP stream protocol";
     return ZX_ERR_NO_MEMORY;
@@ -107,6 +116,7 @@ zx_status_t CameraPipelineManager::ConfigureInputNode(
     return ZX_ERR_INTERNAL;
   }
 
+  // TODO(braval): create FR or DS depending on what stream is requested
   status = isp_.CreateOutputStream(
       &old_buffer_collection, reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate),
       STREAM_TYPE_FULL_RESOLUTION, processing_node->callback(), isp_stream_protocol->protocol());
@@ -201,13 +211,13 @@ zx_status_t CameraPipelineManager::LoadGdcConfiguration(const camera::GdcConfig&
 zx_status_t CameraPipelineManager::CreateGraph(
     CameraPipelineInfo* info, const std::shared_ptr<CameraProcessNode>& parent_node,
     std::shared_ptr<CameraProcessNode>* output_processing_node) {
-  auto next_node = GetNextNodeInPipeline(info, info->node);
-  if (!next_node) {
+  auto next_node_internal = GetNextNodeInPipeline(info, info->node);
+  if (!next_node_internal) {
     FX_LOGS(ERROR) << "Failed to get next node";
     return ZX_ERR_INTERNAL;
   }
 
-  switch (next_node->type) {
+  switch (next_node_internal->type) {
     // Input Node
     case NodeType::kInputStream: {
       FX_LOGS(ERROR) << "Child node cannot be input node";
@@ -223,7 +233,7 @@ zx_status_t CameraPipelineManager::CreateGraph(
     }
     // Output Node
     case NodeType::kOutputStream: {
-      auto status = ConfigureOutputNode(parent_node, next_node, output_processing_node);
+      auto status = ConfigureOutputNode(parent_node, next_node_internal, output_processing_node);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to configure Output Node";
         // TODO(braval): Handle already configured nodes

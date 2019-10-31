@@ -60,7 +60,7 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
 
   if (control_interface.is_valid()) {
     controller_ = std::make_unique<ControllerImpl>(
-        parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_,
+        parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_,
         [this] { controller_ = nullptr; }, std::move(sysmem_allocator));
 
     return ZX_OK;

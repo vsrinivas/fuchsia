@@ -11,8 +11,10 @@
 
 #include <fbl/auto_call.h>
 
+#include "fake_gdc.h"
 #include "fake_isp.h"
 #include "src/camera/drivers/controller/camera_pipeline_manager.h"
+
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class
 
 namespace camera {
@@ -33,10 +35,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
     isp_ = fake_isp_.client();
-    controller_protocol_device_ = std::make_unique<ControllerImpl>(fake_ddk::kFakeParent, isp_,
-                                                                   std::move(sysmem_allocator1_));
+    gdc_ = fake_gdc_.client();
+    controller_protocol_device_ = std::make_unique<ControllerImpl>(
+        fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
     camera_pipeline_manager_ = std::make_unique<CameraPipelineManager>(
-        fake_ddk::kFakeParent, isp_, std::move(sysmem_allocator2_));
+        fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator2_));
   }
 
   void TearDown() override {
@@ -185,6 +188,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   FakeIsp fake_isp_;
+  FakeGdc fake_gdc_;
   async::Loop loop_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
@@ -193,6 +197,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
   ddk::IspProtocolClient isp_;
+  ddk::GdcProtocolClient gdc_;
 };
 
 TEST_F(ControllerProtocolTest, GetConfigs) { TestInternalConfigs(); }
