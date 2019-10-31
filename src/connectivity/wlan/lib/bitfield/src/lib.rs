@@ -30,6 +30,13 @@ use {
 /// pub struct MyFields(pub u32);
 /// ```
 ///
+/// A raw() getter is always generated for getting the underlying unsigned integer:
+///
+/// ```
+/// impl MyFields {
+///     pub fn raw(&self) -> u32 { self.0 }
+/// ```
+///
 /// There are two styles of fields:
 ///
 /// * Single-bit fields, e.g. the `bar` above. For those fields, `bool`-based accessors
@@ -198,6 +205,7 @@ fn generate(
             }
         }
     }
+    methods.push(generate_raw_getter(len_bits));
 
     let debug_impl = generate_debug_impl(struct_name, fields, len_bits);
 
@@ -486,6 +494,15 @@ fn generate_methods_for_alias(
         }
     };
     Ok(value)
+}
+
+fn generate_raw_getter(len_bits: usize) -> TokenStream {
+    let int_type = syn::Ident::new(&format!("u{}", len_bits), Span::call_site());
+    quote! {
+        pub fn raw(&self) -> #int_type {
+            self.0
+        }
+    }
 }
 
 fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize) -> TokenStream {

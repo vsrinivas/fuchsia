@@ -21,6 +21,7 @@ mod tests {
         assert_eq!(0, foo.b());
         assert!(!foo.c());
         assert_eq!(0, foo.d());
+        assert_eq!(0, foo.raw());
     }
 
     #[test]
@@ -30,24 +31,28 @@ mod tests {
         assert_eq!(0, foo.b());
         assert!(!foo.c());
         assert_eq!(0, foo.d());
+        assert_eq!(1, foo.raw());
 
         let foo = Foo(0b00_0_1001_0);
         assert!(!foo.a());
         assert_eq!(0b1001, foo.b());
         assert!(!foo.c());
         assert_eq!(0, foo.d());
+        assert_eq!(0b00_0_1001_0, foo.raw());
 
         let foo = Foo(0b_00_1_0000_0);
         assert!(!foo.a());
         assert_eq!(0, foo.b());
         assert!(foo.c());
         assert_eq!(0, foo.d());
+        assert_eq!(0b_00_1_0000_0, foo.raw());
 
         let foo = Foo(0b_11_0_0000_0);
         assert!(!foo.a());
         assert_eq!(0, foo.b());
         assert!(!foo.c());
         assert_eq!(0b11, foo.d());
+        assert_eq!(0b_11_0_0000_0, foo.raw())
     }
 
     #[test]
@@ -55,7 +60,8 @@ mod tests {
         let mut foo = Foo(0);
         foo.set_b(0b11111);
         assert_eq!(0b1111, foo.b());
-        assert_eq!(0b_00_0_1111_0, foo.0)
+        assert_eq!(0b_00_0_1111_0, foo.0);
+        assert_eq!(0b_00_0_1111_0, foo.raw());
     }
 
     #[test]
@@ -63,8 +69,10 @@ mod tests {
         let mut foo = Foo(0);
         foo.set_c(true);
         assert_eq!(0b_00_1_0000_0, foo.0);
+        assert_eq!(0b_00_1_0000_0, foo.raw());
         foo.set_c(false);
         assert_eq!(0b_00_0_0000_0, foo.0);
+        assert_eq!(0b_00_0_0000_0, foo.raw());
     }
 
     #[test]
@@ -72,14 +80,17 @@ mod tests {
         let mut foo = Foo(!0);
         foo.set_b(0);
         assert_eq!(0b_11_1_0000_1, foo.0);
+        assert_eq!(0b_11_1_0000_1, foo.raw());
         foo.set_c(false);
         assert_eq!(0b_11_0_0000_1, foo.0);
+        assert_eq!(0b_11_0_0000_1, foo.raw());
     }
 
     #[test]
     pub fn builders() {
         let foo = Foo(0).with_b(0b1001).with_c(true).with_d(0b10);
         assert_eq!(0b10_1_1001_0, foo.0);
+        assert_eq!(0b10_1_1001_0, foo.raw());
     }
 
     #[bitfield(
@@ -94,10 +105,13 @@ mod tests {
         big.set_tail(0xdeadbeef0000);
         assert_eq!(0xdeadbeef0000, big.tail());
         assert_eq!(0xdeadbeef0000_0000_0000_0000_0000_0000, big.0);
+        assert_eq!(0xdeadbeef0000_0000_0000_0000_0000_0000, big.raw());
 
         let big = Big(!0);
         assert_eq!(0xffff_ffff_ffff, big.tail());
         assert_eq!(0xffff_ffff_ffff_ffff_ffff, big.head());
+        assert_eq!(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff, big.0);
+        assert_eq!(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff, big.raw());
     }
 
     #[derive(Debug)]
@@ -115,6 +129,7 @@ mod tests {
         let a: CustomType = x.a();
         assert_eq!(0xf, a.0);
         assert_eq!(0x000f, x.0);
+        assert_eq!(0x000f, x.raw());
         x.set_a(CustomType(12));
         assert_eq!(12, x.a().0);
     }
@@ -134,6 +149,7 @@ mod tests {
         let a: CustomBoolType = x.a();
         assert!(a.0);
         assert_eq!(0x0001, x.0);
+        assert_eq!(0x0001, x.raw());
         x.set_a(CustomBoolType(false));
         assert!(!x.a().0);
     }
@@ -192,6 +208,7 @@ mod tests {
 
         a.set_foo(0xf);
         assert_eq!(0x77f5, a.0);
+        assert_eq!(0x77f5, a.raw());
         assert_eq!(5, a.head());
         assert_eq!(0xf, a.foo());
         assert_eq!(0xf, a.bar().0);
@@ -199,6 +216,7 @@ mod tests {
 
         a.set_bar(CustomType(1));
         assert_eq!(0x7715, a.0);
+        assert_eq!(0x7715, a.raw());
         assert_eq!(5, a.head());
         assert_eq!(1, a.foo());
         assert_eq!(1, a.bar().0);
