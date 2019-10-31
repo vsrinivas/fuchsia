@@ -1020,6 +1020,40 @@ if (use_vbmeta) {
     }
   }
 
+  vbmeta("fuchsia_prime.vbmeta") {
+    output_name = "fuchsia_prime"
+    testonly = true
+    if (custom_signing_script != "") {
+      deps = [
+        ":fuchsia_prime_signed",
+      ]
+      zbi = get_target_outputs(":fuchsia_prime_signed")
+    } else {
+      deps = [
+        ":fuchsia_prime",
+      ]
+      zbi = get_target_outputs(":fuchsia_prime")
+    }
+    if (include_devmgr_config_in_vbmeta) {
+      deps += [ ":devmgr_config_prime.txt" ]
+
+      boot_args_file = get_target_outputs(":devmgr_config_prime.txt")
+
+      # expecting a single file
+      assert(
+          [ boot_args_file[0] ] == boot_args_file,
+          "expect a single output file form 'devmgr_config_prime.txt' target")
+
+      prop_from_file = [
+        {
+          # zbi item type w/o ZBI_TYPE_ prefix
+          type = "IMAGE_ARGS"
+          file = boot_args_file[0]
+        },
+      ]
+    }
+  }
+
   default_image_deps += [ ":fuchsia.vbmeta" ]
 
   update_manifest += [
@@ -1876,6 +1910,19 @@ action("update_prime.manifest") {
     "--rewrite",
     zbi_prime.updater + "={target}=" +
         rebase_path(zbi_outputs[0], root_build_dir),
+  ]
+
+  if (use_vbmeta) {
+    deps += [ ":fuchsia_prime.vbmeta" ]
+    fuchsia_prime_vbmeta = get_target_outputs(":fuchsia_prime.vbmeta")
+    args += [
+      "--rewrite",
+      "fuchsia.vbmeta={target}=" +
+          rebase_path(fuchsia_prime_vbmeta[0], root_build_dir),
+    ]
+  }
+
+  args += [
     "--manifest",
     rebase_path(update_manifest_outputs[0], root_build_dir),
   ]
