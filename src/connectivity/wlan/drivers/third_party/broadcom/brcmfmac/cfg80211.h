@@ -29,7 +29,6 @@
 #include "brcmu_d11.h"
 #include "core.h"
 #include "fwil_types.h"
-#include "p2p.h"
 #include "timer.h"
 #include "workqueue.h"
 
@@ -279,7 +278,6 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * struct brcmf_cfg80211_info - dongle private data of cfg80211 interface
  *
  * @conf: dongle configuration.
- * @p2p: peer-to-peer specific information.
  * @btcoex: Bluetooth coexistence information.
  * @scan_request: cfg80211 scan request object.
  * @usr_sync: mainly for dongle up/down synchronization.
@@ -314,7 +312,6 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  */
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
-  struct brcmf_p2p_info p2p;
   struct brcmf_btcoex_info* btcoex;
   const wlanif_scan_req_t* scan_request;
   mtx_t usr_sync;

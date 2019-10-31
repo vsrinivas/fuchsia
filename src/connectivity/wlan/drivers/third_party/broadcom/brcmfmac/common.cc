@@ -32,10 +32,6 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 
-MODULE_AUTHOR("Broadcom Corporation")
-MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.")
-MODULE_LICENSE("Dual BSD/GPL")
-
 #define BRCMF_DEFAULT_SCAN_CHANNEL_TIME 40
 #define BRCMF_DEFAULT_SCAN_UNASSOC_TIME 40
 
@@ -44,26 +40,21 @@ MODULE_LICENSE("Dual BSD/GPL")
 
 #define BRCMF_FW_NAME_LEN 256
 
+// Enable legacy p2p management functionality
 static int brcmf_p2p_enable;
-module_param_named(p2pon, brcmf_p2p_enable, int, 0)
-    MODULE_PARM_DESC(p2pon, "Enable legacy p2p management functionality")
 
-        static int brcmf_feature_disable;
-module_param_named(feature_disable, brcmf_feature_disable, int, 0)
-    MODULE_PARM_DESC(feature_disable, "Disable features")
+// Disable features
+static int brcmf_feature_disable;
 
-        static int brcmf_fcmode;
-module_param_named(fcmode, brcmf_fcmode, int, 0)
-    MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control")
+// Mode of firmware signalled flow control
+static int brcmf_fcmode;
 
-    /* Do not use internal roaming engine */
-    static bool brcmf_roamoff = 1;
+// Do not use internal roaming engine
+static bool brcmf_roamoff = 1;
 
 #if !defined(NDEBUG)
-/* always succeed brcmf_bus_started() */
+/* always succeed brcmf_bus_started() for debugging */
 static int brcmf_ignore_probe_fail;
-module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0)
-    MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging")
 #endif  // !defined(NDEBUG)
 
         void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {

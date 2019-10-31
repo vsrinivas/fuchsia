@@ -147,8 +147,6 @@ struct brcmf_pub {
   char fwver[BRCMF_DRIVER_FIRMWARE_VERSION_LEN];
   uint8_t mac[ETH_ALEN]; /* MAC address obtained from dongle */
 
-  struct mac_address addresses[BRCMF_MAX_IFS];
-
   struct brcmf_if* iflist[BRCMF_MAX_IFS];
   int32_t if2bss[BRCMF_MAX_IFS];
 
@@ -167,7 +165,6 @@ struct brcmf_pub {
   zx_handle_t dbgfs_dir;
 #endif  // !defined(NDEBUG)
 
-  struct notifier_block inetaddr_notifier;
   struct brcmf_mp_device* settings;
 
   uint8_t clmver[BRCMF_DCMD_SMLEN];
@@ -227,8 +224,6 @@ struct brcmf_if {
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;
   sync_completion_t pend_8021x_wait;
-  struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
-  uint8_t ipv6addr_idx;
 };
 
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name);

@@ -25,7 +25,6 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
-#include "p2p.h"
 #include "workqueue.h"
 
 /* T1 start SCO/eSCO priority suppression */

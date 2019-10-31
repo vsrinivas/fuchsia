@@ -46,12 +46,9 @@
 #include "linuxisms.h"
 #include "macros.h"
 #include "netbuf.h"
-#include "p2p.h"
 #include "pno.h"
 #include "proto.h"
 #include "workqueue.h"
-
-#define BRCMF_SCAN_IE_LEN_MAX 2048
 
 #define WPA_OUI "\x00\x50\xF2" /* WPA OUI */
 #define WPA_OUI_TYPE 1
@@ -893,10 +890,6 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
     BRCMF_ERR("Scan request suppressed: connect in progress (status: %lu)\n",
               vif->dev_state.load());
     return ZX_ERR_UNAVAILABLE;
-  }
-  /* If scan req comes for p2p0, send it over primary I/F */
-  if (vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_DEVICE].vif) {
-    vif = cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif;
   }
 
   BRCMF_DBG(SCAN, "START ESCAN\n");
@@ -1994,10 +1987,6 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  if (brcmf_p2p_scan_finding_common_channel(cfg, bss_info_le)) {
-    goto chk_scan_end;
-  }
-
   if (!cfg->int_escan_map && !cfg->scan_request) {
     BRCMF_DBG(SCAN, "result without cfg80211 request\n");
     goto chk_scan_end;
@@ -2019,9 +2008,6 @@ chk_scan_end:
   // If this is not a partial notification, indicate scan complete to wlanstack
   if (status != BRCMF_E_STATUS_PARTIAL) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
-    if (brcmf_p2p_scan_finding_common_channel(cfg, NULL)) {
-      goto done;
-    }
     if (cfg->int_escan_map || cfg->scan_request) {
       aborted = status != BRCMF_E_STATUS_SUCCESS;
       brcmf_notify_escan_complete(cfg, ifp, aborted, false);
@@ -4587,7 +4573,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
     if (err != ZX_OK) {
       BRCMF_DBG(INFO, "TDLS not enabled: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
-      // wiphy->flags &= ~WIPHY_FLAG_SUPPORTS_TDLS;
     } else {
       brcmf_fweh_register(cfg->pub, BRCMF_E_TDLS_PEER_EVENT, brcmf_notify_tdls_peer_event);
     }

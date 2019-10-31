@@ -112,8 +112,6 @@ source_set("core") {
     "firmware.cc",
     "fweh.cc",
     "fwil.cc",
-    "p2p.cc",
-    "p2p.h",
     "pno.cc",
     "pno.h",
     "timer.cc",
