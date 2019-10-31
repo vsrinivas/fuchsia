@@ -6,6 +6,23 @@ library fuchsia.ui.remotewidgets;
 
 using fuchsia.fonts;
 
+/// Defines special actions that are used on Values to control QuickUi
+/// navigation or provide extra semantics to actions associated with them.
+enum QuickAction {
+    /// Can be set on a button spec. Tells the client to navigate to a details
+    /// view reserved exclusively for specs from this server.
+    DETAILS = 0x80000000;
+    /// Can be set on a button spec. Tells the client to return to the previous
+    /// view and discard any changes in flight.
+    CANCEL = 0x40000000;
+    /// Can be set on a button spec. Tells the client to return to the previous
+    /// view and send all changes in flight to the server.
+    SUBMIT = 0x20000000;
+    /// Can be set on a text spec used in a ListValue. Tells the client to
+    /// consider the associated list item as selected.
+    SELECT = 0x10000000;
+};
+
 /// The value to hold these numeric types.
 union Number {
     int64 int_value;
@@ -59,6 +76,14 @@ struct GridValue {
     vector<TextValue>:256 values;
 };
 
+/// Represents a list of strings type in a ui spec.
+struct ListValue {
+    bool multiselect = false;
+    bool popup = false;
+    string:128 title;
+    vector<TextValue>:1024 items;
+};
+
 /// Represents a graph type in a ui spec with an associated action.
 struct GraphValue {
     // [0..1] inclusive.
@@ -78,20 +103,24 @@ union Value {
     IconValue icon;
     GridValue grid;
     GraphValue graph;
+    ListValue list;
 };
 
 /// Represents a group of [Value]s with a title.
 struct Group {
-    // The title to show for this UI spec.
+    // The title to show for this group.
     string:128 title;
     // List of [Value] objects that form part of this spec.
     vector<Value>:16 values;
 };
 
 /// Describes a specification of quick UI.
-struct Spec {
+/// TODO(fxb/40081) Soft transition from table back to struct after clients are migrated.
+table Spec {
+    // The title to show for this spec.
+    1: string:128 title;
     // List of [Group] objects that form part of this spec.
-    vector<Group>:8 groups;
+    2: vector<Group>:8 groups;
 };
 
 /// Defines a protocol for a component to provide specs for building UI for
