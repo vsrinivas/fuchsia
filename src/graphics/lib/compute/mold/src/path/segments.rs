@@ -37,7 +37,7 @@ struct CurveState {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Segments<'p> {
+pub(crate) struct PathSegments<'p> {
     commands: &'p [PathCommand],
     transform: Option<Transform>,
     state: Option<CurveState>,
@@ -49,7 +49,7 @@ pub(crate) struct Segments<'p> {
 /// right accuracy. It uses Wang's Formula, which guarantees this accuracy given some deviation
 /// parameters.
 fn subdivisions(
-    segments: &mut Segments,
+    segments: &mut PathSegments,
     first: Point<f32>,
     last: Point<f32>,
     deviation_x: f32,
@@ -94,9 +94,9 @@ macro_rules! deviation {
     }};
 }
 
-impl<'p> Segments<'p> {
+impl<'p> PathSegments<'p> {
     pub fn new(commands: &'p [PathCommand], transform: Option<Transform>) -> Self {
-        Segments { commands, transform, state: None, last_point: None, closing_point: None }
+        PathSegments { commands, transform, state: None, last_point: None, closing_point: None }
     }
 
     fn from_weighted(point: (Point<f32>, f32)) -> Point<f32> {
@@ -239,7 +239,7 @@ impl<'p> Segments<'p> {
     }
 }
 
-impl Iterator for Segments<'_> {
+impl Iterator for PathSegments<'_> {
     type Item = Segment<f32>;
 
     fn next(&mut self) -> Option<Self::Item> {

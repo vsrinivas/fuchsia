@@ -7,7 +7,7 @@ mod transform;
 
 use crate::point::Point;
 
-use segments::Segments;
+use segments::PathSegments;
 use transform::Transform;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -159,12 +159,12 @@ impl Path {
         self.commands.push(PathCommand::Close);
     }
 
-    pub(crate) fn segments(&self) -> Segments {
-        Segments::new(&self.commands, None)
+    pub(crate) fn segments(&self) -> PathSegments {
+        PathSegments::new(&self.commands, None)
     }
 
-    pub(crate) fn transformed(&self, transform: &[f32; 9]) -> Segments {
-        Segments::new(&self.commands, Some(Transform::new(transform)))
+    pub(crate) fn transformed(&self, transform: &[f32; 9]) -> PathSegments {
+        PathSegments::new(&self.commands, Some(Transform::new(transform)))
     }
 }
 
@@ -178,36 +178,35 @@ mod tests {
     fn path_interface() {
         let mut path = Path::new();
 
-        path.line(
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
+        path.line(Point::new(1.0, 1.0), Point::new(1.0, 1.0));
+        assert_eq!(
+            path.commands.last(),
+            Some(&PathCommand::Line([Point::new(1.0, 1.0), Point::new(1.0, 1.0),]))
         );
-        assert_eq!(path.commands.last(), Some(&PathCommand::Line([
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-        ])));
 
-        path.quad(
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
+        path.quad(Point::new(1.0, 1.0), Point::new(1.0, 1.0), Point::new(1.0, 1.0));
+        assert_eq!(
+            path.commands.last(),
+            Some(&PathCommand::Quad([
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 1.0),
+            ]))
         );
-        assert_eq!(path.commands.last(), Some(&PathCommand::Quad([
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-        ])));
 
         path.rat_quad(
             (Point::new(1.0, 1.0), 1.0),
             (Point::new(1.0, 1.0), 1.0),
             (Point::new(1.0, 1.0), 1.0),
         );
-        assert_eq!(path.commands.last(), Some(&PathCommand::RatQuad([
-            (Point::new(1.0, 1.0), 1.0),
-            (Point::new(1.0, 1.0), 1.0),
-            (Point::new(1.0, 1.0), 1.0),
-        ])));
+        assert_eq!(
+            path.commands.last(),
+            Some(&PathCommand::RatQuad([
+                (Point::new(1.0, 1.0), 1.0),
+                (Point::new(1.0, 1.0), 1.0),
+                (Point::new(1.0, 1.0), 1.0),
+            ]))
+        );
 
         path.cubic(
             Point::new(1.0, 1.0),
@@ -215,12 +214,15 @@ mod tests {
             Point::new(1.0, 1.0),
             Point::new(1.0, 1.0),
         );
-        assert_eq!(path.commands.last(), Some(&PathCommand::Cubic([
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-            Point::new(1.0, 1.0),
-        ])));
+        assert_eq!(
+            path.commands.last(),
+            Some(&PathCommand::Cubic([
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 1.0),
+                Point::new(1.0, 1.0),
+            ]))
+        );
 
         path.rat_cubic(
             (Point::new(1.0, 1.0), 1.0),
@@ -228,12 +230,15 @@ mod tests {
             (Point::new(1.0, 1.0), 1.0),
             (Point::new(1.0, 1.0), 1.0),
         );
-        assert_eq!(path.commands.last(), Some(&PathCommand::RatCubic([
-            (Point::new(1.0, 1.0), 1.0),
-            (Point::new(1.0, 1.0), 1.0),
-            (Point::new(1.0, 1.0), 1.0),
-            (Point::new(1.0, 1.0), 1.0),
-        ])));
+        assert_eq!(
+            path.commands.last(),
+            Some(&PathCommand::RatCubic([
+                (Point::new(1.0, 1.0), 1.0),
+                (Point::new(1.0, 1.0), 1.0),
+                (Point::new(1.0, 1.0), 1.0),
+                (Point::new(1.0, 1.0), 1.0),
+            ]))
+        );
     }
 
     #[test]

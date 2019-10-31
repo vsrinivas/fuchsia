@@ -9,7 +9,7 @@ use fuchsia_trace::duration;
 
 use crate::{
     point::Point,
-    raster::{RasterSegment, RasterSegmentsIter},
+    raster::{RasterSegments, RasterSegmentsIter},
     segment::Segment,
     tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
@@ -81,7 +81,7 @@ pub struct Painter {
 #[derive(Clone, Debug)]
 struct Segments<'t> {
     tile: &'t Tile,
-    segments: &'t RasterSegment,
+    segments: &'t RasterSegments,
     index: usize,
     inner_segments: Option<RasterSegmentsIter<'t>>,
     pub translation: Point<i32>,

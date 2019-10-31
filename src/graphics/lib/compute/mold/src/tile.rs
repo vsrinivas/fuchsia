@@ -16,7 +16,7 @@ use fuchsia_trace::{self, duration};
 use crate::{
     painter::{Context, Painter},
     point::Point,
-    raster::{Raster, RasterSegment},
+    raster::{Raster, RasterSegments},
     segment::Segment,
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
@@ -424,7 +424,7 @@ impl<'m> Layers<'m> {
         Self { layers }
     }
 
-    pub fn segments(&self, id: &u32) -> Option<&RasterSegment> {
+    pub fn segments(&self, id: &u32) -> Option<&RasterSegments> {
         self.layers.get(id).map(|layer| layer.raster.segments())
     }
 
