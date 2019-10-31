@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_HOST_DEVHOST_CONTEXT_H_
+#define SRC_DEVICES_HOST_DEVHOST_CONTEXT_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
@@ -86,3 +87,5 @@ class DevhostContext {
 };
 
 }  // namespace devmgr
+
+#endif  // SRC_DEVICES_HOST_DEVHOST_CONTEXT_H_

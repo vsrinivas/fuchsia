@@ -6,8 +6,8 @@
 
 #include <inttypes.h>
 
-#include "../shared/log.h"
 #include "device-controller-connection.h"
+#include "log.h"
 #include "proxy-iostate.h"
 #include "zx-device.h"
 

@@ -15,12 +15,12 @@ driver_module("driver") {
   ]
 
   deps = [
-    "//zircon/system/banjo/ddk.protocol.bt.gattsvc",
-    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-bt-gatt-svc",
-    "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.bt.gattsvc",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

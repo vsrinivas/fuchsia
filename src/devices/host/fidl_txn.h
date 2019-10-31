@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_
+#ifndef SRC_DEVICES_HOST_FIDL_TXN_H_
+#define SRC_DEVICES_HOST_FIDL_TXN_H_
 
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -117,4 +117,4 @@ class FidlTxn {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_
+#endif  // SRC_DEVICES_HOST_FIDL_TXN_H_

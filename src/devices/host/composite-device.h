@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_
+#ifndef SRC_DEVICES_HOST_COMPOSITE_DEVICE_H_
+#define SRC_DEVICES_HOST_COMPOSITE_DEVICE_H_
 
 #include <ddk/driver.h>
 #include <fbl/array.h>
@@ -36,4 +36,4 @@ class CompositeDevice : public fbl::RefCounted<CompositeDevice> {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_
+#endif  // SRC_DEVICES_HOST_COMPOSITE_DEVICE_H_

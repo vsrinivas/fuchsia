@@ -9,6 +9,7 @@ zx_test("rtc-lib") {
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/driver",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/rtc",
     "$zx/system/ulib/zircon",

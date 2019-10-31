@@ -29,7 +29,7 @@ all_deps = [
   "//zircon/public/lib/async-loop-cpp",
   "//zircon/public/lib/async-loop-default",
   "//zircon/public/lib/ddk",
-  "//zircon/public/lib/driver",
+  "//src/devices:driver",
 ]
 
 source_set("lib_source") {

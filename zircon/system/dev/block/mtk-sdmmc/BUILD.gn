@@ -48,6 +48,7 @@ zx_test("mtk-sdmmc-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",

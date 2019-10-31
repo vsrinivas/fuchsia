@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/test/test_package.gni")
@@ -33,8 +32,8 @@ source_set("lib") {
     "env.cc",
     "fdio.cc",
     "fidl.cc",
-    "suspend-task.cc",
     "resume-task.cc",
+    "suspend-task.cc",
     "system-instance.cc",
     "system-instance.h",
     "task.cc",
@@ -87,33 +86,23 @@ executable("coordinator") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
-generate_manifest("coordinator.bootfs") {
-  deps = [
-    ":coordinator",
-  ]
-
-  #TODO(bwb) rename file in the image to coordinator in the future
-  args = [ "--entry=bin/devcoordinator=" +
-           rebase_path("$root_build_dir/coordinator", root_build_dir) ]
-}
-
 executable("devcoordinator-test") {
   output_name = "devcoordinator-test"
   testonly = true
 
   sources = [
-    "coordinator-test-utils.cc",
-    "multiple-device-test-utils.cc",
     "binding-test.cc",
-    "misc-tests.cc",
     "boot-args-test.cc",
-    "task-test.cc",
-    "system-instance-test.cc",
-    "multiple-device-test.cc",
-    "suspend-tests.cc",
-    "unbind-tests.cc",
     "composite-device-tests.cc",
-    "resume-tests.cc"
+    "coordinator-test-utils.cc",
+    "misc-tests.cc",
+    "multiple-device-test-utils.cc",
+    "multiple-device-test.cc",
+    "resume-tests.cc",
+    "suspend-tests.cc",
+    "system-instance-test.cc",
+    "task-test.cc",
+    "unbind-tests.cc",
   ]
 
   deps = [

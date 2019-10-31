@@ -4,9 +4,10 @@
 
 #include "proxy-iostate.h"
 
-#include <fbl/auto_lock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
+#include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
 #include "zx-device.h"

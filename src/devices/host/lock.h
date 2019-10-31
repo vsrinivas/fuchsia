@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_LOCK_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_LOCK_H_
+#ifndef SRC_DEVICES_HOST_LOCK_H_
+#define SRC_DEVICES_HOST_LOCK_H_
 
-#include <threads.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <threads.h>
 
 #include <atomic>
 
@@ -50,4 +50,4 @@ class ApiAutoRelock {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_LOCK_H_
+#endif  // SRC_DEVICES_HOST_LOCK_H_

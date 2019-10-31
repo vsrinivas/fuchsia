@@ -220,6 +220,7 @@ int main(int argc, char** argv) {
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
   config.require_system = require_system;
+  // TODO(bwb): remove this or figure out how to make it work
   config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
   // Turn it on by default. See fxb/34577
   config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", true);

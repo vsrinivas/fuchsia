@@ -2,7 +2,6 @@
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 This tool takes in multiple manifest files:
  * system image and archive manifest files from each package
@@ -42,7 +41,6 @@ import os
 import sys
 import variant
 
-
 binary_info = variant.binary_info
 
 # An entry for a binary is (manifest.manifest_entry, elfinfo.elf_info).
@@ -50,11 +48,12 @@ binary_entry = namedtuple('binary_entry', ['entry', 'info'])
 
 # In recursions of CollectBinaries.AddBinary, this is the type of the
 # context argument.
-binary_context = namedtuple('binary_context', [
-    'variant',
-    'soname_map',
-    'root_dependent',
-])
+binary_context = namedtuple(
+    'binary_context', [
+        'variant',
+        'soname_map',
+        'root_dependent',
+    ])
 
 # Each --output argument yields an output_manifest tuple.
 output_manifest = namedtuple('output_manifest', ['file', 'manifest'])
@@ -98,10 +97,13 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
     def rewrite_binary_group(old_binary, group_override):
         return binary_entry(
-            old_binary.entry._replace(group=group_override),
-            old_binary.info)
+            old_binary.entry._replace(group=group_override), old_binary.info)
 
     def add_binary(binary, context=None, auxiliary=False):
+        # TODO(bwb): Temporary workaround for ZN/GN migration. Remove when all drivers are outside of ZN
+        if "libdriver.so" in binary.entry.source and ".zircon" not in binary.entry.source:
+            return
+
         # Add a binary by target name.
         def add_auxiliary(target, required, group_override=None):
             if group_override is None:
@@ -116,16 +118,18 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                     "'%s' not in auxiliary manifests, needed by %r via %r" %
                     (target, binary.entry, context.root_dependent))
             if aux_binary:
-                add_binary(rewrite_binary_group(aux_binary, group_override),
-                           aux_context, True)
+                add_binary(
+                    rewrite_binary_group(aux_binary, group_override),
+                    aux_context, True)
                 return True
             return False
 
         existing_binary = binaries.get(binary.entry.target)
         if existing_binary is not None:
             if existing_binary.entry.source != binary.entry.source:
-                raise Exception("%r in both %r and %r" %
-                                (binary.entry.target, existing_binary, binary))
+                raise Exception(
+                    "%r in both %r and %r" %
+                    (binary.entry.target, existing_binary, binary))
             # If the old record was in a later group, we still need to
             # process all the dependencies again to promote them to
             # the new group too.
@@ -139,24 +143,25 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             binary_variant, variant_file = variant.find_variant(
                 binary.info, binary.entry.target)
             if variant_file is not None:
-              # This is a variant that was actually built in a different
-              # place than its original name says.  Rewrite everything to
-              # refer to the "real" name.
-              binary = binary_entry(binary.entry._replace(source=variant_file),
-                                    binary.info.rename(variant_file))
-              examined.add(variant_file)
-            context = binary_context(binary_variant,
-                                     soname_map_by_toolchain.setdefault(
-                                         binary_variant.shared_toolchain, {}),
-                                     binary)
+                # This is a variant that was actually built in a different
+                # place than its original name says.  Rewrite everything to
+                # refer to the "real" name.
+                binary = binary_entry(
+                    binary.entry._replace(source=variant_file),
+                    binary.info.rename(variant_file))
+                examined.add(variant_file)
+            context = binary_context(
+                binary_variant,
+                soname_map_by_toolchain.setdefault(
+                    binary_variant.shared_toolchain, {}), binary)
 
         binaries[binary.entry.target] = binary
         assert binary.entry.group is not None, binary
 
         if binary.info.soname:
             # This binary has a SONAME, so record it in the map.
-            soname_binary = context.soname_map.setdefault(binary.info.soname,
-                                                          binary)
+            soname_binary = context.soname_map.setdefault(
+                binary.info.soname, binary)
             if soname_binary.entry.source != binary.entry.source:
                 raise Exception(
                     "SONAME '%s' in both %r and %r" %
@@ -197,24 +202,24 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             # An auxiliary's dependencies must all be auxiliaries too.
             assert not auxiliary, (
                 "missing '%s' needed by auxiliary %r via %r" %
-                 (target, binary, context.root_dependent))
+                (target, binary, context.root_dependent))
 
             # Check if it's elsewhere in the input set.
             lib = unexamined_binaries.get(target)
             if lib is None:
-              # It must be in the shared_toolchain output directory.
-              # Context like group is inherited from the dependent.
-              lib_entry = binary.entry._replace(
-                  source=os.path.join(context.variant.shared_toolchain,
-                                      soname),
-                  target=target)
+                # It must be in the shared_toolchain output directory.
+                # Context like group is inherited from the dependent.
+                lib_entry = binary.entry._replace(
+                    source=os.path.join(
+                        context.variant.shared_toolchain, soname),
+                    target=target)
 
-              assert os.path.exists(lib_entry.source), (
-                  "missing %r needed by %r via %r" %
-                  (lib_entry, binary, context.root_dependent))
+                assert os.path.exists(lib_entry.source), (
+                    "missing %r needed by %r via %r" %
+                    (lib_entry, binary, context.root_dependent))
 
-              # Read its ELF info and sanity-check.
-              lib = binary_entry(lib_entry, binary_info(lib_entry.source))
+                # Read its ELF info and sanity-check.
+                lib = binary_entry(lib_entry, binary_info(lib_entry.source))
 
             assert lib.info and lib.info.soname == soname, (
                 "SONAME '%s' expected in %r, needed by %r via %r" %
@@ -229,13 +234,13 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
         # of the bits in these files, we treat them as opaque data.
         try:
             if not entry.target.startswith(
-                'data/') and not entry.target.startswith('lib/firmware/'):
+                    'data/') and not entry.target.startswith('lib/firmware/'):
                 info = binary_info(entry.source)
         except IOError as e:
             raise Exception('%s from %s' % (e, entry))
         if info:
-            if (entry.target not in unexamined_binaries or
-                entry.group < unexamined_binaries[entry.target].entry.group):
+            if (entry.target not in unexamined_binaries or entry.group <
+                    unexamined_binaries[entry.target].entry.group):
                 unexamined_binaries[entry.target] = binary_entry(entry, info)
         else:
             nonbinaries.append(entry)
@@ -247,8 +252,8 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
     matched_binaries = set()
     for input_binary in input_binaries:
-        matches = fnmatch.filter(aux_binaries.iterkeys(),
-                                 input_binary.target_pattern)
+        matches = fnmatch.filter(
+            aux_binaries.iterkeys(), input_binary.target_pattern)
         assert matches, (
             "--input-binary='%s' did not match any binaries" %
             input_binary.target_pattern)
@@ -256,9 +261,10 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             assert target not in matched_binaries, (
                 "'%s' matched by multiple --input-binary patterns" % target)
             matched_binaries.add(target)
-            add_binary(rewrite_binary_group(aux_binaries[target],
-                                            input_binary.output_group),
-                       auxiliary=True)
+            add_binary(
+                rewrite_binary_group(
+                    aux_binaries[target], input_binary.output_group),
+                auxiliary=True)
 
     return binaries.itervalues(), nonbinaries
 
@@ -266,8 +272,8 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 # Take an iterable of binary_entry, and return list of binary_entry (all
 # stripped files), a list of binary_info (all debug files), and a boolean
 # saying whether any new stripped output files were written in the process.
-def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
-                          examined):
+def strip_binary_manifest(
+        manifest, stripped_dir, build_id_dir, clang_lib_dir, examined):
     new_output = False
 
     def find_debug_file(filename):
@@ -312,8 +318,8 @@ def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
                 if not os.path.exists(debugfile):
                     return None
         debug = binary_info(debugfile)
-        assert debug, ("Debug file '%s' for '%s' is invalid" %
-                       (debugfile, filename))
+        assert debug, (
+            "Debug file '%s' for '%s' is invalid" % (debugfile, filename))
         examined.add(debugfile)
         return debug
 
@@ -329,8 +335,9 @@ def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
         if info.strip(stripped):
             new_output = True
         info = binary_info(stripped)
-        assert info, ("Stripped file '%s' for '%s' is invalid" %
-                      (stripped, debug.filename))
+        assert info, (
+            "Stripped file '%s' for '%s' is invalid" %
+            (stripped, debug.filename))
         examined.add(debug.filename)
         examined.add(stripped)
         return entry._replace(source=stripped), info, debug
@@ -349,18 +356,19 @@ def strip_binary_manifest(manifest, stripped_dir, build_id_dir, clang_lib_dir,
             continue
         assert debug.build_id, "'%s' has no build ID" % debug.filename
         assert not debug.stripped, "'%s' is stripped" % debug.filename
-        assert info == debug._replace(filename=info.filename, stripped=True), (
-            "Debug file mismatch: %r vs %r" % (info, debug))
+        assert info == debug._replace(
+            filename=info.filename,
+            stripped=True), ("Debug file mismatch: %r vs %r" % (info, debug))
         debug_list.append(debug)
 
     return stripped_manifest, debug_list, new_output
 
 
 def emit_manifests(args, selected, unselected, input_binaries):
+
     def update_file(file, contents, force=False):
-        if (not force and
-            os.path.exists(file) and
-            os.path.getsize(file) == len(contents)):
+        if (not force and os.path.exists(file) and
+                os.path.getsize(file) == len(contents)):
             with open(file, 'r') as f:
                 if f.read() == contents:
                     return
@@ -372,8 +380,8 @@ def emit_manifests(args, selected, unselected, input_binaries):
 
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
-    binaries, nonbinaries = collect_binaries(selected, input_binaries,
-                                             aux_binaries, examined)
+    binaries, nonbinaries = collect_binaries(
+        selected, input_binaries, aux_binaries, examined)
 
     # Prepare to collate groups.
     outputs = [output_manifest(file, []) for file in args.output]
@@ -402,17 +410,18 @@ def emit_manifests(args, selected, unselected, input_binaries):
         # Sort so that functionally identical output is textually
         # identical.
         output.manifest.sort(key=lambda entry: entry.target)
-        update_file(output.file,
-                    manifest.format_manifest_file(output.manifest),
-                    force_update)
+        update_file(
+            output.file, manifest.format_manifest_file(output.manifest),
+            force_update)
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
-    debug_files = sorted(all_debug_files.itervalues(),
-                         key=lambda info: info.build_id)
-    update_file(args.build_id_file, ''.join(
-        info.build_id + ' ' + os.path.abspath(info.filename) + '\n'
-        for info in debug_files))
+    debug_files = sorted(
+        all_debug_files.itervalues(), key=lambda info: info.build_id)
+    update_file(
+        args.build_id_file, ''.join(
+            info.build_id + ' ' + os.path.abspath(info.filename) + '\n'
+            for info in debug_files))
 
     # Emit the depfile.
     if args.depfile:
@@ -424,6 +433,7 @@ def emit_manifests(args, selected, unselected, input_binaries):
 
 
 class input_binary_action(argparse.Action):
+
     def __call__(self, parser, namespace, values, option_string=None):
         binaries = getattr(namespace, self.dest, None)
         if binaries is None:
@@ -435,7 +445,8 @@ class input_binary_action(argparse.Action):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='''
+    parser = argparse.ArgumentParser(
+        description='''
 Massage manifest files from the build to produce images.
 ''',
         epilog='''
@@ -446,24 +457,34 @@ just supplies auxiliary files implicitly required by other (later) input
 manifests, but does not add all its files to any --output manifest.  This
 is used for shared libraries and the like.
 ''')
-    parser.add_argument('--build-id-file', required=True,
-                        metavar='FILE',
-                        help='Output build ID list')
-    parser.add_argument('--build-id-dir', required=False,
-                        metavar='DIR',
-                        help='.build-id directory to populate when stripping')
-    parser.add_argument('--clang-lib-dir', required=False,
-                        metavar='DIR',
-                        help='Path to Clang library directory')
-    parser.add_argument('--depfile',
-                        metavar='DEPFILE',
-                        help='Ninja depfile to write')
-    parser.add_argument('--binary', action=input_binary_action, default=[],
-                        metavar='PATH',
-                        help='Take matching binaries from auxiliary manifests')
-    parser.add_argument('--stripped-dir', required=True,
-                        metavar='STRIPPED_DIR',
-                        help='Directory to hold stripped copies when needed')
+    parser.add_argument(
+        '--build-id-file',
+        required=True,
+        metavar='FILE',
+        help='Output build ID list')
+    parser.add_argument(
+        '--build-id-dir',
+        required=False,
+        metavar='DIR',
+        help='.build-id directory to populate when stripping')
+    parser.add_argument(
+        '--clang-lib-dir',
+        required=False,
+        metavar='DIR',
+        help='Path to Clang library directory')
+    parser.add_argument(
+        '--depfile', metavar='DEPFILE', help='Ninja depfile to write')
+    parser.add_argument(
+        '--binary',
+        action=input_binary_action,
+        default=[],
+        metavar='PATH',
+        help='Take matching binaries from auxiliary manifests')
+    parser.add_argument(
+        '--stripped-dir',
+        required=True,
+        metavar='STRIPPED_DIR',
+        help='Directory to hold stripped copies when needed')
     return manifest.common_parse_args(parser)
 
 

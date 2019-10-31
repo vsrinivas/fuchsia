@@ -4,11 +4,11 @@
 
 #include "composite-device.h"
 
+#include <algorithm>
+
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-
-#include <algorithm>
 
 #include "devhost.h"
 #include "zx-device.h"
@@ -26,7 +26,8 @@ class CompositeDeviceInstance {
                             std::unique_ptr<CompositeDeviceInstance>* device) {
     // Leak a reference to the zxdev here.  It will be cleaned up by the
     // device_remove() in Unbind().
-    auto dev = std::make_unique<CompositeDeviceInstance>(fbl::ExportToRawPtr(&zxdev), std::move(components));
+    auto dev = std::make_unique<CompositeDeviceInstance>(fbl::ExportToRawPtr(&zxdev),
+                                                         std::move(components));
     *device = std::move(dev);
     return ZX_OK;
   }

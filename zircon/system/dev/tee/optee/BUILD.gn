@@ -64,6 +64,7 @@ zx_test("optee-message-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/region-alloc",

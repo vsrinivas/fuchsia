@@ -47,6 +47,7 @@ zx_test("bt-hci-mediatek-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",

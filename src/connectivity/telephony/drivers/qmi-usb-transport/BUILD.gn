@@ -28,8 +28,10 @@ driver_module("qmi_driver") {
   ]
 
   deps = [
+    "//src/devices:driver",
+    "//src/lib/fsl",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",

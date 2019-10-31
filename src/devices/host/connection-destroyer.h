@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_CONNECTION_DESTROYER_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_CONNECTION_DESTROYER_H_
+#ifndef SRC_DEVICES_HOST_CONNECTION_DESTROYER_H_
+#define SRC_DEVICES_HOST_CONNECTION_DESTROYER_H_
 
 #include <lib/async/cpp/receiver.h>
 #include <zircon/syscalls.h>
@@ -49,4 +49,4 @@ class ConnectionDestroyer {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_CONNECTION_DESTROYER_H_
+#endif  // SRC_DEVICES_HOST_CONNECTION_DESTROYER_H_

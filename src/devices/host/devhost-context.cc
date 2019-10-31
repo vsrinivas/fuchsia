@@ -8,7 +8,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "../shared/log.h"
+#include "log.h"
 
 namespace devmgr {
 

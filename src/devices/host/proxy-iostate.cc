@@ -8,8 +8,8 @@
 
 #include <fbl/auto_lock.h>
 
-#include "../shared/log.h"
 #include "connection-destroyer.h"
+#include "log.h"
 #include "zx-device.h"
 
 namespace devmgr {

@@ -276,10 +276,7 @@ template("assemble_system") {
     # checking for interacting with uninstrumented code.
     sources += [ boot_manifest ]
     args += [
-      "--include=bin/devhost.asan",
       "--include=bin/devhost",
-      "--rewrite=bin/devhost.asan=devmgr.devhost.asan=true",
-      "--rewrite=bin/devhost=devhost.asan.strict=false",
       "--manifest=" + rebase_path(boot_manifest, root_build_dir),
     ]
   }
@@ -293,7 +290,7 @@ template("assemble_system") {
   component_manager_manifest =
       component_manager_target_dir + "/" + component_manager_target_name
 
-  coordinator_label = "//src/devices/coordinator:coordinator.bootfs"
+  coordinator_label = "//src/devices:devices.bootfs"
   coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
   coordinator_target_name = get_label_info(coordinator_label, "name")
   coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
