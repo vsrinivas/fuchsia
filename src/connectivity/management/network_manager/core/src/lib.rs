@@ -34,7 +34,68 @@ pub struct DeviceState {
     lif_manager: lifmgr::LIFManager,
     service_manager: servicemgr::Manager,
     packet_filter: packet_filter::PacketFilter,
+    dns_config: DnsConfig,
     hal: hal::NetCfg,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum DnsPolicy {
+    /// Can not be replaced by dynamically learned DNS configuration,
+    /// will overwrite existing configuration.
+    Static,
+    /// Can be replaced by dynamically learned DNS configuration,
+    /// will not overwrite existing configuration.
+    Replaceable,
+    /// Will merge with existing configuration.
+    Merge,
+}
+
+impl From<DnsPolicy> for fidl_fuchsia_router_config::DnsPolicy {
+    fn from(p: DnsPolicy) -> Self {
+        match p {
+            DnsPolicy::Static => fidl_fuchsia_router_config::DnsPolicy::Static,
+            DnsPolicy::Replaceable => fidl_fuchsia_router_config::DnsPolicy::Replaceable,
+            DnsPolicy::Merge => fidl_fuchsia_router_config::DnsPolicy::Merge,
+        }
+    }
+}
+
+impl Default for DnsPolicy {
+    fn default() -> Self {
+        DnsPolicy::Static
+    }
+}
+
+impl From<fidl_fuchsia_router_config::DnsPolicy> for DnsPolicy {
+    fn from(p: fidl_fuchsia_router_config::DnsPolicy) -> Self {
+        match p {
+            fidl_fuchsia_router_config::DnsPolicy::Static => DnsPolicy::Static,
+            fidl_fuchsia_router_config::DnsPolicy::Replaceable => DnsPolicy::Replaceable,
+            fidl_fuchsia_router_config::DnsPolicy::Merge => DnsPolicy::Merge,
+            _ => DnsPolicy::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct DnsConfig {
+    id: ElementId,
+    servers: Vec<fidl_fuchsia_net::IpAddress>,
+    domain: Option<String>,
+    policy: DnsPolicy,
+}
+
+impl From<&DnsConfig> for fidl_fuchsia_router_config::DnsResolverConfig {
+    fn from(c: &DnsConfig) -> Self {
+        fidl_fuchsia_router_config::DnsResolverConfig {
+            element: c.id.into(),
+            policy: c.policy.into(),
+            search: fidl_fuchsia_router_config::DnsSearch {
+                domain_name: c.domain.clone(),
+                servers: c.servers.clone(),
+            },
+        }
+    }
 }
 
 impl DeviceState {
@@ -48,6 +109,12 @@ impl DeviceState {
             service_manager: servicemgr::Manager::new(),
             packet_filter,
             hal,
+            dns_config: DnsConfig {
+                id: ElementId::new(v),
+                servers: Default::default(),
+                domain: Default::default(),
+                policy: Default::default(),
+            },
         }
     }
 
@@ -581,6 +648,43 @@ impl DeviceState {
             error::NetworkManager::SERVICE(error::Service::ErrorGettingPacketFilterRules)
         })
     }
+
+    pub async fn set_dns_resolver(
+        &mut self,
+        servers: &mut [fidl_fuchsia_net::IpAddress],
+        domain: Option<String>,
+        policy: fidl_fuchsia_router_config::DnsPolicy,
+    ) -> error::Result<ElementId> {
+        if domain.is_some() {
+            //TODO(dpradilla): lift this restriction.
+            warn!("setting the dns search domain name is not supported {:?}", domain);
+            return Err(error::NetworkManager::SERVICE(error::Service::NotSupported));
+        }
+        let p = if policy == fidl_fuchsia_router_config::DnsPolicy::NotSet {
+            DnsPolicy::default()
+        } else {
+            DnsPolicy::from(policy)
+        };
+        // Keeping dns_config sorted.
+        servers.sort();
+        if servers.len() == self.dns_config.servers.len()
+            && servers.iter().zip(&self.dns_config.servers).all(|(a, b)| a == b)
+        {
+            // No change needed.
+            return Ok(self.dns_config.id);
+        }
+        // Just return the error, nothing to undo.
+        self.hal.set_dns_resolver(servers, domain.clone(), p).await?;
+        self.dns_config.id.version = self.version;
+        self.dns_config.servers = servers.to_vec();
+        self.version += 1;
+        Ok(self.dns_config.id)
+    }
+
+    /// Returns the dns resolver configuration.
+    pub async fn get_dns_resolver(&self) -> fidl_fuchsia_router_config::DnsResolverConfig {
+        fidl_fuchsia_router_config::DnsResolverConfig::from(&self.dns_config)
+    }
 }
 
 /// Log that the lif properties have changed.
@@ -611,7 +715,7 @@ fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
 type Version = u64;
 type UUID = u128;
 
-static ID: AtomicUsize = AtomicUsize::new(1);
+static ID: AtomicUsize = AtomicUsize::new(0);
 
 fn generate_uuid() -> UUID {
     ID.fetch_add(1, Ordering::Relaxed) as UUID
@@ -622,6 +726,7 @@ pub struct ElementId {
     uuid: UUID,
     version: Version,
 }
+
 impl ElementId {
     pub fn new(v: Version) -> Self {
         ElementId { uuid: generate_uuid(), version: v }
@@ -635,8 +740,11 @@ impl ElementId {
     pub fn version(&self) -> u64 {
         self.version
     }
-    pub fn to_fidl(&self) -> fidl_fuchsia_router_config::Id {
-        fidl_fuchsia_router_config::Id { uuid: self.uuid.to_ne_bytes(), version: self.version }
+}
+
+impl From<ElementId> for fidl_fuchsia_router_config::Id {
+    fn from(id: ElementId) -> Self {
+        fidl_fuchsia_router_config::Id { uuid: id.uuid.to_ne_bytes(), version: id.version }
     }
 }
 
@@ -662,7 +770,7 @@ mod tests {
         assert_eq!(e.version(), new_version);
 
         assert_eq!(
-            e.to_fidl(),
+            fidl_fuchsia_router_config::Id::from(e),
             fidl_fuchsia_router_config::Id { uuid: uuid.to_ne_bytes(), version: new_version },
         );
     }

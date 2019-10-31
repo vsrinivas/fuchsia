@@ -56,8 +56,9 @@ macro_rules! test_suite {
 fn generate_launch_services() -> Vec<LaunchService> {
     let names_and_urls = vec![
         ("fuchsia.net.stack.Stack", component_url!("netstack")),
-        ("fuchsia.netstack.Netstack", component_url!("netstack")),
         ("fuchsia.net.NameLookup", component_url!("netstack")),
+        ("fuchsia.netstack.Netstack", component_url!("netstack")),
+        ("fuchsia.netstack.ResolverAdmin", component_url!("netstack")),
         ("fuchsia.posix.socket.Provider", component_url!("netstack")),
         ("fuchsia.net.filter.Filter", component_url!("netstack")),
         ("fuchsia.router.config.RouterAdmin", component_url!("network_manager")),
@@ -263,13 +264,14 @@ async fn test_device() -> Device {
 #[fasync::run_singlethreaded]
 #[test]
 async fn test_commands() {
-    // The pair is constructed of the CLI command to test, and it's expected output as a
-    // regular expression parsable by the Regex crate.
-    let commands = test_suite![
+    let device = test_device().await;
+    execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement"),
         ("show dhcpconfig 0",
          "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}",""),
-         ("show dnsconfig", "Get DNS config",""),
+         ("show dnsconfig",
+          "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, search: DnsSearch \\{ servers: \\[\\], domain_name: None \\}, policy: Static \\}",
+          "Get DNS config"),
          ("show filterstate", "0 filters installed.*",""),
          ("show forwardstate 0",
           "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}",""),
@@ -280,31 +282,7 @@ async fn test_commands() {
             ""),
             ("show routes", "Response: \\[\\]",""),
             ("show wans", "Response: \\[\\]",""),
-    ];
-
-    let router = test_device().await;
-    for test in commands.tests {
-        let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
-        let network_context = get_network_context(&sandbox).expect("failed to get network context");
-        let endpoint_manager =
-            get_endpoint_manager(&network_context).expect("failed to get endpoint manager");
-        let endpoint = create_endpoint(stringify!(test_interface), &endpoint_manager)
-            .await
-            .expect("failed to create endpoint");
-        let device = endpoint.get_ethernet_device().await.expect("failed to get ethernet device");
-        let env = create_managed_env(&sandbox).expect("Failed to create environment with services");
-        let netstack_proxy =
-            connect_to_sandbox_service::<fidl_fuchsia_netstack::NetstackMarker>(&env)
-                .expect("failed to connect to netstack");
-        add_ethernet_device(&netstack_proxy, device, "port1")
-            .await
-            .expect("error adding ethernet device");
-        let actual_output = exec_cmd(&router.env, &test.command).await;
-        println!("command: {}", test.command);
-        println!("actual: {:?}", actual_output);
-        let re = Regex::new(&test.expected).unwrap();
-        assert!(re.is_match(&actual_output));
-    }
+    ]).await;
 }
 
 #[fasync::run_singlethreaded]
@@ -918,9 +896,30 @@ async fn test_dns_config() {
         ("show wans",
 "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
          ""),
-        ("set dns-config x",
-         "Not Implemented",
-         ""),
+        ("set dns-config 8.8.8.8",
+         "Ok\\(\\(Some\\(Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\\)",
+         "server configured"),
+         ("show dnsconfig",
+          "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}, search: DnsSearch \\{ servers: \\[Ipv4\\(Ipv4Address \\{ addr: \\[8, 8, 8, 8\\] \\}\\)\\], domain_name: None \\}, policy: Static \\}",
+          "Get DNS config , server 8.8.8.8"),
+        ("set dns-config 8.8.8.266",
+         "invalid IP address syntax",
+         "invalid server address, it should fail"),
+         ("show dnsconfig",
+          "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}, search: DnsSearch \\{ servers: \\[Ipv4\\(Ipv4Address \\{ addr: \\[8, 8, 8, 8\\] \\}\\)\\], domain_name: None \\}, policy: Static \\}",
+          "Get DNS config, server should still be 8.8.8.8"),
+        ("set dns-config 8.8.8.8",
+         "Ok\\(\\(Some\\(Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\\)",
+         "server configured"),
+         ("show dnsconfig",
+          "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}, search: DnsSearch \\{ servers: \\[Ipv4\\(Ipv4Address \\{ addr: \\[8, 8, 8, 8\\] \\}\\)\\], domain_name: None \\}, policy: Static \\}",
+          "Get DNS config , server still  8.8.8.8, no version increase"),
+        ("set dns-config 8.8.4.4",
+         "Ok\\(\\(Some\\(Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 3 \\}\\), None\\)\\)",
+         "server configured"),
+         ("show dnsconfig",
+          "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 3 \\}, search: DnsSearch \\{ servers: \\[Ipv4\\(Ipv4Address \\{ addr: \\[8, 8, 4, 4\\] \\}\\)\\], domain_name: None \\}, policy: Static \\}",
+          "Get DNS config , server should not be 8.8.4.4"),
         ("show wans",
 "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
          "no changes."),

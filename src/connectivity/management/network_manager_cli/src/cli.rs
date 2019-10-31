@@ -6,7 +6,7 @@ use crate::opts::*;
 use crate::printer::Printer;
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::{Proxy, ServiceMarker};
-use fidl_fuchsia_net::{Ipv4Address, MacAddress};
+use fidl_fuchsia_net::{Ipv4Address, Ipv6Address, MacAddress};
 use fidl_fuchsia_overnet::{Peer, ServiceConsumerMarker, ServiceConsumerProxy};
 use fidl_fuchsia_overnet_protocol::NodeId;
 use fidl_fuchsia_router_config::{
@@ -21,6 +21,7 @@ use fuchsia_zircon::{self as zx};
 use itertools::Itertools;
 use std::convert::TryInto;
 use std::io::Write;
+use std::net::IpAddr;
 use std::str;
 
 /// Creates a `router_config::PortRange` from a port range string.
@@ -243,7 +244,9 @@ async fn do_show<T: Write>(
         }
 
         Show::DnsConfig {} => {
-            printer.println("Get DNS config".to_string());
+            let response =
+                router_state.get_dns_resolver().await.context("error getting response")?;
+            printer.println(format!("Response: {:?}", response));
             Ok(())
         }
 
@@ -671,8 +674,24 @@ async fn do_set<T: Write>(
             Ok(())
         }
 
-        Set::DnsConfig { dns_config } => {
-            printer.println(format!("Not Implemented {:?}", dns_config));
+        Set::DnsConfig { server } => {
+            printer.println(format!("Sending: {:?}", server));
+            let servers = match server {
+                IpAddr::V4(address) => {
+                    vec![fidl_fuchsia_net::IpAddress::Ipv4(Ipv4Address { addr: address.octets() })]
+                }
+                IpAddr::V6(address) => {
+                    vec![fidl_fuchsia_net::IpAddress::Ipv6(Ipv6Address { addr: address.octets() })]
+                }
+            };
+
+            let mut config = fidl_fuchsia_router_config::DnsResolverConfig {
+                element: Id { uuid: [0; 16], version: 0 },
+                policy: fidl_fuchsia_router_config::DnsPolicy::NotSet,
+                search: fidl_fuchsia_router_config::DnsSearch { domain_name: None, servers },
+            };
+            let response = router_admin.set_dns_resolver(&mut config).await;
+            printer.println(format!("Response: {:?}", response));
             Ok(())
         }
 

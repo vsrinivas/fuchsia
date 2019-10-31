@@ -32,7 +32,6 @@ where
     // Consumes `BufWriter` and returns the underlying buffer.
     // Note that we never call `into_inner()` for the `io::stdout()` variant; so we need to
     // suppress rustc's `dead_code` lint warning here.
-    #[allow(dead_code)]
     pub fn into_inner(self) -> Result<T, Error> {
         match self.writer.into_inner() {
             Ok(w) => Ok(w),

@@ -9,6 +9,7 @@
             "fuchsia.net.policy.Observer",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
+            "fuchsia.netstack.ResolverAdmin",
             "fuchsia.overnet.Overnet"
         ]
     }

@@ -10,6 +10,7 @@ use eui48::MacAddress;
 use failure::{format_err, Error};
 use fidl_fuchsia_router_config::{CidrAddress, Id};
 use std::convert::TryInto;
+use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 pub use structopt::StructOpt;
@@ -354,7 +355,7 @@ pub enum Set {
     /// Configure DNS settings
     DnsConfig {
         #[structopt(raw(required = "true"))]
-        dns_config: String,
+        server: IpAddr,
     },
 
     #[structopt(name = "dns-forwarder")]

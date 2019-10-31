@@ -250,9 +250,26 @@ impl EventLoop {
                 info!("{:?}", reservation_id);
                 responder.send(not_supported!())
             }
-            RouterAdminRequest::SetDnsResolver { config, responder } => {
+            RouterAdminRequest::SetDnsResolver { mut config, responder } => {
                 info!("{:?}", config);
-                responder.send(None, not_supported!())
+                match self
+                    .device
+                    .set_dns_resolver(
+                        &mut config.search.servers,
+                        config.search.domain_name,
+                        config.policy,
+                    )
+                    .await
+                {
+                    Ok(i) => responder.send(
+                        Some(fidl::encoding::OutOfLine(&mut Id {
+                            uuid: i.uuid().to_ne_bytes(),
+                            version: i.version(),
+                        })),
+                        None,
+                    ),
+                    Err(e) => responder.send(None, internal_error!(e.to_string())),
+                }
             }
             RouterAdminRequest::SetDnsForwarder { config, responder } => {
                 info!("{:?}", config);
@@ -518,17 +535,7 @@ impl EventLoop {
                 responder.send(None, not_supported!())
             }
             RouterStateRequest::GetDnsResolver { responder } => {
-                let mut resolver = fidl_fuchsia_router_config::DnsResolverConfig {
-                    element: Id {
-                        uuid: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        version: 0,
-                    },
-                    policy: fidl_fuchsia_router_config::DnsPolicy::NotSet,
-                    search: fidl_fuchsia_router_config::DnsSearch {
-                        domain_name: None,
-                        servers: vec![],
-                    },
-                };
+                let mut resolver = self.device.get_dns_resolver().await;
                 responder.send(&mut resolver)
             }
             RouterStateRequest::GetDnsForwarder { responder } => {

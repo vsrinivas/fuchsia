@@ -6,13 +6,16 @@
 
 use crate::error;
 use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
+use crate::DnsPolicy;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{
     self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker, StackProxy,
 };
 use fidl_fuchsia_net_stack_ext::FidlReturn;
-use fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy};
+use fidl_fuchsia_netstack::{
+    self as netstack, NetstackMarker, NetstackProxy, ResolverAdminMarker, ResolverAdminProxy,
+};
 use fuchsia_component::client::connect_to_service;
 use std::convert::TryFrom;
 use std::net::IpAddr;
@@ -114,6 +117,7 @@ impl From<&ForwardingEntry> for Route {
 pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
+    resolver_admin: ResolverAdminProxy,
 }
 
 #[derive(Debug)]
@@ -186,7 +190,7 @@ impl From<netstack::NetInterface> for Interface {
         Interface {
             id: PortId(iface.id.into()),
             name: iface.name,
-            addr: addr,
+            addr,
             enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
             dhcp_client_enabled: Some((iface.flags & netstack::NET_INTERFACE_FLAG_DHCP) != 0),
         }
@@ -209,7 +213,9 @@ impl NetCfg {
             .context("network_manager failed to connect to netstack")?;
         let netstack = connect_to_service::<NetstackMarker>()
             .context("network_manager failed to connect to netstack")?;
-        Ok(NetCfg { stack, netstack })
+        let resolver_admin = connect_to_service::<ResolverAdminMarker>()
+            .context("network_manager failed to connect to resolver admin")?;
+        Ok(NetCfg { stack, netstack, resolver_admin })
     }
 
     /// Returns event streams for fuchsia.net.stack and fuchsia.netstack.
@@ -330,7 +336,9 @@ impl NetCfg {
         }
         .await;
 
-        r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+        r.squash_result()
+            .with_context(|e| format!("failed setting interface state: {:?}", e))
+            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
     /// Sets the state of the DHCP client on the specified interface.
@@ -449,6 +457,22 @@ impl NetCfg {
             }
         }
     }
+
+    /// Sets the DNS resolver.
+    pub async fn set_dns_resolver(
+        &mut self,
+        servers: &mut [fidl_fuchsia_net::IpAddress],
+        _domains: Option<String>,
+        _policy: DnsPolicy,
+    ) -> error::Result<()> {
+        self.resolver_admin
+            .set_name_servers(&mut servers.iter_mut())
+            .with_context(|e| format!("failed setting interface state: {:?}", e))
+            .map_err(|e| {
+                error!("set_dns_resolver error {:?}", e);
+                error::NetworkManager::HAL(error::Hal::OperationFailed)
+            })
+    }
 }
 
 #[cfg(test)]
@@ -560,7 +584,9 @@ mod tests {
             fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
         let netstack: NetstackProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let mut netcfg = NetCfg { stack, netstack };
+        let resolver_admin: ResolverAdminProxy =
+            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
+        let mut netcfg = NetCfg { stack, netstack, resolver_admin };
         assert_eq!(
             netcfg.interfaces().await.unwrap(),
             // Should return only interfaces with a valid address.
