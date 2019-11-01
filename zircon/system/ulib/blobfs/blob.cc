@@ -175,7 +175,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
       fbl::MakeAutoCall([this, &compressed_vmoid]() { blobfs_->DetachVmo(compressed_vmoid); });
 
   const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
-  AllocatedExtentIterator extent_iter(blobfs_->GetAllocator(), GetMapIndex());
+  AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
   BlockIterator block_iter(&extent_iter);
 
   // Read the uncompressed merkle tree into the start of the blob's VMO.
@@ -245,7 +245,7 @@ zx_status_t Blob::InitUncompressed() {
                  inode_.block_count);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
   fs::ReadTxn txn(blobfs_);
-  AllocatedExtentIterator extent_iter(blobfs_->GetAllocator(), GetMapIndex());
+  AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
   BlockIterator block_iter(&extent_iter);
   // Read both the uncompressed merkle tree and data.
   const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
@@ -317,7 +317,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
   // Special case for the null blob: We skip the write phase.
   if (inode_.blob_size == 0) {
-    zx_status_t status = blobfs_->ReserveNodes(1, &write_info->node_indices);
+    zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info->node_indices);
     if (status != ZX_OK) {
       return status;
     }
@@ -338,7 +338,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   fbl::Vector<ReservedNode> nodes;
 
   // Reserve space for the blob.
-  zx_status_t status = blobfs_->ReserveBlocks(inode_.block_count, &extents);
+  zx_status_t status = blobfs_->GetAllocator()->ReserveBlocks(inode_.block_count, &extents);
   if (status != ZX_OK) {
     return status;
   }
@@ -351,7 +351,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
   // Reserve space for all the nodes necessary to contain this blob.
   size_t node_count = NodePopulator::NodeCountForExtents(extent_count);
-  status = blobfs_->ReserveNodes(node_count, &nodes);
+  status = blobfs_->GetAllocator()->ReserveNodes(node_count, &nodes);
   if (status != ZX_OK) {
     return status;
   }
@@ -480,6 +480,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_OK;
   }
 
+  const uint64_t data_start = DataStartBlock(blobfs_->Info());
   const uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
   const size_t merkle_bytes = merkle_blocks * kBlobfsBlockSize;
   if (GetState() == kBlobStateDataWrite) {
@@ -556,7 +557,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
                                   {
                                       .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset,
-                                      .dev_offset = dev_offset + blobfs_->DataStart(),
+                                      .dev_offset = dev_offset + data_start,
                                       .length = length,
                                   }};
                               streamer.StreamData(std::move(op));
@@ -588,7 +589,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
                                   {
                                       .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset - merkle_blocks,
-                                      .dev_offset = dev_offset + blobfs_->DataStart(),
+                                      .dev_offset = dev_offset + data_start,
                                       .length = length,
                                   }};
                               streamer.StreamData(std::move(op));
@@ -614,7 +615,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
                                                {
                                                    .type = storage::OperationType::kWrite,
                                                    .vmo_offset = vmo_offset,
-                                                   .dev_offset = dev_offset + blobfs_->DataStart(),
+                                                   .dev_offset = dev_offset + data_start,
                                                    .length = length,
                                                }};
             streamer.StreamData(std::move(op));
@@ -684,8 +685,6 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
     return status;
   }
 
-  // TODO(smklein): Only clone / verify the part of the vmo that
-  // was requested.
   const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
   zx::vmo clone;
   if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
@@ -985,7 +984,7 @@ zx_status_t Blob::Purge() {
 
     auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
                                    fbl::RefPtr(this))
-        .and_then(blobfs_->journal()->TrimData(std::move(trim_data)));
+                    .and_then(blobfs_->journal()->TrimData(std::move(trim_data)));
     blobfs_->journal()->schedule_task(std::move(task));
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);

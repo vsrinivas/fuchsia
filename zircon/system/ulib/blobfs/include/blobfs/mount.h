@@ -34,16 +34,11 @@ struct MountOptions {
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
-// Begins serving requests to the filesystem using |dispatch|, by parsing
+// Begins serving requests to the filesystem by parsing
 // the on-disk format using |device|, using |root| as a filesystem server.
 //
-// This function does not block, and instead serves requests on the dispatcher
-// asynchronously.
-//
-// Invokes |on_unmount| when the filesystem has been instructed to terminate.
-// After |on_unmount| completes, |dispatcher| will no longer be accessed.
-zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                  MountOptions* options, zx::channel root, fbl::Closure on_unmount);
+// This function blocks until the filesystem terminates.
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root);
 
 }  // namespace blobfs
 

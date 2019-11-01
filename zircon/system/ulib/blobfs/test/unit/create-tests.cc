@@ -36,7 +36,7 @@ TEST(CreateTest, ValidSuperblock) {
 
   std::unique_ptr<blobfs::Blobfs> blobfs;
   blobfs::MountOptions options;
-  EXPECT_OK(Blobfs::Create(std::move(device), &options, &blobfs));
+  EXPECT_OK(Blobfs::Create(nullptr, std::move(device), &options, &blobfs));
   EXPECT_NOT_NULL(blobfs.get());
 }
 
@@ -53,7 +53,7 @@ TEST(CreateTest, AllocNodeCountGreaterThanAllocated) {
   std::unique_ptr<blobfs::Blobfs> blobfs;
   blobfs::MountOptions options;
 
-  EXPECT_EQ(Blobfs::Create(std::move(device), &options, &blobfs), ZX_ERR_IO_OVERRUN);
+  EXPECT_EQ(Blobfs::Create(nullptr, std::move(device), &options, &blobfs), ZX_ERR_IO_OVERRUN);
   EXPECT_NULL(blobfs.get());
 }
 

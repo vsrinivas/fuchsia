@@ -37,10 +37,10 @@
 #include <fs/vfs_types.h>
 #include <fvm/client.h>
 
-
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob.h"
+#include "blobfs-checker.h"
 #include "compression/compressor.h"
 
 using block_client::RemoteBlockDevice;
@@ -101,6 +101,178 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
 
 }  // namespace
 
+// static.
+zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+                           MountOptions* options, std::unique_ptr<Blobfs>* out) {
+  TRACE_DURATION("blobfs", "Blobfs::Create");
+  char block[kBlobfsBlockSize];
+  zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: could not read info block\n");
+    return status;
+  }
+  const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
+
+  fuchsia_hardware_block_BlockInfo block_info;
+  status = device->BlockGetInfo(&block_info);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: cannot acquire block info: %d\n", status);
+    return status;
+  }
+  uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
+  if (block_info.flags & BLOCK_FLAG_READONLY) {
+    FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
+    options->writability = blobfs::Writability::ReadOnlyDisk;
+  }
+  if (kBlobfsBlockSize % block_info.block_size != 0) {
+    FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
+                   kBlobfsBlockSize, block_info.block_size);
+    return ZX_ERR_IO;
+  }
+
+  // Perform superblock validations which should succeed prior to journal replay.
+  const uint64_t total_blocks = TotalBlocks(*superblock);
+  if (blocks < total_blocks) {
+    FS_TRACE_ERROR("blobfs: Block size mismatch: (superblock: %zu) vs (actual: %zu)\n",
+                   total_blocks, blocks);
+    return ZX_ERR_BAD_STATE;
+  }
+  status = CheckSuperblock(superblock, total_blocks);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Check Superblock failure\n");
+    return status;
+  }
+
+  // Construct the Blobfs object, without intensive validation, since it may require
+  // upgrades / journal replays to become valid.
+  auto fs = std::unique_ptr<Blobfs>(
+      new Blobfs(dispatcher, std::move(device), superblock, options->writability));
+  fs->block_info_ = std::move(block_info);
+
+  if (options->metrics) {
+    fs->Metrics().Collect();
+  }
+
+  if (options->journal) {
+    if (options->writability == blobfs::Writability::ReadOnlyDisk) {
+      FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
+      return ZX_ERR_ACCESS_DENIED;
+    }
+    FS_TRACE_INFO("blobfs: Replaying journal\n");
+    JournalSuperblock journal_superblock;
+    status = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                               JournalBlocks(fs->info_), &journal_superblock);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
+      return status;
+    }
+    FS_TRACE_DEBUG("blobfs: Journal replayed\n");
+
+    switch (options->writability) {
+      case blobfs::Writability::Writable:
+        FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
+        status = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                   JournalBlocks(fs->info_), std::move(journal_superblock),
+                                   &fs->journal_);
+        if (status != ZX_OK) {
+          FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
+          return status;
+        }
+        status = fs->ReloadSuperblock();
+        if (status != ZX_OK) {
+          FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
+          return status;
+        }
+        break;
+      case blobfs::Writability::ReadOnlyFilesystem:
+        // Journal uninitialized.
+        break;
+      default:
+        FS_TRACE_ERROR("blobfs: Unexpected writability option for journaling\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+  } else if (options->writability == blobfs::Writability::Writable) {
+    FS_TRACE_INFO("blobfs: Initializing writeback (no journal)\n");
+    status = InitializeUnjournalledWriteback(fs.get(), fs.get(), &fs->journal_);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to initialize writeback (unjournaled)\n");
+      return status;
+    }
+  }
+
+  // Validate the FVM after replaying the journal.
+  status = CheckFvmConsistency(&fs->info_, fs->Device());
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: FVM info check failed\n");
+    return status;
+  }
+
+  fs->Cache().SetCachePolicy(options->cache_policy);
+  RawBitmap block_map;
+  // Keep the block_map aligned to a block multiple
+  if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
+    FS_TRACE_ERROR("blobfs: Could not reset block bitmap\n");
+    return status;
+  } else if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
+    FS_TRACE_ERROR("blobfs: Could not shrink block bitmap\n");
+    return status;
+  }
+  fzl::ResizeableVmoMapper node_map;
+
+  size_t nodemap_size = kBlobfsInodeSize * fs->info_.inode_count;
+  ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobfsBlockSize) == nodemap_size);
+  ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(fs->info_));
+  if ((status = node_map.CreateAndMap(nodemap_size, "nodemap")) != ZX_OK) {
+    return status;
+  }
+  std::unique_ptr<IdAllocator> nodes_bitmap = {};
+  if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
+    FS_TRACE_ERROR("blobfs: Failed to allocate bitmap for inodes\n");
+    return status;
+  }
+
+  fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
+                                               std::move(nodes_bitmap));
+  if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
+    return status;
+  }
+
+  if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
+    return status;
+  } else if ((status = fs->AttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
+    return status;
+  } else if ((status = fs->CreateFsId()) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
+    return status;
+  } else if ((status = fs->InitializeVnodes()) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
+    return status;
+  }
+
+  // Filesystem instance is safely created at this point. On a read-write filesystem,
+  // since we can now serve writes on the filesystem, we need to unset the kBlobFlagClean flag
+  // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
+  // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
+  if (options->writability == blobfs::Writability::Writable) {
+    storage::UnbufferedOperationsBuilder operations;
+    fs->UpdateFlags(&operations, kBlobFlagClean, false);
+    fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
+  }
+
+  *out = std::move(fs);
+  return ZX_OK;
+}
+
+// static.
+std::unique_ptr<BlockDevice> Blobfs::Destroy(std::unique_ptr<Blobfs> blobfs) {
+  return blobfs->Reset();
+}
+
+Blobfs::~Blobfs() { Reset(); }
+
 zx_status_t Blobfs::VerifyBlob(uint32_t node_index) { return Blob::VerifyBlob(this, node_index); }
 
 void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
@@ -131,7 +303,7 @@ void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuild
     info_.alloc_block_count -= num_blocks;
     WriteBitmap(num_blocks, start, operations);
     WriteInfo(operations);
-    DeleteExtent(DataStart() + start, num_blocks, trim_data);
+    DeleteExtent(DataStartBlock(info_) + start, num_blocks, trim_data);
   }
 }
 
@@ -177,57 +349,6 @@ void Blobfs::PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuild
 }
 
 size_t Blobfs::WritebackCapacity() const { return WriteBufferSize(); }
-
-void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
-  TRACE_DURATION("blobfs", "Blobfs::Unmount");
-#ifdef __Fuchsia__
-  // On a read-write filesystem, set the kBlobFlagClean on a clean unmount.
-  if (IsReadonly() == false) {
-    storage::UnbufferedOperationsBuilder operations;
-    UpdateFlags(&operations, kBlobFlagClean, true);
-    journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
-  }
-#endif
-  if (!cb) {
-    return;
-  }
-  // 1) Shutdown all external connections to blobfs.
-  ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    // 2a) Shutdown all internal connections to blobfs.
-    Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
-      auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-      vnode->CloneWatcherTeardown();
-    });
-    // 2b) Flush all pending work to blobfs to the underlying storage.
-    Sync([this, cb = std::move(cb)](zx_status_t status) mutable {
-      async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
-        // 3) Ensure the underlying disk has also flushed.
-        {
-          fs::WriteTxn sync_txn(this);
-          sync_txn.EnqueueFlush();
-          sync_txn.Transact();
-          // Although the transaction shouldn't reference 'this'
-          // after completing, scope it here to be extra cautious.
-        }
-        auto on_unmount = std::move(on_unmount_);
-
-        // Manually destroy Blobfs. The promise of Shutdown is that no
-        // connections are active, and destroying the Blobfs object
-        // should terminate all background workers.
-        delete this;
-
-        // Identify to the unmounting channel that we've completed teardown.
-        cb(status);
-
-        // Identify to the mounting thread that the filesystem has
-        // terminated.
-        if (on_unmount) {
-          on_unmount();
-        }
-      });
-    });
-  });
-}
 
 void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block,
                          storage::UnbufferedOperationsBuilder* operations) {
@@ -528,179 +649,37 @@ void Blobfs::Sync(SyncCallback closure) {
       }));
 }
 
-Blobfs::Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info)
-    : block_device_(std::move(device)) {
+Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+               const Superblock* info, Writability writable)
+    : dispatcher_(dispatcher), block_device_(std::move(device)), writability_(writable) {
   memcpy(&info_, info, sizeof(Superblock));
 }
 
-Blobfs::~Blobfs() {
-  journal_.reset();
-  Cache().Reset();
-}
-
-bool Blobfs::IsReadonly() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&vfs_lock_);
-#endif
-  return ReadonlyLocked();
-}
-
-zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
-                           std::unique_ptr<Blobfs>* out) {
-  TRACE_DURATION("blobfs", "Blobfs::Create");
-  char block[kBlobfsBlockSize];
-  zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: could not read info block\n");
-    return status;
+std::unique_ptr<BlockDevice> Blobfs::Reset() {
+  if (!block_device_) {
+    return nullptr;
   }
-  const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
+  // Shutdown all internal connections to blobfs.
+  Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
+    auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+    vnode->CloneWatcherTeardown();
+  });
 
-  fuchsia_hardware_block_BlockInfo block_info;
-  status = device->BlockGetInfo(&block_info);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: cannot acquire block info: %d\n", status);
-    return status;
-  }
-  uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
-  if (block_info.flags & BLOCK_FLAG_READONLY) {
-    FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
-    options->writability = blobfs::Writability::ReadOnlyDisk;
-  }
-  if (kBlobfsBlockSize % block_info.block_size != 0) {
-    FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
-                   kBlobfsBlockSize, block_info.block_size);
-    return ZX_ERR_IO;
-  }
-
-  // Construct the Blobfs object, without intensive validation, since it may require
-  // upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(new Blobfs(std::move(device), superblock));
-  fs->block_info_ = std::move(block_info);
-
-  // Perform superblock validations which should succeed prior to journal replay.
-  if (blocks < TotalBlocks(fs->Info())) {
-    FS_TRACE_ERROR("blobfs: Block size mismatch: (superblock: %zu) vs (actual: %zu)\n",
-                   TotalBlocks(fs->Info()), blocks);
-    return ZX_ERR_BAD_STATE;
-  }
-  status = CheckSuperblock(&fs->Info(), TotalBlocks(fs->Info()));
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Check Superblock failure\n");
-    return status;
-  }
-
-  if (options->metrics) {
-    fs->Metrics().Collect();
-  }
-
-  if (options->journal) {
-    if (options->writability == blobfs::Writability::ReadOnlyDisk) {
-      FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
-      return ZX_ERR_ACCESS_DENIED;
-    }
-    FS_TRACE_INFO("blobfs: Replaying journal\n");
-    JournalSuperblock journal_superblock;
-    status = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                               JournalBlocks(fs->info_), &journal_superblock);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
-      return status;
-    }
-    FS_TRACE_DEBUG("blobfs: Journal replayed\n");
-
-    switch (options->writability) {
-      case blobfs::Writability::Writable:
-        FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
-        status = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                                   JournalBlocks(fs->info_), std::move(journal_superblock),
-                                   &fs->journal_);
-        if (status != ZX_OK) {
-          FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
-          return status;
-        }
-        status = fs->Reload();
-        if (status != ZX_OK) {
-          FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
-          return status;
-        }
-        break;
-      case blobfs::Writability::ReadOnlyFilesystem:
-        // Journal uninitialized.
-        break;
-      default:
-        FS_TRACE_ERROR("blobfs: Unexpected writability option for journaling\n");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-  } else if (options->writability == blobfs::Writability::Writable) {
-    FS_TRACE_INFO("blobfs: Initializing writeback (no journal)\n");
-    status = InitializeUnjournalledWriteback(fs.get(), fs.get(), &fs->journal_);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to initialize writeback (unjournaled)\n");
-      return status;
-    }
-  }
-
-  fs->SetReadonly(options->writability != blobfs::Writability::Writable);
-  fs->Cache().SetCachePolicy(options->cache_policy);
-  RawBitmap block_map;
-  // Keep the block_map aligned to a block multiple
-  if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
-    FS_TRACE_ERROR("blobfs: Could not reset block bitmap\n");
-    return status;
-  } else if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
-    FS_TRACE_ERROR("blobfs: Could not shrink block bitmap\n");
-    return status;
-  }
-  fzl::ResizeableVmoMapper node_map;
-
-  size_t nodemap_size = kBlobfsInodeSize * fs->info_.inode_count;
-  ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobfsBlockSize) == nodemap_size);
-  ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(fs->info_));
-  if ((status = node_map.CreateAndMap(nodemap_size, "nodemap")) != ZX_OK) {
-    return status;
-  }
-  std::unique_ptr<IdAllocator> nodes_bitmap = {};
-  if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
-    FS_TRACE_ERROR("blobfs: Failed to allocate bitmap for inodes\n");
-    return status;
-  }
-
-  fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
-                                               std::move(nodes_bitmap));
-  if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
-    return status;
-  }
-
-  if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
-    return status;
-  } else if ((status = fs->AttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
-    return status;
-  } else if ((status = fs->CreateFsId()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
-    return status;
-  } else if ((status = fs->InitializeVnodes()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
-    return status;
-  }
-
-#ifdef __Fuchsia__
-  // Filesystem instance is safely created at this point. On a read-write filesystem,
-  // since we can now serve writes on the filesystem, we need to unset the kBlobFlagClean flag
-  // to indicate that the filesystem may not be in a "clean" state anymore. This helps to make
-  // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
-  if (options->writability == blobfs::Writability::Writable) {
+  // Write the clean bit.
+  if (writability_ == Writability::Writable) {
     storage::UnbufferedOperationsBuilder operations;
-    fs->UpdateFlags(&operations, kBlobFlagClean, false);
-    fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
+    UpdateFlags(&operations, kBlobFlagClean, true);
+    journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
   }
-#endif
+  // Waits for all pending writeback operations to complete or fail.
+  journal_.reset();
 
-  *out = std::move(fs);
-  return ZX_OK;
+  // Flushes the underlying block device.
+  fs::WriteTxn sync_txn(this);
+  sync_txn.EnqueueFlush();
+  sync_txn.Transact();
+
+  return std::move(block_device_);
 }
 
 zx_status_t Blobfs::InitializeVnodes() {
@@ -750,8 +729,8 @@ zx_status_t Blobfs::InitializeVnodes() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::Reload() {
-  TRACE_DURATION("blobfs", "Blobfs::Reload");
+zx_status_t Blobfs::ReloadSuperblock() {
+  TRACE_DURATION("blobfs", "Blobfs::ReloadSuperblock");
 
   // Re-read the info block from disk.
   char block[kBlobfsBlockSize];

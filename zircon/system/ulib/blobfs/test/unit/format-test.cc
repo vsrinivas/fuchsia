@@ -21,7 +21,7 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   options.metrics = false;
   options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  return Blobfs::Create(std::move(device), &options, &blobfs);
+  return Blobfs::Create(nullptr, std::move(device), &options, &blobfs);
 }
 
 // Formatting filesystems should fail on devices that cannot be written.
@@ -220,21 +220,9 @@ TEST(FormatFilesystemTest, FormatDeviceNoJournalAutoConvertReadonly) {
   mount_options.writability = Writability::Writable;
   mount_options.metrics = false;
   mount_options.journal = false;
-  std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_OK(Blobfs::Create(std::move(device), &mount_options, &blobfs));
-  fbl::RefPtr<Directory> root = nullptr;
-  ASSERT_OK(blobfs->OpenRootNode(&root));
-
-  // Although blobfs itself does not permit file names like "foo", the
-  // ZX_ERR_ACCESS_DENIED return code is propagated first, when a writable
-  // request is detected on a read-only filesystem.
-  fbl::RefPtr<fs::Vnode> unused_outvnode;
-  fbl::StringPiece unused_outpath;
-  fs::VnodeConnectionOptions open_options;
-  open_options.flags.create = true;
-  open_options.rights.write = true;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
-            blobfs->Open(root, &unused_outvnode, "foo", &unused_outpath, open_options, 0));
+  std::unique_ptr<Blobfs> fs = nullptr;
+  ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &mount_options, &fs));
+  ASSERT_EQ(Writability::ReadOnlyDisk, fs->writability());
 }
 
 // Validates that a formatted filesystem mounted as writable with a journal cannot be mounted on a
@@ -252,7 +240,7 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
   options.metrics = false;
   options.journal = true;
   std::unique_ptr<Blobfs> blobfs = nullptr;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, Blobfs::Create(std::move(device), &options, &blobfs));
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, Blobfs::Create(nullptr, std::move(device), &options, &blobfs));
 }
 
 // After formatting a filesystem with block size valid block size N, mounting on

@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
+#include <lib/zx/channel.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 
 #include <utility>
 
@@ -21,49 +25,32 @@
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/zx/channel.h>
-#include <trace-provider/provider.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 
 namespace {
 
 using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
 
-int Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
   if (!root_server.is_valid()) {
     FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
-    return -1;
+    return ZX_ERR_BAD_STATE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  trace::TraceProviderWithFdio provider(loop.dispatcher());
-  auto loop_quit = [&loop]() {
-    loop.Quit();
-    FS_TRACE_WARN("blobfs: Unmounted\n");
-  };
-  if (blobfs::Mount(loop.dispatcher(), std::move(device), options, std::move(root_server),
-                    std::move(loop_quit)) != ZX_OK) {
-    return -1;
-  }
-  loop.Run();
-  return ZX_OK;
+  return blobfs::Mount(std::move(device), options, std::move(root_server));
 }
 
-int Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
   return blobfs::FormatFilesystem(device.get());
 }
 
-int Fsck(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+zx_status_t Fsck(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
   return blobfs::Fsck(std::move(device), options);
 }
 
-typedef int (*CommandFunction)(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options);
+typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device,
+                                       blobfs::MountOptions* options);
 
 const struct {
   const char* name;
@@ -169,7 +156,11 @@ int main(int argc, char** argv) {
   status = RemoteBlockDevice::Create(std::move(block_connection), &device);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Could not initialize block device\n");
-    return status;
+    return -1;
   }
-  return func(std::move(device), &options);
+  status = func(std::move(device), &options);
+  if (status != ZX_OK) {
+    return -1;
+  }
+  return 0;
 }

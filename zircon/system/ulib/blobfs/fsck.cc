@@ -17,9 +17,16 @@
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, blobfs::MountOptions* options) {
-  std::unique_ptr<blobfs::Blobfs> blobfs;
-  zx_status_t status = blobfs::Blobfs::Create(std::move(device), options, &blobfs);
+zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions* options) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx_status_t status = loop.StartThread();
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Cannot initialize dispatch loop\n");
+    return status;
+  }
+
+  std::unique_ptr<Blobfs> blobfs;
+  status = Blobfs::Create(loop.dispatcher(), std::move(device), options, &blobfs);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot create filesystem for checking\n");
     return status;

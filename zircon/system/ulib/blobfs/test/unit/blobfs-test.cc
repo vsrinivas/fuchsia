@@ -30,6 +30,7 @@ class MockBlockDevice : public FakeBlockDevice {
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* info) const final;
+
  private:
   bool saw_trim_ = false;
 };
@@ -71,10 +72,12 @@ class BlobfsTest : public zxtest::Test {
     std::unique_ptr<MockBlockDevice> device = CreateAndFormatDevice();
     ASSERT_TRUE(device);
     device_ = device.get();
-    ASSERT_OK(Blobfs::Create(std::move(device), &options, &fs_));
+    loop_.StartThread();
+    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
   }
 
  protected:
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   MockBlockDevice* device_ = nullptr;
   std::unique_ptr<Blobfs> fs_;
 };
@@ -86,43 +89,36 @@ TEST_F(BlobfsTest, BlockNumberToDevice) {
 }
 
 TEST_F(BlobfsTest, CleanFlag) {
-  storage::VmoBuffer buffer;
-  ASSERT_OK(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"));
+  // Scope all operations while the filesystem is alive to ensure they
+  // don't have dangling references once it is destroyed.
+  {
+    storage::VmoBuffer buffer;
+    ASSERT_OK(buffer.Initialize(fs_.get(), 1, kBlobfsBlockSize, "source"));
 
-  // Write the superblock with the clean flag unset on Blobfs::Create in Setup.
-  storage::Operation operation = {};
-  memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
-  operation.type = storage::OperationType::kWrite;
-  operation.dev_offset = 0;
-  operation.length = 1;
+    // Write the superblock with the clean flag unset on Blobfs::Create in Setup.
+    storage::Operation operation = {};
+    memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
+    operation.type = storage::OperationType::kWrite;
+    operation.dev_offset = 0;
+    operation.length = 1;
 
-  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+    ASSERT_OK(fs_->RunOperation(operation, &buffer));
 
-  // Read the superblock with the clean flag unset.
-  operation.type = storage::OperationType::kRead;
-  ASSERT_OK(fs_->RunOperation(operation, &buffer));
+    // Read the superblock with the clean flag unset.
+    operation.type = storage::OperationType::kRead;
+    ASSERT_OK(fs_->RunOperation(operation, &buffer));
+    Superblock* info = reinterpret_cast<Superblock*>(buffer.Data(0));
+    EXPECT_EQ(0, (info->flags & kBlobFlagClean));
+  }
 
-  // Check if superblock on-disk flags are marked "dirty".
-  Superblock* info = reinterpret_cast<Superblock*>(buffer.Data(0));
-  EXPECT_EQ(0, (info->flags & kBlobFlagClean));
+  // Destroy the blobfs instance to force writing of the clean bit.
+  auto device = Blobfs::Destroy(std::move(fs_));
 
-  // Call shutdown to set the clean flag again.
-  fs_->Shutdown(nullptr);
-
-  // fs_->Shutdown(nullptr) will set the clean flags field, but it simply queues the writes
-  // and doesn't explicitly write it to the disk. Explicitly writing the changed superblock to disk.
-  operation.type = storage::OperationType::kWrite;
-  operation.dev_offset = 0;
-  operation.length = 1;
-  memcpy(buffer.Data(0), &fs_->Info(), sizeof(Superblock));
-  ASSERT_OK(fs_->RunOperation(operation, &buffer));
-
-  // Read the superblock and confirm the clean flag is set on shutdown.
-  memset(buffer.Data(0), 0, kBlobfsBlockSize);
-  operation.type = storage::OperationType::kRead;
-  operation.length = 1;
-  ASSERT_OK(fs_->RunOperation(operation, &buffer));
-  info = reinterpret_cast<Superblock*>(buffer.Data(0));
+  // Read the superblock, verify the clean flag is set.
+  uint8_t block[kBlobfsBlockSize] = {};
+  static_assert(sizeof(block) >= sizeof(Superblock));
+  ASSERT_OK(device->ReadBlock(0, kBlobfsBlockSize, &block));
+  Superblock* info = reinterpret_cast<Superblock*>(block);
   EXPECT_EQ(kBlobFlagClean, (info->flags & kBlobFlagClean));
 }
 
@@ -185,9 +181,7 @@ TEST_F(BlobfsTest, TrimsData) {
   ASSERT_OK(root_node->Unlink(info->path, false));
 
   sync_completion_t completion;
-  fs_->Sync([&completion](zx_status_t status) {
-    sync_completion_signal(&completion);
-  });
+  fs_->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   EXPECT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
 
   ASSERT_TRUE(device_->saw_trim());

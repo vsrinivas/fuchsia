@@ -59,6 +59,7 @@ zx_library("blobfs") {
       "iterator/node-populator.cc",
       "metrics.cc",
       "mount.cc",
+      "runner.cc",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",
@@ -82,6 +83,7 @@ zx_library("blobfs") {
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace",
       "$zx/system/ulib/trace-engine",
+      "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]

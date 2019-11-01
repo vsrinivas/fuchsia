@@ -19,6 +19,7 @@
 #include <digest/digest.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <fs/connection.h>
 #include <fs/metrics/events.h>
 #include <fs/vfs_types.h>
 
@@ -181,8 +182,7 @@ void Directory::Sync(SyncCallback closure) {
 const fuchsia_blobfs_Blobfs_ops* Directory::Ops() {
   using DirectoryConnectionBinder = fidl::Binder<Directory>;
   static const fuchsia_blobfs_Blobfs_ops kBlobfsOps = {
-      .GetAllocatedRegions =
-          DirectoryConnectionBinder::BindMember<&Directory::GetAllocatedRegions>,
+      .GetAllocatedRegions = DirectoryConnectionBinder::BindMember<&Directory::GetAllocatedRegions>,
   };
   return &kBlobfsOps;
 }
@@ -196,7 +196,7 @@ zx_status_t Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
   zx::vmo vmo;
   zx_status_t status = ZX_OK;
-  fbl::Vector<BlockRegion> buffer = blobfs_->GetAllocatedRegions();
+  fbl::Vector<BlockRegion> buffer = blobfs_->GetAllocator()->GetAllocatedRegions();
   uint64_t allocations = buffer.size();
   if (allocations != 0) {
     status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);

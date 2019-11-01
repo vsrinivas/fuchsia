@@ -35,7 +35,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
-#include <fs/managed_vfs.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
@@ -60,14 +59,17 @@ using digest::Digest;
 using storage::OperationType;
 using storage::UnbufferedOperationsBuilder;
 
-class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public TransactionManager {
+class Blobfs : public TransactionManager {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
-  ////////////////
-  // fs::ManagedVfs interface.
+  // Creates a blobfs object
+  static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+                            MountOptions* options, std::unique_ptr<Blobfs>* out);
 
-  void Shutdown(fs::Vfs::ShutdownCallback closure) final;
+  static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
+
+  virtual ~Blobfs();
 
   ////////////////
   // TransactionManager's fs::TransactionHandler interface.
@@ -113,11 +115,13 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   BlobfsMetrics& Metrics() final { return metrics_; }
   size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
+  Writability writability() const { return writability_; }
 
   ////////////////
   // Other methods.
 
-  uint64_t DataStart() const { return DataStartBlock(info_); }
+  // Returns the internal blobfs dispatcher.
+  async_dispatcher_t* dispatcher() { return dispatcher_; }
 
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                             uint64_t* first_unset = nullptr) const {
@@ -129,19 +133,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   Allocator* GetAllocator() { return allocator_.get(); }
 
   Inode* GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
-  zx_status_t ReserveBlocks(size_t num_blocks, fbl::Vector<ReservedExtent>* out_extents) {
-    return allocator_->ReserveBlocks(num_blocks, out_extents);
-  }
-  zx_status_t ReserveNodes(size_t num_nodes, fbl::Vector<ReservedNode>* out_node) {
-    return allocator_->ReserveNodes(num_nodes, out_node);
-  }
-
-  static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
-                            std::unique_ptr<Blobfs>* out);
-
-  void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
-
-  virtual ~Blobfs();
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.
@@ -165,6 +156,23 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
                  fbl::Vector<storage::BufferedOperation>* trim_data);
 
+  // Writes node data to the inode table and updates disk.
+  void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
+
+  // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
+  void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
+
+ private:
+  friend class BlobfsChecker;
+
+  Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+         const Superblock* info, Writability writable);
+
+  // Terminates all internal connections, updates the "clean bit" (if writable),
+  // flushes writeback buffers, empties caches, and returns the underlying
+  // block device.
+  std::unique_ptr<BlockDevice> Reset();
+
   // Does a single pass of all blobs, creating uninitialized Vnode
   // objects for them all.
   //
@@ -173,26 +181,9 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // further scanning.
   zx_status_t InitializeVnodes();
 
-  // Writes node data to the inode table and updates disk.
-  void PersistNode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
-
-  // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
-
-  // Record the location and size of all non-free block regions.
-  fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
-
-  // Updates the flags field in superblock.
-  void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
-
- private:
-  friend class BlobfsChecker;
-
-  Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
-
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
-  zx_status_t Reload();
+  zx_status_t ReloadSuperblock();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
   void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
@@ -226,17 +217,19 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Verifies that the contents of a blob are valid.
   zx_status_t VerifyBlob(uint32_t node_index);
 
-  // Check if filesystem is readonly.
-  bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
+  // Updates the flags field in superblock.
+  void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
 
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 
   BlobCache blob_cache_;
 
+  async_dispatcher_t* dispatcher_ = nullptr;
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   block_client::BlockGroupRegistry group_registry_;
+  Writability writability_;
 
   std::unique_ptr<Allocator> allocator_;
 
@@ -246,7 +239,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   uint64_t fs_id_ = 0;
 
   BlobfsMetrics metrics_ = {};
-  fbl::Closure on_unmount_ = {};
 };
 
 }  // namespace blobfs
