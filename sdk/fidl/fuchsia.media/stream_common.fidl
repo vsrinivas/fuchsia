@@ -342,6 +342,9 @@ const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
 const string ENCRYPTION_SCHEME_CENS = "cens";
 const string ENCRYPTION_SCHEME_CBCS = "cbcs";
 
+using KeyId = bytes:MAX_KEY_ID_SIZE;
+using InitVector = bytes:MAX_INIT_VECTOR_SIZE;
+
 /// SubsampleEntry
 ///
 /// A subsample is a byte range within a sample consisting of a clear byte range
@@ -372,6 +375,7 @@ struct EncryptionPattern {
 table EncryptedFormat {
     1: reserved;
     2: reserved;
+    7: reserved;
 
     /// `scheme` specifies which encryption scheme to use, such as
     /// `fuchsia.media.ENCRYPTION_SCHEME_CENC`.
@@ -390,9 +394,7 @@ table EncryptedFormat {
     ///  - It is required to be set prior to delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
-    8: bytes:MAX_KEY_ID_SIZE key_id;
-    // TODO(38522): Remove once clients have migrated back to key_id.
-    7: bytes:MAX_KEY_ID_SIZE key_id_temp;
+    8: KeyId key_id;
 
     /// `init_vector` is used in combination with a key and a block of content
     /// to create the first cipher block in a chain and derive subsequent cipher
@@ -401,7 +403,7 @@ table EncryptedFormat {
     ///  - It is required to be set prior to the delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
-    3: bytes:MAX_INIT_VECTOR_SIZE init_vector;
+    3: InitVector init_vector;
 
     /// `subsamples` is used to identify the clear and encrypted portions of a
     /// subsample.

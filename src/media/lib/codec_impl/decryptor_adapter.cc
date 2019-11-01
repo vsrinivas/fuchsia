@@ -526,9 +526,6 @@ bool DecryptorAdapter::UpdateEncryptionParams(
   }
   if (encrypted_format.has_key_id()) {
     encryption_params_.key_id = encrypted_format.key_id();
-    // TODO(38522): Remove once clients stop sending
-  } else if (encrypted_format.has_key_id_temp()) {
-    encryption_params_.key_id = encrypted_format.key_id_temp();
   }
   if (encrypted_format.has_init_vector()) {
     encryption_params_.init_vector = encrypted_format.init_vector();

@@ -75,7 +75,7 @@ enum KeyStatus {
 };
 
 table KeyState {
-    1: bytes:fuchsia.media.MAX_KEY_ID_SIZE key_id;
+    1: fuchsia.media.KeyId key_id;
     2: KeyStatus status;
 };
 
