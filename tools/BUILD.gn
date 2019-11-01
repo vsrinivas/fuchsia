@@ -13,7 +13,6 @@ group("tools") {
     "//tools/fidlcat:fidlcat_host",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
-    "//tools/net:tools($host_toolchain)",
   ]
 }
 
@@ -40,7 +39,7 @@ group("infratools") {
       "//tools/build:tools($toolchain)",
       "//tools/debug:tools($toolchain)",
       "//tools/integration:tools($toolchain)",
-      "//tools/size_checker/cmd:size_checker($toolchain)",
+      "//tools/size_checker/cmd:host",
       "//tools/testing:tools($toolchain)",
     ]
   }
@@ -60,7 +59,7 @@ group("tests") {
     "//tools/integration:tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",
     "//tools/net:tests($host_toolchain)",
-    "//tools/size_checker/cmd:size_checker_tests($host_toolchain)",
+    "//tools/size_checker/cmd:tests",
     "//tools/testing:tests($host_toolchain)",
   ]
 }

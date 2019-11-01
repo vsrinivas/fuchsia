@@ -6,7 +6,7 @@ A executable that checks if a build exceeds its allocated space limit.
 Run the following command in the output directory:
 
 ```bash
-host_x64/size_checker --build-dir .
+fx size_checker --build-dir .
 ```
 
 ## Space Limit

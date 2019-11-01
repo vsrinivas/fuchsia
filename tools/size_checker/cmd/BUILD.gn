@@ -52,6 +52,7 @@ declare_args() {
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
 
 generated_file("size_checker_json") {
   outputs = [
@@ -79,5 +80,32 @@ go_test("size_checker_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
   deps = [
     ":size_checker_lib",
+  ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":size_checker",
+  ]
+  outputs = [
+    "size_checker",
+  ]
+}
+
+install_host_tools("host_tests") {
+  testonly = true
+
+  deps = [
+    ":size_checker_tests",
+  ]
+  outputs = [
+    "size_checker_tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":host_tests",
   ]
 }
