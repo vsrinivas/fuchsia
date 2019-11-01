@@ -9,6 +9,7 @@ mod config;
 mod device;
 mod fuse_pending;
 mod known_ess_store;
+mod network_config;
 mod policy;
 mod shim;
 mod state_machine;
