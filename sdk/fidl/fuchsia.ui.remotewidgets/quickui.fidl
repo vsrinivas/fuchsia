@@ -115,12 +115,11 @@ struct Group {
 };
 
 /// Describes a specification of quick UI.
-/// TODO(fxb/40081) Soft transition from table back to struct after clients are migrated.
-table Spec {
+struct Spec {
     // The title to show for this spec.
-    1: string:128 title;
+    string:128 title;
     // List of [Group] objects that form part of this spec.
-    2: vector<Group>:8 groups;
+    vector<Group>:8 groups;
 };
 
 /// Defines a protocol for a component to provide specs for building UI for
