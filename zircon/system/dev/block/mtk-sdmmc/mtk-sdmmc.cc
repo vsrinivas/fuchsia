@@ -123,7 +123,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   sdmmc_host_info_t info = {
-      .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2,
+      .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2 |
+              SDMMC_HOST_CAP_SDR104 | SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50,
       // Assuming 512 is smallest block size we are likely to see.
       .max_transfer_size = SDMMC_PAGES_COUNT * 512,
       .max_transfer_size_non_dma = config.fifo_depth,

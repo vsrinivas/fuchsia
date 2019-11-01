@@ -806,6 +806,7 @@ zx_status_t Sdhci::Init() {
   zxlogf(TRACE, "sdhci: controller version %d\n", vrsn);
 
   auto caps0 = Capabilities0::Get().ReadFrom(&regs_mmio_buffer_);
+  auto caps1 = Capabilities1::Get().ReadFrom(&regs_mmio_buffer_);
 
   base_clock_ = caps0.base_clock_frequency_hz();
   if (base_clock_ == 0) {
@@ -829,6 +830,18 @@ zx_status_t Sdhci::Init() {
   }
   if (caps0.voltage_3v3_support()) {
     info_.caps |= SDMMC_HOST_CAP_VOLTAGE_330;
+  }
+  if (caps1.sdr50_support()) {
+    info_.caps |= SDMMC_HOST_CAP_SDR50;
+  }
+  if (caps1.ddr50_support()) {
+    info_.caps |= SDMMC_HOST_CAP_DDR50;
+  }
+  if (caps1.sdr104_support()) {
+    info_.caps |= SDMMC_HOST_CAP_SDR104;
+  }
+  if (!caps1.use_tuning_for_sdr50()) {
+    info_.caps |= SDMMC_HOST_CAP_NO_TUNING_SDR50;
   }
   info_.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
 

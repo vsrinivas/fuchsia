@@ -163,7 +163,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
   sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{0x00}, 0);
 
   // Set the maximum block size for function three to eight bytes.
-  sdmmc_.Write(0x309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
   sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
   sdmmc_.Write(0x100e, std::vector<uint8_t>{0x08, 0x00}, 0);
 
@@ -521,7 +521,7 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
   EXPECT_OK(dut_.Init());
 
   // Set the maximum block size for function three to 128 bytes.
-  sdmmc_.Write(0x309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
   sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
   sdmmc_.Write(0x100e, std::vector<uint8_t>{0x80, 0x00}, 0);
 
@@ -594,6 +594,99 @@ TEST_F(SdioControllerDeviceTest, ProbeFail) {
   sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x00, 0x00}, 0);
 
   EXPECT_NOT_OK(dut_.ProbeSdio());
+}
+
+TEST_F(SdioControllerDeviceTest, ProbeSdr104) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd100'0000; });
+
+  sdmmc_.Write(0x0014, std::vector<uint8_t>{0x07}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 | SDMMC_HOST_CAP_SDR50 |
+              SDMMC_HOST_CAP_DDR50,
+      .max_transfer_size = 0x1000,
+      .max_transfer_size_non_dma = 0x1000,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+
+  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
+  EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
+  EXPECT_EQ(sdmmc_.bus_freq(), 208'000'000);
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_SDR104);
+}
+
+TEST_F(SdioControllerDeviceTest, ProbeSdr50LimitedByHost) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd100'0000; });
+
+  sdmmc_.Write(0x0014, std::vector<uint8_t>{0x07}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR50,
+      .max_transfer_size = 0x1000,
+      .max_transfer_size_non_dma = 0x1000,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+
+  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
+  EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
+  EXPECT_EQ(sdmmc_.bus_freq(), 100'000'000);
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_SDR50);
+}
+
+TEST_F(SdioControllerDeviceTest, ProbeSdr50LimitedByCard) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd100'0000; });
+
+  sdmmc_.Write(0x0014, std::vector<uint8_t>{0x01}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 | SDMMC_HOST_CAP_SDR50 |
+              SDMMC_HOST_CAP_DDR50,
+      .max_transfer_size = 0x1000,
+      .max_transfer_size_non_dma = 0x1000,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+
+  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
+  EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
+  EXPECT_EQ(sdmmc_.bus_freq(), 100'000'000);
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_SDR50);
+}
+
+TEST_F(SdioControllerDeviceTest, ProbeFallBackToHs) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd100'0000; });
+
+  sdmmc_.Write(0x0008, std::vector<uint8_t>{0x00}, 0);
+  sdmmc_.Write(0x0014, std::vector<uint8_t>{0x07}, 0);
+
+  sdmmc_.set_perform_tuning_status(ZX_ERR_IO);
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 | SDMMC_HOST_CAP_SDR50 |
+              SDMMC_HOST_CAP_DDR50,
+      .max_transfer_size = 0x1000,
+      .max_transfer_size_non_dma = 0x1000,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+
+  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
+  EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
+  EXPECT_EQ(sdmmc_.bus_freq(), 50'000'000);
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HS);
 }
 
 TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
