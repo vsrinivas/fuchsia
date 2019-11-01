@@ -5,6 +5,8 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/internal.h>
+#include <lib/fidl/transformer.h>
 #include <string.h>
 
 #ifdef __Fuchsia__
@@ -46,7 +48,48 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
   return status;
 }
 
+const fidl_type_t get_alt_type(const fidl_type_t* type) {
+  switch (type->type_tag) {
+    case kFidlTypePrimitive:
+    case kFidlTypeEnum:
+    case kFidlTypeBits:
+    case kFidlTypeString:
+    case kFidlTypeHandle:
+      return *type;
+    case kFidlTypeStruct:
+      return fidl_type_t(*type->coded_struct.alt_type);
+    case kFidlTypeUnion:
+      return fidl_type_t(*type->coded_union.alt_type);
+    case kFidlTypeArray:
+      return fidl_type_t(*type->coded_array.alt_type);
+    case kFidlTypeVector:
+      return fidl_type_t(*type->coded_vector.alt_type);
+    default:
+      assert(false && "cannot get alt type of a type that lacks an alt type");
+      return *type;
+  }
+}
+
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
+  if (should_decode_union_from_xunion()) {
+    fidl_type_t v1_type = get_alt_type(type);
+    allocated_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
+    uint32_t size;
+    zx_status_t transform_status =
+        fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type, bytes_.data(), bytes_.actual(),
+                       allocated_buffer.data(), &size, error_msg_out);
+    if (transform_status != ZX_OK) {
+      return transform_status;
+    }
+
+    zx_status_t status = fidl_decode(type, allocated_buffer.data(), size, handles_.data(),
+                                     handles_.actual(), error_msg_out);
+    bytes_ = BytePart(allocated_buffer.data(), size, size);
+
+    ClearHandlesUnsafe();
+    return status;
+  }
+
   zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
                                    handles_.actual(), error_msg_out);
   ClearHandlesUnsafe();

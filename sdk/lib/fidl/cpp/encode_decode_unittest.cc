@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/test/test_util.h>
+#include <lib/fidl/transformer.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -69,52 +70,6 @@ TEST(EncodeTest, RequestMagicNumber) {
   ASSERT_TRUE(handler.is_supported);
 }
 
-// Adapted from RoundTrip in test_util.h.
-TEST(Conformance, DecodeUnionFromXUnion) {
-  fidl::test::unionmigration::BasicXUnionStruct input;
-  input.val = fidl::test::unionmigration::BasicXUnion::WithI32(2);
-
-  fidl::Encoder enc(0xfefefefe);
-  const size_t input_encoded_size =
-      EncodingInlineSize<fidl::test::unionmigration::BasicXUnionStruct, fidl::Encoder>(&enc);
-  const size_t input_padding_size = FIDL_ALIGN(input_encoded_size) - input_encoded_size;
-  const ::fidl::FidlStructField fake_input_interface_fields[] = {
-      ::fidl::FidlStructField(fidl::test::unionmigration::BasicXUnionStruct::FidlType, 16,
-                              input_padding_size),
-  };
-  const fidl_type_t fake_input_interface_struct{
-      ::fidl::FidlCodedStruct(fake_input_interface_fields, 1, 16 + input_encoded_size, "Input")};
-  const size_t output_encoded_size =
-      EncodingInlineSize<fidl::test::unionmigration::BasicXUnionStruct, fidl::Encoder>(&enc);
-  const size_t output_padding_size = FIDL_ALIGN(output_encoded_size) - output_encoded_size;
-  const ::fidl::FidlStructField fake_output_interface_fields[] = {
-      ::fidl::FidlStructField(fidl::test::unionmigration::BasicXUnionStruct::FidlType, 16,
-                              output_padding_size),
-  };
-  const fidl_type_t fake_output_interface_struct{
-      ::fidl::FidlCodedStruct(fake_output_interface_fields, 1, 16 + output_encoded_size, "Output")};
-
-  auto ofs = enc.Alloc(input_encoded_size);
-  fidl::Clone(input).Encode(&enc, ofs);
-  auto msg = enc.GetMessage();
-
-  // Set the bit indicating that this contains xunion bytes.
-  fidl_message_header_t* header = reinterpret_cast<fidl_message_header_t*>(msg.bytes().data());
-  header->flags[0] = 1;
-  // The fidl definition of the union and xunion have different names and therefore different
-  // ordinals. Update the ordinal so the union can decode from its corresponding xunion-encoded
-  // bytes.
-  *reinterpret_cast<uint64_t*>(msg.payload().data()) = 580704578;
-
-  const char* err_msg = nullptr;
-  EXPECT_EQ(ZX_OK, msg.Decode(&fake_output_interface_struct, &err_msg)) << err_msg;
-  fidl::Decoder dec(std::move(msg));
-  fidl::test::unionmigration::BasicUnionStruct output;
-  fidl::test::unionmigration::BasicUnionStruct::Decode(&dec, &output, ofs);
-
-  EXPECT_EQ(output.val.i32(), input.val.i32());
-}
-
 TEST(Conformance, EncodeUnionAsXUnion) {
   auto xunion_value = fidl::test::unionmigration::BasicXUnion::WithI32(2);
   fidl::Encoder xunion_enc(0xfefefefe);
@@ -140,6 +95,44 @@ TEST(Conformance, EncodeUnionAsXUnion) {
   EXPECT_TRUE(fidl::test::util::cmp_payload(
       reinterpret_cast<const uint8_t*>(union_payload.data()), union_payload.actual(),
       reinterpret_cast<const uint8_t*>(xunion_payload.data()), xunion_payload.size()));
+}
+
+TEST(Conformance, UnionMigration_SingleVariant_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      // Header:
+      0x00, 0x00, 0x00, 0x00, // TXID
+      0x01, 0x00, 0x00, // Flags
+      0x01, // Magic number
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Ordinal
+      // Body:
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  };
+
+  auto handles = std::vector<zx_handle_t>{};
+
+  fidl::test::unionmigration::SingleVariantUnionStructWithHeader obj;
+  fidl::test::unionmigration::SingleVariantUnionStruct v1;
+  fidl::test::unionmigration::SingleVariantUnion v2;
+  uint32_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+  obj.body = std::move(v1);
+
+  Message message(BytePart(input.data(), input.size(), input.size()), HandlePart());
+
+  const char* err;
+  zx_status_t status = message.Decode(
+      fidl::test::unionmigration::SingleVariantUnionStructWithHeader::FidlType, &err);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl::Decoder decoder(std::move(message));
+  fidl::test::unionmigration::SingleVariantUnionStructWithHeader output;
+  fidl::test::unionmigration::SingleVariantUnionStructWithHeader::Decode(&decoder, &output, 0);
+
+  EXPECT_TRUE(::fidl::Equals(output.body, v1));
 }
 
 }  // namespace

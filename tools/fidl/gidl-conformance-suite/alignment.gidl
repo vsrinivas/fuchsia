@@ -26,6 +26,8 @@ success("3ByteObjectAlignmentInStruct") {
             0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ),
     ],
+	// TODO(fxb/40114) Re-enable once message headers are handled properly.
+	bindings_denylist = [cpp],
 }
 
 success("5ByteObjectAlignmentInStruct") {
@@ -136,6 +138,8 @@ success("3ByteObjectAlignmentInArray") {
             0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ),
     ],
+	// TODO(fxb/40114) Re-enable once message headers are handled properly.
+	bindings_denylist = [cpp],
 }
 
 success("5ByteObjectAlignmentInArray") {

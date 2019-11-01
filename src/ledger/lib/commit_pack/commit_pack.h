@@ -60,6 +60,10 @@ bool DecodeFromBuffer(const fuchsia::mem::Buffer& buffer, T* data) {
     return false;
   }
 
+  if (!bytes.data()) {
+    // Message::Decode cannot handle a nullptr input and has an assertion checking for this case.
+    return false;
+  }
   fidl::Message message(fidl::BytePart(bytes.data(), bytes.size(), bytes.size()),
                         fidl::HandlePart());
   const char* error_msg;

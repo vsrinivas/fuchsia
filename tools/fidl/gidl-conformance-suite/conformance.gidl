@@ -51,6 +51,8 @@ success("Uint8Uint16Uint32Uint64") {
 			0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f4
 		),
 	],
+	// TODO(fxb/40114) Re-enable once message headers are handled properly.
+	bindings_denylist = [cpp],
 }
 
 success("Uint64Uint32Uint16Uint8") {

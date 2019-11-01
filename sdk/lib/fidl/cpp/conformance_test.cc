@@ -9,54 +9,6 @@
 #include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-TEST(Conformance, 3ByteObjectAlignmentInStruct_Encode) {
-  conformance::ThreeByteInStruct v1;
-
-  conformance::ThreeByte v2;
-
-  uint8_t v3 = 1ull;
-  v2.elem1 = std::move(v3);
-
-  uint8_t v4 = 2ull;
-  v2.elem2 = std::move(v4);
-
-  uint8_t v5 = 3ull;
-  v2.elem3 = std::move(v5);
-  v1.elem1 = std::move(v2);
-
-  conformance::ThreeByte v6;
-
-  uint8_t v7 = 4ull;
-  v6.elem1 = std::move(v7);
-
-  uint8_t v8 = 5ull;
-  v6.elem2 = std::move(v8);
-
-  uint8_t v9 = 6ull;
-  v6.elem3 = std::move(v9);
-  v1.elem2 = std::move(v6);
-
-  conformance::ThreeByte v10;
-
-  uint8_t v11 = 7ull;
-  v10.elem1 = std::move(v11);
-
-  uint8_t v12 = 8ull;
-  v10.elem2 = std::move(v12);
-
-  uint8_t v13 = 9ull;
-  v10.elem3 = std::move(v13);
-  v1.elem3 = std::move(v10);
-
-  auto expected = std::vector<uint8_t>{
-      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
-}
-
 TEST(Conformance, 5ByteObjectAlignmentInStruct_Encode) {
   conformance::FiveByteInStruct v1;
 
@@ -185,51 +137,6 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
-  conformance::ThreeByteInArray v1;
-
-  conformance::ThreeByte v2;
-
-  uint8_t v3 = 1ull;
-  v2.elem1 = std::move(v3);
-
-  uint8_t v4 = 2ull;
-  v2.elem2 = std::move(v4);
-
-  uint8_t v5 = 3ull;
-  v2.elem3 = std::move(v5);
-  conformance::ThreeByte v6;
-
-  uint8_t v7 = 4ull;
-  v6.elem1 = std::move(v7);
-
-  uint8_t v8 = 5ull;
-  v6.elem2 = std::move(v8);
-
-  uint8_t v9 = 6ull;
-  v6.elem3 = std::move(v9);
-  conformance::ThreeByte v10;
-
-  uint8_t v11 = 7ull;
-  v10.elem1 = std::move(v11);
-
-  uint8_t v12 = 8ull;
-  v10.elem2 = std::move(v12);
-
-  uint8_t v13 = 9ull;
-  v10.elem3 = std::move(v13);
-  auto v14 = std::array<conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
-  v1.elems = std::move(v14);
-
-  auto expected = std::vector<uint8_t>{
-      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
-}
-
 TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
   conformance::FiveByteInArray v1;
 
@@ -294,30 +201,6 @@ TEST(Conformance, EmptyStructSandwich_Encode) {
       0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x62, 0x65,
       0x66, 0x6f, 0x72, 0x65, 0x00, 0x00, 0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,
-
-  };
-
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
-}
-
-TEST(Conformance, Uint8Uint16Uint32Uint64_Encode) {
-  conformance::Uint8Uint16Uint32Uint64 v1;
-
-  uint8_t v2 = 1ull;
-  v1.f1 = std::move(v2);
-
-  uint16_t v3 = 515ull;
-  v1.f2 = std::move(v3);
-
-  uint32_t v4 = 67438087ull;
-  v1.f3 = std::move(v4);
-
-  uint64_t v5 = 579005069656919567ull;
-  v1.f4 = std::move(v5);
-
-  auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04,
-      0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
 
   };
 
@@ -1388,55 +1271,6 @@ TEST(Conformance, UnionWithBoundString_Encode) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::ThreeByteInStruct v1;
-
-  conformance::ThreeByte v2;
-
-  uint8_t v3 = 1ull;
-  v2.elem1 = std::move(v3);
-
-  uint8_t v4 = 2ull;
-  v2.elem2 = std::move(v4);
-
-  uint8_t v5 = 3ull;
-  v2.elem3 = std::move(v5);
-  v1.elem1 = std::move(v2);
-
-  conformance::ThreeByte v6;
-
-  uint8_t v7 = 4ull;
-  v6.elem1 = std::move(v7);
-
-  uint8_t v8 = 5ull;
-  v6.elem2 = std::move(v8);
-
-  uint8_t v9 = 6ull;
-  v6.elem3 = std::move(v9);
-  v1.elem2 = std::move(v6);
-
-  conformance::ThreeByte v10;
-
-  uint8_t v11 = 7ull;
-  v10.elem1 = std::move(v11);
-
-  uint8_t v12 = 8ull;
-  v10.elem2 = std::move(v12);
-
-  uint8_t v13 = 9ull;
-  v10.elem3 = std::move(v13);
-  v1.elem3 = std::move(v10);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
 TEST(Conformance, 5ByteObjectAlignmentInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
@@ -1568,52 +1402,6 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-      0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::ThreeByteInArray v1;
-
-  conformance::ThreeByte v2;
-
-  uint8_t v3 = 1ull;
-  v2.elem1 = std::move(v3);
-
-  uint8_t v4 = 2ull;
-  v2.elem2 = std::move(v4);
-
-  uint8_t v5 = 3ull;
-  v2.elem3 = std::move(v5);
-  conformance::ThreeByte v6;
-
-  uint8_t v7 = 4ull;
-  v6.elem1 = std::move(v7);
-
-  uint8_t v8 = 5ull;
-  v6.elem2 = std::move(v8);
-
-  uint8_t v9 = 6ull;
-  v6.elem3 = std::move(v9);
-  conformance::ThreeByte v10;
-
-  uint8_t v11 = 7ull;
-  v10.elem1 = std::move(v11);
-
-  uint8_t v12 = 8ull;
-  v10.elem2 = std::move(v12);
-
-  uint8_t v13 = 9ull;
-  v10.elem3 = std::move(v13);
-  auto v14 = std::array<conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
-  v1.elems = std::move(v14);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
 TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
   auto input = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
@@ -1682,31 +1470,6 @@ TEST(Conformance, EmptyStructSandwich_Decode) {
 
   std::string v4("after");
   v1.after = std::move(v4);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, Uint8Uint16Uint32Uint64_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04,
-      0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
-
-  };
-
-  conformance::Uint8Uint16Uint32Uint64 v1;
-
-  uint8_t v2 = 1ull;
-  v1.f1 = std::move(v2);
-
-  uint16_t v3 = 515ull;
-  v1.f2 = std::move(v3);
-
-  uint32_t v4 = 67438087ull;
-  v1.f3 = std::move(v4);
-
-  uint64_t v5 = 579005069656919567ull;
-  v1.f4 = std::move(v5);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));

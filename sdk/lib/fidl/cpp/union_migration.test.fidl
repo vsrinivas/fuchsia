@@ -22,3 +22,17 @@ struct BasicXUnionStruct {
 struct BasicUnionStruct {
     BasicUnion val;
 };
+
+union SingleVariantUnion {
+    1: uint32 x;
+};
+
+struct SingleVariantUnionStruct {
+    SingleVariantUnion u;
+};
+
+struct SingleVariantUnionStructWithHeader {
+    // Header exists to emulate the shape of the transaction header.
+    array<uint8>:16 header;
+    SingleVariantUnionStruct body;
+};

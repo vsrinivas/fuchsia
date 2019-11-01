@@ -2,7 +2,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "78c6e19f843046cceb9b1a31bd9125ab",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "81050b6b5994c4aae1d966694ef73944",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "8f9fa536c9fe20584afb70e4f81feb8c",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "f54860126ea77c1dae1cce915a9bb0f4",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "62bd76e6874f26bba8ffca5e105af68a",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "7dcd5aa3066c9adeaee40cd09a907658",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/logging.h": "6cc184bb613d6539ea5f568927ca06be",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "d38c011c0a9cfdf7f2453676cb1f3f2f",

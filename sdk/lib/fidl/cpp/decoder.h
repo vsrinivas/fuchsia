@@ -33,7 +33,11 @@ class Decoder final {
 
   // As part of the union to xunion migration, it may be necessary to decode
   // unions from xunion bytes rather than union bytes.
-  bool ShouldDecodeUnionFromXUnion() { return message_.should_decode_union_from_xunion(); }
+  bool ShouldDecodeUnionFromXUnion() {
+    // Return false because we will instead be using fidl_transform for this.
+    // TODO(fxb/40122) Remove this method altogether.
+    return false;
+  }
 
  private:
   uint8_t* InternalGetPtr(size_t offset);
