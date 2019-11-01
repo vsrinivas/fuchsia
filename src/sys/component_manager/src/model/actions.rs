@@ -409,7 +409,7 @@ mod tests {
             let model = Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
-                root_default_runner: Arc::new(runner),
+                elf_runner: Arc::new(runner),
                 config: ModelConfig::default(),
                 builtin_capabilities: builtin.clone(),
             });

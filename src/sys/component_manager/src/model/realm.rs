@@ -25,9 +25,6 @@ use {
 pub struct Realm {
     /// The registry for resolving component URLs within the realm.
     pub resolver_registry: Arc<ResolverRegistry>,
-    /// The default runner (nominally runs ELF binaries) for executing components
-    /// within the realm that do not explicitly specify a runner.
-    pub default_runner: Arc<dyn Runner + Send + Sync + 'static>,
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
@@ -48,14 +45,9 @@ pub struct Realm {
 
 impl Realm {
     /// Instantiates a new root realm.
-    pub fn new_root_realm(
-        resolver_registry: ResolverRegistry,
-        default_runner: Arc<dyn Runner + Send + Sync + 'static>,
-        component_url: String,
-    ) -> Self {
+    pub fn new_root_realm(resolver_registry: ResolverRegistry, component_url: String) -> Self {
         Self {
             resolver_registry: Arc::new(resolver_registry),
-            default_runner,
             abs_moniker: AbsoluteMoniker::root(),
             component_url,
             // Started by main().
@@ -483,7 +475,6 @@ impl RealmState {
             let abs_moniker = realm.abs_moniker.child(child_moniker.clone());
             let child_realm = Arc::new(Realm {
                 resolver_registry: realm.resolver_registry.clone(),
-                default_runner: realm.default_runner.clone(),
                 abs_moniker: abs_moniker,
                 component_url: child.url.clone(),
                 startup: child.startup,

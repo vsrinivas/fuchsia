@@ -605,7 +605,7 @@ impl ComponentManagerCapabilityProvider for WorkSchedulerCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{testing::mocks, AbsoluteMoniker, ChildMoniker, ResolverRegistry},
+        crate::model::{AbsoluteMoniker, ChildMoniker, ResolverRegistry},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async::{Executor, Time, WaitState},
@@ -1294,9 +1294,8 @@ mod tests {
 
         let realm = {
             let resolver = ResolverRegistry::new();
-            let runner = Arc::new(mocks::MockRunner::new());
             let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+            Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
         let event = Event::RouteBuiltinCapability {
             realm: realm.clone(),

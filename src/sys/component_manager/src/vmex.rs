@@ -134,7 +134,7 @@ impl ComponentManagerCapabilityProvider for VmexCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{testing::mocks, Realm, ResolverRegistry},
+        crate::model::{Realm, ResolverRegistry},
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -218,9 +218,8 @@ mod tests {
 
         let realm = {
             let resolver = ResolverRegistry::new();
-            let runner = Arc::new(mocks::MockRunner::new());
             let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+            Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
         let event = Event::RouteBuiltinCapability {
             realm: realm.clone(),

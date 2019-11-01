@@ -217,7 +217,7 @@ pub async fn model_setup(
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
         root_resolver_registry: resolver_registry,
-        root_default_runner: Arc::new(runner),
+        elf_runner: Arc::new(runner),
         config: ModelConfig::default(),
         builtin_capabilities: builtin_capabilities.clone(),
     };

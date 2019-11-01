@@ -32,7 +32,7 @@ async fn new_model_with(
     let model = Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
-        root_default_runner: Arc::new(mock_runner),
+        elf_runner: Arc::new(mock_runner),
         config: ModelConfig::default(),
         builtin_capabilities: builtin.clone(),
     });

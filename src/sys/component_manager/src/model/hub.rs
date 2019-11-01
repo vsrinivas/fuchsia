@@ -716,7 +716,7 @@ mod tests {
         let model = Arc::new(model::Model::new(model::ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
-            root_default_runner: Arc::new(runner),
+            elf_runner: Arc::new(runner),
             config: model::ModelConfig::default(),
             builtin_capabilities: builtin_capabilities.clone(),
         }));

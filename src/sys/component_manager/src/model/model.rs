@@ -23,8 +23,8 @@ pub struct ModelParams {
     /// The component resolver registry used in the root realm.
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
-    /// The default runner used in the root realm (nominally runs ELF binaries).
-    pub root_default_runner: Arc<dyn Runner + Send + Sync + 'static>,
+    /// The built-in ELF runner, used for starting components with an ELF binary.
+    pub elf_runner: Arc<dyn Runner + Send + Sync + 'static>,
     /// Configuration options for the model.
     pub config: ModelConfig,
 }
@@ -44,6 +44,11 @@ pub struct Model {
     /// Builtin services that are available in the root realm.
     pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
     pub realm_capability_host: Option<RealmCapabilityHost>,
+
+    /// The built-in ELF runner, used for starting components with an ELF binary.
+    // TODO(fxb/4761): Remove. This should be a routed capability, and
+    // not explicitly passed around in the model.
+    pub elf_runner: Arc<dyn Runner + Send + Sync>,
 }
 
 /// Holds configuration options for the model.
@@ -70,12 +75,12 @@ impl Model {
         Model {
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
-                params.root_default_runner,
                 params.root_component_url,
             )),
             config: params.config,
             builtin_capabilities: params.builtin_capabilities,
             realm_capability_host: None,
+            elf_runner: params.elf_runner,
         }
     }
 
@@ -318,7 +323,7 @@ impl Model {
                     outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
                     runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
                 };
-                realm.default_runner.start(start_info).await?;
+                self.elf_runner.start(start_info).await?;
                 runtime
             } else {
                 // Although this component has no runtime environment, it is still possible to bind

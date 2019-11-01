@@ -184,7 +184,7 @@ impl HooksInner {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::testing::mocks, std::sync::Arc};
+    use {super::*, std::sync::Arc};
 
     #[derive(Clone)]
     struct EventLog {
@@ -271,9 +271,8 @@ mod tests {
 
         let realm = {
             let resolver = ResolverRegistry::new();
-            let runner = Arc::new(mocks::MockRunner::new());
             let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+            Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
         let event = Event::AddDynamicChild { realm: realm.clone() };
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
@@ -308,9 +307,8 @@ mod tests {
 
         let realm = {
             let resolver = ResolverRegistry::new();
-            let runner = Arc::new(mocks::MockRunner::new());
             let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, runner, root_component_url))
+            Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
         let event = Event::AddDynamicChild { realm: realm.clone() };
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
