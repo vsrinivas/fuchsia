@@ -36,8 +36,7 @@ type TestSpec struct {
 
 // Test encapsulates details about a particular test.
 type Test struct {
-	// Name is the full, GN source-relative target name of the test
-	// (e.g., //garnet/bin/foo/tests:foo_tests).
+	// Name is the "basename" of the test, e.g. "foo_test".
 	Name string `json:"name"`
 
 	// PackageURL is the fuchsia package URL for this test. It is only set for
@@ -46,6 +45,10 @@ type Test struct {
 
 	// Path is the path to the test on the target OS.
 	Path string `json:"path"`
+
+	// Label is the full GN label with toolchain for the test target.
+	// E.g.: //src/foo/tests:foo_tests(//build/toolchain/fuchsia:x64)
+	Label string `json:"label"`
 
 	// OS is the operating system in which this test must be executed.
 	OS OS `json:"os"`
