@@ -144,7 +144,7 @@ impl TryFrom<&Inspector> for Snapshot {
             .vmo
             .as_ref()
             .ok_or(format_err!("Cannot read from no-op Inspector"))
-            .and_then(|vmo| Snapshot::try_from(vmo))
+            .and_then(|vmo| Snapshot::try_from(&**vmo))
     }
 }
 

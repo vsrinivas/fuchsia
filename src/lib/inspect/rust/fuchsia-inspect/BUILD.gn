@@ -16,6 +16,7 @@ rustc_library("fuchsia-inspect") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
     "//third_party/rust_crates:bitfield",
@@ -29,6 +30,7 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
+    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

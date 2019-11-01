@@ -26,7 +26,7 @@ use {
 };
 
 #[cfg(test)]
-use crate::format::block::Block;
+use {crate::format::block::Block, failure::bail};
 
 pub mod component;
 pub mod format;
@@ -36,31 +36,35 @@ pub mod reader;
 pub mod trie;
 #[macro_use]
 pub mod testing;
+mod service;
 mod state;
 mod utils;
 
 /// Root of the Inspect API
+#[derive(Clone)]
 pub struct Inspector {
     /// The root node.
-    root_node: Node,
+    root_node: Arc<Node>,
 
     /// The VMO backing the inspector
-    pub(in crate) vmo: Option<zx::Vmo>,
+    pub(in crate) vmo: Option<Arc<zx::Vmo>>,
 }
 
 /// Holds a list of inspect types that won't change.
 #[derive(Derivative)]
-#[derivative(Debug, PartialEq, Eq)]
+#[derivative(Clone, Debug, PartialEq, Eq)]
 struct ValueList {
     #[derivative(PartialEq = "ignore")]
     #[derivative(Debug = "ignore")]
-    values: Mutex<Option<Vec<Box<dyn InspectType>>>>,
+    values: Arc<Mutex<Option<InspectTypeList>>>,
 }
+
+type InspectTypeList = Vec<Box<dyn InspectType>>;
 
 impl ValueList {
     /// Creates a new empty value list.
     pub fn new() -> Self {
-        Self { values: Mutex::new(None) }
+        Self { values: Arc::new(Mutex::new(None)) }
     }
 
     /// Stores an inspect type that won't change.
@@ -93,7 +97,9 @@ impl Inspector {
     /// the VMO should have.
     pub fn new_with_size(max_size: usize) -> Self {
         match Inspector::new_root(max_size) {
-            Ok((vmo, root_node)) => Inspector { vmo: Some(vmo), root_node },
+            Ok((vmo, root_node)) => {
+                Inspector { vmo: Some(Arc::new(vmo)), root_node: Arc::new(root_node) }
+            }
             Err(e) => {
                 fx_log_err!("Failed to create root node. Error: {}", e);
                 Inspector::new_no_op()
@@ -166,13 +172,38 @@ impl Inspector {
         &self.root_node
     }
 
-    pub(in crate) fn state(&self) -> Option<Arc<Mutex<State>>> {
+    /// Gets all the lazy tree names associated to this inspector.
+    #[cfg(test)]
+    pub(in crate) fn tree_names(&self) -> Vec<String> {
+        self.state()
+            .map(|state| {
+                let state = state.lock();
+                state.callbacks.keys().map(|k| k.to_string()).collect::<Vec<String>>()
+            })
+            .unwrap_or(vec![])
+    }
+
+    /// Calls the lazy node callback with the given `name` or fails if the name doesn't exist.
+    #[cfg(test)]
+    pub(in crate) async fn load_tree(&self, name: impl Into<String>) -> Result<Self, Error> {
+        let name = name.into();
+        let result = self.state().and_then(|state| {
+            let state = state.lock();
+            state.callbacks.get(&name).map(|cb| cb())
+        });
+        match result {
+            Some(cb_result) => cb_result.await,
+            None => bail!("failed to load tree name = {:?}", name),
+        }
+    }
+
+    fn state(&self) -> Option<Arc<Mutex<State>>> {
         self.root().inner.as_ref().map(|inner| inner.state.clone())
     }
 
     /// Creates a new No-Op inspector
     fn new_no_op() -> Self {
-        Inspector { vmo: None, root_node: Node::new_no_op() }
+        Inspector { vmo: None, root_node: Arc::new(Node::new_no_op()) }
     }
 
     /// Allocates a new VMO and initializes it.

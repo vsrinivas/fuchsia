@@ -401,7 +401,7 @@ impl<'a> NodeHierarchyLoader<'a> {
             .vmo
             .as_ref()
             .ok_or(format_err!("failed to read root"))
-            .and_then(|vmo| PartialNodeHierarchy::try_from(vmo))?;
+            .and_then(|vmo| PartialNodeHierarchy::try_from(vmo.deref()))?;
         let work_stack = vec![LoaderStep {
             inspector: InspectorHold::Ref(inspector),
             link_value: None,
@@ -491,7 +491,7 @@ impl<'a> NodeHierarchyLoader<'a> {
                     self.work_stack.push(current_step);
                     return;
                 }
-                match PartialNodeHierarchy::try_from(vmo_result.unwrap()) {
+                match PartialNodeHierarchy::try_from(vmo_result.unwrap().deref()) {
                     Ok(child_hierarchy) => {
                         self.work_stack.push(current_step);
                         self.work_stack.push(LoaderStep {
@@ -1092,7 +1092,7 @@ mod tests {
         // Now we will excavate the bytes that comprise the string property, then mess with them on
         // purpose to produce an invalid UTF8 string in the property.
         let vmo = inspector.vmo.unwrap();
-        let snapshot = Snapshot::try_from(&vmo).expect("getting snapshot");
+        let snapshot = Snapshot::try_from(&*vmo).expect("getting snapshot");
         let block = snapshot.get_block(prop.block_index()).expect("getting block");
 
         // The first byte of the actual property string is at this byte offset in the VMO.
