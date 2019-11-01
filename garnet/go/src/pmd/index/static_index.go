@@ -30,15 +30,29 @@ func NewStatic() *StaticIndex {
 	return &StaticIndex{roots: map[pkg.Package]string{}}
 }
 
-// LoadFrom reads a static index from `path` and replaces the index in the
-// receiver with the contents.
-func (idx *StaticIndex) LoadFrom(f io.Reader) error {
-	roots := map[pkg.Package]string{}
+type indexFileEntry struct {
+	Key    pkg.Package
+	Merkle string
+}
 
+// ParseIndexFile parses the key=value format in static_packages.
+func ParseIndexFile(f io.Reader) (result []indexFileEntry, _ error) {
 	r := bufio.NewReader(f)
 	for {
 		l, err := r.ReadString('\n')
 		l = strings.TrimSpace(l)
+		if err != nil {
+			if err == io.EOF {
+				if l == "" {
+					// We're done
+					break
+				} else {
+					// Keep going for one more record
+				}
+			} else {
+				return nil, err
+			}
+		}
 		parts := strings.SplitN(l, "=", 2)
 
 		if len(parts) == 2 {
@@ -47,31 +61,38 @@ func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 
 			if len(merkle) != 64 {
 				log.Printf("index: invalid merkleroot in static manifest: %q", l)
-				goto checkErr
+				continue
 			}
 
 			parts = strings.SplitN(nameVersion, "/", 2)
 			if len(parts) != 2 {
 				log.Printf("index: invalid name/version pair in static manifest: %q", nameVersion)
-				goto checkErr
+				continue
 			}
 			name := parts[0]
 			version := parts[1]
 
-			roots[pkg.Package{Name: name, Version: version}] = merkle
+			result = append(result, indexFileEntry{Key: pkg.Package{Name: name, Version: version}, Merkle: merkle})
 		} else {
 			if len(l) > 0 {
 				log.Printf("index: invalid line in static manifest: %q", l)
 			}
 		}
+	}
+	return
+}
 
-	checkErr:
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
+// LoadFrom reads a static index from `path` and replaces the index in the
+// receiver with the contents.
+func (idx *StaticIndex) LoadFrom(f io.Reader) error {
+	roots := map[pkg.Package]string{}
+
+	entries, err := ParseIndexFile(f)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		roots[entry.Key] = entry.Merkle
 	}
 
 	idx.mu.Lock()

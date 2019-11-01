@@ -97,6 +97,7 @@ func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 
 // staticIndexPath is the path inside the system package directory that contains the static packages for that system version.
 const staticIndexPath = "data/static_packages"
+const cacheIndexPath = "data/cache_packages"
 
 // loadStaticIndex loads the blob specified by root from blobfs. A non-nil
 // *StaticIndex is always returned. If an error is returned that indicates a
@@ -110,6 +111,37 @@ func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root str
 	defer indexFile.Close()
 
 	return static.LoadFrom(indexFile)
+}
+
+func (f *Filesystem) loadCacheIndex(root string) error {
+	indexFile, err := f.blobfs.Open(root)
+	if err != nil {
+		return fmt.Errorf("pkgfs: could not load cache index from blob %s: %s", root, err)
+	}
+	defer indexFile.Close()
+
+	entries, err := index.ParseIndexFile(indexFile)
+	if err != nil {
+		return fmt.Errorf("pkgfs: error parsing cache index: %v", err)
+	}
+	for _, entry := range entries {
+		meta, err := f.blobfs.Open(entry.Merkle)
+		if err != nil {
+			// Package meta.far is missing, skip it.
+			continue
+		}
+		meta.Close()
+		if err := importPackage(f, entry.Merkle); err != nil && err != fs.ErrAlreadyExists {
+			// This probably shouldn't happen if the meta far is present already.
+			log.Printf("pkgfs: surprising error loading optional pkg %q: %v", entry.Key, err)
+		}
+		if f.index.IsInstalling(entry.Merkle) {
+			// Some content blobs are missing.
+			// Mark failed so we don't list the package in /pkgfs/needs/packages
+			f.index.InstallingFailedForPackage(entry.Merkle)
+		}
+	}
+	return nil
 }
 
 // SetSystemRoot sets/updates the merkleroot (and static index) that backs the /system partition and static package index.
@@ -126,6 +158,9 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	}
 
 	err = loadStaticIndex(f.static, f.blobfs, blob)
+	if err != nil {
+		return err
+	}
 
 	// Ensure that the "system_image" package is also indexed
 	f.static.Set(
@@ -136,7 +171,15 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 		merkleroot,
 	)
 
-	return err
+	blob, ok = pd.getBlobFor(cacheIndexPath)
+	if ok {
+		err := f.loadCacheIndex(blob)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (f *Filesystem) Blockcount() int64 {

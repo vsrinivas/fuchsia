@@ -59,7 +59,9 @@ rustc_test("pkgfs_test") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-merkle",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:serde_json",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

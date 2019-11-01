@@ -296,20 +296,26 @@ func (f *installFile) Truncate(sz uint64) error {
 	return goErrToFSErr(err)
 }
 
-// importPackage uses f.blob to import the package that was just written. It
+// importPackage uses f.name to import the package that was just written. It
 // returns an fs.Error to report back to the user at write time.
 func (f *installFile) importPackage() error {
-	b, err := f.fs.blobfs.Open(f.name)
+	return importPackage(f.fs, f.name)
+}
+
+// importPackage uses name to import the package that was just written. It
+// returns an fs.Error to report back to the user at write time.
+func importPackage(f *Filesystem, name string) error {
+	b, err := f.blobfs.Open(name)
 	if err != nil {
-		f.fs.index.InstallingFailedForPackage(f.name)
-		log.Printf("error opening package blob after writing: %s: %s", f.name, err)
+		f.index.InstallingFailedForPackage(name)
+		log.Printf("error opening package blob after writing: %s: %s", name, err)
 		return fs.ErrFailedPrecondition
 	}
 	defer b.Close()
 
 	r, err := far.NewReader(b)
 	if err != nil {
-		f.fs.index.InstallingFailedForPackage(f.name)
+		f.index.InstallingFailedForPackage(name)
 		log.Printf("error reading package archive: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -317,7 +323,7 @@ func (f *installFile) importPackage() error {
 
 	pf, err := r.ReadFile("meta/package")
 	if err != nil {
-		f.fs.index.InstallingFailedForPackage(f.name)
+		f.index.InstallingFailedForPackage(name)
 		log.Printf("error reading package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
@@ -326,21 +332,21 @@ func (f *installFile) importPackage() error {
 	var p pkg.Package
 	err = json.Unmarshal(pf, &p)
 	if err != nil {
-		f.fs.index.InstallingFailedForPackage(f.name)
+		f.index.InstallingFailedForPackage(name)
 		log.Printf("error parsing package metadata: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	if err := p.Validate(); err != nil {
-		f.fs.index.InstallingFailedForPackage(f.name)
+		f.index.InstallingFailedForPackage(name)
 		log.Printf("package is invalid: %s", err)
 		// Note: translates to zx.ErrBadState
 		return fs.ErrFailedPrecondition
 	}
 
 	// Tell the index the identity of this package.
-	f.fs.index.UpdateInstalling(f.name, p)
+	f.index.UpdateInstalling(name, p)
 
 	contents, err := r.ReadFile("meta/contents")
 	if err != nil {
@@ -359,7 +365,7 @@ func (f *installFile) importPackage() error {
 	// readable"
 	mayHaveBlob := func(root string) bool { return true }
 	if len(files) > 20 {
-		dnames, err := f.fs.blobfs.Blobs()
+		dnames, err := f.blobfs.Blobs()
 		if err != nil {
 			log.Printf("error readdir blobfs: %s", err)
 			// Note: translates to zx.ErrBadState
@@ -390,7 +396,7 @@ func (f *installFile) importPackage() error {
 		}
 		root := string(parts[1])
 
-		if mayHaveBlob(root) && f.fs.blobfs.HasBlob(root) {
+		if mayHaveBlob(root) && f.blobfs.HasBlob(root) {
 			foundBlobs[root] = struct{}{}
 			continue
 		}
@@ -417,19 +423,19 @@ func (f *installFile) importPackage() error {
 		// time when importPackage starts, for example if a package is updated and
 		// then reverted to a prior version wihtout GC. In that case, we should still
 		// activate the package, even though there is nothing to fulfill.
-		f.fs.index.Add(p, f.name)
+		f.index.Add(p, name)
 		return fs.ErrAlreadyExists
 	}
 
 	// We tell the index about needs that we have which were explicitly not found
 	// on the system.
-	err = goErrToFSErr(f.fs.index.AddNeeds(f.name, needBlobs))
+	err = goErrToFSErr(f.index.AddNeeds(name, needBlobs))
 
 	// In order to ensure eventual consistency in the case where multiple processes
 	// are racing on these needs, we must re-publish all of those fulfillments
 	// after publishing the locally discovered needs.
 	for blob := range foundBlobs {
-		f.fs.index.Fulfill(blob)
+		f.index.Fulfill(blob)
 	}
 
 	// AddNeeds may return os.ErrExist if the package activation won the race

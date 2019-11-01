@@ -78,7 +78,8 @@ pub struct TestBlobFs {
 }
 
 impl TestBlobFs {
-    pub(crate) fn start() -> Result<Self, Error> {
+    /// Starts a blobfs backed by a ramdisk.
+    pub fn start() -> Result<Self, Error> {
         let test_ramdisk = TestRamDisk::start().context("creating backing ramdisk for blobfs")?;
         mkblobfs(&test_ramdisk)?;
 
