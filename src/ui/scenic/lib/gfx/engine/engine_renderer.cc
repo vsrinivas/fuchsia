@@ -208,10 +208,10 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   paper_renderer_->SetConfig(escher::PaperRendererConfig {
     .shadow_type = shadow_type, .debug = renderer->enable_debugging(),
-    .depth_stencil_format = depth_stencil_format_,
 #if SCENIC_DISPLAY_FRAME_NUMBER
     .debug_frame_number = true,
 #endif
+    .depth_stencil_format = depth_stencil_format_,
   });
 
   // Set up PaperScene from Scenic Scene resource.
