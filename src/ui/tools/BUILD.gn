@@ -6,6 +6,7 @@ group("tools") {
   deps = [
     "paper_shader_compiler",
     "print-input-report",
+    "simple-touch",
   ]
 }
 

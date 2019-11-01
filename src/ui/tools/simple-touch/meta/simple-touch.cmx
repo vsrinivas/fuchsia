@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/simple-touch"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input-report"
+        ]
+    }
+}
