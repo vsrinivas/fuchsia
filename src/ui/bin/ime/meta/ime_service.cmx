@@ -4,7 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.input2.KeyboardLayoutState"
         ]
     }
 }

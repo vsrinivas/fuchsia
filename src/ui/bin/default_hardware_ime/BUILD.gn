@@ -6,10 +6,19 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":default_hardware_ime_tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "default_hardware_ime"
   with_unit_tests = true
   edition = "2018"
+
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
@@ -29,6 +38,10 @@ rustc_binary("bin") {
 }
 
 package("default_hardware_ime") {
+  deps = [
+    ":bin",
+  ]
+
   meta = [
     {
       path = rebase_path("meta/default_hardware_ime.cmx")
@@ -41,13 +54,17 @@ package("default_hardware_ime") {
       path = rebase_path("assets/us.json")
       dest = "us.json"
     },
+    {
+      path = rebase_path("assets/us-legacy.json")
+      dest = "us-legacy.json"
+    },
   ]
 
-  deps = [
-    ":bin",
+  binaries = [
+    {
+      name = "default_hardware_ime"
+    },
   ]
-
-  binary = "default_hardware_ime"
 }
 
 test_package("default_hardware_ime_tests") {

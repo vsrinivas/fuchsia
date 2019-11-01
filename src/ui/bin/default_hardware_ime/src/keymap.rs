@@ -8,7 +8,7 @@ use fidl_fuchsia_ui_input2 as ui_input;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
 use serde::{Deserialize, Deserializer};
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use serde_json::{self as json};
 use std::collections::HashMap;
 use std::fs;
@@ -29,7 +29,7 @@ impl KeymapService {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 enum Modifiers {
     Shift,
     LeftShift,
@@ -72,12 +72,15 @@ impl Into<ui_input::Modifiers> for Modifiers {
 
 type Key = u32;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Entry {
-    symbol: String,
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum Entry {
+    Symbol(String),
+    #[serde(with = "hex_serde")]
+    Action(u32),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct Layout {
     modifiers: Vec<Modifiers>,
     optional_modifiers: Vec<Modifiers>,
@@ -85,7 +88,7 @@ struct Layout {
     entries: HashMap<Key, Entry>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Keymap {
     name: String,
     layouts: Vec<Layout>,
@@ -145,7 +148,7 @@ fn from_modifiers(modifiers: &Vec<Modifiers>) -> Option<ui_input::Modifiers> {
     let modifiers = modifiers
         .iter()
         .cloned()
-        .fold(<ui_input::Modifiers as Decodable>::new_empty(), |acc, m| acc & m.into());
+        .fold(<ui_input::Modifiers as Decodable>::new_empty(), |acc, m| acc | m.into());
     Some(modifiers)
 }
 
@@ -155,9 +158,16 @@ fn from_entries(entries: &HashMap<Key, Entry>) -> Option<Vec<ui_input::SemanticK
     };
     let entries = entries
         .iter()
-        .map(|(&key, Entry { symbol })| {
+        .map(|(&key, entry)| {
             let key = ui_input::Key::from_primitive(key).unwrap();
-            let semantic_key = ui_input::SemanticKey::Symbol(symbol.to_string());
+            let semantic_key = match entry {
+                Entry::Symbol(s) => ui_input::SemanticKey::Symbol(s.to_string()),
+                Entry::Action(i) => ui_input::SemanticKey::Action(
+                    ui_input::SemanticKeyAction::from_primitive(*i).unwrap_or_else(|| {
+                        panic!("Unable to parse semantic key action {:?}", entry)
+                    }),
+                ),
+            };
             ui_input::SemanticKeyMapEntry { key, semantic_key }
         })
         .collect();
@@ -174,8 +184,29 @@ pub async fn handle_watch_keymap(
     {
         let keymap = keymap_service.keymap.lock().await;
         responder.send(keymap.get_layout()?).context("error sending keymap response")?;
+    };
+    while let Some(ui_input::KeyboardLayoutStateRequest::Watch { responder, .. }) =
+        stream.try_next().await.context("failed handling no-op requests")?
+    {
+        // Dropping responed without shutdown to keep it hanging for an update.
+        // Future versions of IME will dispatch updates to keymap using same interface.
+        responder.drop_without_shutdown();
     }
     Ok(())
+}
+
+mod hex_serde {
+    use serde::Deserialize;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u32, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer).map_err(serde::de::Error::custom)?;
+        let s_lower = s.to_lowercase();
+        let without_prefix = s_lower.trim_start_matches("0x");
+        u32::from_str_radix(&without_prefix, 16).map_err(serde::de::Error::custom)
+    }
 }
 
 #[cfg(test)]
@@ -193,16 +224,24 @@ mod tests {
         let service = KeymapService::new().expect("new keymap service");
         let keymap = service.keymap.lock().await;
         assert_eq!(keymap.name, TEST_LAYOUT_NAME);
-        assert_eq!(keymap.layouts.len(), 2);
+        assert_eq!(keymap.layouts.len(), 3);
+
         let layout = keymap.layouts.get(0).expect("layout page populated");
-        assert_eq!(layout.entries.len(), 50);
+        assert_eq!(layout.entries.len(), 27);
+
         let entry = layout.entries.get(&TEST_KEY_CODE).expect("test key defined");
-        assert_eq!(entry.symbol, TEST_SYMBOL);
+        assert_eq!(*entry, Entry::Symbol(TEST_SYMBOL.to_string()));
 
         let layout = keymap.get_layout().expect("layout defined");
         assert_eq!(layout.key_map, None);
+
         let semantic_key_map = layout.semantic_key_map.expect("has semantic key map");
         let semantic_key_page = semantic_key_map.get(0).expect("semantic key map is defined");
+        assert_eq!(
+            semantic_key_page.optional_modifiers,
+            Some(ui_input::Modifiers::NumLock | ui_input::Modifiers::ScrollLock)
+        );
+
         let semantic_key_page_entries = semantic_key_page.entries.as_ref().expect("has entries");
         let semantic_key = semantic_key_page_entries
             .iter()

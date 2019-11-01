@@ -1,0 +1,32 @@
+{
+  "test_cases": [
+    {
+      "key" : "0x00000001",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "a"
+      }
+    },
+    {
+      "key" : "0x00000002",
+      "modifiers": [ "Shift", "CapsLock" ],
+      "semantic_key": {
+        "symbol": "B"
+      }
+    },
+    {
+      "key" : "0x00000003",
+      "modifiers": [ "Shift", "NumLock" ],
+      "semantic_key": {
+        "symbol": "C"
+      }
+    },
+    {
+      "key" : "0x00000025",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000031"
+      }
+    }
+  ]
+}

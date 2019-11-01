@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
 group("tests") {
@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     ":ime_service",
     ":ime_test",
+    ":keyboard_test",
   ]
 }
 
@@ -36,6 +37,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
   ]
@@ -44,18 +48,34 @@ rustc_binary("bin") {
 package("ime_service") {
   deps = [
     ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "ime_service"
-    },
+    "//src/ui/bin/default_hardware_ime:bin",
   ]
 
   meta = [
     {
       path = rebase_path("meta/ime_service.cmx")
       dest = "ime_service.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx")
+      dest = "default_hardware_ime.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//src/ui/bin/default_hardware_ime/assets/us.json")
+      dest = "us.json"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "ime_service"
+    },
+    {
+      name = "default_hardware_ime"
     },
   ]
 }
@@ -70,6 +90,74 @@ test_package("ime_test") {
     {
       name = "ime_service_bin_test"
       environments = basic_envs
+    },
+  ]
+}
+
+rustc_test("keyboard_test_bin") {
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+  ]
+  source_root = "tests/keyboard.rs"
+}
+
+test_package("keyboard_test") {
+  deps = [
+    ":bin",
+    ":keyboard_test_bin",
+    "//src/ui/bin/default_hardware_ime:bin",
+  ]
+
+  tests = [
+    {
+      name = "keyboard_test_bin"
+      environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "ime_service"
+    },
+    {
+      name = "default_hardware_ime"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//src/ui/bin/default_hardware_ime/assets/us.json")
+      dest = "us.json"
+    },
+    {
+      path = rebase_path("tests/goldens/en-us.json")
+      dest = "goldens/en-us.json"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/ime_service.cmx")
+      dest = "ime_service.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx")
+      dest = "default_hardware_ime.cmx"
     },
   ]
 }

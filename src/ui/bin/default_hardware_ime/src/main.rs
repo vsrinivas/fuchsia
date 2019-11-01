@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err, Error};
-use fidl::endpoints::ServiceMarker;
+use failure::{bail, format_err, Error, ResultExt};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_text as txt;
@@ -24,7 +23,6 @@ use text::text_field_state::TextFieldState;
 mod keymap;
 
 const ENABLE_TEXTFIELD: bool = false;
-const ENABLE_KEYMAP: bool = true;
 const LEGACY_LAYOUT_PATH: &'static str = "/pkg/data/us-legacy.json";
 const MAX_QUEUED_INPUTS: usize = 100;
 
@@ -314,16 +312,16 @@ enum Keymapping {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["default-hardware-ime"]).expect("syslog init should not fail");
-    let ime = DefaultHardwareIme::new()?;
+    serve_keymap(keymap::KeymapService::new()?).await.context("error serving keymap")?;
+
     if ENABLE_TEXTFIELD {
+        let ime = DefaultHardwareIme::new()?;
         fasync::spawn(
             serve_textfield(ime.clone())
                 .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
-    if ENABLE_KEYMAP {
-        serve_keymap(keymap::KeymapService::new()?)?;
-    }
+
     Ok(())
 }
 
@@ -359,20 +357,18 @@ async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
     Ok(())
 }
 
-fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error> {
+async fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service_at(ui_input::KeyboardLayoutStateMarker::NAME, {
-        let keymap_service = keymap_service;
-        move |stream| {
-            fuchsia_async::spawn(
-                keymap::handle_watch_keymap(stream, keymap_service.clone())
-                    .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
-            );
-        }
+    fs.dir("svc").add_fidl_service(|stream: ui_input::KeyboardLayoutStateRequestStream| {
+        let keymap_service = keymap_service.clone();
+        fuchsia_async::spawn(
+            keymap::handle_watch_keymap(stream, keymap_service)
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+        );
     });
     fs.take_and_serve_directory_handle()?;
 
-    Ok(())
+    Ok(fs.collect().await)
 }
 
 fn clone_range(range: &txt::Range) -> txt::Range {

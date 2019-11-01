@@ -32,6 +32,15 @@
         "0x00000018" : {"symbol" : "x"},
         "0x00000019" : {"symbol" : "y"},
         "0x0000001a" : {"symbol" : "z"},
+        "0x00000025" : {"action" : "0x00000031"}
+      }
+    },
+    {
+      "modifiers" : [],
+      "optional_modifiers" : [
+        "NumLock", "ScrollLock", "CapsLock"
+      ],
+      "entries" : {
         "0x0000001b" : {"symbol" : "1"},
         "0x0000001c" : {"symbol" : "2"},
         "0x0000001d" : {"symbol" : "3"},
@@ -63,7 +72,7 @@
         "Shift"
       ],
       "optional_modifiers" : [
-        "CapsLock", "NumLock", "ScrollLock"
+        "NumLock", "ScrollLock", "CapsLock"
       ],
       "entries" : {
         "0x00000001" : {"symbol" : "A"},

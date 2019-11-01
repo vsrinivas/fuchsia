@@ -6,6 +6,7 @@ group("bin") {
   deps = [
     "activity",
     "brightness_manager",
+    "default_hardware_ime",
     "ime:ime_service",
     "shortcut",
   ]
@@ -17,6 +18,7 @@ group("tests") {
   deps = [
     "activity:tests",
     "brightness_manager:brightness_manager_tests",
+    "default_hardware_ime:tests",
     "ime:tests",
     "shortcut:tests",
   ]
