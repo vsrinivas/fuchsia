@@ -257,10 +257,44 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cate
 
       return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kFloatingPoint:
-    case debug_ipc::RegisterCategory::kVector:
-    case debug_ipc::RegisterCategory::kDebug:
-      return ZX_ERR_NOT_SUPPORTED;
+    case debug_ipc::RegisterCategory::kFloatingPoint: {
+      zx_thread_state_fp_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteFloatingPointRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kVector: {
+      zx_thread_state_vector_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteVectorRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kDebug: {
+      zx_thread_state_debug_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      res = WriteDebugRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+    }
     case debug_ipc::RegisterCategory::kNone:
     case debug_ipc::RegisterCategory::kLast:
       break;

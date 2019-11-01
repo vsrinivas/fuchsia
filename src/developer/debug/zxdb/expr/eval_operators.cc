@@ -73,7 +73,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
     // Do these computations in signed numbers because weird symbol data could give
     // data.size() - offset => negative number.
     int byte_shift = static_cast<int>((dest.bit_shift() + info.shift) / 8);
-    int byte_length = static_cast<int>((dest.bit_size() + info.bits) / 8);
+    int byte_length = std::min(static_cast<int>(dest.bit_size()), info.bits) / 8;
 
     // Clamp the range to within the buffer in case anything is corrupted.
     byte_length = std::min(byte_length, std::max(0, static_cast<int>(existing_data.size()) -
@@ -137,9 +137,13 @@ void DoRegisterAssignment(const fxl::RefPtr<EvalContext>& context, const ExprVal
     // value.
     context->GetDataProvider()->GetRegisterAsync(
         info->canonical_id, [context, source, dest, info = *info, write_cb = std::move(write_cb)](
-                                const Err&, std::vector<uint8_t> data) mutable {
-          AssignRegisterWithExistingValue(context, dest, std::move(data), info, source,
-                                          std::move(write_cb));
+                                const Err& err, std::vector<uint8_t> data) mutable {
+          if (err.has_error()) {
+            write_cb(err);
+          } else {
+            AssignRegisterWithExistingValue(context, dest, std::move(data), info, source,
+                                            std::move(write_cb));
+          }
         });
   }
 }

@@ -175,10 +175,11 @@ TEST_F(EvalOperators, AssignmentBitfieldRegister) {
 }
 
 TEST_F(EvalOperators, AssignmentVectorRegister) {
-  // Writing the next-to-highest 16-bit word fo the 256-bit "ymm0" register. The "224" is
-  // 256 - 16 (unused high word) - 16 (word we're changing).
-  ExprValue dest(static_cast<uint16_t>(0), fxl::RefPtr<Type>(),
-                 ExprValueSource(RegisterID::kX64_ymm0, 16, 224));
+  // Writing the next-to-highest 64-bit word fo the 256-bit "ymm0" register. The "192" is
+  // 128 - 64 (unused high word) - 64 (word we're changing).
+  auto double_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
+  ExprValue dest(static_cast<double>(0), fxl::RefPtr<Type>(),
+                 ExprValueSource(RegisterID::kX64_ymm0, 64, 128));
 
   // Existing 512-bit register value has each 16-bit word numbered. Both reads and writes should be
   // for the canonical register.
@@ -190,8 +191,8 @@ TEST_F(EvalOperators, AssignmentVectorRegister) {
   eval_context()->data_provider()->AddRegisterValue(RegisterID::kX64_zmm0, false, original);
   // clang-format on
 
-  constexpr uint16_t kValue = 42;
-  ExprValue source(kValue);
+  std::vector<uint8_t> new_data{0x91, 0x92, 0x93, 0x04, 0x95, 0x96, 0x97, 0x98};
+  ExprValue source(double_type, new_data);
 
   ErrOrValue out = SyncEvalBinaryOperator(dest, ExprTokenType::kEquals, source);
 
@@ -204,7 +205,8 @@ TEST_F(EvalOperators, AssignmentVectorRegister) {
   ASSERT_EQ(1u, reg_writes.size());
   EXPECT_EQ(RegisterID::kX64_zmm0, reg_writes[0].first);
   std::vector<uint8_t> expected = original;
-  expected[28] = kValue;
+  for (size_t i = 0; i < new_data.size(); i++)
+    expected[16 + i] = new_data[i];
   EXPECT_EQ(expected, reg_writes[0].second);
 }
 

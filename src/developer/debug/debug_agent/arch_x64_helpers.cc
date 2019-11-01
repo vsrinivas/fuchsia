@@ -105,29 +105,140 @@ uint64_t WatchpointDR7SetMask(size_t index) {
   return masks[index];
 }
 
+// Writes the register data to the given output variable, checking that the register data is
+// the same size as the output.
+template <typename RegType>
+zx_status_t WriteRegisterValue(const Register& reg, RegType* dest) {
+  if (reg.data.size() != sizeof(RegType)) {
+    printf("Bad size, expected %zu, got %zu\n", sizeof(RegType), reg.data.size());
+    return ZX_ERR_INVALID_ARGS;
+  }
+  memcpy(dest, reg.data.data(), sizeof(RegType));
+  return ZX_OK;
+}
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+// Implements a case statement for calling WriteRegisterValue assuming the Zircon register
+// field matches the enum name. This avoids problems with the names not matching.
+#define IMPLEMENT_CASE_WRITE_REGISTER_VALUE(name)  \
+  case RegisterID::kX64_##name:                    \
+    status = WriteRegisterValue(reg, &regs->name); \
+    if (status != ZX_OK)                           \
+      printf("FAILED ON %s\n", TOSTRING(name));    \
+    break;
+
 }  // namespace
 
-zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
-                                  zx_thread_state_general_regs_t* gen_regs) {
-  uint32_t begin = static_cast<uint32_t>(debug_ipc::RegisterID::kX64_rax);
-  uint32_t end = static_cast<uint32_t>(debug_ipc::RegisterID::kX64_rflags);
-  for (const debug_ipc::Register& reg : regs) {
+zx_status_t WriteGeneralRegisters(const std::vector<Register>& updates,
+                                  zx_thread_state_general_regs_t* regs) {
+  uint32_t begin = static_cast<uint32_t>(RegisterID::kX64_rax);
+  uint32_t last = static_cast<uint32_t>(RegisterID::kX64_rflags);
+
+  uint64_t* output_array = reinterpret_cast<uint64_t*>(regs);
+
+  for (const Register& reg : updates) {
     if (reg.data.size() != 8)
       return ZX_ERR_INVALID_ARGS;
 
-    // zx_thread_state_general_regs has the same layout as the RegisterID enum
-    // for x64 general registers.
+    // zx_thread_state_general_regs has the same layout as the RegisterID enum for x64 general
+    // registers.
     uint32_t id = static_cast<uint32_t>(reg.id);
-    if (id > end)
+    if (id < begin || id > last)
       return ZX_ERR_INVALID_ARGS;
 
     // Insert the value to the correct offset.
-    uint32_t offset = id - begin;
-    uint64_t* reg_ptr = reinterpret_cast<uint64_t*>(gen_regs);
-    reg_ptr += offset;
-    *reg_ptr = *reinterpret_cast<const uint64_t*>(reg.data.data());
+    output_array[id - begin] = *reinterpret_cast<const uint64_t*>(reg.data.data());
   }
 
+  return ZX_OK;
+}
+
+zx_status_t WriteFloatingPointRegisters(const std::vector<Register>& updates,
+                                        zx_thread_state_fp_regs_t* regs) {
+  for (const auto& reg : updates) {
+    zx_status_t status = ZX_OK;
+    if (reg.id >= RegisterID::kX64_st0 && reg.id <= RegisterID::kX64_st7) {
+      // FP stack value.
+      uint32_t stack_index =
+          static_cast<uint32_t>(reg.id) - static_cast<uint32_t>(RegisterID::kX64_st0);
+      status = WriteRegisterValue(reg, &regs->st[stack_index]);
+    } else {
+      // FP control registers.
+      switch (reg.id) {
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(fcw);
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(fsw);
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(ftw);
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(fop);
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(fip);
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(fdp);
+        default:
+          status = ZX_ERR_INVALID_ARGS;
+          break;
+      }
+    }
+
+    if (status != ZX_OK)
+      return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t WriteVectorRegisters(const std::vector<Register>& updates,
+                                 zx_thread_state_vector_regs_t* regs) {
+  for (const auto& reg : updates) {
+    zx_status_t status = ZX_OK;
+    if (static_cast<uint32_t>(reg.id) >= static_cast<uint32_t>(RegisterID::kX64_zmm0) &&
+        static_cast<uint32_t>(reg.id) <= static_cast<uint32_t>(RegisterID::kX64_zmm31)) {
+      uint32_t stack_index =
+          static_cast<uint32_t>(reg.id) - static_cast<uint32_t>(RegisterID::kX64_zmm0);
+      status = WriteRegisterValue(reg, &regs->zmm[stack_index]);
+    } else {
+      switch (reg.id) {
+        IMPLEMENT_CASE_WRITE_REGISTER_VALUE(mxcsr);
+        default:
+          status = ZX_ERR_INVALID_ARGS;
+          break;
+      }
+      if (status != ZX_OK)
+        return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t WriteDebugRegisters(const std::vector<Register>& updates,
+                                zx_thread_state_debug_regs_t* regs) {
+  for (const auto& reg : updates) {
+    zx_status_t status = ZX_OK;
+    switch (reg.id) {
+      case RegisterID::kX64_dr0:
+        status = WriteRegisterValue(reg, &regs->dr[0]);
+        break;
+      case RegisterID::kX64_dr1:
+        status = WriteRegisterValue(reg, &regs->dr[1]);
+        break;
+      case RegisterID::kX64_dr2:
+        status = WriteRegisterValue(reg, &regs->dr[2]);
+        break;
+      case RegisterID::kX64_dr3:
+        status = WriteRegisterValue(reg, &regs->dr[3]);
+        break;
+      case RegisterID::kX64_dr6:
+        status = WriteRegisterValue(reg, &regs->dr6);
+        break;
+      case RegisterID::kX64_dr7:
+        status = WriteRegisterValue(reg, &regs->dr7);
+        break;
+      default:
+        status = ZX_ERR_INVALID_ARGS;
+        break;
+    }
+
+    if (status != ZX_OK)
+      return status;
+  }
   return ZX_OK;
 }
 
