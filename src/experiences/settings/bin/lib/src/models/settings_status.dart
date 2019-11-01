@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:fidl_fuchsia_timezone/fidl_async.dart' as tz;
+import 'package:fidl_fuchsia_deprecatedtimezone/fidl_async.dart' as tz;
 import 'package:fidl_fuchsia_wlan_service/fidl_async.dart' as wlan;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_services/services.dart';

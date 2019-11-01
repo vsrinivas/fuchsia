@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_timezone/fidl_async.dart' show TimezoneProxy;
+import 'package:fidl_fuchsia_deprecatedtimezone/fidl_async.dart' show TimezoneProxy;
 import 'package:fuchsia_logger/logger.dart' show setupLogger;
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:lib.settings/timezone_picker.dart';

@@ -21,8 +21,8 @@ template("settings_app") {
   ]
 
   base_deps = [
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.timezone",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
