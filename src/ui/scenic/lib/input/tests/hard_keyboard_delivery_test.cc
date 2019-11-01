@@ -3,18 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/async/cpp/time.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/eventpair.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <memory>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
-#include "src/lib/fxl/logging.h"
+#include <gtest/gtest.h>
+
 #include "src/ui/scenic/lib/input/tests/util.h"
 
 // This test exercises the event delivery logic for hard keyboard events.
@@ -38,19 +34,12 @@
 // NOTE: This test is carefully constructed to avoid Vulkan functionality.
 
 namespace lib_ui_input_tests {
+namespace {
 
 using InputCommand = fuchsia::ui::input::Command;
-using ScenicEvent = fuchsia::ui::scenic::Event;
-using escher::impl::CommandBufferSequencer;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
-using fuchsia::ui::scenic::SessionListener;
-using scenic_impl::Scenic;
-using scenic_impl::gfx::Display;
-using scenic_impl::gfx::DisplayManager;
-using scenic_impl::input::InputSystem;
-using scenic_impl::test::ScenicTest;
 
 // Class fixture for TEST_F. Sets up a 5x5 "display" for GfxSystem.
 class HardKeyboardDeliveryTest : public InputSystemTest {
@@ -59,82 +48,31 @@ class HardKeyboardDeliveryTest : public InputSystemTest {
   uint32_t test_display_height_px() const override { return 5; }
 };
 
-class KeyboardSessionWrapper : public SessionWrapper {
- public:
-  KeyboardSessionWrapper(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
-  ~KeyboardSessionWrapper() = default;
-
-  void ClearEvents() { events_.clear(); }
-};
-
 TEST_F(HardKeyboardDeliveryTest, Test) {
-  KeyboardSessionWrapper presenter(scenic());
+  auto [v_token, vh_token] = scenic::ViewTokenPair::New();
 
-  zx::eventpair v_token, vh_token;
-  CreateTokenPair(&v_token, &vh_token);
+  // Set up a scene with one view.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
 
-  // Tie the test's dispatcher clock to the system (real) clock.
-  RunLoopUntil(zx::clock::get_monotonic());
-
-  // "Presenter" sets up a scene with one view.
-  uint32_t compositor_id = 0;
-  presenter.RunNow([this, &compositor_id, vh_token = std::move(vh_token)](
-                       scenic::Session* session, scenic::EntityNode* root_node) mutable {
-    // Minimal scene.
-    scenic::Compositor compositor(session);
-    compositor_id = compositor.id();
-
-    scenic::Scene scene(session);
-    scenic::Camera camera(scene);
-    scenic::Renderer renderer(session);
-    renderer.SetCamera(camera);
-
-    scenic::Layer layer(session);
-    layer.SetSize(test_display_width_px(), test_display_height_px());
-    layer.SetRenderer(renderer);
-
-    scenic::LayerStack layer_stack(session);
-    layer_stack.AddLayer(layer);
-    compositor.SetLayerStack(layer_stack);
-
-    // Add local root node to the scene, attach the view holder.
-    scene.AddChild(*root_node);
+    // Attach the view holder.
     scenic::ViewHolder view_holder(session, std::move(vh_token), "View Holder");
-    const float bbox_min[3] = {0, 0, 0};
-    const float bbox_max[3] = {5, 5, 1};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
-    view_holder.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
-
-    root_node->Attach(view_holder);
+    view_holder.SetViewProperties(k5x5x1);
+    root_resources.scene.AddChild(view_holder);
 
     RequestToPresent(session);
-  });
+  };
 
-  // Client sets up its content.
-  KeyboardSessionWrapper client(scenic());
-  client.RunNow([this, v_token = std::move(v_token)](scenic::Session* session,
-                                                     scenic::EntityNode* root_node) mutable {
-    // Connect our root node to the presenter's root node.
-    scenic::View view(session, std::move(v_token), "View");
-    view.AddChild(*root_node);
+  SessionWrapper client = CreateClient("View", std::move(v_token));
 
-    scenic::ShapeNode shape(session);
-    shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
-    root_node->AddChild(shape);
+  const uint32_t compositor_id = root_resources.compositor.id();
 
-    scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
-    shape.SetShape(rec);
+  // Scene is now set up; send in the input.
+  {
+    scenic::Session* const session = root_session.session();
 
-    scenic::Material material(session);
-    shape.SetMaterial(material);
-
-    RequestToPresent(session);
-  });
-
-  // Scene is now set up, send in the input.
-  presenter.RunNow([this, compositor_id](scenic::Session* session, scenic::EntityNode* root_node) {
-    PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2,2) location of the 5x5 display.
     // We do enough to trigger a focus change to the View.
@@ -143,19 +81,17 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
 
     // The character 'a', pressed and released.
     KeyboardCommandGenerator keyboard(compositor_id, /*device id*/ 2);
-    uint32_t hid_usage = 0x4;
-    uint32_t modifiers = 0x0;
+    static constexpr uint32_t hid_usage = 0x4;
+    static constexpr uint32_t modifiers = 0x0;
     session->Enqueue(keyboard.Pressed(hid_usage, modifiers));
     session->Enqueue(keyboard.Released(hid_usage, modifiers));
-
-    RunLoopUntilIdle();
-#if 0
-    FXL_LOG(INFO) << DumpScenes();  // Handy debugging.
-#endif
-  });
+  }
+  RunLoopUntilIdle();
 
   // Verify client's inputs do *not* include keyboard events.
-  client.ExamineEvents([](const std::vector<InputEvent>& events) {
+  {
+    const std::vector<InputEvent>& events = client.events();
+
     EXPECT_EQ(events.size(), 3u) << "Should receive exactly 3 input events.";
 
     // ADD
@@ -176,39 +112,35 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
       EXPECT_EQ(down.x, 2.5);
       EXPECT_EQ(down.y, 2.5);
     }
-  });
+  }
 
-  client.ClearEvents();
+  client.events().clear();
 
   // Client requests hard keyboard event delivery.
-  client.RunNow([this](scenic::Session* session, scenic::EntityNode* root_node) {
-    fuchsia::ui::input::SetHardKeyboardDeliveryCmd cmd;
-    cmd.delivery_request = true;
-
+  {
     InputCommand input_cmd;
-    input_cmd.set_set_hard_keyboard_delivery(std::move(cmd));
+    input_cmd.set_set_hard_keyboard_delivery({.delivery_request = true});
 
-    session->Enqueue(std::move(input_cmd));
-
-    RunLoopUntilIdle();
-  });
+    client.session()->Enqueue(std::move(input_cmd));
+  }
+  RunLoopUntilIdle();
 
   // Send in the input.
-  presenter.RunNow([this, compositor_id](scenic::Session* session, scenic::EntityNode* root_node) {
+  {
+    scenic::Session* const session = root_session.session();
+
     // Client is already in focus, no need to focus again.
     KeyboardCommandGenerator keyboard(compositor_id, /*device id*/ 2);
-    uint32_t hid_usage = 0x4;
-    uint32_t modifiers = 0x0;
+    static constexpr uint32_t hid_usage = 0x4;
+    static constexpr uint32_t modifiers = 0x0;
     session->Enqueue(keyboard.Pressed(hid_usage, modifiers));
     session->Enqueue(keyboard.Released(hid_usage, modifiers));
-
-    RunLoopUntilIdle();
-  });
+  }
+  RunLoopUntilIdle();
 
   // Verify client's inputs include keyboard events.
-  client.ExamineEvents([](const std::vector<InputEvent>& events) {
-    EXPECT_EQ(events.size(), 2u) << "Should receive exactly 2 input events.";
-  });
+  EXPECT_EQ(client.events().size(), 2u) << "Should receive exactly 2 input events.";
 }
 
+}  // namespace
 }  // namespace lib_ui_input_tests

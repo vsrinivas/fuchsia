@@ -6,10 +6,10 @@
 #define SRC_UI_SCENIC_LIB_INPUT_TESTS_UTIL_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
-#include <lib/zx/eventpair.h>
 
 #include <memory>
 #include <string>
@@ -24,76 +24,79 @@
 
 namespace lib_ui_input_tests {
 
-// Convenience function to reduce clutter.
-void CreateTokenPair(zx::eventpair* t1, zx::eventpair* t2);
+// Convenience wrapper to write Scenic clients with less boilerplate.
+class SessionWrapper {
+ public:
+  SessionWrapper(scenic_impl::Scenic* scenic);
+  SessionWrapper(SessionWrapper&&) = default;
+  virtual ~SessionWrapper();
+
+  scenic::Session* session() { return session_.get(); }
+  std::vector<fuchsia::ui::input::InputEvent>& events() { return events_; }
+  const std::vector<fuchsia::ui::input::InputEvent>& events() const { return events_; }
+
+ private:
+  // Client-side session object.
+  std::unique_ptr<scenic::Session> session_;
+  // Collects input events conveyed to this session.
+  std::vector<fuchsia::ui::input::InputEvent> events_;
+};
+
+// https://fuchsia.dev/fuchsia-src/concepts/graphics/ui/scenic#scenic_resource_graph
+struct ResourceGraph {
+  ResourceGraph(scenic::Session* session);
+
+  scenic::Scene scene;
+  scenic::Camera camera;
+  scenic::Renderer renderer;
+  scenic::Layer layer;
+  scenic::LayerStack layer_stack;
+  scenic::Compositor compositor;
+};
 
 // Test fixture for exercising the input subsystem.
 class InputSystemTest : public scenic_impl::test::ScenicTest {
- public:
-  // For creation of a client-side session.
-  scenic_impl::Scenic* scenic() { return scenic_.get(); }
+ protected:
+  // Sensible 5x5x1 view bounds for a |scenic::ViewHolder| for a test view configured using
+  // |SetUpTestView|.
+  static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
 
   // Convenience function; triggers scene operations by scheduling the next
   // render task in the event loop.
   void RequestToPresent(scenic::Session* session);
 
-  // Debugging function.
-  std::string DumpScenes();
+  scenic_impl::input::InputSystem* input_system() { return input_system_; }
 
-  // Offers a way to call
-  // |fuchsia.ui.policy.accessibility.PointerEventRegistry| for testing.
-  void RegisterAccessibilityListener(
-      fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-          pointer_event_listener,
-      scenic_impl::input::InputSystem::RegisterCallback callback) {
-    return input_->Register(std::move(pointer_event_listener), std::move(callback));
-  }
-
- protected:
   // Each test fixture defines its own test display parameters.  It's needed
   // both here (to define the display), and in the client (to define the size of
   // a layer (TODO(SCN-248)).
   virtual uint32_t test_display_width_px() const = 0;
   virtual uint32_t test_display_height_px() const = 0;
 
-  // InputSystemTest needs its own teardown sequence, for session management.
-  void TearDown() override;
+  // Creates a root session and empty scene, sizing the layer to display dimensions.
+  std::pair<SessionWrapper, ResourceGraph> CreateScene();
 
+  // Sets up a view containing a 5x5 rectangle centered at (2, 2).
+  void SetUpTestView(scenic::View* view);
+
+  // Creates a test session with a view containing a 5x5 rectangle centered at (2, 2).
+  SessionWrapper CreateClient(const std::string& name, fuchsia::ui::views::ViewToken view_token);
+
+ private:
+  // |scenic_impl::test::ScenicTest|
   // Create a dummy GFX system, as well as a live input system to test.
   void InitializeScenic(scenic_impl::Scenic* scenic) override;
 
- private:
+  // |testing::Test|
+  // InputSystemTest needs its own teardown sequence, for session management.
+  void TearDown() override;
+
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<scenic_impl::gfx::Engine> engine_;
   std::unique_ptr<scenic_impl::gfx::Display> display_;
 
-  scenic_impl::input::InputSystem* input_ = nullptr;
-};
-
-// Convenience wrapper to write Scenic clients with less boilerplate.
-class SessionWrapper {
- public:
-  SessionWrapper(scenic_impl::Scenic* scenic);
-  ~SessionWrapper();
-
-  // Allow caller to run some code in the context of this particular session.
-  void RunNow(fit::function<void(scenic::Session* session, scenic::EntityNode* root_node)>
-                  create_scene_callback);
-
-  // Allow caller to examine the events received by this particular session.
-  void ExamineEvents(fit::function<void(const std::vector<fuchsia::ui::input::InputEvent>& events)>
-                         examine_events_callback);
-
- protected:
-  // Collects input events conveyed to this session.
-  std::vector<fuchsia::ui::input::InputEvent> events_;
-
- private:
-  // Client-side session object.
-  std::unique_ptr<scenic::Session> session_;
-  // Clients attach their nodes here to participate in the global scene graph.
-  std::unique_ptr<scenic::EntityNode> root_node_;
+  scenic_impl::input::InputSystem* input_system_ = nullptr;
 };
 
 // Creates pointer event commands for one finger, where the pointer "device" is

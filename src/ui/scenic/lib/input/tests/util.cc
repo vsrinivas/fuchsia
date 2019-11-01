@@ -46,35 +46,77 @@ using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;
 using scenic_impl::input::InputSystem;
 using scenic_impl::test::ScenicTest;
 
-void CreateTokenPair(zx::eventpair* t1, zx::eventpair* t2) {
-  zx_status_t status = zx::eventpair::create(/*flags*/ 0u, t1, t2);
-  FXL_CHECK(status == ZX_OK);
+SessionWrapper::SessionWrapper(Scenic* scenic) {
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fidl::InterfaceHandle<SessionListener> listener_handle;
+  fidl::InterfaceRequest<SessionListener> listener_request = listener_handle.NewRequest();
+  scenic->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
+  session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
+
+  session_->set_event_handler([this](std::vector<ScenicEvent> events) {
+    for (ScenicEvent& event : events) {
+      if (event.is_input()) {
+        events_.push_back(std::move(event.input()));
+      }
+      // Ignore other event types for these tests.
+    }
+  });
+}
+
+SessionWrapper::~SessionWrapper() {
+  if (session_) {
+    session_->Flush();  // Ensure Scenic receives all release commands.
+  }
+}
+
+ResourceGraph::ResourceGraph(scenic::Session* session)
+    : scene(session),
+      camera(scene),
+      renderer(session),
+      layer(session),
+      layer_stack(session),
+      compositor(session) {
+  renderer.SetCamera(camera);
+  layer.SetRenderer(renderer);
+  layer_stack.AddLayer(layer);
+  compositor.SetLayerStack(layer_stack);
 }
 
 void InputSystemTest::RequestToPresent(scenic::Session* session) {
-  bool scene_presented = false;
   session->Present(/*presentation time*/ 0, [](auto) {});
-  RunLoopFor(zx::msec(20));  // Schedule the render task.
+  RunLoopFor(zx::msec(20));  // Run until the next frame should have been scheduled.
 }
 
-std::string InputSystemTest::DumpScenes() {
-  std::ostringstream output;
-  std::unordered_set<GlobalId, GlobalId::Hash> visited_resources;
-  engine_->DumpScenes(output, &visited_resources);
-  return output.str();
+std::pair<SessionWrapper, ResourceGraph> InputSystemTest::CreateScene() {
+  SessionWrapper root_session(scenic());
+  ResourceGraph root_resources(root_session.session());
+  root_resources.layer.SetSize(test_display_width_px(), test_display_height_px());
+  return {std::move(root_session), std::move(root_resources)};
 }
 
-void InputSystemTest::TearDown() {
-  // A clean teardown sequence is a little involved but possible.
-  // 0. Sessions Flush their last resource-release cmds (e.g., ~SessionWrapper).
-  // 1. Scenic runs the last resource-release cmds.
-  RunLoopUntilIdle();
-  // 2. Destroy Scenic before destroying the command buffer sequencer (CBS).
-  //    This ensures no CBS listeners are active by the time CBS is destroyed.
-  ScenicTest::TearDown();
-  engine_.reset();
-  display_.reset();
-  command_buffer_sequencer_.reset();
+void InputSystemTest::SetUpTestView(scenic::View* view) {
+  scenic::Session* const session = view->session();
+
+  scenic::ShapeNode shape(session);
+  shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
+  view->AddChild(shape);
+
+  scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
+  shape.SetShape(rec);
+
+  scenic::Material material(session);
+  shape.SetMaterial(material);
+
+  RequestToPresent(session);
+}
+
+SessionWrapper InputSystemTest::CreateClient(const std::string& name,
+                                             fuchsia::ui::views::ViewToken view_token) {
+  SessionWrapper session_wrapper(scenic());
+  scenic::View view(session_wrapper.session(), std::move(view_token), name);
+  SetUpTestView(&view);
+
+  return session_wrapper;
 }
 
 void InputSystemTest::InitializeScenic(Scenic* scenic) {
@@ -93,42 +135,23 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
                                                /* sysmem */ nullptr,
                                                /* display_manager */ nullptr, display_.get());
   frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());
-  input_ = scenic->RegisterSystem<InputSystem>(engine_.get());
+  input_system_ = scenic->RegisterSystem<InputSystem>(engine_.get());
   scenic->SetInitialized();
 }
 
-SessionWrapper::SessionWrapper(Scenic* scenic) {
-  fuchsia::ui::scenic::SessionPtr session_ptr;
-  fidl::InterfaceHandle<SessionListener> listener_handle;
-  fidl::InterfaceRequest<SessionListener> listener_request = listener_handle.NewRequest();
-  scenic->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
-  session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
-  root_node_ = std::make_unique<scenic::EntityNode>(session_.get());
-
-  session_->set_event_handler([this](std::vector<ScenicEvent> events) {
-    for (ScenicEvent& event : events) {
-      if (event.is_input()) {
-        events_.push_back(std::move(event.input()));
-      }
-      // Ignore other event types for this test.
-    }
-  });
-}
-
-SessionWrapper::~SessionWrapper() {
-  root_node_.reset();  // Let go of the resource; enqueue the release cmd.
-  session_->Flush();   // Ensure Scenic receives the release cmd.
-}
-
-void SessionWrapper::RunNow(
-    fit::function<void(scenic::Session* session, scenic::EntityNode* root_node)>
-        create_scene_callback) {
-  create_scene_callback(session_.get(), root_node_.get());
-}
-
-void SessionWrapper::ExamineEvents(
-    fit::function<void(const std::vector<InputEvent>& events)> examine_events_callback) {
-  examine_events_callback(events_);
+void InputSystemTest::TearDown() {
+  // A clean teardown sequence is a little involved but possible.
+  // 0. All resources are released (i.e. test scope closure, ~ResourceGraph).
+  // 1. Sessions |Flush| their last resource-release cmds (i.e. test scope closure,
+  //    ~SessionWrapper).
+  // 2. Scenic runs the last resource-release cmds.
+  RunLoopUntilIdle();
+  // 3. Destroy Scenic before destroying the command buffer sequencer (CBS).
+  //    This ensures no CBS listeners are active by the time CBS is destroyed.
+  ScenicTest::TearDown();
+  engine_.reset();
+  display_.reset();
+  command_buffer_sequencer_.reset();
 }
 
 PointerCommandGenerator::PointerCommandGenerator(ResourceId compositor_id, uint32_t device_id,
