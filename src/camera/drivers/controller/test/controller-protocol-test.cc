@@ -212,6 +212,12 @@ TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
   TestConfigureOutputNode_DebugConfig();
 }
 
-TEST_F(ControllerProtocolTest, LoadGdcConfig) { TestGdcConfigLoading(); }
+TEST_F(ControllerProtocolTest, LoadGdcConfig) {
+#ifdef INTERNAL_ACCESS
+  TestGdcConfigLoading();
+#else
+  GTEST_SKIP();
+#endif
+}
 
 }  // namespace camera
