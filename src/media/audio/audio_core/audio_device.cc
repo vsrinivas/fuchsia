@@ -151,8 +151,6 @@ void AudioDevice::ShutdownSelf() {
   // the main message loop telling it to complete the shutdown process.
   if (!is_shutting_down()) {
     shutting_down_.store(true);
-    // TODO(mpuryear): Considering eliminating this; it may not be needed.
-    PreventNewLinks();
 
     threading_model().FidlDomain().PostTask(
         [self = fbl::RefPtr(this)]() { self->device_registry().RemoveDevice(self); });

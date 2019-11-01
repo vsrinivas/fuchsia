@@ -46,17 +46,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
     UnlinkDestinations();
   }
 
-  // PreventNewLinks
-  //
-  // Clears 'new_links_allowed' from within the links_lock, ensuring no further links are added to
-  // this object. This call is one of the first steps in the shutdown process of an AudioObject.
-  //
-  // TODO(johngro): Consider eliminating. Given how links are created/destroyed, we may not need it.
-  void PreventNewLinks() {
-    std::lock_guard<std::mutex> lock(links_lock_);
-    new_links_allowed_ = false;
-  }
-
   // The VolumeCurve for the object, representing its mapping from volume to gain.
   virtual std::optional<VolumeCurve> GetVolumeCurve() const { return std::nullopt; }
 
@@ -121,6 +110,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link);
 
   // Called immediately after a new link is added to the object.
+  // TODO(39961): Should become OnLinksChanged.
   virtual void OnLinkAdded();
 
   std::mutex links_lock_;
@@ -187,7 +177,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   void UnlinkCleanup(typename AudioLink::Set<TagType>* links);
 
   const Type type_;
-  bool new_links_allowed_ FXL_GUARDED_BY(links_lock_) = true;
 };
 
 }  // namespace media::audio

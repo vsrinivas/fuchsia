@@ -19,7 +19,7 @@
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
-#include "src/media/audio/audio_core/routing.h"
+#include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
@@ -33,28 +33,20 @@ class AudioCoreImpl;
 class StreamRegistry;
 
 class AudioRendererImpl : public AudioObject,
-                          public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
                           public fuchsia::media::AudioRenderer,
                           public fuchsia::media::audio::GainControl,
                           public StreamVolume {
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-      async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
-      AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
+      async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
+      fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       AudioCoreImpl* owner);
 
   void Shutdown();
   void OnRenderRange(int64_t presentation_time, uint32_t duration){};
-
-  void SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> throttle_output_link);
-
-  // Recompute the minimum clock lead time based on the current set of outputs
-  // we are linked to.  If this requirement is different from the previous
-  // requirement, report it to our users (if they care).
-  void RecomputeMinClockLeadTime();
 
   // |fuchsia::media::AudioRenderer|
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
@@ -101,8 +93,8 @@ class AudioRendererImpl : public AudioObject,
   bool mute_ = false;
   fbl::RefPtr<AudioLinkPacketSource> throttle_output_link_;
 
-  // Minimum Clock Lead Time state
-  zx::duration min_clock_lead_time_;
+  // Minimum Lead Time state
+  zx::duration min_lead_time_;
 
  private:
   class GainControlBinding : public fuchsia::media::audio::GainControl {
@@ -130,16 +122,19 @@ class AudioRendererImpl : public AudioObject,
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry,
-                    Routing* routing, AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar,
-                    StreamVolumeManager* volume_manager);
+                    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
+                    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
 
   ~AudioRendererImpl() override;
+
+  // Recompute the minimum clock lead time based on the current set of outputs
+  // we are linked to.  If this requirement is different from the previous
+  // requirement, report it to our users (if they care).
+  void RecomputeMinClockLeadTime();
 
   bool IsOperating();
   bool ValidateConfig();
   void ComputePtsToFracFrames(int64_t first_pts);
-  void UnlinkThrottle();
 
   void ReportStart();
   void ReportStop();
@@ -159,8 +154,7 @@ class AudioRendererImpl : public AudioObject,
   void RealizeVolume(VolumeCommand volume_command) final;
 
   async_dispatcher_t* dispatcher_;
-  StreamRegistry& stream_registry_;
-  Routing& routing_;
+  RouteGraph& route_graph_;
   AudioAdmin& admin_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
   StreamVolumeManager& volume_manager_;
@@ -188,7 +182,7 @@ class AudioRendererImpl : public AudioObject,
   TimelineRate frac_frames_per_ref_tick_;
 
   // Minimum Clock Lead Time state
-  bool min_clock_lead_time_events_enabled_ = false;
+  bool min_lead_time_events_enabled_ = false;
 
   std::mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);

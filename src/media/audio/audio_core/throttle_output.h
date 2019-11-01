@@ -18,6 +18,7 @@ namespace media::audio {
 
 static constexpr fxl::TimeDelta TRIM_PERIOD = fxl::TimeDelta::FromMilliseconds(10);
 
+// Throttle output may only be owned on the FIDL thread.
 class ThrottleOutput : public AudioOutput {
  public:
   static fbl::RefPtr<AudioOutput> Create(ThreadingModel* threading_model,

@@ -38,31 +38,28 @@ static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
-    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
+    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
+    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
   return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), dispatcher,
-                                             stream_registry, routing, admin, vmar,
-                                             volume_manager));
+                                             route_graph, admin, vmar, volume_manager));
 }
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
   return Create(std::move(audio_renderer_request),
-                owner->threading_model().FidlDomain().dispatcher(), &owner->device_manager(),
-                &owner->device_manager(), &owner->audio_admin(), owner->vmar(),
-                &owner->volume_manager());
+                owner->threading_model().FidlDomain().dispatcher(), &owner->route_graph(),
+                &owner->audio_admin(), owner->vmar(), &owner->volume_manager());
 }
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
-    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
+    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
+    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioRenderer),
       usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       dispatcher_(dispatcher),
-      stream_registry_(*stream_registry),
-      routing_(*routing),
+      route_graph_(*route_graph),
       admin_(*admin),
       vmar_(std::move(vmar)),
       volume_manager_(*volume_manager),
@@ -73,8 +70,7 @@ AudioRendererImpl::AudioRendererImpl(
       partial_underflow_count_(0u) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   FXL_DCHECK(admin);
-  FXL_DCHECK(stream_registry);
-  FXL_DCHECK(routing);
+  FXL_DCHECK(route_graph);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -88,20 +84,14 @@ AudioRendererImpl::AudioRendererImpl(
 
   volume_manager_.AddStream(this);
 
-  audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
-    audio_renderer_binding_.Unbind();
-    Shutdown();
-  });
+  audio_renderer_binding_.set_error_handler(
+      [this](zx_status_t status) { route_graph_.RemoveRenderer(this); });
 }
 
 AudioRendererImpl::~AudioRendererImpl() {
   AUD_VLOG_OBJ(TRACE, this);
 
-  // Assert that we have been cleanly shutdown already.
-  FXL_DCHECK(is_shutdown_);
-  FXL_DCHECK(!audio_renderer_binding_.is_bound());
-  FXL_DCHECK(gain_control_bindings_.size() == 0);
-  ReportStop();
+  Shutdown();
 
   volume_manager_.RemoveStream(this);
   REP(RemovingRenderer(*this));
@@ -117,32 +107,9 @@ void AudioRendererImpl::Shutdown() {
 
   ReportStop();
 
-  // If we have already been shutdown, then we are just waiting for the service
-  // to destroy us. Run some FXL_DCHECK sanity checks and get out.
-  if (is_shutdown_) {
-    FXL_DCHECK(!audio_renderer_binding_.is_bound());
-    return;
-  }
-
-  is_shutdown_ = true;
-
-  // TODO(mpuryear): Considering eliminating this; it may not be needed.
-  PreventNewLinks();
-  Unlink();
-  UnlinkThrottle();
-
-  if (audio_renderer_binding_.is_bound()) {
-    audio_renderer_binding_.Unbind();
-  }
-
   wav_writer_.Close();
   gain_control_bindings_.CloseAll();
   payload_buffers_.clear();
-
-  // Make sure we have left the set of active AudioRenderers.
-  if (InContainer()) {
-    stream_registry_.RemoveAudioRenderer(this);
-  }
 }
 
 std::optional<std::pair<TimelineFunction, uint32_t>>
@@ -153,28 +120,21 @@ AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time) {
   return {std::make_pair(ref_clock_to_frac_frames_, ref_clock_to_frac_frames_gen_.get())};
 }
 
-void AudioRendererImpl::SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> throttle_output_link) {
-  TRACE_DURATION("audio", "AudioRendererImpl::SetThrottleOutput");
-  FXL_DCHECK(throttle_output_link != nullptr);
-  FXL_DCHECK(throttle_output_link_ == nullptr);
-  throttle_output_link_ = std::move(throttle_output_link);
-}
-
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinClockLeadTime");
   zx::duration cur_lead_time;
 
-  ForEachDestLink([throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
-    if (link.GetDest()->is_output() && &link != throttle_ptr) {
+  ForEachDestLink([&cur_lead_time](auto& link) {
+    if (link.GetDest()->is_output()) {
       const auto output = fbl::RefPtr<AudioDevice>::Downcast(link.GetDest());
 
       cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time());
     }
   });
 
-  if (min_clock_lead_time_ != cur_lead_time) {
+  if (min_lead_time_ != cur_lead_time) {
     REP(SettingRendererMinClockLeadTime(*this, cur_lead_time));
-    min_clock_lead_time_ = cur_lead_time;
+    min_lead_time_ = cur_lead_time;
     ReportNewMinClockLeadTime();
   }
 }
@@ -195,16 +155,13 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
     }
   }
   FXL_LOG(ERROR) << "Disallowed or unknown usage - terminating the stream";
-  Shutdown();
+  route_graph_.RemoveRenderer(this);
 }
 
 // IsOperating is true any time we have any packets in flight. Configuration functions cannot be
 // called any time we are operational.
 bool AudioRendererImpl::IsOperating() {
   TRACE_DURATION("audio", "AudioRendererImpl::IsOperating");
-  if (throttle_output_link_ && !throttle_output_link_->pending_queue_empty()) {
-    return true;
-  }
 
   return ForAnyDestLink([](auto& link) {
     // If pending queue empty: this link is NOT operating; ask other links.
@@ -275,14 +232,6 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
                             << ", rtime:" << pts_to_frac_frames_.reference_time()
                             << ", sdelta:" << pts_to_frac_frames_.subject_delta()
                             << ", rdelta:" << pts_to_frac_frames_.reference_delta();
-}
-
-void AudioRendererImpl::UnlinkThrottle() {
-  TRACE_DURATION("audio", "AudioRendererImpl::UnlinkThrottle");
-  if (throttle_output_link_ != nullptr) {
-    RemoveLink(throttle_output_link_);
-    throttle_output_link_ = nullptr;
-  }
 }
 
 void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
@@ -364,7 +313,7 @@ void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
 //
 void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPcmStreamType");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -410,11 +359,6 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 
   REP(SettingRendererStreamType(*this, format));
 
-  // Everything checks out. Discard any existing links we hold (including
-  // throttle output). New links need to be created with our new format.
-  Unlink();
-  UnlinkThrottle();
-
   // Create a new format info object so we can create links to outputs.
   // TODO(mpuryear): Consider consolidating most of the format_info class.
   fuchsia::media::AudioStreamType cfg;
@@ -423,31 +367,18 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   cfg.frames_per_second = format.frames_per_second;
   format_info_ = AudioRendererFormatInfo::Create(cfg);
 
-  // Have the device manager initialize our set of outputs. Note: we currently need no lock here.
-  // Method calls from user-facing interfaces are serialized by the FIDL framework, and none of the
-  // manager's threads should ever need to manipulate the set. Cleanup of outputs which have gone
-  // away is currently handled in a lazy fashion when the AudioRenderer fails to promote its weak
-  // reference during an operation involving its outputs.
-  //
-  // TODO(mpuryear): someday, deal with recalculating properties that depend on an AudioRenderer's
-  // current set of outputs (for example, minimum latency). This will probably be done using a dirty
-  // flag in the AudioRenderer implementation, scheduling a job to recalculate properties for dirty
-  // AudioRenderers, and notifying users as appropriate.
-
-  // If we cannot promote our own weak pointer, something is seriously wrong.
-  routing_.SelectOutputsForAudioRenderer(this);
+  route_graph_.SetRendererRoutingProfile(this, {.routable = true});
+  volume_manager_.NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
   config_validated_ = false;
   cleanup.cancel();
-
-  volume_manager_.NotifyStreamChanged(this);
 }
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "AudioRendererImpl::AddPayloadBuffer");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -478,7 +409,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
 void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "AudioRendererImpl::RemovePayloadBuffer");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -500,7 +431,7 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsUnits");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator
                             << " / " << tick_per_second_denominator << ")";
@@ -526,7 +457,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
 
 void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsContinuityThreshold");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (" << threshold_seconds << " sec)";
 
@@ -553,7 +484,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
 
 void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetReferenceClock");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -568,7 +499,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::SendPacket");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   // It is an error to attempt to send a packet before we have established at least a minimum valid
   // configuration. IOW - the format must have been configured, and we must have an established
@@ -719,7 +650,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   pts_to_frac_frames_valid_ = false;
   // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   auto ref_time_for_reset =
-      zx::clock::get_monotonic() + min_clock_lead_time_ + kPaddingForUnspecifiedRefTime;
+      zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   {
     std::lock_guard<std::mutex> lock(ref_to_ff_lock_);
     next_frac_frame_pts_ = ref_clock_to_frac_frames_.Apply(ref_time_for_reset.get());
@@ -746,7 +677,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
   zx::time reference_time(_reference_time);
 
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during Play";
@@ -768,8 +699,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
     // streams across multiple parallel outputs. In this mode we must update lead time upon changes
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
-    reference_time =
-        zx::clock::get_monotonic() + min_clock_lead_time_ + kPaddingForUnspecifiedRefTime;
+    reference_time = zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
   // If no media time was specified, use the first pending packet's media time.
@@ -845,7 +775,7 @@ void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) 
 
 void AudioRendererImpl::Pause(PauseCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::Pause");
-  auto cleanup = fit::defer([this]() { Shutdown(); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   if (!ValidateConfig()) {
     FXL_LOG(ERROR) << "Failed to validate configuration during Pause";
@@ -893,7 +823,10 @@ void AudioRendererImpl::PauseNoReply() {
   Pause(nullptr);
 }
 
-void AudioRendererImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
+void AudioRendererImpl::OnLinkAdded() {
+  volume_manager_.NotifyStreamChanged(this);
+  RecomputeMinClockLeadTime();
+}
 
 bool AudioRendererImpl::GetStreamMute() const { return mute_; }
 
@@ -904,21 +837,17 @@ fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
 }
 
 void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
-  // Set this gain with every link (except the link to throttle output)
-  ForEachDestLink([stream_gain_db = stream_gain_db_, throttle_ptr = throttle_output_link_.get(),
-                   &volume_command](auto& link) {
-    if (&link != throttle_ptr) {
-      float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
+  ForEachDestLink([stream_gain_db = stream_gain_db_, &volume_command](auto& link) {
+    float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
 
-      gain_db = Gain::CombineGains(gain_db, stream_gain_db);
-      gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
+    gain_db = Gain::CombineGains(gain_db, stream_gain_db);
+    gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
 
-      if (volume_command.ramp.has_value()) {
-        link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                                       volume_command.ramp->ramp_type);
-      } else {
-        link.bookkeeping()->gain.SetSourceGain(gain_db);
-      }
+    if (volume_command.ramp.has_value()) {
+      link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                                     volume_command.ramp->ramp_type);
+    } else {
+      link.bookkeeping()->gain.SetSourceGain(gain_db);
     }
   });
 }
@@ -934,7 +863,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
+    route_graph_.RemoveRenderer(this);
     return;
   }
 
@@ -961,7 +890,7 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, int64_t duration_ns,
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
-    Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
+    route_graph_.RemoveRenderer(this);
     return;
   }
 
@@ -1002,7 +931,7 @@ void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
   TRACE_DURATION("audio", "AudioRendererImpl::EnableMinLeadTimeEvents");
   AUD_VLOG_OBJ(TRACE, this);
 
-  min_clock_lead_time_events_enabled_ = enabled;
+  min_lead_time_events_enabled_ = enabled;
   if (enabled) {
     ReportNewMinClockLeadTime();
   }
@@ -1014,18 +943,18 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::GetMinLeadTime");
   AUD_VLOG_OBJ(TRACE, this);
 
-  callback(min_clock_lead_time_.to_nsecs());
+  callback(min_lead_time_.to_nsecs());
 }
 
 // For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
 // this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::ReportNewMinClockLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::ReportNewMinClockLeadTime");
-  if (min_clock_lead_time_events_enabled_) {
+  if (min_lead_time_events_enabled_) {
     AUD_VLOG_OBJ(TRACE, this);
 
     auto& lead_time_event = audio_renderer_binding_.events();
-    lead_time_event.OnMinLeadTimeChanged(min_clock_lead_time_.to_nsecs());
+    lead_time_event.OnMinLeadTimeChanged(min_lead_time_.to_nsecs());
   }
 }
 

@@ -54,17 +54,12 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
     return nullptr;
   }
 
-  // Now lock both objects, make sure both are still allowing new links, then add the link to the
-  // proper sets in both source and destination.
+  // Now lock both objects then add the link to the proper sets in both source and destination.
   {
     std::lock_guard<std::mutex> slock(source->links_lock_);
     std::lock_guard<std::mutex> dlock(dest->links_lock_);
-    if (source->new_links_allowed_ && dest->new_links_allowed_) {
-      source->dest_links_.insert(link);
-      dest->source_links_.insert(link);
-    } else {
-      link = nullptr;
-    }
+    source->dest_links_.insert(link);
+    dest->source_links_.insert(link);
   }
 
   source->OnLinkAdded();

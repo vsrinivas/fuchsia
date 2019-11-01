@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/command_line_options.h"
+#include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
@@ -49,6 +50,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   AudioAdmin& audio_admin() { return audio_admin_; }
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
   StreamVolumeManager& volume_manager() { return volume_manager_; }
+  RouteGraph& route_graph() { return route_graph_; }
 
  private:
   // |fuchsia::media::AudioCore|
@@ -106,6 +108,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   // Audio usage manager
   AudioAdmin audio_admin_;
+
+  RouteGraph route_graph_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
 

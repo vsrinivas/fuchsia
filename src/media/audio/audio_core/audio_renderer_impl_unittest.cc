@@ -10,9 +10,10 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
-#include "src/media/audio/audio_core/testing/fake_routing.h"
-#include "src/media/audio/audio_core/testing/stub_stream_registry.h"
+#include "src/media/audio/audio_core/testing/fake_audio_device.h"
+#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
 
 namespace media::audio {
@@ -48,9 +49,10 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
     config_handle_ = ProcessConfig::set_instance(process_config);
 
-    renderer_ =
-        AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &stream_registry_,
-                                  &fake_routing_, &admin_, vmar_, &volume_manager_);
+    route_graph_.SetThrottleOutput(&threading_model(),
+                                   ThrottleOutput::Create(&threading_model(), &device_registry_));
+    renderer_ = AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &route_graph_,
+                                          &admin_, vmar_, &volume_manager_);
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
@@ -65,28 +67,28 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   }
 
   void TearDown() override {
-    if (renderer_) {
-      renderer_->Shutdown();
-    }
-
-    auto renderer = std::move(renderer_);
+    // Dropping the channel queues up a reference to the Renderer through its error handler, which
+    // will not work since the rest of this class is destructed before the loop and its
+    // queued functions are. Here, we ensure the error handler runs before this class' destructors
+    // run.
+    { auto r = std::move(fidl_renderer_); }
+    RunLoopUntilIdle();
 
     testing::ThreadingModelFixture::TearDown();
   }
 
  protected:
-  fbl::RefPtr<AudioRendererImpl> renderer_;
-  testing::FakeRouting fake_routing_;
-
-  testing::StubDeviceRegistry device_registry_;
-  testing::StubStreamRegistry stream_registry_;
-  fuchsia::media::AudioRendererPtr fidl_renderer_;
-
   StubUsageGainAdjustment gain_adjustment_;
   StubPolicyActionReporter policy_action_reporter_;
-
   AudioAdmin admin_;
+
+  testing::StubDeviceRegistry device_registry_;
   StreamVolumeManager volume_manager_;
+  RouteGraph route_graph_;
+
+  fuchsia::media::AudioRendererPtr fidl_renderer_;
+  fbl::RefPtr<AudioRendererImpl> renderer_;
+
   fbl::RefPtr<fzl::VmarManager> vmar_;
   ProcessConfig::Handle config_handle_;
 };
@@ -101,12 +103,13 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
   // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
   fake_output->SetMinClockLeadTime(kMinLeadTime);
 
-  // Our FakeRouting links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
+  // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
   // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
-  fake_routing_.AddOutputForRenderer(fake_output);
+  route_graph_.AddRenderer(renderer_);
+  route_graph_.AddOutput(fake_output.get());
 
-  // SetPcmStreamType triggers Routing::SelectOutputsForAudioRenderer(), which connects output(s) to
-  // renderer then recalculates minimum lead time.
+  // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
+  // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
   SetPcmStreamType();
 
   auto lead_time_ns = kInvalidLeadTimeNs;

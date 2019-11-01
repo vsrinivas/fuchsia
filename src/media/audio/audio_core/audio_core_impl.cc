@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -44,15 +45,14 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
     : threading_model_(*threading_model),
       effects_loader_{CreateEffectsLoaderWithFallback()},
       device_settings_persistence_(threading_model),
-      device_manager_(threading_model, effects_loader_.get(), &device_settings_persistence_, *this),
+      device_manager_(threading_model, effects_loader_.get(), &route_graph_,
+                      &device_settings_persistence_, *this),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
-
-  device_manager().EnableDeviceSettings(options.enable_device_settings_writeback);
 
 #ifdef NDEBUG
   Logging::Init(fxl::LOG_WARNING);
@@ -73,9 +73,12 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
     }
   });
 
-  // Set up our output manager.
+  device_manager_.EnableDeviceSettings(options.enable_device_settings_writeback);
   zx_status_t res = device_manager_.Init();
   FXL_DCHECK(res == ZX_OK);
+
+  route_graph_.SetThrottleOutput(threading_model,
+                                 ThrottleOutput::Create(threading_model, &device_manager_));
 
   // Set up our audio policy.
   LoadDefaults();
@@ -111,16 +114,21 @@ void AudioCoreImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioRenderer");
   AUD_VLOG(TRACE);
-  device_manager_.AddAudioRenderer(
-      AudioRendererImpl::Create(std::move(audio_renderer_request), this));
+
+  route_graph_.AddRenderer(AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioCapturer");
   AUD_VLOG(TRACE);
-  device_manager_.AddAudioCapturer(
-      AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
+  if (loopback) {
+    route_graph_.AddLoopbackCapturer(
+        AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
+  } else {
+    route_graph_.AddCapturer(
+        AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
+  }
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {

@@ -21,8 +21,7 @@
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/device_registry.h"
-#include "src/media/audio/audio_core/routing.h"
-#include "src/media/audio/audio_core/stream_registry.h"
+#include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
@@ -31,12 +30,10 @@ namespace media::audio {
 class AudioCapturerImpl;
 class SystemGainMuteProvider;
 
-class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
-                           public StreamRegistry,
-                           public DeviceRegistry,
-                           public Routing {
+class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
+                     RouteGraph* route_graph,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
                      const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
@@ -68,17 +65,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   // actually changed. If not, only update devices that (because of calls to SetDeviceGain) have
   // diverged from System settings.
   void OnSystemGain(bool changed);
-
-  // |media::audio::Routing|
-  //
-  void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer) override;
-  void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer) override;
-
-  // |media::audio::StreamRegistry|
-  void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) override;
-  void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) override;
-  void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) override;
-  void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) override;
 
   // |media::audio::DeviceRegistry|
   void AddDevice(const fbl::RefPtr<AudioDevice>& device) override;
@@ -122,8 +108,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
   void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
 
-  void LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device);
-
   // Send notification to users that this device's gain settings have changed.
   void NotifyDeviceGainChanged(const AudioDevice& device);
 
@@ -142,6 +126,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   // Load and create audio effects.
   [[maybe_unused]] EffectsLoader& effects_loader_;
 
+  RouteGraph& route_graph_;
+
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;
 
@@ -150,11 +136,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   // These must only be manipulated on main message loop thread. No synchronization should be needed
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
   fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioCapturerImpl>> audio_capturers_;
-  fbl::DoublyLinkedList<fbl::RefPtr<AudioRendererImpl>> audio_renderers_;
-
-  // The special throttle output always exists and is used by every renderer.
-  fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetectorImpl plug_detector_;

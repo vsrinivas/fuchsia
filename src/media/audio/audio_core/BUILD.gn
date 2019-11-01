@@ -17,6 +17,8 @@ config("audio_core_config") {
   if (!audio_core_trace_enabled) {
     defines = [ "NTRACE" ]
   }
+
+  cflags_cc = [ "-Wsuggest-override" ]
 }
 
 action_foreach("json_schema_headers") {
@@ -116,7 +118,6 @@ source_set("audio_core_lib") {
     "reporter.h",
     "ring_buffer.cc",
     "ring_buffer.h",
-    "routing.h",
     "route_graph.cc",
     "route_graph.h",
     "stream_volume_manager.cc",

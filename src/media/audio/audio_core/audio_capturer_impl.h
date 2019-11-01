@@ -23,6 +23,7 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
+#include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -36,17 +37,18 @@ class AudioDeviceManager;
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
                           public fuchsia::media::audio::GainControl,
-                          public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>>,
-                          public StreamVolume {
+                          public StreamVolume,
+                          public fbl::Recyclable<AudioCapturerImpl> {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       AudioCoreImpl* owner);
 
+  ~AudioCapturerImpl() override;
+
   bool loopback() const { return loopback_; }
   void SetInitialFormat(fuchsia::media::AudioStreamType format)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
-  void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) override;
   fuchsia::media::AudioCaptureUsage GetUsage() { return usage_; };
@@ -56,7 +58,6 @@ class AudioCapturerImpl : public AudioObject,
 
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
-  ~AudioCapturerImpl() override;
   zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) override;
 
  private:
@@ -151,8 +152,8 @@ class AudioCapturerImpl : public AudioObject,
 
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    ThreadingModel* threading_model, AudioDeviceManager* device_manager,
-                    AudioAdmin* admin, StreamVolumeManager* volume_manager);
+                    ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
+                    StreamVolumeManager* volume_manager);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -221,13 +222,21 @@ class AudioCapturerImpl : public AudioObject,
     Process();
   }
 
+  // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
+  void RemoveFromRouteGraph();
+
+  friend class fbl::Recyclable<AudioCapturerImpl>;
+  void fbl_recycle();
+
+  void Shutdown(std::unique_ptr<AudioCapturerImpl> self) FXL_LOCKS_EXCLUDED(mix_domain_->token());
+
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
   ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
-  AudioDeviceManager& device_manager_;
   AudioAdmin& admin_;
   StreamVolumeManager& volume_manager_;
+  RouteGraph& route_graph_;
   std::atomic<State> state_;
   const bool loopback_;
 
