@@ -405,6 +405,7 @@ pub struct Canvas<T: PixelSink> {
     pub row_stride: u32,
     pub col_stride: u32,
     pub id: u64,
+    pub index: u32,
     bounds: IntRect,
     current_clip: Option<IntRect>,
     update_area: UpdateArea,
@@ -412,13 +413,21 @@ pub struct Canvas<T: PixelSink> {
 
 impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targeting a shared buffer with stride.
-    pub fn new(size: IntSize, pixel_sink: T, row_stride: u32, col_stride: u32, id: u64) -> Self {
+    pub fn new(
+        size: IntSize,
+        pixel_sink: T,
+        row_stride: u32,
+        col_stride: u32,
+        id: u64,
+        index: u32,
+    ) -> Self {
         let bounds = IntRect::new(IntPoint::zero(), size);
         Canvas {
             pixel_sink,
             row_stride,
             col_stride,
             id,
+            index,
             bounds: bounds,
             current_clip: None,
             update_area: UpdateArea::new_with_bounds_patch(&bounds),
@@ -753,7 +762,7 @@ mod tests {
             pixel_size_bytes: 4,
         };
         let sink = TestPixelSink::new(size);
-        Canvas::new(size, sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes, 0)
+        Canvas::new(size, sink, config.linear_stride_bytes() as u32, config.pixel_size_bytes, 0, 0)
     }
 
     #[test]

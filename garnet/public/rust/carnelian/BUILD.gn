@@ -42,6 +42,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rusttype",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 

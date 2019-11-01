@@ -8,7 +8,7 @@ use carnelian::{
 };
 use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
-use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
+use fuchsia_framebuffer::{Config, FrameBuffer, FrameUsage, PixelFormat};
 use futures::StreamExt;
 
 mod setup;
@@ -17,10 +17,26 @@ static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
 struct RecoveryUI<'a, T: PixelSink> {
+    flusher: Box<dyn Flusher>,
     face: FontFace<'a>,
     canvas: Canvas<T>,
     config: Config,
     text_size: u32,
+}
+
+trait Flusher {
+    fn flush(&mut self);
+}
+
+struct FrameBufferFlusher {
+    framebuffer: FrameBuffer,
+    image_id: u64,
+}
+
+impl<'a> Flusher for FrameBufferFlusher {
+    fn flush(&mut self) {
+        self.framebuffer.flush_frame(self.image_id).expect("flush frame");
+    }
 }
 
 impl<'a, T: PixelSink> RecoveryUI<'a, T> {
@@ -59,6 +75,7 @@ impl<'a, T: PixelSink> RecoveryUI<'a, T> {
             &mut font_description,
             &paint,
         );
+        self.flusher.flush();
     }
 }
 
@@ -80,7 +97,9 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Failed to create executor")?;
 
     executor.run_singlethreaded(async {
-        let fb = FrameBuffer::new(None, None).await.context("Failed to create framebuffer")?;
+        let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None)
+            .await
+            .context("Failed to create framebuffer")?;
         let config = fb.get_config();
         if config.format != PixelFormat::Argb8888
             && config.format != PixelFormat::Rgb565
@@ -91,10 +110,13 @@ fn main() -> Result<(), Error> {
 
         let display_size = IntSize::new(config.width as i32, config.height as i32);
 
-        let frame = Frame::new(&fb).await?;
-        frame.present(&fb, None)?;
+        fb.allocate_frames(1, config.format).await?;
+        fb.present_first_frame(None, true)?;
 
         let face = FontFace::new(FONT_DATA).unwrap();
+
+        let image_id = fb.get_first_frame_id();
+        let frame = fb.get_frame_mut(image_id);
 
         let canvas = Canvas::new(
             display_size,
@@ -102,8 +124,16 @@ fn main() -> Result<(), Error> {
             config.linear_stride_bytes() as u32,
             config.pixel_size_bytes,
             frame.image_id,
+            0,
         );
-        let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
+        let fbf = FrameBufferFlusher { framebuffer: fb, image_id };
+        let mut ui = RecoveryUI {
+            flusher: Box::new(fbf),
+            face: face,
+            canvas,
+            config,
+            text_size: config.height / 12,
+        };
         run(&mut ui).await?;
         Ok::<(), Error>(())
     })?;
@@ -113,7 +143,7 @@ fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{RecoveryUI, FONT_DATA};
+    use super::{Flusher, RecoveryUI, FONT_DATA};
     use carnelian::{Canvas, FontFace, IntSize, PixelSink};
     use fuchsia_framebuffer::{Config, PixelFormat};
 
@@ -124,12 +154,18 @@ mod tests {
         fn write_pixel_at_offset(&mut self, _offset: usize, _value: &[u8]) {}
     }
 
+    struct TestFlusher {}
+    impl Flusher for TestFlusher {
+        fn flush(&mut self) {}
+    }
+
     #[test]
     fn test_draw() {
         const WIDTH: i32 = 800;
         const HEIGHT: i32 = 600;
         let face = FontFace::new(FONT_DATA).unwrap();
         let sink = TestPixelSink {};
+        let flusher = Box::new(TestFlusher {});
         let config = Config {
             display_id: 0,
             width: WIDTH as u32,
@@ -144,9 +180,10 @@ mod tests {
             config.linear_stride_bytes() as u32,
             config.pixel_size_bytes,
             0,
+            0,
         );
 
-        let mut ui = RecoveryUI { face: face, canvas, config, text_size: 24 };
+        let mut ui = RecoveryUI { flusher: flusher, face: face, canvas, config, text_size: 24 };
         ui.draw("Heading", "Body");
     }
 }

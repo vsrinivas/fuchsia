@@ -74,6 +74,7 @@ impl Label {
                 stride,
                 4,
                 0,
+                0,
             );
 
             // since the label buffer is sized to fit the text, always draw at 0,0

@@ -4,24 +4,34 @@
 
 use failure::{bail, format_err, Error, ResultExt};
 use fdio::watch_directory;
-use fidl::endpoints;
+use fidl::{
+    endpoints,
+    endpoints::{create_endpoints, ClientEnd},
+};
 use fidl_fuchsia_hardware_display::{
     ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ImagePlane,
     ProviderSynchronousProxy,
 };
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{
-    self as zx,
-    sys::{zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, ZX_TIME_INFINITE},
-    AsHandleRef, DurationNum, Event, HandleBased, Rights, Signals, Status, Vmo,
+    self as zx, sys::ZX_TIME_INFINITE, AsHandleRef, DurationNum, Event, HandleBased, Signals,
+    Status, Vmo, VmoOp,
 };
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
 use std::fs::OpenOptions;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 #[cfg(test)]
 use std::ops::Range;
+
+mod sysmem;
+
+const BUFFER_COLLECTION_ID: u64 = 1;
 
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_NONE: u32 = 0;
@@ -36,6 +46,10 @@ const ZX_PIXEL_FORMAT_ARGB_8888: u32 = 262148;
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_RGB_x888: u32 = 262149;
 #[allow(non_camel_case_types, non_upper_case_globals)]
+const ZX_PIXEL_FORMAT_ABGR_8888: u32 = 262150;
+#[allow(non_camel_case_types, non_upper_case_globals)]
+const ZX_PIXEL_FORMAT_BGR_x888: u32 = 262151;
+#[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_MONO_8: u32 = 65543;
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_GRAY_8: u32 = 65543;
@@ -44,7 +58,9 @@ const ZX_PIXEL_FORMAT_MONO_1: u32 = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PixelFormat {
+    Abgr8888,
     Argb8888,
+    BgrX888,
     Gray8,
     Mono1,
     Mono8,
@@ -65,7 +81,9 @@ impl From<u32> for PixelFormat {
     fn from(pixel_format: u32) -> Self {
         #[allow(non_upper_case_globals)]
         match pixel_format {
+            ZX_PIXEL_FORMAT_ABGR_8888 => PixelFormat::Abgr8888,
             ZX_PIXEL_FORMAT_ARGB_8888 => PixelFormat::Argb8888,
+            ZX_PIXEL_FORMAT_BGR_x888 => PixelFormat::BgrX888,
             ZX_PIXEL_FORMAT_MONO_1 => PixelFormat::Mono1,
             ZX_PIXEL_FORMAT_MONO_8 => PixelFormat::Mono8,
             ZX_PIXEL_FORMAT_RGB_2220 => PixelFormat::Rgb2220,
@@ -82,7 +100,9 @@ impl From<u32> for PixelFormat {
 impl Into<u32> for PixelFormat {
     fn into(self) -> u32 {
         match self {
+            PixelFormat::Abgr8888 => ZX_PIXEL_FORMAT_ABGR_8888,
             PixelFormat::Argb8888 => ZX_PIXEL_FORMAT_ARGB_8888,
+            PixelFormat::BgrX888 => ZX_PIXEL_FORMAT_BGR_x888,
             PixelFormat::Mono1 => ZX_PIXEL_FORMAT_MONO_1,
             PixelFormat::Mono8 => ZX_PIXEL_FORMAT_MONO_8,
             PixelFormat::Rgb2220 => ZX_PIXEL_FORMAT_RGB_2220,
@@ -91,6 +111,16 @@ impl Into<u32> for PixelFormat {
             PixelFormat::RgbX888 => ZX_PIXEL_FORMAT_RGB_x888,
             PixelFormat::Gray8 => ZX_PIXEL_FORMAT_GRAY_8,
             PixelFormat::Unknown => ZX_PIXEL_FORMAT_NONE,
+        }
+    }
+}
+
+impl Into<fidl_fuchsia_sysmem::PixelFormatType> for PixelFormat {
+    fn into(self) -> fidl_fuchsia_sysmem::PixelFormatType {
+        match self {
+            PixelFormat::Abgr8888 => fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8,
+            PixelFormat::Argb8888 => fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+            _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
         }
     }
 }
@@ -153,6 +183,10 @@ impl FrameSet {
             self.available.remove(&first);
         }
         first
+    }
+
+    pub fn return_image(&mut self, image_id: ImageId) {
+        self.available.insert(image_id);
     }
 }
 
@@ -232,90 +266,112 @@ impl Config {
     }
 }
 
+// TODO: this should eventually be removed in favor of client adding
+// CPU access requirements if needed
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FrameUsage {
+    Cpu,
+    Gpu,
+}
+
 pub struct Frame {
     config: Config,
     pub image_id: u64,
-    pub event: Event,
+    pub image_index: u32,
+    pub signal_event: Event,
     signal_event_id: u64,
+    pub wait_event: Event,
+    wait_event_id: u64,
+    image_vmo: Vmo,
     pub mapping: Arc<Mapping>,
 }
 
 impl Frame {
-    async fn allocate_image_vmo(framebuffer: &FrameBuffer) -> Result<Vmo, Error> {
-        let (status, vmo) =
-            framebuffer.controller.allocate_vmo(framebuffer.byte_size() as u64).await?;
-        if let Some(vmo) = vmo {
-            Ok(vmo)
-        } else {
-            bail!(
-                "failed to allocate image vmo {} ({})\nThis happens if scenic is \
-                 running or if box is run under Qemu with virtual consoles enabled.",
-                Status::from_raw(status),
-                status
-            );
-        }
-    }
-
-    async fn import_image_vmo(framebuffer: &FrameBuffer, image_vmo: Vmo) -> Result<u64, Error> {
-        let pixel_format: u32 = framebuffer.config.format.into();
-        let plane = ImagePlane {
-            byte_offset: 0,
-            bytes_per_row: framebuffer.config.linear_stride_bytes() as u32,
-        };
-        let mut image_config = ImageConfig {
-            width: framebuffer.config.width,
-            height: framebuffer.config.height,
-            pixel_format: pixel_format as u32,
-            type_: 0,
+    fn create_image_config(image_type: u32, config: &Config) -> ImageConfig {
+        ImageConfig {
+            width: config.width,
+            height: config.height,
+            pixel_format: config.format.into(),
+            type_: image_type,
             planes: [
-                plane,
+                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
                 ImagePlane { byte_offset: 0, bytes_per_row: 0 },
                 ImagePlane { byte_offset: 0, bytes_per_row: 0 },
                 ImagePlane { byte_offset: 0, bytes_per_row: 0 },
             ],
-        };
+        }
+    }
 
-        let (_, image_id) =
-            framebuffer.controller.import_vmo_image(&mut image_config, image_vmo, 0).await?;
+    async fn import_buffer(
+        framebuffer: &FrameBuffer,
+        config: &Config,
+        image_type: u32,
+        index: u32,
+    ) -> Result<u64, Error> {
+        let mut image_config = Self::create_image_config(image_type, config);
+
+        let (status, image_id) = framebuffer
+            .controller
+            .import_image(&mut image_config, BUFFER_COLLECTION_ID, index)
+            .await
+            .context("controller import_image")?;
+
+        if status != 0 {
+            bail!("import_image error {} ({})", Status::from_raw(status), status);
+        }
 
         Ok(image_id)
     }
 
-    pub async fn new(framebuffer: &FrameBuffer) -> Result<Frame, Error> {
-        let image_vmo = Self::allocate_image_vmo(framebuffer).await?;
-        image_vmo
-            .set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING)
-            .unwrap_or_else(|err| println!("set_cache_policy failed {}", err));
+    async fn create_and_import_event(framebuffer: &FrameBuffer) -> Result<(Event, u64), Error> {
+        let event = Event::create()?;
 
-        let mapping = Mapping::create_from_vmo(
-            &image_vmo,
-            framebuffer.byte_size(),
-            zx::VmarFlags::PERM_READ
-                | zx::VmarFlags::PERM_WRITE
-                | zx::VmarFlags::MAP_RANGE
-                | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-        )
-        .context("Frame::new() Mapping::create_from_vmo failed")?;
-
-        // import image VMO
-        let imported_image_vmo = image_vmo.duplicate_handle(Rights::SAME_RIGHTS)?;
-        let image_id = Self::import_image_vmo(framebuffer, imported_image_vmo)
-            .await
-            .context("Frame::new() import_image_vmo")?;
-
-        let my_event = Event::create()?;
-
-        let their_event = my_event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-        let signal_event_id = my_event.get_koid()?.raw_koid();
+        let their_event = event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let event_id = event.get_koid()?.raw_koid();
         framebuffer
             .controller
-            .import_event(Event::from_handle(their_event.into_handle()), signal_event_id)?;
+            .import_event(Event::from_handle(their_event.into_handle()), event_id)?;
+        Ok((event, event_id))
+    }
+
+    pub(crate) async fn new(
+        framebuffer: &FrameBuffer,
+        image_vmo: Vmo,
+        config: &Config,
+        image_type: u32,
+        index: u32,
+    ) -> Result<Frame, Error> {
+        // TODO: don't require a CPU mapping when it is not needed.
+        let mapping = match framebuffer.usage {
+            FrameUsage::Cpu => Mapping::create_from_vmo(
+                &image_vmo,
+                framebuffer.byte_size(),
+                zx::VmarFlags::PERM_READ
+                    | zx::VmarFlags::PERM_WRITE
+                    | zx::VmarFlags::MAP_RANGE
+                    | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+            )
+            .context("Frame::new() Mapping::create_from_vmo failed")?,
+            FrameUsage::Gpu => Mapping::allocate(4096).expect("Unused VMO allocation failed").0,
+        };
+
+        // import image
+        let image_id = Self::import_buffer(framebuffer, config, image_type, index)
+            .await
+            .context("Frame::new() import_buffer")?;
+
+        let (signal_event, signal_event_id) = Self::create_and_import_event(framebuffer).await?;
+        let (wait_event, wait_event_id) = Self::create_and_import_event(framebuffer).await?;
 
         Ok(Frame {
-            config: framebuffer.get_config(),
+            config: *config,
             image_id: image_id,
-            event: my_event,
-            signal_event_id: signal_event_id,
+            image_index: index,
+            signal_event,
+            signal_event_id,
+            wait_event,
+            wait_event_id,
+            image_vmo,
             mapping: Arc::new(mapping),
         })
     }
@@ -344,30 +400,6 @@ impl Frame {
         }
     }
 
-    pub fn present(
-        &self,
-        framebuffer: &FrameBuffer,
-        sender: Option<futures::channel::mpsc::UnboundedSender<u64>>,
-    ) -> Result<(), Error> {
-        framebuffer
-            .controller
-            .set_layer_image(framebuffer.layer_id, self.image_id, 0, self.signal_event_id)
-            .context("Frame::present() set_layer_image")?;
-        framebuffer.controller.apply_config().context("Frame::present() apply_config")?;
-        if let Some(signal_sender) = sender.as_ref() {
-            let signal_sender = signal_sender.clone();
-            let image_id = self.image_id;
-            let local_event = self.event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-            local_event.as_handle_ref().signal(Signals::EVENT_SIGNALED, Signals::NONE)?;
-            fasync::spawn_local(async move {
-                let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
-                signals.await.expect("to wait");
-                signal_sender.unbounded_send(image_id).expect("send to work");
-            });
-        }
-        Ok(())
-    }
-
     pub fn linear_stride_bytes(&self) -> usize {
         self.config.linear_stride_pixels as usize * self.config.pixel_size_bytes as usize
     }
@@ -387,8 +419,13 @@ pub struct FrameBuffer {
     #[allow(unused)]
     display_controller: zx::Channel,
     controller: ControllerProxy,
+    sysmem: fidl_fuchsia_sysmem::AllocatorProxy,
+    pub local_token: Option<fidl_fuchsia_sysmem::BufferCollectionTokenProxy>,
     config: Config,
     layer_id: u64,
+    frames: BTreeMap<u64, Frame>,
+    #[allow(unused)]
+    pub usage: FrameUsage,
 }
 
 impl FrameBuffer {
@@ -428,23 +465,16 @@ impl FrameBuffer {
         })
     }
 
-    async fn configure_layer(config: Config, proxy: &ControllerProxy) -> Result<u64, Error> {
-        let (_status, layer_id) = proxy.create_layer().await?;
-        let pixel_format: u32 = config.format.into();
-        let plane =
-            ImagePlane { byte_offset: 0, bytes_per_row: config.linear_stride_bytes() as u32 };
-        let mut image_config = ImageConfig {
-            width: config.width,
-            height: config.height,
-            pixel_format: pixel_format as u32,
-            type_: 0,
-            planes: [
-                plane,
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-            ],
-        };
+    async fn configure_layer(
+        config: &Config,
+        image_type: u32,
+        proxy: &ControllerProxy,
+    ) -> Result<u64, Error> {
+        let (status, layer_id) = proxy.create_layer().await?;
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!("Failed to create layer {}", Status::from_raw(status)));
+        }
+        let mut image_config = Frame::create_image_config(image_type, config);
         proxy.set_layer_primary_config(layer_id, &mut image_config)?;
 
         let mut layers = std::iter::once(layer_id);
@@ -452,7 +482,72 @@ impl FrameBuffer {
         Ok(layer_id)
     }
 
+    async fn import_buffer_collection(
+        &mut self,
+        buffer_collection_id: u64,
+        buffer_collection: endpoints::ClientEnd<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>,
+    ) -> Result<(), Error> {
+        self.controller.import_buffer_collection(buffer_collection_id, buffer_collection).await?;
+        Ok(())
+    }
+
+    async fn set_buffer_collection_constraints(
+        &mut self,
+        buffer_collection_id: u64,
+        config: &Config,
+    ) -> Result<(), Error> {
+        let mut image_config = Frame::create_image_config(0, config);
+        self.controller
+            .set_buffer_collection_constraints(buffer_collection_id, &mut image_config)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn allocate_buffer_collection(
+        &mut self,
+        frame_count: usize,
+        config: &Config,
+    ) -> Result<fidl_fuchsia_sysmem::BufferCollectionProxy, Error> {
+        let local_token = self.local_token.take().expect("token");
+        let (display_token, display_token_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
+
+        // Duplicate local token for display.
+        local_token.duplicate(std::u32::MAX, display_token_request)?;
+
+        // Ensure that duplicate message has been processed by sysmem.
+        local_token.sync().await?;
+
+        // Frame buffer import of buffer collection.
+        self.import_buffer_collection(BUFFER_COLLECTION_ID, display_token).await?;
+        self.set_buffer_collection_constraints(BUFFER_COLLECTION_ID, config).await?;
+
+        //  Bind and set local buffer collection constraints.
+        let (collection_client, collection_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionMarker>()?;
+        self.sysmem.bind_shared_collection(
+            ClientEnd::new(local_token.into_channel().unwrap().into_zx_channel()),
+            collection_request,
+        )?;
+        let collection_client = collection_client.into_proxy()?;
+        let pixel_format: fidl_fuchsia_sysmem::PixelFormatType = config.format.into();
+        let mut buffer_collection_constraints = crate::sysmem::buffer_collection_constraints(
+            config.width,
+            config.height,
+            pixel_format,
+            frame_count as u32,
+            self.usage,
+        );
+        collection_client
+            .set_constraints(true, &mut buffer_collection_constraints)
+            .context("Sending buffer constraints to sysmem")?;
+
+        Ok(collection_client)
+    }
+
     pub async fn new(
+        usage: FrameUsage,
         display_index: Option<usize>,
         vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
     ) -> Result<FrameBuffer, Error> {
@@ -467,7 +562,7 @@ impl FrameBuffer {
                 first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
                 Err(zx::Status::STOP)
             });
-            first_path.expect("failed to unwrap first path in FrameBuffer::new")
+            first_path.unwrap()
         };
         let file = OpenOptions::new().read(true).write(true).open(device_path)?;
 
@@ -486,7 +581,6 @@ impl FrameBuffer {
 
         let mut stream = proxy.take_event_stream();
         let config = Self::create_config_from_event_stream(&proxy, &mut stream).await?;
-        let layer_id = Self::configure_layer(config, &proxy).await?;
 
         if let Some(vsync_sender) = vsync_sender {
             fasync::spawn_local(
@@ -504,7 +598,84 @@ impl FrameBuffer {
             );
         }
 
-        Ok(FrameBuffer { display_controller: device_client, controller: proxy, config, layer_id })
+        // Connect to sysmem and allocate shared buffer collection.
+        let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+
+        let (local_token, local_token_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
+        let local_token = local_token.into_proxy()?;
+
+        sysmem.allocate_shared_collection(local_token_request)?;
+
+        let fb = FrameBuffer {
+            display_controller: device_client,
+            controller: proxy,
+            sysmem,
+            local_token: Some(local_token),
+            config,
+            layer_id: 0,
+            frames: BTreeMap::new(),
+            usage,
+        };
+
+        Ok(fb)
+    }
+
+    pub async fn allocate_frames(
+        &mut self,
+        frame_count: usize,
+        format: PixelFormat,
+    ) -> Result<(), Error> {
+        let config = Config {
+            display_id: self.config.display_id,
+            width: self.config.width,
+            height: self.config.height,
+            linear_stride_pixels: self.config.linear_stride_pixels,
+            format: format.into(),
+            pixel_size_bytes: pixel_format_bytes(format.into()) as u32,
+        };
+        let collection_proxy = self.allocate_buffer_collection(frame_count, &config).await?;
+
+        let (status, buffers) = collection_proxy.wait_for_buffers_allocated().await?;
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!(
+                "Failed to wait for buffers {}({})",
+                Status::from_raw(status),
+                status
+            ));
+        }
+
+        let image_type = if buffers.settings.has_image_format_constraints
+            && buffers.settings.image_format_constraints.pixel_format.has_format_modifier
+        {
+            match buffers.settings.image_format_constraints.pixel_format.format_modifier.value {
+                fidl_fuchsia_sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED => 1,
+                _ => 0,
+            }
+        } else {
+            0
+        };
+
+        self.layer_id = Self::configure_layer(&config, image_type, &self.controller).await?;
+
+        // Clean close of collection in order to allow other clients to
+        // continue usage.
+        collection_proxy.close()?;
+
+        for index in 0..frame_count {
+            let vmo_buffer = &buffers.buffers[index];
+            let vmo = vmo_buffer
+                .vmo
+                .as_ref()
+                .expect("vmo_buffer")
+                .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                .context("duplicating buffer vmo")?;
+            let frame = Frame::new(self, vmo, &config, image_type, index as u32)
+                .await
+                .context("new_with_vmo")?;
+            self.frames.insert(frame.image_id, frame);
+        }
+        Ok(())
     }
 
     pub fn get_config(&self) -> Config {
@@ -514,21 +685,99 @@ impl FrameBuffer {
     pub fn byte_size(&self) -> usize {
         self.config.height as usize * self.config.linear_stride_bytes()
     }
-}
 
-impl Drop for FrameBuffer {
-    fn drop(&mut self) {}
+    pub fn get_frame_count(&self) -> usize {
+        self.frames.len()
+    }
+
+    pub fn get_frame(&self, image_id: u64) -> &Frame {
+        self.frames.get(&image_id).expect("to find image")
+    }
+
+    pub fn get_frame_mut(&mut self, image_id: u64) -> &mut Frame {
+        self.frames.get_mut(&image_id).expect("to find image")
+    }
+
+    pub fn get_image_ids(&self) -> BTreeSet<u64> {
+        self.frames.keys().map(|image_id| *image_id).collect::<BTreeSet<_>>()
+    }
+
+    pub fn get_first_frame_id(&self) -> u64 {
+        if let Some(image_id) = self.get_image_ids().iter().next() {
+            *image_id
+        } else {
+            // this should be impossible, as a frame buffer cannot be
+            // created with zero frames
+            panic!("no allocated frames")
+        }
+    }
+
+    pub fn flush_frame(&mut self, image_id: u64) -> Result<(), Error> {
+        let frame = self.get_frame(image_id);
+        frame.image_vmo.op_range(VmoOp::CACHE_CLEAN_INVALIDATE, 0, frame.image_vmo.get_size()?)?;
+        Ok(())
+    }
+
+    pub fn present_frame(
+        &mut self,
+        image_id: u64,
+        sender: Option<futures::channel::mpsc::UnboundedSender<u64>>,
+        signal_wait_event: bool,
+    ) -> Result<(), Error> {
+        let frame = self.get_frame(image_id);
+        if self.usage == FrameUsage::Cpu {
+            frame.image_vmo.op_range(
+                VmoOp::CACHE_CLEAN_INVALIDATE,
+                0,
+                frame.image_vmo.get_size()?,
+            )?;
+        }
+        let mut layers = std::iter::once(self.layer_id);
+        self.controller.set_display_layers(self.config.display_id, &mut layers)?;
+        self.controller
+            .set_layer_image(
+                self.layer_id,
+                frame.image_id,
+                frame.wait_event_id,
+                frame.signal_event_id,
+            )
+            .context("Frame::present() set_layer_image")?;
+        self.controller.apply_config().context("Frame::present() apply_config")?;
+        if signal_wait_event {
+            frame.wait_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        }
+        if let Some(signal_sender) = sender.as_ref() {
+            let signal_sender = signal_sender.clone();
+            let image_id = frame.image_id;
+            let local_event = frame.signal_event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+            local_event.as_handle_ref().signal(Signals::EVENT_SIGNALED, Signals::NONE)?;
+            fasync::spawn_local(async move {
+                let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
+                signals.await.expect("to wait");
+                signal_sender.unbounded_send(image_id).expect("send to work");
+            });
+        }
+        Ok(())
+    }
+
+    pub fn present_first_frame(
+        &mut self,
+        sender: Option<futures::channel::mpsc::UnboundedSender<u64>>,
+        signal_wait_event: bool,
+    ) -> Result<(), Error> {
+        self.present_frame(self.get_first_frame_id(), sender, signal_wait_event)
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::FrameBuffer;
-    use fuchsia_async::{self as fasync};
+    use crate::{FrameBuffer, FrameUsage};
+    use fuchsia_async as fasync;
 
     #[test]
     fn test_async_new() -> std::result::Result<(), failure::Error> {
         let mut executor = fasync::Executor::new()?;
-        let fb_future = FrameBuffer::new(None, None);
+        let fb_future = FrameBuffer::new(FrameUsage::Cpu, None, None);
         executor.run_singlethreaded(fb_future)?;
         Ok(())
     }

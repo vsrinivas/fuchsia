@@ -16,6 +16,7 @@
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]
     }

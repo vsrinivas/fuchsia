@@ -17,14 +17,11 @@ use fidl_fuchsia_ui_input::{
 };
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_framebuffer::{Frame, FrameSet, ImageId};
+use fuchsia_framebuffer::{FrameSet, ImageId};
 use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr, View};
-use fuchsia_zircon::{ClockId, Duration, Time};
+use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
 use futures::{channel::mpsc::unbounded, StreamExt, TryFutureExt};
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
-};
+use std::{cell::RefCell, collections::BTreeMap};
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
@@ -66,6 +63,13 @@ pub struct ViewAssistantContext<'a> {
     /// For views in canvas mode, this will contain a canvas
     /// to be used for drawing.
     pub canvas: Option<&'a RefCell<Canvas<MappingPixelSink>>>,
+    /// When running in frame buffer mode, the number of buffers in
+    /// the buffer collection
+    pub buffer_count: Option<usize>,
+    /// When running in frame buffer mode, the the event to signal
+    /// to indicate that the layer image can swap to the currently
+    /// set frame
+    pub wait_event: Option<&'a Event>,
 
     messages: Vec<Message>,
 }
@@ -147,6 +151,11 @@ pub trait ViewAssistant {
     /// Initial animation mode for view
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::None;
+    }
+
+    /// Pixel format for image pipe mode
+    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
+        fuchsia_framebuffer::PixelFormat::Argb8888
     }
 }
 
@@ -256,6 +265,8 @@ impl ScenicViewStrategy {
             messages: Vec::new(),
             scenic_resources: Some(&self.scenic_resources),
             canvas: None,
+            buffer_count: None,
+            wait_event: None,
         }
     }
 }
@@ -328,6 +339,8 @@ impl ScenicCanvasViewStrategy {
             messages: Vec::new(),
             scenic_resources: None,
             canvas: canvas,
+            buffer_count: None,
+            wait_event: None,
         }
     }
 }
@@ -370,6 +383,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
                 stride,
                 4,
                 0,
+                0,
             ));
 
             let canvas_context =
@@ -409,37 +423,48 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
 }
 
 type Canvases = BTreeMap<ImageId, RefCell<Canvas<MappingPixelSink>>>;
-type Frames = BTreeMap<ImageId, Frame>;
+type WaitEvents = BTreeMap<ImageId, Event>;
 
 struct FrameBufferViewStrategy {
-    frames: Frames,
     frame_buffer: FrameBufferPtr,
     canvases: Canvases,
     frame_set: FrameSet,
     image_sender: futures::channel::mpsc::UnboundedSender<u64>,
+    wait_events: WaitEvents,
+    signals_wait_event: bool,
 }
 
 impl FrameBufferViewStrategy {
     fn new(
         size: &IntSize,
-        frames: BTreeMap<ImageId, Frame>,
         pixel_size: u32,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
         stride: u32,
         frame_buffer: FrameBufferPtr,
+        signals_wait_event: bool,
     ) -> ViewStrategyPtr {
+        let mut fb = frame_buffer.borrow_mut();
         let mut canvases: Canvases = Canvases::new();
-        let mut image_ids = BTreeSet::new();
-        frames.iter().for_each(|(_image_id, frame)| {
+        let mut wait_events: WaitEvents = WaitEvents::new();
+        let image_ids = fb.get_image_ids();
+        image_ids.iter().for_each(|image_id| {
+            let frame = fb.get_frame_mut(*image_id);
             let canvas = RefCell::new(Canvas::new(
                 *size,
                 MappingPixelSink::new(&frame.mapping),
                 stride,
                 pixel_size,
                 frame.image_id,
+                frame.image_index,
             ));
             canvases.insert(frame.image_id, canvas);
-            image_ids.insert(frame.image_id);
+            if signals_wait_event {
+                let wait_event = frame
+                    .wait_event
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("duplicate_handle");
+                wait_events.insert(frame.image_id, wait_event);
+            }
         });
         let (image_sender, mut image_receiver) = unbounded::<u64>();
         // wait for events from the image freed fence to know when an
@@ -453,11 +478,12 @@ impl FrameBufferViewStrategy {
         });
         let frame_set = FrameSet::new(image_ids);
         Box::new(FrameBufferViewStrategy {
-            frames,
             canvases,
             frame_buffer: frame_buffer.clone(),
             frame_set: frame_set,
             image_sender: image_sender,
+            wait_events,
+            signals_wait_event,
         })
     }
 
@@ -466,6 +492,13 @@ impl FrameBufferViewStrategy {
         view_details: &ViewDetails,
         image_id: ImageId,
     ) -> ViewAssistantContext {
+        let wait_event = if self.signals_wait_event {
+            let stored_wait_event = self.wait_events.get(&image_id).expect("wait event");
+            Some(stored_wait_event)
+        } else {
+            None
+        };
+
         ViewAssistantContext {
             key: view_details.key,
             logical_size: view_details.logical_size,
@@ -477,6 +510,8 @@ impl FrameBufferViewStrategy {
             canvas: Some(
                 &self.canvases.get(&image_id).expect("failed to get canvas in make_context"),
             ),
+            buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
+            wait_event: wait_event,
         }
     }
 }
@@ -488,6 +523,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
             view_assistant
                 .setup(&framebuffer_context)
                 .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+            self.frame_set.return_image(available);
         }
     }
 
@@ -503,12 +539,10 @@ impl ViewStrategy for FrameBufferViewStrategy {
 
     fn present(&mut self, _view_details: &ViewDetails) {
         if let Some(prepared) = self.frame_set.prepared {
-            let frame = self.frames.get_mut(&prepared).expect("prepared frame to be in frame map");
             let mut fb = self.frame_buffer.borrow_mut();
-            frame
-                .present(&mut fb, Some(self.image_sender.clone()))
+            fb.present_frame(prepared, Some(self.image_sender.clone()), !self.signals_wait_event)
                 .unwrap_or_else(|e| panic!("Present error: {:?}", e));
-            self.frame_set.mark_presented(frame.image_id);
+            self.frame_set.mark_presented(prepared);
         }
     }
 
@@ -590,19 +624,19 @@ impl ViewController {
         size: IntSize,
         pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
-        frames: Vec<Frame>,
         stride: u32,
         mut view_assistant: ViewAssistantPtr,
         test_sender: Option<TestSender>,
         frame_buffer: FrameBufferPtr,
+        signals_wait_event: bool,
     ) -> Result<ViewController, Error> {
         let strategy = FrameBufferViewStrategy::new(
             &size,
-            frames.into_iter().map(|frame| (frame.image_id, frame)).collect(),
             pixel_size,
             pixel_format,
             stride,
             frame_buffer,
+            signals_wait_event,
         );
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {

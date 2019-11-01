@@ -15,7 +15,7 @@ use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component, client::connect_to_service};
-use fuchsia_framebuffer::{Frame, FrameBuffer, VSyncMessage};
+use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
 use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
@@ -40,6 +40,9 @@ pub enum ViewMode {
     /// This app's views do all of their rendering with a Canvas and Carnelian should
     /// take care of creating such a canvas for view created by this app.
     Canvas,
+    /// This app's views requires an image pipe and Carnelian should
+    /// take care of creating a buffer collection for view created by this app.
+    ImagePipe,
 }
 
 /// Trait that a mod author must implement. Currently responsible for creating
@@ -72,6 +75,18 @@ pub trait AppAssistant {
         )
     }
 
+    /// Called when the Fuchsia view system requests that a view be created for
+    /// apps running in ViewMode::ImagePipe.
+    fn create_view_assistant_image_pipe(
+        &mut self,
+        _: ViewKey,
+        _fb: FrameBufferPtr,
+    ) -> Result<ViewAssistantPtr, Error> {
+        failure::bail!(
+            "Assistant has ViewMode::ImagePipe but doesn't implement create_view_assistant_image_pipe."
+        )
+    }
+
     /// Return the list of names of services this app wants to provide
     fn outgoing_services_names(&self) -> Vec<&'static str> {
         Vec::new()
@@ -90,6 +105,12 @@ pub trait AppAssistant {
     fn get_mode(&self) -> ViewMode {
         ViewMode::Scenic
     }
+
+    /// Return true to indicate that this apps view assistants will
+    /// arrange to have the frame buffer's wait event signaled
+    fn signals_wait_event(&self) -> bool {
+        return false;
+    }
 }
 
 pub type TestSender = futures::channel::mpsc::UnboundedSender<Result<(), Error>>;
@@ -103,7 +124,6 @@ pub type AppAssistantPtr = Box<dyn AppAssistant>;
 trait AppStrategy {
     fn supports_scenic(&self) -> bool;
     fn get_scenic_proxy(&self) -> Option<&ScenicProxy>;
-    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>>;
     fn get_frame_buffer(&self) -> Option<FrameBufferPtr> {
         None
     }
@@ -111,16 +131,25 @@ trait AppStrategy {
     fn get_pixel_size(&self) -> u32;
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat;
     fn get_linear_stride_bytes(&self) -> u32;
+    fn post_setup(
+        &mut self,
+        _executor: &mut fasync::Executor,
+        _pixel_format: fuchsia_framebuffer::PixelFormat,
+    ) {
+    }
 }
 
 type AppStrategyPtr = Box<dyn AppStrategy>;
+
+/// Reference to FrameBuffer.
 pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
 
 struct FrameBufferAppStrategy {
     #[allow(unused)]
     frame_buffer: FrameBufferPtr,
-    frames: Vec<Frame>,
 }
+
+const FRAME_COUNT: usize = 2;
 
 impl AppStrategy for FrameBufferAppStrategy {
     fn supports_scenic(&self) -> bool {
@@ -129,12 +158,6 @@ impl AppStrategy for FrameBufferAppStrategy {
 
     fn get_scenic_proxy(&self) -> Option<&ScenicProxy> {
         return None;
-    }
-
-    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>> {
-        let mut frames = Vec::new();
-        frames.append(&mut self.frames);
-        Some(frames)
     }
 
     fn get_frame_buffer_size(&self) -> Option<IntSize> {
@@ -160,32 +183,35 @@ impl AppStrategy for FrameBufferAppStrategy {
     fn get_frame_buffer(&self) -> Option<FrameBufferPtr> {
         Some(self.frame_buffer.clone())
     }
+
+    fn post_setup(
+        &mut self,
+        executor: &mut fasync::Executor,
+        pixel_format: fuchsia_framebuffer::PixelFormat,
+    ) {
+        let mut fb = self.frame_buffer.borrow_mut();
+        let f = fb.allocate_frames(FRAME_COUNT, pixel_format);
+        executor.run_singlethreaded(f).expect("allocating frames failed");
+    }
 }
 
-const FRAME_COUNT: usize = 3;
-
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
-async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
+async fn create_app_strategy(assistant: &AppAssistantPtr) -> Result<AppStrategyPtr, Error> {
+    let usage =
+        if assistant.get_mode() == ViewMode::ImagePipe { FrameUsage::Gpu } else { FrameUsage::Cpu };
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
-    let fb = FrameBuffer::new(None, Some(sender)).await;
+    let fb = FrameBuffer::new(usage, None, Some(sender)).await;
     if fb.is_err() {
         let scenic = connect_to_service::<ScenicMarker>()?;
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();
-        let mut frames = Vec::new();
-        for _ in 0..FRAME_COUNT {
-            let frame = Frame::new(&fb).await?;
-            frames.push(frame);
-        }
-        // TODO: avoid presenting a frame that hasn't been
-        // updated by the view assistent.
-        frames[0].present(&fb, None)?;
+
         // TODO: improve scheduling of updates
         fasync::spawn(
             async move {
                 while let Some(_) = receiver.next().await {
-                    App::with(|app| app.update_all_views());
+                    App::try_with(|app| app.update_all_views());
                 }
                 Ok(())
             }
@@ -196,7 +222,6 @@ async fn create_app_strategy() -> Result<AppStrategyPtr, Error> {
 
         Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy {
             frame_buffer: Rc::new(RefCell::new(fb)),
-            frames,
         }))
     }
 }
@@ -212,10 +237,6 @@ impl AppStrategy for ScenicAppStrategy {
 
     fn get_scenic_proxy(&self) -> Option<&ScenicProxy> {
         return Some(&self.scenic);
-    }
-
-    fn take_frame_buffer_frames(&mut self) -> Option<Vec<Frame>> {
-        None
     }
 
     fn get_frame_buffer_size(&self) -> Option<IntSize> {
@@ -284,10 +305,10 @@ impl App {
         executor: &mut fasync::Executor,
         app: &mut App,
     ) -> Result<bool, Error> {
-        let strat_future = create_app_strategy();
+        let strat_future = create_app_strategy(&assistant);
         let strat = executor.run_singlethreaded(strat_future).context("create_app_strategy")?;
         let supports_scenic = strat.supports_scenic();
-        if assistant.get_mode() != ViewMode::Canvas && !supports_scenic {
+        if assistant.get_mode() == ViewMode::Scenic && !supports_scenic {
             bail!("This application requires Scenic but this Fuchsia system doesn't have it.");
         }
         app.strategy.replace(strat);
@@ -307,10 +328,7 @@ impl App {
         let supports_scenic =
             App::with(|app| Self::app_init_common(assistant, &mut executor, app))?;
         if !supports_scenic {
-            App::with(|app| {
-                let frames = app.strategy.as_mut().unwrap().take_frame_buffer_frames().unwrap();
-                app.create_view_framebuffer(frames, None)
-            })?;
+            App::with(|app| app.create_view_framebuffer(&mut executor, None))?;
         }
 
         executor.run_singlethreaded(future::pending::<()>());
@@ -340,8 +358,7 @@ impl App {
             });
         } else {
             App::with(|app| {
-                let frames = app.strategy.as_mut().unwrap().take_frame_buffer_frames().unwrap();
-                app.create_view_framebuffer(frames, Some(create_view_sender))
+                app.create_view_framebuffer(&mut executor, Some(create_view_sender))
                     .expect("create_view_framebuffer failed");
             });
         }
@@ -389,6 +406,31 @@ impl App {
                 app_ref.send_message(key, msg);
             }
             r
+        })
+    }
+
+    // Sometimes the vsync event will come in while some other part
+    // of the framework is awaiting an async call, which fails. Since
+    // missing a vsync event is not fatal, add this private method
+    // to handle vsync events.
+    fn try_with<F>(f: F)
+    where
+        F: FnOnce(&mut App),
+    {
+        APP.with(|app| {
+            if let Ok(mut app_ref) = app.try_borrow_mut() {
+                f(&mut app_ref);
+
+                // Replace app's messages with an empty list before
+                // sending them. This isn't strictly needed now as
+                // queueing messages during `with` is not possible
+                // but it will be in the future.
+                let mut messages = Vec::new();
+                mem::swap(&mut messages, &mut app_ref.messages);
+                for (key, msg) in messages {
+                    app_ref.send_message(key, msg);
+                }
+            }
         })
     }
 
@@ -473,6 +515,10 @@ impl App {
         self.assistant.as_ref().unwrap().get_mode()
     }
 
+    fn get_signals_wait_event(&self) -> bool {
+        self.assistant.as_ref().unwrap().signals_wait_event()
+    }
+
     fn create_view_scenic(
         &mut self,
         view_token: ViewToken,
@@ -480,10 +526,10 @@ impl App {
     ) -> Result<(), Error> {
         let session = self.setup_session()?;
         let view_mode = self.get_view_mode();
-        let view_assistant = if view_mode != ViewMode::Canvas {
-            self.create_view_assistant(&session)?
-        } else {
-            self.create_view_assistant_canvas()?
+        let view_assistant = match view_mode {
+            ViewMode::Scenic => self.create_view_assistant(&session)?,
+            ViewMode::Canvas => self.create_view_assistant_canvas()?,
+            ViewMode::ImagePipe => bail!("ImagePipe mode is not yet supported with Scenic."),
         };
         let mut view_controller = ViewController::new(
             self.next_key,
@@ -502,24 +548,46 @@ impl App {
         Ok(())
     }
 
+    // Creates a view assistant for views that are using the image pipe view
+    // mode feature, either in Scenic or framebuffer mode.
+    fn create_view_assistant_image_pipe(&mut self) -> Result<ViewAssistantPtr, Error> {
+        let strat = self.strategy.as_ref().unwrap();
+        let fb = strat.get_frame_buffer().unwrap();
+        let view =
+            self.assistant.as_mut().unwrap().create_view_assistant_image_pipe(self.next_key, fb)?;
+        Ok(view)
+    }
+
     fn create_view_framebuffer(
         &mut self,
-        frames: Vec<Frame>,
+        executor: &mut fasync::Executor,
         test_sender: Option<TestSender>,
     ) -> Result<(), Error> {
-        let view_assistant = self.create_view_assistant_canvas()?;
-        let strat = self.strategy.as_ref().unwrap();
+        let view_mode = self.get_view_mode();
+        let signals_wait_event = self.get_signals_wait_event();
+        let view_assistant = if view_mode == ViewMode::ImagePipe {
+            self.create_view_assistant_image_pipe()?
+        } else {
+            self.create_view_assistant_canvas()?
+        };
+        let strat = self.strategy.as_mut().unwrap();
+        let pixel_format = if view_mode == ViewMode::ImagePipe {
+            view_assistant.get_pixel_format()
+        } else {
+            strat.get_pixel_format()
+        };
+        strat.post_setup(executor, pixel_format);
         let size = strat.get_frame_buffer_size().unwrap();
         let mut view_controller = ViewController::new_with_frame_buffer(
             self.next_key,
             size,
             strat.get_pixel_size(),
-            strat.get_pixel_format(),
-            frames,
+            pixel_format,
             strat.get_linear_stride_bytes(),
             view_assistant,
             test_sender,
             strat.get_frame_buffer().unwrap(),
+            signals_wait_event,
         )?;
 
         // For framebuffer apps, always use vsync to drive update
@@ -529,6 +597,7 @@ impl App {
         view_controller.present();
         self.view_controllers.insert(self.next_key, view_controller);
         self.next_key += 1;
+        self.update_all_views();
         Ok(())
     }
 

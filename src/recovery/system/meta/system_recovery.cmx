@@ -10,7 +10,8 @@
         "services": [
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

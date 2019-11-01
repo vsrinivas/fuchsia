@@ -10,7 +10,7 @@ use carnelian::{
 use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
-use fuchsia_zircon::{ClockId, Time};
+use fuchsia_zircon::{AsHandleRef, ClockId, Signals, Time};
 use std::{
     collections::BTreeMap,
     env,
@@ -53,6 +53,10 @@ impl AppAssistant for DrawingAppAssistant {
 
     fn get_mode(&self) -> ViewMode {
         ViewMode::Canvas
+    }
+
+    fn signals_wait_event(&self) -> bool {
+        return true;
     }
 }
 
@@ -161,6 +165,10 @@ impl ViewAssistant for DrawingViewAssistant {
         canvas.fill_roundrect(&r_clipped2, grid_size / 5.0, self.color5);
 
         canvas.reset_update_area();
+
+        let wait_event =
+            context.wait_event.as_ref().expect("wait event should be passed in context");
+        wait_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())
     }

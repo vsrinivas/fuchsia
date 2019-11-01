@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, ResultExt};
+use failure::{Error, ResultExt};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_framebuffer::{
-    to_565, Config, Frame, FrameBuffer, FrameSet, ImageId, PixelFormat, VSyncMessage,
+    to_565, Config, Frame, FrameBuffer, FrameSet, FrameUsage, ImageId, PixelFormat, VSyncMessage,
 };
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, future, StreamExt, TryFutureExt};
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeSet,
     env,
     io::{self, Read},
     rc::Rc,
@@ -39,33 +39,35 @@ pub fn wait_for_close() {
     });
 }
 
-pub struct FrameManager {
-    frames: BTreeMap<ImageId, Frame>,
+struct FrameManager {
     frame_set: FrameSet,
 }
+
+// this buffering approach will only work with two images, since
+// as soon as it is released by the display controller it is prepared
+// for use again and their can only be one prepared image.
+const BUFFER_COUNT: usize = 2;
 
 impl FrameManager {
     pub async fn new(fb: &mut FrameBuffer) -> Result<FrameManager, Error> {
         // this buffering approach will only work with two images, since
         // as soon as it is released by the display controller it is prepared
         // for use again and their can only be one prepared image.
-        const BUFFER_COUNT: usize = 2;
-        let mut frames = BTreeMap::new();
         let mut available = BTreeSet::new();
         let config = fb.get_config();
-        for _ in 0..BUFFER_COUNT {
-            let mut frame = Frame::new(fb).await?;
+        let image_ids = fb.get_image_ids();
+        for image_id in image_ids {
+            let frame = fb.get_frame_mut(image_id);
             let black = [0x00, 0x00, 0x00, 0xFF];
             if config.format != PixelFormat::Rgb565 {
                 frame.fill_rectangle(0, 0, config.width, config.height, &black);
             } else {
                 frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&black));
             }
-            available.insert(frame.image_id);
-            frames.insert(frame.image_id, frame);
+            available.insert(image_id);
         }
         let frame_set = FrameSet::new(available);
-        Ok(FrameManager { frames, frame_set })
+        Ok(FrameManager { frame_set })
     }
 
     pub fn present_prepared(
@@ -74,24 +76,21 @@ impl FrameManager {
         sender: Option<futures::channel::mpsc::UnboundedSender<ImageId>>,
     ) -> Result<bool, Error> {
         if let Some(prepared) = self.frame_set.prepared {
-            let frame = self.frames.get(&prepared).expect("prepared frame to be in frame map");
-            frame.present(fb, sender)?;
-            self.frame_set.mark_presented(frame.image_id);
+            fb.present_frame(prepared, sender, true)?;
+            self.frame_set.mark_presented(prepared);
             Ok(true)
         } else {
-            println!("no prepared image to present");
             Ok(false)
         }
     }
 
-    pub fn prepare_frame<F>(&mut self, f: F)
+    pub fn prepare_frame<F>(&mut self, fb: &mut FrameBuffer, f: F)
     where
         F: FnOnce(&mut Frame),
     {
         if let Some(image_id) = self.frame_set.get_available_image() {
-            let mut frame =
-                self.frames.get_mut(&image_id).expect("available frame to be in frame map");
-            f(&mut frame);
+            let frame = fb.get_frame_mut(image_id);
+            f(frame);
             self.frame_set.mark_prepared(image_id);
         } else {
             println!("no free image to prepare");
@@ -108,7 +107,7 @@ const FRAME_DELTA: u64 = 10_000_000;
 fn update(config: &Config, frame: &mut Frame, timestamp: u64) -> Result<(), Error> {
     let box_color = [0x80, 0x00, 0x80, 0xFF];
     let white = [0xFF, 0xFF, 0xFF, 0xFF];
-    let box_size = 200;
+    let box_size = 500;
     let box_x = config.width / 2 - box_size / 2;
     let box_y = config.height / 2 - box_size / 2;
     if config.format != PixelFormat::Rgb565 {
@@ -143,13 +142,9 @@ fn main() -> Result<(), Error> {
         let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
         // create a framebuffer
-        let fb = FrameBuffer::new(None, Some(sender)).await;
+        let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, Some(sender)).await?;
 
-        let mut fb = if fb.is_err() {
-            bail!("Can't open frame buffer.");
-        } else {
-            fb.unwrap()
-        };
+        fb.allocate_frames(BUFFER_COUNT, PixelFormat::Argb8888).await?;
 
         // Find out the details of the display this frame buffer targets
         let config = fb.get_config();
@@ -159,7 +154,7 @@ fn main() -> Result<(), Error> {
         let frame_manager = Rc::new(RefCell::new(FrameManager::new(&mut fb).await?));
 
         // prepare the first frame
-        frame_manager.borrow_mut().prepare_frame(|frame| {
+        frame_manager.borrow_mut().prepare_frame(&mut fb, |frame| {
             update(&config, frame, 0).expect("update to work");
         });
 
@@ -176,7 +171,7 @@ fn main() -> Result<(), Error> {
 
         // Prepare a second image. There always wants to be a prepared image
         // to present at a fixed time after vsync.
-        frame_manager.borrow_mut().prepare_frame(|frame| {
+        frame_manager.borrow_mut().prepare_frame(&mut fb, |frame| {
             update(&config, frame, 0).expect("update to work");
         });
 
@@ -188,6 +183,9 @@ fn main() -> Result<(), Error> {
         // the async block that receives messages about images being no longer
         // in use.
         let frame_manager_image = frame_manager.clone();
+
+        let fb_ptr = Rc::new(RefCell::new(fb));
+        let fb_ptr2 = fb_ptr.clone();
 
         // wait for events from the image freed fence to know when an
         // image can prepared.
@@ -207,7 +205,8 @@ fn main() -> Result<(), Error> {
                     // Use elapsed time to animate the horizontal and vertical
                     // lines
                     let time = Instant::now().duration_since(start_time).as_nanos() as u64;
-                    frame_manager.prepare_frame(|frame| {
+                    let mut fb = fb_ptr.borrow_mut();
+                    frame_manager.prepare_frame(&mut fb, |frame| {
                         update(&config, frame, time).expect("update to work");
                     });
                 }
@@ -230,6 +229,8 @@ fn main() -> Result<(), Error> {
                     // since only one of this closure or the vsync closure can
                     // be in scope at once.
                     let mut frame_manager = frame_manager.borrow_mut();
+
+                    let mut fb = fb_ptr2.borrow_mut();
 
                     // Present the previously prepared image. As a side effect,
                     // the currently presented image will be eventually freed.
