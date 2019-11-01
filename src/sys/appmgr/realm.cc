@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/sys/appmgr/realm.h"
-
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -84,12 +84,12 @@ void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int target_fd,
   }
 }
 
-zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data, const std::string& argv0,
+zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::string& argv0,
                           const std::vector<std::string>& env_vars,
                           fuchsia::sys::LaunchInfo launch_info, zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   TRACE_DURATION("appmgr", "Realm::CreateProcess", "launch_info.url", launch_info.url);
-  if (!data)
+  if (!executable)
     return zx::process();
 
   zx::job duplicate_job;
@@ -144,11 +144,11 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data, const std::str
                        .ns = {.prefix = flat->path[i], .handle = flat->handle[i]}});
   }
 
-  data.vmo().set_property(ZX_PROP_NAME, label.data(), label.size());
+  executable.set_property(ZX_PROP_NAME, label.data(), label.size());
 
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_vmo(job.get(), flags, data.vmo().release(), argv.data(), environ.data(),
+  status = fdio_spawn_vmo(job.get(), flags, executable.release(), argv.data(), environ.data(),
                           actions.size(), actions.data(), process.reset_and_get_address(), err_msg);
 
   if (status != ZX_OK) {
@@ -578,15 +578,18 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
 
   zx_status_t status;
-  fsl::SizedVmo executable;
-  if (!fsl::VmoFromFilename(path, &executable))
+  zx::vmo executable;
+  fbl::unique_fd fd;
+  status = fdio_open_fd(path.c_str(), fuchsia::io::OPEN_RIGHT_READABLE |
+                        fuchsia::io::OPEN_RIGHT_EXECUTABLE,
+                        fd.reset_and_get_address());
+  if (status != ZX_OK) {
     return;
-
-  // The VMO we get back from VmoFromFilename is not marked executable.
-  // Turn it into one that is executable.
-  status = executable.ReplaceAsExecutable(zx::handle());
-  if (status != ZX_OK)
+  }
+  status = fdio_get_vmo_exec(fd.get(), executable.reset_and_get_address());
+  if (status != ZX_OK) {
     return;
+  }
 
   zx::job child_job;
   status = zx::job::create(job_, 0u, &child_job);
@@ -735,7 +738,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     runtime = cmx.runtime_meta();
   }
 
-  fsl::SizedVmo app_data;
+  zx::vmo executable;
   std::string app_argv0;
   fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata;
   const ProgramMetadata program = cmx.program_meta();
@@ -756,10 +759,17 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     app_argv0 = fxl::Concatenate({kAppArgv0Prefix, bin_path});
     TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:VmoFromFilenameAt",
                          "bin_path", bin_path);
-    VmoFromFilenameAt(fd.get(), bin_path, &app_data);
-    app_data.ReplaceAsExecutable(zx::handle());
+    zx_status_t status;
+    fbl::unique_fd elf_fd;
+    status = fdio_open_fd_at(fd.get(), bin_path.c_str(),
+                             fuchsia::io::OPEN_RIGHT_READABLE |
+                             fuchsia::io::OPEN_RIGHT_EXECUTABLE,
+                             elf_fd.reset_and_get_address());
+    if (status == ZX_OK) {
+        status = fdio_get_vmo_exec(elf_fd.get(), executable.reset_and_get_address());
+    }
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:VmoFromFilenameAt");
-    if (!app_data) {
+    if (status != ZX_OK) {
       FXL_LOG(ERROR) << "component '" << package->resolved_url << "' has neither runner (error: '"
                      << runtime_parse_error << "') nor elf binary: '" << bin_path << "'";
       component_request.SetReturnValues(kComponentCreationFailed,
@@ -848,7 +858,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   if (runtime.IsNull()) {
     // Use the default runner: ELF binaries.
-    CreateElfBinaryComponentFromPackage(std::move(launch_info), app_data, app_argv0,
+    CreateElfBinaryComponentFromPackage(std::move(launch_info), std::move(executable), app_argv0,
                                         program.env_vars(), std::move(loader_service),
                                         builder.Build(), std::move(component_request),
                                         std::move(ns), policies, std::move(callback));
@@ -861,7 +871,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 }
 
 void Realm::CreateElfBinaryComponentFromPackage(
-    fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data, const std::string& app_argv0,
+    fuchsia::sys::LaunchInfo launch_info, zx::vmo executable, const std::string& app_argv0,
     const std::vector<std::string>& env_vars, zx::channel loader_service,
     fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
     fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_t>& policies,
@@ -885,7 +895,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
   const std::string args = Util::GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
   auto channels = Util::BindDirectory(&launch_info);
-  zx::process process = CreateProcess(child_job, std::move(app_data), app_argv0, env_vars,
+  zx::process process = CreateProcess(child_job, std::move(executable), app_argv0, env_vars,
                                       std::move(launch_info), std::move(loader_service), flat);
 
   if (process) {

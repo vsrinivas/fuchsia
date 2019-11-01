@@ -147,7 +147,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                                   ComponentObjectCreatedCallback callback);
 
   void CreateElfBinaryComponentFromPackage(fuchsia::sys::LaunchInfo launch_info,
-                                           fsl::SizedVmo& app_data, const std::string& app_argv0,
+                                           zx::vmo executable, const std::string& app_argv0,
                                            const std::vector<std::string>& env_vars,
                                            zx::channel loader_service, fdio_flat_namespace_t* flat,
                                            ComponentRequestWrapper component_request,
