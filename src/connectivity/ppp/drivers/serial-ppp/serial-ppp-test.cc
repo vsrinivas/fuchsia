@@ -142,7 +142,7 @@ TEST_F(SerialPppHarness, DriverRxSingleFrameNoProtocol) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  Device().Rx(fppp::ProtocolType::CONTROL, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::CONTROL, [information](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -163,7 +163,7 @@ TEST_F(SerialPppHarness, DriverRxSingleFrame) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  Device().Rx(fppp::ProtocolType::IPV4, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::IPV4, [information](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -184,7 +184,7 @@ TEST_F(SerialPppHarness, DriverRxSingleFrameFiller) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  Device().Rx(fppp::ProtocolType::IPV4, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::IPV4, [information](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -207,7 +207,7 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFrames) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  Device().Rx(fppp::ProtocolType::IPV4, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::IPV4, [information0, information1](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -219,7 +219,7 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFrames) {
     ASSERT_BYTES_EQ(received.data(), information0.data(), information0.size());
   });
 
-  Device().Rx(fppp::ProtocolType::CONTROL, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::CONTROL, [information1](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -244,7 +244,7 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFramesQueued) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  Device().Rx(fppp::ProtocolType::CONTROL, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::CONTROL, [information2](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
@@ -256,7 +256,7 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFramesQueued) {
     ASSERT_BYTES_EQ(received.data(), information2.data(), information2.size());
   });
 
-  Device().Rx(fppp::ProtocolType::IPV4, [&](auto result) {
+  Device().Rx(fppp::ProtocolType::IPV4, [information1](auto result) {
     ASSERT_TRUE(result.is_ok());
     auto& response = result.value();
     auto& protocol = response.protocol;
