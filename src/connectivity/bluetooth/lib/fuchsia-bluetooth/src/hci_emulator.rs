@@ -167,7 +167,7 @@ impl TestDevice {
         let channel = fdio::clone_channel(&self.0)?;
         let controller = ControllerProxy::new(fasync::Channel::from_channel(channel)?);
 
-        let _ = controller
+        controller
             .bind(EMULATOR_DRIVER_PATH)
             .map_err(Error::from)
             .on_timeout(10.seconds().after_now(), || {

@@ -778,7 +778,8 @@ async fn try_restore_bonds(
         Some(data) => data,
         None => return Ok(()),
     };
-    let res = host_device.read().restore_bonds(data).await;
+    let fut = host_device.read().restore_bonds(data);
+    let res = fut.await;
     res.map_err(|e| {
         fx_log_err!("failed to restore bonding data for host: {:?}", e);
         e

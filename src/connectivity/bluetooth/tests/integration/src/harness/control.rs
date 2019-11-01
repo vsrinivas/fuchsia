@@ -83,7 +83,8 @@ pub async fn new_control_harness() -> Result<ControlHarness, Error> {
     let control_harness = ControlHarness::new(proxy);
 
     // Store existing hosts in our state, as we won't get notified about them
-    let hosts = control_harness.aux().get_adapters().await?;
+    let fut = control_harness.aux().get_adapters();
+    let hosts = fut.await?;
     if let Some(hosts) = hosts {
         for host in hosts {
             control_harness.write_state().hosts.insert(host.identifier.clone(), host);
@@ -198,7 +199,8 @@ pub async fn activate_fake_host(
         .identifier
         .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
 
-    control.aux().set_active_adapter(&host).await?;
+    let fut = control.aux().set_active_adapter(&host);
+    fut.await?;
     control
         .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout())
         .await?;

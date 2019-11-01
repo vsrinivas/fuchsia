@@ -65,13 +65,13 @@ async fn start_advertising(
     params: AdvertisingParameters,
     handle: ServerEnd<AdvertisingHandleMarker>,
 ) -> Result<AdvertisingResult, Error> {
-    harness
+    let fut = harness
         .aux()
         .proxy()
         .start_advertising(params, handle)
         .map_err(|e| e.context("FIDL error sending command").into())
-        .on_timeout(test_timeout().after_now(), move || Err(err_msg("timed out")))
-        .await
+        .on_timeout(test_timeout().after_now(), move || Err(err_msg("timed out")));
+    fut.await
         .map_err(|e| e.context("Could not start advertising").into())
 }
 

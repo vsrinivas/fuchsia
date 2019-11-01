@@ -34,10 +34,10 @@ fn service_definition_for_testing() -> ServiceDefinition {
 
 async fn add_service(profile: &ProfileHarness) -> Result<u64, failure::Error> {
     let mut service_def = service_definition_for_testing();
-    let (status, id) = profile
+    let fut = profile
         .aux()
-        .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
-        .await?;
+        .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false);
+    let (status, id) = fut.await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
@@ -68,7 +68,8 @@ async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Erro
 }
 
 async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, socket) = profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16).await?;
+    let fut = profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16);
+    let (status, socket) = fut.await?;
     // Should be an error
     if status.error.is_none() {
         return Err(format_err!("Expected an error from connecting to an unknown peer"));

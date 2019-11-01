@@ -58,11 +58,11 @@ pub fn expect_remote_device(
 
 // Returns a future that resolves when a peer matching `id` is not present on the host.
 pub async fn expect_no_peer(host: &HostDriverHarness, id: String) -> Result<(), Error> {
-    host.when_satisfied(
+    let fut = host.when_satisfied(
         Predicate::<HostState>::new(move |host| host.peers.iter().all(|(i, _)| i != &id), None),
         timeout_duration(),
-    )
-    .await?;
+    );
+    fut.await?;
     Ok(())
 }
 
@@ -115,21 +115,21 @@ pub async fn expect_host_peer(
     host: &HostDriverHarness,
     target: Predicate<RemoteDevice>,
 ) -> Result<HostState, Error> {
-    host.when_satisfied(
+    let fut = host.when_satisfied(
         Predicate::<HostState>::new(
             move |host| host.peers.iter().any(|(_, p)| target.satisfied(p)),
             None,
         ),
         timeout_duration(),
-    )
-    .await
+    );
+    fut.await
 }
 
 pub async fn expect_adapter_state(
     host: &HostDriverHarness,
     target: Predicate<AdapterState>,
 ) -> Result<HostState, Error> {
-    host.when_satisfied(
+    let fut = host.when_satisfied(
         Predicate::<HostState>::new(
             move |host| match &host.host_info.state {
                 Some(state) => target.satisfied(state),
@@ -138,8 +138,8 @@ pub async fn expect_adapter_state(
             None,
         ),
         timeout_duration(),
-    )
-    .await
+    );
+    fut.await
 }
 
 impl TestHarness for HostDriverHarness {

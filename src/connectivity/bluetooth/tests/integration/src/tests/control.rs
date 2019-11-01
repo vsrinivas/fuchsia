@@ -52,7 +52,8 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
         .collect();
 
     for (id, _) in state.hosts {
-        control.aux().set_active_adapter(&id).await?;
+        let fut = control.aux().set_active_adapter(&id);
+        fut.await?;
         control.when_satisfied(control_expectation::active_host_is(id), control_timeout()).await?;
     }
 
@@ -89,7 +90,8 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
         .await?
         .map_err(|e| format_err!("Failed to register fake peer: {:#?}", e))?;
 
-    control.aux().request_discovery(true).await?;
+    let fut = control.aux().request_discovery(true);
+    fut.await?;
     let state = control
         .when_satisfied(
             control_expectation::peer_exists(expectation::peer::address(&peer_address_string)),
@@ -103,12 +105,14 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     // We can safely unwrap here as this is guarded by the previous expectation
     let peer = state.peers.iter().find(|(_, d)| &d.address == &peer_address_string).unwrap().0;
 
-    control.aux().connect(peer).await?;
+    let fut = control.aux().connect(peer);
+    fut.await?;
 
     control
         .when_satisfied(control_expectation::peer_connected(peer, true), control_timeout())
         .await?;
-    control.aux().disconnect(peer).await?;
+    let fut = control.aux().disconnect(peer);
+    fut.await?;
 
     control
         .when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())

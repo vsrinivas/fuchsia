@@ -63,13 +63,13 @@ fn scan_timeout() -> Duration {
 }
 
 async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
-    let status = central
+    let fut = central
         .aux()
         .proxy()
         .start_scan(None)
         .map_err(|e| e.context("FIDL error sending command").into())
-        .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")))
-        .await
+        .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")));
+    let status = fut.await
         .context("Could not initialize scan")?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
@@ -79,7 +79,8 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
 
 async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let _peer = central.aux().add_le_peer_default(&address).await?;
+    let fut = central.aux().add_le_peer_default(&address);
+    let _peer = fut.await?;
     start_scan(&central).await?;
     let _ = central
         .when_satisfied(
