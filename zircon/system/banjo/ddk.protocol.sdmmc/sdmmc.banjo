@@ -100,7 +100,7 @@ protocol Sdmmc {
     SetSignalVoltage(SdmmcVoltage voltage) -> (zx.status s);
     /// Set bus width.
     SetBusWidth(SdmmcBusWidth bus_width) -> (zx.status s);
-    /// Set bus frequency.
+    /// Set bus frequency, zero means disable the clock to the card.
     SetBusFreq(uint32 bus_freq) -> (zx.status s);
     /// Set mmc timing.
     SetTiming(SdmmcTiming timing) -> (zx.status s);

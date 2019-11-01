@@ -95,6 +95,9 @@ class TestAmlSdEmmc : public AmlSdEmmc {
           cnd_signal(&spurious_interrupt_received_);
           return ZX_OK;
         }
+
+        // Indicate to the driver that the bus is idle.
+        mmio_.Write32(1 << 24, kAmlSdEmmcStatusOffset);
       }
 
       zx::nanosleep(zx::deadline_after(zx::usec(1)));
@@ -473,6 +476,31 @@ TEST_F(AmlSdEmmcTest, SpuriousInterrupt) {
   // And just to be sure send another request which will also require the
   // interrupt thread to be running.
   ASSERT_OK(dut_->SdmmcRequest(&request));
+}
+
+TEST_F(AmlSdEmmcTest, SetBusFreq) {
+  ASSERT_OK(dut_->Init());
+
+  auto clock = AmlSdEmmcClock::Get().FromValue(0).WriteTo(&mmio_);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(100'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 10);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(200'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 9);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(0));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 0);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(54'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 19);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(400'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 60);
+  EXPECT_EQ(clock.cfg_src(), 0);
 }
 
 }  // namespace sdmmc

@@ -19,6 +19,11 @@
 
 namespace {
 
+constexpr uint32_t kInitializationFrequencyHz = 400'000;
+
+constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
+constexpr zx::duration kDataStabilizationTime = zx::msec(1);
+
 constexpr uint32_t GetBits(uint32_t x, uint32_t mask, uint32_t loc) { return (x & mask) >> loc; }
 
 constexpr void UpdateBits(uint32_t* x, uint32_t mask, uint32_t loc, uint32_t val) {
@@ -199,7 +204,7 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
   zx_status_t st = ZX_OK;
   sdmmc_req_t req = {};
   req.cmd_idx = SD_VOLTAGE_SWITCH;
-  req.arg = ocr;
+  req.arg = 0;
   req.cmd_flags = SD_VOLTAGE_SWITCH_FLAGS;
   req.use_dma = UseDma();
 
@@ -207,18 +212,32 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
     return ZX_OK;
   }
 
-  st = host_.Request(&req);
-  if (st != ZX_OK) {
+  if ((st = host_.Request(&req)) != ZX_OK) {
     zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
     return st;
   }
-  zx::nanosleep(zx::deadline_after(zx::msec(20)));
-  // TODO: clock gating while switching voltage
-  st = host_.SetSignalVoltage(SDMMC_VOLTAGE_V180);
-  if (st != ZX_OK) {
+
+  if ((st = host_.SetBusFreq(0)) != ZX_OK) {
     zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
     return st;
   }
+
+  if ((st = host_.SetSignalVoltage(SDMMC_VOLTAGE_V180)) != ZX_OK) {
+    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
+    return st;
+  }
+
+  // Wait 5ms for the voltage to stabilize. See section 3.6.1. in the SDHCI specification.
+  zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
+
+  if ((st = host_.SetBusFreq(kInitializationFrequencyHz)) != ZX_OK) {
+    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
+    return st;
+  }
+
+  // Wait 1ms for the data lines to stabilize.
+  zx::nanosleep(zx::deadline_after(kDataStabilizationTime));
+
   signal_voltage_ = SDMMC_VOLTAGE_V180;
   return ZX_OK;
 }

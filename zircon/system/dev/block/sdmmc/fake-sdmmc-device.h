@@ -46,10 +46,22 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
 
   zx_status_t SdmmcHostInfo(sdmmc_host_info_t* out_info);
 
-  zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) { return set_signal_voltage_status_; }
-  zx_status_t SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) { return set_bus_width_status_; }
-  zx_status_t SdmmcSetBusFreq(uint32_t bus_freq) { return set_bus_freq_status_; }
-  zx_status_t SdmmcSetTiming(sdmmc_timing_t timing) { return set_timing_status_; }
+  zx_status_t SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
+    signal_voltage_ = voltage;
+    return set_signal_voltage_status_;
+  }
+  zx_status_t SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
+    bus_width_ = bus_width;
+    return set_bus_width_status_;
+  }
+  zx_status_t SdmmcSetBusFreq(uint32_t bus_freq) {
+    bus_freq_ = bus_freq;
+    return set_bus_freq_status_;
+  }
+  zx_status_t SdmmcSetTiming(sdmmc_timing_t timing) {
+    timing_ = timing;
+    return set_timing_status_;
+  }
   void SdmmcHwReset() {}
   zx_status_t SdmmcPerformTuning(uint32_t cmd_idx) { return perform_tuning_status_; }
 
@@ -75,6 +87,11 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   void set_set_timing_status(zx_status_t status) { set_timing_status_ = status; }
   void set_perform_tuning_status(zx_status_t status) { perform_tuning_status_ = status; }
 
+  sdmmc_voltage_t signal_voltage() const { return signal_voltage_; }
+  sdmmc_bus_width_t bus_width() const { return bus_width_; }
+  uint32_t bus_freq() const { return bus_freq_; }
+  sdmmc_timing_t timing() const { return timing_; }
+
  private:
   const sdmmc_protocol_t proto_;
   sdmmc_host_info_t host_info_;
@@ -87,6 +104,10 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   zx_status_t set_bus_freq_status_ = ZX_OK;
   zx_status_t set_timing_status_ = ZX_OK;
   zx_status_t perform_tuning_status_ = ZX_OK;
+  sdmmc_voltage_t signal_voltage_ = SDMMC_VOLTAGE_MAX;
+  sdmmc_bus_width_t bus_width_ = SDMMC_BUS_WIDTH_ONE;
+  uint32_t bus_freq_ = 0;
+  sdmmc_timing_t timing_ = SDMMC_TIMING_MAX;
 };
 
 }  // namespace sdmmc

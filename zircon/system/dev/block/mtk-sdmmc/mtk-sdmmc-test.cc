@@ -138,7 +138,8 @@ TEST(SdmmcTest, SetBusFreq) {
       .ExpectWrite()
       .ExpectWrite(
           msdc_cfg.set_card_ck_mode(MsdcCfg::kCardCkModeDiv).set_card_ck_div(125).reg_value())
-      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
+      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).reg_value());
 
   EXPECT_OK(sdmmc.SdmmcSetBusFreq(400000));
   ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
@@ -149,7 +150,8 @@ TEST(SdmmcTest, SetBusFreq) {
       .ExpectRead(msdc_cfg.reg_value())
       .ExpectWrite()
       .ExpectWrite(msdc_cfg.set_card_ck_div(25).reg_value())
-      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
+      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).reg_value());
 
   EXPECT_OK(sdmmc.SdmmcSetBusFreq(1000000));
   ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
@@ -161,7 +163,8 @@ TEST(SdmmcTest, SetBusFreq) {
       .ExpectWrite()
       .ExpectWrite(
           msdc_cfg.set_card_ck_mode(MsdcCfg::kCardCkModeNoDiv).set_card_ck_div(0).reg_value())
-      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
+      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).reg_value());
 
   EXPECT_OK(sdmmc.SdmmcSetBusFreq(200000000));
   ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
@@ -172,7 +175,8 @@ TEST(SdmmcTest, SetBusFreq) {
       .ExpectRead(msdc_cfg.reg_value())
       .ExpectWrite()
       .ExpectWrite(msdc_cfg.set_hs400_ck_mode(1).reg_value())
-      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
+      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).reg_value());
 
   EXPECT_OK(sdmmc.SdmmcSetBusFreq(200000000));
   ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
@@ -183,9 +187,19 @@ TEST(SdmmcTest, SetBusFreq) {
       .ExpectRead(msdc_cfg.reg_value())
       .ExpectWrite()
       .ExpectWrite(msdc_cfg.set_card_ck_div(3).set_hs400_ck_mode(0).reg_value())
-      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
+      .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).reg_value());
 
   EXPECT_OK(sdmmc.SdmmcSetBusFreq(10000000));
+  mock_regs.VerifyAll();
+
+  // Zero bus frequency: Gate the clock.
+  msdc_cfg.set_reg_value(0).set_ck_pwr_down(1).set_ck_drive(1);
+  GetMockReg<MsdcCfg>(mock_regs)
+      .ExpectRead(msdc_cfg.reg_value())
+      .ExpectWrite(msdc_cfg.set_ck_pwr_down(0).set_ck_drive(0).reg_value());
+
+  EXPECT_OK(sdmmc.SdmmcSetBusFreq(0));
   mock_regs.VerifyAll();
 }
 

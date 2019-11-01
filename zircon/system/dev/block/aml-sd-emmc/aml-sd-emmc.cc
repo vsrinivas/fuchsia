@@ -320,8 +320,8 @@ zx_status_t AmlSdEmmc::SdmmcRegisterInBandInterrupt(
 zx_status_t AmlSdEmmc::SdmmcSetBusFreq(uint32_t freq) {
   uint32_t clk = 0, clk_src = 0, clk_div = 0;
   if (freq == 0) {
-    // TODO: Disable clock here
-    return ZX_ERR_NOT_SUPPORTED;
+    AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(0).WriteTo(&mmio_);
+    return ZX_OK;
   } else if (freq > max_freq_) {
     freq = max_freq_;
   } else if (freq < min_freq_) {
@@ -659,6 +659,12 @@ zx_status_t AmlSdEmmc::FinishReq(sdmmc_req_t* req) {
 }
 
 zx_status_t AmlSdEmmc::SdmmcRequest(sdmmc_req_t* req) {
+  // Wait for the bus to become idle before issuing the next request. This could be necessary if the
+  // card is driving CMD low after a voltage switch.
+  while (!AmlSdEmmcStatus::Get().ReadFrom(&mmio_).cmd_i()) {
+    zx::nanosleep(zx::deadline_after(zx::usec(10)));
+  }
+
   zx_status_t status = ZX_OK;
 
   // stop executing
