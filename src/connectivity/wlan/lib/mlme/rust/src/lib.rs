@@ -9,6 +9,7 @@ pub mod auth;
 pub mod buffer;
 pub mod client;
 pub mod device;
+pub mod key;
 pub mod error;
 pub mod timer;
 

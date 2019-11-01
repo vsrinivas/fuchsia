@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{buffer::OutBuf, error::Error},
+    crate::{buffer::OutBuf, error::Error, key},
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
@@ -36,6 +36,9 @@ pub struct Device {
     /// chosen channel.
     set_wlan_channel:
         extern "C" fn(device: *mut c_void, channel: ddk_protocol_wlan_info::WlanChannel) -> i32,
+    /// Set a key on the device.
+    /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
+    set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
 }
 
 impl Device {
@@ -74,6 +77,11 @@ impl Device {
         zx::ok(status)
     }
 
+    pub fn set_key(&self, mut key: key::KeyConfig) -> Result<(), zx::Status> {
+        let status = (self.set_key)(self.device, &mut key as *mut key::KeyConfig);
+        zx::ok(status)
+    }
+
     pub fn channel(&self) -> ddk_protocol_wlan_info::WlanChannel {
         (self.get_wlan_channel)(self.device)
     }
@@ -85,6 +93,7 @@ pub struct FakeDevice {
     pub wlan_queue: Vec<(Vec<u8>, u32)>,
     pub sme_sap: (zx::Channel, zx::Channel),
     pub wlan_channel: ddk_protocol_wlan_info::WlanChannel,
+    pub keys: Vec<key::KeyConfig>,
 }
 
 #[cfg(test)]
@@ -100,6 +109,7 @@ impl FakeDevice {
                 cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
                 secondary80: 0,
             },
+            keys: vec![],
         }
     }
 
@@ -149,6 +159,13 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
+    pub extern "C" fn set_key(device: *mut c_void, key: *mut key::KeyConfig) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).keys.push((*key).clone());
+        }
+        zx::sys::ZX_OK
+    }
+
     pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -178,6 +195,7 @@ impl FakeDevice {
             get_sme_channel: Self::get_sme_channel,
             get_wlan_channel: Self::get_wlan_channel,
             set_wlan_channel: Self::set_wlan_channel,
+            set_key: Self::set_key,
         }
     }
 
@@ -189,6 +207,7 @@ impl FakeDevice {
             get_sme_channel: Self::get_sme_channel,
             set_wlan_channel: Self::set_wlan_channel,
             get_wlan_channel: Self::get_wlan_channel,
+            set_key: Self::set_key,
         }
     }
 }
@@ -233,6 +252,7 @@ mod tests {
             get_sme_channel,
             get_wlan_channel: FakeDevice::get_wlan_channel,
             set_wlan_channel: FakeDevice::set_wlan_channel,
+            set_key: FakeDevice::set_key,
         };
 
         let result = dev.access_sme_sender(|sender| {
@@ -296,5 +316,25 @@ mod tests {
                 secondary80: 4,
             }
         );
+    }
+
+    #[test]
+    fn set_key() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        dev.set_key(key::KeyConfig {
+            bssid: 1,
+            protection: key::Protection::NONE,
+            cipher_oui: [3, 4, 5],
+            cipher_type: 6,
+            key_type: key::KeyType::PAIRWISE,
+            peer_addr: [8; 6],
+            key_idx: 9,
+            key_len: 10,
+            key: [11; 32],
+            rsc: 12,
+        })
+        .expect("error setting key");
+        assert_eq!(fake_device.keys.len(), 1);
     }
 }

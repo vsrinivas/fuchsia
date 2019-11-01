@@ -134,6 +134,7 @@ typedef struct wlan_tx_status {
   bool success;
 } __PACKED wlan_tx_status_t;
 
+// LINT.IfChange
 enum {
   WLAN_PROTECTION_NONE = 0,
   WLAN_PROTECTION_RX = 1,
@@ -168,6 +169,7 @@ typedef struct wlan_key_config {
   // In all other cases the RSC will be 0.
   uint64_t rsc;
 } wlan_key_config_t;
+// LINT.ThenChange(//src/connectivity/wlan/lib/mlme/rust/src/key.rs)
 
 typedef struct wlan_tx_packet {
   // Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.

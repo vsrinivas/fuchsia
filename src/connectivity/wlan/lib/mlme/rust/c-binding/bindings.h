@@ -15,6 +15,7 @@
 #include <stdlib.h>
 
 #include <ddk/protocol/wlan/info.h>
+#include <garnet/lib/wlan/protocol/include/wlan/protocol/mac.h>
 
 typedef struct wlan_ap_sta_t wlan_ap_sta_t;
 
@@ -73,6 +74,11 @@ typedef struct {
    * chosen channel.
    */
   int32_t (*set_wlan_channel)(void *device, wlan_channel_t channel);
+  /**
+   * Set a key on the device.
+   * |key| is mutable because the underlying API does not take a const wlan_key_config_t.
+   */
+  int32_t (*set_key)(void *device, wlan_key_config_t *key);
 } mlme_device_ops_t;
 
 /**

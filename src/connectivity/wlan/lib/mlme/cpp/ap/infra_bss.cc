@@ -4,6 +4,7 @@
 
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -56,6 +57,9 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
       },
       .get_wlan_channel = [](void* bss) -> wlan_channel_t {
         return BSS(bss)->device_->GetState()->channel();
+      },
+      .set_key = [](void* bss, wlan_key_config_t* key) -> zx_status_t {
+        return BSS(bss)->device_->SetKey(key);
       },
   };
   rust_ap_ = NewApStation(rust_device, rust_buffer_provider, bssid_);

@@ -73,6 +73,9 @@ Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config
       .get_wlan_channel = [](void* sta) -> wlan_channel_t {
         return STA(sta)->device_->GetState()->channel();
       },
+      .set_key = [](void* sta, wlan_key_config_t* key) -> zx_status_t {
+        return STA(sta)->device_->SetKey(key);
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = static_cast<void*>(this),
