@@ -326,19 +326,20 @@ impl {{ $interface.Name }}Event {
 	{{- end }}
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct {{ $interface.Name }}EventSender<'a> {
+#[deprecated(note = "Use {{ $interface.Name }}RequestStream / Responder instead")]
+pub struct {{ $interface.Name }}ServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> {{ $interface.Name }}EventSender<'a> {
+impl <'a> {{ $interface.Name }}ServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
 	}
@@ -360,7 +361,29 @@ impl <'a> {{ $interface.Name }}EventSender<'a> {
 			Ok(())
 		})
 	}
-	{{ end }}
+	{{- end -}}
+
+	{{- if and $method.HasRequest $method.HasResponse }}
+	pub fn send_{{ $method.Name }}_response(&self,
+		txid: fidl::client::Txid
+		{{- range $param := $method.Response -}},
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			{{ $interface.Name }}Encoder::encode_{{ $method.Name }}_response(
+				bytes, handles,
+				txid.as_raw_id(),
+				{{- range $index, $param := $method.Response -}}
+					{{ $param.Name -}},
+				{{- end -}}
+			)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	{{- end -}}
+
 	{{- end }}
 }
 
@@ -481,6 +504,73 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+{{ $interface.RequestDerives }}
+#[deprecated(note = "Use {{ $interface.Name }}Request instead")]
+pub enum {{ $interface.Name }}RequestMessage {
+	{{- range $method := $interface.Methods }}
+        {{- if $method.HasRequest }}
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
+	{{ $method.CamelName }} {
+		{{ range $index, $param := $method.Request }}
+		{{ $param.Name }}: {{ $param.Type }},
+		{{ end -}}
+		{{- if $method.HasResponse -}}
+			tx_id: fidl::client::Txid,
+		{{- end -}}
+	},
+	{{- end }}
+	{{- end }}
+}
+
+impl {{ $interface.Name }}RequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<{{ $interface.Name }}RequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			{{- range $method := $interface.Methods }}
+			{{- if $method.HasRequest }}
+			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
+				let mut out_tuple: (
+					{{- range $index, $param := $method.Request -}}
+						{{- if ne 0 $index -}}, {{- $param.Type -}}
+						{{- else -}} {{- $param.Type -}}
+						{{- end -}}
+					{{- end -}}
+				) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok({{ $interface.Name }}RequestMessage::{{ $method.CamelName }} {
+					{{- range $index, $param := $method.Request -}}
+						{{- if ne 1 (len $method.Request) -}}
+						{{ $param.Name }}: out_tuple.{{ $index }},
+						{{- else -}}
+						{{ $param.Name }}: out_tuple,
+						{{- end -}}
+					{{- end -}}
+					{{- if $method.HasResponse -}}
+						tx_id: header.tx_id.into(),
+					{{- end -}}
+				})
+			}
+			{{- end }}
+			{{- end }}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 
 {{- range .DocComments}}

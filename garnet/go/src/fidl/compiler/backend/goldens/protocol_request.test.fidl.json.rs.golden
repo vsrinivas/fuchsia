@@ -143,19 +143,20 @@ pub enum ChildEvent {
 impl ChildEvent {
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct ChildEventSender<'a> {
+#[deprecated(note = "Use ChildRequestStream / Responder instead")]
+pub struct ChildServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ChildEventSender<'a> {
+impl <'a> ChildServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
 	}
@@ -242,6 +243,31 @@ impl futures::Stream for ChildRequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use ChildRequest instead")]
+pub enum ChildRequestMessage {
+}
+
+impl ChildRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ChildRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 #[derive(Debug)]
 pub enum ChildRequest {
@@ -479,21 +505,44 @@ pub enum ParentEvent {
 impl ParentEvent {
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct ParentEventSender<'a> {
+#[deprecated(note = "Use ParentRequestStream / Responder instead")]
+pub struct ParentServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ParentEventSender<'a> {
+impl <'a> ParentServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
+	}
+	pub fn send_get_child_response(&self,
+		txid: fidl::client::Txid,
+		mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			ParentEncoder::encode_get_child_response(
+				bytes, handles,
+				txid.as_raw_id(),c,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_get_child_request_response(&self,
+		txid: fidl::client::Txid,
+		mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			ParentEncoder::encode_get_child_request_response(
+				bytes, handles,
+				txid.as_raw_id(),r,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 
@@ -622,6 +671,67 @@ impl futures::Stream for ParentRequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use ParentRequest instead")]
+pub enum ParentRequestMessage {
+	GetChild {
+		tx_id: fidl::client::Txid,},
+	GetChildRequest {
+		tx_id: fidl::client::Txid,},
+	TakeChild {
+		
+		c: fidl::endpoints::ClientEnd<ChildMarker>,
+		},
+	TakeChildRequest {
+		
+		r: fidl::endpoints::ServerEnd<ChildMarker>,
+		},
+}
+
+impl ParentRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ParentRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			0x3692bc6900000000 | 0x57e26ed694158086 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ParentRequestMessage::GetChild {tx_id: header.tx_id.into(),})
+			}
+			0x3faacc7e00000000 | 0x5ea0990a698a80 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ParentRequestMessage::GetChildRequest {tx_id: header.tx_id.into(),})
+			}
+			0x4c0642f900000000 | 0x6a9827d18871f87d => {
+				let mut out_tuple: (fidl::endpoints::ClientEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ParentRequestMessage::TakeChild {c: out_tuple,})
+			}
+			0x5ec3867a00000000 | 0x6c4a70e2a2126637 => {
+				let mut out_tuple: (fidl::endpoints::ServerEnd<ChildMarker>) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ParentRequestMessage::TakeChildRequest {r: out_tuple,})
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 #[derive(Debug)]
 pub enum ParentRequest {

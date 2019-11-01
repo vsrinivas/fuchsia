@@ -84,6 +84,12 @@ impl Txid {
     }
 }
 
+impl From<u32> for Txid {
+    fn from(txid: u32) -> Self {
+        Self(txid)
+    }
+}
+
 impl Client {
     /// Create a new client.
     ///

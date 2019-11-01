@@ -49,7 +49,8 @@ impl Device {
         zx::ok(status)
     }
 
-    pub fn access_sme_sender<F: FnOnce(&fidl_mlme::MlmeEventSender) -> Result<(), fidl::Error>>(
+    #[allow(deprecated)] // Until Rust MLME is powered by a Rust-written message loop.
+    pub fn access_sme_sender<F: FnOnce(&fidl_mlme::MlmeServerSender) -> Result<(), fidl::Error>>(
         &self,
         fun: F,
     ) -> Result<(), Error> {
@@ -63,7 +64,7 @@ impl Device {
             Err(Error::Status(format!("SME channel not available"), zx::Status::BAD_HANDLE))
         } else {
             let channel = unsafe { zx::Unowned::<zx::Channel>::from_raw_handle(handle) };
-            fun(&fidl_mlme::MlmeEventSender::new(&channel))
+            fun(&fidl_mlme::MlmeServerSender::new(&channel))
                 .map_err(|e| format_err!("error sending MLME message: {}", e).into())
         }
     }

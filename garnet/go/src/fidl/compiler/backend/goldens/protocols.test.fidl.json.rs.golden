@@ -374,21 +374,64 @@ impl WithAndWithoutRequestResponseEvent {
 	
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct WithAndWithoutRequestResponseEventSender<'a> {
+#[deprecated(note = "Use WithAndWithoutRequestResponseRequestStream / Responder instead")]
+pub struct WithAndWithoutRequestResponseServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
+impl <'a> WithAndWithoutRequestResponseServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
+	}
+	pub fn send_no_request_empty_response_response(&self,
+		txid: fidl::client::Txid) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_no_request_empty_response_response(
+				bytes, handles,
+				txid.as_raw_id(),)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_no_request_with_response_response(&self,
+		txid: fidl::client::Txid,
+		mut ret: &str) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_no_request_with_response_response(
+				bytes, handles,
+				txid.as_raw_id(),ret,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_with_request_empty_response_response(&self,
+		txid: fidl::client::Txid) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_with_request_empty_response_response(
+				bytes, handles,
+				txid.as_raw_id(),)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_with_request_with_response_response(&self,
+		txid: fidl::client::Txid,
+		mut ret: &str) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithAndWithoutRequestResponseEncoder::encode_with_request_with_response_response(
+				bytes, handles,
+				txid.as_raw_id(),ret,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 	pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
@@ -398,7 +441,6 @@ impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
 			Ok(())
 		})
 	}
-	
 	pub fn send_on_with_response(&self,
 		mut ret: &str) -> Result<(), fidl::Error> {
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
@@ -408,7 +450,6 @@ impl <'a> WithAndWithoutRequestResponseEventSender<'a> {
 			Ok(())
 		})
 	}
-	
 }
 
 /// A Stream of incoming requests for WithAndWithoutRequestResponse
@@ -562,6 +603,85 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use WithAndWithoutRequestResponseRequest instead")]
+pub enum WithAndWithoutRequestResponseRequestMessage {
+	NoRequestNoResponse {
+		},
+	NoRequestEmptyResponse {
+		tx_id: fidl::client::Txid,},
+	NoRequestWithResponse {
+		tx_id: fidl::client::Txid,},
+	WithRequestNoResponse {
+		
+		arg: String,
+		},
+	WithRequestEmptyResponse {
+		
+		arg: String,
+		tx_id: fidl::client::Txid,},
+	WithRequestWithResponse {
+		
+		arg: String,
+		tx_id: fidl::client::Txid,},
+}
+
+impl WithAndWithoutRequestResponseRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<WithAndWithoutRequestResponseRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			0x1e03f87500000000 | 0x3931f96bc77fba8 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestNoResponse {})
+			}
+			0x4df6dbd500000000 | 0x706ec7bd335005f9 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestEmptyResponse {tx_id: header.tx_id.into(),})
+			}
+			0x668d7f800000000 | 0x4625ad5934067a48 => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestWithResponse {tx_id: header.tx_id.into(),})
+			}
+			0x19c2137100000000 | 0x46e5095902913025 => {
+				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestNoResponse {arg: out_tuple,})
+			}
+			0x76f2397300000000 | 0x180c481d4a15967 => {
+				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestEmptyResponse {arg: out_tuple,tx_id: header.tx_id.into(),})
+			}
+			0x1973292000000000 | 0x553860267eceec0 => {
+				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestWithResponse {arg: out_tuple,tx_id: header.tx_id.into(),})
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 #[derive(Debug)]
 pub enum WithAndWithoutRequestResponseRequest {
@@ -1396,21 +1516,55 @@ pub enum WithErrorSyntaxEvent {
 impl WithErrorSyntaxEvent {
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct WithErrorSyntaxEventSender<'a> {
+#[deprecated(note = "Use WithErrorSyntaxRequestStream / Responder instead")]
+pub struct WithErrorSyntaxServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> WithErrorSyntaxEventSender<'a> {
+impl <'a> WithErrorSyntaxServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
+	}
+	pub fn send_response_as_struct_response(&self,
+		txid: fidl::client::Txid,
+		mut result: &mut WithErrorSyntaxResponseAsStructResult) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithErrorSyntaxEncoder::encode_response_as_struct_response(
+				bytes, handles,
+				txid.as_raw_id(),result,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_error_as_primitive_response(&self,
+		txid: fidl::client::Txid,
+		mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithErrorSyntaxEncoder::encode_error_as_primitive_response(
+				bytes, handles,
+				txid.as_raw_id(),result,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_error_as_enum_response(&self,
+		txid: fidl::client::Txid,
+		mut result: &mut WithErrorSyntaxErrorAsEnumResult) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			WithErrorSyntaxEncoder::encode_error_as_enum_response(
+				bytes, handles,
+				txid.as_raw_id(),result,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
 	}
 }
 
@@ -1534,6 +1688,55 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use WithErrorSyntaxRequest instead")]
+pub enum WithErrorSyntaxRequestMessage {
+	ResponseAsStruct {
+		tx_id: fidl::client::Txid,},
+	ErrorAsPrimitive {
+		tx_id: fidl::client::Txid,},
+	ErrorAsEnum {
+		tx_id: fidl::client::Txid,},
+}
+
+impl WithErrorSyntaxRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<WithErrorSyntaxRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			0x4f3c32be00000000 | 0x592157d505db2bcf => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithErrorSyntaxRequestMessage::ResponseAsStruct {tx_id: header.tx_id.into(),})
+			}
+			0x7b58113900000000 | 0x20cf80ad7d9b60be => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithErrorSyntaxRequestMessage::ErrorAsPrimitive {tx_id: header.tx_id.into(),})
+			}
+			0x4c95de1f00000000 | 0x3fcd36560f812e7f => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(WithErrorSyntaxRequestMessage::ErrorAsEnum {tx_id: header.tx_id.into(),})
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 #[derive(Debug)]
 pub enum WithErrorSyntaxRequest {
@@ -2163,19 +2366,20 @@ impl ChannelProtocolEvent {
 	
 }
 
-/// A type which can be used to send events into a borrowed channel.
+/// A type which can be used to send responses and events into a borrowed channel.
 ///
 /// Note: this should only be used when the channel must be temporarily
 /// borrowed. For a typical sending of events, use the send_ methods
 /// on the ControlHandle types, which can be acquired through a
 /// RequestStream or Responder type.
-pub struct ChannelProtocolEventSender<'a> {
+#[deprecated(note = "Use ChannelProtocolRequestStream / Responder instead")]
+pub struct ChannelProtocolServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: &'a ::fidl::Channel,
 }
 
-impl <'a> ChannelProtocolEventSender<'a> {
+impl <'a> ChannelProtocolServerSender<'a> {
 	pub fn new(channel: &'a ::fidl::Channel) -> Self {
 		Self { channel }
 	}
@@ -2189,7 +2393,28 @@ impl <'a> ChannelProtocolEventSender<'a> {
 			Ok(())
 		})
 	}
-	
+	pub fn send_method_b_response(&self,
+		txid: fidl::client::Txid,
+		mut result: i64) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			ChannelProtocolEncoder::encode_method_b_response(
+				bytes, handles,
+				txid.as_raw_id(),result,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+	pub fn send_mutate_socket_response(&self,
+		txid: fidl::client::Txid,
+		mut b: fidl::Socket) -> Result<(), fidl::Error> {
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			ChannelProtocolEncoder::encode_mutate_socket_response(
+				bytes, handles,
+				txid.as_raw_id(),b,)?;
+			self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
 }
 
 /// A Stream of incoming requests for ChannelProtocol
@@ -2308,6 +2533,65 @@ impl futures::Stream for ChannelProtocolRequestStream {
 			}))
 		})
 	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use ChannelProtocolRequest instead")]
+pub enum ChannelProtocolRequestMessage {
+	MethodA {
+		
+		a: i64,
+		
+		b: i64,
+		},
+	MethodB {
+		
+		a: i64,
+		
+		b: i64,
+		tx_id: fidl::client::Txid,},
+	MutateSocket {
+		
+		a: fidl::Socket,
+		tx_id: fidl::client::Txid,},
+}
+
+impl ChannelProtocolRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<ChannelProtocolRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal {
+			0x556693d200000000 | 0x1b1e059b3f02bffc => {
+				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ChannelProtocolRequestMessage::MethodA {a: out_tuple.0,b: out_tuple.1,})
+			}
+			0xac6551b00000000 | 0x5db17a61464744a3 => {
+				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ChannelProtocolRequestMessage::MethodB {a: out_tuple.0,b: out_tuple.1,tx_id: header.tx_id.into(),})
+			}
+			0x4b02e28600000000 | 0x36caa6fff7569577 => {
+				let mut out_tuple: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(ChannelProtocolRequestMessage::MutateSocket {a: out_tuple,tx_id: header.tx_id.into(),})
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
 }
 #[derive(Debug)]
 pub enum ChannelProtocolRequest {
