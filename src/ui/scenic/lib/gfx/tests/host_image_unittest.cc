@@ -146,6 +146,7 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
 
   if (!Memory::HasSharedMemoryPools(device, physical_device)) {
     FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
+    return;
   }
 
   zx::vmo vmo;
