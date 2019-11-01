@@ -253,7 +253,7 @@ template("test_spec") {
       os = current_os
       cpu = current_cpu
       if (runtime_deps_file != "") {
-        deps_file = rebase_path(runtime_deps_file, root_build_dir)
+        runtime_deps = rebase_path(runtime_deps_file, root_build_dir)
       }
     }
     environments = []  # Clear from previous iteration.

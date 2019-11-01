@@ -56,13 +56,13 @@ type Test struct {
 	// Command is the command line to run to execute this test.
 	Command []string `json:"command,omitempty"`
 
-	// DepsFile is a relative path within the build directory to a file containing a JSON
-	// list of the test's runtime dependencies,
-	// Currently this field only makes sense for Linux and Mac tests.
-	DepsFile string `json:"deps_file,omitempty"`
+	// RuntimeDepsFile is a relative path within the build directory to a file
+	// containing a JSON list of the test's runtime dependencies, Currently this
+	// field only makes sense for Linux and Mac tests.
+	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
 
 	// Deps is the list of paths to the test's runtime dependencies within the build
-	// directory. It is read out of DepsFile.
+	// directory. It is read out of RuntimeDepsFile.
 	Deps []string `json:"deps,omitempty"`
 }
 
@@ -129,10 +129,10 @@ func LoadTestSpecs(fuchsiaBuildDir string) ([]TestSpec, error) {
 	}
 
 	for i := range specs {
-		if specs[i].DepsFile == "" {
+		if specs[i].RuntimeDepsFile == "" {
 			continue
 		}
-		path := filepath.Join(fuchsiaBuildDir, specs[i].DepsFile)
+		path := filepath.Join(fuchsiaBuildDir, specs[i].RuntimeDepsFile)
 		f, err := os.Open(path)
 		if err != nil {
 			return nil, err
@@ -140,7 +140,7 @@ func LoadTestSpecs(fuchsiaBuildDir string) ([]TestSpec, error) {
 		if err = json.NewDecoder(f).Decode(&specs[i].Deps); err != nil {
 			return nil, err
 		}
-		specs[i].DepsFile = "" // No longer needed.
+		specs[i].RuntimeDepsFile = "" // No longer needed.
 	}
 	return specs, nil
 }

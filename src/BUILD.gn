@@ -130,16 +130,11 @@ foreach(entry, zircon_test_specs) {
                                      "*",
                                      [
                                        "disabled",
-                                       "name",
                                        "runtime_deps",
                                      ])
               label = string_replace(label, "//", "//zircon/")
-
-              # TODO(fxbug.dev/36436): deprecate name in favour of label
-              # and deps_file in favour of runtime_deps.
-              name = get_label_info(label, "label_no_toolchain")
               if (defined(runtime_deps_file)) {
-                deps_file = rebase_path(runtime_deps_file, root_build_dir)
+                runtime_deps = rebase_path(runtime_deps_file, root_build_dir)
               }
             }
 

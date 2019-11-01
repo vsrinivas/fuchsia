@@ -118,7 +118,7 @@ func TestLoadTestSpecs(t *testing.T) {
 	}
 
 	specBazIn := specBaz
-	specBazIn.DepsFile = "deps.json"
+	specBazIn.RuntimeDepsFile = "deps.json"
 	initial := []TestSpec{specBar, specBazIn}
 
 	manifest := filepath.Join(tmpDir, build.TestSpecManifestName)
