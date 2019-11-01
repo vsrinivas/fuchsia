@@ -5,12 +5,14 @@ use {
     crate::audio::StreamVolumeControl,
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
+    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
     failure::Error,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
     std::collections::HashMap,
@@ -30,6 +32,12 @@ pub const DEFAULT_STREAMS: [AudioStream; 5] = [
     create_default_audio_stream(AudioStreamType::SystemAgent),
     create_default_audio_stream(AudioStreamType::Communication),
 ];
+
+pub const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: false };
+
+// TODO(go/fxb/35983): Load default values from a config.
+pub const DEFAULT_AUDIO_INFO: AudioInfo =
+    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO };
 
 // TODO(go/fxb/35983): Load default values from a config.
 pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -53,10 +61,16 @@ fn get_streams_array_from_map(
     streams
 }
 
+impl DeviceStorageCompatible for AudioInfo {
+    const DEFAULT_VALUE: Self = DEFAULT_AUDIO_INFO;
+    const KEY: &'static str = "audio_info";
+}
+
 /// Controller that handles commands for SettingType::Audio.
-/// TODO(go/fxb/37493): Remove |pair_media_and_system_agent| hack.
+/// TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
 pub fn spawn_audio_controller(
     service_context_handle: Arc<RwLock<ServiceContext>>,
+    storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
     pair_media_and_system_agent: bool,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -67,7 +81,6 @@ pub fn spawn_audio_controller(
 
     let audio_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
-    // TODO(go/fxb/35878): Add persistent storage.
     // TODO(go/fxb/35983): Load default values from a config.
     let mut stream_volume_controls = HashMap::new();
 
@@ -102,6 +115,16 @@ pub fn spawn_audio_controller(
             &mut stream_volume_controls,
         )
         .ok();
+
+        // Load data from persistent storage.
+        let mut stored_value: AudioInfo;
+        {
+            let mut storage_lock = storage.lock().await;
+            stored_value = storage_lock.get().await;
+        }
+
+        let stored_streams = stored_value.streams.iter().cloned().collect();
+        update_volume_stream(&stored_streams, &mut stream_volume_controls).await;
 
         while let Some(command) = audio_handler_rx.next().await {
             match command {
@@ -150,6 +173,10 @@ pub fn spawn_audio_controller(
                                 }
                             }
 
+                            stored_value.streams =
+                                get_streams_array_from_map(&stream_volume_controls);
+                            persist_audio_info(stored_value.clone(), storage.clone()).await;
+
                             let _ = responder.send(Ok(None)).ok();
                             if let Some(notifier) = (*notifier_lock.read()).clone() {
                                 notifier.unbounded_send(SettingType::Audio).unwrap();
@@ -178,7 +205,7 @@ pub fn spawn_audio_controller(
 
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
-                                    streams: get_streams_array_from_map(&stream_volume_controls),
+                                    streams: stored_value.streams,
                                     input: AudioInputInfo { mic_mute: *mic_mute_state.read() },
                                 }))))
                                 .ok();
@@ -202,6 +229,16 @@ async fn update_volume_stream(
             volume_control.set_volume(stream.clone()).await;
         }
     }
+}
+
+async fn persist_audio_info(info: AudioInfo, storage: Arc<Mutex<DeviceStorage<AudioInfo>>>) {
+    fasync::spawn(async move {
+        let mut storage_lock = storage.lock().await;
+        let write_request = storage_lock.write(&info, false).await;
+        write_request.unwrap_or_else(move |e| {
+            fx_log_err!("failed storing audio, {}", e);
+        });
+    });
 }
 
 // Checks to see if |service_connected| contains true. If it is not, then

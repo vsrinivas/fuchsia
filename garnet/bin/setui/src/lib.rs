@@ -117,7 +117,11 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .write()
             .register(
                 switchboard::base::SettingType::Audio,
-                spawn_audio_controller(service_context_handle.clone(), true),
+                spawn_audio_controller(
+                    service_context_handle.clone(),
+                    unboxed_storage_factory.get_store::<switchboard::base::AudioInfo>(),
+                    true,
+                ),
             )
             .unwrap();
 

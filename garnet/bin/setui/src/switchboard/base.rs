@@ -103,14 +103,14 @@ impl DeviceInfo {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AudioSettingSource {
     Default,
     User,
     System,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Hash, Eq)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq)]
 pub enum AudioStreamType {
     Background,
     Media,
@@ -119,7 +119,7 @@ pub enum AudioStreamType {
     Communication,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AudioStream {
     pub stream_type: AudioStreamType,
     pub source: AudioSettingSource,
@@ -127,12 +127,12 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AudioInputInfo {
     pub mic_mute: bool,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AudioInfo {
     pub streams: [AudioStream; 5],
     pub input: AudioInputInfo,

@@ -4,6 +4,7 @@
 
 pub use self::audio_controller::create_default_audio_stream;
 pub use self::audio_controller::spawn_audio_controller;
+pub use self::audio_controller::DEFAULT_AUDIO_INFO;
 pub use self::audio_controller::DEFAULT_STREAMS;
 pub use self::audio_controller::DEFAULT_VOLUME_LEVEL;
 pub use self::audio_controller::DEFAULT_VOLUME_MUTED;
