@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/vk/shader_program.h"
 
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
@@ -24,12 +25,29 @@ const uint32_t kYuvSize = 64;
 
 class ShaderProgramTest : public ::testing::Test, public VulkanTester {
  protected:
+  ShaderProgramTest()
+      : vk_debug_report_callback_registry_(
+            VK_TESTS_SUPPRESSED()
+                ? nullptr
+                : test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance(),
+            std::make_optional<VulkanInstance::DebugReportCallback>(
+                test::impl::VkDebugReportCollector::HandleDebugReport, &vk_debug_report_collector_),
+            {}),
+        vk_debug_report_collector_() {}
   const MeshPtr& ring_mesh1() const { return ring_mesh1_; }
   const MeshPtr& ring_mesh2() const { return ring_mesh2_; }
   const MeshPtr& sphere_mesh() const { return sphere_mesh_; }
 
+  test::impl::VkDebugReportCallbackRegistry& vk_debug_report_callback_registry() {
+    return vk_debug_report_callback_registry_;
+  }
+  test::impl::VkDebugReportCollector& vk_debug_report_collector() {
+    return vk_debug_report_collector_;
+  }
+
  private:
   void SetUp() override {
+    vk_debug_report_callback_registry().RegisterDebugReportCallbacks();
     auto escher = test::GetEscher();
     EXPECT_TRUE(escher->Cleanup());
 
@@ -62,11 +80,17 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     EXPECT_TRUE(escher->Cleanup());
 
     escher->shader_program_factory()->Clear();
+
+    EXPECT_VULKAN_VALIDATION_OK();
+    vk_debug_report_callback_registry().DeregisterDebugReportCallbacks();
   }
 
   MeshPtr ring_mesh1_;
   MeshPtr ring_mesh2_;
   MeshPtr sphere_mesh_;
+
+  test::impl::VkDebugReportCallbackRegistry vk_debug_report_callback_registry_;
+  test::impl::VkDebugReportCollector vk_debug_report_collector_;
 };
 
 VK_TEST_F(ShaderProgramTest, CachedVariants) {
@@ -112,10 +136,15 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
 
   auto cb = CommandBuffer::NewForGraphics(escher, /*use_protected_memory=*/false);
 
+  auto depth_format_result = impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  bool has_depth_attachment = depth_format_result.result != vk::Result::eSuccess;
+
   auto color_attachment =
       escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, 512, 512, 1, vk::Filter::eNearest);
-  auto depth_attachment =
-      escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, 512, 512, 1, vk::Filter::eNearest);
+  auto depth_attachment = has_depth_attachment
+                              ? escher->NewAttachmentTexture(depth_format_result.value, 512, 512, 1,
+                                                             vk::Filter::eNearest)
+                              : TexturePtr();
 
   // TODO(ES-83): add support for setting an initial image layout (is there
   // already a bug for this?  If not, add one).  Then, use this so we don't need
@@ -137,9 +166,11 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   render_pass_info.clear_attachments = 1u;
   render_pass_info.store_attachments = 1u;
   render_pass_info.depth_stencil_attachment = depth_attachment;
-  render_pass_info.op_flags = RenderPassInfo::kClearDepthStencilOp |
-                              RenderPassInfo::kOptimalColorLayoutOp |
-                              RenderPassInfo::kOptimalDepthStencilLayoutOp;
+  render_pass_info.op_flags = RenderPassInfo::kOptimalColorLayoutOp;
+  if (depth_attachment) {
+    render_pass_info.op_flags |=
+        RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalDepthStencilLayoutOp;
+  }
   EXPECT_TRUE(render_pass_info.Validate());
 
   // TODO(ES-83): move into ShaderProgramTest.

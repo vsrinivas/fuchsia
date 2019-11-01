@@ -16,6 +16,10 @@ const ResourceTypeInfo Texture::kTypeInfo("Texture", ResourceType::kResource,
 
 TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image, vk::Filter filter,
                         vk::ImageAspectFlags aspect_mask, bool use_unnormalized_coordinates) {
+  if (!image) {
+    return TexturePtr();
+  }
+
   SamplerPtr sampler = fxl::MakeRefCounted<Sampler>(resource_recycler, image->format(), filter,
                                                     use_unnormalized_coordinates);
 

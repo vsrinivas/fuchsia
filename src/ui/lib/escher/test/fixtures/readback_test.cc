@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/test/fixtures/readback_test.h"
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -21,8 +22,13 @@ void ReadbackTest::SetUp() {
       vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
           vk::ImageUsageFlagBits::eTransferDst);
 
-  depth_attachment_ = image_utils::NewDepthImage(&image_factory, kDepthFormat, kFramebufferWidth,
-                                                 kFramebufferHeight, vk::ImageUsageFlags());
+  auto depth_attachment_format_result =
+      impl::GetSupportedDepthStencilFormat(escher_->vk_physical_device());
+  FXL_CHECK(depth_attachment_format_result.result == vk::Result::eSuccess)
+      << "No depth stencil format is supported on this device.";
+  depth_attachment_ =
+      image_utils::NewDepthImage(&image_factory, depth_attachment_format_result.value,
+                                 kFramebufferWidth, kFramebufferHeight, vk::ImageUsageFlags());
 
   // Create 1-pixel black image that will be used for clearing the framebuffer.
   // See NewFrame() for details.

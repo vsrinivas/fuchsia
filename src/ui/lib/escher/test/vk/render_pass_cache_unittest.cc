@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
@@ -46,10 +47,20 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
-  TexturePtr depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
-                                                       1, vk::Filter::eNearest);
-  TexturePtr depth_tex2 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
-                                                       1, vk::Filter::eNearest);
+  // Get depth stencil texture format supported by the device.
+  std::vector<vk::Format> supported_depth_stencil_formats = impl::GetSupportedDepthFormats(
+      escher->vk_physical_device(),
+      {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  if (supported_depth_stencil_formats.empty()) {
+    FXL_LOG(ERROR) << "No depth stencil format is supported on this device, test terminated.";
+    EXPECT_TRUE(escher->Cleanup());
+    return;
+  }
+
+  TexturePtr depth_tex1 = escher->NewAttachmentTexture(supported_depth_stencil_formats[0], width,
+                                                       height, 1, vk::Filter::eNearest);
+  TexturePtr depth_tex2 = escher->NewAttachmentTexture(supported_depth_stencil_formats[0], width,
+                                                       height, 1, vk::Filter::eNearest);
   TexturePtr color_tex = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height, 1,
                                                       vk::Filter::eNearest);
 
@@ -68,13 +79,18 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   EXPECT_EQ(cache.size(), 1U);
 
   // Using a different image format should result in a different RenderPass.
-  depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD32SfloatS8Uint, width, height, 1,
-                                            vk::Filter::eNearest);
-  info.depth_stencil_attachment = depth_tex1;
-  CompareRenderPassWithInfo(cache.ObtainRenderPass(info), info);
-  EXPECT_EQ(cache.size(), 2U);
+  // However we cannot test it if there is only one image format supported.
+  if (supported_depth_stencil_formats.size() == 1) {
+    FXL_LOG(ERROR) << "Only one depth stencil format is supported on this device, test terminated.";
+  } else {
+    depth_tex1 = escher->NewAttachmentTexture(supported_depth_stencil_formats[1], width, height, 1,
+                                              vk::Filter::eNearest);
+    info.depth_stencil_attachment = depth_tex1;
+    CompareRenderPassWithInfo(cache.ObtainRenderPass(info), info);
+    EXPECT_EQ(cache.size(), 2U);
 
-  depth_tex1 = depth_tex2 = color_tex = nullptr;
+    depth_tex1 = depth_tex2 = color_tex = nullptr;
+  }
 
   EXPECT_TRUE(escher->Cleanup());
 
@@ -150,57 +166,85 @@ VK_TEST_F(RenderPassCacheTest, RespectsSampleCount) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
+  // Get depth stencil texture format supported by the device.
+  auto depth_stencil_texture_format_result =
+      impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  if (depth_stencil_texture_format_result.result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    return;
+  }
+
   // Attachments and renderpass info for no MSAA.
-  TexturePtr depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
-                                                       1, vk::Filter::eNearest);
+  TexturePtr depth_tex1 = escher->NewAttachmentTexture(depth_stencil_texture_format_result.value,
+                                                       width, height, 1, vk::Filter::eNearest);
   TexturePtr color_tex1a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         1, vk::Filter::eNearest);
   TexturePtr color_tex1b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         1, vk::Filter::eNearest);
   RenderPassInfo info1a, info1b;
-  InitRenderPassInfo(&info1a, depth_tex1, color_tex1a, nullptr);
-  InitRenderPassInfo(&info1b, depth_tex1, color_tex1b, nullptr);
+  bool sample_1_supported = false;
+  if (depth_tex1 || (color_tex1a && color_tex1b)) {
+    InitRenderPassInfo(&info1a, depth_tex1, color_tex1a, nullptr);
+    InitRenderPassInfo(&info1b, depth_tex1, color_tex1b, nullptr);
+    sample_1_supported = true;
+  }
 
   // Attachments and renderpass info for 2x MSAA.
-  TexturePtr depth_tex2 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
-                                                       2, vk::Filter::eNearest);
+  TexturePtr depth_tex2 = escher->NewAttachmentTexture(depth_stencil_texture_format_result.value,
+                                                       width, height, 2, vk::Filter::eNearest);
   TexturePtr color_tex2a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         2, vk::Filter::eNearest);
   TexturePtr color_tex2b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         2, vk::Filter::eNearest);
   RenderPassInfo info2a, info2b;
-  InitRenderPassInfo(&info2a, depth_tex2, color_tex2a, color_tex1a);
-  InitRenderPassInfo(&info2b, depth_tex2, color_tex2b, color_tex1b);
+  bool sample_2_supported = false;
+  if (depth_tex2 || (color_tex2a && color_tex2b)) {
+    InitRenderPassInfo(&info2a, depth_tex2, color_tex2a, color_tex1a);
+    InitRenderPassInfo(&info2b, depth_tex2, color_tex2b, color_tex1b);
+    sample_2_supported = true;
+  }
 
   // Attachments and renderpass info for 4x MSAA.
-  TexturePtr depth_tex4 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
-                                                       4, vk::Filter::eNearest);
+  TexturePtr depth_tex4 = escher->NewAttachmentTexture(depth_stencil_texture_format_result.value,
+                                                       width, height, 4, vk::Filter::eNearest);
   TexturePtr color_tex4a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         4, vk::Filter::eNearest);
   TexturePtr color_tex4b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
                                                         4, vk::Filter::eNearest);
   RenderPassInfo info4a, info4b;
-  InitRenderPassInfo(&info4a, depth_tex4, color_tex4a, color_tex1a);
-  InitRenderPassInfo(&info4b, depth_tex4, color_tex4b, color_tex1b);
+  bool sample_4_supported = false;
+  if (depth_tex4 || (color_tex4a && color_tex4b)) {
+    InitRenderPassInfo(&info4a, depth_tex4, color_tex4a, color_tex1a);
+    InitRenderPassInfo(&info4b, depth_tex4, color_tex4b, color_tex1b);
+    sample_4_supported = true;
+  }
 
   impl::RenderPassPtr rp1a, rp1b, rp2a, rp2b, rp4a, rp4b;
-  rp1a = cache.ObtainRenderPass(info1a);
-  rp1b = cache.ObtainRenderPass(info1b);
-  rp2a = cache.ObtainRenderPass(info2a);
-  rp2b = cache.ObtainRenderPass(info2b);
-  rp4a = cache.ObtainRenderPass(info4a);
-  rp4b = cache.ObtainRenderPass(info4b);
+  if (sample_1_supported) {
+    rp1a = cache.ObtainRenderPass(info1a);
+    rp1b = cache.ObtainRenderPass(info1b);
+  }
+  if (sample_2_supported) {
+    rp2a = cache.ObtainRenderPass(info2a);
+    rp2b = cache.ObtainRenderPass(info2b);
+  }
+  if (sample_4_supported) {
+    rp4a = cache.ObtainRenderPass(info4a);
+    rp4b = cache.ObtainRenderPass(info4b);
+  }
 
   // Same cached renderpass should be returned for info with the same sample count (but different
   // framebuffer images).
-  EXPECT_EQ(rp1a, rp1b);
-  EXPECT_EQ(rp2a, rp2b);
-  EXPECT_EQ(rp4a, rp4b);
+  // We ignore the result if a sample count is not supported.
+  EXPECT_TRUE(!sample_1_supported || rp1a == rp1b);
+  EXPECT_TRUE(!sample_2_supported || rp2a == rp2b);
+  EXPECT_TRUE(!sample_4_supported || rp4a == rp4b);
 
   // Different cached renderpass should be returned when the sample count differs.
-  EXPECT_NE(rp1a, rp2a);
-  EXPECT_NE(rp1a, rp4a);
-  EXPECT_NE(rp2a, rp4a);
+  // We ignore the result if a sample count is not supported.
+  EXPECT_TRUE(!sample_1_supported || !sample_2_supported || rp1a != rp2a);
+  EXPECT_TRUE(!sample_1_supported || !sample_4_supported || rp1a != rp4a);
+  EXPECT_TRUE(!sample_2_supported || !sample_4_supported || rp2a != rp4a);
 
   EXPECT_TRUE(escher->Cleanup());
 }

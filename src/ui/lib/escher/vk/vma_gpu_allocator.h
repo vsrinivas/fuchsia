@@ -43,6 +43,8 @@ class VmaGpuAllocator : public GpuAllocator {
   virtual bool CreateImage(const VkImageCreateInfo& image_create_info,
                            const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,
                            VmaAllocation* vma_allocation, VmaAllocationInfo* vma_allocation_info);
+
+  vk::PhysicalDevice physical_device_;
   VmaAllocator allocator_;
 };
 

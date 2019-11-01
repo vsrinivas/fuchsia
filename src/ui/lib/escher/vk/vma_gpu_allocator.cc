@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
 namespace {
@@ -73,7 +74,8 @@ class VmaImage : public escher::Image {
 
 namespace escher {
 
-VmaGpuAllocator::VmaGpuAllocator(const VulkanContext& context) {
+VmaGpuAllocator::VmaGpuAllocator(const VulkanContext& context)
+    : physical_device_(context.physical_device) {
   FXL_DCHECK(context.device);
   FXL_DCHECK(context.physical_device);
   VmaAllocatorCreateInfo allocatorInfo = {};
@@ -164,6 +166,12 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
                                         GpuMemPtr* out_ptr) {
   // Needed so we have a pointer to the C-style type.
   VkImageCreateInfo c_image_info = image_utils::CreateVkImageCreateInfo(info);
+
+  // Check if the image create info above is valid.
+  if (!impl::CheckImageCreateInfoValidity(physical_device_, c_image_info)) {
+    FXL_LOG(ERROR) << "VmaGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
+    return ImagePtr();
+  }
 
   VmaAllocationCreateInfo create_info = {VMA_ALLOCATION_CREATE_MAPPED_BIT,
                                          VMA_MEMORY_USAGE_UNKNOWN,

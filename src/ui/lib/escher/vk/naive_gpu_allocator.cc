@@ -84,6 +84,13 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                           GpuMemPtr* out_ptr) {
+  // Check if the image create info above is valid.
+  if (!impl::CheckImageCreateInfoValidity(physical_device_,
+                                          image_utils::CreateVkImageCreateInfo(info))) {
+    FXL_LOG(ERROR) << "NaiveGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
+    return ImagePtr();
+  }
+
   vk::Image image = image_utils::CreateVkImage(device_, info);
 
   // Allocate memory and bind it to the image.

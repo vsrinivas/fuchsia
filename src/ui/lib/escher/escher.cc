@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/impl/mesh_manager.h"
 #include "src/ui/lib/escher/impl/vk/pipeline_cache.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/profiling/timestamp_profiler.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/buffer_cache.h"

@@ -6,9 +6,10 @@
 #define SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/logging.h"
+
+#include <vulkan/vulkan.hpp>
 
 #if defined(ESCHER_VK_UTILS)
 #error "vulkan_utils.h should not be included from header files"
@@ -35,6 +36,9 @@ auto ESCHER_CHECKED_VK_RESULT(typename vk::ResultValue<T> result) -> T {
 }
 
 namespace impl {
+
+// Check if the given vk::ImageCreateInfo is valid for the device.
+bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCreateInfo& info);
 
 // Filter the |desired_formats| list to contain only those formats which support
 // optimal tiling.

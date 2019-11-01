@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
@@ -70,7 +71,9 @@ std::vector<impl::FramebufferPtr> ObtainFramebuffers(
   return result;
 }
 
-VK_TEST(FramebufferAllocator, Basic) {
+using FramebufferAllocatorTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(FramebufferAllocatorTest, Basic) {
   auto escher = test::GetEscher();
 
   impl::RenderPassCache cache(escher->resource_recycler());
@@ -80,16 +83,23 @@ VK_TEST(FramebufferAllocator, Basic) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
+  std::vector<vk::Format> supported_depth_formats = impl::GetSupportedDepthFormats(
+      escher->vk_physical_device(), {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  bool d24_supported = std::find(supported_depth_formats.begin(), supported_depth_formats.end(),
+                                 vk::Format::eD24UnormS8Uint) != supported_depth_formats.end();
+  bool d32_supported = std::find(supported_depth_formats.begin(), supported_depth_formats.end(),
+                                 vk::Format::eD32SfloatS8Uint) != supported_depth_formats.end();
+
   // Create a pair of each of three types of framebuffers.
-  auto textures_2colors_D24 =
-      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-                              vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
-  auto textures_2colors_D32 =
-      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-                              vk::Format::eB8G8R8A8Unorm, vk::Format::eD32SfloatS8Uint);
-  auto textures_1color_D32 =
-      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-                              vk::Format::eUndefined, vk::Format::eD32SfloatS8Uint);
+  auto textures_2colors_D24 = MakeFramebufferTextures(
+      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
+      d24_supported ? vk::Format::eD24UnormS8Uint : vk::Format::eUndefined);
+  auto textures_2colors_D32 = MakeFramebufferTextures(
+      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
+      d32_supported ? vk::Format::eD32SfloatS8Uint : vk::Format::eUndefined);
+  auto textures_1color_D32 = MakeFramebufferTextures(
+      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined,
+      d32_supported ? vk::Format::eD32SfloatS8Uint : vk::Format::eUndefined);
 
   auto framebuffers_2colors_D24 = ObtainFramebuffers(&allocator, textures_2colors_D24);
   auto framebuffers_2colors_D32 = ObtainFramebuffers(&allocator, textures_2colors_D32);
@@ -104,15 +114,30 @@ VK_TEST(FramebufferAllocator, Basic) {
   EXPECT_NE(framebuffers_1color_D32[0], framebuffers_1color_D32[1]);
   EXPECT_EQ(framebuffers_1color_D32[0]->render_pass(), framebuffers_1color_D32[1]->render_pass());
 
-  // Each pair of Framebuffers should have a different RenderPass from the other
-  // pairs.
-  EXPECT_EQ(cache.size(), 3U);
-  EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(), framebuffers_2colors_D32[0]->render_pass());
+  // If either D32 or D24 format is supported we will have different textures
+  // for textures_2colors_D24 and textures_2colors_D32, so the render passes
+  // will be different; otherwise they will be the same.
+  // The rest pairs of Framebuffers should have different RenderPasses since the
+  // color formats are different.
+  if (d32_supported || d24_supported) {
+    EXPECT_EQ(cache.size(), 3U);
+    EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(),
+              framebuffers_2colors_D32[0]->render_pass());
+  } else {
+    EXPECT_EQ(cache.size(), 2U);
+    EXPECT_EQ(framebuffers_2colors_D24[0]->render_pass(),
+              framebuffers_2colors_D32[0]->render_pass());
+  }
   EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
   EXPECT_NE(framebuffers_2colors_D32[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
+
+  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
+  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
 }
 
-VK_TEST(FramebufferAllocator, CacheReclamation) {
+VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
   auto escher = test::GetEscher();
 
   impl::RenderPassCache cache(escher->resource_recycler());
@@ -124,8 +149,15 @@ VK_TEST(FramebufferAllocator, CacheReclamation) {
 
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
+  auto depth_format_result = impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  vk::Format depth_format = depth_format_result.value;
+  if (depth_format_result.result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    depth_format = vk::Format::eUndefined;
+  }
+
   auto textures = MakeFramebufferTextures(escher, 1, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-                                          vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
+                                          vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
   auto framebuffer = ObtainFramebuffers(&allocator, textures);
 
   // Obtaining a Framebuffer using the same textures should result in the same
@@ -151,6 +183,11 @@ VK_TEST(FramebufferAllocator, CacheReclamation) {
     allocator.BeginFrame();
   }
   EXPECT_NE(framebuffer, ObtainFramebuffers(&allocator, textures));
+
+  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
+  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
 }
 
 }  // anonymous namespace

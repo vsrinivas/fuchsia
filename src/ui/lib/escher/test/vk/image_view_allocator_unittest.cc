@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/vk/image_view.h"
@@ -23,8 +24,16 @@ VK_TEST_F(ImageViewAllocatorTest, CacheReclamation) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
-  auto texture = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height, 1,
-                                              vk::Filter::eNearest);
+  // Get depth stencil texture format supported by the device.
+  auto depth_stencil_texture_format_result =
+      impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  if (depth_stencil_texture_format_result.result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    return;
+  }
+
+  auto texture = escher->NewAttachmentTexture(depth_stencil_texture_format_result.value, width,
+                                              height, 1, vk::Filter::eNearest);
 
   auto stencil_view =
       allocator.ObtainImageView(texture->image(), vk::ImageAspectFlagBits::eStencil);

@@ -7,6 +7,53 @@
 namespace escher {
 namespace impl {
 
+bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCreateInfo& info) {
+  vk::ImageFormatProperties image_format_properties;
+  vk::Result get_format_properties_result = device.getImageFormatProperties(
+      info.format, info.imageType, info.tiling, info.usage, info.flags, &image_format_properties);
+
+  if (get_format_properties_result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): Image format / type / tiling / usage / "
+                      "flags is not supported.";
+    return false;
+  }
+
+  if (image_format_properties.maxMipLevels < info.mipLevels) {
+    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): mipLevels exceeds the maximum limit = "
+                   << image_format_properties.maxMipLevels;
+    return false;
+  }
+
+  if (image_format_properties.maxExtent.width < info.extent.width ||
+      image_format_properties.maxExtent.height < info.extent.height ||
+      image_format_properties.maxExtent.depth < info.extent.depth) {
+    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): extent "
+                   << "(" << info.extent.width << ", " << info.extent.height << ", "
+                   << info.extent.depth << ")"
+                   << " exceeds the maximum limit"
+                   << "(" << image_format_properties.maxExtent.width << ", "
+                   << image_format_properties.maxExtent.height << ", "
+                   << image_format_properties.maxExtent.depth << ")";
+    return false;
+  }
+
+  if (image_format_properties.maxArrayLayers < info.arrayLayers) {
+    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): arrayLayers exceeds the maximum limit = "
+                   << image_format_properties.maxArrayLayers;
+    return false;
+  }
+
+  if (!(image_format_properties.sampleCounts & info.samples)) {
+    FXL_LOG(ERROR) << "CheckImageCreateInfoValidity(): samples is not supported. "
+                   << "Requested sample counts: " << vk::to_string(info.samples) << "; "
+                   << "Supported sample counts: "
+                   << vk::to_string(image_format_properties.sampleCounts);
+    return false;
+  }
+
+  return true;
+}
+
 std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,
                                                  std::vector<vk::Format> desired_formats) {
   std::vector<vk::Format> result;
