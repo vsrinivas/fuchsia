@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 source_set("modules") {
-  visibility = [ "../../*" ]
   sources = [
     "dma-format.cc",
     "dma-mgr.cc",
