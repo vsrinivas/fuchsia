@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::bail, wlan_common::mac::Aid};
-
-const ASSOCIATION_ID_MAX_VALUE: u16 = 2007;
+use {
+    failure::bail,
+    wlan_common::mac::{Aid, MAX_AID},
+};
 
 #[derive(Debug)]
 pub struct Map {
@@ -27,7 +28,7 @@ impl Map {
             if bitmap.count_zeros() > 0 {
                 let first_unset_bit_pos = (!*bitmap).trailing_zeros() as u16;
                 let aid = first_unset_bit_pos + Map::ELEM_BITS * (i as u16);
-                if aid <= ASSOCIATION_ID_MAX_VALUE {
+                if aid <= MAX_AID {
                     *bitmap |= 1 << first_unset_bit_pos;
                     return Ok(aid);
                 } else {

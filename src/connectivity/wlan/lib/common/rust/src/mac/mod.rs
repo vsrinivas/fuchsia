@@ -32,6 +32,10 @@ macro_rules! frame_len {
 // IEEE Std 802.11-2016, 9.4.1.8
 pub type Aid = u16;
 
+// IEEE Std 802.11-2016, 9.4.1.8: A non-DMG STA assigns the value of the AID in the range of 1 to
+// 2007.
+pub const MAX_AID: u16 = 2007;
+
 pub type MacAddr = [u8; 6];
 
 // Bssid is a newtype to wrap MacAddr where a BSSID is explicitly required, e.g. for beacon fields
