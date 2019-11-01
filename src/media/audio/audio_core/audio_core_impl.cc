@@ -21,20 +21,6 @@ constexpr size_t kAudioRendererVmarSize = 16ull * 1024 * 1024 * 1024;
 constexpr zx_vm_option_t kAudioRendererVmarFlags =
     ZX_VM_COMPACT | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_1GB;
 
-static constexpr const char* kDefaultEffectsModuleName = "audio_effects.so";
-std::unique_ptr<EffectsLoader> CreateEffectsLoaderWithFallback() {
-  std::unique_ptr<EffectsLoader> effects_loader;
-  zx_status_t status = EffectsLoader::CreateWithModule(kDefaultEffectsModuleName, &effects_loader);
-  if (status == ZX_OK) {
-    return effects_loader;
-  }
-
-  FXL_LOG(ERROR) << "Unable to load '" << kDefaultEffectsModuleName
-                 << "'. No effects will be available";
-  effects_loader = EffectsLoader::CreateWithNullModule();
-  FXL_DCHECK(effects_loader);
-  return effects_loader;
-}
 }  // namespace
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
@@ -43,10 +29,8 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
                              std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
     : threading_model_(*threading_model),
-      effects_loader_{CreateEffectsLoaderWithFallback()},
       device_settings_persistence_(threading_model),
-      device_manager_(threading_model, effects_loader_.get(), &route_graph_,
-                      &device_settings_persistence_, *this),
+      device_manager_(threading_model, &route_graph_, &device_settings_persistence_, *this),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       component_context_(std::move(component_context)),

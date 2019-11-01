@@ -23,15 +23,13 @@
 namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
-                                       EffectsLoader* effects_loader, RouteGraph* route_graph,
+                                       RouteGraph* route_graph,
                                        AudioDeviceSettingsPersistence* device_settings_persistence,
                                        const SystemGainMuteProvider& system_gain_mute)
     : threading_model_(*threading_model),
       system_gain_mute_(system_gain_mute),
-      effects_loader_(*effects_loader),
       route_graph_(*route_graph),
       device_settings_persistence_(*device_settings_persistence) {
-  FXL_DCHECK(effects_loader);
   FXL_DCHECK(route_graph);
   FXL_DCHECK(device_settings_persistence);
   FXL_DCHECK(threading_model);
@@ -160,8 +158,6 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
   devices_.insert(devices_pending_init_.erase(*device));
   device->SetActivated();
 
-  // TODO(mpuryear): Create this device instance's EffectsProcessor here?
-
   // Now that we have our gain settings (restored from disk, cloned from
   // others, or default), reapply them via the device itself.  We do this in
   // order to allow the device the chance to apply its own internal limits,
@@ -178,8 +174,6 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
   settings->GetGainInfo(&gain_info);
   REP(SettingDeviceGainInfo(*device, gain_info, kAllSetFlags));
   device->SetGainInfo(gain_info, kAllSetFlags);
-
-  // TODO(mpuryear): Configure the EffectsProcessor based on settings, here?
 
   // Notify interested users of this new device. Check whether this will become
   // the new default device, so we can set 'is_default' in the notification
@@ -208,12 +202,8 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
     OnDeviceUnplugged(device, device->plug_time());
   }
 
-  // TODO(mpuryear): Persist any final remaining device-effect settings?
-
   device->Shutdown();
   device_settings_persistence_.FinalizeSettings(*device->device_settings());
-
-  // TODO(mpuryear): Delete this device instance's EffectsProcessor here?
 
   if (device->InContainer()) {
     auto& device_set = device->activated() ? devices_ : devices_pending_init_;

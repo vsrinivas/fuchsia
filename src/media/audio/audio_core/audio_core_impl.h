@@ -95,8 +95,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   ThreadingModel& threading_model_;
 
-  std::unique_ptr<EffectsLoader> effects_loader_;
-
   AudioDeviceSettingsPersistence device_settings_persistence_;
   // State for dealing with devices.
   AudioDeviceManager device_manager_;

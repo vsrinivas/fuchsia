@@ -23,7 +23,6 @@
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/threading_model.h"
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
 
 namespace media::audio {
 
@@ -32,7 +31,7 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
-  AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
+  AudioDeviceManager(ThreadingModel* threading_model,
                      RouteGraph* route_graph,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
                      const SystemGainMuteProvider& system_gain_mute);
@@ -123,8 +122,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // Pointer to System gain/mute values. This pointer cannot be bad while we still exist.
   const SystemGainMuteProvider& system_gain_mute_;
-  // Load and create audio effects.
-  [[maybe_unused]] EffectsLoader& effects_loader_;
 
   RouteGraph& route_graph_;
 
