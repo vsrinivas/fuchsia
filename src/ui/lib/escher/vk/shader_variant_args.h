@@ -5,11 +5,13 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_SHADER_VARIANT_ARGS_H_
 #define SRC_UI_LIB_ESCHER_VK_SHADER_VARIANT_ARGS_H_
 
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "src/ui/lib/escher/util/hashable.h"
+#include "src/ui/lib/escher/vk/shader_stage.h"
 
 namespace escher {
 
@@ -66,6 +68,15 @@ inline void ShaderVariantArgs::set_definitions(
   definitions_ = std::move(defs);
   InvalidateHash();
 }
+
+typedef std::map<ShaderStage, std::string> StageMap;
+
+// Struct to house data for a shader program including its source
+// files and its
+struct ShaderProgramData {
+  StageMap source_files;
+  ShaderVariantArgs args = {};
+};
 
 }  // namespace escher
 

@@ -282,6 +282,8 @@ source_set("escher") {
     "paper/paper_renderer.cc",
     "paper/paper_renderer.h",
     "paper/paper_renderer_config.h",
+    "paper/paper_renderer_static_config.cc",
+    "paper/paper_renderer_static_config.h",
     "paper/paper_scene.h",
     "paper/paper_shader_structs.h",
     "paper/paper_shape_cache.cc",

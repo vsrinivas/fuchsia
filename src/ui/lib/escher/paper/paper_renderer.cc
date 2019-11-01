@@ -13,6 +13,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
+#include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
@@ -40,55 +41,13 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
       draw_call_factory_(weak_escher, config),
       shape_cache_(std::move(weak_escher), config),
       // TODO(ES-151): (probably) move programs into PaperDrawCallFactory.
-      ambient_light_program_(escher()->GetGraphicsProgram(
-          "shaders/model_renderer/main.vert", "shaders/paper/frag/main_ambient_light.frag",
-          ShaderVariantArgs({
-              {"USE_ATTRIBUTE_UV", "1"},
-              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              // TODO(ES-153): currently required by main.vert.
-              {"NO_SHADOW_LIGHTING_PASS", "1"},
-          }))),
-      no_lighting_program_(escher()->GetGraphicsProgram(
-          "shaders/model_renderer/main.vert", "shaders/model_renderer/main.frag",
-          ShaderVariantArgs({
-              {"USE_ATTRIBUTE_UV", "1"},
-              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              // TODO(ES-153): currently required by main.vert.
-              {"NO_SHADOW_LIGHTING_PASS", "1"},
-          }))),
-      point_light_program_(escher()->GetGraphicsProgram(
-          "shaders/model_renderer/main.vert", "shaders/paper/frag/main_point_light.frag",
-          ShaderVariantArgs({
-              {"USE_ATTRIBUTE_UV", "1"},
-              {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
-              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              {"SHADOW_VOLUME_POINT_LIGHTING", "1"},
-          }))),
-      point_light_falloff_program_(escher()->GetGraphicsProgram(
-          "shaders/model_renderer/main.vert", "shaders/paper/frag/main_point_light.frag",
-          ShaderVariantArgs({
-              {"USE_ATTRIBUTE_UV", "1"},
-              {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
-              {"USE_PAPER_SHADER_POINT_LIGHT_FALLOFF", "1"},
-              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              {"SHADOW_VOLUME_POINT_LIGHTING", "1"},
-          }))),
-      shadow_volume_geometry_program_(
-          escher()->GetGraphicsProgram("shaders/model_renderer/main.vert", "",
-                                       ShaderVariantArgs({
-                                           {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
-                                           {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
-                                           {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-                                           {"SHADOW_VOLUME_EXTRUSION", "1"},
-                                       }))),
-      shadow_volume_geometry_debug_program_(escher()->GetGraphicsProgram(
-          "shaders/model_renderer/main.vert", "shaders/model_renderer/main.frag",
-          ShaderVariantArgs({
-              {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
-              {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
-              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-              {"SHADOW_VOLUME_EXTRUSION", "1"},
-          }))) {
+      ambient_light_program_(escher()->GetProgram(kAmbientLightProgramData)),
+      no_lighting_program_(escher()->GetProgram(kNoLightingProgramData)),
+      point_light_program_(escher()->GetProgram(kPointLightProgramData)),
+      point_light_falloff_program_(escher()->GetProgram(kPointLightFalloffProgramData)),
+      shadow_volume_geometry_program_(escher()->GetProgram(kShadowVolumeGeometryProgramData)),
+      shadow_volume_geometry_debug_program_(
+          escher()->GetProgram(kShadowVolumeGeometryDebugProgramData)) {
   FXL_DCHECK(config.num_depth_buffers > 0);
   depth_buffers_.resize(config.num_depth_buffers);
   msaa_buffers_.resize(config.num_depth_buffers);

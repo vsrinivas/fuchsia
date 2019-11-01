@@ -5,10 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_CONFIG_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_CONFIG_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/util/debug_print.h"
+#include "src/ui/lib/escher/vk/shader_variant_args.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -24,6 +25,7 @@ enum class PaperRendererShadowType {
   // For EnumCount<>().
   kEnumCount
 };
+
 ESCHER_DEBUG_PRINTABLE(PaperRendererShadowType);
 
 // Allows clients to configure the behavior of a |PaperRenderer| by calling

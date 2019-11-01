@@ -8,6 +8,7 @@
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
+#include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/scene/camera.h"
@@ -31,16 +32,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   // Initialize filesystem with files before creating renderer; it will use them
   // to generate the necessary ShaderPrograms.
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
-      {"shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
-       "shaders/model_renderer/default_position.vert",
-       "shaders/model_renderer/shadow_map_generation.frag",
-       "shaders/model_renderer/shadow_map_lighting.frag",
-       "shaders/model_renderer/wobble_position.vert", "shaders/paper/common/use.glsl",
-       "shaders/paper/frag/main_ambient_light.frag", "shaders/paper/frag/main_point_light.frag",
-       "shaders/paper/vert/compute_model_space_position.vert",
-       "shaders/paper/vert/compute_world_space_position.vert",
-       "shaders/paper/vert/main_shadow_volume_extrude.vert",
-       "shaders/paper/vert/vertex_attributes.vert"});
+      kPaperRendererShaderPaths);
 
   renderer_ = escher::PaperRenderer::New(GetEscherWeakPtr());
 

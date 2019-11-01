@@ -35,14 +35,18 @@ class ShaderProgramFactory : public Trait {
                                       std::string geometry_shader_path,
                                       std::string fragment_shader_path, ShaderVariantArgs args);
 
+  // Convenience helper function that calls the pure virtual function |GetProgram|. Can be used
+  // for both compute and graphics shaders.
+  ShaderProgramPtr GetProgram(ShaderProgramData program_data);
+
  protected:
   virtual ~ShaderProgramFactory();
 
   // Subclasses must implement this.  The array index of each path corresponds
   // to a value in the ShaderStage enum; each non-empty path provides the source
   // code for the corresponding shader stage.
-  virtual ShaderProgramPtr GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
-                                      ShaderVariantArgs args) = 0;
+  virtual ShaderProgramPtr GetProgramImpl(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                          ShaderVariantArgs args) = 0;
 };
 
 }  // namespace escher

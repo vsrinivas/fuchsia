@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 
 #include "src/ui/lib/escher/util/hasher.h"
+
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
@@ -83,7 +84,6 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
   HackFilesystemWatcher* const filesystem_watcher_;
   std::unordered_map<shaderc_include_result*, std::unique_ptr<ResultRecord>> result_map_;
 };
-
 }  // anonymous namespace
 
 ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler,
@@ -130,6 +130,20 @@ void ShaderModuleTemplate::ScheduleVariantCompilation(fxl::WeakPtr<Variant> vari
   }
 }
 
+bool ShaderModuleTemplate::CompileVariantToSpirv(const ShaderVariantArgs& args,
+                                                 std::vector<uint32_t>* output) {
+  FXL_CHECK(output);
+  Variant* variant = nullptr;
+  if (variants_[args]) {
+    variant = variants_[args];
+  } else {
+    variant = new Variant(this, args);
+    RegisterVariant(variant);
+  }
+
+  return variant->GenerateSpirV(output);
+}
+
 ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate, ShaderVariantArgs args)
     : ShaderModule(tmplate->device_, tmplate->shader_stage_),
       template_(tmplate),
@@ -153,7 +167,11 @@ void ShaderModuleTemplate::Variant::ScheduleCompilation() {
   template_->ScheduleVariantCompilation(weak_factory_.GetWeakPtr());
 }
 
-void ShaderModuleTemplate::Variant::Compile() {
+// Generates the spirv for a compiled shader and returns it via the |output| parameter.
+// Returns true if the compilation was successful and false otherwise.
+bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output) {
+  FXL_DCHECK(output);
+
   // Clear watcher paths; we'll gather new ones during compilation.
   filesystem_watcher_->ClearPaths();
 
@@ -176,12 +194,20 @@ void ShaderModuleTemplate::Variant::Compile() {
                                                        template_->path_.c_str(), "main", options);
 
   auto status = result.GetCompilationStatus();
-  if (status == shaderc_compilation_status_success) {
-    RecreateModuleFromSpirvAndNotifyListeners({result.cbegin(), result.cend()});
-  } else {
-    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status
-                   << " msg: " << result.GetErrorMessage();
+  if (status != shaderc_compilation_status_success) {
+    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status;
+    return false;
   }
+
+  *output = {result.cbegin(), result.cend()};
+  return true;
 }
 
+// Generates the spirv  for the shader and recreates the vk shader module with it.
+void ShaderModuleTemplate::Variant::Compile() {
+  std::vector<uint32_t> spirv;
+  if (GenerateSpirV(&spirv)) {
+    RecreateModuleFromSpirvAndNotifyListeners(spirv);
+  }
+}
 }  // namespace escher

@@ -10,13 +10,12 @@
 namespace escher {
 
 ShaderModule::ShaderModule(vk::Device device, ShaderStage shader_stage)
-    : device_(device), stage_(shader_stage) {
-  FXL_DCHECK(device_);
-}
+    : device_(device), stage_(shader_stage) {}
 
 ShaderModule::~ShaderModule() {
   FXL_DCHECK(listeners_.empty());
   if (module_) {
+    FXL_DCHECK(device_);
     device_.destroyShaderModule(module_);
   }
 }
@@ -39,6 +38,7 @@ void ShaderModule::RemoveShaderModuleListener(ShaderModuleListener* listener) {
 }
 
 void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(std::vector<uint32_t> spirv) {
+  FXL_DCHECK(device_);
   if (module_) {
     device_.destroyShaderModule(module_);
   }

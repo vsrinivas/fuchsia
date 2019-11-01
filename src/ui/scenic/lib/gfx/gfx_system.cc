@@ -17,6 +17,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
@@ -120,17 +121,7 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
   app_context->outgoing()->debug_dir()->AddSharedEntry("gfx", debug_dir);
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
-    bool success = shader_fs->InitializeWithRealFiles(
-        {"shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
-         "shaders/model_renderer/default_position.vert",
-         "shaders/model_renderer/shadow_map_generation.frag",
-         "shaders/model_renderer/shadow_map_lighting.frag",
-         "shaders/model_renderer/wobble_position.vert", "shaders/paper/common/use.glsl",
-         "shaders/paper/frag/main_ambient_light.frag", "shaders/paper/frag/main_point_light.frag",
-         "shaders/paper/vert/compute_model_space_position.vert",
-         "shaders/paper/vert/compute_world_space_position.vert",
-         "shaders/paper/vert/main_shadow_volume_extrude.vert",
-         "shaders/paper/vert/vertex_attributes.vert"});
+    bool success = shader_fs->InitializeWithRealFiles(escher::kPaperRendererShaderPaths);
     FXL_DCHECK(success) << "Failed to init shader files.";
   }
 

@@ -257,9 +257,9 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint3
                     use_unnormalized_coordinates, memory_flags);
 }
 
-ShaderProgramPtr Escher::GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
-                                    ShaderVariantArgs args) {
-  return shader_program_factory_->GetProgram(shader_paths, std::move(args));
+ShaderProgramPtr Escher::GetProgramImpl(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                        ShaderVariantArgs args) {
+  return shader_program_factory_->GetProgramImpl(shader_paths, std::move(args));
 }
 
 FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging,

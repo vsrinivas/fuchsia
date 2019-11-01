@@ -156,8 +156,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::atomic<uint32_t> renderer_count_;
 
   // |ShaderProgramFactory|
-  ShaderProgramPtr GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
-                              ShaderVariantArgs args) override;
+  ShaderProgramPtr GetProgramImpl(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                  ShaderVariantArgs args) override;
 
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;

@@ -82,6 +82,7 @@ if (is_mac) {
     ]
 
     deps = [
+      ":force_paper_shader_compiler_to_build_on_host",
       ":force_waterfall_to_build_on_host",
       ":gtest_escher",
       "base:base_unittests",
@@ -175,6 +176,16 @@ group("force_waterfall_to_build_on_host") {
   if (is_linux) {
     deps = [
       "//src/ui/examples/escher/waterfall($host_toolchain)",
+    ]
+  }
+}
+
+# Guarantees that buildbots at least build the paper shader compiler on Linux,
+# even if they are not run.
+group("force_paper_shader_compiler_to_build_on_host") {
+  if (is_linux) {
+    deps = [
+      "//src/ui/tools/paper_shader_compiler($host_toolchain)",
     ]
   }
 }

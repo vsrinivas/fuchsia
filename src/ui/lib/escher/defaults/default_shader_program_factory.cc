@@ -15,7 +15,7 @@ DefaultShaderProgramFactory::DefaultShaderProgramFactory(EscherWeakPtr escher,
 
 DefaultShaderProgramFactory::~DefaultShaderProgramFactory() = default;
 
-ShaderProgramPtr DefaultShaderProgramFactory::GetProgram(
+ShaderProgramPtr DefaultShaderProgramFactory::GetProgramImpl(
     const std::string shader_paths[EnumCount<ShaderStage>()], ShaderVariantArgs args) {
   Hasher hasher(args.hash().val);
   for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {

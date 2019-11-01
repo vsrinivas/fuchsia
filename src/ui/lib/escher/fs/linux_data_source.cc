@@ -22,11 +22,11 @@ bool LinuxDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>& p
   char test_path[PATH_MAX];
   const char exe_link[] = "/proc/self/exe";
   realpath(exe_link, test_path);
-  const std::string kRoot = files::SimplifyPath(files::JoinPath(test_path, root));
+  base_path_ = {files::SimplifyPath(files::JoinPath(test_path, root))};
 
   bool success = true;
   for (const auto& path : paths) {
-    success &= LoadFile(this, kRoot, path);
+    success &= LoadFile(this, *base_path_, path);
   }
   return success;
 }

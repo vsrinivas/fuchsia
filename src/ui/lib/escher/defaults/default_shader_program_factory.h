@@ -29,16 +29,18 @@ class DefaultShaderProgramFactory final : public ShaderProgramFactory {
   // Clear all cached programs and other data.
   void Clear();
 
-  // |ShaderProgramFactory|.  Public so that Escher::GetProgram() can delegate
-  // to it.
-  ShaderProgramPtr GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
-                              ShaderVariantArgs args) override;
-
- private:
   // Obtain a lazily-generated and cached ShaderModuleTemplate corresponding to
   // the specified shader stage and source code.
   ShaderModuleTemplatePtr ObtainShaderModuleTemplate(ShaderStage stage,
                                                      const std::string& source_path);
+
+ private:
+  friend class Escher;
+
+  // |ShaderProgramFactory|.  Public so that Escher::GetProgram() can delegate
+  // to it.
+  ShaderProgramPtr GetProgramImpl(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                  ShaderVariantArgs args) override;
 
   // This is used for paranoid debug-mode verification that we don't have hash
   // collisions.  Otherwise, we'd simply stash the ShaderProgramPtr.

@@ -18,7 +18,7 @@ ShaderProgramPtr ShaderProgramFactory::GetComputeProgram(std::string compute_sha
   FXL_DCHECK(!compute_shader_path.empty());
   std::string paths[EnumCount<ShaderStage>()] = {"", "", "",
                                                  "", "", std::move(compute_shader_path)};
-  return GetProgram(paths, std::move(args));
+  return GetProgramImpl(paths, std::move(args));
 }
 
 ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(std::string vertex_shader_path,
@@ -30,7 +30,16 @@ ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(std::string vertex_sha
   FXL_DCHECK(!vertex_shader_path.empty());
   std::string paths[EnumCount<ShaderStage>()] = {std::move(vertex_shader_path),   "", "", "",
                                                  std::move(fragment_shader_path), ""};
-  return GetProgram(paths, std::move(args));
+  return GetProgramImpl(paths, std::move(args));
+}
+
+ShaderProgramPtr ShaderProgramFactory::GetProgram(ShaderProgramData program_data) {
+  std::string paths[EnumCount<ShaderStage>()];
+  for (const auto& iter : program_data.source_files) {
+    paths[static_cast<uint8_t>(iter.first)] = std::move(iter.second);
+  }
+
+  return GetProgramImpl(paths, program_data.args);
 }
 
 ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(
@@ -47,7 +56,7 @@ ShaderProgramPtr ShaderProgramFactory::GetGraphicsProgram(
                                                  std::move(geometry_shader_path),
                                                  std::move(fragment_shader_path),
                                                  kEmpty};
-  return GetProgram(paths, std::move(args));
+  return GetProgramImpl(paths, std::move(args));
 }
 
 }  // namespace escher
