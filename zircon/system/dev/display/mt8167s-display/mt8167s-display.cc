@@ -418,6 +418,10 @@ int Mt8167sDisplay::VSyncThread() {
       break;
     }
     fbl::AutoLock lock(&display_lock_);
+    // If DisplayControllerImplApplyConfiguration is called for the first time between IRQ wait and
+    // acquiring display_lock_ it will ovl_->Reset() or ovl_->Restart(), making ovl_->IsValidIrq()
+    // unreliable.
+    bool valid_irq = ovl_->IsValidIrq();
     // Apply any pending configuration at this point since it is safe to do
     // so without any visual artifacts
     if (pending_config_) {
@@ -437,7 +441,7 @@ int Mt8167sDisplay::VSyncThread() {
     }
     pending_config_ = 0;
 
-    if (!ovl_->IsValidIrq()) {
+    if (!valid_irq) {
       DISP_SPEW("Spurious Interrupt\n");
       continue;
     }

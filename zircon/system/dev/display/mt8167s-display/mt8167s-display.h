@@ -140,7 +140,7 @@ class Mt8167sDisplay
 
   const display_setting_t* init_disp_table_ = nullptr;
 
-  bool full_init_done_ = false;
+  bool full_init_done_ TA_GUARDED(display_lock_) = false;
 
   uint8_t pending_config_ TA_GUARDED(display_lock_) = 0;
   std::array<OvlConfig, kMaxLayer> ovl_config_ TA_GUARDED(display_lock_);
