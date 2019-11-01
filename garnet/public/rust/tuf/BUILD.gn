@@ -23,6 +23,9 @@ rustc_library("tuf") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:ring",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
@@ -33,7 +36,7 @@ rustc_library("tuf") {
   ]
 }
 
-test_package("tuf-tests") {
+test_package("rust-tuf-tests") {
   deps = [
     ":tuf_test",
   ]
