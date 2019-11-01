@@ -316,7 +316,8 @@ that they are not included in the base set, but instead included in
 either "cache" or "universe". In that case, simply restarting the
 software on the target (e.g. by closing it completely, or by invoking
 `killall`) will result in the software being immediately updated when it is
-started again.
+started again. Specifically for shutting down Modular and all dependant
+components, use `sessionctl shutdown_basemgr`.
 
 The commands `fx push-package` and `fx build-push` perform manual, forceful
 updates of packages on a target device. These commands do not however know
@@ -335,11 +336,6 @@ there is nothing that the update system can do to forcefully trigger updates
 in the rest of the system. Users who find themselves with this issue mostly
 need to find efficient workflow methods to fully restart the relevant
 software stack.
-
-XXX: TODO: NEEDED: simple example command to restart all GUI / shell
-components, e.g. if basemgr spawned things under a job or a component
-topology, a method to restart that topology (e.g. `killall basemgr.cmx`,
-however that's no good today).
 
 ## Execute tests {#execute-tests}
 
