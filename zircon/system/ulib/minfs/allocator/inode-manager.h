@@ -32,6 +32,9 @@ class InspectableInodeManager {
 
   // Loads the inode from storage.
   virtual void Load(ino_t inode_num, Inode* out) const = 0;
+
+  // Checks if the inode is allocated.
+  virtual bool CheckAllocated(uint32_t inode_num) const = 0;
 };
 
 // InodeManager is responsible for owning the persistent storage for inodes.
@@ -69,6 +72,10 @@ class InodeManager : public InspectableInodeManager {
   const Allocator* GetInodeAllocator() const final;
 
   void Load(ino_t ino, Inode* out) const final;
+
+  bool CheckAllocated(uint32_t inode_num) const final {
+    return inode_allocator_->CheckAllocated(inode_num);
+  }
 
   // Extend the number of inodes managed.
   //

@@ -38,12 +38,16 @@ class MockInodeManager : public InspectableInodeManager {
   MockInodeManager& operator=(MockInodeManager&&) = delete;
 
   void Load(ino_t inode_num, Inode* out) const final;
+  bool CheckAllocated(uint32_t inode_num) const final;
   const Allocator* GetInodeAllocator() const final;
 };
 
 MockInodeManager::MockInodeManager() {}
 
 void MockInodeManager::Load(ino_t inode_num, Inode* out) const {}
+
+// We fake that only the inode at index 1 is allocated.
+bool MockInodeManager::CheckAllocated(uint32_t inode_num) const { return (inode_num == 1); }
 
 const Allocator* MockInodeManager::GetInodeAllocator() const { return nullptr; }
 
@@ -159,19 +163,18 @@ TEST(InspectorTest, TestRoot) {
 TEST(InspectorTest, TestInodeTable) {
   auto inode_table_obj = std::unique_ptr<MockInodeManager>(new MockInodeManager());
 
-  std::unique_ptr<InodeTableObject> inode_mgr(new InodeTableObject(inode_table_obj.get(), 2));
+  uint32_t allocated_num = 1;
+  uint32_t inode_num = 3;
+  std::unique_ptr<InodeTableObject> inode_mgr(
+      new InodeTableObject(inode_table_obj.get(), allocated_num, inode_num));
   ASSERT_STR_EQ(kInodeTableName, inode_mgr->GetName());
-  ASSERT_EQ(2, inode_mgr->GetNumElements());
+  ASSERT_EQ(allocated_num, inode_mgr->GetNumElements());
 
+  // The only allocated inode should be inode #1 as defined in |MockInodeManager::CheckAllocated|.
   std::unique_ptr<disk_inspector::DiskObject> obj0 = inode_mgr->GetElementAt(0);
-  fbl::String name = fbl::StringPrintf("%s #%d", kInodeName, 0);
+  fbl::String name = fbl::StringPrintf("allocated #%d, inode #%d", 0, 1);
   ASSERT_STR_EQ(name, obj0->GetName());
   ASSERT_EQ(kInodeNumElements, obj0->GetNumElements());
-
-  std::unique_ptr<disk_inspector::DiskObject> obj1 = inode_mgr->GetElementAt(1);
-  name = fbl::StringPrintf("%s #%d", kInodeName, 1);
-  ASSERT_STR_EQ(name, obj1->GetName());
-  ASSERT_EQ(kInodeNumElements, obj1->GetNumElements());
 }
 
 TEST(InspectorTest, TestSuperblock) { RunSuperblockTest(SuperblockType::kPrimary); }
@@ -183,8 +186,10 @@ TEST(InspectorTest, TestInode) {
   fileInode.block_count = 2;
   fileInode.link_count = 1;
 
-  std::unique_ptr<InodeObject> finodeObj(new InodeObject(1, fileInode));
-  fbl::String name = fbl::StringPrintf("%s #%d", kInodeName, 1);
+  uint32_t allocated_num = 2;
+  uint32_t inode_num = 4;
+  std::unique_ptr<InodeObject> finodeObj(new InodeObject(allocated_num, inode_num, fileInode));
+  fbl::String name = fbl::StringPrintf("allocated #%d, inode #%d", allocated_num, inode_num);
   ASSERT_STR_EQ(name, finodeObj->GetName());
   ASSERT_EQ(kInodeNumElements, finodeObj->GetNumElements());
 

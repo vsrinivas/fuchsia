@@ -16,8 +16,7 @@
 namespace minfs {
 
 // Total number of fields in the on-disk inode structure.
-constexpr uint32_t kInodeNumElements = 15;
-constexpr char kInodeName[] = "inode";
+constexpr uint32_t kInodeNumElements = 16;
 
 class InodeObject : public disk_inspector::DiskObject {
  public:
@@ -27,8 +26,12 @@ class InodeObject : public disk_inspector::DiskObject {
   InodeObject& operator=(const InodeObject&) = delete;
   InodeObject& operator=(InodeObject&&) = delete;
 
-  InodeObject(ino_t ino, Inode inode)
-    : ino_(ino), inode_(inode), name_(fbl::StringPrintf("%s #%d", kInodeName, ino_)) {}
+  InodeObject(uint32_t allocated_inode_index, uint32_t inode_index, Inode inode)
+      : allocated_inode_index_(allocated_inode_index),
+        inode_index_(inode_index),
+        inode_(inode),
+        name_(fbl::StringPrintf("allocated #%d, inode #%d", allocated_inode_index_, inode_index_)) {
+  }
 
   // DiskObject interface:
   const char* GetName() const override { return name_.c_str(); }
@@ -40,9 +43,14 @@ class InodeObject : public disk_inspector::DiskObject {
   std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
 
  private:
-  // In-memory inode from the inode table.
-  const ino_t ino_;
+  // Index of inode in list of only allocated inodes in inode table.
+  const uint32_t allocated_inode_index_;
+  // Position of inode in the inode table.
+  const uint32_t inode_index_;
   const Inode inode_;
+  // TODO(fxb/37907): Currently the name is in the format "allocated #, inode #".
+  // We should change this once disk-inspect does not index based on allocations
+  // and rather the actual inode table index.
   const fbl::String name_;
 };
 

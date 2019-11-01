@@ -16,16 +16,25 @@ void InodeTableObject::GetValue(const void** out_buffer, size_t* out_buffer_size
 }
 
 std::unique_ptr<disk_inspector::DiskObject> InodeTableObject::GetElementAt(uint32_t index) const {
-  if (index >= inode_count_) {
+  if (index >= allocated_inode_count_) {
     return nullptr;
   }
-  return GetInode(static_cast<ino_t>(index));
+  return GetInode(index);
 }
 
-std::unique_ptr<disk_inspector::DiskObject> InodeTableObject::GetInode(ino_t inode) const {
+std::unique_ptr<disk_inspector::DiskObject> InodeTableObject::GetInode(
+    uint32_t element_index) const {
   Inode inode_obj;
-  inode_table_->Load(inode, &inode_obj);
-  return std::unique_ptr<disk_inspector::DiskObject>(new InodeObject(inode, inode_obj));
+  int32_t inode_index = allocated_inode_indices[element_index];
+  inode_table_->Load(inode_index, &inode_obj);
+  return std::make_unique<InodeObject>(element_index, inode_index, inode_obj);
+}
+
+void InodeTableObject::SetupAllocatedInodeIndex() {
+  for (uint32_t i = 0; i < inode_count_; ++i) {
+    if (inode_table_->CheckAllocated(i))
+      allocated_inode_indices.push_back(i);
+  }
 }
 
 }  // namespace minfs

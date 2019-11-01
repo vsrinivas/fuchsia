@@ -76,8 +76,8 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetSuperBlock() const {
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetInodeTable() const {
-  return std::unique_ptr<disk_inspector::DiskObject>(
-      new InodeTableObject(fs_->GetInodeManager(), fs_->Info().alloc_inode_count));
+  return std::unique_ptr<disk_inspector::DiskObject>(new InodeTableObject(
+      fs_->GetInodeManager(), fs_->Info().alloc_inode_count, fs_->Info().inode_count));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
