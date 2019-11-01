@@ -29,7 +29,7 @@ static const sysmem_metadata_t sysmem_metadata = {
     // optee reserved range passed to Zircon during boot - the specific location is obtained by
     // sysmem calling the secmem TA via fuchsia::sysmem::Tee protocol between sysmem and TEE
     // Controller.
-    .protected_memory_size = 128 * 1024 * 1024,
+    .protected_memory_size = 32 * 1024 * 1024,
     // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with NV12), and add some
     // extra size for additional pictures for buffering and several framebuffers (1024*608*4 bytes
     // each).
