@@ -54,49 +54,43 @@ Register CreateRegisterWithValue(RegisterID id, uint64_t value) {
   return reg;
 }
 
-std::vector<Register> GetRegisters() {
-  std::vector<Register> result;
-
-  result.push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
-  result.push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
-  result.push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
+void FillGeneralRegisters(std::vector<Register>* out) {
+  out->push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
+  out->push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
+  out->push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
   // This one is out-of-order to force testing the sorting.
-  result.push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
+  out->push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
+}
 
-  // Sanity check
-  EXPECT_EQ(*(uint8_t*)&(result[0].data[0]), 0x01u);
-  EXPECT_EQ(*(uint32_t*)&(result[1].data[0]), 0x01020304u);
-  EXPECT_EQ(*(uint64_t*)&(result[2].data[0]), 0x0102030405060708u);
-  EXPECT_EQ(*(uint16_t*)&(result[3].data[0]), 0x0102u);
-
-  result.push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
-  result.push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
-  result.push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
-  result.push_back(CreateRegister(RegisterID::kX64_xmm4, 16, 16));
-  // This one is out-of-order to force testing the sorting.
-  result.push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
-
-  result.push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
-  result.push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
+void FillFloatingPointRegisters(std::vector<Register>* out) {
+  out->push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
+  out->push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
   // Invalid
-  result.push_back(CreateRegister(RegisterID::kX64_st2, 16, 16));
+  out->push_back(CreateRegister(RegisterID::kX64_st2, 16, 16));
   // Push a valid 16-byte long double value.
-  auto& reg = result.back();
+  auto& reg = out->back();
   // Clear all (create a 0 value).
   for (size_t i = 0; i < reg.data.size(); i++)
     reg.data[i] = 0;
+}
 
-  return result;
+void FillVectorRegisters(std::vector<Register>* out) {
+  out->push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
+  out->push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
+  out->push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
+  out->push_back(CreateRegister(RegisterID::kX64_xmm4, 16, 16));
+  // This one is out-of-order to force testing the sorting.
+  out->push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
 }
 
 }  // namespace
 
 TEST(FormatRegisters, GeneralRegisters) {
-  auto registers = GetRegisters();
+  std::vector<Register> registers;
+  FillGeneralRegisters(&registers);
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::kGeneral};
 
   // Force rcx to -2 to test negative integer formatting.
   Register& rcx = registers[1];
@@ -110,7 +104,7 @@ TEST(FormatRegisters, GeneralRegisters) {
       "  rcx  0xfffffffffffffffe = -2\n"
       "  rdx   0x102030405060708 \n"
       "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, VectorRegisters) {
@@ -125,7 +119,6 @@ TEST(FormatRegisters, VectorRegisters) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::kVector};
   options.vector_format = VectorRegisterFormat::kFloat;
 
   EXPECT_EQ(
@@ -135,7 +128,7 @@ TEST(FormatRegisters, VectorRegisters) {
       "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
       "     Currently showing vectors of \"float\".)\n"
       "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+      FormatRegisters(options, registers).AsString());
 
   // Format as 128-bit.
   options.vector_format = VectorRegisterFormat::kUnsigned128;
@@ -146,19 +139,20 @@ TEST(FormatRegisters, VectorRegisters) {
       "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
       "     Currently showing vectors of \"u128\".)\n"
       "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, AllRegisters) {
-  auto registers = GetRegisters();
+  std::vector<Register> registers;
+  FillGeneralRegisters(&registers);
+  FillFloatingPointRegisters(&registers);
+  FillVectorRegisters(&registers);
 
   // Add mxcsr since that appears in a separate category.
   registers.emplace_back(RegisterID::kX64_mxcsr, 0x1f80);
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
-                        RegisterCategory::kVector};
   options.vector_format = VectorRegisterFormat::kUnsigned32;
 
   EXPECT_EQ(
@@ -188,65 +182,13 @@ TEST(FormatRegisters, AllRegisters) {
       FormatRegisters(options, registers).AsString());
 }
 
-TEST(FormatRegisters, OneRegister) {
-  auto registers = GetRegisters();
-
-  FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
-  ASSERT_TRUE(options.filter_regex.Init("xmm3"));
-  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
-                        RegisterCategory::kVector};
-  options.vector_format = VectorRegisterFormat::kUnsigned16;
-
-  EXPECT_EQ(
-      "Vector Registers\n"
-      "  Name    [7]    [6]    [5]    [4]    [3]    [2]    [1]    [0]\n"
-      "  xmm3 0x0000 0x0000 0x0000 0x0000 0x0102 0x0304 0x0506 0x0708\n"
-      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
-      "     Currently showing vectors of \"u16\".)\n"
-      "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
-}
-
-TEST(FormatRegister, RegexSearch) {
-  auto registers = GetRegisters();
-
-  FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
-  ASSERT_TRUE(options.filter_regex.Init("XMm[2-4]$"));
-  options.categories = {RegisterCategory::kVector};
-
-  EXPECT_EQ(
-      "Vector Registers\n"
-      "  Name         [3]         [2]         [1]         [0]\n"
-      "  xmm2           0           0           0 2.38794e-38\n"
-      "  xmm3           0           0 2.38794e-38 6.30194e-36\n"
-      "  xmm4 2.38794e-38 6.30194e-36 1.66163e-33 4.37753e-31\n"
-      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
-      "     Currently showing vectors of \"float\".)\n"
-      "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
-}
-
-TEST(FormatRegisters, CannotFindRegister) {
-  auto registers = GetRegisters();
-
-  FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
-  ASSERT_TRUE(options.filter_regex.Init("W0"));
-  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
-                        RegisterCategory::kVector};
-
-  EXPECT_TRUE(FilterRegisters(options, registers).empty());
-}
-
 TEST(FormatRegisters, WithRflags) {
-  auto registers = GetRegisters();
+  std::vector<Register> registers;
+  FillGeneralRegisters(&registers);
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -257,11 +199,11 @@ TEST(FormatRegisters, WithRflags) {
       "  rflags         0x00000000 CF=0, PF=0, AF=0, ZF=0, SF=0, TF=0, IF=0, "
       "DF=0, OF=0\n"
       "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, RFlagsValues) {
-  auto registers = GetRegisters();
+  std::vector<Register> registers;
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
   SetRegisterValue(&registers.back(), X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
                                           X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
@@ -269,15 +211,13 @@ TEST(FormatRegisters, RFlagsValues) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  ASSERT_TRUE(options.filter_regex.Init("rflags"));
-  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
       "  rflags  0x00000555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, "
       "OF=0\n"
       "\n",
-      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, RFlagsValuesExtended) {
@@ -294,7 +234,6 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.extended = true;
-  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -313,7 +252,6 @@ TEST(FormatRegisters, CPSRValues) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kArm64;
-  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -349,7 +287,6 @@ TEST(FormatRegisters, DebugRegisters_x86) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::kDebug};
 
   EXPECT_EQ(
       "Debug Registers\n"
@@ -388,7 +325,6 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kArm64;
-  options.categories = {RegisterCategory::kDebug};
 
   // clang-format off
   EXPECT_EQ(

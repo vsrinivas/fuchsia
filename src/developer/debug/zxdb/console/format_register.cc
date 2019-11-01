@@ -58,29 +58,6 @@ void FormatCategory(const FormatRegisterOptions& options, RegisterCategory categ
 
 }  // namespace
 
-std::vector<Register> FilterRegisters(const FormatRegisterOptions& options,
-                                      const std::vector<Register>& registers) {
-  std::vector<Register> result;
-
-  for (const Register& reg : registers) {
-    RegisterCategory category = RegisterIDToCategory(reg.id);
-    if (std::find(options.categories.begin(), options.categories.end(), category) ==
-        options.categories.end())
-      continue;  // Register filtered out by category.
-
-    if (options.filter_regex.valid()) {
-      // Filter by regex.
-      if (options.filter_regex.Match(RegisterIDToString(reg.id)))
-        result.push_back(reg);
-    } else {
-      // Unconditional addition.
-      result.push_back(reg);
-    }
-  }
-
-  return result;
-}
-
 OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
                              const std::vector<Register>& registers) {
   OutputBuffer out;

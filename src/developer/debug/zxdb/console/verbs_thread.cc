@@ -1043,43 +1043,84 @@ const char kRegsHelp[] =
   registers at the time that stack frame was active. To get the current CPU
   registers, run "regs" on frame 0.
 
-Arguments
+Category selection arguments
 
-  --category=<category> | -c <category>
-      Which categories if registers to show.
-      The following options can be set:
+  -a
+  --all
+      Prints all register categories.
 
-      - general: Show general purpose registers.
-      - fp: Show floating point registers.
-      - vector: Show vector registers.
-      - debug: Show debug registers (eg. The DR registers on x86).
-      - all: Show all the categories available.
+  -g
+  --general  (default)
+      Prints the general CPU registers.
 
-      NOTE: not all categories exist within all architectures. For example,
-            ARM64's fp category doesn't have any registers.
+  -f
+  --float
+      Prints the dedicated floating-point registers but most users will want
+      --vector instead. 64-bit ARM uses vector registers for floating
+      point and has no separate floating-point registers. Almost all x64 code
+      also uses vector registers for floating-point computations.
 
-  --extended | -e
+  -v
+  --vector
+      Prints the vector registers. These will be displayed in a table according
+      to the current "vector-format" setting (use "get vector-format" for
+      the current value and options, and "set vector-format <new-value>" to set).
+
+      Note that the vector register table will be displayed with the low values
+      on the right side, which is the opposite order that the expression
+      evaluator (which treats them as arrays) displays them.
+
+  -d
+  --debug
+      Prints the debug registers.
+
+  -e
+  --extended
       Enables more verbose flag decoding. This will enable more information
       that is not normally useful for everyday debugging. This includes
       information such as the system level flags within the RFLAGS register for
       x86.
 
-  <regexp>
-      Case insensitive regular expression. Any register that matches will be
-      shown. Uses POSIX Extended Regular Expression syntax. If not specified, it
-      will match all registers.
+Reading and writing individual registers
+
+  The "regs" command only shows full categories of registers. If you want to see
+  individual ones or modify them, use the expression system:
+
+    [zxdb] print $rax
+    41
+
+    [zxdb] print -x $rbx      # Use -x for hex formatting.
+    0x7cc6120190
+
+    [zxdb] print $xmm3
+    {0.0, 3.14159}      # Note [0] index is first in contrast to the table view!
+
+    [zxdb] print $xmm3[0]
+    3.14159
+
+  The print command can also be used to set register values:
+
+    [zxdb] print $rax = 42
+    42
+
+  The "$" may be omitted for registers if there is no collision with program
+  variables.
 
 Examples
 
   regs
-  thread 4 regs --category=vector
-  process 2 thread 1 regs -c all v*
+  thread 4 regs -v
+  process 2 thread 1 regs --all
   frame 2 regs
 )";
 
 // Switches
-constexpr int kRegsCategoriesSwitch = 1;
-constexpr int kRegsExtendedSwitch = 2;
+constexpr int kRegsAllSwitch = 1;
+constexpr int kRegsGeneralSwitch = 2;
+constexpr int kRegsFloatingPointSwitch = 3;
+constexpr int kRegsVectorSwitch = 4;
+constexpr int kRegsDebugSwitch = 5;
+constexpr int kRegsExtendedSwitch = 6;
 
 void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& registers,
                     const FormatRegisterOptions& options, bool top_stack_frame) {
@@ -1107,7 +1148,13 @@ void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& 
     console->Output(warning_out);
   }
 
-  console->Output(FormatRegisters(options, FilterRegisters(options, registers)));
+  OutputBuffer out;
+  out.Append(Syntax::kComment,
+             "    (Use \"print $registername\" to show a single one, or\n"
+             "     \"print $registername = newvalue\" to set.)\n\n");
+  out.Append(FormatRegisters(options, registers));
+
+  console->Output(out);
 }
 
 // When we request more than one category of registers, this collects all of them and keeps track
@@ -1123,6 +1170,8 @@ struct RegisterCollector {
 };
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
+  using debug_ipc::RegisterCategory;
+
   Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs");
   if (err.has_error())
     return err;
@@ -1134,58 +1183,47 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   if (auto found = StringToVectorRegisterFormat(vec_fmt))
     options.vector_format = *found;
 
-  // When empty, print all the registers.
-  if (!cmd.args().empty()) {
-    // We expect only one name.
-    if (cmd.args().size() > 1u)
-      return Err("Only one register regular expression filter expected.");
-
-    if (!options.filter_regex.Init(cmd.args().front()))
-      return Err("Invalid regular expression '%s'.", cmd.args().front().c_str());
-  }
+  if (!cmd.args().empty())
+    return Err("\"regs\" takes no arguments. To show an individual register, use \"print\".");
 
   bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
 
   // General purpose are the default. Other categories can only be shown for the top stack frame
   // since they require reading from the current CPU state.
-  std::vector<RegisterCategory> categories = {RegisterCategory::kGeneral};
-  if (top_stack_frame && cmd.HasSwitch(kRegsCategoriesSwitch)) {
-    auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
-    if (option == "all") {
-      categories = {
-          debug_ipc::RegisterCategory::kGeneral,
-          debug_ipc::RegisterCategory::kFloatingPoint,
-          debug_ipc::RegisterCategory::kVector,
-          debug_ipc::RegisterCategory::kDebug,
-      };
-    } else if (option == "general") {
-      categories = {RegisterCategory::kGeneral};
-    } else if (option == "fp") {
-      categories = {RegisterCategory::kFloatingPoint};
-    } else if (option == "vector") {
-      categories = {RegisterCategory::kVector};
-    } else if (option == "debug") {
-      categories = {RegisterCategory::kDebug};
-    } else {
-      return Err(fxl::StringPrintf("Unknown category: %s", option.c_str()));
-    }
+  std::set<RegisterCategory> category_set;
+  if (cmd.HasSwitch(kRegsAllSwitch)) {
+    category_set.insert(RegisterCategory::kGeneral);
+    category_set.insert(RegisterCategory::kFloatingPoint);
+    category_set.insert(RegisterCategory::kVector);
+    category_set.insert(RegisterCategory::kDebug);
   }
+  if (cmd.HasSwitch(kRegsGeneralSwitch))
+    category_set.insert(RegisterCategory::kGeneral);
+  if (cmd.HasSwitch(kRegsFloatingPointSwitch))
+    category_set.insert(RegisterCategory::kFloatingPoint);
+  if (cmd.HasSwitch(kRegsVectorSwitch))
+    category_set.insert(RegisterCategory::kVector);
+  if (cmd.HasSwitch(kRegsDebugSwitch))
+    category_set.insert(RegisterCategory::kDebug);
+
+  // Default to "general" if no categories specified.
+  if (category_set.empty())
+    category_set.insert(RegisterCategory::kGeneral);
 
   options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
-  options.categories = categories;  // Make a copy, original used below.
 
-  if (categories.size() == 1 && categories[0] == RegisterCategory::kGeneral) {
+  if (category_set.size() == 1 && *category_set.begin() == RegisterCategory::kGeneral) {
     // Any available general registers should be available synchronously.
     auto* regs = cmd.frame()->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
     FXL_DCHECK(regs);
     OnRegsComplete(Err(), *regs, options, top_stack_frame);
   } else {
     auto collector = std::make_shared<RegisterCollector>();
-    collector->remaining_callbacks = static_cast<int>(categories.size());
+    collector->remaining_callbacks = static_cast<int>(category_set.size());
     collector->options = std::move(options);
     collector->top_stack_frame = top_stack_frame;
 
-    for (auto category : categories) {
+    for (auto category : category_set) {
       cmd.frame()->GetRegisterCategoryAsync(
           category, [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
             // Save the new registers.
@@ -1372,11 +1410,13 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kPrint] = std::move(print);
 
   // regs
-  SwitchRecord regs_categories(kRegsCategoriesSwitch, true, "category", 'c');
-  SwitchRecord regs_extended(kRegsExtendedSwitch, false, "extended", 'e');
   VerbRecord regs(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp, CommandGroup::kAssembly);
-  regs.switches.push_back(std::move(regs_categories));
-  regs.switches.push_back(std::move(regs_extended));
+  regs.switches.emplace_back(kRegsAllSwitch, false, "all", 'a');
+  regs.switches.emplace_back(kRegsGeneralSwitch, false, "general", 'g');
+  regs.switches.emplace_back(kRegsFloatingPointSwitch, false, "float", 'f');
+  regs.switches.emplace_back(kRegsVectorSwitch, false, "vector", 'v');
+  regs.switches.emplace_back(kRegsDebugSwitch, false, "debug", 'd');
+  regs.switches.emplace_back(kRegsExtendedSwitch, false, "extended", 'e');
   (*verbs)[Verb::kRegs] = std::move(regs);
 
   // step
