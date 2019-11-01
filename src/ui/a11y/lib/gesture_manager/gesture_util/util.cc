@@ -42,7 +42,7 @@ bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& poin
   }
   gesture_start_info->starting_global_position = pointer_event.global_point();
 
-  if (!pointer_event.has_local_point()) {
+  if (pointer_event.has_local_point()) {
     gesture_start_info->starting_local_position = pointer_event.local_point();
   }
 
@@ -52,7 +52,9 @@ bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& poin
 
   // Init GestureContext.
   gesture_context->view_ref_koid = gesture_start_info->view_ref_koid;
-  gesture_context->local_point = gesture_start_info->starting_local_position;
+  if (gesture_start_info->starting_local_position) {
+    gesture_context->local_point = gesture_start_info->starting_local_position;
+  }
   return true;
 }
 

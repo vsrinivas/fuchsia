@@ -24,7 +24,7 @@ struct GestureInfo {
   uint32_t device_id;
   uint32_t pointer_id;
   ::fuchsia::math::PointF starting_global_position;
-  ::fuchsia::math::PointF starting_local_position;
+  std::optional<::fuchsia::math::PointF> starting_local_position;
   zx_koid_t view_ref_koid;
   uint64_t single_tap_detected_time;
   bool is_winner_ = false;

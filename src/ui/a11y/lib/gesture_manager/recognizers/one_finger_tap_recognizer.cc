@@ -138,8 +138,10 @@ void OneFingerTapRecognizer::ResetState() {
   gesture_start_info_.gesture_start_time = 0;
   gesture_start_info_.starting_global_position.x = 0;
   gesture_start_info_.starting_global_position.y = 0;
-  gesture_start_info_.starting_local_position.x = 0;
-  gesture_start_info_.starting_local_position.y = 0;
+  // Important! Do not set local coordinates to zero. std::optional is used here
+  // to indicate that they can be either present or not. Zero is present and may
+  // lead to errors.
+  gesture_start_info_.starting_local_position.reset();
   gesture_start_info_.device_id = 0;
   gesture_start_info_.pointer_id = 0;
   gesture_start_info_.view_ref_koid = ZX_KOID_INVALID;
