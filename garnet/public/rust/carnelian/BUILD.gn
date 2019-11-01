@@ -196,6 +196,47 @@ rustc_binary("drawing_mold") {
   ]
 }
 
+rustc_binary("clockface") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/clockface.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/graphics/lib/compute/mold",
+    "//src/graphics/lib/compute/spinel-mold",
+    "//src/graphics/lib/compute/spinel-rs-sys",
+    "//src/lib/mapped-vmo",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:rusttype",
+    "//third_party/rust_crates:vk-sys",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+  non_rust_deps = [
+    "//src/graphics/lib/vulkan",
+    "//src/graphics/lib/compute/common",
+    "//src/graphics/lib/compute/common/vk",
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
+    "//src/graphics/lib/compute/spinel",
+    "//src/graphics/lib/compute/spinel/platforms/vk",
+    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+  ]
+}
+
 package("spinning_square_rs") {
   deps = [
     ":spinning_square_example",
@@ -372,6 +413,26 @@ package("drawing_mold_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "drawing_mold_rs.cmx"
+    },
+  ]
+}
+
+package("clockface_rs") {
+  deps = [
+    ":clockface",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "clockface"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "clockface_rs.cmx"
     },
   ]
 }
