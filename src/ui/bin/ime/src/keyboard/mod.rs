@@ -135,12 +135,18 @@ impl Service {
                     stream.try_next().await.context("error running keyboard service")?
                 {
                     match msg {
-                        ui_input::KeyboardRequest::SetListener { view_ref, listener, .. } => {
+                        ui_input::KeyboardRequest::SetListener {
+                            view_ref,
+                            listener,
+                            responder,
+                            ..
+                        } => {
                             let id = store
                                 .lock()
                                 .await
                                 .add_new_subscriber(view_ref, listener.into_proxy()?);
                             subscriber_ids.push(id);
+                            responder.send()?;
                         }
                     }
                 }

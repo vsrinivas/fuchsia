@@ -34,12 +34,13 @@ fn keyboard_events() -> Result<(), Error> {
     let (listener_client_end, mut listener_stream) =
         fidl::endpoints::create_request_stream::<ui_input::KeyListenerMarker>()?;
 
-    // Set listener and view ref.
     let (raw_event_pair, _) = zx::EventPair::create()?;
     let view_ref = &mut ui_views::ViewRef { reference: raw_event_pair };
-    keyboard.set_listener(view_ref, listener_client_end).expect("set_listener");
 
     executor.run_singlethreaded(async move {
+        // Set listener and view ref.
+        keyboard.set_listener(view_ref, listener_client_end).await.expect("set_listener");
+
         let mut token_pair = scenic::ViewTokenPair::new().expect("create ViewTokenPair");
 
         presenter.present_view(&mut token_pair.view_holder_token, None).expect("present_view");

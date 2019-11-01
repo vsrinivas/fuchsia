@@ -11,7 +11,7 @@ using fuchsia.ui.views;
 [Discoverable]
 protocol Keyboard {
     /// Set key event listener for the specified View.
-    SetListener(fuchsia.ui.views.ViewRef view_ref, KeyListener listener);
+    SetListener(fuchsia.ui.views.ViewRef view_ref, KeyListener listener) -> ();
 };
 
 /// Client should implement this protocol to get notified of key events.
