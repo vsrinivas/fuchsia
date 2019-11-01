@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef TEST_UTILS_TEST_UTILS_H_
+#define TEST_UTILS_TEST_UTILS_H_
 
 // This file is a collection of utilities for writing tests.
 // Typically they are wrappers on system calls and other routines
@@ -147,12 +148,6 @@ zx_handle_t tu_job_create(zx_handle_t job);
 
 zx_handle_t tu_io_port_create(void);
 
-// Set/unset the exception port for |handle| which is a process or thread.
-// Passing ZX_HANDLE_INVALID for |handle| means self.
-
-void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options);
-void tu_unset_exception_port(zx_handle_t handle);
-
 // Creates an exception channel for |task| which is a job, process, or thread.
 
 zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options);
@@ -222,3 +217,5 @@ int tu_set_timeout_scale(int scale);
 const char* tu_exception_to_string(uint32_t exception);
 
 __END_CDECLS
+
+#endif  // TEST_UTILS_TEST_UTILS_H_

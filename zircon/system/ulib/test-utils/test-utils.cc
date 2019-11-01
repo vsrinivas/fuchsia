@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
 #include <fcntl.h>
 #include <fuchsia/process/llcpp/fidl.h>
 #include <lib/backtrace-request/backtrace-request.h>
@@ -14,7 +13,6 @@
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
-#include <string>
 #include <string.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
@@ -23,6 +21,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
+
+#include <cstdio>
+#include <string>
 
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
@@ -180,8 +181,8 @@ bool tu_channel_wait_readable(zx_handle_t channel) {
 zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const char* const* argv,
                               int envc, const char* const* envp, size_t num_handles,
                               zx_handle_t* handles, uint32_t* handle_ids) {
-  springboard_t* sb = tu_launch_init(job, name, argc, argv, envc, envp, num_handles, handles,
-                                     handle_ids);
+  springboard_t* sb =
+      tu_launch_init(job, name, argc, argv, envc, envp, num_handles, handles, handle_ids);
   return tu_launch_fini(sb);
 }
 
@@ -228,13 +229,9 @@ struct springboard {
   }
 };
 
-zx_handle_t springboard_get_process_handle(springboard_t* sb) {
-  return sb->data.process.get();
-}
+zx_handle_t springboard_get_process_handle(springboard_t* sb) { return sb->data.process.get(); }
 
-zx_handle_t springboard_get_root_vmar_handle(springboard_t* sb) {
-  return sb->data.root_vmar.get();
-}
+zx_handle_t springboard_get_root_vmar_handle(springboard_t* sb) { return sb->data.root_vmar.get(); }
 
 springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const char* const* argv,
                               int envc, const char* const* envp, size_t num_handles,
@@ -438,22 +435,6 @@ zx_handle_t tu_io_port_create(void) {
   if (status < 0)
     tu_fatal(__func__, status);
   return handle;
-}
-
-void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options) {
-  if (handle == 0)
-    handle = zx_process_self();
-  zx_status_t status = zx_task_bind_exception_port(handle, eport, key, options);
-  if (status < 0)
-    tu_fatal(__func__, status);
-}
-
-void tu_unset_exception_port(zx_handle_t handle) {
-  if (handle == 0)
-    handle = zx_process_self();
-  zx_status_t status = zx_task_bind_exception_port(handle, ZX_HANDLE_INVALID, 0, 0);
-  if (status < 0)
-    tu_fatal(__func__, status);
 }
 
 zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options) {
