@@ -69,7 +69,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     WRITE_DATA_PIO,
   };
 
-  virtual zx_status_t WaitForReset(const SoftwareReset mask) const;
+  virtual zx_status_t WaitForReset(const SoftwareReset mask);
   virtual zx_status_t WaitForInterrupt() { return irq_.wait(nullptr); }
 
   RequestStatus GetRequestStatus() TA_EXCL(mtx_) {
@@ -104,7 +104,6 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   static_assert(sizeof(Adma64Descriptor) == 12, "unexpected ADMA2 descriptor size");
 
   static void PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* command);
-  static zx_status_t FinishRequest(sdmmc_req_t* req);
 
   bool SupportsAdma2_64Bit() const {
     return (info_.caps & SDMMC_HOST_CAP_ADMA2) && (info_.caps & SDMMC_HOST_CAP_SIXTY_FOUR_BIT) &&
@@ -125,6 +124,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   zx_status_t BuildDmaDescriptor(sdmmc_req_t* req);
   zx_status_t StartRequestLocked(sdmmc_req_t* req) TA_REQ(mtx_);
+  zx_status_t FinishRequest(sdmmc_req_t* req);
 
   zx::interrupt irq_;
   thrd_t irq_thread_;

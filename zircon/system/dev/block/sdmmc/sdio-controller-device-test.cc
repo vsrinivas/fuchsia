@@ -704,4 +704,25 @@ TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
 }
 
+TEST_F(SdioControllerDeviceTest, IoAbortSetsAbortFlag) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
+
+  EXPECT_OK(dut_.ProbeSdio());
+
+  sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT, [](sdmmc_req_t* req) -> void {
+    EXPECT_EQ(req->cmd_idx, SDIO_IO_RW_DIRECT);
+    EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_TYPE_ABORT);
+    EXPECT_EQ(req->arg, 0xb024'68ab);
+  });
+  EXPECT_OK(dut_.SdioDoRwByte(true, 3, 0x1234, 0xab, nullptr));
+
+  sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT, [](sdmmc_req_t* req) -> void {
+    EXPECT_EQ(req->cmd_idx, SDIO_IO_RW_DIRECT);
+    EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_TYPE_ABORT);
+    EXPECT_EQ(req->arg, 0x8000'0c03);
+  });
+  EXPECT_OK(dut_.SdioIoAbort(3));
+}
+
 }  // namespace sdmmc

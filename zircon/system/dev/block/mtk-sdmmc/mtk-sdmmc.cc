@@ -772,7 +772,7 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
         .set_cmd_ready_enable(1)
         .WriteTo(&mmio_);
 
-    SdcCmd::FromRequest(req, config_.is_sdio).WriteTo(&mmio_);
+    SdcCmd::FromRequest(req).WriteTo(&mmio_);
   }
 
   sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);

@@ -283,11 +283,13 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   sdmmc_req_t req = {};
   req.cmd_idx = SDIO_IO_RW_DIRECT;
   req.arg = cmd_arg;
-  req.cmd_flags = SDIO_IO_RW_DIRECT_FLAGS;
-  req.use_dma = UseDma();
   if (reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
+    req.cmd_flags = SDIO_IO_RW_DIRECT_ABORT_FLAGS;
     req.probe_tuning_cmd = true;
+  } else {
+    req.cmd_flags = SDIO_IO_RW_DIRECT_FLAGS;
   }
+  req.use_dma = UseDma();
   zx_status_t st = host_.Request(&req);
   if (st != ZX_OK && reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
     // Do not log error if ABORT fails during reset, as it proved to be harmless.

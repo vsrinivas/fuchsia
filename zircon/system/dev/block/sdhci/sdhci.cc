@@ -120,7 +120,7 @@ void Sdhci::PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* c
   }
 }
 
-zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) const {
+zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) {
   const zx::time deadline = zx::clock::get_monotonic() + kResetTime;
   do {
     if ((SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & mask.reg_value()) == 0) {
@@ -276,8 +276,6 @@ void Sdhci::ErrorRecoveryLocked() {
   WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1));
   SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_dat(1).WriteTo(&regs_mmio_buffer_);
   WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_dat(1));
-
-  // TODO(fxb/38209): data stage abort
 
   // Complete any pending txn with error status
   if (cmd_req_ != nullptr) {
@@ -523,6 +521,11 @@ zx_status_t Sdhci::FinishRequest(sdmmc_req_t* req) {
       return st;
     }
   }
+
+  if (req->cmd_flags & SDMMC_CMD_TYPE_ABORT) {
+    // SDHCI spec section 3.8.2: reset the data line after an abort to discard data in the buffer.
+    return WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1).set_reset_dat(1));
+  }
   return ZX_OK;
 }
 
@@ -727,8 +730,6 @@ zx_status_t Sdhci::SdmmcRequest(sdmmc_req_t* req) {
 
 zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
   zxlogf(TRACE, "sdhci: perform tuning\n");
-
-  // TODO(fxb/38209): no other commands should run during tuning
 
   uint16_t blocksize;
   auto ctrl2 = HostControl2::Get().FromValue(0);

@@ -386,7 +386,7 @@ TEST(SdmmcTest, ReadPolled) {
 
   req.cmd_idx = 36;
   req.cmd_flags = SDMMC_RESP_R1 | SDMMC_CMD_TYPE_NORMAL | SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ |
-                  SDMMC_CMD_MULTI_BLK;
+                  SDMMC_CMD_MULTI_BLK | SDMMC_CMD_AUTO12;
   req.arg = 0x954887c8;
   req.status = 1;
   req.blockcount = 4;
@@ -490,8 +490,8 @@ TEST(SdmmcTest, WritePolled) {
                                   0x69, 0xf2, 0x8e, 0x25, 0xaa, 0x6f, 0xbc, 0xe6, 0xba};
 
   req.cmd_idx = 36;
-  req.cmd_flags =
-      SDMMC_RESP_R1 | SDMMC_CMD_TYPE_NORMAL | SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_MULTI_BLK;
+  req.cmd_flags = SDMMC_RESP_R1 | SDMMC_CMD_TYPE_NORMAL | SDMMC_RESP_DATA_PRESENT |
+                  SDMMC_CMD_MULTI_BLK | SDMMC_CMD_AUTO12;
   req.arg = 0x954887c8;
   req.status = 1;
   req.blockcount = 4;

@@ -31,8 +31,17 @@ class TestSdhci : public Sdhci {
     Sdhci::DdkUnbindNew(std::move(txn));
   }
 
+  uint8_t reset_mask() {
+    uint8_t ret = reset_mask_;
+    reset_mask_ = 0;
+    return ret;
+  }
+
  protected:
-  zx_status_t WaitForReset(const SoftwareReset mask) const override { return ZX_OK; }
+  zx_status_t WaitForReset(const SoftwareReset mask) override {
+    reset_mask_ = mask.reg_value();
+    return ZX_OK;
+  }
 
   zx_status_t WaitForInterrupt() override {
     auto status = InterruptStatus::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
@@ -68,6 +77,7 @@ class TestSdhci : public Sdhci {
   }
 
  private:
+  uint8_t reset_mask_ = 0;
   std::atomic<bool> run_thread_ = true;
   std::atomic<uint16_t> blocks_remaining_ = 0;
   std::atomic<uint16_t> current_block_ = 0;
@@ -570,6 +580,49 @@ TEST_F(SdhciTest, RequestWithData) {
   for (uint32_t i = 0; i < 16; i++) {
     EXPECT_EQ(buffer[i], 0xe99dd637);
   }
+
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, RequestAbort) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  EXPECT_OK(dut_->Init());
+
+  uint32_t buffer[4] = {0x178096fb, 0x27328a47, 0x3267ce33, 0x8fccdf57};
+
+  sdmmc_req_t request = {
+      .cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = 4,
+      .blocksize = 4,
+      .use_dma = false,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = buffer,
+      .virt_size = 0,
+      .buf_offset = 0,
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = 0,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+
+  dut_->reset_mask();
+
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+  EXPECT_EQ(dut_->reset_mask(), 0);
+
+  request.cmd_idx = SDMMC_STOP_TRANSMISSION;
+  request.cmd_flags = SDMMC_STOP_TRANSMISSION_FLAGS;
+  request.blockcount = 0;
+  request.blocksize = 0;
+  request.virt_buffer = nullptr;
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+  EXPECT_EQ(dut_->reset_mask(),
+            SoftwareReset::Get().FromValue(0).set_reset_dat(1).set_reset_cmd(1).reg_value());
 
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }

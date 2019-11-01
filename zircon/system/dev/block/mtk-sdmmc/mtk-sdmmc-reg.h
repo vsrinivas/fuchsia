@@ -133,7 +133,7 @@ class SdcCmd : public hwreg::RegisterBase<SdcCmd, uint32_t> {
 
   static auto Get() { return hwreg::RegisterAddr<SdcCmd>(0x34); }
 
-  static SdcCmd FromRequest(const sdmmc_req_t* req, bool is_sdio) {
+  static SdcCmd FromRequest(const sdmmc_req_t* req) {
     SdcCmd cmd = Get().FromValue(0);
 
     if (req->cmd_idx == SD_VOLTAGE_SWITCH) {
@@ -157,7 +157,7 @@ class SdcCmd : public hwreg::RegisterBase<SdcCmd, uint32_t> {
 
     if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
       if (req->blockcount > 1) {
-        if (!is_sdio) {
+        if (req->cmd_flags & SDMMC_CMD_AUTO12) {
           cmd.set_auto_cmd(kAutoCmd12);
         }
 
@@ -171,7 +171,7 @@ class SdcCmd : public hwreg::RegisterBase<SdcCmd, uint32_t> {
       }
     }
 
-    if ((req->cmd_flags & SDMMC_CMD_TYPE_ABORT) && !is_sdio) {
+    if (req->cmd_flags & SDMMC_CMD_TYPE_ABORT) {
       cmd.set_stop(1);
     }
 

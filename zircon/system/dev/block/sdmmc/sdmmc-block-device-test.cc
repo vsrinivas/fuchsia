@@ -296,6 +296,13 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockACmd12) {
 
   CallbackContext ctx(5, block_op_size_);
 
+  sdmmc_.set_command_callback(SDMMC_READ_MULTIPLE_BLOCK, [](sdmmc_req_t* req) -> void {
+    EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_AUTO12);
+  });
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK, [](sdmmc_req_t* req) -> void {
+    EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_AUTO12);
+  });
+
   dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
   dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
   dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
@@ -335,6 +342,13 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockNoACmd12) {
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 10, 0x2000, &op5));
 
   CallbackContext ctx(5, block_op_size_);
+
+  sdmmc_.set_command_callback(SDMMC_READ_MULTIPLE_BLOCK, [](sdmmc_req_t* req) -> void {
+    EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_AUTO12);
+  });
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK, [](sdmmc_req_t* req) -> void {
+    EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_AUTO12);
+  });
 
   dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
   dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
@@ -389,6 +403,46 @@ TEST_F(SdmmcBlockDeviceTest, ErrorsPropagate) {
   EXPECT_OK(op3->private_storage()->status);
   EXPECT_NOT_OK(op4->private_storage()->status);
   EXPECT_NOT_OK(op5->private_storage()->status);
+}
+
+TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
+  EXPECT_OK(dut_.StartWorkerThread());
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
+      .max_transfer_size_non_dma = 0,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op1));
+  CallbackContext ctx1(1, block_op_size_);
+
+  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx1);
+
+  EXPECT_OK(sync_completion_wait(&ctx1.completion, zx::duration::infinite().get()));
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 1);
+
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_AUTO_CMD12,
+      .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
+      .max_transfer_size_non_dma = 0,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op2));
+  CallbackContext ctx2(1, block_op_size_);
+
+  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx2);
+
+  EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 2);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {

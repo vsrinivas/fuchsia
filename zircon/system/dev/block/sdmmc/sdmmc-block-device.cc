@@ -140,6 +140,9 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
       if (txn->operation()->rw.length > 1) {
         cmd_idx = SDMMC_READ_MULTIPLE_BLOCK;
         cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS;
+        if (sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12) {
+          cmd_flags |= SDMMC_CMD_AUTO12;
+        }
       } else {
         cmd_idx = SDMMC_READ_BLOCK;
         cmd_flags = SDMMC_READ_BLOCK_FLAGS;
@@ -149,6 +152,9 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
       if (txn->operation()->rw.length > 1) {
         cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK;
         cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS;
+        if (sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12) {
+          cmd_flags |= SDMMC_CMD_AUTO12;
+        }
       } else {
         cmd_idx = SDMMC_WRITE_BLOCK;
         cmd_flags = SDMMC_WRITE_BLOCK_FLAGS;
@@ -207,15 +213,16 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
   }
 
   st = sdmmc_.host().Request(req);
+
+  if (st != ZX_OK || ((req->blockcount > 1) && !(req->cmd_flags & SDMMC_CMD_AUTO12))) {
+    zx_status_t stop_st = sdmmc_.SdmmcStopTransmission();
+    if (stop_st != ZX_OK) {
+      zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", stop_st);
+    }
+  }
+
   if (st != ZX_OK) {
     zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
-  } else {
-    if ((req->blockcount > 1) && !(sdmmc_.host_info().caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
-      st = sdmmc_.SdmmcStopTransmission();
-      if (st != ZX_OK) {
-        zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", st);
-      }
-    }
   }
 
   BlockComplete(txn, st, async_id_);
