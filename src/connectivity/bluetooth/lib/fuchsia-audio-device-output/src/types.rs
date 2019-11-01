@@ -111,7 +111,7 @@ impl<T: Stream + Unpin> Stream for MaybeStream<T> {
     }
 }
 
-impl<T: FusedStream + Stream> FusedStream for MaybeStream<T> {
+impl<T: FusedStream + Stream + Unpin> FusedStream for MaybeStream<T> {
     fn is_terminated(&self) -> bool {
         if self.0.is_none() {
             false
@@ -231,7 +231,7 @@ impl<T: Decodable> Drop for RequestStream<T> {
     }
 }
 
-impl<T: Decodable> FusedStream for RequestStream<T> {
+impl<T: Decodable + Unpin + ResponseDirectable> FusedStream for RequestStream<T> {
     fn is_terminated(&self) -> bool {
         false
     }
