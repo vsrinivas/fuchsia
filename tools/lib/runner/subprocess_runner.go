@@ -30,12 +30,14 @@ type SubprocessRunner struct {
 // orphaned.
 func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
 	cmd := exec.Cmd{
-		Path:        command[0],
-		Args:        command,
-		Stdout:      stdout,
-		Stderr:      stderr,
-		Dir:         r.Dir,
-		Env:         r.Env,
+		Path:   command[0],
+		Args:   command,
+		Stdout: stdout,
+		Stderr: stderr,
+		Dir:    r.Dir,
+		Env:    r.Env,
+		// Set a process group ID so we can kill the entire group,
+		// meaning the process and any of its children.
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
 	logger.Infof(ctx, "environment of subprocess:\n%v", cmd.Env)
@@ -51,6 +53,7 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 	case err := <-done:
 		return err
 	case <-ctx.Done():
+		// Negating the process ID means interpret it as a process group ID.
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		return ctx.Err()
 	}
