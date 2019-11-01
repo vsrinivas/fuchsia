@@ -705,14 +705,14 @@ mod tests {
         // But an even generation count should work.
         try_byte(&mut buffer, (HEADER, 8), 2, Some(" root ->\n\n>  node ->\n\n\n\n"));
         // Let's give it a property.
-        const NUMBER: usize = 3;
-        let mut header = BlockHeader(0);
-        header.set_order(0);
-        header.set_block_type(BlockType::IntValue.to_u8().unwrap());
-        header.set_value_name_index(4);
-        header.set_value_parent_index(1);
-        put_header(&header, &mut buffer, NUMBER);
-        const NUMBER_NAME: usize = 4;
+        const NUMBER: usize = 4;
+        let mut number_header = BlockHeader(0);
+        number_header.set_order(0);
+        number_header.set_block_type(BlockType::IntValue.to_u8().unwrap());
+        number_header.set_value_name_index(3);
+        number_header.set_value_parent_index(1);
+        put_header(&number_header, &mut buffer, NUMBER);
+        const NUMBER_NAME: usize = 3;
         let mut header = BlockHeader(0);
         header.set_order(0);
         header.set_block_type(BlockType::Name.to_u8().unwrap());
@@ -747,8 +747,60 @@ mod tests {
         try_byte(&mut buffer, (NUMBER, 0), 0xb0, None);
         // 15 is an illegal block type.
         try_byte(&mut buffer, (NUMBER, 0), 0xf0, None);
-
-        // TODO: Test more cases here.
+        number_header.set_order(2);
+        number_header.set_block_type(BlockType::ArrayValue.to_u8().unwrap());
+        put_header(&number_header, &mut buffer, NUMBER);
+        // Array block again has illegal Array Entry Type of 0.
+        try_byte(&mut buffer, (128, 0), 0, None);
+        // 4, 5, and 6 are legal array types.
+        try_byte(
+            &mut buffer,
+            (NUMBER, 8),
+            0x04,
+            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], Default)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 8),
+            0x05,
+            Some(" root ->\n\n>  node ->\n> >  number: UintArray([], Default)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 8),
+            0x06,
+            Some(" root ->\n\n>  node ->\n> >  number: DoubleArray([], Default)\n\n\n"),
+        );
+        // 0, 1, and 2 are legal formats.
+        try_byte(
+            &mut buffer,
+            (NUMBER, 8),
+            0x14,
+            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], LinearHistogram)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 8),
+            0x24,
+            Some(" root ->\n\n>  node ->\n> >  number: IntArray([], ExponentialHistogram)\n\n\n"),
+        );
+        try_byte(&mut buffer, (NUMBER, 8), 0x34, None);
+        // Let's make sure other Value block-type numbers are rejected.
+        try_byte(&mut buffer, (NUMBER, 8), BlockType::ArrayValue.to_u8().unwrap(), None);
+        buffer[NUMBER * 16 + 8] = 4; // Int, Default
+        buffer[NUMBER * 16 + 9] = 2; // 2 entries
+        try_byte(
+            &mut buffer,
+            (NUMBER, 16),
+            42,
+            Some(" root ->\n\n>  node ->\n> >  number: IntArray([42, 0], Default)\n\n\n"),
+        );
+        try_byte(
+            &mut buffer,
+            (NUMBER, 24),
+            42,
+            Some(" root ->\n\n>  node ->\n> >  number: IntArray([0, 42], Default)\n\n\n"),
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
