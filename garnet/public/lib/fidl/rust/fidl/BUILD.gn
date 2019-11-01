@@ -29,7 +29,10 @@ rustc_library("fidl") {
   } else {
     deps += [ "//third_party/rust_crates:lazy_static" ]
   }
-  test_deps = [ "//src/lib/test_util" ]
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:matches",
+  ]
 }
 
 # not actually used-- just to ensure successful compilation

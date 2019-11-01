@@ -108,8 +108,6 @@ success("SimpleTableXAndY") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
-	// TODO(fxb/39778) Fix table decoding bug in Rust.
-	bindings_denylist = [rust],
 }
 
 success("SimpleTableJustY") {
@@ -135,8 +133,6 @@ success("SimpleTableJustY") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
-	// TODO(fxb/39778) Fix table decoding bug in Rust.
-	bindings_denylist = [rust],
 }
 
 success("TableWithStringAndVectorNoVectorContent") {
@@ -191,8 +187,6 @@ success("SimpleTableThenUint64") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
-	// TODO(fxb/39778) Fix table decoding bug in Rust.
-	bindings_denylist = [rust],
 }
 
 success("InlineXUnionInStruct") {

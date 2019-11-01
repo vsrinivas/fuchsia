@@ -1776,6 +1776,21 @@ pub fn encode_in_envelope(
     Ok(())
 }
 
+/// Decodes a reserved field in a table (an empty envelope).
+pub fn decode_reserved_table_field(decoder: &mut Decoder) -> Result<()> {
+    let mut num_bytes: u32 = 0;
+    num_bytes.decode(decoder)?;
+    let mut num_handles: u32 = 0;
+    num_handles.decode(decoder)?;
+    let mut present: u64 = 0;
+    present.decode(decoder)?;
+
+    if num_bytes != 0 || num_handles != 0 || present != ALLOC_ABSENT_U64 {
+        return Err(Error::UnknownTableField);
+    }
+    Ok(())
+}
+
 /// A macro which implements the table empty constructor and the FIDL `Encodable` and `Decodable`
 /// traits for an existing struct whose fields are all `Option`s and may or may not appear in the
 /// wire-format representation.
@@ -1870,11 +1885,18 @@ macro_rules! fidl_table {
                     // u32 num_bytes
                     // u32_num_handles
                     // 64-bit presence indicator
+                    let mut _next_ordinal_to_read = 0;
                     $(
+                        _next_ordinal_to_read += 1;
                         if decoder.is_empty() {
                             // The remaining fields have been omitted, so set them to None
                             self.$member_name = None;
                         } else {
+                            // Decode empty envelopes for gaps in ordinals.
+                            while _next_ordinal_to_read < $ordinal {
+                                $crate::encoding::decode_reserved_table_field(decoder)?;
+                                _next_ordinal_to_read += 1;
+                            }
                             let mut num_bytes: u32 = 0;
                             $crate::fidl_decode!(&mut num_bytes, decoder)?;
                             let mut num_handles: u32 = 0;
@@ -1923,18 +1945,7 @@ macro_rules! fidl_table {
                     // to new generated bindings before they can receive
                     // messages containing new table fields.
                     while !decoder.is_empty() {
-                        let mut num_bytes: u32 = 0;
-                        $crate::fidl_decode!(&mut num_bytes, decoder)?;
-                        let mut num_handles: u32 = 0;
-                        $crate::fidl_decode!(&mut num_handles, decoder)?;
-                        let mut present: u64 = 0;
-                        $crate::fidl_decode!(&mut present, decoder)?;
-                        if num_bytes != 0 ||
-                           num_handles != 0 ||
-                           present != $crate::encoding::ALLOC_ABSENT_U64
-                        {
-                            return Err($crate::Error::UnknownTableField);
-                        }
+                        $crate::encoding::decode_reserved_table_field(decoder)?;
                     }
 
                     Ok(())
@@ -2858,6 +2869,7 @@ impl<T: Encodable> Encodable for &mut T {
 #[cfg(test)]
 mod test {
     use super::*;
+    use matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
 
     pub const CONTEXTS: &[&Context] = &[
@@ -3537,12 +3549,8 @@ mod test {
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            let err = Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out)
-                .unwrap_err();
-            match err {
-                Error::UnknownTableField => {}
-                err => panic!("unexpected error decoding: {:?}", err),
-            }
+            let result = Decoder::decode_with_context(ctx, buf, handle_buf, &mut table_prefix_out);
+            assert_matches!(result, Err(Error::UnknownTableField));
         }
     }
 
@@ -3676,6 +3684,85 @@ mod test {
 
         for ctx in CONTEXTS {
             encode_assert_bytes(ctx, SimpleTable { x: None, y: None }, empty_table);
+        }
+    }
+
+    struct TableWithGaps {
+        second: Option<i32>,
+        fourth: Option<i32>,
+    }
+
+    fidl_table! {
+        name: TableWithGaps,
+        members: {
+            second {
+                ty: i32,
+                ordinal: 2,
+            },
+            fourth {
+                ty: i32,
+                ordinal: 4,
+            },
+        },
+    }
+
+    #[test]
+    fn encode_decode_table_with_gaps() {
+        for ctx in CONTEXTS {
+            let mut table = TableWithGaps { second: Some(1), fourth: Some(2) };
+            let table_out = encode_decode(ctx, &mut table);
+            assert_eq!(table_out.second, Some(1));
+            assert_eq!(table_out.fourth, Some(2));
+        }
+    }
+
+    #[test]
+    fn encode_empty_envelopes_for_reserved_table_fields() {
+        for ctx in CONTEXTS {
+            let mut table = TableWithGaps { second: Some(1), fourth: Some(2) };
+            let buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
+
+            // Expected layout:
+            //     0x00 table header
+            //     0x10 envelope 1 (reserved)
+            //     0x20 envelope 2 (second)
+            //     0x30 envelope 3 (reserved)
+            //     0x40 envelope 4 (fourth)
+            assert_eq!(&buf[0x10..0x20], &[0; 16]);
+            assert_eq!(&buf[0x30..0x40], &[0; 16]);
+        }
+    }
+
+    #[test]
+    fn decode_fails_without_reserved_table_fields() {
+        struct TableWithoutGaps {
+            first: Option<i32>,
+            second: Option<i32>,
+        }
+        fidl_table! {
+            name: TableWithoutGaps,
+            members: {
+                first {
+                    ty: i32,
+                    ordinal: 1,
+                },
+                second {
+                    ty: i32,
+                    ordinal: 2,
+                },
+            },
+        }
+
+        for ctx in CONTEXTS {
+            // Encode _without_ gaps, then attempt to decode _with_ gaps.
+            let mut table = TableWithoutGaps { first: Some(1), second: Some(2) };
+            let buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
+
+            let mut out = TableWithGaps::new_empty();
+            let result = Decoder::decode_with_context(ctx, buf, &mut Vec::new(), &mut out);
+            assert_matches!(result, Err(Error::UnknownTableField));
         }
     }
 
@@ -3973,16 +4060,11 @@ mod test {
             let mut input = TestSampleXUnion::U(1);
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut input)
-                .expect("Encoding TestSampleXUnionExpanded failed");
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut input).unwrap();
 
             let mut strict_xunion = StrictBoolXUnion::new_empty();
-            let err = Decoder::decode_with_context(ctx, buf, handle_buf, &mut strict_xunion)
-                .expect_err("Decoding StrictBoolXUnion unexpectedly succeeded");
-            match err {
-                Error::UnknownUnionTag => (),
-                _ => panic!("Unexpected kind of error"),
-            }
+            let result = Decoder::decode_with_context(ctx, buf, handle_buf, &mut strict_xunion);
+            assert_matches!(result, Err(Error::UnknownUnionTag));
         }
     }
 
@@ -3990,17 +4072,14 @@ mod test {
     fn extra_data_is_disallowed() {
         for ctx in CONTEXTS {
             let mut output = ();
-            match Decoder::decode_with_context(ctx, &[0], &mut [], &mut output).expect_err("bytes")
-            {
-                Error::ExtraBytes => {}
-                e => panic!("expected ExtraBytes, found {:?}", e),
-            }
-            match Decoder::decode_with_context(ctx, &[], &mut [Handle::invalid()], &mut output)
-                .expect_err("handles")
-            {
-                Error::ExtraHandles => {}
-                e => panic!("expected ExtraHandles, found {:?}", e),
-            }
+            assert_matches!(
+                Decoder::decode_with_context(ctx, &[0], &mut [], &mut output),
+                Err(Error::ExtraBytes)
+            );
+            assert_matches!(
+                Decoder::decode_with_context(ctx, &[], &mut [Handle::invalid()], &mut output),
+                Err(Error::ExtraHandles)
+            );
         }
     }
 

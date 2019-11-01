@@ -910,6 +910,21 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
+// byTableOrdinal is a wrapper type for sorting a TableMember slice.
+type byTableOrdinal []TableMember
+
+func (s byTableOrdinal) Len() int {
+	return len(s)
+}
+
+func (s byTableOrdinal) Less(i, j int) bool {
+	return s[i].Ordinal < s[j].Ordinal
+}
+
+func (s byTableOrdinal) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 func (c *compiler) compileTable(table types.Table) Table {
 	var members []TableMember
 	for _, member := range table.Members {
@@ -924,6 +939,8 @@ func (c *compiler) compileTable(table types.Table) Table {
 			Ordinal:    member.Ordinal,
 		})
 	}
+	// The fidl_table! macro relies on members being sorted by ordinal.
+	sort.Sort(byTableOrdinal(members))
 	return Table{
 		Attributes: table.Attributes,
 		ECI:        table.Name,
