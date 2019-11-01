@@ -22,6 +22,9 @@ rustc_library("spinel-mold") {
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
+  features = [
+    "lib",
+  ]
   deps = [
     "//src/graphics/lib/compute/mold",
   ]
@@ -52,6 +55,18 @@ unittest_package("spinel-mold-tests") {
   tests = [
     {
       name = "spinel_mold_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+unittest_package("spinel-mold-static-tests") {
+  deps = [
+    ":spinel-mold-static_test",
+  ]
+  tests = [
+    {
+      name = "spinel_mold_static_staticlib_test"
       environments = basic_envs
     },
   ]

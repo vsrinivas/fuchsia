@@ -1,17 +1,31 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+#[cfg(not(feature = "lib"))]
+use std::{cell::RefCell, rc::Rc};
+use std::collections::HashMap;
 
 use mold::Raster;
 
-use crate::{Context, styling::COMMANDS_LAYER_ID_MAX};
+#[cfg(not(feature = "lib"))]
+use crate::Context;
+use crate::styling::COMMANDS_LAYER_ID_MAX;
 
 #[derive(Debug)]
 pub struct Composition {
+    #[cfg(not(feature = "lib"))]
     pub(crate) context: Rc<RefCell<Context>>,
     placements: HashMap<u32, Vec<Raster>>,
     layers: HashMap<u32, Raster>,
 }
 
 impl Composition {
+    #[cfg(feature = "lib")]
+    pub fn new() -> Self {
+        Self {
+            placements: HashMap::new(),
+            layers: HashMap::new(),
+        }
+    }
+
+    #[cfg(not(feature = "lib"))]
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
         Self {
             context,

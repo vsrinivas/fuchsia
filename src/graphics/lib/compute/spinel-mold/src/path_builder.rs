@@ -1,11 +1,15 @@
-use std::{cell::RefCell, mem, rc::Rc};
+#[cfg(not(feature = "lib"))]
+use std::{cell::RefCell, rc::Rc};
+use std::mem;
 
 use mold::{Path, Point};
 
+#[cfg(not(feature = "lib"))]
 use crate::{Context, PathId};
 
 #[derive(Debug)]
 pub struct PathBuilder {
+    #[cfg(not(feature = "lib"))]
     context: Rc<RefCell<Context>>,
     current_path: Path,
     end_point: Point<f32>,
@@ -13,6 +17,16 @@ pub struct PathBuilder {
 }
 
 impl PathBuilder {
+    #[cfg(feature = "lib")]
+    pub fn new() -> Self {
+        Self {
+            current_path: Path::new(),
+            end_point: Point::new(0.0, 0.0),
+            end_control_point: Point::new(0.0, 0.0),
+        }
+    }
+
+    #[cfg(not(feature = "lib"))]
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
         Self {
             context,
@@ -112,6 +126,15 @@ impl PathBuilder {
         self.end_control_point = p3;
     }
 
+    #[cfg(feature = "lib")]
+    pub fn build(&mut self) -> Path {
+        let mut path = Path::new();
+        mem::swap(&mut self.current_path, &mut path);
+
+        path
+    }
+
+    #[cfg(not(feature = "lib"))]
     pub fn build(&mut self) -> PathId {
         let mut path = Path::new();
         mem::swap(&mut self.current_path, &mut path);

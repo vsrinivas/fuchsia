@@ -1,3 +1,4 @@
+#[cfg(not(feature = "lib"))]
 use std::{cell::RefCell, collections::{HashMap, HashSet}, convert::TryFrom, mem, ptr, rc::Rc, slice};
 
 mod composition;
@@ -5,11 +6,25 @@ mod path_builder;
 mod raster_builder;
 mod styling;
 
+#[cfg(not(feature = "lib"))]
 use composition::Composition;
+#[cfg(not(feature = "lib"))]
 use path_builder::PathBuilder;
+#[cfg(not(feature = "lib"))]
 use raster_builder::RasterBuilder;
+#[cfg(not(feature = "lib"))]
 use styling::Styling;
 
+#[cfg(feature = "lib")]
+pub use composition::Composition;
+#[cfg(feature = "lib")]
+pub use path_builder::PathBuilder;
+#[cfg(feature = "lib")]
+pub use raster_builder::RasterBuilder;
+#[cfg(feature = "lib")]
+pub use styling::Styling;
+
+#[cfg(not(feature = "lib"))]
 use mold::{ColorBuffer, PixelFormat, tile::Map, Path, Point, RasterInner};
 
 #[repr(C)]
@@ -75,6 +90,7 @@ pub const SPN_STYLING_OPCODE_COLOR_ILL_ZERO: u32 = 23;
 pub const SPN_STYLING_OPCODE_COLOR_ILL_COPY_ACC: u32 = 24;
 pub const SPN_STYLING_OPCODE_COLOR_ACC_MULTIPLY_ILL: u32 = 25;
 
+#[cfg(not(feature = "lib"))]
 unsafe fn retain_from_ptr<T>(ptr: *const T) {
     let object = Rc::from_raw(ptr);
 
@@ -82,6 +98,7 @@ unsafe fn retain_from_ptr<T>(ptr: *const T) {
     Rc::into_raw(object);
 }
 
+#[cfg(not(feature = "lib"))]
 unsafe fn clone_from_ptr<T>(ptr: *const T) -> Rc<T> {
     let original = Rc::from_raw(ptr);
     let clone = Rc::clone(&original);
@@ -91,6 +108,7 @@ unsafe fn clone_from_ptr<T>(ptr: *const T) -> Rc<T> {
     clone
 }
 
+#[cfg(not(feature = "lib"))]
 #[repr(C)]
 #[derive(Clone, Debug)]
 pub struct RawBuffer {
@@ -99,9 +117,12 @@ pub struct RawBuffer {
     pub format: PixelFormat,
 }
 
+#[cfg(not(feature = "lib"))]
 unsafe impl Send for RawBuffer {}
+#[cfg(not(feature = "lib"))]
 unsafe impl Sync for RawBuffer {}
 
+#[cfg(not(feature = "lib"))]
 impl ColorBuffer for RawBuffer {
     fn pixel_format(&self) -> PixelFormat {
         self.format
@@ -117,6 +138,7 @@ impl ColorBuffer for RawBuffer {
     }
 }
 
+#[cfg(not(feature = "lib"))]
 #[repr(C)]
 #[derive(Debug)]
 pub struct Context {
@@ -130,6 +152,7 @@ pub struct Context {
     new_prints: HashSet<u32>,
 }
 
+#[cfg(not(feature = "lib"))]
 impl Context {
     pub fn get_path(&self, id: PathId) -> &Path {
         &self.paths[&id].0
@@ -194,6 +217,7 @@ impl Context {
     }
 }
 
+#[cfg(not(feature = "lib"))]
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RenderSubmit {
@@ -203,15 +227,24 @@ pub struct RenderSubmit {
     pub tile_clip: [u32; 4],
 }
 
+#[cfg(not(feature = "lib"))]
 pub type ContextPtr = *const RefCell<Context>;
+#[cfg(not(feature = "lib"))]
 pub type PathBuilderPtr = *const RefCell<PathBuilder>;
+#[cfg(not(feature = "lib"))]
 pub type PathId = u32;
+#[cfg(not(feature = "lib"))]
 pub type RasterId = u32;
+#[cfg(not(feature = "lib"))]
 pub type RasterPtr = *const RasterInner;
+#[cfg(not(feature = "lib"))]
 pub type RasterBuilderPtr = *const RefCell<RasterBuilder>;
+#[cfg(not(feature = "lib"))]
 pub type CompositionPtr = *const RefCell<Composition>;
+#[cfg(not(feature = "lib"))]
 pub type StylingPtr = *const RefCell<Styling>;
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn mold_context_create(
@@ -231,6 +264,7 @@ pub unsafe extern "C" fn mold_context_create(
     *context_ptr = Rc::into_raw(Rc::new(RefCell::new(context)));
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_context_retain(context: ContextPtr) -> SpnResult {
     retain_from_ptr(context);
@@ -238,6 +272,7 @@ pub unsafe extern "C" fn spn_context_retain(context: ContextPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_context_release(context: ContextPtr) -> SpnResult {
     Rc::from_raw(context);
@@ -245,18 +280,21 @@ pub unsafe extern "C" fn spn_context_release(context: ContextPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_context_reset(context: ContextPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_context_status(context: ContextPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_create(
     context: ContextPtr,
@@ -268,6 +306,7 @@ pub unsafe extern "C" fn spn_path_builder_create(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_retain(path_builder: PathBuilderPtr) -> SpnResult {
     retain_from_ptr(path_builder);
@@ -275,6 +314,7 @@ pub unsafe extern "C" fn spn_path_builder_retain(path_builder: PathBuilderPtr) -
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_release(path_builder: PathBuilderPtr) -> SpnResult {
     Rc::from_raw(path_builder);
@@ -282,18 +322,21 @@ pub unsafe extern "C" fn spn_path_builder_release(path_builder: PathBuilderPtr) 
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_path_builder_flush(path_builder: PathBuilderPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_path_builder_begin(path_builder: PathBuilderPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_end(
     path_builder: PathBuilderPtr,
@@ -304,6 +347,7 @@ pub unsafe extern "C" fn spn_path_builder_end(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_move_to(
     path_builder: PathBuilderPtr,
@@ -315,6 +359,7 @@ pub unsafe extern "C" fn spn_path_builder_move_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_line_to(
     path_builder: PathBuilderPtr,
@@ -326,6 +371,7 @@ pub unsafe extern "C" fn spn_path_builder_line_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_quad_to(
     path_builder: PathBuilderPtr,
@@ -339,6 +385,7 @@ pub unsafe extern "C" fn spn_path_builder_quad_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_quad_smooth_to(
     path_builder: PathBuilderPtr,
@@ -350,6 +397,7 @@ pub unsafe extern "C" fn spn_path_builder_quad_smooth_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_cubic_to(
     path_builder: PathBuilderPtr,
@@ -367,6 +415,7 @@ pub unsafe extern "C" fn spn_path_builder_cubic_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_cubic_smooth_to(
     path_builder: PathBuilderPtr,
@@ -380,6 +429,7 @@ pub unsafe extern "C" fn spn_path_builder_cubic_smooth_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_rat_quad_to(
     path_builder: PathBuilderPtr,
@@ -394,6 +444,7 @@ pub unsafe extern "C" fn spn_path_builder_rat_quad_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_path_builder_rat_cubic_to(
     path_builder: PathBuilderPtr,
@@ -413,6 +464,7 @@ pub unsafe extern "C" fn spn_path_builder_rat_cubic_to(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_path_retain(
@@ -427,6 +479,7 @@ pub unsafe extern "C" fn spn_path_retain(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_path_release(
@@ -441,6 +494,7 @@ pub unsafe extern "C" fn spn_path_release(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_raster_builder_create(
     context: ContextPtr,
@@ -452,6 +506,7 @@ pub unsafe extern "C" fn spn_raster_builder_create(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_raster_builder_retain(raster_builder: RasterBuilderPtr) -> SpnResult {
     retain_from_ptr(raster_builder);
@@ -459,6 +514,7 @@ pub unsafe extern "C" fn spn_raster_builder_retain(raster_builder: RasterBuilder
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_raster_builder_release(raster_builder: RasterBuilderPtr) -> SpnResult {
     Rc::from_raw(raster_builder);
@@ -466,18 +522,21 @@ pub unsafe extern "C" fn spn_raster_builder_release(raster_builder: RasterBuilde
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_raster_builder_flush(raster_builder: RasterBuilderPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_raster_builder_begin(raster_builder: RasterBuilderPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_raster_builder_end(
     raster_builder: RasterBuilderPtr,
@@ -488,6 +547,7 @@ pub unsafe extern "C" fn spn_raster_builder_end(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_raster_builder_add(
     raster_builder: RasterBuilderPtr,
@@ -515,6 +575,7 @@ pub unsafe extern "C" fn spn_raster_builder_add(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_raster_retain(
@@ -529,6 +590,7 @@ pub unsafe extern "C" fn spn_raster_retain(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_raster_release(
@@ -543,6 +605,7 @@ pub unsafe extern "C" fn spn_raster_release(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_composition_create(
@@ -555,6 +618,7 @@ pub unsafe extern "C" fn spn_composition_create(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_composition_clone(
@@ -567,6 +631,7 @@ pub unsafe extern "C" fn spn_composition_clone(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_composition_retain(composition: CompositionPtr) -> SpnResult {
     retain_from_ptr(composition);
@@ -574,6 +639,7 @@ pub unsafe extern "C" fn spn_composition_retain(composition: CompositionPtr) -> 
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_composition_release(composition: CompositionPtr) -> SpnResult {
     Rc::from_raw(composition);
@@ -581,6 +647,7 @@ pub unsafe extern "C" fn spn_composition_release(composition: CompositionPtr) ->
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe  extern "C" fn spn_composition_place(
     composition: CompositionPtr,
@@ -616,18 +683,21 @@ pub unsafe  extern "C" fn spn_composition_place(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_composition_seal(composition: CompositionPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_composition_unseal(composition: CompositionPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_composition_reset(composition: CompositionPtr) -> SpnResult {
     (*composition).borrow_mut().reset();
@@ -635,6 +705,7 @@ pub unsafe extern "C" fn spn_composition_reset(composition: CompositionPtr) -> S
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_composition_get_bounds(
@@ -644,6 +715,7 @@ pub unsafe extern "C" fn spn_composition_get_bounds(
     unimplemented!()
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_styling_create(
@@ -658,6 +730,7 @@ pub unsafe extern "C" fn spn_styling_create(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_retain(styling: StylingPtr) -> SpnResult {
     retain_from_ptr(styling);
@@ -665,6 +738,7 @@ pub unsafe extern "C" fn spn_styling_retain(styling: StylingPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_release(styling: StylingPtr) -> SpnResult {
     Rc::from_raw(styling);
@@ -672,18 +746,21 @@ pub unsafe extern "C" fn spn_styling_release(styling: StylingPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_styling_seal(styling: StylingPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern "C" fn spn_styling_unseal(styling: StylingPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_reset(styling: StylingPtr) -> SpnResult {
     (*styling).borrow_mut().reset();
@@ -691,6 +768,7 @@ pub unsafe extern "C" fn spn_styling_reset(styling: StylingPtr) -> SpnResult {
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_alloc(styling: StylingPtr, group_id: *mut u32) -> SpnResult {
     *group_id = (*styling).borrow_mut().group_alloc();
@@ -698,6 +776,7 @@ pub unsafe extern "C" fn spn_styling_group_alloc(styling: StylingPtr, group_id: 
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_enter(
     styling: StylingPtr,
@@ -712,6 +791,7 @@ pub unsafe extern "C" fn spn_styling_group_enter(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_leave(
     styling: StylingPtr,
@@ -726,6 +806,7 @@ pub unsafe extern "C" fn spn_styling_group_leave(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_parents(
     styling: StylingPtr,
@@ -740,6 +821,7 @@ pub unsafe extern "C" fn spn_styling_group_parents(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_range_lo(
     styling: StylingPtr,
@@ -751,6 +833,7 @@ pub unsafe extern "C" fn spn_styling_group_range_lo(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_range_hi(
     styling: StylingPtr,
@@ -762,6 +845,7 @@ pub unsafe extern "C" fn spn_styling_group_range_hi(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_group_layer(
     styling: StylingPtr,
@@ -777,6 +861,7 @@ pub unsafe extern "C" fn spn_styling_group_layer(
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_layer_fill_rgba_encoder(mut cmds: *mut u32, rgba: &[f32; 4]) {
     let mut bytes = [0u8; 4];
@@ -795,6 +880,7 @@ pub unsafe extern "C" fn spn_styling_layer_fill_rgba_encoder(mut cmds: *mut u32,
     cmds.write(0);
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_styling_background_over_encoder(mut cmds: *mut u32, rgba: &[f32; 4]) {
     let mut bytes = [0u8; 4];
@@ -813,9 +899,10 @@ pub unsafe extern "C" fn spn_styling_background_over_encoder(mut cmds: *mut u32,
     cmds.write(0);
 }
 
+#[cfg(not(feature = "lib"))]
 #[no_mangle]
 pub unsafe extern "C" fn spn_render(context: ContextPtr, submit: *const RenderSubmit) -> SpnResult {
-    let submit = *submit ;
+    let submit = *submit;
     let width = (submit.tile_clip[2] - submit.tile_clip[0]) as usize;
     let height = (submit.tile_clip[3] - submit.tile_clip[1]) as usize;
 
@@ -846,6 +933,7 @@ pub unsafe extern "C" fn spn_render(context: ContextPtr, submit: *const RenderSu
     SpnResult::SpnSuccess
 }
 
+#[cfg(not(feature = "lib"))]
 #[cfg(test)]
 mod tests {
     use super::*;
