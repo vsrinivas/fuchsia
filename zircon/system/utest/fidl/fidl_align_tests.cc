@@ -21,28 +21,8 @@ bool fidl_align() {
   END_TEST;
 }
 
-bool fidl_elem_align() {
-  BEGIN_TEST;
-
-  EXPECT_EQ(1, FIDL_ELEM_ALIGN(1));
-  EXPECT_EQ(2, FIDL_ELEM_ALIGN(2));
-  EXPECT_EQ(4, FIDL_ELEM_ALIGN(3));
-  EXPECT_EQ(4, FIDL_ELEM_ALIGN(4));
-  EXPECT_EQ(8, FIDL_ELEM_ALIGN(5));
-  EXPECT_EQ(8, FIDL_ELEM_ALIGN(6));
-  EXPECT_EQ(8, FIDL_ELEM_ALIGN(7));
-  EXPECT_EQ(8, FIDL_ELEM_ALIGN(8));
-  EXPECT_EQ(16, FIDL_ELEM_ALIGN(9));
-  EXPECT_EQ(16, FIDL_ELEM_ALIGN(16));
-  EXPECT_EQ(24, FIDL_ELEM_ALIGN(17));
-  EXPECT_EQ(24, FIDL_ELEM_ALIGN(24));
-
-  END_TEST;
-}
-
 }  // namespace
 
 BEGIN_TEST_CASE(fidl_align_tests)
 RUN_TEST(fidl_align)
-RUN_TEST(fidl_elem_align)
 END_TEST_CASE(fidl_align_tests)

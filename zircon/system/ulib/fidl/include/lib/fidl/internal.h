@@ -64,9 +64,13 @@ inline bool AddOutOfLine(uint32_t offset, uint32_t size, uint32_t* out_offset) {
 
 struct FidlStructField {
   const fidl_type* type;
+
   // If |type| is not nullptr, |offset| stores the offset of the struct member.
-  // Otherwise, |offset| stores the offset of the padding.
-  uint32_t offset;
+  // If |type| is nullptr, |padding_offset| stores the offset where padding starts.
+  union {
+    uint32_t offset;
+    uint32_t padding_offset;
+  };
   uint8_t padding;
 
   // Pointer to the alternate ("alt") version of this FidlStructField, which is
@@ -279,8 +283,11 @@ struct FidlCodedArrayNew {
   constexpr FidlCodedArrayNew(const fidl_type* element, uint64_t element_count,
                               uint32_t element_size, uint32_t element_padding,
                               const FidlCodedArrayNew* alt_type)
-      : element(element), element_count(element_count), element_size(element_size),
-        element_padding(element_padding), alt_type(alt_type) {}
+      : element(element),
+        element_count(element_count),
+        element_size(element_size),
+        element_padding(element_padding),
+        alt_type(alt_type) {}
 };
 
 // Note: must keep in sync with fidlc types.h HandleSubtype.

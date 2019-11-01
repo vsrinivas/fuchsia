@@ -8,15 +8,15 @@
 library example;
 
 union UnionSize8Aligned4 {
-    uint8 unused1;   // makes `variant` tagged 2
-    uint8 unused2;   // since it is the third
-    uint32 variant;  // xunion_ordinal = 0x7fc2f0db
+    uint8 unused1; // makes `variant` tagged 2
+    uint8 unused2; // since it is the third
+    uint32 variant; // xunion_ordinal = 0x7fc2f0db
 };
 
 union UnionSize16Aligned4 {
-    uint8 unused1;          // avoid tag 0
-    uint8 unused2;          // avoid tag 1
-    uint8 unused3;          // avoid tag 2
+    uint8 unused1; // avoid tag 0
+    uint8 unused2; // avoid tag 1
+    uint8 unused3; // avoid tag 2
     array<uint8>:6 variant; // 0x20d1d3bf
 };
 
@@ -26,34 +26,34 @@ struct StructSize16Alignement8 {
 };
 
 union UnionSize24Alignement8 {
-    uint8 unused1;                   // avoid tag 0
-    uint8 unused2;                   // avoid tag 1
-    uint8 unused3;                   // avoid tag 2
+    uint8 unused1; // avoid tag 0
+    uint8 unused2; // avoid tag 1
+    uint8 unused3; // avoid tag 2
     StructSize16Alignement8 variant; // 0x3404559b
 };
 
 struct Sandwich1 {
-   uint32 before;
-   UnionSize8Aligned4 union;
-   uint32 after;
+    uint32 before;
+    UnionSize8Aligned4 union;
+    uint32 after;
 };
 
 struct Sandwich2 {
-   uint32 before;
-   UnionSize16Aligned4 union;
-   uint32 after;
+    uint32 before;
+    UnionSize16Aligned4 union;
+    uint32 after;
 };
 
 struct Sandwich3 {
-   uint32 before;
-   UnionSize24Alignement8 union;
-   uint32 after;
+    uint32 before;
+    UnionSize24Alignement8 union;
+    uint32 after;
 };
 
 union UnionSize36Alignment4 {
-    uint8 unused1;           // avoid tag 0
-    uint8 unused2;           // avoid tag 1
-    uint8 unused3;           // avoid tag 2
+    uint8 unused1; // avoid tag 0
+    uint8 unused2; // avoid tag 1
+    uint8 unused3; // avoid tag 2
     array<uint8>:32 variant; // 0x5e411019
 };
 
@@ -64,9 +64,9 @@ struct Sandwich4 {
 };
 
 union UnionOfUnion {
-    uint8 unused;                          // avoid tag 0
-    UnionSize8Aligned4 size8aligned4;      // 0x20AADD60
-    UnionSize16Aligned4 size16aligned4;    // 0x2D7665CD
+    uint8 unused; // avoid tag 0
+    UnionSize8Aligned4 size8aligned4; // 0x20AADD60
+    UnionSize16Aligned4 size16aligned4; // 0x2D7665CD
     UnionSize24Alignement8 size24aligned8; // 0x06722D1F
 };
 
@@ -88,15 +88,15 @@ struct StructSize3Alignment2 {
 // We name Sandwich6 cases by the tag number, i.e. Sandwich6 case 2 is
 // testing the `string` variant.
 union UnionWithVector {
-    uint8 unused;                                    // avoid tag 0
-    vector<uint8> vector_of_uint8;                   // 1: 0x79C3CCAD
-    string string;                                   // 2: 0x3B314338
-    vector<StructSize3Alignment1> vector_s3_a1;      // 3: 0x4BC13CDC
-    vector<StructSize3Alignment2> vector_s3_a2;      // 4: 0x1D08AA3C
-    vector<handle> handles;                          // 5: 0x471EAA76
-    array<StructSize3Alignment1>:2 array_s3_a1;      // 6: 0x5EA0A810
-    array<StructSize3Alignment2>:2 array_s3_a2;      // 7: 0x5CF8B70D
-    vector<UnionSize8Aligned4> vector_union;         // 8: 0x2B768C31
+    uint8 unused; // 0: unused
+    vector<uint8> vector_of_uint8; // 1: 0x79C3CCAD
+    string string; // 2: 0x3B314338
+    vector<StructSize3Alignment1> vector_s3_a1; // 3: 0x4BC13CDC
+    vector<StructSize3Alignment2> vector_s3_a2; // 4: 0x1D08AA3C
+    vector<handle> handles; // 5: 0x471EAA76
+    array<StructSize3Alignment1>:2 array_s3_a1; // 6: 0x5EA0A810
+    array<StructSize3Alignment2>:2 array_s3_a2; // 7: 0x5CF8B70D
+    vector<UnionSize8Aligned4> vector_union; // 8: 0x2B768C31
 };
 
 struct Sandwich6 {
@@ -111,25 +111,102 @@ struct Sandwich7 {
     uint32 after;
 };
 
-// TODO(apang): Add the following tests
-//
-//     struct Regression1 {
-//         uint8 f1;
-//         uint32 f2;
-//         uint8 f3;
-//         uint16 f4;
-//         uint64 f5;
-//         uint8 f6;
-//     };
-//
-//     struct Regression2 {
-//         Regression1 head;
-//         uint8 f6;
-//     };
-//
-//     struct Regression3 {
-//         Regression2? opt_value;
-//     };
-//
-// These are particularly interesting because they exercice complex field
-// placement, padding, both inline and out-of-line.
+// Same as Sandwich5, except "before" is uint64 instead of uint32, so there's no padding before the
+// union.
+struct Sandwich8 {
+    uint64 before;
+    UnionOfUnion union_of_union;
+    uint32 after;
+};
+
+struct Regression1 {
+    uint8 f1;
+    uint32 f2;
+    uint8 f3;
+    uint16 f4;
+    uint64 f5;
+    uint8 f6;
+};
+
+struct Regression2 {
+    Regression1 head;
+    uint8 f7;
+};
+
+struct Regression3 {
+    Regression2? opt_value;
+};
+
+table Table_NoFields {
+};
+
+table Table_TwoReservedFields {
+    1: reserved;
+    2: reserved;
+};
+
+table Table_StructWithReservedSandwich {
+    1: reserved;
+    2: StructSize3Alignment1 s1;
+    3: StructSize3Alignment1 s2;
+    4: reserved;
+};
+
+table Table_StructWithUint32Sandwich {
+    1: uint32 i;
+    2: StructSize3Alignment1 s1;
+    3: StructSize3Alignment1 s2;
+    4: uint32 i2;
+};
+
+table Table_UnionWithVector_ReservedSandwich {
+    1: reserved;
+    2: UnionWithVector uv;
+    3: reserved;
+};
+
+table Table_UnionWithVector_StructSandwich {
+    1: StructSize3Alignment1 s1;
+    2: UnionWithVector uv;
+    3: StructSize3Alignment1 s2;
+};
+
+xunion XUnionWithStruct {
+    StructSize3Alignment1 s;
+};
+
+xunion XUnionWithXUnion {
+    XUnionWithStruct xu;
+};
+
+xunion XUnionWithUnions {
+    UnionSize8Aligned4 u1;
+    UnionSize16Aligned4 u2;
+};
+
+struct Size5Alignment1 {
+    array<uint8>:5 data;
+};
+
+struct Size5Alignment4 {
+    uint32 four;
+    uint8 one;
+};
+
+struct Size5Alignment1Vector {
+    vector<Size5Alignment1> v;
+};
+
+struct Size5Alignment4Vector {
+    vector<Size5Alignment4> v;
+};
+
+struct Size5Alignment1Array {
+    array<Size5Alignment1>:3 a;
+};
+
+struct Size5Alignment4Array {
+    array<Size5Alignment4>:3 a;
+};
+
+// TODO(apang): Union containing a table (to test out-of-line sizing)

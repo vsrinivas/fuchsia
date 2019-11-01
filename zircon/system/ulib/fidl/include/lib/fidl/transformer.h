@@ -18,14 +18,24 @@ typedef uint32_t fidl_transformation_t;
 // See also `fidl_transform`.
 #define FIDL_TRANSFORMATION_NONE ((fidl_transformation_t)0u)
 
-// In the v1 wire format, static-unions are encoded as extensible-unions.
+// In the old wire format, a FIDL union is encoded as a static union. In the v1 wire format, a FIDL
+// union is encoded as an extensible union.
 //
-// Performing this transformation will inline all static-unions into their
-// container (including their data which will move from out-of-line to
-// inline).
+// Performing the FIDL_TRANSFORMATION_V1_TO_OLD transformation will transform a top-level struct
+// that contains FIDL unions from extensible unions to static unions. The |src_bytes| buffer passed
+// to `fidl_transform` MUST have been previously validated with `fidl_validate`, or the behavior is
+// undefined.
 //
 // See also `fidl_transform`.
 #define FIDL_TRANSFORMATION_V1_TO_OLD ((fidl_transformation_t)1u)
+
+// Performing FIDL_TRANSFORMATION_OLD_TO_V1 transformation will transform a top-level struct that
+// contains FIDL unions from static unions to extensible unions. The |src_bytes| buffer passed to
+// `fidl_transform` MUST have been previously validated with `fidl_validate`, or the behavior is
+// undefined.
+//
+// See also `fidl_transform`.
+#define FIDL_TRANSFORMATION_OLD_TO_V1 ((fidl_transformation_t)2u)
 
 // Transforms an encoded FIDL buffer from one wire format to another.
 //
@@ -42,11 +52,9 @@ typedef uint32_t fidl_transformation_t;
 // error message.
 //
 // See also `fidl_transformation_t` and `FIDL_TRANSFORMATION_...` constants.
-zx_status_t fidl_transform(fidl_transformation_t transformation,
-                           const fidl_type_t* type,
-                           const uint8_t* src_bytes, uint32_t src_num_bytes,
-                           uint8_t* dst_bytes, uint32_t* out_dst_num_bytes,
-                           const char** out_error_msg);
+zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
+                           const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
+                           uint32_t* out_dst_num_bytes, const char** out_error_msg);
 
 __END_CDECLS
 
