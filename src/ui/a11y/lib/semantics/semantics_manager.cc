@@ -62,6 +62,7 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNod
       return binding->impl()->GetAccessibilityNode(node_id);
     }
   }
+
   return nullptr;
 }
 
@@ -92,8 +93,8 @@ void SemanticsManager::PerformHitTesting(
   FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
 }
 
-fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager> SemanticsManager::GetHandler(
-    async_dispatcher_t* dispatcher) {
+fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>
+SemanticsManager::GetHandler(async_dispatcher_t* dispatcher) {
   return bindings_.GetHandler(this, dispatcher);
 }
 

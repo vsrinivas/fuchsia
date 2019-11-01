@@ -61,18 +61,6 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // Also, deletes the semantic tree, when Semantics Manager is disabled.
   void EnableSemanticsUpdates(bool enabled);
 
-  // FOR TESTING ONLY
-  // Create semantic tree logs in a human readable form.
-  std::string LogSemanticTree();
-
- private:
-  // Representation of single semantic tree update/delete transaction.
-  struct SemanticTreeTransaction {
-    uint32_t node_id;
-    bool delete_node;
-    fuchsia::accessibility::semantics::Node node;
-  };
-
   // Semantic Tree for a particular view. Each client is responsible for
   // maintaining the state of their tree. Nodes can be added, updated or
   // deleted. Because the size of an update may exceed FIDL transfer limits,
@@ -95,6 +83,47 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
 
+  // TODO(fxb/40132): Remove test-only methods, and move some of intermediate state into a separate
+  // class.
+
+  // The methods below labelled "FOR TESTING ONLY" are used to manipulate/observe internal tree
+  // state directly for testing purposes.
+
+  // FOR TESTING ONLY
+  // Create semantic tree logs in a human readable form. This method enables us to verify the
+  // state of the semantic tree against static golden text.
+  std::string LogSemanticTree();
+
+  // FOR TESTING ONLY
+  // Populates nodes_. This method is helpful for setting up the semantic tree without using
+  // UpdateSemanticNodes(), which enables us to create certain edge/error states in the tree
+  // that the update API would otherwise prevent.
+  void InitializeNodesForTest(std::vector<fuchsia::accessibility::semantics::Node> nodes);
+
+  // FOR TESTING ONLY
+  // Add pending transaction. This method is useful, because it enables us to test
+  // CommitUpdates() independently of UpdateSemanticNodes() and DeleteSemanticNodes().
+  void AddPendingTransaction(const uint32_t node_id, bool delete_node,
+                             fuchsia::accessibility::semantics::Node node);
+
+  // FOR TESTING ONLY
+  // Returns a list of node ids to be deleted. This method enables us to verify that
+  // DeleteSemanticNodes() correctly alters the state of pending_transactions_.
+  std::vector<uint32_t> GetPendingDeletions();
+
+  // FOR TESTING ONLY
+  // Returns a list of node updates. This method enables us to verify that UpdateSemanticNodes()
+  // correctly alters the state of pending_transactions_.
+  std::vector<fuchsia::accessibility::semantics::Node> GetPendingUpdates();
+
+ private:
+  // Representation of single semantic tree update/delete transaction.
+  struct SemanticTreeTransaction {
+    uint32_t node_id;
+    bool delete_node;
+    fuchsia::accessibility::semantics::Node node;
+  };
+
   // Helper function to traverse semantic tree with a root node, and for
   // creating string with tree information.
   void LogSemanticTreeHelper(fuchsia::accessibility::semantics::NodePtr root_node,
@@ -105,7 +134,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // And because of multiple parents it will be visited twice through different paths.
   // In a tree without cycles every node should have just 1 path from root node.
   bool IsTreeWellFormed(fuchsia::accessibility::semantics::NodePtr node,
-                             std::unordered_set<uint32_t>* visited);
+                        std::unordered_set<uint32_t>* visited);
 
   // Checks if there are multiple disjoint subtrees in the semantic tree. In other words it
   // ensures that every node is reachable from the root node. This function uses "visited"
@@ -114,7 +143,8 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   bool CheckIfAllNodesReachable(const std::unordered_set<uint32_t>& visited);
 
   // Internal helper function to check if a point is within a bounding box.
-  static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const fuchsia::math::PointF& point);
+  static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
+                               const fuchsia::math::PointF& point);
 
   // Function to create per view Log files under debug directory for debugging
   // semantic tree.

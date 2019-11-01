@@ -6,6 +6,7 @@ source_set("mocks") {
   testonly = true
 
   public = [
+    "mock_semantic_listener.h",
     "mock_semantic_provider.h",
   ]
 

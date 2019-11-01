@@ -7,6 +7,8 @@
 #include <lib/async/default.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
@@ -93,6 +95,22 @@ bool SemanticTree::ApplyCommit() {
       nodes_[transaction.node_id] = std::move(transaction.node);
     }
   }
+
+  // Remove deleted node ids from their respective parents' child_ids.
+  for (auto& node_id_and_node_pair : nodes_) {
+    auto& node = node_id_and_node_pair.second;
+
+    if (!node.has_child_ids()) {
+      continue;
+    }
+
+    auto child_ids = node.mutable_child_ids();
+    auto retained_child_ids_end =
+        std::remove_if(child_ids->begin(), child_ids->end(),
+                       [&](uint32_t child_id) { return nodes_.count(child_id) == 0; });
+    child_ids->erase(retained_child_ids_end, child_ids->end());
+  }
+
   // Clear list of pending transactions.
   pending_transactions_.clear();
 
@@ -249,8 +267,53 @@ std::string SemanticTree::LogSemanticTree() {
   return tree_log;
 }
 
+void SemanticTree::InitializeNodesForTest(
+    std::vector<fuchsia::accessibility::semantics::Node> nodes) {
+  for (auto& node : nodes) {
+    nodes_[node.node_id()] = std::move(node);
+  }
+}
+
+std::vector<uint32_t> SemanticTree::GetPendingDeletions() {
+  std::vector<uint32_t> pending_deletions;
+  for (auto& pending_transaction : pending_transactions_) {
+    if (pending_transaction.delete_node) {
+      pending_deletions.push_back(pending_transaction.node_id);
+    }
+  }
+
+  return pending_deletions;
+}
+
+std::vector<fuchsia::accessibility::semantics::Node> SemanticTree::GetPendingUpdates() {
+  std::vector<fuchsia::accessibility::semantics::Node> pending_updates;
+  for (auto& pending_transaction : pending_transactions_) {
+    if (pending_transaction.delete_node) {
+      continue;
+    }
+
+    fuchsia::accessibility::semantics::Node pending_update_node;
+    pending_transaction.node.Clone(&pending_update_node);
+    pending_updates.push_back(std::move(pending_update_node));
+  }
+
+  return pending_updates;
+}
+
+void SemanticTree::AddPendingTransaction(const uint32_t node_id, bool delete_node,
+                                         fuchsia::accessibility::semantics::Node node) {
+  SemanticTreeTransaction transaction;
+  transaction.node_id = node_id;
+  transaction.delete_node = delete_node;
+  node.Clone(&transaction.node);
+
+  pending_transactions_.push_back(std::move(transaction));
+
+  FX_LOGS(INFO) << "Pending transaction node id: " << pending_transactions_.back().node_id;
+}
+
 bool SemanticTree::IsTreeWellFormed(fuchsia::accessibility::semantics::NodePtr node,
-                                         std::unordered_set<uint32_t>* visited) {
+                                    std::unordered_set<uint32_t>* visited) {
   FXL_CHECK(node);
   FXL_CHECK(visited);
 
