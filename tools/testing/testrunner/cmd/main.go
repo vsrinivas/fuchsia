@@ -42,6 +42,9 @@ var (
 	// Whether to use runtests when executing tests on fuchsia. If false, the
 	// default will be run_test_component.
 	useRuntests bool
+
+	// Per-test timeout.
+	perTestTimeout time.Duration
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -65,6 +68,8 @@ func init() {
 	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+	// TODO(fxb/36480): Support different timeouts for different tests.
+	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Usage = usage
 }
 
@@ -182,6 +187,12 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testru
 	// contains the test runner's TAP output stream.
 	multistdout := io.MultiWriter(stdout, os.Stderr)
 	multistderr := io.MultiWriter(stderr, os.Stderr)
+
+	if perTestTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, perTestTimeout)
+		defer cancel()
+	}
 
 	startTime := time.Now()
 

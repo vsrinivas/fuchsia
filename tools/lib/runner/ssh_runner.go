@@ -18,7 +18,7 @@ type SSHRunner struct {
 }
 
 // Run executes the given command.
-func (r *SSHRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
+func (r *SSHRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	r.Session.Stdout = stdout
 	r.Session.Stderr = stderr
 
@@ -42,5 +42,5 @@ func (r *SSHRunner) Run(ctx context.Context, command []string, stdout io.Writer,
 		r.Session.Signal(ssh.SIGKILL)
 	}
 
-	return nil
+	return ctx.Err()
 }
