@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
-#include <src/virtualization/tests/mock_netstack.h>
 
 #include "src/lib/component/cpp/environment_services_helper.h"
 #include "src/lib/component/cpp/testing/test_util.h"
@@ -100,15 +100,15 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
   fuchsia::virtualization::RealmPtr realm_;
   std::unique_ptr<sys::testing::EnvironmentServices> services_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
-  MockNetstack mock_netstack_;
+  FakeNetstack fake_netstack_;
 
  protected:
   void SetUp() {
     services_ = CreateServices();
 
     // Add Netstack services
-    services_->AddService(mock_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
-    services_->AddService(mock_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
+    services_->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
+    services_->AddService(fake_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
 
     // Add guest service
     fuchsia::sys::LaunchInfo guest_manager_launch_info;

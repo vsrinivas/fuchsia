@@ -14,8 +14,8 @@
 #include <map>
 
 #include <src/lib/files/unique_fd.h>
+#include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
-#include <src/virtualization/tests/mock_netstack.h>
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"

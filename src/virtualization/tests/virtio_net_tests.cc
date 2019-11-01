@@ -56,7 +56,7 @@ class VirtioNetDebianGuest : public DebianEnclosedGuest {
   }
 };
 
-static void TestThread(const MockNetstack& netstack, uint8_t receive_byte, uint8_t send_byte,
+static void TestThread(const FakeNetstack& netstack, uint8_t receive_byte, uint8_t send_byte,
                        bool use_raw_packets) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
@@ -99,7 +99,7 @@ using VirtioNetZirconGuestTest = GuestTest<VirtioNetZirconGuest>;
 
 TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
-    MockNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
     TestThread(*netstack, 0xab, 0xba, true /* use_raw_packets */);
   });
 
@@ -121,7 +121,7 @@ using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 
 TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
-    MockNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
+    FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
     TestThread(*netstack, 0xab, 0xba, false /* use_raw_packets */);
   });
 

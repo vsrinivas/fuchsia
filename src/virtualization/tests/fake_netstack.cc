@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mock_netstack.h"
+#include "fake_netstack.h"
 
 #include <lib/fit/defer.h>
 #include <netinet/icmp6.h>
@@ -26,13 +26,13 @@ static constexpr uint16_t kProtocolIpv4 = 0x0800;
 static constexpr uint8_t kPacketTypeUdp = 17;
 static constexpr uint16_t kTestPort = 4242;
 
-static constexpr uint32_t kMockNicId = 0;
+static constexpr uint32_t kFakeNicId = 0;
 
-void MockNetstack::AddEthernetDevice(
+void FakeNetstack::AddEthernetDevice(
     std::string topological_path, fuchsia::netstack::InterfaceConfig interfaceConfig,
     fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
     AddEthernetDeviceCallback callback) {
-  auto deferred = fit::defer([callback = std::move(callback)]() { callback(kMockNicId); });
+  auto deferred = fit::defer([callback = std::move(callback)]() { callback(kFakeNicId); });
   eth_device_ = device.BindSync();
 
   zx_status_t status;
@@ -90,11 +90,11 @@ void MockNetstack::AddEthernetDevice(
   }
 }
 
-void MockNetstack::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
+void FakeNetstack::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
                                        uint8_t prefixLen, SetInterfaceAddressCallback callback) {
   fuchsia::netstack::NetErr err;
 
-  if (nicid != kMockNicId) {
+  if (nicid != kFakeNicId) {
     err.status = fuchsia::netstack::Status::UNKNOWN_INTERFACE;
     err.message = "No such interface.";
   } else {
@@ -145,7 +145,7 @@ static size_t make_ip_header(uint8_t packet_type, size_t length, uint8_t* data) 
   return sizeof(ethhdr) + sizeof(iphdr);
 }
 
-zx_status_t MockNetstack::SendUdpPacket(void* packet, size_t length) const {
+zx_status_t FakeNetstack::SendUdpPacket(void* packet, size_t length) const {
   struct udp_hdr_t {
     uint16_t src_port;
     uint16_t dst_port;
@@ -176,7 +176,7 @@ zx_status_t MockNetstack::SendUdpPacket(void* packet, size_t length) const {
   return SendPacket(data, total_length);
 }
 
-zx_status_t MockNetstack::SendPacket(void* packet, size_t length) const {
+zx_status_t FakeNetstack::SendPacket(void* packet, size_t length) const {
   if (length > kMtu) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -216,7 +216,7 @@ zx_status_t MockNetstack::SendPacket(void* packet, size_t length) const {
   return ZX_OK;
 }
 
-zx_status_t MockNetstack::ReceivePacket(void* packet, size_t length, size_t* actual) const {
+zx_status_t FakeNetstack::ReceivePacket(void* packet, size_t length, size_t* actual) const {
   eth_fifo_entry_t entry;
 
   zx_signals_t pending = 0;

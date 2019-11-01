@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_MOCK_NETSTACK_H_
-#define SRC_VIRTUALIZATION_TESTS_MOCK_NETSTACK_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
+#define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 static constexpr zx::duration kTestTimeout = zx::sec(300);
 
-class MockNetstack : public fuchsia::netstack::Netstack {
+class FakeNetstack : public fuchsia::netstack::Netstack {
  public:
   void GetPortForService(std::string service, fuchsia::netstack::Protocol protocol,
                          GetPortForServiceCallback callback) override {}
@@ -71,4 +71,4 @@ class MockNetstack : public fuchsia::netstack::Netstack {
   uintptr_t io_addr_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_MOCK_NETSTACK_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_

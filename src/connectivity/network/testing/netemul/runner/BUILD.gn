@@ -71,7 +71,6 @@ source_set("src") {
     "//src/lib/pkg_url",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
-    "//src/virtualization/tests:mock_netstack",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

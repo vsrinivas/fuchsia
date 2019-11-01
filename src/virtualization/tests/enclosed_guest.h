@@ -16,9 +16,9 @@
 #include "src/virtualization/lib/vsh/command_runner.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_host.grpc.pb.h"
+#include "src/virtualization/tests/fake_netstack.h"
 #include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_console.h"
-#include "src/virtualization/tests/mock_netstack.h"
 
 static constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
@@ -84,7 +84,7 @@ class EnclosedGuest {
 
   uint32_t GetGuestCid() const { return guest_cid_; }
 
-  MockNetstack* GetNetstack() { return &mock_netstack_; }
+  FakeNetstack* GetNetstack() { return &fake_netstack_; }
 
   FakeScenic* GetScenic() { return &fake_scenic_; }
 
@@ -120,7 +120,7 @@ class EnclosedGuest {
   fuchsia::virtualization::RealmPtr realm_;
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
-  MockNetstack mock_netstack_;
+  FakeNetstack fake_netstack_;
   std::unique_ptr<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;

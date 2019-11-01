@@ -98,7 +98,7 @@ zx_status_t EnclosedGuest::Start() {
     return status;
   }
 
-  status = services->AddService(mock_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
+  status = services->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failure launching mock netstack: " << zx_status_get_string(status);
     return status;

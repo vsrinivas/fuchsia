@@ -68,14 +68,14 @@ source_set("guest_console") {
   ]
 }
 
-source_set("mock_netstack") {
+source_set("fake_netstack") {
   visibility = [
     "//src/connectivity/network/testing/netemul/*",
     "//src/virtualization/*",
   ]
   sources = [
-    "mock_netstack.cc",
-    "mock_netstack.h",
+    "fake_netstack.cc",
+    "fake_netstack.h",
   ]
   deps = [
     "//src/lib/fxl",
@@ -130,8 +130,8 @@ source_set("lib") {
   ]
 
   deps = [
+    ":fake_netstack",
     ":guest_console",
-    ":mock_netstack",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
@@ -180,9 +180,9 @@ executable("guest_integration_tests_bin") {
   }
 
   deps = [
+    ":fake_netstack",
     ":guest_console",
     ":lib",
-    ":mock_netstack",
     ":test_main",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
@@ -280,10 +280,9 @@ test_package("guest_integration_tests") {
   tests = [
     {
       name = "guest_integration_tests"
+
       # TODO(37320): The tests are temporarily disabled for vim2_env due to an unresolved bug.
-      environments = [
-        nuc_env,
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }
@@ -379,10 +378,9 @@ test_package("termina_integration_tests") {
   tests = [
     {
       name = "termina_integration_tests"
+
       # TODO(37320): The tests are temporarily disabled for vim2_env due to an unresolved bug.
-      environments = [
-        nuc_env,
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }
