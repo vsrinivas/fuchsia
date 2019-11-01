@@ -66,15 +66,11 @@ Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& 
   return local_intersection;
 }
 
-// TODO(37712): Remove when parent propagation is removed and we no longer have false nodes.
-bool IsHittableNode(const Node* node) { return node->IsKindOf<ShapeNode>(); }
-
 }  // namespace
 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
-  FXL_DCHECK(tag_info_ == nullptr);
   FXL_DCHECK(intersection_info_ == nullptr);
   hits_.clear();  // Reset to good state after std::move.
 
@@ -85,13 +81,14 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   // Get start intersection info with infinite bounds.
   Node::IntersectionInfo intersection_info;
   intersection_info_ = &intersection_info;
-  AccumulateHitsLocal(node);
+  AccumulateHitsInner(node);
   ray_info_ = nullptr;
   intersection_info_ = nullptr;
 
-  FXL_DCHECK(tag_info_ == nullptr);
-
-  // Sort by distance, preserving traversal order in case of ties.
+  // Sort by distance, preserving reverse traversal order in case of ties.
+  // TODO(37785): Change to std::sort and remove std::reverse when we remove ordering guarantee unit
+  // test.
+  std::reverse(hits_.begin(), hits_.end());
   std::stable_sort(hits_.begin(), hits_.end(),
                    [](const Hit& a, const Hit& b) { return a.distance < b.distance; });
 
@@ -107,7 +104,7 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
 void HitTester::AccumulateHitsOuter(Node* node) {
   // Take a fast path for identity transformations.
   if (node->transform().IsIdentity()) {
-    AccumulateHitsLocal(node);
+    AccumulateHitsInner(node);
     return;
   }
 
@@ -127,39 +124,16 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 
   ray_info_ = &local_ray_info;
   intersection_info_ = &local_intersection;
-  AccumulateHitsLocal(node);
+  AccumulateHitsInner(node);
   ray_info_ = outer_ray_info;
   intersection_info_ = outer_intersection;
 }
 
-void HitTester::AccumulateHitsLocal(Node* node) {
+void HitTester::AccumulateHitsInner(Node* node) {
   // Bail if hit testing is suppressed.
   if (node->hit_test_behavior() == ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)
     return;
 
-  // Session-based hit testing may encounter nodes that don't participate.
-  if (!should_participate(node)) {
-    AccumulateHitsInner(node);
-    return;
-  }
-
-  // The node is tagged by session which initiated the hit test.
-  TagInfo* outer_tag_info = tag_info_;
-  TagInfo local_tag_info{};
-
-  tag_info_ = &local_tag_info;
-  AccumulateHitsInner(node);
-  tag_info_ = outer_tag_info;
-
-  if (local_tag_info.is_hit()) {
-    hits_.emplace_back(
-        Hit{node, ray_info_->ray, ray_info_->inverse_transform, local_tag_info.distance});
-    if (outer_tag_info)
-      outer_tag_info->ReportIntersection(local_tag_info.distance);
-  }
-}
-
-void HitTester::AccumulateHitsInner(Node* node) {
   if (node->clip_to_self() && node->ClipsRay(ray_info_->ray))
     return;
 
@@ -167,8 +141,9 @@ void HitTester::AccumulateHitsInner(Node* node) {
   Node::IntersectionInfo intersection = node->GetIntersection(ray_info_->ray, *intersection_info_);
   intersection_info_ = &intersection;
 
-  if (intersection.did_hit && tag_info_) {
-    tag_info_->ReportIntersection(intersection.distance);
+  if (intersection.did_hit) {
+    hits_.emplace_back(
+        Hit{node, ray_info_->ray, ray_info_->inverse_transform, intersection.distance});
   }
 
   // Only test the descendants if the current node permits it.
@@ -185,14 +160,10 @@ std::string GetDistanceCollisionsWarning(const std::vector<Hit>& hits) {
   bool message_started = false;
   for (size_t i = 0; i < hits.size();) {
     // Compare distances of adjacent hits.
-    size_t num_colliding_nodes = IsHittableNode(hits[i].node) ? 1 : 0;
-    size_t count = 1;
-    while (i + count < hits.size() && hits[i].distance == hits[i + count].distance) {
-      // Filter out false hits.
-      // TODO(37712): Remove when we no longer have false hits.
-      num_colliding_nodes += IsHittableNode(hits[i + count].node) ? 1 : 0;
-
-      ++count;
+    size_t num_colliding_nodes = 1;
+    while (i + num_colliding_nodes < hits.size() &&
+           hits[i].distance == hits[i + num_colliding_nodes].distance) {
+      ++num_colliding_nodes;
     }
 
     // Create warning message if there were any collisions.
@@ -203,16 +174,14 @@ std::string GetDistanceCollisionsWarning(const std::vector<Hit>& hits) {
       }
 
       warning_message << "[ ";
-      for (size_t j = 0; j < count; ++j) {
-        if (IsHittableNode(hits[i + j].node)) {
-          warning_message << hits[i + j].node->global_id() << " ";
-        }
+      for (size_t j = 0; j < num_colliding_nodes; ++j) {
+        warning_message << hits[i + j].node->global_id() << " ";
       }
       warning_message << "] ";
     }
 
     // Skip past collisions.
-    i += count;
+    i += num_colliding_nodes;
   }
 
   if (message_started) {

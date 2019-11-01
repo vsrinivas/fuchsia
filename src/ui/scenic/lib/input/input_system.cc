@@ -138,7 +138,7 @@ std::vector<gfx::Hit> PerformGlobalHitTest(gfx::Engine* engine, GlobalId composi
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
   FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
 
-  auto hit_tester = std::make_unique<gfx::GlobalHitTester>();
+  auto hit_tester = std::make_unique<gfx::HitTester>();
   std::vector<gfx::Hit> hits = layer_stack->HitTest(ray, hit_tester.get());
 
   FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
@@ -589,6 +589,8 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
+
+  FXL_VLOG(2) << "Sending pointer event to session " << view_info.session_id;
 
   auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info.global_transform);
   InputEvent event;
