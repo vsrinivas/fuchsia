@@ -1456,7 +1456,7 @@ TEST(Conformance, UnionWithBoundString_Encode) {
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
       0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
@@ -1494,12 +1494,12 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
     v13->elem3 = std::move(v17);
     v1->elem3 = std::move(*v13);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInStruct_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
       0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
 
@@ -1530,12 +1530,12 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Decode) {
     v11->elem2 = std::move(v14);
     v1->elem3 = std::move(*v11);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
       0x07, 0x08, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1574,12 +1574,12 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
     auto v19 = fidl::VectorView<llcpp::conformance::ThreeByte>(v18.data(), 3);
     v1->elems = std::move(v19);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
       0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
@@ -1611,12 +1611,12 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
     auto v16 = fidl::VectorView<llcpp::conformance::FiveByte>(v15.data(), 3);
     v1->elems = std::move(v16);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
       0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
@@ -1652,12 +1652,12 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
     auto v18 = fidl::Array<llcpp::conformance::ThreeByte, 3>{*v3, *v8, *v13};
     v1->elems = std::move(v18);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
       0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
 
@@ -1687,12 +1687,12 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
     auto v15 = fidl::Array<llcpp::conformance::FiveByte, 3>{*v3, *v7, *v11};
     v1->elems = std::move(v15);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, EmptyStruct_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -1701,12 +1701,12 @@ TEST(Conformance, EmptyStruct_Decode) {
     char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
     llcpp::conformance::EmptyStruct* v1 = new (buf_v2) llcpp::conformance::EmptyStruct();
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, EmptyStructSandwich_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x62, 0x65,
@@ -1727,12 +1727,12 @@ TEST(Conformance, EmptyStructSandwich_Decode) {
     fidl::StringView v6("after", 5);
     v1->after = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint8Uint16Uint32Uint64_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04,
       0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
 
@@ -1752,12 +1752,12 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Decode) {
     uint64_t v6 = 579005069656919567ull;
     v1->f4 = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint64Uint32Uint16Uint8_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
       0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
 
@@ -1777,12 +1777,12 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Decode) {
     uint8_t v6 = 1ull;
     v1->f4 = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, SimpleTableEmpty_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1797,12 +1797,12 @@ TEST(Conformance, SimpleTableEmpty_Decode) {
     auto v4 = v3.view();
     v1->table = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, SimpleTableXAndY_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1827,12 +1827,12 @@ TEST(Conformance, SimpleTableXAndY_Decode) {
     auto v6 = v3.view();
     v1->table = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, SimpleTableJustY_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1854,12 +1854,12 @@ TEST(Conformance, SimpleTableJustY_Decode) {
     auto v5 = v3.view();
     v1->table = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
@@ -1882,12 +1882,12 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
     auto v6 = v3.view();
     v1->table = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, SimpleTableThenUint64_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1914,12 +1914,12 @@ TEST(Conformance, SimpleTableThenUint64_Decode) {
     uint64_t v7 = 16045690984833335023ull;
     v1->number = std::move(v7);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, InlineXUnionInStruct_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x00,
@@ -1943,12 +1943,12 @@ TEST(Conformance, InlineXUnionInStruct_Decode) {
     fidl::StringView v6("after", 5);
     v1->after = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
@@ -1967,12 +1967,12 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
     fidl::StringView v4("after", 5);
     v1->after = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x00,
@@ -1996,12 +1996,12 @@ TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
     fidl::StringView v6("after", 5);
     v1->after = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2025,12 +2025,12 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
     auto v6 = v3.view();
     v1->value = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -2060,12 +2060,12 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
     auto v8 = v3.view();
     v1->value = std::move(v8);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, StrictXUnion_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
@@ -2082,12 +2082,12 @@ TEST(Conformance, StrictXUnion_Decode) {
     v3.set_u(&v4);
     v1->xu = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, AddEthernetDeviceRequest_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2118,12 +2118,12 @@ TEST(Conformance, AddEthernetDeviceRequest_Decode) {
     uint32_t v9 = 4294967295ull;
     v1->this_should_be_a_handle = std::move(v9);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, FileGetAttrResponse_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x23, 0x96, 0x00,
       0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe7, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2157,12 +2157,12 @@ TEST(Conformance, FileGetAttrResponse_Decode) {
     v4->modification_time = std::move(v12);
     v1->attributes = std::move(*v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Optionals_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0xfe, 0xe0, 0x99, 0x74, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
@@ -2216,12 +2216,12 @@ TEST(Conformance, Optionals_Decode) {
     v19.set_s(*v20);
     v1->u2 = &v19;
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Arrays_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
@@ -2279,12 +2279,12 @@ TEST(Conformance, Arrays_Decode) {
     auto v31 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v26, v30};
     v1->arr_arr_int = std::move(v31);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Vectors_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -2358,12 +2358,12 @@ TEST(Conformance, Vectors_Decode) {
     auto v36 = fidl::VectorView<fidl::VectorView<int32_t>>(v35.data(), 2);
     v1->vec_vec_int = std::move(v36);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, BoolTrue_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2374,12 +2374,12 @@ TEST(Conformance, BoolTrue_Decode) {
     bool v3 = true;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, BoolFalse_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2390,12 +2390,12 @@ TEST(Conformance, BoolFalse_Decode) {
     bool v3 = false;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, ByteZero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2406,12 +2406,12 @@ TEST(Conformance, ByteZero_Decode) {
     uint8_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Byte255_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2422,12 +2422,12 @@ TEST(Conformance, Byte255_Decode) {
     uint8_t v3 = 255ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int8Min_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2438,12 +2438,12 @@ TEST(Conformance, Int8Min_Decode) {
     int8_t v3 = -128ll;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int8Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2454,12 +2454,12 @@ TEST(Conformance, Int8Zero_Decode) {
     int8_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int8Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2470,12 +2470,12 @@ TEST(Conformance, Int8Max_Decode) {
     int8_t v3 = 127ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int16Min_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2486,12 +2486,12 @@ TEST(Conformance, Int16Min_Decode) {
     int16_t v3 = -32768ll;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int16Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2502,12 +2502,12 @@ TEST(Conformance, Int16Zero_Decode) {
     int16_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int16Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2518,12 +2518,12 @@ TEST(Conformance, Int16Max_Decode) {
     int16_t v3 = 32767ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int32Min_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2534,12 +2534,12 @@ TEST(Conformance, Int32Min_Decode) {
     int32_t v3 = -2147483648ll;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int32Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2550,12 +2550,12 @@ TEST(Conformance, Int32Zero_Decode) {
     int32_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int32Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2566,12 +2566,12 @@ TEST(Conformance, Int32Max_Decode) {
     int32_t v3 = 2147483647ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int64Min_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,
 
   };
@@ -2582,12 +2582,12 @@ TEST(Conformance, Int64Min_Decode) {
     int64_t v3 = -9223372036854775807ll - 1;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int64Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2598,12 +2598,12 @@ TEST(Conformance, Int64Zero_Decode) {
     int64_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Int64Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,
 
   };
@@ -2614,12 +2614,12 @@ TEST(Conformance, Int64Max_Decode) {
     int64_t v3 = 9223372036854775807ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint8Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2630,12 +2630,12 @@ TEST(Conformance, Uint8Zero_Decode) {
     uint8_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint8Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2646,12 +2646,12 @@ TEST(Conformance, Uint8Max_Decode) {
     uint8_t v3 = 255ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint16Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2662,12 +2662,12 @@ TEST(Conformance, Uint16Zero_Decode) {
     uint16_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint16Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2678,12 +2678,12 @@ TEST(Conformance, Uint16Max_Decode) {
     uint16_t v3 = 65535ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint32Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2694,12 +2694,12 @@ TEST(Conformance, Uint32Zero_Decode) {
     uint32_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint32Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2710,12 +2710,12 @@ TEST(Conformance, Uint32Max_Decode) {
     uint32_t v3 = 4294967295ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint64Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2726,12 +2726,12 @@ TEST(Conformance, Uint64Zero_Decode) {
     uint64_t v3 = 0ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Uint64Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
   };
@@ -2742,12 +2742,12 @@ TEST(Conformance, Uint64Max_Decode) {
     uint64_t v3 = 18446744073709551615ull;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float32Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2758,12 +2758,12 @@ TEST(Conformance, Float32Zero_Decode) {
     float v3 = 0;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float32One_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2774,12 +2774,12 @@ TEST(Conformance, Float32One_Decode) {
     float v3 = 1;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float32MinusOne_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2790,12 +2790,12 @@ TEST(Conformance, Float32MinusOne_Decode) {
     float v3 = -1;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float32Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2806,12 +2806,12 @@ TEST(Conformance, Float32Max_Decode) {
     float v3 = 3.4028234663852886e+38;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float64Zero_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -2822,12 +2822,12 @@ TEST(Conformance, Float64Zero_Decode) {
     double v3 = 0;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float64One_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
 
   };
@@ -2838,12 +2838,12 @@ TEST(Conformance, Float64One_Decode) {
     double v3 = 1;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float64MinusOne_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,
 
   };
@@ -2854,12 +2854,12 @@ TEST(Conformance, Float64MinusOne_Decode) {
     double v3 = -1;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, Float64Max_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,
 
   };
@@ -2870,12 +2870,12 @@ TEST(Conformance, Float64Max_Decode) {
     double v3 = 1.7976931348623157e+308;
     v1->value = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }
 
 TEST(Conformance, UnionWithBoundString_Decode) {
-  const auto expected = std::vector<uint8_t>{
+  auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
@@ -2892,6 +2892,6 @@ TEST(Conformance, UnionWithBoundString_Decode) {
     v3.set_boundFiveStr(std::move(v4));
     v1->v = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
   }
 }

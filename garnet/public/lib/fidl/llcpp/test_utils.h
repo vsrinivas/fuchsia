@@ -52,10 +52,18 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
 
 // Verifies that |bytes| decodes to an object that is the same as |value|.
 template <typename FidlType>
-bool DecodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
+bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  // TODO(fxb/7958): For now we are only ensuring that no error is present.
-  // Need deep equality to verify that the result is the same as |value|.
+  fidl::EncodedMessage<FidlType> message(fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  auto decode_result = fidl::Decode(std::move(message));
+  if (decode_result.status != ZX_OK || decode_result.error != nullptr) {
+    std::cout << "Decoding failed (" << zx_status_get_string(decode_result.status)
+              << "): " << decode_result.error << std::endl;
+    return false;
+  }
+  // TODO(fxb/7958): For now we are only checking that fidl::Decode succeeds.
+  // We need deep equality on FIDL objects to verify that
+  // |decode_result.message| is the same as |value|.
   return true;
 }
 

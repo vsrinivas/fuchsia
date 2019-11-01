@@ -43,14 +43,14 @@ TEST(Conformance, {{ .Name }}_Encode) {
 
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
-	const auto expected = std::vector<uint8_t>{
+	auto bytes = std::vector<uint8_t>{
 		{{ .Bytes }}
 	};
 
 	{
 		{{ .ValueBuild }}
 
-		EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess({{ .ValueVarName }}, expected));
+		EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess({{ .ValueVarName }}, std::move(bytes)));
 	}
 }
 {{ end }}
