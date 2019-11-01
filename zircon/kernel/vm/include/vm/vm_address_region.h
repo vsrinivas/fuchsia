@@ -226,6 +226,10 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // returns nullptr.  This is a non-recursive search.
   virtual fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
+  // Apply |op| to VMO mappings in the specified range of pages.
+  zx_status_t RangeOp(uint32_t op, size_t offset, size_t len,
+                      user_inout_ptr<void> buffer, size_t buffer_size);
+
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to this region to allocate.  If a subregion is entirely in
   // the range, that subregion is destroyed.  If a subregion is partially in

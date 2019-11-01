@@ -220,6 +220,13 @@ zx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_
   return vmar_->Protect(base, len, arch_mmu_flags);
 }
 
+zx_status_t VmAddressRegionDispatcher::RangeOp(uint32_t op, vaddr_t base, size_t len,
+                                               user_inout_ptr<void> buffer, size_t buffer_size) {
+  canary_.Assert();
+
+  return vmar_->RangeOp(op, base, len, buffer, buffer_size);
+}
+
 zx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
   canary_.Assert();
 

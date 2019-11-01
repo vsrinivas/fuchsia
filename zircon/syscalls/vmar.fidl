@@ -40,4 +40,14 @@ protocol vmar {
     /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
     vmar_protect(handle<vmo> handle, VmOption options, vaddr addr, uint64 len) -> (status status);
+
+    /// Perform an operation on VMOs mapped into this VMAR.
+    /// Rights: If op is ZX_VMO_OP_DECOMMIT, affected mappings must be writable.
+    [Blocking]
+    vmar_op_range(handle<vmar> handle,
+                  uint32 op,
+                  uint64 offset,
+                  uint64 size,
+                  mutable_vector_void buffer)
+        -> (status status);
 };

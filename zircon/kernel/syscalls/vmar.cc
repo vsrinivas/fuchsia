@@ -204,3 +204,18 @@ zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vadd
 
   return vmar->Protect(addr, len, options);
 }
+
+// zx_status_t zx_vmar_op_range
+zx_status_t sys_vmar_op_range(zx_handle_t handle, uint32_t op, zx_vaddr_t addr, uint64_t len,
+                              user_inout_ptr<void> _buffer, size_t buffer_size) {
+  auto up = ProcessDispatcher::GetCurrent();
+
+  // TODO(39956): Pass |handle| rights to RangeOp(), so it can enforce e.g. that
+  // certain operations only be available through writable handles.
+  fbl::RefPtr<VmAddressRegionDispatcher> vmar;
+  zx_status_t status = up->GetDispatcher(handle, &vmar);
+  if (status != ZX_OK)
+    return status;
+
+  return vmar->RangeOp(op, addr, len, _buffer, buffer_size);
+}

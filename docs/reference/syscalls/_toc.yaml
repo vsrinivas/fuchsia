@@ -310,6 +310,8 @@ toc:
   path: /docs/reference/syscalls/vmar_destroy.md
 - title: "zx_vmar_map"
   path: /docs/reference/syscalls/vmar_map.md
+- title: "zx_vmar_op_range"
+  path: /docs/reference/syscalls/vmar_op_range.md
 - title: "zx_vmar_protect"
   path: /docs/reference/syscalls/vmar_protect.md
 - title: "zx_vmar_unmap_handle_close_thread_exit"

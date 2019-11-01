@@ -1722,6 +1722,83 @@ bool protect_large_uncommitted_test() {
   END_TEST;
 }
 
+// Verify vmar_op_range() commit/decommit of mapped VMO pages.
+bool range_op_commit_vmo_pages() {
+  BEGIN_TEST;
+
+  // Create a VMO to map parts of into a VMAR.
+  const size_t kVmoSize = PAGE_SIZE * 5;
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_vmo_create(kVmoSize, 0, &vmo), ZX_OK);
+
+  // Create a VMAR to guarantee some pages remain unmapped.
+  zx_vaddr_t vmar_base = 0u;
+  zx_handle_t vmar = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_vmar_allocate(
+      zx_vmar_root_self(),
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+      0, kVmoSize, &vmar, &vmar_base), ZX_OK);
+
+  zx_vaddr_t mapping_addr = 0u;
+  // Map one writable page to the VMO.
+  ASSERT_EQ(zx_vmar_map(vmar,
+                        ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                        0, vmo, 0, PAGE_SIZE*2, &mapping_addr),
+            ZX_OK);
+  ASSERT_EQ(vmar_base, mapping_addr);
+
+  // Map second page to a different part of the VMO.
+  ASSERT_EQ(zx_vmar_map(vmar,
+                        ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                        PAGE_SIZE*2, vmo, PAGE_SIZE*3, PAGE_SIZE, &mapping_addr),
+            ZX_OK);
+
+  // Map fourth page read-only.
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ,
+                        PAGE_SIZE*4, vmo, PAGE_SIZE, PAGE_SIZE, &mapping_addr),
+            ZX_OK);
+
+  // Verify decommit of only part of a mapping.
+  std::atomic_uint8_t* target =
+      reinterpret_cast<std::atomic_uint8_t*>(vmar_base);
+  target[0].store(5);
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base, PAGE_SIZE,
+                             nullptr, 0u),
+            ZX_OK);
+  EXPECT_EQ(target[0].load(), 0u);
+  target[PAGE_SIZE].store(7);
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base+PAGE_SIZE,
+                             PAGE_SIZE, nullptr, 0u),
+            ZX_OK);
+  EXPECT_EQ(target[PAGE_SIZE].load(), 0u);
+
+  // Verify decommit across two adjacent mappings.
+  target[PAGE_SIZE].store(5);
+  target[PAGE_SIZE*2].store(6);
+  EXPECT_EQ(target[PAGE_SIZE*4].load(), 5u);
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base+PAGE_SIZE,
+                             PAGE_SIZE*2, nullptr, 0u),
+            ZX_OK);
+  EXPECT_EQ(target[PAGE_SIZE].load(), 0u);
+  EXPECT_EQ(target[PAGE_SIZE*2].load(), 0u);
+  EXPECT_EQ(target[PAGE_SIZE*4].load(), 0u);
+
+  // Verify decommit including an unmapped region fails.
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
+                             vmar_base + PAGE_SIZE, PAGE_SIZE*3, nullptr, 0u), ZX_ERR_BAD_STATE);
+
+  // Verify decommit of a non-writable page fails.
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
+                             vmar_base + (PAGE_SIZE*4), PAGE_SIZE, nullptr, 0u),
+            ZX_ERR_ACCESS_DENIED);
+
+  EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), vmar_base, kVmoSize), ZX_OK);
+
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+  END_TEST;
+}
+
 // Attempt to unmap a large mostly uncommitted VMO
 bool unmap_large_uncommitted_test() {
   BEGIN_TEST;
@@ -2016,6 +2093,7 @@ RUN_TEST(protect_split_test);
 RUN_TEST(protect_multiple_test);
 RUN_TEST(protect_over_demand_paged_test);
 RUN_TEST(protect_large_uncommitted_test);
+RUN_TEST(range_op_commit_vmo_pages);
 RUN_TEST(unmap_large_uncommitted_test);
 RUN_TEST(partial_unmap_and_read);
 RUN_TEST(partial_unmap_and_write);

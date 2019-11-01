@@ -94,13 +94,14 @@
 + [vmo_op_range](vmo_op_range.md) - perform an operation on a range of a vmo
 + [vmo_replace_as_executable](vmo_replace_as_executable.md) - add execute rights to a vmo
 + [vmo_create_physical](vmo_create_physical.md) - create a VM object referring to a specific contiguous range of physical memory
-+ [vmo_set_cache_policy](vmo_set_cache_policy.md) - set the caching policy for pages held by a VMO.
++ [vmo_set_cache_policy](vmo_set_cache_policy.md) - set the caching policy for pages held by a VMO
 
 ## Virtual Memory Address Regions (VMARs)
 + [vmar_allocate](vmar_allocate.md) - create a new child VMAR
 + [vmar_map](vmar_map.md) - map a VMO into a process
 + [vmar_unmap](vmar_unmap.md) - unmap a memory region from a process
 + [vmar_protect](vmar_protect.md) - adjust memory access permissions
++ [vmar_op_range](vmar_op_range.md) - perform an operation on VMOs mapped into a range of a VMAR
 + [vmar_destroy](vmar_destroy.md) - destroy a VMAR and all of its children
 
 ## Userspace Pagers

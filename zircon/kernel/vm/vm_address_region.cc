@@ -575,6 +575,89 @@ void VmAddressRegion::Activate() {
   parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
+zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
+                                     user_inout_ptr<void> buffer, size_t buffer_size) {
+  canary_.Assert();
+
+  if (buffer || buffer_size) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  size = ROUNDUP(size, PAGE_SIZE);
+  if (size == 0 || !IS_PAGE_ALIGNED(base)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  Guard<fbl::Mutex> guard{aspace_->lock()};
+  if (state_ != LifeCycleState::ALIVE) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (!is_in_range(base, size)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (subregions_.is_empty()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Don't allow any operations on the vDSO code mapping.
+  // TODO(39860): Factor this out into a common helper.
+  if (aspace_->vdso_code_mapping_ && Intersects(aspace_->vdso_code_mapping_->base(),
+                                                aspace_->vdso_code_mapping_->size(), base, size)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+
+  const vaddr_t end_addr = base + size;
+  auto end = subregions_.lower_bound(end_addr);
+  auto begin = UpperBoundInternalLocked(base);
+
+  for (auto curr = begin; curr != end; curr++) {
+    // TODO(39861): Allow the |op| range to include child VMARs.
+    if (!curr->is_mapping()) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    auto mapping = curr->as_vm_mapping();
+    fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
+    uint64_t vmo_offset = mapping->object_offset();
+
+    // The |op| range must not include unmapped regions.
+    if (base < curr->base()) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    const vaddr_t curr_end = curr->base() + curr->size();
+    const vaddr_t op_end = fbl::min(curr_end, end_addr);
+    const uint64_t op_offset = (base - curr->base()) + vmo_offset;
+    const size_t op_size = op_end - base;
+    base = op_end;
+
+    switch (op) {
+      case ZX_VMO_OP_DECOMMIT: {
+        // Decommit may zero page contents, so require write permissions.
+        if ((mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) == 0) {
+          return ZX_ERR_ACCESS_DENIED;
+        }
+        zx_status_t result = vmo->DecommitRange(op_offset, op_size);
+        if (result != ZX_OK) {
+          return result;
+        }
+        break;
+      }
+      default:
+        return ZX_ERR_NOT_SUPPORTED;
+    };
+  }
+
+  // The |op| range must not have an unmapped region at the end.
+  if (base != end_addr) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
   canary_.Assert();
 

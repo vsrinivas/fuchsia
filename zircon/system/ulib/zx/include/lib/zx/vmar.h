@@ -43,6 +43,11 @@ class vmar final : public object<vmar> {
     return zx_vmar_protect(get(), prot, address, len);
   }
 
+  zx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size,
+                       void* buffer, size_t buffer_size) const {
+    return zx_vmar_op_range(get(), op, offset, size, buffer, buffer_size);
+  }
+
   zx_status_t destroy() const { return zx_vmar_destroy(get()); }
 
   zx_status_t allocate(size_t offset, size_t size, uint32_t options, vmar* child,

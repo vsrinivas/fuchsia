@@ -39,6 +39,9 @@ class VmAddressRegionDispatcher final
 
   zx_status_t Protect(vaddr_t base, size_t len, uint32_t flags);
 
+  zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size,
+                      user_inout_ptr<void> buffer, size_t buffer_size);
+
   zx_status_t Unmap(vaddr_t base, size_t len);
 
   const fbl::RefPtr<VmAddressRegion>& vmar() const { return vmar_; }
