@@ -448,17 +448,32 @@ bool VulkanTest::Exec(
   }
 
   if (linear) {
-    VkImageSubresource subresource = {.aspectMask = format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR
-                                                        ? VK_IMAGE_ASPECT_PLANE_0_BIT
-                                                        : VK_IMAGE_ASPECT_COLOR_BIT,
-                                      .mipLevel = 0,
-                                      .arrayLayer = 0};
+    bool is_yuv = (format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR) ||
+                  (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR);
+    VkImageSubresource subresource = {
+        .aspectMask = is_yuv ? VK_IMAGE_ASPECT_PLANE_0_BIT : VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = 0,
+        .arrayLayer = 0};
     VkSubresourceLayout layout;
     vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &layout);
 
-    VkDeviceSize min_bytes_per_pixel = format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR ? 1 : 4;
+    VkDeviceSize min_bytes_per_pixel = is_yuv ? 1 : 4;
     EXPECT_LE(min_bytes_per_pixel * width, layout.rowPitch);
     EXPECT_LE(min_bytes_per_pixel * width * 64, layout.size);
+  }
+
+  if (linear && (format == VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR)) {
+    VkImageSubresource subresource = {
+        .aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT, .mipLevel = 0, .arrayLayer = 0};
+    VkSubresourceLayout b_layout;
+    vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &b_layout);
+
+    subresource.aspectMask = VK_IMAGE_ASPECT_PLANE_2_BIT;
+    VkSubresourceLayout r_layout;
+    vkGetImageSubresourceLayout(vk_device_, vk_image_, &subresource, &r_layout);
+
+    // I420 has the U plane (mapped to B) before the V plane (mapped to R)
+    EXPECT_LT(b_layout.offset, r_layout.offset);
   }
 
   if (!direct) {
@@ -731,6 +746,12 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {
   ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, false, GetParam(), false));
 }
 
+TEST_P(VulkanImageExtensionTest, BufferCollectionI420) {
+  VulkanTest test;
+  ASSERT_TRUE(test.Initialize());
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, false, GetParam(), false));
+}
+
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
@@ -753,6 +774,12 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionDirectNV12) {
   VulkanTest test;
   ASSERT_TRUE(test.Initialize());
   ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam(), false));
+}
+
+TEST_P(VulkanImageExtensionTest, BufferCollectionDirectI420) {
+  VulkanTest test;
+  ASSERT_TRUE(test.Initialize());
+  ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 64, true, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
