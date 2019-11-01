@@ -181,8 +181,18 @@ zx_status_t As370::AudioInit() {
   // Output devices.
   constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
-  status = DdkAddComposite("audio-max98373", props, countof(props), codec_components,
-                           countof(codec_components), UINT32_MAX);
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = codec_components,
+      .components_count = countof(codec_components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("audio-max98373", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
     return status;

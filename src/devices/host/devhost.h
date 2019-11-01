@@ -189,10 +189,7 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
                                      uint32_t type, const void* data, size_t length) REQ_DM_LOCK;
 
 zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                         const zx_device_prop_t* props, size_t props_count,
-                                         const device_component_t* components,
-                                         size_t components_count,
-                                         uint32_t coresident_device_index) REQ_DM_LOCK;
+                                         const composite_device_desc_t* comp_desc) REQ_DM_LOCK;
 
 zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
                                   void* cookie) REQ_DM_LOCK;

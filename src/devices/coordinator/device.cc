@@ -1030,7 +1030,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
 
 void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
-  uint8_t data[fuchsia_device_manager_METADATA_MAX];
+  uint8_t data[fuchsia_device_manager_METADATA_BYTES_MAX];
   size_t actual = 0;
   llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result response;
   zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
@@ -1114,13 +1114,12 @@ void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watch
 }
 
 void Device::AddCompositeDevice(
-    ::fidl::StringView name_view, ::fidl::VectorView<uint64_t> props,
-    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-    uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync completer) {
+    ::fidl::StringView name_view,
+    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+    AddCompositeDeviceCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
-  zx_status_t status =
-      this->coordinator->AddCompositeDevice(dev, name, props, components, coresident_device_index);
+  zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, comp_desc);
   llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
   if (status != ZX_OK) {
     response.set_err(status);

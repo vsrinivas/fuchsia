@@ -355,11 +355,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add(this->parent_, &args, &this->zxdev_);
   }
 
-  zx_status_t DdkAddComposite(const char* name, const zx_device_prop_t* props, size_t props_count,
-                              const device_component_t* components, size_t components_count,
-                              uint32_t coresident_device_index) {
-    return device_add_composite(this->parent_, name, props, props_count, components,
-                                components_count, coresident_device_index);
+  zx_status_t DdkAddComposite(const char* name, const composite_device_desc_t* comp_desc) {
+    return device_add_composite(this->parent_, name, comp_desc);
   }
 
   void DdkMakeVisible() { device_make_visible(zxdev()); }

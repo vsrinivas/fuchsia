@@ -223,8 +223,17 @@ zx_status_t Vim::ThermalInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL},
   };
 
-  status = DdkAddComposite("vim-thermal", props, fbl::count_of(props), components,
-                           fbl::count_of(components), 0);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = 0,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("vim-thermal", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
     return status;

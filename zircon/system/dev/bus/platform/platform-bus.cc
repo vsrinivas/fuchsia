@@ -218,8 +218,17 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       {BIND_PLATFORM_DEV_DID, 0, pdev->did},
   };
 
-  return DdkAddComposite(pdev->name, props, fbl::count_of(props), components, components_count + 1,
-                         coresident_device_index);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = fbl::count_of(props),
+      .components = components,
+      .components_count = components_count + 1,
+      .coresident_device_index = coresident_device_index,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  return DdkAddComposite(pdev->name, &comp_desc);
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {

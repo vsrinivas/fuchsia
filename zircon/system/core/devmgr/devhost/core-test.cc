@@ -41,10 +41,9 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     completer.Reply(std::move(response));
   }
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) override {}
-  void AddCompositeDevice(
-      ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
-      ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-      uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync completer) override {
+  void AddCompositeDevice(::fidl::StringView name,
+                          llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+                          AddCompositeDeviceCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
     response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));

@@ -18,26 +18,47 @@ namespace devmgr {
 // CompositeDevice methods
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
-                                 uint32_t components_count, uint32_t coresident_device_index)
+                                 uint32_t components_count, uint32_t coresident_device_index,
+                                 fbl::Array<std::unique_ptr<Metadata>> metadata)
     : name_(std::move(name)),
       properties_(std::move(properties)),
       components_count_(components_count),
-      coresident_device_index_(coresident_device_index) {}
+      coresident_device_index_(coresident_device_index),
+      metadata_(std::move(metadata)) {}
 
 CompositeDevice::~CompositeDevice() = default;
 
 zx_status_t CompositeDevice::Create(
-    const fbl::StringPiece& name, ::fidl::VectorView<uint64_t> props,
-    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-    uint32_t coresident_device_index, std::unique_ptr<CompositeDevice>* out) {
+    const fbl::StringPiece& name,
+    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+    std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
-  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[props.count()], props.count());
-  memcpy(properties.data(), props.data(), props.count() * sizeof(props.data()[0]));
+  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[comp_desc.props.count()],
+                                          comp_desc.props.count());
+  memcpy(properties.data(), comp_desc.props.data(),
+         comp_desc.props.count() * sizeof(comp_desc.props.data()[0]));
 
-  auto dev = std::make_unique<CompositeDevice>(std::move(name), std::move(properties),
-                                               components.count(), coresident_device_index);
-  for (uint32_t i = 0; i < components.count(); ++i) {
-    const auto& fidl_component = components[i];
+  fbl::Array<std::unique_ptr<Metadata>> metadata(
+      new std::unique_ptr<Metadata>[comp_desc.metadata.count()], comp_desc.metadata.count());
+
+  for (size_t i = 0; i < comp_desc.metadata.count(); i++) {
+    std::unique_ptr<Metadata> md;
+    zx_status_t status = Metadata::Create(comp_desc.metadata[i].data.count(), &md);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    md->type = comp_desc.metadata[i].key;
+    md->length = comp_desc.metadata[i].data.count();
+    memcpy(md->Data(), comp_desc.metadata[i].data.data(), md->length);
+    metadata[i] = std::move(md);
+  }
+
+  auto dev = std::make_unique<CompositeDevice>(
+      std::move(name), std::move(properties), comp_desc.components.count(),
+      comp_desc.coresident_device_index, std::move(metadata));
+  for (uint32_t i = 0; i < comp_desc.components.count(); ++i) {
+    const auto& fidl_component = comp_desc.components[i];
     size_t parts_count = fidl_component.parts_count;
     fbl::Array<ComponentPartDescriptor> parts(new ComponentPartDescriptor[parts_count],
                                               parts_count);
@@ -188,6 +209,18 @@ zx_status_t CompositeDevice::TryAssemble() {
 
   device_ = std::move(new_device);
   device_->set_composite(this);
+
+  // Add metadata
+  for (size_t i = 0; i < metadata_.size(); i++) {
+    // Making a copy of metadata, instead of transfering ownership, so that
+    // metadata can be added again if device is recreated
+    status = coordinator->AddMetadata(device_, metadata_[i]->type, metadata_[i]->Data(),
+                                      metadata_[i]->length);
+    if (status != ZX_OK) {
+      log(ERROR, "devcoordinator: Failed to add metadata: %s\n", zx_status_get_string(status));
+      return status;
+    }
+  }
 
   status = device_->SignalReadyForBind();
   if (status != ZX_OK) {

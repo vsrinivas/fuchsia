@@ -129,8 +129,18 @@ zx_status_t Sysdev::MakeComposite() {
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_LIBDRIVER_TEST},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_COMPOSITE},
   };
-  return device_add_composite(zxdev(), "composite", props, countof(props), components,
-                              countof(components), UINT32_MAX);
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  return device_add_composite(zxdev(), "composite", &comp_desc);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

@@ -281,8 +281,17 @@ zx_status_t Astro::SdioInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI},
   };
 
-  status =
-      DdkAddComposite("wifi", props, countof(props), wifi_composite, countof(wifi_composite), 0);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = wifi_composite,
+      .components_count = countof(wifi_composite),
+      .coresident_device_index = 0,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("wifi", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
     return status;

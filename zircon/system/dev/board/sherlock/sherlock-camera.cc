@@ -386,8 +386,17 @@ zx_status_t Sherlock::CameraInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
   };
 
-  status = DdkAddComposite("imx227-sensor", sensor_props, countof(sensor_props),
-                           imx227_sensor_components, countof(imx227_sensor_components), UINT32_MAX);
+  const composite_device_desc_t sensor_comp_desc = {
+      .props = sensor_props,
+      .props_count = countof(sensor_props),
+      .components = imx227_sensor_components,
+      .components_count = countof(imx227_sensor_components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("imx227-sensor", &sensor_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
     return status;
@@ -421,9 +430,17 @@ zx_status_t Sherlock::CameraInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_CONTROLLER},
   };
 
-  status = DdkAddComposite("camera-controller", camera_controller_props,
-                           countof(camera_controller_props), camera_controller_components,
-                           countof(camera_controller_components), 0);
+  const composite_device_desc_t camera_comp_desc = {
+      .props = camera_controller_props,
+      .props_count = countof(camera_controller_props),
+      .components = camera_controller_components,
+      .components_count = countof(camera_controller_components),
+      .coresident_device_index = 0,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("camera-controller", &camera_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d\n", __func__, status);
     return status;

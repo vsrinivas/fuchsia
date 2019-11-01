@@ -43,6 +43,7 @@ struct Coordinator_AddDevice_Response;
 struct Coordinator_AddDevice_Result;
 struct Coordinator_AddDeviceInvisible_Response;
 struct Coordinator_AddDeviceInvisible_Result;
+struct DeviceMetadata;
 struct Coordinator_UnbindDone_Response;
 struct Coordinator_UnbindDone_Result;
 struct Coordinator_RunCompatibilityTests_Response;
@@ -84,6 +85,7 @@ class DeviceController;
 struct BindInstruction;
 struct DeviceComponentPart;
 struct DeviceComponent;
+struct CompositeDeviceDescriptor;
 class AddDeviceConfig final {
 public:
   constexpr AddDeviceConfig() : value_(0u) {}
@@ -797,8 +799,11 @@ constexpr uint32_t SUSPEND_FLAG_MEXEC = 3705406208u;
 // Maximum number of properties that can be attached to a device
 constexpr uint32_t PROPERTIES_MAX = 256u;
 
+// Maximum number of metadata that can be added to a device
+constexpr uint32_t METADATA_MAX = 32u;
+
 // Maximum number of bytes in a metadata payload
-constexpr uint32_t METADATA_MAX = 8192u;
+constexpr uint32_t METADATA_BYTES_MAX = 8192u;
 
 constexpr uint32_t MAX_SYSTEM_POWER_STATES = 7u;
 
@@ -1493,6 +1498,26 @@ struct Coordinator_AddDeviceInvisible_Result {
     ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response response_;
     int32_t err_;
   };
+};
+
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceMetadataTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceMetadataTable;
+
+// Metadata that can be added to a device
+struct DeviceMetadata {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceMetadataTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceMetadataTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8192;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8192;
+
+  uint32_t key = {};
+
+  ::fidl::VectorView<uint8_t> data = {};
 };
 
 // Maximum number of bytes in a path
@@ -3796,6 +3821,30 @@ struct DeviceComponent {
   ::fidl::Array<::llcpp::fuchsia::device::manager::DeviceComponentPart, 16> parts = {};
 };
 
+extern "C" const fidl_type_t fuchsia_device_manager_CompositeDeviceDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CompositeDeviceDescriptorTable;
+
+// Composite device parts and properties
+struct CompositeDeviceDescriptor {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CompositeDeviceDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CompositeDeviceDescriptorTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 56;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 331584;
+  static constexpr uint32_t AltPrimarySize = 56;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 331584;
+
+  ::fidl::VectorView<uint64_t> props = {};
+
+  ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components = {};
+
+  uint32_t coresident_device_index = {};
+
+  ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceMetadata> metadata = {};
+};
+
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
@@ -4291,17 +4340,15 @@ class Coordinator final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::fidl::StringView name;
-    ::fidl::VectorView<uint64_t> props;
-    ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components;
-    uint32_t coresident_device_index;
+    ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 72;
-    static constexpr uint32_t MaxOutOfLine = 68704;
-    static constexpr uint32_t AltPrimarySize = 72;
-    static constexpr uint32_t AltMaxOutOfLine = 68704;
+    static constexpr uint32_t PrimarySize = 88;
+    static constexpr uint32_t MaxOutOfLine = 331616;
+    static constexpr uint32_t AltPrimarySize = 88;
+    static constexpr uint32_t AltMaxOutOfLine = 331616;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4606,7 +4653,7 @@ class Coordinator final {
     class AddCompositeDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index);
+      AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
       ~AddCompositeDevice_Impl() = default;
       AddCompositeDevice_Impl(AddCompositeDevice_Impl&& other) = default;
       AddCompositeDevice_Impl& operator=(AddCompositeDevice_Impl&& other) = default;
@@ -4894,7 +4941,7 @@ class Coordinator final {
     class AddCompositeDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer);
+      AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc, ::fidl::BytePart _response_buffer);
       ~AddCompositeDevice_Impl() = default;
       AddCompositeDevice_Impl(AddCompositeDevice_Impl&& other) = default;
       AddCompositeDevice_Impl& operator=(AddCompositeDevice_Impl&& other) = default;
@@ -5113,13 +5160,13 @@ class Coordinator final {
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::AddCompositeDevice AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index);
+    ResultOf::AddCompositeDevice AddCompositeDevice(::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
 
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddCompositeDevice AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddCompositeDevice AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc, ::fidl::BytePart _response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -5301,13 +5348,13 @@ class Coordinator final {
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddCompositeDevice AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index);
+    static ResultOf::AddCompositeDevice AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
 
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddCompositeDevice AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddCompositeDevice AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc, ::fidl::BytePart _response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -5656,7 +5703,7 @@ class Coordinator final {
 
     using AddCompositeDeviceCompleter = ::fidl::Completer<AddCompositeDeviceCompleterBase>;
 
-    virtual void AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<::llcpp::fuchsia::device::manager::DeviceComponent> components, uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync _completer) = 0;
+    virtual void AddCompositeDevice(::fidl::StringView name, ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc, AddCompositeDeviceCompleter::Sync _completer) = 0;
 
     class DirectoryWatchCompleterBase : public _Base {
      public:
@@ -5892,6 +5939,13 @@ struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisi
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceMetadata> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::DeviceMetadata>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceMetadata, key) == 0);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceMetadata, data) == 8);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceMetadata) == ::llcpp::fuchsia::device::manager::DeviceMetadata::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response, __reserved) == 0);
@@ -6110,6 +6164,15 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceComponent, parts
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceComponent) == ::llcpp::fuchsia::device::manager::DeviceComponent::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor, props) == 0);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor, components) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor, coresident_device_index) == 32);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor, metadata) == 40);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor) == ::llcpp::fuchsia::device::manager::CompositeDeviceDescriptor::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::AddDeviceConfig> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::AddDeviceConfig>);
 static_assert(sizeof(::llcpp::fuchsia::device::manager::AddDeviceConfig) == sizeof(uint32_t));
@@ -6305,9 +6368,7 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::AddComposit
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest)
     == ::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest, name) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest, props) == 32);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest, components) == 48);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest, coresident_device_index) == 64);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceRequest, comp_desc) == 32);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::AddCompositeDeviceResponse> : public std::true_type {};

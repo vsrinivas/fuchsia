@@ -235,11 +235,30 @@ typedef struct device_component {
   const device_component_part_t* parts;
 } device_component_t;
 
-// Create a composite device with the properties |props| out of the devices
-// described by |components|.  The composite device will reside in the same
-// devhost as the device that matches |components[coresident_device_index]|,
-// unless |coresident_device_index| is UINT32_MAX, in which case it reside in
-// a new devhost.  Once all of the component devices are found, the composite
+//
+typedef struct device_metadata {
+  uint32_t type;
+  const void* data;
+  size_t length;
+} device_metadata_t;
+
+// A description of the composite device with properties |props| and made of
+// |components| devices. The composite device will reside in the same devhost
+// as the device that matches |components[coresident_device_index]|, unless
+// |coresident_device_index| is UINT32_MAX, in which case it reside in a new devhost.
+// |metadata_list| contains the metadata to be added to the composite device, if any.
+typedef struct composite_device_desc {
+  const zx_device_prop_t* props;
+  size_t props_count;
+  const device_component_t* components;
+  size_t components_count;
+  uint32_t coresident_device_index;
+  const device_metadata_t* metadata_list;
+  size_t metadata_count;
+} composite_device_desc_t;
+
+// Create a composite device with the properties |comp_desc|.
+// Once all of the component devices are found, the composite
 // device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
 // given properties.  A driver may then bind to the created device, and
 // access its parents via the protocol operations returned by
@@ -250,9 +269,8 @@ typedef struct device_component {
 //
 // |dev| must be the zx_device_t corresponding to the "sys" device (i.e., the
 // Platform Bus Driver's device).
-zx_status_t device_add_composite(zx_device_t* dev, const char* name, const zx_device_prop_t* props,
-                                 size_t props_count, const device_component_t* components,
-                                 size_t components_count, uint32_t coresident_device_index);
+zx_status_t device_add_composite(zx_device_t* dev, const char* name,
+                                 const composite_device_desc_t* comp_desc);
 
 #define ROUNDUP(a, b)                             \
   ({                                              \

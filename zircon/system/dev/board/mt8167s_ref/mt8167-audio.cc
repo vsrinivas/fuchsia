@@ -293,8 +293,18 @@ zx_status_t Mt8167::AudioInit() {
   if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782}};
-    status = DdkAddComposite("audio-tas5782", props, countof(props), mt8167s_codec_components,
-                             countof(mt8167s_codec_components), UINT32_MAX);
+
+    const composite_device_desc_t comp_desc = {
+        .props = props,
+        .props_count = fbl::count_of(props),
+        .components = mt8167s_codec_components,
+        .components_count = countof(mt8167s_codec_components),
+        .coresident_device_index = UINT32_MAX,
+        .metadata_list = nullptr,
+        .metadata_count = 0,
+    };
+
+    status = DdkAddComposite("audio-tas5782", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: DdkAddComposite failed %d\n", __FUNCTION__, status);
       return status;
@@ -309,8 +319,18 @@ zx_status_t Mt8167::AudioInit() {
   } else {
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
-    status = DdkAddComposite("audio-tas5805", props, countof(props), cleo_codec_components,
-                             countof(cleo_codec_components), UINT32_MAX);
+
+    const composite_device_desc_t comp_desc = {
+        .props = props,
+        .props_count = fbl::count_of(props),
+        .components = cleo_codec_components,
+        .components_count = countof(cleo_codec_components),
+        .coresident_device_index = UINT32_MAX,
+        .metadata_list = nullptr,
+        .metadata_count = 0,
+    };
+
+    status = DdkAddComposite("audio-tas5805", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: DdkAddComposite failed %d\n", __FUNCTION__, status);
       return status;

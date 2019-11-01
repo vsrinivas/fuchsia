@@ -51,8 +51,17 @@ zx_status_t Mt8167::BacklightInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_SG_MICRO_SGM37603A},
   };
 
-  auto status = DdkAddComposite("sgm37603a", props, fbl::count_of(props), components,
-                                fbl::count_of(components), UINT32_MAX);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = fbl::count_of(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  auto status = DdkAddComposite("sgm37603a", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add SGM37603A device: %d\n", __FUNCTION__, status);
   }

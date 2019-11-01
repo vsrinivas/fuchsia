@@ -16,6 +16,8 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 
+#include "metadata.h"
+
 namespace devmgr {
 
 // Forward declaration
@@ -106,7 +108,8 @@ class CompositeDevice {
  public:
   // Only public because of make_unique.  You probably want Create().
   CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
-                  uint32_t components_count, uint32_t coresident_device_index);
+                  uint32_t components_count, uint32_t coresident_device_index,
+                  fbl::Array<std::unique_ptr<Metadata>> metadata);
 
   CompositeDevice(CompositeDevice&&) = delete;
   CompositeDevice& operator=(CompositeDevice&&) = delete;
@@ -116,9 +119,8 @@ class CompositeDevice {
 
   ~CompositeDevice();
 
-  static zx_status_t Create(const fbl::StringPiece& name, ::fidl::VectorView<uint64_t> props,
-                            ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent>,
-                            uint32_t coresident_device_index,
+  static zx_status_t Create(const fbl::StringPiece& name,
+                            llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
 
   const fbl::String& name() const { return name_; }
@@ -169,6 +171,7 @@ class CompositeDevice {
   const fbl::Array<const zx_device_prop_t> properties_;
   const uint32_t components_count_;
   const uint32_t coresident_device_index_;
+  const fbl::Array<std::unique_ptr<Metadata>> metadata_;
 
   ComponentList unbound_;
   ComponentList bound_;

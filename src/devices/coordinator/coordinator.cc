@@ -788,9 +788,8 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 }
 
 zx_status_t Coordinator::AddCompositeDevice(
-    const fbl::RefPtr<Device>& dev, fbl::StringPiece name, ::fidl::VectorView<uint64_t> props,
-    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-    uint32_t coresident_device_index) {
+    const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+    llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc) {
   // Only the platform bus driver should be able to use this.  It is the
   // descendant of the sys device node.
   if (dev->parent() != sys_device_) {
@@ -798,8 +797,7 @@ zx_status_t Coordinator::AddCompositeDevice(
   }
 
   std::unique_ptr<CompositeDevice> new_device;
-  zx_status_t status =
-      CompositeDevice::Create(name, props, components, coresident_device_index, &new_device);
+  zx_status_t status = CompositeDevice::Create(name, comp_desc, &new_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -905,8 +903,14 @@ zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint
   return ZX_ERR_NOT_FOUND;
 }
 
+// Traverse up the device tree to find the metadata with the matching |type|.
+// If not found, check the published metadata list for metadata with matching
+// topological path.
+// |buffer| can be nullptr, in which case only the size of the metadata is
+// returned. This is used by GetMetadataSize method.
 zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                      size_t buflen, size_t* size) {
+  ZX_ASSERT(size != nullptr);
   auto status = GetMetadataRecurse(dev, type, buffer, buflen, size);
   if (status == ZX_OK) {
     return ZX_OK;

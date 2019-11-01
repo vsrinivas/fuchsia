@@ -47,24 +47,33 @@ zx_status_t Sherlock::LightInit() {
   params.lux_constant_coefficient = 0;
   params.lux_linear_coefficient = .29f;
   params.integration_time_ms = 615;
-  pbus_metadata_t metadata[] = {
+
+  device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &params,
-          .data_size = sizeof(params),
+          .data = &params,
+          .length = sizeof(params),
       },
   };
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMS},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMS_TCS3400},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
+  };
 
-  pbus_dev_t dev = {};
-  dev.name = "SherlockLightSensor";
-  dev.vid = PDEV_VID_AMS;
-  dev.pid = PDEV_PID_AMS_TCS3400;
-  dev.did = PDEV_DID_AMS_LIGHT;
-  dev.metadata_list = metadata;
-  dev.metadata_count = countof(metadata);
-  auto status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = metadata,
+      .metadata_count = countof(metadata),
+  };
+
+  zx_status_t status = DdkAddComposite("SherlockLightSensor", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
     return status;
   }
 

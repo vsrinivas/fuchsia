@@ -46,7 +46,6 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 // clang-format on
 
 enum {
-  COMPONENT_PDEV,
   COMPONENT_I2C,
   COMPONENT_GPIO,
   COMPONENT_COUNT,

@@ -92,10 +92,9 @@ class Device : public fbl::RefCounted<Device>,
   void UnbindDone(UnbindDoneCompleter::Sync _completer) override;
   void RemoveDone(RemoveDoneCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
-  void AddCompositeDevice(
-      ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
-      ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-      uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync _completer) override;
+  void AddCompositeDevice(::fidl::StringView name,
+                          llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
+                          AddCompositeDeviceCompleter::Sync _completer) override;
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync _completer) override;

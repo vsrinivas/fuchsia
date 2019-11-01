@@ -227,9 +227,8 @@ class Coordinator {
   zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
                               const void* data, uint32_t length);
   zx_status_t AddCompositeDevice(
-      const fbl::RefPtr<Device>& dev, fbl::StringPiece name, ::fidl::VectorView<uint64_t> props,
-      ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
-      uint32_t coresident_device_index);
+      const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+      llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc);
 
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 

@@ -1009,11 +1009,9 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
 }
 
 zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                         const zx_device_prop_t* props, size_t props_count,
-                                         const device_component_t* components_data,
-                                         size_t components_count,
-                                         uint32_t coresident_device_index) {
-  if ((props == nullptr && props_count > 0) || components_data == nullptr || name == nullptr) {
+                                         const composite_device_desc_t* comp_desc) {
+  if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
+      comp_desc->components == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   const zx::channel& rpc = *dev->rpc;
@@ -1022,36 +1020,51 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   }
 
   std::vector<fuchsia::device::manager::DeviceComponent> compvec = {};
-  for (size_t i = 0; i < components_count; i++) {
+  for (size_t i = 0; i < comp_desc->components_count; i++) {
     ::fidl::Array<fuchsia::device::manager::DeviceComponentPart, 16> parts{};
-    for (uint32_t j = 0; j < components_data[i].parts_count; j++) {
+    for (uint32_t j = 0; j < comp_desc->components[i].parts_count; j++) {
       ::fidl::Array<fuchsia::device::manager::BindInstruction, 32> bind_instructions{};
-      for (uint32_t k = 0; k < components_data[i].parts[j].instruction_count; k++) {
+      for (uint32_t k = 0; k < comp_desc->components[i].parts[j].instruction_count; k++) {
         bind_instructions[k] = fuchsia::device::manager::BindInstruction{
-            .op = components_data[i].parts[j].match_program[k].op,
-            .arg = components_data[i].parts[j].match_program[k].arg,
+            .op = comp_desc->components[i].parts[j].match_program[k].op,
+            .arg = comp_desc->components[i].parts[j].match_program[k].arg,
         };
       }
       auto part = fuchsia::device::manager::DeviceComponentPart{
-          .match_program_count = components_data[i].parts[j].instruction_count,
+          .match_program_count = comp_desc->components[i].parts[j].instruction_count,
           .match_program = bind_instructions,
       };
       parts[j] = part;
     }
     auto dc = fuchsia::device::manager::DeviceComponent{
-        .parts_count = components_data[i].parts_count,
+        .parts_count = comp_desc->components[i].parts_count,
         .parts = parts,
     };
     compvec.push_back(dc);
   }
 
+  std::vector<fuchsia::device::manager::DeviceMetadata> metadata = {};
+  for (size_t i = 0; i < comp_desc->metadata_count; i++) {
+    auto meta = fuchsia::device::manager::DeviceMetadata{
+        .key = comp_desc->metadata_list[i].type,
+        .data = ::fidl::VectorView(
+            reinterpret_cast<uint8_t*>(const_cast<void*>(comp_desc->metadata_list[i].data)),
+            comp_desc->metadata_list[i].length)};
+    metadata.push_back(meta);
+  }
+
+  fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
+      .props = ::fidl::VectorView(
+          reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(comp_desc->props)),
+          comp_desc->props_count),
+      .components = ::fidl::VectorView(compvec),
+      .coresident_device_index = comp_desc->coresident_device_index,
+      .metadata = ::fidl::VectorView(metadata)};
+
   log_rpc(dev, "create-composite");
-  static_assert(sizeof(props[0]) == sizeof(uint64_t));
+  static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));
   auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
-      zx::unowned_channel(rpc.get()), ::fidl::StringView(name, strlen(name)),
-      ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(props)),
-                         props_count),
-      ::fidl::VectorView(compvec), coresident_device_index);
+      zx::unowned_channel(rpc.get()), ::fidl::StringView(name, strlen(name)), comp_dev);
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {

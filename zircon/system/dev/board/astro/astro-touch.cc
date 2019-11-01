@@ -105,8 +105,18 @@ zx_status_t Astro::TouchInit() {
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_ASTRO},
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ASTRO_GOODIXTOUCH},
     };
-    zx_status_t status = DdkAddComposite("gt92xx-touch", props, countof(props), goodix_components,
-                                         countof(goodix_components), UINT32_MAX);
+
+    const composite_device_desc_t comp_desc = {
+        .props = props,
+        .props_count = countof(props),
+        .components = goodix_components,
+        .components_count = countof(goodix_components),
+        .coresident_device_index = UINT32_MAX,
+        .metadata_list = nullptr,
+        .metadata_count = 0,
+    };
+
+    zx_status_t status = DdkAddComposite("gt92xx-touch", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(INFO, "astro_touch_init(gt92xx): composite_device_add failed: %d\n", status);
       return status;
