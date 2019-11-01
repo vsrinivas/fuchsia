@@ -23,7 +23,7 @@ We'll use the `echo.test.fidl` sample that we discussed in the
 
 
 ```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/services/echo.fidl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/services/echo.test.fidl" adjust_indentation="auto" %}
 ```
 
 ## Build
@@ -90,7 +90,7 @@ Here are the import declarations in the Rust server implementation:
     the `context` method to `Result` for providing extra information about
     where the error occurred.
 -   `fidl_fidl_examples_echo` contains bindings for the `Echo` protocol.
-    This file is generated from the protocol defined in `echo.fidl`.
+    This file is generated from the protocol defined in `echo.test.fidl`.
     These bindings include:
     -   The `EchoRequest` type, an enum over all of the different request types
         that can be received.
