@@ -16,8 +16,7 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
                                async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
                                const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                                fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-    : binding_(this),
-      camera_pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
+    : binding_(this), pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
   binding_.set_error_handler([occ = std::move(on_connection_closed)](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Client disconnected";
     occ();
@@ -103,7 +102,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
     return;
   }
 
-  CameraPipelineInfo info;
+  PipelineInfo info;
   info.output_buffers = std::move(buffer_collection);
   info.image_format_index = image_format_index;
   info.node = *stream_config_node;
@@ -111,7 +110,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
 
   // We now have the stream_config_node which needs to be configured
   // Configure the stream pipeline
-  status = camera_pipeline_manager_.ConfigureStreamPipeline(&info, stream);
+  status = pipeline_manager_.ConfigureStreamPipeline(&info, stream);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to create Stream Pipeline" << status;
     return;

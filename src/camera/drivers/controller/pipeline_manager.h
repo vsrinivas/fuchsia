@@ -14,24 +14,24 @@
 #include "controller-processing-node.h"
 #include "fbl/macros.h"
 namespace camera {
-struct CameraPipelineInfo {
+struct PipelineInfo {
   InternalConfigNode node;
   const fuchsia::camera2::hal::StreamConfig* stream_config;
   uint32_t image_format_index;
   fuchsia::sysmem::BufferCollectionInfo_2 output_buffers;
 };
 
-// |CameraPipelineManager|
+// |PipelineManager|
 // This class provides a way to create the stream pipeline for a particular
 // stream configuration requested.
 // While doing so it would also create ISP stream protocol and client stream protocols
 // and setup the camera pipeline such that the streams are flowing properly as per the
 // requested stream configuration.
-class CameraPipelineManager {
+class PipelineManager {
  public:
-  CameraPipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
-                        const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
-                        fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+  PipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
+                  const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
+                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device),
         dispatcher_(dispatcher),
         isp_(isp),
@@ -39,12 +39,12 @@ class CameraPipelineManager {
         memory_allocator_(std::move(sysmem_allocator)) {}
 
   // For tests.
-  CameraPipelineManager(zx_device_t* device, const ddk::IspProtocolClient& isp,
-                        const ddk::GdcProtocolClient& gdc,
-                        fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+  PipelineManager(zx_device_t* device, const ddk::IspProtocolClient& isp,
+                  const ddk::GdcProtocolClient& gdc,
+                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device), isp_(isp), gdc_(gdc), memory_allocator_(std::move(sysmem_allocator)) {}
 
-  zx_status_t ConfigureStreamPipeline(CameraPipelineInfo* info,
+  zx_status_t ConfigureStreamPipeline(PipelineInfo* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
   // Configures the input node: Does the following things
@@ -52,7 +52,7 @@ class CameraPipelineManager {
   // 2. Creates the requested ISP stream
   // 3. Allocate buffers if needed
   // 4. Creates the CameraProcessNode for the input node
-  zx_status_t CreateInputNode(CameraPipelineInfo* info,
+  zx_status_t CreateInputNode(PipelineInfo* info,
                               std::unique_ptr<CameraProcessNode>* out_processing_node);
 
   zx_status_t CreateOutputNode(CameraProcessNode* parent_node,
@@ -60,14 +60,14 @@ class CameraPipelineManager {
                                CameraProcessNode** output_processing_node);
 
   // Create the stream pipeline graph
-  zx_status_t CreateGraph(CameraPipelineInfo* info, CameraProcessNode* parent_node,
+  zx_status_t CreateGraph(PipelineInfo* info, CameraProcessNode* parent_node,
                           CameraProcessNode** output_processing_node);
   // Gets the next node for the requested stream path
-  const InternalConfigNode* GetNextNodeInPipeline(CameraPipelineInfo* info,
+  const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
                                                   const InternalConfigNode& node);
 
   // Gets the right buffercollection for the producer-consumer combination
-  zx_status_t GetBuffers(const InternalConfigNode& producer, CameraPipelineInfo* info,
+  zx_status_t GetBuffers(const InternalConfigNode& producer, PipelineInfo* info,
                          fuchsia::sysmem::BufferCollectionInfo_2* out_buffers);
 
   zx_status_t LoadGdcConfiguration(const camera::GdcConfig& config_type, zx_handle_t* handle);

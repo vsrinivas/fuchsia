@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "camera_pipeline_manager.h"
+#include "pipeline_manager.h"
 
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -14,8 +14,8 @@
 
 namespace camera {
 
-const InternalConfigNode* CameraPipelineManager::GetNextNodeInPipeline(
-    CameraPipelineInfo* info, const InternalConfigNode& node) {
+const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* info,
+                                                                 const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
     if (child_node.output_stream_type == info->stream_config->properties.stream_type()) {
       return &child_node;
@@ -62,9 +62,8 @@ static zx_status_t ConvertToBufferCollectionInfo(
 // NOTE: This API currently supports only debug config
 // At a later point it will also need to take care of scenarios where same source stream
 // provides multiple output streams.
-zx_status_t CameraPipelineManager::GetBuffers(
-    const InternalConfigNode& producer, CameraPipelineInfo* info,
-    fuchsia::sysmem::BufferCollectionInfo_2* out_buffers) {
+zx_status_t PipelineManager::GetBuffers(const InternalConfigNode& producer, PipelineInfo* info,
+                                        fuchsia::sysmem::BufferCollectionInfo_2* out_buffers) {
   auto consumer = GetNextNodeInPipeline(info, producer);
   if (!consumer) {
     FX_LOGS(ERROR) << "Failed to get next node";
@@ -80,8 +79,8 @@ zx_status_t CameraPipelineManager::GetBuffers(
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t CameraPipelineManager::CreateInputNode(
-    CameraPipelineInfo* info, std::unique_ptr<CameraProcessNode>* out_processing_node) {
+zx_status_t PipelineManager::CreateInputNode(
+    PipelineInfo* info, std::unique_ptr<CameraProcessNode>* out_processing_node) {
   uint8_t isp_stream_type;
   if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
@@ -132,9 +131,9 @@ zx_status_t CameraPipelineManager::CreateInputNode(
   return ZX_OK;
 }
 
-zx_status_t CameraPipelineManager::CreateOutputNode(CameraProcessNode* parent_node,
-                                                    const InternalConfigNode& internal_output_node,
-                                                    CameraProcessNode** output_processing_node) {
+zx_status_t PipelineManager::CreateOutputNode(CameraProcessNode* parent_node,
+                                              const InternalConfigNode& internal_output_node,
+                                              CameraProcessNode** output_processing_node) {
   // Create Output Node
   auto output_node =
       std::make_unique<camera::CameraProcessNode>(internal_output_node.type, parent_node);
@@ -185,8 +184,8 @@ const char* ToString(const camera::GdcConfig& config_type) {
   }
 }
 
-zx_status_t CameraPipelineManager::LoadGdcConfiguration(const camera::GdcConfig& config_type,
-                                                        zx_handle_t* vmo) {
+zx_status_t PipelineManager::LoadGdcConfiguration(const camera::GdcConfig& config_type,
+                                                  zx_handle_t* vmo) {
   if (config_type == GdcConfig::INVALID) {
     FX_LOGS(ERROR) << "Invalid GDC configuration type";
     return ZX_ERR_INVALID_ARGS;
@@ -206,9 +205,8 @@ zx_status_t CameraPipelineManager::LoadGdcConfiguration(const camera::GdcConfig&
   return ZX_OK;
 }
 
-zx_status_t CameraPipelineManager::CreateGraph(CameraPipelineInfo* info,
-                                               CameraProcessNode* parent_node,
-                                               CameraProcessNode** output_processing_node) {
+zx_status_t PipelineManager::CreateGraph(PipelineInfo* info, CameraProcessNode* parent_node,
+                                         CameraProcessNode** output_processing_node) {
   auto next_node_internal = GetNextNodeInPipeline(info, info->node);
   if (!next_node_internal) {
     FX_LOGS(ERROR) << "Failed to get next node";
@@ -246,8 +244,8 @@ zx_status_t CameraPipelineManager::CreateGraph(CameraPipelineInfo* info,
   return ZX_OK;
 }
 
-zx_status_t CameraPipelineManager::ConfigureStreamPipeline(
-    CameraPipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+zx_status_t PipelineManager::ConfigureStreamPipeline(
+    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // Input Validations
   if (info == nullptr || info->stream_config == nullptr) {
     return ZX_ERR_INVALID_ARGS;

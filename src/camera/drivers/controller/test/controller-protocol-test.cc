@@ -13,7 +13,7 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
-#include "src/camera/drivers/controller/camera_pipeline_manager.h"
+#include "src/camera/drivers/controller/pipeline_manager.h"
 
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class
 
@@ -38,8 +38,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     gdc_ = fake_gdc_.client();
     controller_protocol_device_ = std::make_unique<ControllerImpl>(
         fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
-    camera_pipeline_manager_ = std::make_unique<CameraPipelineManager>(
-        fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator2_));
+    pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, isp_, gdc_,
+                                                          std::move(sysmem_allocator2_));
   }
 
   void TearDown() override {
@@ -129,14 +129,14 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
 
-    CameraPipelineInfo info;
+    PipelineInfo info;
     info.output_buffers = std::move(buffer_collection);
     info.image_format_index = 0;
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
     std::unique_ptr<CameraProcessNode> out_processing_node;
-    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->CreateInputNode(&info, &out_processing_node));
+    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &out_processing_node));
 
     EXPECT_NE(nullptr, out_processing_node->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, out_processing_node->type());
@@ -157,21 +157,21 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
 
-    CameraPipelineInfo info;
+    PipelineInfo info;
     info.output_buffers = std::move(buffer_collection);
     info.image_format_index = 0;
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
     std::unique_ptr<CameraProcessNode> input_processing_node;
-    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->CreateInputNode(&info, &input_processing_node));
+    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &input_processing_node));
 
     EXPECT_NE(nullptr, input_processing_node->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, input_processing_node->type());
 
     CameraProcessNode* output_processing_node;
-    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->CreateGraph(&info, input_processing_node.get(),
-                                                           &output_processing_node));
+    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateGraph(&info, input_processing_node.get(),
+                                                    &output_processing_node));
     ASSERT_NE(nullptr, output_processing_node);
     EXPECT_NE(nullptr, output_processing_node->client_stream());
     EXPECT_EQ(NodeType::kOutputStream, output_processing_node->type());
@@ -180,11 +180,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestGdcConfigLoading() {
     zx_handle_t handle;
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, &handle));
+              pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, &handle));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, nullptr));
-    EXPECT_EQ(ZX_OK,
-              camera_pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p, &handle));
+              pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, nullptr));
+    EXPECT_EQ(ZX_OK, pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p, &handle));
   }
 
   FakeIsp fake_isp_;
@@ -193,7 +192,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
-  std::unique_ptr<camera::CameraPipelineManager> camera_pipeline_manager_;
+  std::unique_ptr<camera::PipelineManager> pipeline_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
   ddk::IspProtocolClient isp_;

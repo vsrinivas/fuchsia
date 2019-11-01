@@ -13,10 +13,10 @@
 #include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
 
-#include "camera_pipeline_manager.h"
 #include "configs/sherlock/internal-config.h"
 #include "controller-processing-node.h"
 #include "isp_stream_protocol.h"
+#include "pipeline_manager.h"
 
 namespace camera {
 
@@ -37,8 +37,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   explicit ControllerImpl(zx_device_t* device, const ddk::IspProtocolClient& isp,
                           const ddk::GdcProtocolClient& gdc,
                           fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : binding_(nullptr),
-        camera_pipeline_manager_(device, isp, gdc, std::move(sysmem_allocator)) {}
+      : binding_(nullptr), pipeline_manager_(device, isp, gdc, std::move(sysmem_allocator)) {}
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
@@ -79,7 +78,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   InternalConfigs internal_configs_;
-  CameraPipelineManager camera_pipeline_manager_;
+  PipelineManager pipeline_manager_;
 };
 
 }  // namespace camera
