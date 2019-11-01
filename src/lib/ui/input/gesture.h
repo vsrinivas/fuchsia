@@ -6,35 +6,34 @@
 #define SRC_LIB_UI_INPUT_GESTURE_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 
 #include <map>
 
 namespace input {
 
-// Tracks an individual gesture, defined as a set of touch points in an
-// interaction with a particular input device. Changes are transformed into a
-// |Gesture::Delta| with aggregate 2D relative translation, rotation, and scale
-// as suggested by touch point updates.
+// Tracks an individual gesture, defined as an ensemble of time-overlapping touch points in an
+// interaction with a particular input device. Changes are transformed into a |Gesture::Delta| with
+// aggregate 2D relative translation, rotation, and scale as suggested by touch point updates.
+
 //
-// This class does not handle tapping or threshold-based classification of
-// gestures, which can be handled by the caller. |GestureDetector| is an
-// implementation of such a higher level facility.
+// This class does not handle tapping or threshold-based classification of gestures, which can be
+// handled by the caller. |GestureDetector| is an implementation of such a higher level facility.
 class Gesture {
  public:
-  using PointerId = uint32_t;
+  using PointerId = decltype(fuchsia::ui::input::PointerEvent::pointer_id);
 
   // Represents a change from the previous |UpdatePointer| state.
   struct Delta {
     Delta& operator+=(const Delta& other);
     bool operator==(const Delta& other) const;
 
-    // Delta translation is expressed in the coordinate system determined by
-    // the input source. For most use cases, this is the view space, which is
-    // x-right y-down and scaled according to view properties.
+    // Delta translation is expressed in the coordinate system determined by the input source. For
+    // most use cases, this is the view space, which is x-right y-down and scaled according to view
+    // properties.
     fuchsia::ui::gfx::vec2 translation;
-    // Delta rotation is expressed in radians about the right-hand z of the
-    // coordinate system of the input source. For most use cases, this is
-    // clockwise.
+    // Delta rotation is expressed in radians about the right-hand z of the coordinate system of the
+    // input source. For most use cases, this is clockwise.
     float rotation = 0;
     float scale = 1;
   };
