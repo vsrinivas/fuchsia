@@ -20,13 +20,13 @@ use {
 #[structopt(name = "netstack_cfg")]
 /// Configure netstack from emulated environments.
 struct Opt {
-    #[structopt(short = "e")]
+    #[structopt(long, short = "e")]
     /// Endpoint name to retrieve from network.EndpointManager
     endpoint: String,
-    #[structopt(short = "i")]
+    #[structopt(long, short = "i")]
     /// Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
     ip: Option<String>,
-    #[structopt(short = "g")]
+    #[structopt(long, short = "g")]
     /// Ip address of the default gateway (useful when DHCP is not used).
     gateway: Option<String>,
     #[structopt(long = "skip-up-check")]
