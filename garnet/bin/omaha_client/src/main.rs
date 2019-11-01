@@ -38,7 +38,7 @@ fn main() -> Result<(), Error> {
             Some(channel_configs) => channel_configs.default_channel.clone(),
             None => None,
         };
-        let app_set = configuration::get_app_set(&version, default_channel);
+        let (app_set, channel_source) = configuration::get_app_set(&version, default_channel);
         info!("Omaha app set: {:?}", app_set.to_vec().await);
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
@@ -73,6 +73,8 @@ fn main() -> Result<(), Error> {
         let apps_node = inspect::AppsNode::new(root.create_child("apps"));
         apps_node.set(&app_set.to_vec().await);
         let state_node = inspect::StateNode::new(root.create_child("state"));
+        let _channel_source_property =
+            root.create_string("channel_source", format!("{:?}", channel_source));
 
         let fidl = fidl::FidlServer::new(
             state_machine_ref.clone(),
