@@ -207,6 +207,9 @@ class RndisHost : public RndisHostType,
   // If successful, the received message is stored in control_receive_buffer_.
   zx_status_t ReceiveControlMessage(uint32_t request_id);
 
+  zx_status_t InitializeDevice();
+  zx_status_t QueryDevice(uint32_t oid, void* info_buffer_out, size_t expected_info_buffer_length);
+
   usb::UsbDevice usb_;
 
   uint8_t mac_addr_[ETH_MAC_SIZE];

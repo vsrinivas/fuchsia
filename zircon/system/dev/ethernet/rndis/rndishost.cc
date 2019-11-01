@@ -51,6 +51,11 @@ static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
   return true;
 }
 
+template <typename T>
+bool command_succeeded(const T* buf, uint32_t type) {
+  return command_succeeded(buf, type, sizeof(*buf));
+}
+
 zx_status_t RndisHost::SendControlCommand(void* command) {
   rndis_header* header = static_cast<rndis_header*>(command);
   header->request_id = next_request_id_++;
@@ -72,6 +77,8 @@ zx_status_t RndisHost::ReceiveControlMessage(uint32_t request_id) {
   }
   const auto* header = reinterpret_cast<rndis_header*>(control_receive_buffer_);
   if (header->request_id != request_id) {
+    zxlogf(ERROR, "rndishost received wrong packet ID on control channel: got %d, wanted %d\n",
+           header->request_id, request_id);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   return status;
@@ -325,8 +332,8 @@ zx_status_t RndisHost::EthernetImplSetParam(uint32_t param, int32_t value, const
 
 void RndisHost::EthernetImplGetBti(zx::bti* out_bti) {}
 
-zx_status_t RndisHost::StartThread() {
-  // Send an initialization message to the device.
+// Send an initialization message to the device.
+zx_status_t RndisHost::InitializeDevice() {
   rndis_init init{};
   init.msg_type = RNDIS_INITIALIZE_MSG;
   init.msg_length = sizeof(init);
@@ -335,50 +342,108 @@ zx_status_t RndisHost::StartThread() {
   init.max_xfer_size = RNDIS_MAX_XFER_SIZE;
 
   zx_status_t status = Command(&init);
-  if (status < 0) {
+  if (status != ZX_OK) {
     zxlogf(ERROR, "rndishost bad status on initial message. %d\n", status);
+    return status;
+  }
+
+  rndis_init_complete* init_cmplt = reinterpret_cast<rndis_init_complete*>(control_receive_buffer_);
+  if (!command_succeeded(init_cmplt, RNDIS_INITIALIZE_CMPLT)) {
+    zxlogf(ERROR, "rndishost initialization failed.\n");
+    return ZX_ERR_IO;
+  }
+
+  mtu_ = init_cmplt->max_xfer_size;
+  return ZX_OK;
+}
+
+zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
+                                   size_t expected_info_buffer_length) {
+  rndis_query query{};
+  query.msg_type = RNDIS_QUERY_MSG;
+  query.msg_length = sizeof(query);
+  query.oid = oid;
+  query.info_buffer_length = 0;
+  query.info_buffer_offset = 0;
+
+  zx_status_t status = SendControlCommand(&query);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "rndishost failed to issue query: %d\n", status);
+    return status;
+  }
+
+  status = ReceiveControlMessage(query.request_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "rndishost failed to receive query response: %d\n", status);
+    return status;
+  }
+
+  rndis_query_complete* query_cmplt =
+      reinterpret_cast<rndis_query_complete*>(control_receive_buffer_);
+  if (!command_succeeded(control_receive_buffer_, RNDIS_QUERY_CMPLT,
+                         sizeof(*query_cmplt) + expected_info_buffer_length)) {
+    return ZX_ERR_IO;
+  }
+
+  // info_buffer_offset and info_buffer_length determine where the query result is in the response
+  // buffer. Check that the length of the result matches what we expect.
+  if (query_cmplt->info_buffer_length != expected_info_buffer_length) {
+    zxlogf(ERROR, "rndishost expected info buffer of size %zu, got %u\n",
+           expected_info_buffer_length, query_cmplt->info_buffer_length);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  if (query_cmplt->info_buffer_offset == 0 || query_cmplt->info_buffer_length == 0) {
+    // Section 2.2.10 (REMOTE_NDIS_QUERY_CMPLT), p. 20 of the RNDIS specification states that if
+    // there is no payload, both the offset and length must be set to 0. It does not expressly
+    // forbid a nonempty payload with a zero offset, but we assume it is meant to be forbidden.
+    if (query_cmplt->info_buffer_offset != 0 || query_cmplt->info_buffer_length != 0) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    // Both the offset and the length are zero. As the length equals expected_info_buffer_length, we
+    // were expecting an empty response to this query. (It is unclear when this might happen, but it
+    // is permitted.)
+    return ZX_OK;
+  }
+
+  // The offset in info_buffer_offset is given in bytes from from the beginning of request_id. Check
+  // that it doesn't begin outside the response buffer. This also ensures that computing the total
+  // offset from the start of the buffer does not overflow.
+  if (query_cmplt->info_buffer_offset >=
+      sizeof(control_receive_buffer_) - offsetof(rndis_query_complete, request_id)) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  // Check that the length + offset lies within the buffer. From the previous check, we know that
+  // total_offset < sizeof(control_receive_buffer_), and therefore the subtraction won't underflow.
+  const ptrdiff_t total_offset =
+      offsetof(rndis_query, request_id) + query_cmplt->info_buffer_offset;
+  if (query_cmplt->info_buffer_length > sizeof(control_receive_buffer_) - total_offset) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  if (info_buffer_out != nullptr) {
+    memcpy(info_buffer_out, control_receive_buffer_ + total_offset, expected_info_buffer_length);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t RndisHost::StartThread() {
+  zx_status_t status = InitializeDevice();
+  if (status != ZX_OK) {
     goto fail;
   }
-  {
-    rndis_init_complete* init_cmplt =
-        reinterpret_cast<rndis_init_complete*>(control_receive_buffer_);
-    if (!command_succeeded(control_receive_buffer_, RNDIS_INITIALIZE_CMPLT, sizeof(*init_cmplt))) {
-      zxlogf(ERROR, "rndishost initialization failed.\n");
-      status = ZX_ERR_IO;
-      goto fail;
-    }
-    mtu_ = init_cmplt->max_xfer_size;
-  }
 
-  {
-    // Query the device for a MAC address.
-    rndis_query query{};
-    query.msg_type = RNDIS_QUERY_MSG;
-    query.msg_length = sizeof(query);
-    query.oid = OID_802_3_PERMANENT_ADDRESS;
-    query.info_buffer_length = 0;
-    query.info_buffer_offset = 0;
-    status = Command(&query);
-    if (status < 0) {
-      zxlogf(ERROR, "Couldn't get device physical address\n");
-      goto fail;
-    }
+  status = QueryDevice(OID_802_3_PERMANENT_ADDRESS, mac_addr_, sizeof(mac_addr_));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "rndishost could not obtain device physical address: %d\n", status);
+    goto fail;
   }
+  zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0], mac_addr_[1],
+         mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
 
-  {
-    rndis_query_complete* mac_query_cmplt =
-        reinterpret_cast<rndis_query_complete*>(control_receive_buffer_);
-    if (!command_succeeded(control_receive_buffer_, RNDIS_QUERY_CMPLT,
-                           sizeof(*mac_query_cmplt) + mac_query_cmplt->info_buffer_length)) {
-      zxlogf(ERROR, "rndishost MAC query failed.\n");
-      status = ZX_ERR_IO;
-      goto fail;
-    }
-    uint8_t* mac_addr = control_receive_buffer_ + 8 + mac_query_cmplt->info_buffer_offset;
-    memcpy(mac_addr_, mac_addr, sizeof(mac_addr_));
-    zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0],
-           mac_addr_[1], mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
-  }
   {
     rndis_set set{};
     set.msg_type = RNDIS_SET_MSG;
@@ -391,7 +456,7 @@ zx_status_t RndisHost::StartThread() {
               RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_PROMISCUOUS;
     status = Command(&set);
     if (status < 0) {
-      zxlogf(ERROR, "Couldn't set the packet filter.\n");
+      zxlogf(ERROR, "rndishost could not set the packet filter.\n");
       goto fail;
     }
 
