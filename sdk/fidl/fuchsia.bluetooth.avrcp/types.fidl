@@ -117,6 +117,22 @@ struct MediaAttributes {
     // TODO(BT-729): Add BIP cover art handle.
 };
 
+/// Status of currently playing media on the TG.
+/// Defined by AVRCP 1.6.2 section 6.7.1, Table 6.29.
+table PlayStatus {
+    /// The total length of the currently playing media, in milliseconds.
+    /// Optional, if the TG does not support song length.
+    1: uint32 song_length;
+
+    /// The current position of the playing media, in milliseconds elapsed.
+    /// Optional, if the TG does not support song position.
+    2: uint32 song_position;
+
+    /// The playback status of the currently playing media.
+    /// Mandatory, the TG must respond with a PlaybackStatus.
+    3: PlaybackStatus playback_status;
+};
+
 /// Defined by AV\C Panel specification.
 enum AvcPanelCommand : uint8 {
     SELECT = 0x00;
