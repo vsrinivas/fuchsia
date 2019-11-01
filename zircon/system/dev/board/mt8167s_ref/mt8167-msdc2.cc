@@ -26,6 +26,9 @@ constexpr uint16_t kPullDown = 1;
 constexpr uint16_t kPull10k = 1;
 constexpr uint16_t kPull50k = 2;
 
+constexpr uint16_t kDriveStrength6mA = 2;
+constexpr uint16_t kDriveStrength8mA = 3;
+
 constexpr uintptr_t kIocfgBaseAligned =
     fbl::round_down<uintptr_t, uintptr_t>(MT8167_IOCFG_BASE, PAGE_SIZE);
 constexpr size_t kIocfgOffset = MT8167_IOCFG_BASE - kIocfgBaseAligned;
@@ -39,7 +42,7 @@ constexpr size_t kGpioSizeAligned =
     fbl::round_up<size_t, size_t>(kGpioOffset + MT8167_GPIO_SIZE, PAGE_SIZE);
 
 constexpr uint32_t kFifoDepth = 128;
-constexpr uint32_t kSrcClkFreq = 188000000;
+constexpr uint32_t kSrcClkFreq = 206'000'000;
 
 }  // namespace
 
@@ -91,6 +94,32 @@ class GpioModeF : public hwreg::RegisterBase<GpioModeF, uint16_t> {
   DEF_FIELD(8, 6, gpio72_mode);
   DEF_FIELD(5, 3, gpio71_mode);
   DEF_FIELD(2, 0, gpio70_mode);
+};
+
+class Smt3En : public hwreg::RegisterBase<Smt3En, uint16_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<Smt3En>(kIocfgOffset + 0x130); }
+  DEF_BIT(6, msdc2_dat3_smt_en);
+  DEF_BIT(5, msdc2_dat2_smt_en);
+  DEF_BIT(4, msdc2_dat1_smt_en);
+  DEF_BIT(3, msdc2_dat0_smt_en);
+  DEF_BIT(2, msdc2_cmd_smt_en);
+  DEF_BIT(1, msdc2_clk_smt_en);
+};
+
+class DrvMode4 : public hwreg::RegisterBase<DrvMode4, uint16_t> {
+public:
+  static auto Get() { return hwreg::RegisterAddr<DrvMode4>(kIocfgOffset + 0x440); }
+
+  DEF_FIELD(14, 12, msdc2_cmd_drive_strength);
+};
+
+class DrvMode5 : public hwreg::RegisterBase<DrvMode5, uint16_t> {
+public:
+  static auto Get() { return hwreg::RegisterAddr<DrvMode5>(kIocfgOffset + 0x450); }
+
+  DEF_FIELD(6, 4, msdc2_dat_drive_strength);
+  DEF_FIELD(2, 0, msdc2_clk_drive_strength);
 };
 
 zx_status_t Mt8167::Msdc2Init() {
@@ -159,6 +188,26 @@ zx_status_t Mt8167::Msdc2Init() {
       .set_msdc2_clk_pull(kPull50k)
       .set_msdc2_dat3_pupd(kPullUp)
       .set_msdc2_dat3_pull(kPull10k)
+      .WriteTo(&(*iocfg_mmio));
+
+  Smt3En::Get()
+      .ReadFrom(&(*iocfg_mmio))
+      .set_msdc2_dat3_smt_en(1)
+      .set_msdc2_dat2_smt_en(1)
+      .set_msdc2_dat1_smt_en(1)
+      .set_msdc2_dat0_smt_en(1)
+      .set_msdc2_cmd_smt_en(1)
+      .set_msdc2_clk_smt_en(1)
+      .WriteTo(&(*iocfg_mmio));
+
+  DrvMode4::Get()
+      .ReadFrom(&(*iocfg_mmio))
+      .set_msdc2_cmd_drive_strength(kDriveStrength6mA)
+      .WriteTo(&(*iocfg_mmio));
+  DrvMode5::Get()
+      .ReadFrom(&(*iocfg_mmio))
+      .set_msdc2_clk_drive_strength(kDriveStrength8mA)
+      .set_msdc2_dat_drive_strength(kDriveStrength6mA)
       .WriteTo(&(*iocfg_mmio));
 
   std::optional<ddk::MmioBuffer> gpio_mmio;

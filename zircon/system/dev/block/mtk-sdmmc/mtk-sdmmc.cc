@@ -123,8 +123,9 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   sdmmc_host_info_t info = {
+      // TODO(34596): Re-enable SDR104 once it works without causing CRC errors.
       .caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_ADMA2 |
-              SDMMC_HOST_CAP_SDR104 | SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50,
+              /*SDMMC_HOST_CAP_SDR104 |*/ SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50,
       // Assuming 512 is smallest block size we are likely to see.
       .max_transfer_size = SDMMC_PAGES_COUNT * 512,
       .max_transfer_size_non_dma = config.fifo_depth,
@@ -251,10 +252,7 @@ zx_status_t MtkSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t MtkSdmmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
-  // TODO(bradenkell): According to the schematic VCCQ is fixed at 1.8V. Verify this and update.
-  return ZX_OK;
-}
+zx_status_t MtkSdmmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) { return ZX_OK; }
 
 zx_status_t MtkSdmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
   uint32_t bus_width_value;
@@ -336,15 +334,8 @@ zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
 
   MsdcCfg::Get().ReadFrom(&mmio_).set_ck_pwr_down(0).WriteTo(&mmio_);
 
-  // TODO(ZX-4823): Attempting to enable UHS mode causes persistent timeout errors. Figure out why
-  //                and re-enable UHS.
-
   switch (timing) {
     case SDMMC_TIMING_DDR50:
-      if (config_.is_sdio) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      __FALLTHROUGH;
     case SDMMC_TIMING_HSDDR:
       ck_mode = MsdcCfg::kCardCkModeDdr;
       break;
@@ -352,11 +343,7 @@ zx_status_t MtkSdmmc::SdmmcSetTiming(sdmmc_timing_t timing) {
       ck_mode = MsdcCfg::kCardCkModeHs400;
       break;
     case SDMMC_TIMING_SDR104:
-    case SDMMC_TIMING_SDR50:
-      if (config_.is_sdio) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      __FALLTHROUGH;
+      return ZX_ERR_NOT_SUPPORTED;
     default:
       ck_mode = MsdcCfg::kCardCkModeDiv;
       break;
@@ -375,9 +362,18 @@ void MtkSdmmc::SdmmcHwReset() {
   while (MsdcCfg::Get().ReadFrom(&mmio_).reset()) {
   }
 
+  if (power_en_gpio_.is_valid()) {
+    power_en_gpio_.ConfigOut(0);
+  }
   if (reset_gpio_.is_valid()) {
     reset_gpio_.ConfigOut(0);
-    usleep(10);
+  }
+  if (power_en_gpio_.is_valid()) {
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    power_en_gpio_.ConfigOut(1);
+  }
+  if (reset_gpio_.is_valid()) {
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
     reset_gpio_.ConfigOut(1);
   }
 }
@@ -420,18 +416,25 @@ RequestStatus MtkSdmmc::SendTuningBlock(uint32_t cmd_idx, zx_handle_t vmo) {
 template <typename DelayCallback, typename RequestCallback>
 void MtkSdmmc::TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do_request,
                                  TuneWindow* window) {
+  char results[PadTune0::kDelayMax + 2];
+
   for (uint32_t delay = 0; delay <= PadTune0::kDelayMax; delay++) {
     std::forward<DelayCallback>(set_delay)(delay);
 
     for (int i = 0; i < kTuningDelayIterations; i++) {
       if (std::forward<RequestCallback>(do_request)() != ZX_OK) {
+        results[delay] = '-';
         window->Fail();
         break;
       } else if (i == kTuningDelayIterations - 1) {
+        results[delay] = '|';
         window->Pass();
       }
     }
   }
+
+  results[fbl::count_of(results) - 1] = '\0';
+  zxlogf(INFO, "%s: Tuning results: %s\n", __func__, results);
 }
 
 zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
@@ -474,14 +477,14 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
   msdc_iocon.set_cmd_sample(MsdcIoCon::kSampleFallingEdge).WriteTo(&mmio_);
   TestDelaySettings(set_cmd_delay, test_cmd, &cmd_falling_window);
 
-  uint32_t sample, delay;
-  if (!GetBestWindow(cmd_rising_window, cmd_falling_window, &sample, &delay)) {
+  uint32_t cmd_sample, cmd_delay;
+  if (!GetBestWindow(cmd_rising_window, cmd_falling_window, &cmd_sample, &cmd_delay)) {
     return ZX_ERR_IO;
   }
 
   // Select the best sampling edge and delay value.
-  msdc_iocon.set_cmd_sample(sample).WriteTo(&mmio_);
-  pad_tune0.set_cmd_delay(delay).WriteTo(&mmio_);
+  msdc_iocon.set_cmd_sample(cmd_sample).WriteTo(&mmio_);
+  pad_tune0.set_cmd_delay(cmd_delay).WriteTo(&mmio_);
 
   auto set_data_delay = [this](uint32_t delay) {
     PadTune0::Get().ReadFrom(&mmio_).set_data_delay(delay).WriteTo(&mmio_);
@@ -500,12 +503,15 @@ zx_status_t MtkSdmmc::SdmmcPerformTuning(uint32_t cmd_idx) {
   msdc_iocon.set_data_sample(MsdcIoCon::kSampleFallingEdge).WriteTo(&mmio_);
   TestDelaySettings(set_data_delay, test_data, &data_falling_window);
 
-  if (!GetBestWindow(data_rising_window, data_falling_window, &sample, &delay)) {
+  uint32_t data_sample, data_delay;
+  if (!GetBestWindow(data_rising_window, data_falling_window, &data_sample, &data_delay)) {
     return ZX_ERR_IO;
   }
 
-  msdc_iocon.set_data_sample(sample).WriteTo(&mmio_);
-  pad_tune0.set_data_delay(delay).WriteTo(&mmio_);
+  msdc_iocon.set_data_sample(data_sample).WriteTo(&mmio_);
+  pad_tune0.set_data_delay(data_delay).WriteTo(&mmio_);
+  zxlogf(INFO, "%s: cmd sample %u, cmd delay %u, data sample %u, data delay %u\n", __func__,
+         cmd_sample, cmd_delay, data_sample, data_delay);
 
   return ZX_OK;
 }
