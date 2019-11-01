@@ -21,9 +21,9 @@ class HitTester {
   HitTester() = default;
   virtual ~HitTester() = default;
 
-  // Performs a hit test along the specified ray. Returns a list of hits
-  // sorted by increasing distance, and when distance is equal, sorted by decreasing tree depth in
-  // reverse child order.
+  // Performs a hit test along the specified ray. Returns a list of hits sorted by increasing
+  // distance. For hits of equal distance, the returned vector does not impose additional sorting
+  // based on tree depth or sibling order.
   std::vector<Hit> HitTest(Node* node, const escher::ray4& ray);
 
  private:

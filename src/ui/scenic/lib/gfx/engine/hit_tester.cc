@@ -85,12 +85,9 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   ray_info_ = nullptr;
   intersection_info_ = nullptr;
 
-  // Sort by distance, preserving reverse traversal order in case of ties.
-  // TODO(37785): Change to std::sort and remove std::reverse when we remove ordering guarantee unit
-  // test.
-  std::reverse(hits_.begin(), hits_.end());
-  std::stable_sort(hits_.begin(), hits_.end(),
-                   [](const Hit& a, const Hit& b) { return a.distance < b.distance; });
+  // Sort by distance.
+  std::sort(hits_.begin(), hits_.end(),
+            [](const Hit& a, const Hit& b) { return a.distance < b.distance; });
 
   // Warn if there are objects at the same distance as that is a user error.
   const std::string warning_message = GetDistanceCollisionsWarning(hits_);
