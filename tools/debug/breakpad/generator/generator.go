@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"go.fuchsia.dev/fuchsia/tools/debug/breakpad/lib"
+	breakpad "go.fuchsia.dev/fuchsia/tools/debug/breakpad/lib"
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 
@@ -102,7 +102,7 @@ func (g *generator) generate(in <-chan elflib.BinaryFileRef, outdir string) erro
 		if err != nil {
 			return err
 		}
-		fd, err := os.Create(filepath.Join(outdir, sf.ModuleSection.BuildID))
+		fd, err := os.Create(filepath.Join(outdir, fmt.Sprintf("%s.sym", bfr.BuildID)))
 		if err != nil {
 			return err
 		}
