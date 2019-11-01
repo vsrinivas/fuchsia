@@ -21,13 +21,22 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
-#include "imx227_seq.h"
-#include "imx227_tester.h"
+#include "src/camera/drivers/sensors/imx227/imx227_seq.h"
+#include "src/camera/drivers/sensors/imx227/imx227_tester.h"
 
 namespace camera {
 
 namespace {
 
+constexpr uint16_t kSensorModelIdReg = 0x0016;
+constexpr uint16_t kModeSelectReg = 0x0100;
+constexpr uint16_t kFrameLengthLinesReg = 0x0340;
+constexpr uint16_t kLineLengthPckReg = 0x0342;
+
+constexpr uint8_t kByteShift = 8;
+constexpr uint8_t kRaw10Bits = 10;
+constexpr uint8_t kRaw12Bits = 12;
+constexpr uint8_t kByteMask = 0xFF;
 constexpr uint16_t kSensorId = 0x0227;
 constexpr uint32_t kAGainPrecision = 12;
 constexpr uint32_t kDGainPrecision = 8;
@@ -98,12 +107,12 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   // First two bytes are the address, third one is the value to be written.
-  uint8_t buf[3];
-  buf[1] = static_cast<uint8_t>(addr & 0xFF);
-  buf[0] = static_cast<uint8_t>((addr >> 8) & 0xFF);
+  std::array<uint8_t, 3> buf;
+  buf[0] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
+  buf[1] = static_cast<uint8_t>(addr & kByteMask);
   buf[2] = val;
 
-  zx_status_t status = i2c_.WriteSync(buf, 3);
+  zx_status_t status = i2c_.WriteSync(buf.data(), 3);
   if (status != ZX_OK) {
     zxlogf(ERROR,
            "Imx227Device: could not write reg addr/val: 0x%08x/0x%08x status: "
@@ -113,7 +122,8 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
 }
 
 bool Imx227Device::ValidateSensorID() {
-  uint16_t sensor_id = static_cast<uint16_t>((ReadReg(0x0016) << 8) | ReadReg(0x0017));
+  auto sensor_id = static_cast<uint16_t>((ReadReg(kSensorModelIdReg) << kByteShift) |
+                                         ReadReg(kSensorModelIdReg + 1));
   if (sensor_id != kSensorId) {
     zxlogf(ERROR, "Imx227Device: Invalid sensor ID\n");
     return false;
@@ -122,7 +132,7 @@ bool Imx227Device::ValidateSensorID() {
 }
 
 zx_status_t Imx227Device::InitSensor(uint8_t idx) {
-  if (idx >= countof(kSEQUENCE_TABLE)) {
+  if (idx >= kSEQUENCE_TABLE.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -218,12 +228,12 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (modes_count > countof(supported_modes)) {
+  if (modes_count > supported_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(out_modes_list, &supported_modes, sizeof(camera_sensor_mode_t) * countof(supported_modes));
-  *out_modes_actual = countof(supported_modes);
+  memcpy(out_modes_list, &supported_modes, sizeof(camera_sensor_mode_t) * supported_modes.size());
+  *out_modes_actual = supported_modes.size();
   return ZX_OK;
 }
 
@@ -235,7 +245,7 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (mode >= countof(supported_modes)) {
+  if (mode >= supported_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -257,8 +267,10 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 
   ctx_.param.active.width = supported_modes[mode].resolution.width;
   ctx_.param.active.height = supported_modes[mode].resolution.height;
-  ctx_.HMAX = static_cast<uint16_t>(ReadReg(0x342) << 8 | ReadReg(0x343));
-  ctx_.VMAX = static_cast<uint16_t>(ReadReg(0x340) << 8 | ReadReg(0x341));
+  ctx_.HMAX = static_cast<uint16_t>(ReadReg(kLineLengthPckReg) << kByteShift |
+                                    ReadReg(kLineLengthPckReg + 1));
+  ctx_.VMAX = static_cast<uint16_t>(ReadReg(kFrameLengthLinesReg) << kByteShift |
+                                    ReadReg(kFrameLengthLinesReg + 1));
   ctx_.int_max = 0x0ADE;  // Max allowed for 30fps = 2782 (dec), 0x0ADE (hex)
   ctx_.int_time_min = 1;
   ctx_.int_time_limit = ctx_.int_max;
@@ -287,15 +299,14 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   }
 
   switch (supported_modes[mode].bits) {
-    case 10:
+    case kRaw10Bits:
       adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
       break;
-    case 12:
+    case kRaw12Bits:
       adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW12;
       break;
     default:
       adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
-      break;
   }
 
   adap_info.resolution.width = supported_modes[mode].resolution.width;
@@ -311,7 +322,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
   }
   zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
   ctx_.streaming_flag = 1;
-  WriteReg(0x0100, 0x01);
+  WriteReg(kModeSelectReg, 0x01);
   return ZX_OK;
 }
 
@@ -320,7 +331,7 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
     return ZX_ERR_BAD_STATE;
   }
   ctx_.streaming_flag = 0;
-  WriteReg(0x0100, 0x00);
+  WriteReg(kModeSelectReg, 0x00);
   return ZX_OK;
 }
 
@@ -335,18 +346,17 @@ zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
 
 zx_status_t Imx227Device::CameraSensorUpdate() { return ZX_ERR_NOT_SUPPORTED; }
 
-// static
-zx_status_t Imx227Device::Setup(void* ctx, zx_device_t* parent,
-                                std::unique_ptr<Imx227Device>* out) {
+zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent,
+                                 std::unique_ptr<Imx227Device>* device_out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "%s could not get composite protocoln", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  std::array<zx_device_t*, COMPONENT_COUNT> components;
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
+  composite.GetComponents(components.data(), COMPONENT_COUNT, &actual);
   if (actual != COMPONENT_COUNT) {
     zxlogf(ERROR, "%s Could not get components\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -367,7 +377,7 @@ zx_status_t Imx227Device::Setup(void* ctx, zx_device_t* parent,
     zxlogf(ERROR, "%s InitPdev failed\n", __func__);
     return status;
   }
-  *out = std::move(sensor_device);
+  *device_out = std::move(sensor_device);
   return status;
 }
 
@@ -382,34 +392,34 @@ void Imx227Device::DdkRelease() {
 
 zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
   std::unique_ptr<Imx227Device> sensor_device;
-  zx_status_t status = camera::Imx227Device::Setup(ctx, device, &sensor_device);
+  zx_status_t status = Imx227Device::Create(ctx, device, &sensor_device);
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d\n", status);
     return status;
   }
-  zx_device_prop_t props[] = {
+  std::array<zx_device_prop_t, 1> props = {{
       {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR},
-  };
+  }};
 
 // Run the unit tests for this device
 // TODO(braval): CAM-44 (Run only when build flag enabled)
 // This needs to be replaced with run unittests hooks when
 // the framework is available.
 #if 0
-    status = camera::Imx227DeviceTester::RunTests(sensor_device.get());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
-        return status;
-    }
+      status = Imx227DeviceTester::RunTests(sensor_device.get());
+      if (status != ZX_OK) {
+          zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
+          return status;
+      }
 #endif
 
-  status = sensor_device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
+  status =
+      sensor_device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props.data(), props.size());
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d\n", status);
     return status;
-  } else {
-    zxlogf(INFO, "imx227 driver added\n");
   }
+  zxlogf(INFO, "imx227 driver added\n");
 
   // camera_sensor_device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = sensor_device.release();

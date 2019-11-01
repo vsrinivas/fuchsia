@@ -7,8 +7,6 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
-#include "imx227.h"
-
 namespace camera {
 
 namespace {

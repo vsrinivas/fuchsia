@@ -8,6 +8,8 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 
+#include <array>
+
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/camerasensor.h>
@@ -19,7 +21,7 @@
 
 namespace camera {
 
-typedef struct sensor_context {
+struct SensorCtx {
   // TODO(braval): Add details for each one of these
   //               and also remove unused ones.
   uint32_t again_limit;
@@ -36,8 +38,8 @@ typedef struct sensor_context {
   uint16_t dgain_old;
   uint16_t int_time_min;
   uint16_t again_old;
-  uint16_t dgain[2];
-  uint16_t again[2];
+  std::array<uint16_t, 2> dgain;
+  std::array<uint16_t, 2> again;
   uint8_t seq_width;
   uint8_t streaming_flag;
   uint8_t again_delay;
@@ -47,7 +49,7 @@ typedef struct sensor_context {
   uint8_t change_flag;
   uint8_t hdr_flag;
   camera_sensor_info_t param;
-} sensor_context_t;
+};
 
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
@@ -65,7 +67,6 @@ class Imx227Device : public DeviceType,
     COMPONENT_COUNT,
   };
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent);
   Imx227Device(zx_device_t* device, zx_device_t* i2c, zx_device_t* gpio_vana,
                zx_device_t* gpio_vdig, zx_device_t* gpio_cam_rst, zx_device_t* clk24,
                zx_device_t* mipicsi)
@@ -76,8 +77,11 @@ class Imx227Device : public DeviceType,
         gpio_cam_rst_(gpio_cam_rst),
         clk24_(clk24),
         mipi_(mipicsi) {}
-  static zx_status_t Setup(void* ctx, zx_device_t* parent, std::unique_ptr<Imx227Device>* device);
-  // Methods required by the ddk mixins.
+
+  static zx_status_t Create(void* ctx, zx_device_t* parent,
+                            std::unique_ptr<Imx227Device>* device_out);
+
+  // Methods required by the ddk mixins
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -85,7 +89,7 @@ class Imx227Device : public DeviceType,
   // the status of the sensor.
   bool IsSensorInitialized() { return initialized_; }
 
-  // Methods for ZX_PROTOCOL_CAMERA_SENSOR.
+  // Methods for ZX_PROTOCOL_CAMERA_SENSOR
   zx_status_t CameraSensorInit();
   void CameraSensorDeInit();
   zx_status_t CameraSensorSetMode(uint8_t mode);
@@ -101,10 +105,11 @@ class Imx227Device : public DeviceType,
 
  private:
   friend class Imx227DeviceTester;
-  // Sensor Context
-  sensor_context_t ctx_;
 
-  // Protocols.
+  // Sensor Context
+  SensorCtx ctx_;
+
+  // Protocols
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient gpio_vana_enable_;
   ddk::GpioProtocolClient gpio_vdig_enable_;
@@ -112,10 +117,10 @@ class Imx227Device : public DeviceType,
   ddk::ClockProtocolClient clk24_;
   ddk::MipiCsiProtocolClient mipi_;
 
-  // Sensor Status.
+  // Sensor Status
   bool initialized_ = false;
 
-  // I2C Helpers.
+  // I2C Helpers
   uint8_t ReadReg(uint16_t addr);
   void WriteReg(uint16_t addr, uint8_t val);
 
@@ -124,6 +129,7 @@ class Imx227Device : public DeviceType,
   void ShutDown();
   bool ValidateSensorID();
 };
+
 }  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_H_

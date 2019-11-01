@@ -10,10 +10,9 @@
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
 
-namespace camera {
+#include "src/camera/drivers/sensors/imx227/imx227.h"
 
-// |Imx227DeviceTester| is spawned by the driver in |imx227.cc|
-class Imx227Device;
+namespace camera {
 
 class Imx227DeviceTester : public zxtest::Test {
  public:
