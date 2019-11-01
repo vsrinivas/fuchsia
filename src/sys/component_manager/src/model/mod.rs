@@ -18,6 +18,7 @@ mod resolver;
 mod routing;
 pub mod routing_facade;
 mod runner;
+pub mod shutdown;
 mod storage;
 pub mod testing;
 #[cfg(test)]
