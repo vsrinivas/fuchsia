@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <functional>
-#include <gtest/gtest.h>
 
-#include "sim_test.h"
+#include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
 
@@ -30,8 +30,7 @@ class ScanTest : public SimTest {
   ScanTest() = default;
   void Init();
   void StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                   const wlan_channel_t& chan,
-                   zx::duration beacon_interval = kBeaconInterval);
+                   const wlan_channel_t& chan, zx::duration beacon_interval = kBeaconInterval);
 
   // Event handlers
   void EndSimulation();

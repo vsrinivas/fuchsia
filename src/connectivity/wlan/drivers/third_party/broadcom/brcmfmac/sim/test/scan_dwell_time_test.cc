@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <functional>
-#include <gtest/gtest.h>
 
-#include "sim_test.h"
+#include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
 
@@ -123,7 +122,7 @@ void ScanTest::StartScan() {
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_PASSIVE,
       .num_channels = 1,
-      .channel_list = { kDefaultChannel.primary },
+      .channel_list = {kDefaultChannel.primary},
       .min_channel_time = kDwellTimeMs,
       .max_channel_time = kDwellTimeMs,
       .num_ssids = 0,

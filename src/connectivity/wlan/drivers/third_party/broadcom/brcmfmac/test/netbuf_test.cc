@@ -14,12 +14,12 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+
 #include <stdio.h>
 
 #include "gtest/gtest.h"
-
-#include "../debug.h"
-#include "../netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 namespace {
 

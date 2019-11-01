@@ -5,11 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_SIM_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_SIM_TEST_H_
 
-#include <gtest/gtest.h>
+#include <zircon/types.h>
 
+#include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
 
 namespace wlan::brcmfmac {
 

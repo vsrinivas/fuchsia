@@ -32,21 +32,21 @@
 #endif
 #include <threads.h>
 
-#include "bcdc.h"
-#include "brcm_hw_ids.h"
-#include "brcmu_utils.h"
-#include "brcmu_wifi.h"
-#include "chip.h"
-#include "common.h"
-#include "core.h"
-#include "debug.h"
-#include "defs.h"
-#include "firmware.h"
-#include "linuxisms.h"
-#include "netbuf.h"
-#include "soc.h"
-#include "timer.h"
-#include "workqueue.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
 #define CTL_DONE_TIMEOUT_MSEC (2500)
@@ -99,9 +99,9 @@ struct rte_console {
 };
 
 #endif /* !defined(NDEBUG) */
-#include "bus.h"
-#include "chipcommon.h"
-#include "debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 #define TXQLEN 2048         /* bulk tx queue length */
 #define TXHI (TXQLEN - 256) /* turn on flow control above TXHI */

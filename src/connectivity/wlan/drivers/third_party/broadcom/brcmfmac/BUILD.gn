@@ -1,17 +1,15 @@
-#
 # Copyright (c) 2018 The Fuchsia Authors.
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+# fee is hereby granted, provided that the above copyright notice and this permission notice appear
+# in all copies.
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+# SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
@@ -20,26 +18,26 @@ import("//build/package.gni")
 # By default, targets are only visible here and to subdirectories.
 visibility = [ "./*" ]
 
-# The brcmfmac driver can be built with support for different system buses
-# (SDIO, and simulated-firmware), and different configurations will require
-# different support.  To facilitate consolidating all the potentially messy
-# conditional compilation in one place, "bus.cc" is conditionally compiled based
-# on the values of the preprocessor #defines:
+# The brcmfmac driver can be built with support for different system buses (SDIO and
+# simulated-firmware), and different configurations will require different support.  To facilitate
+# consolidating all the potentially messy conditional compilation in one place, "binding.cc" is
+# conditionally compiled based on the values of the preprocessor #defines:
 #
 # * CONFIG_BRCMFMAC_SDIO
 # * CONFIG_BRCMFMAC_SIM
+# * CONFIG_BRCMFMAC_DRIVER_TEST
 #
-# These #defines are applied as public_configs entries on the targets,
+# These #defines are applied as public_configs entries on the targets:
 # respectively:
 #
-# * :sdio
-# * :sim
+# * sdio/sdio
+# * sim/sim
 #
-# Thus a target that depends on one of the above targets, can include "bus.cc"
-# in its sources and will then conditionally compile it with the set of
-# preprocessor #defines set by the targets it depends on.
+# Thus a target that depends on one of the above targets, can include "binding.cc" in its sources
+# and will then conditionally compile it with the set of preprocessor #defines set by the targets
+# it depends on.
 #
-# See the targets ":driver_module" and ":driver_sim" to see how this is done.
+# See the targets ":driver_module" and ":test_driver_module" to see how this is done.
 
 # Sources for driver debug logging.
 source_set("debug") {
@@ -162,76 +160,6 @@ source_set("core") {
   friend = [ "test/*" ]
 }
 
-# Bus definitions below.  These are:
-#
-# * :sdio
-# * :sim
-
-config("config_sdio") {
-  defines = [ "CONFIG_BRCMFMAC_SDIO=1" ]
-}
-
-source_set("sdio") {
-  sources = [
-    "bcmsdh.cc",
-    "sdio.cc",
-    "sdio_device.cc",
-  ]
-  public = [
-    "sdio.h",
-    "sdio_device.h",
-  ]
-  deps = [
-    ":bcdc",
-    ":debug",
-    "//zircon/public/lib/broadcom",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
-    "//zircon/system/banjo/ddk.protocol.composite",
-    "//zircon/system/public",
-  ]
-  public_deps = [
-    ":core",
-    ":linuxisms",
-    "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.sdio",
-  ]
-  public_configs = [ ":config_sdio" ]
-}
-
-config("config_sim") {
-  defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
-}
-
-source_set("sim") {
-  sources = [
-    "sim-fw/sim_fw.cc",
-    "sim-fw/sim_fw.h",
-    "sim-fw/sim_hw.cc",
-    "sim-fw/sim_hw.h",
-    "sim.cc",
-    "sim_device.cc",
-  ]
-  public = [
-    "sim.h",
-    "sim_device.h",
-  ]
-  deps = [
-    ":bcdc",
-    ":debug",
-    "//zircon/public/lib/broadcom",
-    "//zircon/public/lib/ddk",
-    "//zircon/system/public",
-  ]
-  public_deps = [
-    ":core",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-  ]
-  public_configs = [ ":config_sim" ]
-}
-
 # Source set including the driver sources, and the bus definitions conditionally compiled in on each
 # platform.
 source_set("driver_sources") {
@@ -247,7 +175,7 @@ source_set("driver_sources") {
 
   # Assume for now that arm64 boards use the SDIO interface.
   if (target_cpu == "arm64") {
-    public_deps += [ ":sdio" ]
+    public_deps += [ "sdio" ]
   }
 }
 
@@ -395,6 +323,17 @@ if (internal_access) {
   }
   group("brcmfmac-clm-copy") {
   }
+}
+
+# The test package, including tests in subdirs.
+group("brcmfmac_tests") {
+  deps = [
+    "sdio/test:brcmfmac_sdio_test",
+    "sim/test:brcmfmac_sim_test",
+    "test:brcmfmac_test",
+  ]
+  testonly = true
+  visibility += [ "*" ]
 }
 
 # Driver packages.  Depend on one or the other, depending on whether the board definition would like

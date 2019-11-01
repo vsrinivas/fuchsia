@@ -19,14 +19,15 @@
 #include <algorithm>
 
 #include <ddk/device.h>
-#include <gtest/gtest.h>
 
+#include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
 
 namespace wlan {
 namespace brcmfmac {

@@ -14,10 +14,11 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <algorithm>
-#include "gtest/gtest.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
-#include "../debug.h"
+#include <algorithm>
+
+#include "gtest/gtest.h"
 
 namespace {
 

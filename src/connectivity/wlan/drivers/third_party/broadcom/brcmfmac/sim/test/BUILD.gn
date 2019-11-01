@@ -1,0 +1,149 @@
+# Copyright (c) 2019 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+# fee is hereby granted, provided that the above copyright notice and this permission notice appear
+# in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+# SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("sim_test") {
+  output_name = "sim_test"
+  testonly = true
+  sources = [
+    "sim_test.cc",
+  ]
+  public = [
+    "sim_test.h",
+  ]
+  deps = [
+    "//zircon/system/public",
+  ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+executable("dynamic_if_test") {
+  output_name = "dynamic_if_test"
+  testonly = true
+  sources = [
+    "dynamic_if_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
+executable("firmware_config_test") {
+  output_name = "firmware_config_test"
+  testonly = true
+  sources = [
+    "firmware_config_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
+executable("lifecycle_test") {
+  output_name = "lifecycle_test"
+  testonly = true
+  sources = [
+    "lifecycle_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
+executable("scan_dwell_time_test") {
+  output_name = "scan_dwell_time_test"
+  testonly = true
+  sources = [
+    "scan_dwell_time_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
+executable("scan_test") {
+  output_name = "scan_test"
+  testonly = true
+  sources = [
+    "scan_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+unittest_package("brcmfmac_sim_test") {
+  package_name = "brcmfmac_sim_test"
+  deps = [
+    ":dynamic_if_test",
+    ":firmware_config_test",
+    ":lifecycle_test",
+    ":scan_dwell_time_test",
+    ":scan_test",
+  ]
+  tests = [
+    {
+      name = "dynamic_if_test"
+      environments = basic_envs
+    },
+    {
+      name = "firmware_config_test"
+      environments = basic_envs
+    },
+    {
+      name = "lifecycle_test"
+      environments = basic_envs
+    },
+    {
+      name = "scan_dwell_time_test"
+      environments = basic_envs
+    },
+    {
+      name = "scan_test"
+      environments = basic_envs
+    },
+  ]
+}

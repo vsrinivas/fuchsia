@@ -12,7 +12,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -29,24 +28,6 @@ executable("debug_test") {
   ]
 }
 
-executable("dynamic_if_test") {
-  output_name = "dynamic_if_test"
-  testonly = true
-  sources = [
-    "dynamic_if_test.cc",
-    "sim_test.cc",
-    "sim_test.h",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-}
-
 executable("firmware_test") {
   output_name = "firmware_test"
   testonly = true
@@ -55,38 +36,6 @@ executable("firmware_test") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-}
-
-executable("firmware_config_test") {
-  output_name = "firmware_config_test"
-  testonly = true
-  sources = [
-    "firmware_config_test.cc",
-    "sim_test.cc",
-    "sim_test.h",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-}
-
-executable("lifecycle_test") {
-  output_name = "lifecycle_test"
-  testonly = true
-  sources = [
-    "lifecycle_test.cc",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
@@ -106,67 +55,6 @@ executable("netbuf_test") {
   ]
 }
 
-executable("scan_dwell_time_test") {
-  output_name = "scan_dwell_time_test"
-  testonly = true
-  sources = [
-    "scan_dwell_time_test.cc",
-    "sim_test.cc",
-    "sim_test.h",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-}
-
-executable("scan_test") {
-  output_name = "scan_test"
-  testonly = true
-  sources = [
-    "scan_test.cc",
-    "sim_test.cc",
-    "sim_test.h",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
-}
-
-executable("sdio_test") {
-  output_name = "sdio_test"
-  testonly = true
-  sources = [
-    "sdio_test.cc",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sdio",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/broadcom",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fake_ddk",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
-    "//zircon/system/banjo/ddk.protocol.sdio",
-    "//zircon/system/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
-    "//zircon/system/public",
-  ]
-}
-
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
@@ -183,27 +71,15 @@ executable("workqueue_test") {
 
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
-
   deps = [
     ":debug_test",
-    ":dynamic_if_test",
     ":firmware_test",
-    ":firmware_config_test",
-    ":lifecycle_test",
     ":netbuf_test",
-    ":scan_dwell_time_test",
-    ":scan_test",
-    ":sdio_test",
     ":workqueue_test",
   ]
-
   tests = [
     {
       name = "debug_test"
-      environments = basic_envs
-    },
-    {
-      name = "dynamic_if_test"
       environments = basic_envs
     },
     {
@@ -211,27 +87,7 @@ unittest_package("brcmfmac_test") {
       environments = basic_envs
     },
     {
-      name = "firmware_config_test"
-      environments = basic_envs
-    },
-    {
-      name = "lifecycle_test"
-      environments = basic_envs
-    },
-    {
       name = "netbuf_test"
-      environments = basic_envs
-    },
-    {
-      name = "scan_dwell_time_test"
-      environments = basic_envs
-    },
-    {
-      name = "scan_test"
-      environments = basic_envs
-    },
-    {
-      name = "sdio_test"
       environments = basic_envs
     },
     {

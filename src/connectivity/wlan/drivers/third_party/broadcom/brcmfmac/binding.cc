@@ -25,7 +25,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 
 #if CONFIG_BRCMFMAC_SDIO
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"  // nogncheck
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"  // nogncheck
 #endif  // CONFIG_BRCMFMAC_SDIO
 
 static constexpr zx_driver_ops_t brcmfmac_driver_ops = {

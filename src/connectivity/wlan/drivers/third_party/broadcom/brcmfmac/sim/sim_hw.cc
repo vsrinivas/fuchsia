@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim-fw/sim_hw.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 
 #include <cstring>
 

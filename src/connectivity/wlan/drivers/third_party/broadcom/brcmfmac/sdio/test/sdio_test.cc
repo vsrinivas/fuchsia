@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/types.h>

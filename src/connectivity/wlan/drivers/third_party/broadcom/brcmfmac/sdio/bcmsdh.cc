@@ -35,19 +35,19 @@
 #endif
 #include <threads.h>
 
-#include "brcm_hw_ids.h"
-#include "brcmu_utils.h"
-#include "brcmu_wifi.h"
-#include "bus.h"
-#include "chip.h"
-#include "chipcommon.h"
-#include "common.h"
-#include "debug.h"
-#include "defs.h"
-#include "linuxisms.h"
-#include "netbuf.h"
-#include "sdio.h"
-#include "soc.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT 2
 

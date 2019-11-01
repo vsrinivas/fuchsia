@@ -11,14 +11,14 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"
 
 #include <string>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 
 namespace wlan {
 namespace brcmfmac {

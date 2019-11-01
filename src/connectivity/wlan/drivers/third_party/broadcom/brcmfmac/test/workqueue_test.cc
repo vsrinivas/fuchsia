@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../workqueue.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 #include <lib/sync/completion.h>
 
