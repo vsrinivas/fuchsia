@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::directory_broker::RoutingFn,
     crate::model::*,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
+    directory_broker::RoutingFn,
     failure::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},

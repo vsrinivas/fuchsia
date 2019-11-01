@@ -40,9 +40,18 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // Publish the root realm's hub directory as 'hub/' and the first nested
   // realm's (to be created by sysmgr) service directory as 'svc/'.
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
-    auto svc = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-      return root_realm_->BindFirstNestedRealmSvc(std::move(channel));
-    }));
+    zx::channel svc_client_chan, svc_server_chan;
+    zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "failed to create channel: " << status;
+      return;
+    }
+    status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "failed to bind to root realm services: " << status;
+      return;
+    }
+    auto svc = fbl::AdoptRef(new fs::RemoteDir(std::move(svc_client_chan)));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);
     publish_vfs_.ServeDirectory(publish_dir_, zx::channel(args.pa_directory_request));

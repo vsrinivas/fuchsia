@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("outdir") {
+  testonly = true
+  deps = [
+    ":appmgr_out_dir_integration_test",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "appmgr_out_dir_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/lib/directory_broker",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:void",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("appmgr_out_dir_integration_test") {
+  deps = [
+    ":bin",
+    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
+    "//src/sys/appmgr:bin",
+    "//src/sys/sysmgr:bin",
+  ]
+
+  binaries = [
+    {
+      name = "appmgr"
+    },
+    {
+      name = "sysmgr"
+    },
+    {
+      name = "echo_server_rust"
+      dest = "echo_server"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
+      dest = "echo_server.cmx"
+    },
+    {
+      path = rebase_path("//src/sys/sysmgr/meta/sysmgr.cmx")
+      dest = "sysmgr.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "appmgr_out_dir_integration_test"
+      environments = basic_envs
+    },
+  ]
+}

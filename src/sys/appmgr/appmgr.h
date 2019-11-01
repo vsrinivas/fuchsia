@@ -8,6 +8,7 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <fs/pseudo_dir.h>
+#include <fs/remote_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
 

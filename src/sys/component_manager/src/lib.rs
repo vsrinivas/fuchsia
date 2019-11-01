@@ -6,7 +6,6 @@
 #![recursion_limit = "256"]
 
 pub mod capability;
-pub mod directory_broker;
 pub mod elf_runner;
 pub mod framework;
 pub mod fuchsia_boot_resolver;

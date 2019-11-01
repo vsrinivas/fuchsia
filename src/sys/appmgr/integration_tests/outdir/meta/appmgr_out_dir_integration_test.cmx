@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/appmgr_out_dir_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

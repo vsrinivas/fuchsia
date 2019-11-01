@@ -5,9 +5,9 @@
 use {
     crate::{
         capability::*,
-        directory_broker,
         model::{addable_directory::AddableDirectory, *},
     },
+    directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async as fasync,

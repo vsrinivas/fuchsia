@@ -18,6 +18,7 @@ group("integration_tests") {
     "fidl",
     "inspect",
     "mock_runner",
+    "outdir",
     "sandbox",
     "util",
   ]
@@ -40,8 +41,8 @@ executable("realm_tests") {
     "mock_runner:appmgr_mock_runner",
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
-    "//garnet//examples/fidl/services:echo",
     "//garnet//examples/fidl/echo_server_cpp",
+    "//garnet//examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",

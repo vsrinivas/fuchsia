@@ -47,7 +47,7 @@ rustc_binary("storage_user_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//garnet/public/rust/fuchsia-zircon",
-    "//src/sys/component_manager:lib",
+    "//src/sys/lib/directory_broker",
     "//third_party/rust_crates:failure",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

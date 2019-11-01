@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::directory_broker::{DirectoryBroker, RoutingFn},
     crate::model::addable_directory::AddableDirectory,
     crate::model::*,
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl, UseStorageDecl},
+    directory_broker::{DirectoryBroker, RoutingFn},
     fuchsia_vfs_pseudo_fs::directory,
     std::collections::HashMap,
 };

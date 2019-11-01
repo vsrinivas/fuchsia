@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        directory_broker,
         framework::RealmCapabilityHost,
         klog,
         model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
@@ -12,6 +11,7 @@ use {
         startup,
     },
     cm_rust::*,
+    directory_broker,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{

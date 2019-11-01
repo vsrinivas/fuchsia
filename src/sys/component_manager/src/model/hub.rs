@@ -5,7 +5,6 @@
 use {
     crate::{
         capability::*,
-        directory_broker,
         model::{
             self,
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
@@ -14,6 +13,7 @@ use {
         },
     },
     cm_rust::ComponentDecl,
+    directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async as fasync,

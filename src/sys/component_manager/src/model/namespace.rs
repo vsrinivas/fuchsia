@@ -4,9 +4,9 @@
 
 use {
     crate::constants::PKG_PATH,
-    crate::directory_broker,
     crate::model::*,
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
+    directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,

@@ -5,7 +5,7 @@
 #![recursion_limit = "128"]
 
 use {
-    component_manager_lib::directory_broker,
+    directory_broker,
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},

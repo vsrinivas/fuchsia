@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        directory_broker::RoutingFn,
-        model::{moniker::AbsoluteMoniker, routing::*, Model},
-    },
+    crate::model::{moniker::AbsoluteMoniker, routing::*, Model},
     cm_rust::{ExposeDecl, UseDecl},
+    directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
