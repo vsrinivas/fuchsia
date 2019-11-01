@@ -99,29 +99,29 @@ impl Realm {
         &'a self,
         model: &'a Model,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
-        let meta_use = {
+        {
+            // If our meta directory has already been resolved, just return the answer.
             let state = self.lock_state().await;
             let state = state.as_ref().expect("resolve_meta_dir: not resolved");
             if state.meta_dir.is_some() {
                 return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
             }
-            let meta_use =
-                state.decl().uses.iter().find(|u| u == &&UseDecl::Storage(UseStorageDecl::Meta));
-            if meta_use.is_none() {
+
+            // If we don't even have a meta directory, return None.
+            if !state.decl().uses.iter().any(|u| u == &UseDecl::Storage(UseStorageDecl::Meta)) {
                 return Ok(None);
             }
 
-            meta_use.unwrap().clone()
             // Don't hold the state lock while performing routing for the meta storage capability,
             // as the routing logic may want to acquire the lock for this component's state.
-        };
+        }
 
         let (meta_client_chan, server_chan) =
             zx::Channel::create().expect("failed to create channel");
 
         routing::route_and_open_storage_capability(
             &model,
-            &meta_use,
+            &UseStorageDecl::Meta,
             MODE_TYPE_DIRECTORY,
             self.abs_moniker.clone(),
             server_chan,
@@ -130,6 +130,7 @@ impl Realm {
         let meta_dir = Arc::new(DirectoryProxy::from_channel(
             fasync::Channel::from_channel(meta_client_chan).unwrap(),
         ));
+
         let mut state = self.lock_state().await;
         let state = state.as_mut().expect("resolve_meta_dir: not resolved");
         state.set_meta_dir(meta_dir.clone());
@@ -281,8 +282,8 @@ impl Realm {
             }
         };
         for use_ in decl.uses.iter() {
-            if let UseDecl::Storage(_) = use_ {
-                route_and_delete_storage(&model, &use_, realm.abs_moniker.clone()).await?;
+            if let UseDecl::Storage(use_storage) = use_ {
+                route_and_delete_storage(&model, &use_storage, realm.abs_moniker.clone()).await?;
                 break;
             }
         }

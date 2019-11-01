@@ -7,7 +7,7 @@ use {
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, OfferDecl,
         OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
-        StorageDecl, StorageDirectorySource, UseDecl,
+        StorageDecl, StorageDirectorySource, UseDecl, UseStorageDecl,
     },
     failure::format_err,
     fidl::endpoints::ServerEnd,
@@ -56,10 +56,10 @@ pub async fn route_use_capability<'a>(
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    if let UseDecl::Storage(_) = use_decl {
+    if let UseDecl::Storage(use_storage) = use_decl {
         return route_and_open_storage_capability(
             model,
-            use_decl,
+            &use_storage,
             open_mode,
             abs_moniker,
             server_chan,
@@ -204,22 +204,18 @@ async fn open_framework_capability<'a>(
 /// opens its isolated storage with `server_chan`.
 pub async fn route_and_open_storage_capability<'a>(
     model: &'a Model,
-    use_decl: &'a UseDecl,
+    use_decl: &'a UseStorageDecl,
     open_mode: u32,
     use_abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     let (dir_source_realm, dir_source_path, relative_moniker) =
         route_storage_capability(model, use_decl, use_abs_moniker).await?;
-    let storage_type = match use_decl {
-        UseDecl::Storage(d) => d.type_(),
-        _ => panic!("non-storage capability"),
-    };
     let storage_dir_proxy = open_isolated_storage(
         &model,
         dir_source_realm,
         &dir_source_path,
-        storage_type,
+        use_decl.type_(),
         &relative_moniker,
         open_mode,
     )
@@ -237,7 +233,7 @@ pub async fn route_and_open_storage_capability<'a>(
 /// deletes its isolated storage.
 pub async fn route_and_delete_storage<'a>(
     model: &'a Model,
-    use_decl: &'a UseDecl,
+    use_decl: &'a UseStorageDecl,
     use_abs_moniker: AbsoluteMoniker,
 ) -> Result<(), ModelError> {
     let (dir_source_realm, dir_source_path, relative_moniker) =
@@ -256,7 +252,7 @@ pub async fn route_and_delete_storage<'a>(
 ///   the isolated storage directory.
 async fn route_storage_capability<'a>(
     model: &'a Model,
-    use_decl: &'a UseDecl,
+    use_decl: &'a UseStorageDecl,
     use_abs_moniker: AbsoluteMoniker,
 ) -> Result<(Arc<Realm>, CapabilityPath, RelativeMoniker), ModelError> {
     // Walk the offer chain to find the storage decl
@@ -269,7 +265,7 @@ async fn route_storage_capability<'a>(
         }
     };
     let mut pos = WalkPosition {
-        capability: RoutedCapability::Use(use_decl.clone()),
+        capability: RoutedCapability::Use(UseDecl::Storage(use_decl.clone())),
         last_child_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
         moniker: Some(parent_moniker),
     };
