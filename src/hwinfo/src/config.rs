@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_hwinfo,
     fidl_fuchsia_intl::{LocaleId, RegulatoryDomain},
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_err, fx_log_warn},
     serde_derive::{Deserialize, Serialize},
     std::{fs::File, io, path::Path},
 };
@@ -35,7 +35,6 @@ async fn read_factory_file(
     proxy_handle.get_factory_store(dir_server_end)?;
     let file_proxy = io_util::open_file(&dir_proxy, &Path::new(path), OPEN_RIGHT_READABLE)?;
     let result = io_util::read_file(&file_proxy).await?.trim().to_owned();
-    fx_log_info!("{} file contents {}", path, result);
     return Ok(result);
 }
 
