@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
+#include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 #include "src/developer/feedback/crashpad_agent/upload_report.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
@@ -22,7 +23,8 @@ namespace feedback {
 // Wrapper around the Crashpad database that also stores annotations.
 class Database {
  public:
-  static std::unique_ptr<Database> TryCreate(CrashpadDatabaseConfig config);
+  static std::unique_ptr<Database> TryCreate(CrashpadDatabaseConfig config,
+                                             InspectManager* inspect_manager);
 
   // Make a new report in |database_|.
   //
@@ -72,13 +74,15 @@ class Database {
     bool has_minidump;
   };
 
-  Database(CrashpadDatabaseConfig config, std::unique_ptr<crashpad::CrashReportDatabase> database);
+  Database(CrashpadDatabaseConfig config, std::unique_ptr<crashpad::CrashReportDatabase> database,
+           InspectManager* inspect_manager);
 
   // Removes |local_report_id| from |additional_data_|.
   void CleanUp(const crashpad::UUID& local_report_id);
 
   const CrashpadDatabaseConfig config_;
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
+  InspectManager* inspect_manager_;
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);

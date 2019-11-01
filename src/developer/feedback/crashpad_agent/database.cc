@@ -23,7 +23,8 @@ using OperationStatus = crashpad::CrashReportDatabase::OperationStatus;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 
-std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config) {
+std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config,
+                                              InspectManager* inspect_manager) {
   if (!files::IsDirectory(kCrashpadDatabasePath)) {
     files::CreateDirectory(kCrashpadDatabasePath);
   }
@@ -36,12 +37,14 @@ std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config) {
     return nullptr;
   }
 
-  return std::unique_ptr<Database>(new Database(config, std::move(crashpad_database)));
+  return std::unique_ptr<Database>(
+      new Database(config, std::move(crashpad_database), inspect_manager));
 }
 
 Database::Database(CrashpadDatabaseConfig config,
-                   std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : config_(config), database_(std::move(database)) {
+                   std::unique_ptr<crashpad::CrashReportDatabase> database,
+                   InspectManager* inspect_manager)
+    : config_(config), database_(std::move(database)), inspect_manager_(inspect_manager) {
   FXL_DCHECK(database_);
 }
 
@@ -110,6 +113,8 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   }
 
   const UUID local_report_id = upload_report->GetUUID();
+
+  inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
   if (const auto status =
           database_->RecordUploadComplete(upload_report->TransferUploadReport(), server_report_id);
       status != OperationStatus::kNoError) {
@@ -126,6 +131,8 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 bool Database::Archive(const crashpad::UUID& local_report_id) {
   FX_LOGS(INFO) << fxl::StringPrintf("Archiving local crash report, ID %s, under %s",
                                      local_report_id.ToString().c_str(), kCrashpadDatabasePath);
+
+  inspect_manager_->MarkReportAsArchived(local_report_id.ToString());
 
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);
@@ -173,6 +180,7 @@ size_t Database::GarbageCollect() {
     }
 
     for (const auto& uuid : clean_up) {
+      inspect_manager_->MarkReportAsGarbageCollected(uuid.ToString());
       CleanUp(uuid);
     }
   }

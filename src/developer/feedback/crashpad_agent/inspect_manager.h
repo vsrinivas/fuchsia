@@ -36,11 +36,26 @@ class InspectManager {
   // or another).
   bool AddReport(const std::string& program_name, const std::string& local_report_id);
 
+  // Increments the number of upload attempts for an existing report.
+  //
+  // Returns false if there are no reports with |local_report_id| as ID.
+  bool IncrementUploadAttempt(const std::string& local_report_id);
+
   // Marks an existing report as uploaded, storing its server report ID.
   //
   // Returns false if there are no reports with |local_report_id| as ID.
   bool MarkReportAsUploaded(const std::string& local_report_id,
                             const std::string& server_report_id);
+
+  // Mark an existing report as archived.
+  //
+  // Returns false if there are no reports with |local_report_id| as ID.
+  bool MarkReportAsArchived(const std::string& local_report_id);
+
+  // Mark an existing report as garbage collected.
+  //
+  // Returns false if there are no report with |local_report_id| as ID.
+  bool MarkReportAsGarbageCollected(const std::string& local_report_id);
 
  private:
   bool Contains(const std::string& local_report_id);
@@ -81,6 +96,8 @@ class InspectManager {
     const std::string& Path() { return path_; }
 
     inspect::StringProperty creation_time_;
+    inspect::UintProperty upload_attempts_;
+    inspect::StringProperty final_state_;
 
     inspect::StringProperty server_id_;
     inspect::StringProperty server_creation_time_;

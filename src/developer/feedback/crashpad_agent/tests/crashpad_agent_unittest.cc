@@ -782,7 +782,11 @@ TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
           ChildrenMatch(ElementsAre(AllOf(
               NodeMatches(NameMatches(kProgramName)),
               ChildrenMatch(ElementsAre(AllOf(
-                  NodeMatches(PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty()))))),
+                  NodeMatches(PropertyList(UnorderedElementsAreArray({
+                      StringIs("creation_time", Not(IsEmpty())),
+                      StringIs("final_state", "uploaded"),
+                      UintIs("upload_attempts", 1u),
+                  }))),
                   ChildrenMatch(ElementsAre(NodeMatches(AllOf(
                       NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
                                                        StringIs("creation_time", Not(IsEmpty())),

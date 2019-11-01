@@ -23,7 +23,7 @@ std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
                                         CrashpadDatabaseConfig database_config,
                                         CrashServer* crash_server,
                                         InspectManager* inspect_manager) {
-  auto database = Database::TryCreate(database_config);
+  auto database = Database::TryCreate(database_config, inspect_manager);
   if (!database) {
     return nullptr;
   }
@@ -104,13 +104,14 @@ bool Queue::Upload(const UUID& local_report_id) {
     return true;
   }
 
+  inspect_manager_->IncrementUploadAttempt(local_report_id.ToString());
+
   std::string server_report_id;
   if (crash_server_->MakeRequest(report->GetAnnotations(), report->GetAttachments(),
                                  &server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded crash report at https://crash.corp.google.com/"
                   << server_report_id;
     database_->MarkAsUploaded(std::move(report), server_report_id);
-    inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
     return true;
   }
 

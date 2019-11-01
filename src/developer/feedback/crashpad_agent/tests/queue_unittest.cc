@@ -35,6 +35,7 @@ using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
+using inspect::testing::UintIs;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -467,47 +468,60 @@ TEST_F(QueueTest, Check_InspectTree) {
           NodeMatches(NameMatches(kInspectReportsName)),
           ChildrenMatch(IsSupersetOf({
               AllOf(NodeMatches(NameMatches("program_1")),
-                    ChildrenMatch(ElementsAre(AllOf(
-                        NodeMatches(AllOf(
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
-                        ChildrenMatch(ElementsAre(
-                            NodeMatches(AllOf(NameMatches("crash_server"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  StringIs("creation_time", Not(IsEmpty())),
-                                                  StringIs("id", kStubServerReportId),
-                                              })))))))))),
+                    ChildrenMatch(
+                        ElementsAre(AllOf(NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
               AllOf(NodeMatches(NameMatches("program_2")),
-                    ChildrenMatch(ElementsAre(AllOf(
-                        NodeMatches(AllOf(
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
-                        ChildrenMatch(ElementsAre(
-                            NodeMatches(AllOf(NameMatches("crash_server"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  StringIs("creation_time", Not(IsEmpty())),
-                                                  StringIs("id", kStubServerReportId),
-                                              })))))))))),
+                    ChildrenMatch(
+                        ElementsAre(AllOf(NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
               AllOf(NodeMatches(NameMatches("program_3")),
                     ChildrenMatch(UnorderedElementsAreArray({
-                        NodeMatches(AllOf(
-                            NameMatches(expected_queue_contents_[0].ToString()),
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
+                        NodeMatches(AllOf(NameMatches(expected_queue_contents_[0].ToString()),
+                                          PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
                     }))),
               AllOf(NodeMatches(NameMatches("program_4")),
                     ChildrenMatch(UnorderedElementsAreArray({
-                        NodeMatches(AllOf(
-                            NameMatches(expected_queue_contents_[1].ToString()),
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
+                        NodeMatches(AllOf(NameMatches(expected_queue_contents_[1].ToString()),
+                                          PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
                     }))),
               AllOf(NodeMatches(NameMatches("program_5")),
-                    ChildrenMatch(ElementsAre(AllOf(
-                        NodeMatches(AllOf(
-                            PropertyList(ElementsAre(StringIs("creation_time", Not(IsEmpty())))))),
-                        ChildrenMatch(ElementsAre(
-                            NodeMatches(AllOf(NameMatches("crash_server"),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  StringIs("creation_time", Not(IsEmpty())),
-                                                  StringIs("id", kStubServerReportId),
-                                              })))))))))),
+                    ChildrenMatch(
+                        ElementsAre(AllOf(NodeMatches(AllOf(PropertyList(UnorderedElementsAreArray({
+                                              StringIs("creation_time", Not(IsEmpty())),
+                                              StringIs("final_state", "uploaded"),
+                                              UintIs("upload_attempts", 1u),
+                                          })))),
+                                          ChildrenMatch(ElementsAre(NodeMatches(
+                                              AllOf(NameMatches("crash_server"),
+                                                    PropertyList(UnorderedElementsAreArray({
+                                                        StringIs("creation_time", Not(IsEmpty())),
+                                                        StringIs("id", kStubServerReportId),
+                                                    })))))))))),
           }))))));
 }
 

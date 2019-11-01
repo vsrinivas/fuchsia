@@ -5,7 +5,12 @@
 #include "src/developer/feedback/crashpad_agent/database.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/timekeeper/test_clock.h>
 
+#include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -19,14 +24,23 @@ namespace feedback {
 namespace {
 
 using crashpad::UUID;
+using inspect::testing::ChildrenMatch;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using inspect::testing::PropertyList;
+using inspect::testing::StringIs;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::IsSubsetOf;
 using testing::IsSupersetOf;
 using testing::Key;
+using testing::Not;
 using testing::Pair;
 using testing::UnorderedElementsAreArray;
+
+constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
+constexpr char kTimeStr[] = "1970-01-01 07:14:52 GMT";
 
 constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
 
@@ -69,7 +83,13 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
 
 class DatabaseTest : public ::testing::Test {
  public:
-  void SetUp() override { SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb); }
+  void SetUp() override {
+    clock_ = std::make_unique<timekeeper::TestClock>();
+    inspector_ = std::make_unique<inspect::Inspector>();
+    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
+
+    SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
+  }
 
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
@@ -77,7 +97,8 @@ class DatabaseTest : public ::testing::Test {
 
  protected:
   void SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database = Database::TryCreate(CrashpadDatabaseConfig{max_size_in_kb});
+    auto new_database =
+        Database::TryCreate(CrashpadDatabaseConfig{max_size_in_kb}, inspect_manager_.get());
     FXL_CHECK(new_database) << "Error creating database";
     database_ = std::move(new_database);
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
@@ -131,6 +152,12 @@ class DatabaseTest : public ::testing::Test {
                                          }));
   }
 
+  inspect::Hierarchy InspectTree() {
+    auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
+    FXL_CHECK(result.is_ok());
+    return result.take_value();
+  }
+
  private:
   std::vector<std::string> GetDirectoryContents(const std::string& path) {
     std::vector<std::string> contents;
@@ -148,12 +175,17 @@ class DatabaseTest : public ::testing::Test {
   }
 
  protected:
-  std::unique_ptr<Database> database_;
+  std::unique_ptr<timekeeper::TestClock> clock_;
+  std::unique_ptr<InspectManager> inspect_manager_;
   std::string attachments_dir_;
 
  private:
+  std::unique_ptr<inspect::Inspector> inspector_;
   std::string completed_dir_;
   std::string pending_dir_;
+
+ protected:
+  std::unique_ptr<Database> database_;
 };
 
 TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
@@ -414,6 +446,96 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
                            ? local_report_id_2
                            : local_report_id_1;
   EXPECT_FALSE(database_->Archive(pruned_report));
+}
+
+TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
+  SetUp();
+  clock_->Set(kTime);
+
+  // Add a crash report.
+  UUID local_report_id;
+  MakeNewReportOrDie(&local_report_id);
+
+  // Get the upload report.
+  auto upload_report = database_->GetUploadReport(local_report_id);
+  ASSERT_TRUE(upload_report);
+
+  // Add the report to Inspect.
+  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+
+  // Mark the report as uploaded and check the Inspect tree.
+  EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(AllOf(
+                  NodeMatches(NameMatches("reports")),
+                  ChildrenMatch(ElementsAre(AllOf(
+                      NodeMatches(NameMatches("program")),
+                      ChildrenMatch(ElementsAre(AllOf(
+                          NodeMatches(AllOf(NameMatches(local_report_id.ToString()),
+                                            PropertyList(UnorderedElementsAreArray({
+                                                StringIs("creation_time", kTimeStr),
+                                                StringIs("final_state", "uploaded"),
+                                            })))),
+                          ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                              NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("creation_time", kTimeStr),
+                                                               StringIs("id", "server_report_id"),
+                                                           }))))))))))))))));
+}
+
+TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
+  SetUp();
+  clock_->Set(kTime);
+
+  // Add a crash report.
+  UUID local_report_id;
+  MakeNewReportOrDie(&local_report_id);
+
+  // Add the report to Inspect.
+  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+
+  // Archive the report and check the Inspect tree.
+  EXPECT_TRUE(database_->Archive(local_report_id));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("reports")),
+          ChildrenMatch(ElementsAre(AllOf(
+              NodeMatches(NameMatches("program")),
+              ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
+                  NameMatches(local_report_id.ToString()), PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("creation_time", kTimeStr),
+                                                               StringIs("final_state", "archived"),
+                                                           }))))))))))))));
+}
+
+TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
+  // Set up the database with a max size of 0, meaning any reports in the database with size > 0
+  // will get garbage collected.
+  SetUpDatabase(/*max_size_in_kb=*/0u);
+  clock_->Set(kTime);
+
+  // Add a crash report.
+  UUID local_report_id;
+  MakeNewReportOrDie(
+      /*attachments=*/{{kAttachmentKey, kAttachmentValue}}, &local_report_id);
+
+  // Add the report to Inpsect.
+  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+
+  // Check that garbage collection occurs correctly and check the Inspect tree.
+  EXPECT_EQ(database_->GarbageCollect(), 1u);
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("reports")),
+          ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("program")),
+                                          ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
+                                              NameMatches(local_report_id.ToString()),
+                                              PropertyList(UnorderedElementsAreArray({
+                                                  StringIs("creation_time", kTimeStr),
+                                                  StringIs("final_state", "garbage_collected"),
+                                              }))))))))))))));
 }
 
 }  // namespace

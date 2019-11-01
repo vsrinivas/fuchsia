@@ -51,6 +51,23 @@ bool InspectManager::AddReport(const std::string& program_name,
   return true;
 }
 
+bool InspectManager::IncrementUploadAttempt(const std::string& local_report_id) {
+  if (!Contains(local_report_id)) {
+    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    return false;
+  }
+
+  Report& report = reports_.at(local_report_id);
+
+  if (!report.upload_attempts_) {
+    report.upload_attempts_ = node_manager_.Get(report.Path())->CreateUint("upload_attempts", 1u);
+  } else {
+    report.upload_attempts_.Add(1u);
+  }
+
+  return true;
+}
+
 bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
                                           const std::string& server_properties_report_id) {
   if (!Contains(local_report_id)) {
@@ -59,12 +76,39 @@ bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
   }
 
   Report& report = reports_.at(local_report_id);
+  report.final_state_ = node_manager_.Get(report.Path())->CreateString("final_state", "uploaded");
+
   const std::string server_path = JoinPath(report.Path(), "crash_server");
 
   inspect::Node* server = node_manager_.Get(server_path);
 
   report.server_id_ = server->CreateString("id", server_properties_report_id);
   report.server_creation_time_ = server->CreateString("creation_time", CurrentTime());
+
+  return true;
+}
+
+bool InspectManager::MarkReportAsArchived(const std::string& local_report_id) {
+  if (!Contains(local_report_id)) {
+    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    return false;
+  }
+
+  Report& report = reports_.at(local_report_id);
+  report.final_state_ = node_manager_.Get(report.Path())->CreateString("final_state", "archived");
+
+  return true;
+}
+
+bool InspectManager::MarkReportAsGarbageCollected(const std::string& local_report_id) {
+  if (!Contains(local_report_id)) {
+    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    return false;
+  }
+
+  Report& report = reports_.at(local_report_id);
+  report.final_state_ =
+      node_manager_.Get(report.Path())->CreateString("final_state", "garbage_collected");
 
   return true;
 }
