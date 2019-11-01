@@ -28,8 +28,6 @@ void CacheNode::fbl_recycle() {
   }
 }
 
-CacheNode::CacheNode() = default;
-
 CacheNode::CacheNode(const Digest& digest) { digest.CopyTo(digest_, sizeof(digest_)); }
 CacheNode::~CacheNode() = default;
 

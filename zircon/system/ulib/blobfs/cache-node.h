@@ -35,10 +35,6 @@ class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
 
   bool InContainer() const { return type_wavl_state_.InContainer(); }
 
-  // TODO(ZX-3137): This constructor is only used for the "Directory" Vnode.
-  // Once distinct Vnodes are utilized for "blobs" and "the blob directory",
-  // this constructor should be deleted.
-  CacheNode();
   explicit CacheNode(const Digest& digest);
   virtual ~CacheNode();
 
