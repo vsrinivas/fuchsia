@@ -19,8 +19,7 @@ class ControllerMemoryAllocator {
   // Takes in two sets of constraints and allocated memory using sysmem based on those two sets of
   // constraints.
   zx_status_t AllocateSharedMemory(
-      fuchsia::sysmem::BufferCollectionConstraints constraints_1,
-      fuchsia::sysmem::BufferCollectionConstraints constraints_2,
+      std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints,
       fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
 
  private:

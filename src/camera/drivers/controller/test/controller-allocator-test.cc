@@ -40,9 +40,11 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
 // Buffer collection constraints.
 TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
-  EXPECT_EQ(ZX_OK,
-            controller_memory_allocator_->AllocateSharedMemory(
-                MonitorConfigFullResConstraints(), Gdc1Constraints(), &buffer_collection_info));
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(MonitorConfigFullResConstraints());
+  constraints.push_back(Gdc1Constraints());
+  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+                                                                      &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMlDSMinBufferForCamping);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
@@ -68,9 +70,11 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
 // Buffer collection constraints.
 TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       MonitorConfigDownScaledResConstraints(), Gdc2Constraints(),
-                       &buffer_collection_info));
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(MonitorConfigDownScaledResConstraints());
+  constraints.push_back(Gdc2Constraints());
+  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+                                                                      &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMonitoringMinBufferForCamping);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
