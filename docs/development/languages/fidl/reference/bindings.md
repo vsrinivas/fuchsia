@@ -3,9 +3,10 @@
 This document is a specification of requirements on the Fuchsia Interface
 Definition Language (**FIDL**) bindings.
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
-"SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this document are to be
-interpreted as described in [RFC2119][RFC2119].
+In this document, the following keywords are to be interpreted as described in
+[RFC2119][RFC2119]: **MAY**, **MUST**, **MUST NOT**, **OPTIONAL**,
+**RECOMMENDED**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**,
+**SHOULD NOT**.
 
 ## Requirements
 

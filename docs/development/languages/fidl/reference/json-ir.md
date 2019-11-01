@@ -8,10 +8,12 @@ A second phase takes the IR as input, and produces the appropriate language-spec
 
 This section documents the JSON IR.
 
-> If you're curious about the JSON IR, you can generate it by running
-> the FIDL compiler with the `json` output directive:
->
-> `fidlc --json outputfile.json --files inputfile.fidl`
+If you are interested in the JSON IR, you can generate it by running
+the FIDL compiler with the `json` output directive:
+
+```
+fidlc --json outputfile.json --files inputfile.fidl
+```
 
 ## A simple example
 
@@ -196,8 +198,8 @@ the parameter description specifies `"nullable": true` (line `[25]` and `[40]`).
 The `size` members might be confusing at first; it's important here to note
 that the size refers to the size of the *container* and not the *contents*.
 
-> You may wish to refer to the [on-wire](wire-format/README.md) format document when
-> reading this part.
+Note: Before reading this section, consider referring to the
+[on-wire](wire-format/README.md) format.
 
 Lines `[36]` through `[47]`, for example, define the `response` string container.
 It's 16 bytes long, and consists of two 64-bit values:
@@ -359,6 +361,7 @@ Field             | Meaning
 `max_handles`     | The maximum number of handles
 
 The second member, `int64 y` is identical except:
+
 *   its `"name"` is `"y"` instead of `"x"`,
 *   its `offset` is `8` instead of `0`.
 
@@ -384,12 +387,13 @@ Field      | Meaning
 `ordinal`  | This is the "serial number" of this table member
 `reserved` | A flag indicating if this table member is reserved for future use
 
-> Note that if the `reserved` flag indicates the table member is reserved for future use, then
-> there is no definition of the member given; conversely, if the flag indicates the
-> member is not reserved, then the member definition follows immediately after.
+Note: If the `reserved` flag indicates the table member is reserved for future
+use, then there is no definition of the member given; conversely, if the flag
+indicates the member is not reserved, then the member definition follows
+immediately after.
 
-In our FIDL example above, the `table_declarations` has the following `<MEMBER>` part for the
-first member, `x`:
+In the FIDL example above, the `table_declarations` has the following
+`<MEMBER>` part for the first member, `x`:
 
 ```json
 [01] "members": [

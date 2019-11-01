@@ -2,13 +2,15 @@
 
 This document contains these sections:
 
-* Description of the [command-line interface to the FIDL compiler](#compiler-interface). This 
-  section is for users of the compiler.
-* Overview of the [internals of the compiler frontend](#compiler-internals). This section is 
-  for developers of the compiler or FIDL tools.
+* Description of the
+  [command-line interface to the FIDL compiler](#compiler-interface).
+  This section is for users of the compiler.
+* Overview of the
+  [internals of the compiler frontend](#compiler-internals).
+  This section is for developers of the compiler or FIDL tools.
 
-See [Overview](../intro/README.md) for more information about FIDL's overall purpose, goals, and
-requirements, as well as links to related documents.
+For more information about FIDL's overall purpose, goals, and requirements,
+see [Overview](../intro/README.md).
 
 ## Compiler Interface {#compiler-interface}
 
@@ -189,10 +191,11 @@ of its parent. The root node, which is a `raw::File`, has a start token equal to
 first token of the file and an end token equal to the last token of the file.
 
 The `Parser` keeps track of the:
+
 * Current nodes that are being built using a stack of [`SourceElements`](#sourceelement), which are
   stored in `active_ast_scopes_`.
 * Current and previous `Token`s that are being processed. `last_token_` and `previous_token_`,
-  respectively. 
+  respectively.
 * Its own state machine inside of the `Parser::Lex` method. The current token (`last_token_`) is
   always the next token that is about to be consumed, which effectively gives the parser a one
   token lookahead (i.e. LL(1)).
@@ -318,7 +321,7 @@ for a given declaration.
 
 #### Resolution
 
-Given the sorted declarations, the compilation happens via the `CompileFoo` methods, generally
+Given the sorted declarations, the compilation happens through the `CompileFoo` methods, generally
 correponding to the AST nodes (e.g. `CompileStruct`, `CompileConst`), with `CompileDecl` as the
 entrypoint. The main purpose of `CompileDecl` is for:
 
@@ -379,6 +382,7 @@ An example of generated coding tables can be found in [extra_messages.cc][extra_
 ### Glossary
 
 #### Decl {#decl}
+
 The `Decl` is the base of all flat AST nodes, just like `SourceElement` is the base of all parser
 tree nodes, and corresponds to all possible declarations that a user can make in a FIDL file. There
 are two types of `Decl`s:
@@ -393,47 +397,55 @@ have a static `Shape()` method which contains the logic for determining the `Typ
 of that given type.
 
 #### FieldShape {#fieldshape}
+
 A `FieldShape` describes the offset and padding information for members of an aggregate type like a
 struct or union. Generally these fields will require both a `Typeshape` as well as a `FieldShape`
 
 #### Name {#name}
+
 A `Name` represents a scope variable name, and consists of the library the name belongs to (or
 `nullptr` for global names), and the variable name itself as a string (for anonymous names) or a
 `SourceLocation`. `Name`s can alos optionally include a `member_name_` field when referring to the
 field of a declared variable (for example `MyEnum.MyField`).
 
 #### SourceElement {#sourceelement}
+
 A `SourceElement` represents a block of code inside a fidl file and is parameterized by a `start_`
 and `end_` `Token`. All parser tree ("raw" AST) nodes inherit from this class.
 
 #### SourceFile {#sourcefile}
+
 Wrapper around a file which is responsible for owning the data in that file. Also see [Virtual
 SourceFile](#virtualsourcefile)
 
 #### SourceLocation {#sourcelocation}
+
 Wrapper around a `StringView` and the `SourceFile` it comes from. It provides methods to get the
 surrounding line of the `StringView` as well as its location in the form of a
 `"[filename]:[line]:[col]"` string
 
 #### SourceManager {#sourcemanager}
+
 Wrapper around a set of `SourceFile`s that all relate to a single `Library`.
 
 #### Token {#token}
+
 A token is essentially a lexeme (in the form of a [`SourceLocation`](#sourcelocation) stored as the
 `location_` attribute), enhanced with two other pieces information that are useful to the parser
 during the later stages of compilation:
 
 * `previous_end_`. A `SourceLocation` which starts at the end of the previous token and ends at the
    start of this token. It contains data that is uninteresting to the parser such as whitespace.
-*  A kind and subkind which together classifies the lexeme. The possible kinds are: 
+*  A kind and subkind which together classifies the lexeme. The possible kinds are:
    * The special characters such as `Kind::LeftParen`, `Kind::Dot`, `Kind::Comma`, etc...
    * String and numeric constants
    * Identifiers. Tokens that are keywords (e.g. `const`, `struct`) are considered identifiers, but
      also have a subkind defined to identify which keyword it is (e.g. `Subkind::Const`,
-     `Subkind::Struct`). All other tokens have a subkind of `None`. 
+     `Subkind::Struct`). All other tokens have a subkind of `None`.
    * Uninitialized tokens have a kind of `kNotAToken`.
 
 #### Type {#type}
+
 A struct representing an instance of a type. For example, the `vector<int32>:10?` type corresponds
 to an instance of the `VectorType` `TypeDecl` with `max_size_ = 10` and `maybe_arg_type` set to the
 `Type` corresponding to `int32`. Built-in types all have a static `Shape()` method which will
@@ -442,13 +454,16 @@ structs or unions) will all have a type of `IdentifierType` - the corresponding
 [`TypeDecl`](#typedecl), like `Struct` provides the static `Shape()` method instead.
 
 #### TypeDecl {#typedecl}
-see [`Decl`](#decl)
+
+See [`Decl`](#decl)
 
 #### TypeShape {#typeshape}
+
 Information about how objects of a type should be laid out in memory, including their size,
 alignment, depth, etc.
 
 #### Typespace {#typespace}
+
 The typespace is a map from [`Type`](#type) names to a `TypeTemplate` for that `Type`. During
 compilation, the typespace is initialized to include all of the built-in types (e.g. `"vector"`
 maps to `VectorTypeTemplate`), whereas user-defined types get added during the compilation process.
@@ -456,6 +471,7 @@ This also ensures that a single type template instance exists per type and avoid
 collisions/shadowing of types (e.g. FIDL-310).
 
 #### TypeTemplate {#typetemplate}
+
 Instances of TypeTemplates provide a `Create()` method to create a new instance of a specific
 `Type` - therefore there is a TypeTemplate subclass for each built-in FIDL type (e.g.
 `ArrayTypeTemplate`, `PrimitiveTypeTemplate`, etc.) as well as a single class for all user defined
@@ -473,6 +489,7 @@ The concrete type for user defined types is the `IdentifierType`, which gets gen
 `TypeDeclTypeTemplate`.
 
 #### Virtual SourceFile {#virtualsourcefile}
+
 A subclass of `SourceFile` that has a fake "filename" and is initialized with no backing data. It
 exposes an `AddLine()` method to add data to the file, and is used as a backing `SourceFile` for
 content that does not appear directly in any of the input `SourceFile`s, like for generated

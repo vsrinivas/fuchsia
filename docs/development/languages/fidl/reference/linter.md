@@ -2,8 +2,8 @@
 
 This document describes the command-line interface to the FIDL linter.
 
-See [Overview](../intro/README.md) for more information about FIDL's overall
-purpose, goals, and requirements, as well as links to related documents.
+For more information about FIDL's overall purpose, goals, and requirements,
+see [Overview](../intro/README.md).
 
 ## Overview
 
@@ -27,13 +27,13 @@ arguments, `fx lint` will run all available linters on all files in your most
 recent `git commit`.
 
 ```sh
-$ fx lint
+fx lint
 ```
 
 To review other available options, run:
 
 ```sh
-$ fx lint --help
+fx lint --help
 ```
 
 <!-- xrefs -->

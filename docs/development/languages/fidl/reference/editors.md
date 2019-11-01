@@ -1,45 +1,53 @@
 # Editors
 
-Several editors have support for FIDL.
+Several editors have support for FIDL:
 
-## Atom
+* [Atom](#atom)
+* [IntelliJ/Android Studio](#intellij)
+* [Sublime Text](#sublime)
+* [Vim](#vim)
+* [Visual Studio Code](#visual-studio-code)
 
-To install
+## Atom {#atom}
 
-    pushd ~/.atom/packages
-    git clone https://fuchsia.googlesource.com/atom-language-fidl
-    popd
+To install:
 
-## IntelliJ / Android Studio
+```
+pushd ~/.atom/packages
+git clone https://fuchsia.googlesource.com/atom-language-fidl
+popd
+```
 
-There is an IntelliJ plugin available for FIDL.  It adds syntax and parsing
-support.  To install it, choose **Settings > Plugins**, then click **Browse
-Repositories** and search for **FIDL**.
+## IntelliJ / Android Studio {#intellij}
 
-## Sublime Text
+There is an IntelliJ plugin available for FIDL. It adds syntax and parsing
+support.To install it, select **Settings**, then **Plugins**, and then click
+**Browse Repositories** and search for **FIDL**.
 
-[Sublime syntax highlighting support can be found here](/garnet/public/lib/fidl/tools/sublime).
+## Sublime Text {#sublime}
 
-To install, go to **Sublime Text > Preferences > Browse Packages** and copy the
-files ``FIDL.sublime-syntax``, and ``Comments (FIDL).tmPreferences`` into the
-**User** package.
+[Sublime syntax highlighting support](/garnet/public/lib/fidl/tools/sublime).
 
-## Vim
+To install, select **Sublime Text**, then **Preferences**, then
+**Browse Packages** and copy the files `FIDL.sublime-syntax`, and
+`Comments (FIDL).tmPreferences` into the **User** package.
 
-[Vim syntax highlighting support and instructions can be found here](/garnet/public/lib/fidl/tools/vim).
+## Vim {#vim}
 
-## Visual Studio Code
+[Vim syntax highlighting support and instructions](/garnet/public/lib/fidl/tools/vim).
 
-There is a (Visual Studio Code extension available) at
-<https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl>.
+## Visual Studio Code {#visual-studio-code}
+
+There is a an extension,
+[Visual Studio Code extension available](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl).
 
 ## Contributing
 
-Contributions to the various plugins are welcome. Their respective code lives at
+Contributions to the various plugins are welcome. Their respective code is in:
 
-* **Atom**: <https://fuchsia.googlesource.com/atom-language-fidl/>
-* **IntelliJ**: <https://fuchsia.googlesource.com/intellij-language-fidl/>
-* **Sublime**: </garnet/public/lib/fidl/tools/sublime>
-* **vim**: </garnet/public/lib/fidl/tools/vim>
-* **Visual Studio Code**: <https://fuchsia.googlesource.com/vscode-language-fidl/>
+* [Atom](https://fuchsia.googlesource.com/atom-language-fidl/)
+* [IntelliJ](https://fuchsia.googlesource.com/intellij-language-fidl/)
+* [Sublime](/garnet/public/lib/fidl/tools/sublime)
+* [vim](/garnet/public/lib/fidl/tools/vim)
+* [Visual Studio Code](https://fuchsia.googlesource.com/vscode-language-fidl/)
 

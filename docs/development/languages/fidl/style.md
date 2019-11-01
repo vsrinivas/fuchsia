@@ -7,11 +7,10 @@ This section contains style-related information for
 
 ## Names
 
-```
-The Naming of Cats is a difficult matter,
-It isn't just one of your holiday games;
-  --- T.S. Eliot
-```
+
+> The Naming of Cats is a difficult matter,<br>
+> It isn't just one of your holiday games;<br>
+>  --- T.S. Eliot
 
 Names defined in FIDL are used to generate identifiers in each target language.
 Some languages attach semantic or conventional meaning to names of various
@@ -89,12 +88,12 @@ enum members               | _upper snake case_ | `RGB_888`
 #### Syntax
 
 Library names are period-separated lists of identifiers. Portions of the library
-name other than the last are also referred to as namespaces.  Each component of
+name other than the last are also referred to as namespaces. Each component of
 the name is in lowercase and must match the following regular expression:
 `[a-z][a-z0-9]*`.
 
 We use these restrictive rules because different target languages have different
-restrictions on how they qualify namespaces, libraries, or packages.  We have
+restrictions on how they qualify namespaces, libraries, or packages. We have
 selected a conservative least common denominator in order for FIDL to work well
 with our current set of target languages and with potential future target
 languages.
@@ -119,16 +118,27 @@ appropriate name would be `fuchsia.ui.focus`, instead of
 accessible, then `fuchsia.ui.focus` isn't a problematic name.  The following
 example words should be avoided:
 
-* `constrained`, `limited`, `oem`,  `private`, `privileged`, `protected`,
-  `special`, `vendor`.
+* `constrained`
+* `limited`
+* `oem`
+* `private`
+* `privileged`
+* `protected`
+* `special`
+* `vendor`
 
-Identifier names should have meaning; avoid meaningless names.  If
+Identifier names should have meaning; avoid meaningless names. If
 `fuchsia.foo.bar` and `fuchsia.foo.baz` share a number of concepts that you
 wish to factor out into a separate library, consider defining those concepts in
-`fuchsia.foo` rather than in `fuchsia.foo.common`.  The following example words
+`fuchsia.foo` rather than in `fuchsia.foo.common`. The following example words
 should be avoided:
 
-* `common`, `service`, `util`, `base`, `f<letter>l`, `zx<word>`.
+* `common`
+* `service`
+* `util`
+* `base`
+* `f<letter>l`
+* `zx<word>`
 
 #### Fuchsia Libraries
 
@@ -212,31 +222,32 @@ For example, `Directory` is a noun that suggests that the protocol is used for
 interacting with a directory held by the implementation.
 
 A protocol may be named using object-oriented design patterns.  For example,
-`fuchsia.fonts.Provider` uses the "provider" suffix, which indicates that the
+`fuchsia.fonts.Provider` uses the `provider` suffix, which indicates that the
 protocol provides fonts (rather than represents a font itself).  Similarly,
-`fuchsia.tracing.Controller` uses the "controller" suffix, which indicates that
+`fuchsia.tracing.Controller` uses the `controller` suffix, which indicates that
 the protocol controls the tracing system (rather than represents a trace
 itself).
 
 The name `Manager` may be used as a name of last resort for a protocol with
-broad scope.  For example, `fuchsia.power.Manager`.  However, be warned that
+broad scope.  For example, `fuchsia.power.Manager`. However, be warned that
 "manager" protocols tend to attract a large amount of loosely related
 functionality that might be better factored into multiple protocols.
 
-Protocols must not include the name "service."  All protocols define services.
-The term is meaningless.  For example, `fuchsia.net.oldhttp.HttpService`
-violates this rubric in two ways.  First, the "http" prefix is redundant with
-the library name.  Second, the "service" suffix is banned.
+Protocols must not include the name `service.` All protocols define services.
+The term is meaningless. For example, `fuchsia.net.oldhttp.HttpService`
+violates this rubric in two ways.  First, the `http` prefix is redundant with
+the library name. Second, the `service` suffix is banned.
 Notice that the successor library simply omits this altogether by being
 explicit in naming the service it offers `fuchsia.net.http.Loader`.
 
 #### Methods
 
 Methods must must be verb phrases.
+
 For example, `GetBatteryStatus` and `CreateSession` are verb phrases that
 indicate what action the method performs.
 
-Methods on "listener" or "observer" protocols that are called when an event
+Methods on `listener` or `observer` protocols that are called when an event
 occurs should be prefixed with `On` and describe the event that occurred in the
 past tense.  For example, the `ViewContainerListener` protocol has a method
 named `OnChildAttached`.
@@ -246,6 +257,7 @@ named `OnChildAttached`.
 Similarly, events (i.e., unsolicited messages from the server to the client)
 should be prefixed with `On` and describe the event that occurred in the past
 tense.
+
 For example, the `AudioCapturer` protocol has an event named
 `OnPacketCaptured`.
 
@@ -269,14 +281,15 @@ delivered should be named `time`, rather than `event_time`, because the name
 `event` already appears in the name of the enclosing type. In all target
 languages, member names are scoped by their enclosing type.
 
-However, a type `DeviceToRoom`--that associates a smart device with the room
-it's located in--may need to have members `device_id` and `room_name`, because
-`id` and `name` are ambiguous; they could refer to either the device or
-the room.
+However, a type `DeviceToRoom`, that associates a smart device with the room
+it's located in, may need to have members `device_id` and `room_name`, because
+`id` and `name` are ambiguous. Either of these could refer to either the device
+or the room.
 
 ### Enums
 
 Enums must be noun phrases.
+
 For example, `PixelFormat` is an enum that defines how colors are encoded
 into bits in an image.
 
@@ -285,12 +298,13 @@ into bits in an image.
 Enum member names must not repeat names from the enclosing type (or library).
 For example, members of `PixelFormat` enum should be named `ARGB` rather than
 `PIXEL_FORMAT_ARGB` because the name `PIXEL_FORMAT` already appears in the name
-of the enclosing type.  In all target languages, enum member names are scoped by
+of the enclosing type. In all target languages, enum member names are scoped by
 their enclosing type.
 
 ### Bitfields
 
 Bitfields must be noun phrases.
+
 For example, `InfoFeatures` is a bitfield that indicates which features
 are present on an Ethernet interface.
 
@@ -340,7 +354,6 @@ qualified name, in the form ``[`<library>/<top level declaration>.<member>`]``
 the tooling supports it.  Subsequent references to that documented entity can
 use an abbreviated version, as long as that abbreviated version is unambiguous
 (e.g., `clone`). The form without brackets does not generate a hyperlink.
-
 
 Request parameters, response parameters, and error types should be documented as
 lists of the form:
@@ -428,7 +441,7 @@ with references to the external thing. For example, reference the WiFi
 specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
-For more information about what your comments should contain, consult the [API
+For more information about what your comments should contain, see the [API
 Documentation Rubric](/docs/development/api/documentation.md).
 
 #### Referencing FIDL protocols or protocol methods
@@ -468,7 +481,6 @@ overviews:
 
  * If the overview is short and the library consists of a single file, you can
    place the overview in the `library` statement at the top of the library file.
-
  * If the library consists of multiple files, create a standalone file
    `overview.fidl` to document the library. The 'overview.fidl' file should not
    contain any declarations, type aliases, or protocol definitions.
@@ -483,14 +495,14 @@ comment, keep in mind the following.
 
 Regular comments:
 
- * descriptions of parameters, arguments, function
- * usage notes
+ * Descriptions of parameters, arguments, function
+ * Usage notes
 
 Non flow-through comments:
 
- * internal "todo" comments
- * copyright notices
- * implementation details
+ * Internal "todo" comments
+ * Copyright notices
+ * Implementation details
 
 Both style of comments can be combined:
 
@@ -520,15 +532,14 @@ libraries with less than a dozen files.  This directory structure matches how
 FIDL files are included in the Fuchsia SDK.
 
 The division of a library into files has no technical impact on consumers of the
-library.  Declarations, including protocols, can reference each other and
+library. Declarations, including protocols, can reference each other and
 themselves throughout the library, regardless of the file in which they appear.
 Divide libraries into files to maximize readability.
 
  * Prefer a DAG dependency diagram for files in a library.
-
  * Prefer keeping mutually referring definitions textually close to each other,
    ideally in the same file.
-
  * For complex libraries, prefer defining pure data types or constants in leaf
    files and defining protocols that reference those types together in a trunk
    file.
+

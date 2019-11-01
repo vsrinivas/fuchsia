@@ -3,10 +3,10 @@
 This document is a specification of the Fuchsia Interface Definition Language
 (**FIDL**) syntax.
 
-See [Overview](../README.md) for more information about FIDL's overall
-purpose, goals, and requirements, as well as links to related documents.
+For more information about FIDL's overall purpose, goals, and requirements,
+see [Overview](../README.md).
 
-You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
+Also, see a modified [EBNF description of the FIDL grammar](grammar.md).
 
 [TOC]
 
@@ -71,9 +71,10 @@ struct Foo { };
 struct struct { };
 ```
 
-> Note that while using keywords as identifiers is supported, it can lead to confusion,
-> and should the be considered on a case-by-case basis. See the `Names` section of the
-> [Style Rubric](/docs/development/languages/fidl/style.md#Names)
+Note: While using keywords as identifiers is supported, it can lead to
+confusion, and should the be considered on a case-by-case basis.
+See the `Names` section of the
+[Style Rubric](/docs/development/languages/fidl/style.md#Names)
 
 ### Qualified Identifiers
 

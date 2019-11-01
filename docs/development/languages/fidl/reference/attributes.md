@@ -50,7 +50,7 @@ Illustrates both aspects:
 **MEANING**:
 See [FTP-013].
 
-> Note: not yet implemented.
+Note: Not implemented.
 
 ## `[Discoverable]` {#discoverable}
 
@@ -91,8 +91,8 @@ The text of the comment is
 emitted into the generated code, in a manner compatible with the syntax of
 the target language.
 
-> Technically, to be identical, the `[Doc]` version would be
-> `[Doc = " Foo\n"]`; note the space before the "Foo" and the line-feed "`\n`".
+Note: To be identical, the `[Doc]` version should be `[Doc = " Foo\n"]`. Note
+the space before the "Foo" and the line-feed "`\n`".
 
 ## `[FragileBase]` {#fragilebase}
 
@@ -188,7 +188,7 @@ whether the method is implemented or not.
 
 ## `[Transport]` {#transport}
 
-**USAGE**: `[Transport = "`_tranport_list_`"]`
+**USAGE**: `[Transport = "`_tranportList_`"]`
 
 **MEANING**:
 Allows you to select a transport.

@@ -1,17 +1,17 @@
-# Host Side Fidl
+# Host Side FIDL
 
 This document is a short summary of what's available now for host side FIDL,
 and what may be available in the future.
 
-## What's Available?
+## What is Available?
 
 Encoding and decoding of structs and tables that contain no zircon handles in C++ only.
 
 * Use of handles (or consequently FIDL protocol requests and the like) will cause the
   host side libraries to fail.
-* In the future this will be verified via a mechanism like NoHandles.
+* In the future this will be verified through a mechanism like NoHandles.
 
-## What's not Available?
+## What is not Available?
 
 Any use of protocols.
 
@@ -29,4 +29,4 @@ Protocols communicating over a socket transport (implies not exchanging handles)
 
 ## What is undecided?
 
-Emulation of channels on host side (maybe via overnet).
+Emulation of channels on host side (maybe through overnet).

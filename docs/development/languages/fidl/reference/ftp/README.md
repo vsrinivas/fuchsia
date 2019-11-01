@@ -1,6 +1,6 @@
 # FIDL Tuning Proposals
 
-> Note that documents are sorted by date reviewed.
+Note: Documents are sorted by date reviewed.
 
 ## Accepted Proposals
 

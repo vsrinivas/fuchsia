@@ -3,8 +3,8 @@
 This document is a specification of the Fuchsia Interface Definition Language
 (**FIDL**) message format.
 
-See [Overview](../../README.md) for more information about FIDL's overall
-purpose, goals, and requirements, as well as links to related documents.
+For more information about FIDL's overall purpose, goals, and requirements,
+see [Overview](../../README.md).
 
 [TOC]
 
@@ -48,11 +48,11 @@ Together, a primary object and its secondary objects are called a
 A transactional FIDL message (**transactional message**) is used to
 send data from one application to another.
 
-> The roles of the applications (e.g. **client** vs **server**) are not
-> relevant to the formatting of the data.
+Note: The roles of the applications (e.g. **client** vs **server**) are not
+relevant to the formatting of the data.
 
-As we will see in the [transactional messages](#transactional-messages) section
-below, a transactional message is composed of a header message optionally followed
+The [transactional messages](#transactional-messages) section, describes how
+a transactional message is composed of a header message optionally followed
 by a body message.
 
 ### Traversal Order
@@ -115,39 +115,37 @@ does not contain pointers (memory addresses) or handles (capabilities).
 
 During **encoding**...
 
-*   all pointers to sub-objects within the message are replaced with flags which
+*   All pointers to sub-objects within the message are replaced with flags which
     indicate whether their referent is present or not-present,
-*   all handles within the message are extracted to an associated **handle
+*   All handles within the message are extracted to an associated **handle
     vector** and replaced with flags which indicate whether their referent is
     present or not-present.
 
 The resulting **encoded message** and **handle vector** can then be sent to
 another process using [**zx_channel_write()**][channel write] or a similar IPC
 mechanism.
-There are additional constraints on this kind of IPC; see [transactional
-messages](#transactional-messages).
+There are additional constraints on this kind of IPC. See
+[transactional messages](#transactional-messages).
 
-> Note that the handle vector is *not* stored as part of the message, it's
-> sent separately (also known as "**out-of-band**, not to be confused with
-> **out-of-line**).
-> For example, the [**zx_channel_write()**][channel write] function
-> takes two sets of data pointers; one for the message, and one for the
-> handle vector.
-> The message data pointer will contain all of the **in-line** and
-> **out-of-line** data, and the handle vector pointer will contain the
-> handles.
+Note: The handle vector is *not* stored as part of the message, it's sent
+separately (also known as "**out-of-band**, not to be confused with
+**out-of-line**). For example, the
+[**zx_channel_write()**][channel write] function takes two sets of data
+pointers: one for the message, and one for the handle vector. The message
+data pointer will contain all of the **in-line** and **out-of-line** data,
+and the handle vector pointer will contain the handles.
 
 #### Decoded Messages
 
 A **decoded message** has been prepared for use within a process's address
 space: it may contain pointers (memory addresses) or handles (capabilities).
 
-During **decoding**...
+During **decoding**:
 
-*   all pointers to sub-objects within the message are reconstructed using the
-    encoded present / not-present flags,
-*   all handles within the message are restored from the associated **handle
-    vector** using the encoded present / not-present flags.
+*   All pointers to sub-objects within the message are reconstructed using
+    the encoded present and not-present flags.
+*   All handles within the message are restored from the associated
+    **handle vector** using the encoded present and not-present flags.
 
 The resulting **decoded message** is ready to be consumed directly from memory.
 
@@ -210,7 +208,7 @@ Boolean                 | `bool`
 Signed integer          | `int8`, `int16`, `int32`, `int64`
 Unsigned integer        | `uint8`, `uint16`, `uint32`, `uint64`
 IEEE 754 floating-point | `float32`, `float64`
-strings                 | (not a primitive, see [Strings](#strings) below)
+strings                 | (not a primitive, see [Strings](#strings))
 
 Number types are suffixed with their size in bits.
 
@@ -232,12 +230,13 @@ type (e.g., `uint32`).
 
 A handle is a 32-bit integer, but with special treatment.
 When encoded for transfer, the handle's on-wire representation is replaced with
-a present / not-present indication, and the handle itself is stored in a separate
-handle vector.
-When decoded, the handle presence indication is replaced with zero (if not
-present) or a valid handle (if present).
+a present and  not-present indication, and the handle itself is stored in a
+separate handle vector. When decoded, the handle presence indication is
+replaced with zero (if not present) or a valid handle (if present).
 
-The handle *value* itself is **not** transferred from one application to another.
+The handle *value* itself is **not** transferred from one application to
+another.
+
 In this respect, handles are like pointers; they reference a context that's
 unique to each application.
 Handles are moved from one application's context to the other's.
@@ -322,19 +321,22 @@ the **int32**), and a size of 8 bytes (3 bytes of padding after the **int8**):
 
 ![drawing](struct1.png)
 
-A struct with a **bool** and a **string** field has an alignment of 8 bytes (due to
-the **string**) and a size of 24 bytes (7 bytes of padding after the **bool**):
+A struct with a **bool** and a **string** field has an alignment of 8 bytes
+(due to the **string**) and a size of 24 bytes (7 bytes of padding after the
+**bool**):
+
 ![drawing](struct2.png)
 
-> Keep in mind that a **string** is really just a special
-> case of `vector<uint8>`.
+Note: Keep in mind that a **string** is really just a special case of
+`vector<uint8>`.
 
-A struct with a **bool** and two **uint8** fields has an alignment of 1 byte and a
-size of 3 bytes (no padding!):
+A struct with a **bool** and two **uint8** fields has an alignment of 1 byte
+and a size of 3 bytes (no padding!):
 
 ![drawing](struct3.png)
 
-Note that a structure can be:
+A structure can be:
+
 * empty &mdash; it has no fields. Such a structure is 1 byte in size, with an
   alignment of 1 byte, and is exactly equivalent to a structure containing a
   `uint8` with the value zero.
@@ -368,9 +370,10 @@ Structs are denoted by their declared name (e.g. `Circle`) and nullability:
 *   `Color?`: nullable `Color`
 
 The following example illustrates:
-  * structure layout (order, packing, and alignment),
-  * a non-nullable structure (`Point`),
-  * a nullable structure (`Color`)
+
+  * Structure layout (order, packing, and alignment)
+  * A non-nullable structure (`Point`)
+  * A nullable structure (`Color`)
 
 ```fidl
 struct Circle {
@@ -390,23 +393,25 @@ Going through the layout in detail:
 ![drawing](structs.png)
 
 1. The first member, `bool filled`, occupies one byte, but requires three bytes
-   of padding because of the next member, which has a 4-byte alignment requirement.
+   of padding because of the next member, which has a 4-byte alignment
+   requirement.
 2. The `Point center` member is an example of a non-nullable struct. As such,
    its content (the `x` and `y` 32-bit floats) are inlined, and the entire thing
    consumes 8 bytes.
-3. `radius` is a 32-bit item, requiring 4 byte alignment. Since the next available
-   location is already on a 4 byte alignment boundary, no padding is required.
+3. `radius` is a 32-bit item, requiring 4 byte alignment. Since the next
+   available location is already on a 4 byte alignment boundary, no padding
+   is required.
 4. The `Color? color` member is an example of a nullable structure. Since the
-   `color` data may or may not be present, the most efficient way of handling this
-   is to keep a pointer to the structure as the in-line data. That way, if the
-   `color` member is indeed present, the pointer points to its data (or, in the
-   case of the encoded format, indicates "is present"), and the data itself is
-   stored out-of-line (after the data for the `Circle` structure). If the
-   `color` member is not present, the pointer is `NULL` (or, in the encoded
-   format, indicates "is not present" by storing a zero).
+   `color` data may or may not be present, the most efficient way of handling
+   this is to keep a pointer to the structure as the in-line data. That way,
+   if the `color` member is indeed present, the pointer points to its data
+   (or, in the case of the encoded format, indicates "is present"), and the
+   data itself is stored out-of-line (after the data for the `Circle`
+   structure). If the `color` member is not present, the pointer is `NULL`
+   (or, in the encoded format, indicates "is not present" by storing a zero).
 5. The `bool dashed` doesn't require any special alignment, so it goes next.
-   Now, however, we've reached the end of the object, and *all objects must be
-   8-byte aligned*. That means we need an additional 7 bytes of padding.
+   Now, however, we've reached the end of the object, and all objects must be
+   8-byte aligned. That means we need an additional 7 bytes of padding.
 6. The out-of-line data for `color` follows the `Circle` data structure, and
    contains three 32-bit `float` values (`r`, `g`, and `b`); they require 4
    byte alignment and so can follow each other without padding. But, just as
@@ -429,8 +434,8 @@ you can realize significant space savings [[2]](#Footnote-2):
 
 The structure now takes 40 bytes.
 
-> While `fidlc` could automatically pack structs, like Rust, we chose not to do
-> that in order to simplify [ABI compatibility changes](../abi-compat.md).
+Note: While `fidlc` could automatically pack structs, like Rust, we chose not
+to do that in order to simplify [ABI compatibility changes](../abi-compat.md).
 
 ### Unions
 
@@ -442,15 +447,15 @@ The structure now takes 40 bytes.
     tag field and any of its options.
 *   Union is padded so that its size is a multiple of its alignment factor.
     For example:
-    1. a union with an **int32** and an **int8** option has an alignment of 4 bytes (due to
-       the **int32**), and a size of 8 bytes including the 4 byte tag (0 or 3 bytes of padding,
-       depending on the option / variant).
-    2. a union with a **bool** and a **string** option has an alignment of 8 bytes (due to
-       the **string**), and a size of 24 bytes (4 or 19 bytes of padding, depending on the
-       option / variant).
+    1. A union with an **int32** and an **int8** option has an alignment of 4
+    bytes (due to the **int32**), and a size of 8 bytes including the 4 byte
+    tag (0 or 3 bytes of padding, depending on the option / variant).
+    2. A union with a **bool** and a **string** option has an alignment of 8
+    bytes (due to the **string**), and a size of 24 bytes (4 or 19 bytes of
+    padding, depending on the option or variant).
 *   In general, changing the definition of a union will break binary
-    compatibility; instead prefer to extend interfaces by adding new methods
-    which use new unions.
+    compatibility. Instead it is preferred that you extend interfaces by
+    adding new methods which use new unions.
 
 Storage of a union depends on whether it is nullable at point of reference.
 
@@ -463,10 +468,10 @@ Storage of a union depends on whether it is nullable at point of reference.
     *   Contents are stored out-of-line and accessed through an indirect
         reference.
     *   When encoded for transfer, stored reference indicates presence of union:
-        *   `0`: reference is null
+        *   `0`: reference is `null`
         *   `UINTPTR_MAX`: reference is non-null, union content is the next out-of-line object
     *   When decoded for consumption, stored reference is a pointer:
-        *   `0`: reference is null
+        *   `0`: reference is `null`
         *   `<valid pointer>`: reference is non-null, union content is at indicated memory address
 
 Unions are denoted by their declared name (e.g. `Pattern`) and nullability:
@@ -497,8 +502,7 @@ to the selected option.
 ### Envelopes
 
 An envelope is a container for out-of-line data, used internally by tables
-and extensible unions.
-It is not exposed to the FIDL language.
+and extensible unions. It is not exposed to the FIDL language.
 
 It has a fixed, 16 byte format, and is not nullable:
 
@@ -578,10 +582,10 @@ The header has the following form:
     * `txid`s with the high bit set are reserved for use by
       [**zx_channel_write()**][channel write]
     * `txid`s with the high bit unset are reserved for use by userspace
-    * a value of `0` for `txid` is reserved for messages which do not
+    * A value of `0` for `txid` is reserved for messages which do not
       require a response from the other side.
-    * See [**zx_channel_call()**][channel call] for more details on
-      `txid` allocation
+    Note: For more details on `txid` allocation, see
+    [**zx_channel_call()**][channel call].
 *   `uint8[3] flags`, MUST NOT be checked by bindings. These flags can be used
     to enable soft transitions of the wire format. See [Header Flags](#flags)
     for a description of the current flag definitions.
@@ -736,17 +740,18 @@ alignment.
 
 Notes:
 
-1. **N** indicates the number of elements, whether stated explicity (as in
-   `array<T>:N`, an array with **N** elements of type **T**) or implictly (a `table`
-   consisting of 7 elements would have `N=7`).
-2. The out-of-line size is always padded to 8 bytes; we indicate the content size
-   below, excluding the padding.
-3. `sizeof(T)` in the `vector` entry below is `in_line_sizeof(T) + out_of_line_sizeof(T)`.
-4. **M** in the `table` entry below is the maximum ordinal of present field.
-5. In the `struct` entry below, the padding refers to the required padding to make the
-   `struct` aligned to the widest element. For example, `struct{uint32;uint8}`
-   has 3 bytes of padding, which is different than the padding to align to 8 bytes
-   boundaries.
+* **N** indicates the number of elements, whether stated explicity (as in
+  `array<T>:N`, an array with **N** elements of type **T**) or implictly
+  (a `table` consisting of 7 elements would have `N=7`).
+* The out-of-line size is always padded to 8 bytes. We indicate the content
+  size below, excluding the padding.
+* `sizeof(T)` in the `vector` entry below is\
+  `in_line_sizeof(T) + out_of_line_sizeof(T)`.
+* **M** in the `table` entry below is the maximum ordinal of present field.
+* In the `struct` entry below, the padding refers to the required padding to
+  make the `struct` aligned to the widest element. For example,
+  `struct{uint32;uint8}` has 3 bytes of padding, which is different than the
+  padding to align to 8 bytes boundaries.
 
 Type(s)                      | Size (in-line)                    | Size (out-of-line)                                              | Alignment
 -----------------------------|-----------------------------------|-----------------------------------------------------------------|--------------------------------
@@ -847,9 +852,9 @@ Conformant FIDL bindings must check all of the following integrity constraints:
         to the next buffer position where a sub-object is expected to appear. As
         a corollary, pointers never refer to locations outside of the buffer.
 *   Decoding only:
-    *   All present / not-present flags for referenced sub-objects hold the
+    *   All present and not-present flags for referenced sub-objects hold the
         value **0** or **UINTPTR_MAX** only.
-    *   All present / not-present flags for referenced handles hold the value
+    *   All present and not-present flags for referenced handles hold the value
         **0** or **UINT32_MAX** only.
 
 #### Header Flags {#flags}
@@ -898,9 +903,9 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 
 #### Footnote 1
 
-Defining the zero handle to mean "there is no handle" means it is safe to default-initialize
-wire format structures to all zeros.
-Zero is also the value of the `ZX_HANDLE_INVALID` constant.
+Defining the zero handle to mean "there is no handle" means it is safe to
+default-initialize wire format structures to all zeros. Zero is also the value
+of the `ZX_HANDLE_INVALID` constant.
 
 #### Footnote 2
 
