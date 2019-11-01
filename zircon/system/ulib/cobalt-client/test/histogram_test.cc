@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cobalt-client/cpp/histogram.h>
+
 #include <float.h>
+#include <fuchsia/cobalt/c/fidl.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -11,16 +16,12 @@
 #include <unistd.h>
 
 #include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
-#include <fuchsia/cobalt/c/fidl.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
 #include <unittest/unittest.h>
 
 #include "fake_logger.h"
@@ -684,10 +685,7 @@ RUN_TEST(TestAdd)
 RUN_TEST(TestAddAfterFlush)
 RUN_TEST(TestAddMultiple)
 RUN_TEST(TestAddMultiThread)
-
-// Test disabled due to flakiness. See FLK-329.
-// RUN_TEST(TestAddAndFlushMultiThread)
-
+RUN_TEST(TestAddAndFlushMultiThread)
 END_TEST_CASE(HistogramTest)
 
 }  // namespace
