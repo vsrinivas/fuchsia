@@ -139,7 +139,7 @@ TEST(ParseBeaconTest, ParseBeaconElements) {
                                                   0x09, 0x0a, 0x0b}));
   EXPECT_EQ(bss_desc.chan.primary, 36);
   EXPECT_EQ(*bss_desc.country, std::vector<uint8_t>({'A', 'B', 'C'}));
-  EXPECT_EQ(*bss_desc.rsn, std::vector<uint8_t>({48, 2, 0xaa, 0xbb}));
+  EXPECT_EQ(*bss_desc.rsne, std::vector<uint8_t>({48, 2, 0xaa, 0xbb}));
   ASSERT_NE(bss_desc.ht_cap, nullptr);
   EXPECT_EQ(common::ParseHtCapabilities(bss_desc.ht_cap->bytes)->ampdu_params.exponent(), 3);
   ASSERT_NE(bss_desc.ht_op, nullptr);

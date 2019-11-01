@@ -28,7 +28,7 @@ use {
     zerocopy::AsBytes,
 };
 
-fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
+fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
         bssid: [7, 1, 2, 77, 53, 8],
         ssid,
@@ -37,10 +37,10 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         dtim_period: 100,
         timestamp: 0,
         local_time: 0,
-        cap: mac::CapabilityInfo(0).with_privacy(rsn.is_some()).0,
+        cap: mac::CapabilityInfo(0).with_privacy(rsne.is_some()).0,
         rates: vec![],
         country: None,
-        rsn,
+        rsne,
         vendor_ies: None,
 
         rcpi_dbmh: 0,

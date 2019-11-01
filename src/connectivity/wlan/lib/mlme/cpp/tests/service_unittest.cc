@@ -125,7 +125,7 @@ TEST_F(ServiceTest, SendAssocInd) {
   ASSERT_EQ(msgs[0].body()->listen_interval, 100);
   ASSERT_TRUE(std::equal(msgs[0].body()->ssid->begin(), msgs[0].body()->ssid->end(),
                          std::begin(ssid), std::end(ssid)));
-  ASSERT_EQ(std::memcmp(msgs[0].body()->rsn->data(), expected_rsne, sizeof(expected_rsne)), 0);
+  ASSERT_EQ(std::memcmp(msgs[0].body()->rsne->data(), expected_rsne, sizeof(expected_rsne)), 0);
 }
 
 TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
@@ -147,7 +147,7 @@ TEST_F(ServiceTest, SendAssocInd_EmptyRsne) {
   ASSERT_EQ(msgs[0].body()->listen_interval, 100);
   ASSERT_TRUE(std::equal(msgs[0].body()->ssid->begin(), msgs[0].body()->ssid->end(),
                          std::begin(ssid), std::end(ssid)));
-  ASSERT_FALSE(msgs[0].body()->rsn.has_value());
+  ASSERT_FALSE(msgs[0].body()->rsne.has_value());
 }
 
 }  // namespace

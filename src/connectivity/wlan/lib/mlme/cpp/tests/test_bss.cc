@@ -63,7 +63,7 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
   common::WriteCountry(w, kCountry, subbands);
 }
 
-wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
+wlan_mlme::BSSDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
   common::MacAddr bssid(kBssid1);
 
   wlan_mlme::BSSDescription bss_desc;
@@ -82,10 +82,10 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
   cap.set_short_preamble(true);
   bss_desc.cap = cap.val();
 
-  if (rsn) {
-    bss_desc.rsn.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+  if (rsne) {
+    bss_desc.rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   } else {
-    bss_desc.rsn.reset();
+    bss_desc.rsne.reset();
   }
   bss_desc.rcpi_dbmh = 0;
   bss_desc.rsni_dbh = 0;
@@ -180,15 +180,15 @@ MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
   return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AuthenticateResp_Ordinal};
 }
 
-MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
+MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsne) {
   common::MacAddr bssid(kBssid1);
 
   auto req = wlan_mlme::AssociateRequest::New();
   std::memcpy(req->peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
-  if (rsn) {
-    req->rsn.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+  if (rsne) {
+    req->rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   } else {
-    req->rsn.reset();
+    req->rsne.reset();
   }
 
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AssociateReq_Ordinal};

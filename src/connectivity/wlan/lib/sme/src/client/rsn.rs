@@ -96,9 +96,9 @@ pub fn get_rsna(
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, failure::Error> {
-    let a_rsne_bytes = match bss.rsn.as_ref() {
+    let a_rsne_bytes = match bss.rsne.as_ref() {
         None => bail!("RSNE not present in BSS"),
-        Some(rsn) => &rsn[..],
+        Some(rsne) => &rsne[..],
     };
 
     // Credentials supplied and BSS is protected.

@@ -796,7 +796,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
-                rsn: None,
+                rsne: None,
             },
         );
     }

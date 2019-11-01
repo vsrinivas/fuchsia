@@ -35,7 +35,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         rates: d.rates.clone(),
         country: d.country.clone(),
 
-        rsn: d.rsn.clone(),
+        rsne: d.rsne.clone(),
         vendor_ies: d.vendor_ies.clone(),
 
         rcpi_dbmh: d.rcpi_dbmh,

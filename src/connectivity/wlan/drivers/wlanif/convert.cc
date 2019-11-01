@@ -150,7 +150,7 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
 
   // rsne
   if (wlanif_desc->rsne_len)
-    CopyRSNE(fidl_desc.rsn.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
+    CopyRSNE(fidl_desc.rsne.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
              &wlanif_desc->rsne_len);
 
   // chan
@@ -266,7 +266,7 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
   ConvertRates(&fidl_desc->rates, wlanif_desc);
 
   // rsne
-  ArrayToVector(&fidl_desc->rsn, wlanif_desc.rsne, wlanif_desc.rsne_len);
+  ArrayToVector(&fidl_desc->rsne, wlanif_desc.rsne, wlanif_desc.rsne_len);
 
   // vendor ie
   if (wlanif_desc.vendor_ie_len) {

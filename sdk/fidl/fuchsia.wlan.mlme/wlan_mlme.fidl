@@ -103,8 +103,7 @@ struct BSSDescription {
     bytes:RATES_MAX_LEN rates;
     bytes? country;
 
-    // TODO(hahnr): This field represents an IE and should thus be named RSNE.
-    bytes? rsn;
+    bytes? rsne;
 
     /// All vendor info elements present in the beacon frame. E.g. this may include a WPA1 IE.
     /// This slice should be a valid chain of IEs including IE headers for each element.
@@ -326,8 +325,7 @@ struct DeauthenticateIndication {
 
 struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
-    // TODO(hahnr): This field represents an IE and should thus be named RSNE.
-    bytes? rsn;
+    bytes? rsne;
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
     bytes? vendor_ies;
 
@@ -365,7 +363,7 @@ struct AssociateIndication {
     bytes? ssid;
     // OperationalRateSet
     // BSSMembershipSelectorSet
-    bytes? rsn;
+    bytes? rsne;
 
     // etc
 };

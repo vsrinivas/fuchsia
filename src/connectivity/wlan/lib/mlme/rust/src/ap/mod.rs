@@ -91,14 +91,14 @@ impl Context {
         peer_sta_address: MacAddr,
         listen_interval: u16,
         ssid: Option<Vec<u8>>,
-        rsn: Option<Vec<u8>>,
+        rsne: Option<Vec<u8>>,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
             sender.send_associate_ind(&mut fidl_mlme::AssociateIndication {
                 peer_sta_address,
                 listen_interval,
                 ssid,
-                rsn,
+                rsne,
                 // TODO(37891): Send everything else (e.g. HT capabilities).
             })
         })
@@ -411,7 +411,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
-                rsn: None,
+                rsne: None,
             },
         );
     }

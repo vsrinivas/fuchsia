@@ -43,8 +43,8 @@ struct Context {
 
   void SendClientDeauthFrame() { ap->HandleFramePacket(CreateDeauthFrame(client_addr)); }
 
-  void SendClientAssocReqFrame(fbl::Span<const uint8_t> ssid = kSsid, bool rsn = true) {
-    ap->HandleFramePacket(CreateAssocReqFrame(client_addr, ssid, rsn));
+  void SendClientAssocReqFrame(fbl::Span<const uint8_t> ssid = kSsid, bool rsne = true) {
+    ap->HandleFramePacket(CreateAssocReqFrame(client_addr, ssid, rsne));
   }
 
   void SendClientDisassocFrame() { ap->HandleFramePacket(CreateDisassocFrame(client_addr)); }
@@ -128,14 +128,14 @@ struct Context {
     EXPECT_EQ(msg.body()->reason_code, reason_code);
   }
 
-  void AssertAssocInd(MlmeMsg<wlan_mlme::AssociateIndication> msg, bool rsn = true) {
+  void AssertAssocInd(MlmeMsg<wlan_mlme::AssociateIndication> msg, bool rsne = true) {
     EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), client_addr.byte, 6), 0);
     EXPECT_EQ(msg.body()->listen_interval, kListenInterval);
     EXPECT_EQ(std::memcmp(msg.body()->ssid->data(), kSsid, msg.body()->ssid->size()), 0);
-    if (rsn) {
-      EXPECT_EQ(std::memcmp(msg.body()->rsn->data(), kRsne, sizeof(kRsne)), 0);
+    if (rsne) {
+      EXPECT_EQ(std::memcmp(msg.body()->rsne->data(), kRsne, sizeof(kRsne)), 0);
     } else {
-      EXPECT_FALSE(msg.body()->rsn.has_value());
+      EXPECT_FALSE(msg.body()->rsne.has_value());
     }
   }
 
@@ -524,7 +524,7 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
   ctx.AssertAssocInd(std::move(assoc_inds[0]));
 }
 
-TEST_F(ApInfraBssTest, Associate_EmptyRsn) {
+TEST_F(ApInfraBssTest, Associate_EmptyRsne) {
   ctx.StartAp(false);
   ctx.AuthenticateClient();
 

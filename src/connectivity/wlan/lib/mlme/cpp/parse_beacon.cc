@@ -130,12 +130,12 @@ static void DoParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_chann
         }
         break;
       case element_id::kRsn: {
-        bss_desc->rsn.emplace();
-        bss_desc->rsn->resize(sizeof(ElementHeader));
-        auto header = reinterpret_cast<ElementHeader*>(bss_desc->rsn->data());
+        bss_desc->rsne.emplace();
+        bss_desc->rsne->resize(sizeof(ElementHeader));
+        auto header = reinterpret_cast<ElementHeader*>(bss_desc->rsne->data());
         header->id = static_cast<uint8_t>(element_id::kRsn);
         header->len = raw_body.size();
-        bss_desc->rsn->insert(bss_desc->rsn->end(), raw_body.begin(), raw_body.end());
+        bss_desc->rsne->insert(bss_desc->rsne->end(), raw_body.begin(), raw_body.end());
         break;
       }
       case element_id::kHtCapabilities:

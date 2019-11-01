@@ -69,8 +69,8 @@ struct ClientTest : public ::testing::Test {
     client.HandleTimeout(timer_id);
   }
 
-  void Join(bool rsn = true) {
-    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(rsn)));
+  void Join(bool rsne = true) {
+    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(rsne)));
     device.svc_queue.clear();
   }
 
@@ -82,8 +82,8 @@ struct ClientTest : public ::testing::Test {
     TriggerTimeout();
   }
 
-  void Associate(bool rsn = true) {
-    client.HandleMlmeMsg(CreateAssocRequest(rsn));
+  void Associate(bool rsne = true) {
+    client.HandleMlmeMsg(CreateAssocRequest(rsne));
     client.HandleFramePacket(CreateAssocRespFrame());
     device.svc_queue.clear();
     device.wlan_queue.clear();
@@ -101,11 +101,11 @@ struct ClientTest : public ::testing::Test {
         CreateSetCtrlPortRequest(common::MacAddr(kBssid1), wlan_mlme::ControlledPortState::OPEN));
   }
 
-  void Connect(bool rsn = true) {
-    Join(rsn);
+  void Connect(bool rsne = true) {
+    Join(rsne);
     Authenticate();
-    Associate(rsn);
-    if (rsn) {
+    Associate(rsne);
+    if (rsne) {
       EstablishRsna();
     }
     // Clear any existing ensure-on-channel flag.
@@ -171,7 +171,7 @@ struct ClientTest : public ::testing::Test {
     EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
   }
 
-  void AssertAssocReqFrame(WlanPacket pkt, bool rsn) {
+  void AssertAssocReqFrame(WlanPacket pkt, bool rsne) {
     auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationRequest>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
@@ -187,7 +187,7 @@ struct ClientTest : public ::testing::Test {
         has_ssid = true;
       } else if (id == element_id::kRsn) {
         has_rsne = true;
-        if (rsn) {
+        if (rsne) {
           // kRsne contains two bytes for element ID and length; the rest are
           // RSNE bytes
           EXPECT_EQ(std::memcmp(body.data(), kRsne + 2, body.size()), 0);
@@ -196,7 +196,7 @@ struct ClientTest : public ::testing::Test {
       }
     }
     EXPECT_TRUE(has_ssid);
-    EXPECT_EQ(has_rsne, rsn);
+    EXPECT_EQ(has_rsne, rsne);
   }
 
   void AssertKeepAliveFrame(WlanPacket pkt) {

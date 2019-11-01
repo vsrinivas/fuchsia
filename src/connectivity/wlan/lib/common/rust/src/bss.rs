@@ -111,7 +111,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             })
             .unwrap_or(false);
 
-        let rsne = match self.rsn.as_ref() {
+        let rsne = match self.rsne.as_ref() {
             Some(rsne) => match ie::rsn::rsne::from_bytes(rsne) {
                 Ok((_, rsne)) => rsne,
                 Err(_e) => return Protection::Unknown,
@@ -266,19 +266,19 @@ mod tests {
     #[test]
     fn test_get_unknown_protection() {
         let mut bss = bss(ProtectionCfg::Wpa2);
-        bss.rsn = Some(fake_unknown_rsne());
+        bss.rsne = Some(fake_unknown_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
 
-        bss.rsn = Some(invalid_wpa2_wpa3_rsne());
+        bss.rsne = Some(invalid_wpa2_wpa3_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
 
-        bss.rsn = Some(invalid_wpa3_rsne());
+        bss.rsne = Some(invalid_wpa3_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
 
-        bss.rsn = Some(invalid_wpa3_enterprise_192_bit_rsne());
+        bss.rsne = Some(invalid_wpa3_enterprise_192_bit_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
 
-        bss.rsn = Some(fake_wpa2_legacy_rsne());
+        bss.rsne = Some(fake_wpa2_legacy_rsne());
         assert_eq!(Protection::Unknown, bss.get_protection());
     }
 
@@ -353,7 +353,7 @@ mod tests {
                     _ => true,
                 })
                 .0,
-            rsn: match protection {
+            rsne: match protection {
                 ProtectionCfg::Wpa3Enterprise => Some(fake_wpa3_enterprise_192_bit_rsne()),
                 ProtectionCfg::Wpa2Enterprise => Some(fake_wpa2_enterprise_rsne()),
                 ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),

@@ -10,8 +10,8 @@ mod rsn;
 #[cfg(test)]
 pub mod test_utils;
 
-use remote_client::*;
 use event::*;
+use remote_client::*;
 use rsn::*;
 
 use {
@@ -410,7 +410,7 @@ impl InfraBss {
             Some(client) => client,
         };
 
-        client.handle_assoc_ind(&mut self.ctx, &mut self.aid_map, &self.rsn_cfg, ind.rsn);
+        client.handle_assoc_ind(&mut self.ctx, &mut self.aid_map, &self.rsn_cfg, ind.rsne);
         if !client.authenticated() {
             warn!("client {:02X?} failed to associate and was deauthenticated", peer_addr);
             self.remove_client(&peer_addr);
@@ -953,7 +953,7 @@ mod tests {
                     peer_sta_address: self.addr,
                     listen_interval: 100,
                     ssid: Some(SSID.to_vec()),
-                    rsn: rsne,
+                    rsne,
                 },
             }
         }

@@ -496,7 +496,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
   }
 
   // Open port if user connected to an open network.
-  if (!join_ctx_->bss()->rsn.has_value()) {
+  if (!join_ctx_->bss()->rsne.has_value()) {
     debugjoin("802.1X controlled port is now open\n");
     controlled_port_ = eapol::PortState::kOpen;
     device_->SetStatus(ETHERNET_STATUS_ONLINE);
@@ -633,7 +633,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
   }
 
   bool needs_protection =
-      join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
+      join_ctx_->bss()->rsne.has_value() && controlled_port_ == eapol::PortState::kOpen;
   auto eth_hdr = eth_frame.hdr();
   return client_sta_send_data_frame(rust_client_.get(), &eth_hdr->src.byte, &eth_hdr->dest.byte,
                                     needs_protection, IsQosReady(), eth_hdr->ether_type(),
@@ -766,7 +766,7 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
   }
 
   bool needs_protection =
-      join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
+      join_ctx_->bss()->rsne.has_value() && controlled_port_ == eapol::PortState::kOpen;
   client_sta_send_eapol_frame(rust_client_.get(), &src.byte, &dst.byte, needs_protection,
                               AsWlanSpan(eapol_frame));
   return ZX_OK;

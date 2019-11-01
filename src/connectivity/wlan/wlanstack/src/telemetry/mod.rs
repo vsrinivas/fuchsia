@@ -1165,7 +1165,7 @@ mod tests {
             cap: wlan_common::mac::CapabilityInfo(0).0,
             rates: vec![],
             country: None,
-            rsn: None,
+            rsne: None,
             vendor_ies: None,
 
             rcpi_dbmh: 0,

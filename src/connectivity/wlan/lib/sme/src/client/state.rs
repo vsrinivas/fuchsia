@@ -763,7 +763,7 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
         ssid = ssid,
         cap = bss.cap,
         rates = bss.rates,
-        protected = bss.rsn.is_some(),
+        protected = bss.rsne.is_some(),
         chan = bss.chan,
         rcpi = bss.rcpi_dbmh,
         rsni = bss.rsni_dbh,
@@ -947,7 +947,7 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
         Protection::Open | Protection::Wep(_) => {
             mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
                 peer_sta_address: cmd.bss.bssid.clone(),
-                rsn: None,
+                rsne: None,
                 vendor_ies: None,
             }));
         }
@@ -964,7 +964,7 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
             write_wpa1_ie(&mut buf, &s_wpa).expect("writing WPA IE into Vec can never fail");
             mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
                 peer_sta_address: cmd.bss.bssid.clone(),
-                rsn: None,
+                rsne: None,
                 vendor_ies: Some(buf),
             }));
         }
@@ -984,7 +984,7 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
             let () = s_rsne.write_into(&mut buf).expect("writing RSNE into Vec can never fail");
             mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
                 peer_sta_address: cmd.bss.bssid.clone(),
-                rsn: Some(buf),
+                rsne: Some(buf),
                 vendor_ies: None,
             }));
         }

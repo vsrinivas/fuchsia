@@ -53,8 +53,8 @@ impl ClientConfig {
             Protection::Wpa1 => self.0.wpa1_supported,
             Protection::Wpa1Wpa2Personal
             | Protection::Wpa2Personal
-            | Protection::Wpa2Wpa3Personal => match bss.rsn.as_ref() {
-                Some(rsn) if privacy => match rsne::from_bytes(&rsn[..]) {
+            | Protection::Wpa2Wpa3Personal => match bss.rsne.as_ref() {
+                Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
                     Ok((_, a_rsne)) => is_rsn_compatible(&a_rsne),
                     _ => false,
                 },
@@ -302,7 +302,7 @@ mod tests {
                 .0,
             rates: vec![],
             country: None,
-            rsn: match protection {
+            rsne: match protection {
                 ProtectionCfg::Wpa2Legacy => Some(fake_wpa2_legacy_rsne()),
                 ProtectionCfg::Wpa2 | ProtectionCfg::Wpa2NoPrivacy => Some(fake_wpa2_rsne()),
                 ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
