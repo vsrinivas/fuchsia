@@ -9,6 +9,7 @@
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -43,6 +44,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::hardware::pty::Device::Name_,
     fuchsia::kernel::Counter::Name_,
     fuchsia::kernel::Stats::Name_,
+    fuchsia::media::AudioCore::Name_,
     fuchsia::net::Connectivity::Name_,
     fuchsia::net::NameLookup::Name_,
     fuchsia::net::stack::Stack::Name_,

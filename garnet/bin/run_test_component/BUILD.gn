@@ -22,6 +22,7 @@ source_set("lib") {
     "//garnet/lib/cmx",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys.test",

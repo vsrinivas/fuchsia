@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.media.AudioCore"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/audio_core_hardware_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.AudioCore",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

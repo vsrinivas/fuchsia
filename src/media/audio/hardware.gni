@@ -20,3 +20,8 @@ extended_hardware_envs = [
   nuc_env,
   vim2_env,
 ]
+
+built_in_input_hardware_envs = [
+  astro_env,
+  sherlock_env,
+]

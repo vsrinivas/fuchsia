@@ -40,7 +40,8 @@ static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
-zx::duration kAssumedWorstSourceFenceTime = zx::msec(5);
+// TODO(40183): Eliminate this and instead use FIFO depth, queried from the input device.
+zx::duration kAssumedWorstSourceFenceTime = zx::usec(5500);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
@@ -91,8 +92,7 @@ AudioCapturerImpl::AudioCapturerImpl(
   binding_.set_error_handler([this](zx_status_t status) { RemoveFromRouteGraph(); });
   source_link_refs_.reserve(16u);
 
-  // TODO(johngro) : Initialize this with the native configuration of the source
-  // we are initially bound to.
+  // Ideally, initialize this to the native configuration of our initially-bound source.
   format_ = fuchsia::media::AudioStreamType::New();
   UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
@@ -368,8 +368,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Allocate our intermediate buffer for mixing.
   //
-  // TODO(johngro): This does not need to be as long (in frames) as the user
-  // supplied VMO. Limit this to something more reasonable.
+  // TODO(39886): Limit this to something more reasonable than the entire user-provided VMO.
   mix_buf_ = std::make_unique<float[]>(payload_buf_frames_);
 
   // Map the VMO into our process.
@@ -410,16 +409,14 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  // Things went well. While we may fail to create links to audio sources from
-  // this point forward, we have successfully configured the mode for this
-  // capturer, so we are now in the OperatingSync state.
+  // Success. Although we might still fail to create links to audio sources, we have successfully
+  // configured this capturer's mode, so we are now in the OperatingSync state.
   state_.store(State::OperatingSync);
 
-  // Let our source links know about the format that we prefer.
+  // Tell our source links what format we prefer.
   //
-  // TODO(johngro): Remove this notification. Audio sources do not care what we
-  // prefer to capture. If an AudioInput is going to be reconfigured because of
-  // our needs, it will happen at the policy level before we get linked up.
+  // TODO(39888): Any source configuration based on capturer preference should be mediated by a
+  // policy component at link time, rather than these notifications going directly to source(s).
   ForEachSourceLink([this](auto& link) {
     const auto& source = link.GetSource();
     switch (source->type()) {
@@ -431,7 +428,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
       }
 
       case AudioObject::Type::AudioRenderer:
-        // TODO(johngro): Support capturing from packet sources
+        // TODO(13688): Support capturing from packet sources
         break;
 
       case AudioObject::Type::AudioCapturer:
@@ -442,12 +439,10 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   // Select a mixer for each active link here.
   //
-  // TODO(johngro): We should probably just stop doing this here. It would be
-  // best if had an invariant which said that source and destination objects
-  // could not be linked unless both had a configured format. Dynamic changes
-  // of format would require breaking and reforming links in this case, which
-  // would make it difficult to ever do a seamless format change (something
-  // which already would be rather difficult to do).
+  // TODO(39888): Set the mixer earlier (when source and destination are linked) instead of doing it
+  // here. There should be an invariant that source and destination objects cannot be linked unless
+  // both have a configured format. Otherwise, dynamic format changes require breaking/re-forming
+  // links, making the already-tricky "seamless format change" even more difficult.
   std::vector<fbl::RefPtr<AudioLink>> cleanup_list;
   ForEachSourceLink([this, &cleanup_list](auto& link) {
     auto copy = fbl::RefPtr(&link);
@@ -601,10 +596,8 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
 
   // Sanity check the number of frames per packet the user is asking for.
   //
-  // TODO(johngro) : This effectively sets the minimum number of frames per
-  // packet to produce at 1. This is still absurdly low; what is the proper
-  // number? We should decide on a proper lower bound, document it, and enforce
-  // the limit here.
+  // Currently our minimum frames-per-packet is 1, which is absurdly low.
+  // TODO(13344): Decide on a proper minimum packet size, document it, and enforce the limit here.
   if (frames_per_packet == 0) {
     FXL_LOG(ERROR) << "Frames per packet may not be zero.";
     return;
@@ -838,17 +831,13 @@ zx_status_t AudioCapturerImpl::Process() {
     // If we have yet to establish a timeline transformation from capture frames
     // to clock monotonic, establish one now.
     //
-    // TODO(johngro) : If we have only one capture source, and our frame rate
-    // matches their frame rate, align our start time exactly with one of their
-    // sample boundaries.
+    // Ideally, if there were only one capture source and our frame rates match, we would align our
+    // start time exactly with a source sample boundary.
     auto now = zx::clock::get_monotonic();
     if (!dest_frames_to_clock_mono_.invertible()) {
-      // TODO(johngro) : It would be nice if we could alter the offsets in a
-      // timeline function without needing to change the scale factor. This
-      // would allow us to establish a new mapping here without needing to
-      // re-reduce the ratio between frames_per_second_ and nanoseconds every
-      // time. Since the frame rate we supply is already reduced, this step
-      // should go pretty quickly.
+      // Ideally a timeline function could alter offsets without also recalculating the scale
+      // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
+      // Since we supply a rate that is already reduced, this should go pretty quickly.
       dest_frames_to_clock_mono_ =
           TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
       dest_frames_to_clock_mono_gen_.Next();
@@ -870,15 +859,13 @@ zx_status_t AudioCapturerImpl::Process() {
     }
 
     if (last_frame_time > now) {
-      // TODO(johngro) : Fix this. We should not assume anything about the
-      // fence times for our sources. Instead, we should pay attention to what
-      // the fence times are, and to the comings and goings of sources, and
-      // update this number dynamically.
+      // TODO(40183): We should not assume anything about fence times for our sources. Instead, we
+      // should heed the actual reported fence times (FIFO depth), and the arrivals and departures
+      // of sources, and update this number dynamically.
       //
-      // Additionally, we need to be a bit careful when new sources show up. If
-      // a new source shows up and pushes the largest fence time out, the next
-      // time we wake up, it will be early. We will need to recognize this
-      // condition and go back to sleep for a little bit before actually mixing.
+      // Additionally, we must be mindful that if a newly-arriving source causes our "fence time" to
+      // increase, we will wake up early. At wakeup time, we need to be able to detect this case and
+      // sleep a bit longer before mixing.
       zx::time next_mix_time = last_frame_time + kAssumedWorstSourceFenceTime;
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_mix_time);
       if (status != ZX_OK) {
@@ -1149,9 +1136,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     auto rb_frames = rb->frames();
 
     // Sometimes, because of audio input devices with large FIFO depth (or external delay),
-    // end_fence_frames can be negative at stream-start time. If so, bring start_fence_frames to 0
-    // and "wraparound" end_fence_frames into the ring range.
-
+    // start_fence_frames can be negative at stream-start time. If so, bring start_fence_frames to 0
+    // and ensure that end_fence_frames is still within the ring range.
     FXL_CHECK(end_fence_frames >= 0);
 
     start_fence_frames = std::max(start_fence_frames, 0l);
@@ -1283,17 +1269,13 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
           << static_cast<int32_t>(region_frac_frame_len);
       const uint8_t* region_source = rb->virt() + (region.srb_pos * rb->frame_size());
 
-      // Invalidate the region of the cache we are just about to read on
-      // architectures who require it.
+      // Invalidate the region of the cache we are about to read, on architectures requiring it.
       //
       // TODO(35022): Optimize this. In particular...
-      // 1) When we have multiple clients of this ring buffer, it would be good
-      //    not to invalidate what has already been invalidated.
-      // 2) If our driver's ring buffer is not being fed directly from hardware,
-      //    there is no reason to invalidate the cache here.
+      // 1) When we have multiple clients of this ring buffer, only invalidate a section once.
+      // 2) If this ring buffer is not fed directly from hardware, don't invalidate cache at all.
       //
-      // Also, at some point I need to come back and double check that the
-      // mixer's filter width is being accounted for properly here.
+      // Also, at some point double-check that mixer filter width is accounted for properly here.
       FXL_DCHECK(dest_offset <= frames_left);
       uint64_t cache_target_frac_frames = dest_to_src.Scale(frames_left - dest_offset);
       uint32_t cache_target_frames = ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
@@ -1682,8 +1664,8 @@ void AudioCapturerImpl::SetGain(float gain_db) {
     return;
   }
 
-  // If the incoming SetGain request represents no change, we're done.
-  // TODO(mpuryear): once we add gain ramping, this type of check isn't workable
+  // If the incoming SetGain request represents no change, we're done
+  // (once we add gain ramping, this type of check isn't workable).
   if (stream_gain_db_ == gain_db) {
     return;
   }
@@ -1713,7 +1695,7 @@ void AudioCapturerImpl::SetMute(bool mute) {
 
 void AudioCapturerImpl::NotifyGainMuteChanged() {
   TRACE_DURATION("audio", "AudioCapturerImpl::NotifyGainMuteChanged");
-  // TODO(mpuryear): consider making these events disable-able like MinLeadTime.
+  // Consider making these events disable-able like MinLeadTime.
   for (auto& gain_binding : gain_control_bindings_.bindings()) {
     gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
   }

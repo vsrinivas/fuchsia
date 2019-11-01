@@ -10,6 +10,7 @@ group("test") {
   testonly = true
   deps = [
     ":audio_admin_tests",
+    ":audio_core_hardware_tests",
     ":audio_device_service_tests",
     ":audio_device_tests",
     ":audio_fidl_tests",
@@ -47,6 +48,41 @@ executable("audio_admin_test_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+test_package("audio_core_hardware_tests") {
+  deps = [
+    ":audio_core_hardware_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_core_hardware_tests"
+
+      # By definition this validates software that requires real audio input hardware.
+      environments = built_in_input_hardware_envs
+    },
+  ]
+}
+
+executable("audio_core_hardware_tests_bin") {
+  testonly = true
+  output_name = "audio_core_hardware_tests"
+
+  sources = [
+    "hardware/audio_core_hardware_test.cc",
+    "hardware/audio_core_hardware_test.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl:fxl_logging",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/media/audio/lib/test:test_fixture",
     "//zircon/public/lib/fzl",
   ]
 }

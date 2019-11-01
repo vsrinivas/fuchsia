@@ -806,6 +806,8 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   fifo_depth_bytes_ = resp.fifo_depth;
   fifo_depth_frames_ = (fifo_depth_bytes_ + bytes_per_frame_ - 1) / bytes_per_frame_;
 
+  AUD_VLOG(TRACE) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
+
   // Figure out how many frames we need in our ring buffer.
   int64_t min_frames_64 = TimelineRate::Scale(min_ring_buffer_duration_.to_nsecs(),
                                               bytes_per_frame_ * frames_per_sec_, ZX_SEC(1));
