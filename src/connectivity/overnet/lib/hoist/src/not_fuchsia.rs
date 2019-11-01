@@ -103,7 +103,7 @@ struct Writer {
 
 struct OvernetRuntime {
     writer: Rc<RefCell<Writer>>,
-    router_link_id: LinkId,
+    router_link_id: LinkId<overnet_core::PhysLinkId<()>>,
 }
 
 fn spawn_local(future: impl Future<Output = ()> + 'static) {
@@ -138,7 +138,7 @@ impl NodeRuntime for OvernetRuntime {
         })
     }
 
-    fn router_link_id(&self, _id: Self::LinkId) -> LinkId {
+    fn router_link_id(&self, _id: Self::LinkId) -> LinkId<overnet_core::PhysLinkId<()>> {
         self.router_link_id
     }
 
@@ -236,7 +236,7 @@ async fn read_incoming(
 async fn process_incoming_inner(
     node: Node<OvernetRuntime>,
     mut rx_frames: futures::channel::mpsc::Receiver<Vec<u8>>,
-    link_id: LinkId,
+    link_id: LinkId<overnet_core::PhysLinkId<()>>,
 ) -> Result<(), Error> {
     while let Some(mut frame) = rx_frames.next().await {
         node.queue_recv(link_id, frame.as_mut());
@@ -247,7 +247,7 @@ async fn process_incoming_inner(
 async fn process_incoming(
     node: Node<OvernetRuntime>,
     rx_frames: futures::channel::mpsc::Receiver<Vec<u8>>,
-    link_id: LinkId,
+    link_id: LinkId<overnet_core::PhysLinkId<()>>,
 ) {
     if let Err(e) = process_incoming_inner(node, rx_frames, link_id).await {
         log::warn!("Error processing incoming frames: {}", e);

@@ -41,7 +41,7 @@ struct AscenddRuntime;
 
 #[derive(Clone, Copy, Debug)]
 enum PhysLinkId {
-    UnixLink(SaltedID),
+    UnixLink(SaltedID<UnixLink>),
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
@@ -83,7 +83,7 @@ impl NodeRuntime for AscenddRuntime {
         })
     }
 
-    fn router_link_id(&self, id: Self::LinkId) -> LinkId {
+    fn router_link_id(&self, id: Self::LinkId) -> LinkId<overnet_core::PhysLinkId<PhysLinkId>> {
         with_app_mut(|app| match id {
             PhysLinkId::UnixLink(id) => {
                 app.unix_links.get(id).map(|link| link.router_id).unwrap_or(LinkId::invalid())
@@ -129,7 +129,7 @@ impl UnixLinkState {
 struct UnixLink {
     state: UnixLinkState,
     framer: StreamFramer,
-    router_id: LinkId,
+    router_id: LinkId<overnet_core::PhysLinkId<PhysLinkId>>,
     connection_label: Option<String>,
 }
 
@@ -160,7 +160,11 @@ where
     current_thread::spawn(future.unit_error().boxed_local().compat());
 }
 
-fn start_writes(id: SaltedID, tx: tokio::io::WriteHalf<tokio::net::UnixStream>, bytes: Vec<u8>) {
+fn start_writes(
+    id: SaltedID<UnixLink>,
+    tx: tokio::io::WriteHalf<tokio::net::UnixStream>,
+    bytes: Vec<u8>,
+) {
     if bytes.len() == 0 {
         with_app_mut(|app| {
             if let Some(link) = app.unix_links.get_mut(id) {
@@ -175,7 +179,7 @@ fn start_writes(id: SaltedID, tx: tokio::io::WriteHalf<tokio::net::UnixStream>, 
 }
 
 async fn finish_writes(
-    id: SaltedID,
+    id: SaltedID<UnixLink>,
     wr: impl Future<
         Output = Result<(tokio::io::WriteHalf<tokio::net::UnixStream>, Vec<u8>), std::io::Error>,
     >,

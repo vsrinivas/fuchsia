@@ -58,7 +58,7 @@ pub trait NodeRuntime {
     ///  Execute `f` at time `t`
     fn at(&mut self, t: Self::Time, f: impl FnOnce() + 'static);
     /// Convert an application link id to a router link id
-    fn router_link_id(&self, id: Self::LinkId) -> LinkId;
+    fn router_link_id(&self, id: Self::LinkId) -> LinkId<PhysLinkId<Self::LinkId>>;
     /// Send `packet` on application link `id`
     fn send_on_link(&mut self, id: Self::LinkId, packet: &mut [u8]) -> Result<(), Error>;
 }
@@ -72,7 +72,10 @@ enum StreamBinding {
 /// Maintains a small list of borrows from the App instance that creates it.
 struct Receiver<'a, Runtime: NodeRuntime + 'static> {
     service_map: &'a HashMap<String, ServiceProviderProxy>,
-    streams: &'a mut ShadowSlab<StreamBinding>,
+    streams: &'a mut ShadowSlab<
+        <StreamId<PhysLinkId<Runtime::LinkId>> as salt_slab::ElemType>::Elem,
+        StreamBinding,
+    >,
     node_table: &'a mut NodeTable,
     runtime: &'a mut Runtime,
     update_routing: bool,
@@ -82,7 +85,10 @@ struct Receiver<'a, Runtime: NodeRuntime + 'static> {
 impl<'a, Runtime: NodeRuntime + 'static> Receiver<'a, Runtime> {
     /// Given a stream_id create a channel to pass to an application as the outward facing
     /// interface.
-    fn make_channel(&mut self, stream_id: StreamId) -> Result<Channel, Error> {
+    fn make_channel(
+        &mut self,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
+    ) -> Result<Channel, Error> {
         let (overnet_channel, app_channel) = Channel::create()?;
         let overnet_channel = Rc::new(AsyncChannel::from_channel(overnet_channel)?);
         self.streams.init(stream_id, StreamBinding::Channel(overnet_channel.clone()));
@@ -91,12 +97,14 @@ impl<'a, Runtime: NodeRuntime + 'static> Receiver<'a, Runtime> {
     }
 }
 
-impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtime> {
+impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver<PhysLinkId<Runtime::LinkId>>
+    for Receiver<'a, Runtime>
+{
     type Handle = Handle;
 
     fn connect_channel(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
         service_name: &str,
         connection_info: fidl_fuchsia_overnet::ConnectionInfo,
     ) -> Result<(), Error> {
@@ -108,13 +116,16 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
         Ok(())
     }
 
-    fn bind_channel(&mut self, stream_id: StreamId) -> Result<Self::Handle, Error> {
+    fn bind_channel(
+        &mut self,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
+    ) -> Result<Self::Handle, Error> {
         Ok(self.make_channel(stream_id)?.into_handle())
     }
 
     fn channel_recv(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
         bytes: &mut Vec<u8>,
         handles: &mut Vec<Self::Handle>,
     ) -> Result<(), Error> {
@@ -129,7 +140,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver for Receiver<'a, Runtim
         }
     }
 
-    fn close(&mut self, stream_id: StreamId) {
+    fn close(&mut self, stream_id: StreamId<PhysLinkId<Runtime::LinkId>>) {
         self.streams.remove(stream_id);
     }
 
@@ -207,15 +218,19 @@ impl NodeStateCallback for ListPeersResponse {
     }
 }
 
-struct SocketLink {
-    router_id: LinkId,
+#[derive(Debug)]
+pub struct SocketLink<UpLinkID: Copy + Debug> {
+    router_id: LinkId<PhysLinkId<UpLinkID>>,
     framer: StreamFramer,
     writes: Option<futures::io::WriteHalf<fidl::AsyncSocket>>,
 }
 
+/// Intermediate link identifier
 #[derive(Clone, Copy, Debug)]
-enum PhysLinkId<UpLinkID: Copy> {
-    SocketLink(SaltedID),
+pub enum PhysLinkId<UpLinkID: Copy + Debug> {
+    /// A link allocated by attaching a socket to this overnet node
+    SocketLink(SaltedID<SocketLink<UpLinkID>>),
+    /// A link allocated by the containing code
     UpLink(UpLinkID),
 }
 
@@ -280,7 +295,10 @@ struct NodeInner<Runtime: NodeRuntime> {
     /// Overnet router implementation.
     router: Router<PhysLinkId<Runtime::LinkId>, Runtime::Time>,
     /// overnetstack state for each active stream.
-    streams: ShadowSlab<StreamBinding>,
+    streams: ShadowSlab<
+        <StreamId<PhysLinkId<Runtime::LinkId>> as salt_slab::ElemType>::Elem,
+        StreamBinding,
+    >,
     /// Table of known nodes and links in the mesh (generates routing data,
     /// and provides service discovery).
     node_table: NodeTable,
@@ -293,7 +311,7 @@ struct NodeInner<Runtime: NodeRuntime> {
     /// Map our externally visible link ids to real link ids.
     node_to_app_link_ids: BTreeMap<NodeLinkId, PhysLinkId<Runtime::LinkId>>,
     /// Attached socket links
-    socket_links: SaltSlab<SocketLink>,
+    socket_links: SaltSlab<SocketLink<Runtime::LinkId>>,
     /// Local node link ids
     next_node_link_id: u64,
     /// State for list_peers call
@@ -311,13 +329,12 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Create a new instance of App
     pub fn new(runtime: Runtime, options: NodeOptions) -> Result<Self, Error> {
         let router = Router::new_with_options(options.router_options);
-        let streams_key = router.streams_key();
         let mut node = Self {
             inner: Rc::new(RefCell::new(NodeInner {
                 service_map: HashMap::new(),
                 node_table: NodeTable::new(router.node_id()),
+                streams: router.shadow_streams(),
                 router,
-                streams: ShadowSlab::new(streams_key),
                 timeout_key: 0,
                 next_node_link_id: 1,
                 flush_queued: false,
@@ -657,7 +674,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
 
     async fn socket_link_read_loop(
         &self,
-        rtr_id: LinkId,
+        rtr_id: LinkId<PhysLinkId<Runtime::LinkId>>,
         mut deframer: StreamDeframer,
         mut rx: futures::io::ReadHalf<fidl::AsyncSocket>,
     ) -> Result<(), Error> {
@@ -675,7 +692,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     }
 
     /// Queue an incoming receive of `packet` from some link `link`
-    pub fn queue_recv(&self, link_id: LinkId, packet: &mut [u8]) {
+    pub fn queue_recv(&self, link_id: LinkId<PhysLinkId<Runtime::LinkId>>, packet: &mut [u8]) {
         let this = &mut *self.inner.borrow_mut();
         this.router.queue_recv(link_id, packet);
         self.clone().need_flush(this);
@@ -687,7 +704,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         peer: NodeId,
         node_link_id: NodeLinkId,
         up_id: PhysLinkId<Runtime::LinkId>,
-    ) -> Result<LinkId, Error> {
+    ) -> Result<LinkId<PhysLinkId<Runtime::LinkId>>, Error> {
         let r = this.router.new_link(peer, node_link_id, up_id);
         this.node_to_app_link_ids.insert(node_link_id, up_id);
         // TODO: move this to the router update_link path
@@ -702,7 +719,11 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     }
 
     /// Create a new link to `peer` with application link id `up_id`.
-    pub fn new_link(&self, peer: NodeId, up_id: Runtime::LinkId) -> Result<LinkId, Error> {
+    pub fn new_link(
+        &self,
+        peer: NodeId,
+        up_id: Runtime::LinkId,
+    ) -> Result<LinkId<PhysLinkId<Runtime::LinkId>>, Error> {
         let this = &mut *self.inner.borrow_mut();
         let node_link_id = this.next_node_link_id.into();
         this.next_node_link_id += 1;
@@ -804,7 +825,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
 
     async fn flush_sends_to_socket_link(
         self,
-        link_id: SaltedID,
+        link_id: SaltedID<SocketLink<Runtime::LinkId>>,
         mut tx: futures::io::WriteHalf<fidl::AsyncSocket>,
         frame: Vec<u8>,
     ) {
@@ -862,7 +883,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     async fn channel_reader_inner(
         self,
         chan: Rc<AsyncChannel>,
-        stream_id: StreamId,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
     ) -> Result<(), Error> {
         let mut buf = fidl::MessageBuf::new();
         loop {
@@ -894,7 +915,11 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     }
 
     /// Wrapper for the above loop to handle errors 'gracefully'.
-    async fn channel_reader(self, chan: Rc<AsyncChannel>, stream_id: StreamId) {
+    async fn channel_reader(
+        self,
+        chan: Rc<AsyncChannel>,
+        stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
+    ) {
         if let Err(e) = self.channel_reader_inner(chan, stream_id).await {
             log::warn!("Channel reader failed: {:?}", e);
         }
@@ -960,7 +985,7 @@ mod test {
                 .unwrap();
         }
 
-        fn router_link_id(&self, _id: Self::LinkId) -> LinkId {
+        fn router_link_id(&self, _id: Self::LinkId) -> LinkId<PhysLinkId<()>> {
             unimplemented!();
         }
 

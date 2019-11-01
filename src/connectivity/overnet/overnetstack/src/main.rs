@@ -75,7 +75,7 @@ impl NodeRuntime for AppRuntime {
         fasync::spawn_local(at(t.0, f))
     }
 
-    fn router_link_id(&self, id: AppLinkId) -> LinkId {
+    fn router_link_id(&self, id: AppLinkId) -> LinkId<overnet_core::PhysLinkId<AppLinkId>> {
         with_app_mut(|app| match id {
             AppLinkId::Udp(addr) => {
                 app.udp_link_ids.get(&addr).copied().unwrap_or(LinkId::invalid())
@@ -148,7 +148,7 @@ struct App {
 
     // TODO(ctiller): This state should be moved out into its own file.
     /// Map socket addresses to udp link ids.
-    udp_link_ids: HashMap<SocketAddrV6, LinkId>,
+    udp_link_ids: HashMap<SocketAddrV6, LinkId<overnet_core::PhysLinkId<AppLinkId>>>,
     /// UDP socket to communicate over.
     udp_socket: Option<UdpSocketHolder>,
 }

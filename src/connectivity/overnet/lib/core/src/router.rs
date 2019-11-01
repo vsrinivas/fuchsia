@@ -5,7 +5,7 @@
 //! Manages peer<->peer connections and routing packets over links between nodes.
 
 // General structure:
-// A router is a collection of: - streams (each with a StreamId)
+// A router is a collection of: - streams (each with a StreamId<LinkData>)
 //                                These are streams of information flow between processes.
 //                              - peers (each with a PeerId)
 //                                These are other overnet instances in the overlay network.
@@ -31,7 +31,7 @@ use fidl_fuchsia_overnet_protocol::{
     UpdateLinkStatus, ZirconChannelMessage, ZirconHandle,
 };
 use rand::Rng;
-use salt_slab::{SaltSlab, SaltedID};
+use salt_slab::{SaltSlab, SaltedID, ShadowSlab};
 use std::{
     collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap},
     convert::TryInto,
@@ -41,11 +41,11 @@ use std::{
 };
 
 /// Designates one peer in the router
-pub type PeerId = SaltedID;
+pub type PeerId<LinkData> = SaltedID<Peer<LinkData>>;
 /// Designates one link in the router
-pub type LinkId = SaltedID;
+pub type LinkId<LinkData> = SaltedID<Link<LinkData>>;
 /// Designates one stream in the router
-pub type StreamId = SaltedID;
+pub type StreamId<LinkData> = SaltedID<Stream<LinkData>>;
 
 /// Describes the current time for a router.
 pub trait RouterTime: PartialEq + PartialOrd + Ord + Clone + Copy {
@@ -110,11 +110,11 @@ impl std::fmt::Debug for PeerConn {
 /// ConnectToService requests travel from the client -> server, and all subsequent streams are
 /// created on that connection.
 #[derive(Debug)]
-struct Peer {
+pub struct Peer<LinkData: Copy + Debug> {
     /// The quic connection between ourselves and this peer.
     conn: PeerConn,
     /// The stream id of the connection stream for this peer.
-    connection_stream_id: StreamId,
+    connection_stream_id: StreamId<LinkData>,
     /// The next stream index to create for an outgoing stream.
     next_stream: u64,
     /// The node associated with this peer.
@@ -135,9 +135,9 @@ struct Peer {
     /// A list of packets to forward on next writing flush.
     forward: Vec<(RoutingLabel, Vec<u8>)>,
     /// A map of quic stream index to overnet stream id for this peer.
-    streams: BTreeMap<u64, StreamId>,
+    streams: BTreeMap<u64, StreamId<LinkData>>,
     /// If known, a link that will likely be able to forward packets to this peers node_id.
-    current_link: Option<LinkId>,
+    current_link: Option<LinkId<LinkData>>,
     /// State of link status updates for this peer (only for client)
     link_status_update_state: Option<PeerLinkStatusUpdateState>,
     // Stats, per PeerConnectionDiagnosticsInfo
@@ -160,9 +160,9 @@ fn is_local_quic_stream_index(stream_index: u64, is_client: bool) -> bool {
 
 /// Describes a stream from this node to some peer.
 #[derive(Debug)]
-struct Stream {
+pub struct Stream<LinkData: Copy + Debug> {
     /// The peer that terminates this stream.
-    peer_id: PeerId,
+    peer_id: PeerId<LinkData>,
     /// The quic stream id associated with this stream (The reverse map of Peer.streams)
     id: u64,
     /// The current parse state for this stream
@@ -351,7 +351,7 @@ impl RouterOptions {
 
 /// During flush_recvs, defines the set of callbacks that may be made to notify the containing
 /// application of updates received.
-pub trait MessageReceiver {
+pub trait MessageReceiver<LinkData: Copy + Debug> {
     /// The type of handle this receiver deals with. Usually this is fidl::Handle, but for
     /// some tests it's convenient to vary this.
     type Handle;
@@ -360,16 +360,16 @@ pub trait MessageReceiver {
     /// The new stream is `stream_id`, and the service requested is `service_name`.
     fn connect_channel<'a>(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         service_name: &'a str,
         connection_info: fidl_fuchsia_overnet::ConnectionInfo,
     ) -> Result<(), Error>;
     /// A new channel stream is created at `stream_id`.
-    fn bind_channel(&mut self, stream_id: StreamId) -> Result<Self::Handle, Error>;
+    fn bind_channel(&mut self, stream_id: StreamId<LinkData>) -> Result<Self::Handle, Error>;
     /// A channel stream `stream_id` received a datagram with `bytes` and `handles`.
     fn channel_recv(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         bytes: &mut Vec<u8>,
         handles: &mut Vec<Self::Handle>,
     ) -> Result<(), Error>;
@@ -382,7 +382,7 @@ pub trait MessageReceiver {
     /// `desc`.
     fn update_link(&mut self, from: NodeId, to: NodeId, link_id: NodeLinkId, desc: LinkDescription);
     /// A stream `stream_id` has been closed.
-    fn close(&mut self, stream_id: StreamId);
+    fn close(&mut self, stream_id: StreamId<LinkData>);
 }
 
 /// When sending a datagram on a channel, contains information needed to establish streams
@@ -396,7 +396,7 @@ pub enum SendHandle {
 /// This type is parameterized by `LinkData` which is an application defined type that
 /// lets it look up the link implementation quickly.
 #[derive(Debug)]
-struct Link<LinkData: Copy + Debug> {
+pub struct Link<LinkData: Copy + Debug> {
     /// The node on the other end of this link.
     peer: NodeId,
     /// The externally visible id for this link
@@ -457,35 +457,35 @@ impl<Time: RouterTime, T: Ord> PartialOrd for Timeout<Time, T> {
 /// The part of Router that deals only with streams and peers (but not links).
 /// Separated to make satisfying the borrow checker a little more tractable without having to
 /// write monster functions.
-struct Endpoints<Time: RouterTime> {
+struct Endpoints<LinkData: Copy + Debug, Time: RouterTime> {
     /// Node id of this router.
     node_id: NodeId,
     /// All peers.
-    peers: SaltSlab<Peer>,
+    peers: SaltSlab<Peer<LinkData>>,
     /// All streams.
-    streams: SaltSlab<Stream>,
+    streams: SaltSlab<Stream<LinkData>>,
     /// Mapping of node id -> client oriented peer id.
-    node_to_client_peer: BTreeMap<NodeId, PeerId>,
+    node_to_client_peer: BTreeMap<NodeId, PeerId<LinkData>>,
     /// Mapping of node id -> server oriented peer id.
-    node_to_server_peer: BTreeMap<NodeId, PeerId>,
+    node_to_server_peer: BTreeMap<NodeId, PeerId<LinkData>>,
     /// Peers waiting to be written (has pending_writes==true).
-    write_peers: BinaryHeap<PeerId>,
+    write_peers: BinaryHeap<PeerId<LinkData>>,
     /// Peers waiting to be read (has pending_reads==true).
-    read_peers: BinaryHeap<PeerId>,
+    read_peers: BinaryHeap<PeerId<LinkData>>,
     /// Peers that need their timeouts checked (having check_timeout==true).
-    check_timeouts: BinaryHeap<PeerId>,
+    check_timeouts: BinaryHeap<PeerId<LinkData>>,
     /// Client oriented peer connections that have become established.
     newly_established_clients: BinaryHeap<NodeId>,
     /// Client oriented peer connections that need to send initial node descriptions to.
-    need_to_send_node_description_clients: BinaryHeap<StreamId>,
+    need_to_send_node_description_clients: BinaryHeap<StreamId<LinkData>>,
     /// Peers that we've heard about recently.
-    recently_mentioned_peers: Vec<(NodeId, Option<LinkId>)>,
+    recently_mentioned_peers: Vec<(NodeId, Option<LinkId<LinkData>>)>,
     /// Timeouts to get to at some point.
-    queued_timeouts: BinaryHeap<Timeout<Time, PeerId>>,
+    queued_timeouts: BinaryHeap<Timeout<Time, PeerId<LinkData>>>,
     /// Link status updates waiting to be sent
-    link_status_updates: BinaryHeap<StreamId>,
+    link_status_updates: BinaryHeap<StreamId<LinkData>>,
     /// Link status updates waiting to be acked
-    ack_link_status_updates: BinaryHeap<StreamId>,
+    ack_link_status_updates: BinaryHeap<StreamId<LinkData>>,
     /// The last timestamp we saw.
     now: Time,
     /// The current description of our node id, formatted into a serialized description packet
@@ -497,9 +497,9 @@ struct Endpoints<Time: RouterTime> {
     server_cert_file: Option<Box<dyn AsRef<Path>>>,
 }
 
-impl<Time: RouterTime> Endpoints<Time> {
+impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
     /// Update the routing table for `dest` to use `link_id`.
-    fn adjust_route(&mut self, dest: NodeId, link_id: LinkId) -> Result<(), Error> {
+    fn adjust_route(&mut self, dest: NodeId, link_id: LinkId<LinkData>) -> Result<(), Error> {
         log::trace!("ADJUST_ROUTE: {:?} via {:?}", dest, link_id);
 
         let server_peer_id = self.server_peer_id(dest);
@@ -531,7 +531,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     }
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
-    fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId, Error> {
+    fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId<LinkData>, Error> {
         assert_ne!(node, self.node_id);
         let peer_id = self.client_peer_id(node, None)?;
         let peer = self.peers.get_mut(peer_id).unwrap();
@@ -583,7 +583,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Regenerate our description packet and send it to all peers.
     fn publish_node_description(&mut self, services: Vec<String>) -> Result<(), Error> {
         self.node_desc_packet = make_desc_packet(services)?;
-        let stream_ids: Vec<StreamId> = self
+        let stream_ids: Vec<StreamId<LinkData>> = self
             .peers
             .iter_mut()
             .map(|(_peer_id, peer)| peer)
@@ -610,11 +610,11 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Send a datagram on a channel type stream.
     fn queue_send_channel_message(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         bytes: Vec<u8>,
         handles: Vec<SendHandle>,
-        update_stats: impl FnOnce(&mut Peer, u64, u64),
-    ) -> Result<Vec<StreamId>, Error> {
+        update_stats: impl FnOnce(&mut Peer<LinkData>, u64, u64),
+    ) -> Result<Vec<StreamId<LinkData>>, Error> {
         let stream = self
             .streams
             .get(stream_id)
@@ -660,10 +660,10 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Send a datagram on a stream.
     fn queue_send_raw_datagram(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         frame: Option<&mut [u8]>,
         fin: bool,
-        update_stats: impl FnOnce(&mut Peer, u64, u64),
+        update_stats: impl FnOnce(&mut Peer<LinkData>, u64, u64),
     ) -> Result<(), Error> {
         log::trace!(
             "{:?} queue_send: stream_id={:?} frame={:?} fin={:?}",
@@ -774,7 +774,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Receive a packet from some link.
     fn queue_recv(
         &mut self,
-        link_id: LinkId,
+        link_id: LinkId<LinkData>,
         routing_label: RoutingLabel,
         packet: &mut [u8],
     ) -> Result<(), Error> {
@@ -896,7 +896,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Process all received packets and make callbacks depending on what was contained in them.
     fn flush_recvs<Got>(&mut self, got: &mut Got)
     where
-        Got: MessageReceiver,
+        Got: MessageReceiver<LinkData>,
     {
         let mut buf = [0_u8; MAX_RECV_LEN];
 
@@ -915,12 +915,12 @@ impl<Time: RouterTime> Endpoints<Time> {
     /// Helper for flush_recvs to process incoming packets from one peer.
     fn recv_from_peer_id<Got>(
         &mut self,
-        peer_id: PeerId,
+        peer_id: PeerId<LinkData>,
         buf: &mut [u8],
         got: &mut Got,
     ) -> Result<(), Error>
     where
-        Got: MessageReceiver,
+        Got: MessageReceiver<LinkData>,
     {
         log::trace!("{:?} flush_recvs {:?}", self.node_id, peer_id);
         let mut peer = self
@@ -1004,7 +1004,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     fn ensure_client_peer_id(
         &mut self,
         node_id: NodeId,
-        link_id_hint: Option<LinkId>,
+        link_id_hint: Option<LinkId<LinkData>>,
     ) -> Result<(), Error> {
         self.client_peer_id(node_id, link_id_hint).map(|_| ())
     }
@@ -1016,8 +1016,8 @@ impl<Time: RouterTime> Endpoints<Time> {
     fn client_peer_id(
         &mut self,
         node_id: NodeId,
-        link_id_hint: Option<LinkId>,
-    ) -> Result<PeerId, Error> {
+        link_id_hint: Option<LinkId<LinkData>>,
+    ) -> Result<PeerId<LinkData>, Error> {
         if let Some(peer_id) = self.node_to_client_peer.get(&node_id) {
             log::trace!("Existing client: {:?}", node_id);
             return Ok(*peer_id);
@@ -1073,7 +1073,7 @@ impl<Time: RouterTime> Endpoints<Time> {
     }
 
     /// Retrieve an existing server peer id for some node id.
-    fn server_peer_id(&mut self, node_id: NodeId) -> Option<PeerId> {
+    fn server_peer_id(&mut self, node_id: NodeId) -> Option<PeerId<LinkData>> {
         self.node_to_server_peer.get(&node_id).copied()
     }
 
@@ -1144,22 +1144,22 @@ const MAX_RECV_LEN: usize = 1500;
 
 /// Helper to receive one message.
 /// Borrows of all relevant data structures from Endpoints (but only them).
-struct RecvMessageContext<'a, Got> {
+struct RecvMessageContext<'a, Got, LinkData: Copy + Debug> {
     node_id: NodeId,
     got: &'a mut Got,
-    peer_id: PeerId,
-    peer: &'a mut Peer,
+    peer_id: PeerId<LinkData>,
+    peer: &'a mut Peer<LinkData>,
     stream_index: u64,
-    stream_id: StreamId,
-    streams: &'a mut SaltSlab<Stream>,
-    recently_mentioned_peers: &'a mut Vec<(NodeId, Option<LinkId>)>,
-    link_status_updates: &'a mut BinaryHeap<StreamId>,
-    ack_link_status_updates: &'a mut BinaryHeap<StreamId>,
+    stream_id: StreamId<LinkData>,
+    streams: &'a mut SaltSlab<Stream<LinkData>>,
+    recently_mentioned_peers: &'a mut Vec<(NodeId, Option<LinkId<LinkData>>)>,
+    link_status_updates: &'a mut BinaryHeap<StreamId<LinkData>>,
+    ack_link_status_updates: &'a mut BinaryHeap<StreamId<LinkData>>,
 }
 
-impl<'a, Got> RecvMessageContext<'a, Got>
+impl<'a, Got, LinkData: Copy + Debug> RecvMessageContext<'a, Got, LinkData>
 where
-    Got: MessageReceiver,
+    Got: MessageReceiver<LinkData>,
 {
     /// Receive a datagram, parse it, and dispatch it to the right methods.
     /// message==None => end of stream.
@@ -1292,7 +1292,7 @@ where
         &mut self,
         stream_type: StreamType,
         stream_index: u64,
-        mut app_bind: impl FnMut(StreamId, &mut Got) -> Result<R, Error>,
+        mut app_bind: impl FnMut(StreamId<LinkData>, &mut Got) -> Result<R, Error>,
     ) -> Result<R, Error> {
         if stream_index == 0 {
             failure::bail!("Cannot connect stream 0");
@@ -1347,27 +1347,27 @@ struct Links<LinkData: Copy + Debug, Time: RouterTime> {
     /// All known links
     links: SaltSlab<Link<LinkData>>,
     /// Queues of things that need to happen to links
-    queues: LinkQueues<Time>,
+    queues: LinkQueues<LinkData, Time>,
 }
 
-struct LinkQueues<Time: RouterTime> {
+struct LinkQueues<LinkData: Copy + Debug, Time: RouterTime> {
     /// Links that need pings
-    ping_links: BinaryHeap<LinkId>,
+    ping_links: BinaryHeap<LinkId<LinkData>>,
     /// Links that need pongs
-    pong_links: BinaryHeap<LinkId>,
+    pong_links: BinaryHeap<LinkId<LinkData>>,
     /// Timeouts that are pending
-    queued_timeouts: BinaryHeap<Timeout<Time, LinkId>>,
+    queued_timeouts: BinaryHeap<Timeout<Time, LinkId<LinkData>>>,
     /// Are there link updates to send out?
     send_link_updates: bool,
     /// Which links were updated locally?
-    link_updates: BTreeSet<LinkId>,
+    link_updates: BTreeSet<LinkId<LinkData>>,
 }
 
-impl<Time: RouterTime> LinkQueues<Time> {
+impl<LinkData: Copy + Debug, Time: RouterTime> LinkQueues<LinkData, Time> {
     /// Handle a PingTrackerResult
-    fn handle_ping_tracker_result<LinkData: Copy + Debug>(
+    fn handle_ping_tracker_result(
         &mut self,
-        link_id: LinkId,
+        link_id: LinkId<LinkData>,
         link: &mut Link<LinkData>,
         ptres: PingTrackerResult,
     ) {
@@ -1393,7 +1393,7 @@ impl<Time: RouterTime> LinkQueues<Time> {
 impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
     fn recv_packet<'a>(
         &mut self,
-        link_id: LinkId,
+        link_id: LinkId<LinkData>,
         packet: &'a mut [u8],
     ) -> Result<(RoutingLabel, &'a mut [u8]), Error> {
         let link =
@@ -1453,7 +1453,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
     fn pong_link<SendTo>(
         &mut self,
         send_to: &mut SendTo,
-        link_id: LinkId,
+        link_id: LinkId<LinkData>,
         buf: &mut [u8],
     ) -> Result<(), Error>
     where
@@ -1491,7 +1491,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
     fn ping_link<SendTo>(
         &mut self,
         send_to: &mut SendTo,
-        link_id: LinkId,
+        link_id: LinkId<LinkData>,
         buf: &mut [u8],
     ) -> Result<(), Error>
     where
@@ -1554,7 +1554,7 @@ pub struct Router<LinkData: Copy + Debug, Time: RouterTime> {
     /// Our node id
     node_id: NodeId,
     /// Endpoint data-structure
-    endpoints: Endpoints<Time>,
+    endpoints: Endpoints<LinkData, Time>,
     /// Links data-structure
     links: Links<LinkData, Time>,
     /// Ack link status frame
@@ -1632,8 +1632,8 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     }
 
     /// Return the key for the SaltSlab representing streams
-    pub fn streams_key(&self) -> u32 {
-        self.endpoints.streams.key()
+    pub fn shadow_streams<T>(&self) -> ShadowSlab<Stream<LinkData>, T> {
+        self.endpoints.streams.shadow()
     }
 
     /// Create a new link to some node, returning a `LinkId` describing it.
@@ -1642,7 +1642,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         peer: NodeId,
         node_link_id: NodeLinkId,
         link_data: LinkData,
-    ) -> Result<LinkId, Error> {
+    ) -> Result<LinkId<LinkData>, Error> {
         let (ping_tracker, ptres) = PingTracker::new();
         let link_id = self.links.links.insert(Link {
             peer,
@@ -1704,17 +1704,17 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     }
 
     /// Drop a link that is no longer needed.
-    pub fn drop_link(&mut self, link_id: LinkId) {
+    pub fn drop_link(&mut self, link_id: LinkId<LinkData>) {
         self.links.links.remove(link_id);
     }
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
-    pub fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId, Error> {
+    pub fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId<LinkData>, Error> {
         self.endpoints.new_stream(node, service)
     }
 
     /// Update the routing table for `dest` to use `link_id`.
-    pub fn adjust_route(&mut self, dest: NodeId, link_id: LinkId) -> Result<(), Error> {
+    pub fn adjust_route(&mut self, dest: NodeId, link_id: LinkId<LinkData>) -> Result<(), Error> {
         self.endpoints.adjust_route(dest, link_id)
     }
 
@@ -1731,10 +1731,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// Send a datagram on a channel type stream.
     pub fn queue_send_channel_message(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         bytes: Vec<u8>,
         handles: Vec<SendHandle>,
-    ) -> Result<Vec<StreamId>, Error> {
+    ) -> Result<Vec<StreamId<LinkData>>, Error> {
         self.endpoints.queue_send_channel_message(
             stream_id,
             bytes,
@@ -1749,7 +1749,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// Send a datagram on a stream.
     pub fn queue_send_raw_datagram(
         &mut self,
-        stream_id: StreamId,
+        stream_id: StreamId<LinkData>,
         frame: Option<&mut [u8]>,
         fin: bool,
     ) -> Result<(), Error> {
@@ -1760,7 +1760,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     }
 
     /// Receive a packet from some link.
-    pub fn queue_recv(&mut self, link_id: LinkId, packet: &mut [u8]) {
+    pub fn queue_recv(&mut self, link_id: LinkId<LinkData>, packet: &mut [u8]) {
         if packet.len() < 1 {
             return;
         }
@@ -1783,7 +1783,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     fn flush_sends_to_peer<SendTo>(
         &mut self,
         send_to: &mut SendTo,
-        peer_id: PeerId,
+        peer_id: PeerId<LinkData>,
         buf: &mut [u8],
     ) -> Result<(), Error>
     where
@@ -1997,7 +1997,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// Process all received packets and make callbacks depending on what was contained in them.
     pub fn flush_recvs<Got>(&mut self, got: &mut Got)
     where
-        Got: MessageReceiver,
+        Got: MessageReceiver<LinkData>,
     {
         self.endpoints.flush_recvs(got);
 
@@ -2169,11 +2169,11 @@ mod tests {
 
     #[derive(Debug)]
     enum IncomingMessage<'a> {
-        ConnectService(u8, StreamId, &'a str, fidl_fuchsia_overnet::ConnectionInfo),
-        BindChannel(u8, StreamId),
-        ChannelRecv(u8, StreamId, &'a [u8]),
+        ConnectService(u8, StreamId<u8>, &'a str, fidl_fuchsia_overnet::ConnectionInfo),
+        BindChannel(u8, StreamId<u8>),
+        ChannelRecv(u8, StreamId<u8>, &'a [u8]),
         UpdateNode(u8, NodeId, NodeDescription),
-        Close(u8, StreamId),
+        Close(u8, StreamId<u8>),
     }
 
     #[test]
@@ -2191,8 +2191,8 @@ mod tests {
     struct TwoNode {
         router1: Router<u8, Instant>,
         router2: Router<u8, Instant>,
-        link1: LinkId,
-        link2: LinkId,
+        link1: LinkId<u8>,
+        link2: LinkId<u8>,
     }
 
     impl TwoNode {
@@ -2219,14 +2219,14 @@ mod tests {
             router1.update_time(now);
             router2.update_time(now);
             struct R<'a, In>(u8, &'a mut In);
-            impl<'a, In> MessageReceiver for R<'a, In>
+            impl<'a, In> MessageReceiver<u8> for R<'a, In>
             where
                 In: FnMut(IncomingMessage) -> Result<(), Error>,
             {
                 type Handle = ();
                 fn connect_channel(
                     &mut self,
-                    stream_id: StreamId,
+                    stream_id: StreamId<u8>,
                     service_name: &str,
                     connection_info: fidl_fuchsia_overnet::ConnectionInfo,
                 ) -> Result<(), Error> {
@@ -2237,12 +2237,12 @@ mod tests {
                         connection_info,
                     ))
                 }
-                fn bind_channel(&mut self, stream_id: StreamId) -> Result<(), Error> {
+                fn bind_channel(&mut self, stream_id: StreamId<u8>) -> Result<(), Error> {
                     (self.1)(IncomingMessage::BindChannel(self.0, stream_id))
                 }
                 fn channel_recv(
                     &mut self,
-                    stream_id: StreamId,
+                    stream_id: StreamId<u8>,
                     bytes: &mut Vec<u8>,
                     handles: &mut Vec<()>,
                 ) -> Result<(), Error> {
@@ -2260,7 +2260,7 @@ mod tests {
                     _desc: LinkDescription,
                 ) {
                 }
-                fn close(&mut self, stream_id: StreamId) {
+                fn close(&mut self, stream_id: StreamId<u8>) {
                     (self.1)(IncomingMessage::Close(self.0, stream_id)).unwrap();
                 }
                 fn established_connection(&mut self, _node_id: NodeId) {}
@@ -2312,7 +2312,7 @@ mod tests {
                     });
                 }
                 let _stream1 = env.router1.new_stream(env.router2.node_id, "hello world").unwrap();
-                let mut stream2: Option<StreamId> = None;
+                let mut stream2: Option<StreamId<u8>> = None;
                 let router1_node_id = env.router1.node_id;
                 while stream2 == None {
                     env.step(|frame| {
