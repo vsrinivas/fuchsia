@@ -8,9 +8,11 @@
 #include <memory>
 
 #include <ddk/protocol/wlan/info.h>
+#include <wlan/mlme/client/timeout_target.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/timer.h>
+#include <wlan/mlme/timer_manager.h>
 
 namespace wlan {
 
@@ -45,7 +47,7 @@ struct OnChannelHandler {
 class ChannelScheduler {
  public:
   ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
-                   std::unique_ptr<Timer> timer);
+                   TimerManager<TimeoutTarget>* timer_mgr);
 
   void HandleIncomingFrame(std::unique_ptr<Packet>);
 
@@ -66,7 +68,9 @@ class ChannelScheduler {
   // time begins.
   void RequestOffChannelTime(const OffChannelRequest& request);
 
+  void ScheduleTimeout(zx::time deadline);
   void HandleTimeout();
+  void CancelTimeout();
 
  private:
   void GoOffChannel();
@@ -74,13 +78,14 @@ class ChannelScheduler {
 
   OnChannelHandler* on_channel_handler_;
   DeviceInterface* device_;
-  std::unique_ptr<Timer> timer_;
+  TimerManager<TimeoutTarget>* timer_mgr_;
 
   wlan_channel_t channel_ = {.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
   bool on_channel_ = true;
   bool ensure_on_channel_ = false;
   bool pending_off_channel_request_ = false;
   OffChannelRequest off_channel_request_;
+  TimeoutId timeout_;
 };
 
 }  // namespace wlan

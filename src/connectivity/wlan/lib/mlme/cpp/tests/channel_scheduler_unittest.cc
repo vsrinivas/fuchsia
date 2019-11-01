@@ -13,7 +13,9 @@ namespace wlan {
 namespace {
 
 struct ChannelSchedulerTest : public ::testing::Test, public OnChannelHandler {
-  ChannelSchedulerTest() : chan_sched_(this, &device_, device_.CreateTimer(1)) {
+  ChannelSchedulerTest()
+      : timer_mgr_(TimerManager<TimeoutTarget>(device_.CreateTimer(1))),
+        chan_sched_(this, &device_, &timer_mgr_) {
     chan_sched_.SetChannel(
         wlan_channel_t{.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   }
@@ -25,6 +27,7 @@ struct ChannelSchedulerTest : public ::testing::Test, public OnChannelHandler {
   virtual void ReturnedOnChannel() override { str_ += "returned_on_chan,"; }
 
   MockDevice device_;
+  TimerManager<TimeoutTarget> timer_mgr_;
   ChannelScheduler chan_sched_;
   std::string str_;
 };

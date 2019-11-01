@@ -15,6 +15,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/rust_utils.h>
+#include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
@@ -28,7 +29,8 @@ class MlmeMsg;
 
 class Scanner {
  public:
-  Scanner(DeviceInterface* device, ChannelScheduler* chan_sched, std::unique_ptr<Timer> timer);
+  Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
+          TimerManager<TimeoutTarget>* timer_mgr);
   virtual ~Scanner() {}
 
   zx_status_t Start(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
@@ -37,7 +39,9 @@ class Scanner {
   bool IsRunning() const;
   wlan_channel_t ScanChannel() const;
 
+  void ScheduleTimeout(zx::time deadline);
   void HandleTimeout();
+  void CancelTimeout();
 
   zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
   void HandleBeacon(const MgmtFrameView<Beacon>& frame);
@@ -74,8 +78,9 @@ class Scanner {
 
   std::unordered_map<uint64_t, Bss> current_bss_;
   ChannelScheduler* chan_sched_;
-  std::unique_ptr<Timer> timer_;
+  TimerManager<TimeoutTarget>* timer_mgr_;
   SequenceManager seq_mgr_;
+  TimeoutId timeout_;
 };
 
 }  // namespace wlan

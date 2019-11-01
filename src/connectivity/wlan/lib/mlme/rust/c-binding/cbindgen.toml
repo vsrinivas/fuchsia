@@ -25,7 +25,7 @@ include = ["wlan_mlme", "wlan_common", "wlan_span"]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
 include = ["Ap", "BufferProvider", "Device", "InBuf", "OutBuf", "Client",
-           "Scheduler", "EventId", "CSpan"]
+           "Scheduler", "EventId", "CSpan", "ClientConfig"]
 
 # Banjo types.
 exclude = ["WlanChannel"]
@@ -44,6 +44,7 @@ exclude = ["WlanChannel"]
 "Scheduler" = "wlan_scheduler_ops_t"
 "EventId" = "wlan_scheduler_event_id_t"
 "CSpan" = "wlan_span_t"
+"ClientConfig" = "wlan_client_mlme_config_t"
 
 # Banjo types.
 "WlanChannel" = "wlan_channel_t"

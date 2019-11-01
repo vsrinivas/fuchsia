@@ -16,6 +16,7 @@ use {
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     frame_writer::*,
+    fuchsia_zircon as zx,
     log::error,
     state::States,
     wlan_common::{
@@ -35,6 +36,15 @@ const MAX_EAPOL_FRAME_LEN: usize = 255;
 #[derive(Debug)]
 pub enum TimedEvent {
     Authenticating,
+}
+
+/// ClientConfig affects time duration used for different timeouts.
+/// Originally added to more easily control behavior in tests.
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct ClientConfig {
+    signal_report_beacon_timeout: usize,
+    ensure_on_channel_time: zx::sys::zx_duration_t,
 }
 
 /// A STA running in Client mode.

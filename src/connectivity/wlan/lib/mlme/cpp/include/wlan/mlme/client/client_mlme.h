@@ -14,8 +14,11 @@
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/client_interface.h>
 #include <wlan/mlme/client/join_context.h>
+#include <wlan/mlme/client/timeout_target.h>
 #include <wlan/mlme/mlme.h>
+#include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
@@ -23,6 +26,7 @@ namespace wlan {
 class DeviceInterface;
 class Packet;
 class BaseMlmeMsg;
+class ChannelScheduler;
 class Scanner;
 class Station;
 
@@ -30,6 +34,7 @@ class Station;
 class ClientMlme : public Mlme {
  public:
   explicit ClientMlme(DeviceInterface* device);
+  ClientMlme(DeviceInterface* device, wlan_client_mlme_config_t config);
   ~ClientMlme();
 
   // Mlme interface methods.
@@ -62,6 +67,8 @@ class ClientMlme : public Mlme {
 
   DeviceInterface* const device_;
   OnChannelHandlerImpl on_channel_handler_;
+  std::unique_ptr<TimerManager<TimeoutTarget>> timer_mgr_;
+  wlan_client_mlme_config_t config_;
   std::unique_ptr<ChannelScheduler> chan_sched_;
   std::unique_ptr<Scanner> scanner_;
   // TODO(tkilbourn): track other STAs

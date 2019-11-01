@@ -5,6 +5,7 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <cinttypes>
@@ -15,7 +16,6 @@
 #include <wlan/common/bitfield.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
-#include <wlan/mlme/client/client_factory.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
@@ -32,7 +32,19 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-ClientMlme::ClientMlme(DeviceInterface* device) : device_(device), on_channel_handler_(this) {
+wlan_client_mlme_config_t ClientMlmeDefaultConfig() {
+  return wlan_client_mlme_config_t{
+      .signal_report_beacon_timeout = 10,
+      .ensure_on_channel_time = zx::msec(500).get(),
+  };
+}
+
+ClientMlme::ClientMlme(DeviceInterface* device) : ClientMlme(device, ClientMlmeDefaultConfig()) {
+  debugfn();
+}
+
+ClientMlme::ClientMlme(DeviceInterface* device, wlan_client_mlme_config_t config)
+    : device_(device), on_channel_handler_(this), config_(config) {
   debugfn();
 }
 
@@ -44,48 +56,50 @@ zx_status_t ClientMlme::Init() {
   std::unique_ptr<Timer> timer;
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-  timer_id.set_target(to_enum_type(ObjectTarget::kChannelScheduler));
+  timer_id.set_target(to_enum_type(ObjectTarget::kClientMlme));
   zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
   if (status != ZX_OK) {
     errorf("could not create channel scheduler timer: %d\n", status);
     return status;
   }
-  chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
+  timer_mgr_ = std::make_unique<TimerManager<TimeoutTarget>>(std::move(timer));
 
-  std::unique_ptr<Timer> scanner_timer;
-  ObjectId scanner_timer_id;
-  scanner_timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-  scanner_timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
-  status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, scanner_timer_id.val()), &scanner_timer);
-  if (status != ZX_OK) {
-    errorf("could not create scanner timer: %d\n", status);
-    return status;
-  }
+  chan_sched_ = std::make_unique<ChannelScheduler>(&on_channel_handler_, device_, timer_mgr_.get());
+  scanner_ = std::make_unique<Scanner>(device_, chan_sched_.get(), timer_mgr_.get());
 
-  scanner_.reset(new Scanner(device_, chan_sched_.get(), std::move(scanner_timer)));
   return status;
 }
 
 zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
-  switch (id.target()) {
-    case to_enum_type(ObjectTarget::kChannelScheduler):
-      chan_sched_->HandleTimeout();
-      break;
-    case to_enum_type(ObjectTarget::kScanner):
-      scanner_->HandleTimeout();
-      break;
-    case to_enum_type(ObjectTarget::kStation):
-      if (sta_ != nullptr) {
-        sta_->HandleTimeout();
-      } else {
-        warnf("timeout for unknown STA: %zu\n", id.mac());
-      }
-      break;
-    default:
-      ZX_DEBUG_ASSERT(0);
-      return ZX_ERR_NOT_SUPPORTED;
+  if (id.target() != to_enum_type(ObjectTarget::kClientMlme)) {
+    ZX_DEBUG_ASSERT(0);
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  return ZX_OK;
+
+  auto status = timer_mgr_->HandleTimeout([&](auto now, auto target, auto timeout_id) {
+    switch (target) {
+      case TimeoutTarget::kDefault:
+      case TimeoutTarget::kRust:
+        if (sta_ != nullptr) {
+          sta_->HandleTimeout(now, target, timeout_id);
+        } else {
+          warnf("timeout for unknown STA: %zu\n", id.mac());
+        }
+        break;
+      case TimeoutTarget::kChannelScheduler:
+        chan_sched_->HandleTimeout();
+        break;
+      case TimeoutTarget::kScanner:
+        scanner_->HandleTimeout();
+        break;
+    }
+  });
+
+  if (status != ZX_OK) {
+    errorf("failed to rearm the timer after handling the timeout: %s",
+           zx_status_get_string(status));
+  }
+  return status;
 }
 
 void ClientMlme::HwScanComplete(uint8_t result_code) {
@@ -241,7 +255,9 @@ zx_status_t ClientMlme::SpawnStation() {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto client = CreateDefaultClient(device_, &join_ctx_.value(), chan_sched_.get());
+  auto client = std::make_unique<Station>(device_, &config_, timer_mgr_.get(), chan_sched_.get(),
+                                          &join_ctx_.value());
+
   if (!client) {
     return ZX_ERR_INTERNAL;
   }

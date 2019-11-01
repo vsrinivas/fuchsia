@@ -59,8 +59,9 @@ struct MockOnChannelHandler : OnChannelHandler {
 class ScannerTest : public ::testing::Test {
  public:
   ScannerTest()
-      : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
-        scanner_(&mock_dev_, &chan_sched_, mock_dev_.CreateTimer(1u)) {
+      : timer_mgr_(TimerManager<TimeoutTarget>(mock_dev_.CreateTimer(1u))),
+        chan_sched_(&on_channel_handler_, &mock_dev_, &timer_mgr_),
+        scanner_(&mock_dev_, &chan_sched_, &timer_mgr_) {
     mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20});
   }
 
@@ -115,6 +116,7 @@ class ScannerTest : public ::testing::Test {
 
   MockDevice mock_dev_;
   MockOnChannelHandler on_channel_handler_;
+  TimerManager<TimeoutTarget> timer_mgr_;
   ChannelScheduler chan_sched_;
   Scanner scanner_;
 };

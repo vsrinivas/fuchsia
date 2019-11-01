@@ -12,8 +12,10 @@
 #include <memory>
 
 #include <wlan/common/macaddr.h>
+#include <wlan/mlme/client/timeout_target.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/timer_manager.h>
 
 namespace wlan {
 
@@ -25,7 +27,7 @@ class ClientInterface {
 
   virtual zx_status_t HandleEthFrame(EthFrame&&) = 0;
   virtual zx_status_t HandleWlanFrame(std::unique_ptr<Packet>) = 0;
-  virtual zx_status_t HandleTimeout() = 0;
+  virtual void HandleTimeout(zx::time now, TimeoutTarget target, TimeoutId timeout_id) = 0;
   virtual zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                                    uint32_t timeout) = 0;
   virtual zx_status_t Deauthenticate(::fuchsia::wlan::mlme::ReasonCode reason_code) = 0;

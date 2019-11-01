@@ -66,11 +66,11 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
 // gross. Refactor.
 
 Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
-                 std::unique_ptr<Timer> timer)
+                 TimerManager<TimeoutTarget>* timer_mgr)
     : off_channel_handler_(this),
       device_(device),
       chan_sched_(chan_sched),
-      timer_(std::move(timer)),
+      timer_mgr_(timer_mgr),
       seq_mgr_(NewSequenceManager()) {}
 
 zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
@@ -158,9 +158,9 @@ void Scanner::OffChannelHandlerImpl::BeginOffChannelTime() {
     if (scanner_->req_->probe_delay == 0) {
       scanner_->SendProbeRequest(scanner_->ScanChannel());
     } else {
-      scanner_->timer_->CancelTimer();
-      auto deadline = scanner_->timer_->Now() + WLAN_TU(scanner_->req_->probe_delay);
-      scanner_->timer_->SetTimer(deadline);
+      scanner_->CancelTimeout();
+      auto deadline = scanner_->timer_mgr_->Now() + WLAN_TU(scanner_->req_->probe_delay);
+      scanner_->ScheduleTimeout(deadline);
     }
   }
 }
@@ -177,7 +177,7 @@ void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(std::unique_ptr<Packe
 
 bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
                                                        OffChannelRequest* next_req) {
-  scanner_->timer_->CancelTimer();
+  scanner_->CancelTimeout();
 
   // If we were interrupted before the timeout ended, scan the channel again
   if (interrupted) {
@@ -213,7 +213,13 @@ wlan_channel_t Scanner::ScanChannel() const {
   };
 }
 
+void Scanner::ScheduleTimeout(zx::time deadline) {
+  timer_mgr_->Schedule(deadline, TimeoutTarget::kScanner, &timeout_);
+}
+
 void Scanner::HandleTimeout() { SendProbeRequest(ScanChannel()); }
+
+void Scanner::CancelTimeout() { timer_mgr_->Cancel(timeout_); }
 
 bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
   // Ignore all management frames when scanner is not running.

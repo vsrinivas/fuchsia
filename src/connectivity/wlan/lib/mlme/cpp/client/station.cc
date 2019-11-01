@@ -41,11 +41,13 @@ using common::dBm;
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
 #define STA(c) static_cast<Station*>(c)
-Station::Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mgr,
-                 ChannelScheduler* chan_sched, JoinContext* join_ctx)
+Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config,
+                 TimerManager<TimeoutTarget>* timer_mgr, ChannelScheduler* chan_sched,
+                 JoinContext* join_ctx)
     : device_(device),
+      mlme_config_(mlme_config),
       rust_client_(nullptr, client_sta_delete),
-      timer_mgr_(std::move(timer_mgr)),
+      timer_mgr_(timer_mgr),
       chan_sched_(chan_sched),
       join_ctx_(join_ctx) {
   auto rust_device = mlme_device_ops_t{
@@ -76,17 +78,16 @@ Station::Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mg
       .cookie = static_cast<void*>(this),
       .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
         TimeoutId id = {};
-        STA(cookie)->timer_mgr_.Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
+        STA(cookie)->timer_mgr_->Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
         return {._0 = id.raw()};
       },
       .cancel =
           [](void* cookie, wlan_scheduler_event_id_t id) {
-            STA(cookie)->timer_mgr_.Cancel(TimeoutId(id._0));
+            STA(cookie)->timer_mgr_->Cancel(TimeoutId(id._0));
           },
   };
   rust_client_ = NewClientStation(rust_device, rust_buffer_provider, scheduler, join_ctx_->bssid(),
                                   self_addr());
-
   Reset();
 }
 #undef STA
@@ -95,7 +96,7 @@ void Station::Reset() {
   debugfn();
 
   state_ = WlanState::kIdle;
-  timer_mgr_.CancelAll();
+  timer_mgr_->CancelAll();
 }
 
 zx_status_t Station::HandleWlanFrame(std::unique_ptr<Packet> pkt) {
@@ -217,7 +218,7 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
   debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
   zx::time deadline = deadline_after_bcn_period(timeout);
-  zx_status_t status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
+  zx_status_t status = timer_mgr_->Schedule(deadline, {}, &auth_timeout_);
   if (status != ZX_OK) {
     errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
     // This is the wrong result code, but we need to define our own codes at
@@ -230,7 +231,7 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
   status = client_sta_send_open_auth_frame(rust_client_.get());
   if (status != ZX_OK) {
     errorf("could not send open auth frame: %d\n", status);
-    timer_mgr_.Cancel(auth_timeout_);
+    timer_mgr_->Cancel(auth_timeout_);
     service::SendAuthConfirm(device_, join_ctx_->bssid(),
                              wlan_mlme::AuthenticateResultCodes::REFUSED);
     return status;
@@ -347,7 +348,7 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
   // TODO(NET-500): Add association timeout to MLME-ASSOCIATE.request just like
   // JOIN and AUTHENTICATE requests do.
   zx::time deadline = deadline_after_bcn_period(kAssocBcnCountTimeout);
-  status = timer_mgr_.Schedule(deadline, {}, &assoc_timeout_);
+  status = timer_mgr_->Schedule(deadline, {}, &assoc_timeout_);
   if (status != ZX_OK) {
     errorf("could not set auth timedout event: %d\n", status);
     // This is the wrong result code, but we need to define our own codes at
@@ -381,7 +382,7 @@ void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
   }
 
   remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
-  auto_deauth_last_accounted_ = timer_mgr_.Now();
+  auto_deauth_last_accounted_ = timer_mgr_->Now();
 
   auto bcn_frame = frame.View().NextFrame();
   fbl::Span<const uint8_t> ie_chain = bcn_frame.body_data();
@@ -400,7 +401,7 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
   }
 
   // Authentication notification received. Cancel pending timeout.
-  timer_mgr_.Cancel(auth_timeout_);
+  timer_mgr_->Cancel(auth_timeout_);
 
   auto auth_hdr = frame.body_data();
   zx_status_t status = mlme_is_valid_open_auth_resp(AsWlanSpan(auth_hdr));
@@ -452,7 +453,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
   }
 
   // Receive association response, cancel association timeout.
-  timer_mgr_.Cancel(assoc_timeout_);
+  timer_mgr_->Cancel(assoc_timeout_);
 
   auto assoc = frame.body();
   if (assoc->status_code != WLAN_STATUS_CODE_SUCCESS) {
@@ -479,8 +480,8 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
   NotifyAssocContext();
 
   // Initiate RSSI reporting to Wlanstack.
-  zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-  timer_mgr_.Schedule(deadline, {}, &signal_report_timeout_);
+  zx::time deadline = deadline_after_bcn_period(mlme_config_->signal_report_beacon_timeout);
+  timer_mgr_->Schedule(deadline, {}, &signal_report_timeout_);
   avg_rssi_dbm_.reset();
   if (frame.View().rx_info()->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
     avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
@@ -488,8 +489,8 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
   }
 
   remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
-  status = timer_mgr_.Schedule(timer_mgr_.Now() + remaining_auto_deauth_timeout_, {},
-                               &auto_deauth_timeout_);
+  status = timer_mgr_->Schedule(timer_mgr_->Now() + remaining_auto_deauth_timeout_, {},
+                                &auto_deauth_timeout_);
   if (status != ZX_OK) {
     warnf("could not set auto-deauthentication timeout event\n");
   }
@@ -534,7 +535,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
   device_->ClearAssoc(join_ctx_->bssid());
   device_->SetStatus(0);
   controlled_port_ = eapol::PortState::kBlocked;
-  timer_mgr_.Cancel(signal_report_timeout_);
+  timer_mgr_->Cancel(signal_report_timeout_);
 
   return service::SendDisassociateIndication(device_, join_ctx_->bssid(), disassoc->reason_code);
 }
@@ -639,64 +640,56 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
                                     AsWlanSpan(eth_frame.body_data()));
 }
 
-zx_status_t Station::HandleTimeout() {
+void Station::HandleTimeout(zx::time now, TimeoutTarget target, TimeoutId timeout_id) {
   debugfn();
 
-  zx_status_t status = timer_mgr_.HandleTimeout([&](auto now, auto target, auto timeout_id) {
-    if (target == TimeoutTarget::kRust) {
-      client_sta_timeout_fired(rust_client_.get(),
-                               wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
-      return;
-    }
-
-    if (timeout_id == auth_timeout_) {
-      debugjoin("auth timed out; moving back to idle state\n");
-      state_ = WlanState::kIdle;
-      service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                               wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
-    } else if (timeout_id == assoc_timeout_) {
-      debugjoin("assoc timed out; moving back to authenticated\n");
-      // TODO(tkilbourn): need a better error code for this
-      service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
-    } else if (timeout_id == signal_report_timeout_) {
-      if (state_ == WlanState::kAssociated) {
-        service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
-
-        zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-        timer_mgr_.Schedule(deadline, {}, &signal_report_timeout_);
-      }
-    } else if (timeout_id == auto_deauth_timeout_) {
-      debugclt("now: %lu\n", now.get());
-      debugclt("remaining auto-deauth timeout: %lu\n", remaining_auto_deauth_timeout_.get());
-      debugclt("auto-deauth last accounted time: %lu\n", auto_deauth_last_accounted_.get());
-
-      if (!chan_sched_->OnChannel()) {
-        ZX_DEBUG_ASSERT("auto-deauth timeout should not trigger while off channel\n");
-      } else if (remaining_auto_deauth_timeout_ > now - auto_deauth_last_accounted_) {
-        // Update the remaining auto-deauth timeout with the unaccounted time
-        remaining_auto_deauth_timeout_ -= now - auto_deauth_last_accounted_;
-        auto_deauth_last_accounted_ = now;
-        timer_mgr_.Schedule(now + remaining_auto_deauth_timeout_, {}, &auto_deauth_timeout_);
-      } else if (state_ == WlanState::kAssociated) {
-        infof("lost BSS; deauthenticating...\n");
-        state_ = WlanState::kIdle;
-        device_->ClearAssoc(join_ctx_->bssid());
-        device_->SetStatus(0);
-        controlled_port_ = eapol::PortState::kBlocked;
-
-        auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
-        service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
-        client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
-      }
-    }
-  });
-
-  if (status != ZX_OK) {
-    errorf("failed to rearm the timer after handling the timeout: %s",
-           zx_status_get_string(status));
+  if (target == TimeoutTarget::kRust) {
+    client_sta_timeout_fired(rust_client_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
+    return;
   }
 
-  return status;
+  ZX_ASSERT(target == TimeoutTarget::kDefault);
+
+  if (timeout_id == auth_timeout_) {
+    debugjoin("auth timed out; moving back to idle state\n");
+    state_ = WlanState::kIdle;
+    service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                             wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+  } else if (timeout_id == assoc_timeout_) {
+    debugjoin("assoc timed out; moving back to authenticated\n");
+    // TODO(tkilbourn): need a better error code for this
+    service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+  } else if (timeout_id == signal_report_timeout_) {
+    if (state_ == WlanState::kAssociated) {
+      service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
+
+      zx::time deadline = deadline_after_bcn_period(mlme_config_->signal_report_beacon_timeout);
+      timer_mgr_->Schedule(deadline, {}, &signal_report_timeout_);
+    }
+  } else if (timeout_id == auto_deauth_timeout_) {
+    debugclt("now: %lu\n", now.get());
+    debugclt("remaining auto-deauth timeout: %lu\n", remaining_auto_deauth_timeout_.get());
+    debugclt("auto-deauth last accounted time: %lu\n", auto_deauth_last_accounted_.get());
+
+    if (!chan_sched_->OnChannel()) {
+      ZX_DEBUG_ASSERT("auto-deauth timeout should not trigger while off channel\n");
+    } else if (remaining_auto_deauth_timeout_ > now - auto_deauth_last_accounted_) {
+      // Update the remaining auto-deauth timeout with the unaccounted time
+      remaining_auto_deauth_timeout_ -= now - auto_deauth_last_accounted_;
+      auto_deauth_last_accounted_ = now;
+      timer_mgr_->Schedule(now + remaining_auto_deauth_timeout_, {}, &auto_deauth_timeout_);
+    } else if (state_ == WlanState::kAssociated) {
+      infof("lost BSS; deauthenticating...\n");
+      state_ = WlanState::kIdle;
+      device_->ClearAssoc(join_ctx_->bssid());
+      device_->SetStatus(0);
+      controlled_port_ = eapol::PortState::kBlocked;
+
+      auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
+      service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
+      client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
+    }
+  }
 }
 
 zx_status_t Station::SendAddBaRequestFrame() {
@@ -816,8 +809,8 @@ void Station::PreSwitchOffChannel() {
   if (state_ == WlanState::kAssociated) {
     SetPowerManagementMode(true);
 
-    timer_mgr_.Cancel(auto_deauth_timeout_);
-    zx::duration unaccounted_time = timer_mgr_.Now() - auto_deauth_last_accounted_;
+    timer_mgr_->Cancel(auto_deauth_timeout_);
+    zx::duration unaccounted_time = timer_mgr_->Now() - auto_deauth_last_accounted_;
     if (remaining_auto_deauth_timeout_ > unaccounted_time) {
       remaining_auto_deauth_timeout_ -= unaccounted_time;
     } else {
@@ -831,20 +824,22 @@ void Station::BackToMainChannel() {
   if (state_ == WlanState::kAssociated) {
     SetPowerManagementMode(false);
 
-    zx::time now = timer_mgr_.Now();
+    zx::time now = timer_mgr_->Now();
     auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
-    timer_mgr_.Schedule(deadline, {}, &auto_deauth_timeout_);
+    timer_mgr_->Schedule(deadline, {}, &auto_deauth_timeout_);
     auto_deauth_last_accounted_ = now;
   }
 }
 
 zx_status_t Station::SendCtrlFrame(std::unique_ptr<Packet> packet) {
-  chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
+  chan_sched_->EnsureOnChannel(timer_mgr_->Now() +
+                               zx::duration(mlme_config_->ensure_on_channel_time));
   return SendWlan(std::move(packet));
 }
 
 zx_status_t Station::SendMgmtFrame(std::unique_ptr<Packet> packet) {
-  chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
+  chan_sched_->EnsureOnChannel(timer_mgr_->Now() +
+                               zx::duration(mlme_config_->ensure_on_channel_time));
   return SendWlan(std::move(packet));
 }
 
@@ -912,7 +907,7 @@ zx_status_t Station::SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) {
 }
 
 zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
-  return timer_mgr_.Now() + WLAN_TU(join_ctx_->bss()->beacon_period * bcn_count);
+  return timer_mgr_->Now() + WLAN_TU(join_ctx_->bss()->beacon_period * bcn_count);
 }
 
 zx::duration Station::FullAutoDeauthDuration() {
@@ -1051,7 +1046,7 @@ uint8_t Station::GetTid(const EthFrame& frame) { return GetTid(); }
 zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& frame) {
   ZX_DEBUG_ASSERT(join_ctx_ != nullptr);
   assoc_ctx_ = AssocContext{};
-  assoc_ctx_.ts_start = timer_mgr_.Now();
+  assoc_ctx_.ts_start = timer_mgr_->Now();
   assoc_ctx_.bssid = join_ctx_->bssid();
   assoc_ctx_.aid = frame.body()->aid & kAidMask;
   assoc_ctx_.listen_interval = join_ctx_->listen_interval();
@@ -1199,7 +1194,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
   auto ctx = IntersectAssocCtx(bss.value(), client);
 
   // Add info that can't be derived by the intersection
-  ctx.ts_start = timer_mgr_.Now();
+  ctx.ts_start = timer_mgr_->Now();
   ctx.bssid = bss->bssid;
   ctx.aid = bss->aid;
   ctx.phy = ctx.DerivePhy();

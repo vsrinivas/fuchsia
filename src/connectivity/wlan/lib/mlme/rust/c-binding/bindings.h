@@ -131,6 +131,15 @@ typedef struct {
   void (*cancel)(void *cookie, wlan_scheduler_event_id_t id);
 } wlan_scheduler_ops_t;
 
+/**
+ * ClientConfig affects time duration used for different timeouts.
+ * Originally added to more easily control behavior in tests.
+ */
+typedef struct {
+  uintptr_t signal_report_beacon_timeout;
+  zx_duration_t ensure_on_channel_time;
+} wlan_client_mlme_config_t;
+
 extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
 
 extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
@@ -188,4 +197,4 @@ extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr
 extern "C" uint32_t mlme_sequence_manager_next_sns2(mlme_sequence_manager_t *mgr,
                                                     const uint8_t (*sta_addr)[6], uint16_t tid);
 
-#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_
+#endif /* SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_ */

@@ -36,13 +36,9 @@ class Packet;
 
 class Station : public ClientInterface {
  public:
-  enum TimeoutTarget : uint8_t {
-    kDefault = 0,
-    kRust = 1,
-  };
-
-  Station(DeviceInterface* device, TimerManager<TimeoutTarget>&& timer_mgr,
-          ChannelScheduler* chan_sched, JoinContext* join_ctx);
+  Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config,
+          TimerManager<TimeoutTarget>* timer_mgr, ChannelScheduler* chan_sched,
+          JoinContext* join_ctx);
   ~Station() = default;
 
   enum class WlanState {
@@ -55,7 +51,7 @@ class Station : public ClientInterface {
 
   zx_status_t HandleEthFrame(EthFrame&&) override;
   zx_status_t HandleWlanFrame(std::unique_ptr<Packet>) override;
-  zx_status_t HandleTimeout() override;
+  void HandleTimeout(zx::time now, TimeoutTarget target, TimeoutId timeout_id) override;
   zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                            uint32_t timeout) override;
   zx_status_t Deauthenticate(::fuchsia::wlan::mlme::ReasonCode reason_code) override;
@@ -73,7 +69,6 @@ class Station : public ClientInterface {
 
  private:
   static constexpr size_t kAssocBcnCountTimeout = 20;
-  static constexpr size_t kSignalReportBcnCountTimeout = 10;
   static constexpr size_t kAutoDeauthBcnCountTimeout = 100;
   static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
   // Maximum number of packets buffered while station is in power saving mode.
@@ -128,8 +123,9 @@ class Station : public ClientInterface {
   zx_status_t NotifyAssocContext();
 
   DeviceInterface* device_;
+  wlan_client_mlme_config_t* mlme_config_;
   ClientStation rust_client_;
-  TimerManager<TimeoutTarget> timer_mgr_;
+  TimerManager<TimeoutTarget>* timer_mgr_;
   ChannelScheduler* chan_sched_;
   JoinContext* join_ctx_;
 

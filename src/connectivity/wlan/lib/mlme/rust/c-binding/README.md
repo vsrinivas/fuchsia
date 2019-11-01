@@ -5,7 +5,7 @@
 We are using `cbindgen 0.9.1` to auto generate our C bindings.
 Install the tool via:
 ```
-cargo install --force cbindgen
+cargo install --version 0.9.1 --force cbindgen
 ```
 
 ## Generate Cargo.toml file

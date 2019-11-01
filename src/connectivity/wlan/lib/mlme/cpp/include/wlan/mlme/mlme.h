@@ -21,12 +21,10 @@ enum class ObjectSubtype : uint8_t {
 };
 
 enum class ObjectTarget : uint8_t {
-  kChannelScheduler = 0,
-  kStation = 1,
+  kClientMlme = 0,
   kBss = 2,
   kMinstrel = 3,
   kHwmp = 4,
-  kScanner = 5,
 };
 
 // An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits
