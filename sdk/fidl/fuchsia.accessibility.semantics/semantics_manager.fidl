@@ -11,13 +11,16 @@ using fuchsia.ui.views;
 const uint64 MAX_TREE_DEPTH = 256;
 
 /// Maximum number of children for a node in the semantic tree.
-const uint64 MAX_FAN_OUT = 256;
+const uint64 MAX_FAN_OUT = 20000;
 
 /// Maximum number of semantic nodes that may be sent in a single update.
 const uint64 MAX_NODES_PER_UPDATE = 2048;
 
 /// Maximum size of a label string, in bytes.
 const uint64 MAX_LABEL_SIZE = 16384;
+
+/// Maximum size of a value string, in bytes.
+const uint64 MAX_VALUE_SIZE = 16384;
 
 /// An interface to manage connections with views for the purposes of gathering semantic information
 /// about their current UI state.

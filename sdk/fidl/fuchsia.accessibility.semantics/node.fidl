@@ -8,14 +8,28 @@ using fuchsia.ui.gfx;
 
 /// Represents actions that can be applied to Nodes.
 enum Action {
-    /// The default action associated with the role of an element.
+    /// The default action associated with the element.
     DEFAULT = 1;
+    /// The secondary action associated with the element. This may correspond to a long press (touchscreens) or right click (mouse).
+    SECONDARY = 2;
+    /// Set (input/non-accessibility) focus on this element.
+    SET_FOCUS = 3;
+    /// Set the element's value.
+    SET_VALUE = 4;
 };
 
 /// Represents a role of an element on a UI.
 enum Role {
     /// Role used to represent elements which role is not currently supported.
     UNKNOWN = 1;
+    /// Something on screen that can be clicked/activated, that has a single function.
+    BUTTON = 2;
+    /// Header text, e.g. something tagged <h1> in HTML.
+    HEADER = 3;
+    /// An image or graphic.
+    IMAGE = 4;
+    /// A field containing text that is not a header.
+    TEXT_FIELD = 5;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states, attributes do not
@@ -23,23 +37,51 @@ enum Role {
 /// Example: A button with a label attribute 'ok' should never change to 'cancel', as this is not
 /// the same element.
 table Attributes {
-    /// The label for an element. If longer than MAX_LABEL_SIZE the client is responsible for
-    /// truncating the label.
+    /// The primary label for an element. If longer than MAX_LABEL_SIZE the client is responsible
+    /// for truncating the label.
     1: string:MAX_LABEL_SIZE label;
+
+    /// The secondary label for an element. If longer than MAX_LABEL_SIZE the client is responsible
+    /// for truncating the label.
+    2: string:MAX_LABEL_SIZE secondary_label;
+
+    /// A description of what the secondary action on a node (equivalent to long press or right click) should do.
+    3: string:MAX_LABEL_SIZE secondary_action_description;
+};
+
+/// Represents the state of a UI checkbox.
+enum CheckedState {
+    /// Used when no data is entered or the element is not a check box.
+    NONE = 1;
+    /// True
+    TRUE = 2;
+    /// False
+    FALSE = 3;
+    /// Indeterminate state
+    MIXED = 4;
 };
 
 /// A state is a dynamic property of an element that may change in response to
 /// user action or automated processes. Thus, they are different from attributes
 /// in an important point, which is frequency of change.
-/// Example: a checkbox can be checked / unchecked, and this state can be
-/// altered via user input.
 table States {
-    /// Whether the element is checked.
+    /// DEPRECATED
     1: bool checked;
+
+    /// State of a checkbox.
+    2: CheckedState checked_state;
+
+    /// Whether the element is currently selected.
+    3: bool selected;
+
+    /// Whether the element is currently hidden or marked invisible by the framework.
+    4: bool hidden;
+
+    /// The user-entered value of the element, if applicable. If longer than MAX_VALUE_SIZE the
+    /// client is responsible for truncating.
+    5: string:MAX_VALUE_SIZE value;
 };
 
-/// Node: data structure to represent semantic information about a UI element.
-///
 /// The Node represents a semantic element on an interface. This may
 /// be a button, a text field, a checkbox or any element that has a relevant
 /// semantic meaning so that assistive technology can understand the current UI.
@@ -69,6 +111,6 @@ table Node {
     /// Local bounding box of this element.
     7: fuchsia.ui.gfx.BoundingBox location;
 
-    /// Transform from parent coordinate space to local space.
+    /// Transform from parent coordinate space to local space. 4x4 for compatibility with scenic.
     8: fuchsia.ui.gfx.mat4 transform;
 };
