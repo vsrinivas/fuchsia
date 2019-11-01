@@ -12,12 +12,15 @@ use {
     },
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
+    fuchsia_inspect::reader::NodeHierarchy,
     fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{future, FutureExt, TryFutureExt, TryStreamExt},
+    inspect_formatter::{self, HierarchyData, HierarchyFormatter, JsonFormatter},
     io_util,
     regex::{Regex, RegexSet},
+    std::convert::TryFrom,
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
 };
@@ -137,6 +140,29 @@ impl DataCollector for InspectDataCollector {
     }
 }
 
+/// InspectDataContainer is the container that holds
+/// all information needed to interact with the inspect
+/// hierarchies under a component's out directory.
+pub struct InspectDataContainer {
+    /// Path to the out directory that this
+    /// data packet is configured for.
+    component_out_dir_path: PathBuf,
+    /// DirectoryProxy for the out directory that this
+    /// data packet is configured for.
+    component_out_proxy: DirectoryProxy,
+    /// RegexSet encoding all the node path selectors for
+    /// inspect hierarchies under this component's out directory.
+    component_node_selector: RegexSet,
+    /// Vector of Regexes corresponding to the node path selectors
+    /// in the regex set.
+    /// Note: Order of Regexes matters here, this vector must be aligned
+    /// with the vector used to construct component_node_selector since
+    /// conponent_node_selector.matches() returns a vector of ints used to
+    /// find all the relevant property selectors corresponding to the matching
+    /// node selectors.
+    node_property_selectors: Vec<Regex>,
+}
+
 /// InspectDataRepository manages storage of all state needed in order
 /// for the inspect reader to retrieve inspect data when a read is requested.
 pub struct InspectDataRepository {
@@ -217,16 +243,22 @@ impl InspectDataRepository {
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
     /// which contain data that should be selected from.
-    pub fn fetch_data(&self) -> Vec<DirectoryProxy> {
+    pub fn fetch_data(&self) -> Vec<InspectDataContainer> {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, (_, y, _, _))| {
-                match io_util::clone_directory(&y, CLONE_FLAG_SAME_RIGHTS) {
-                    Ok(directory) => Some(directory),
-                    Err(_) => None,
-                }
-            })
+            .filter_map(
+                |(_, (component_path, dir_proxy, node_path_regex_set, property_regex_vec))| {
+                    io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).ok().map(
+                        |directory| InspectDataContainer {
+                            component_out_dir_path: component_path.clone(),
+                            component_out_proxy: directory,
+                            component_node_selector: node_path_regex_set.clone(),
+                            node_property_selectors: property_regex_vec.clone(),
+                        },
+                    )
+                },
+            )
             .collect();
     }
 }
@@ -279,6 +311,46 @@ impl ReaderServer {
         self.active_selectors.lock().unwrap().clear();
     }
 
+    /// Parses an inspect VMO into a node hierarchy, and iterates over the
+    /// hierarchy creating a copy with selector filters applied.
+    fn filter_inspect_vmo(
+        inspect_vmo: &zx::Vmo,
+        path_selectors: &RegexSet,
+        property_selectors: &Vec<Regex>,
+    ) -> Result<NodeHierarchy, Error> {
+        let root_node = NodeHierarchy::try_from(inspect_vmo)?;
+        let mut new_root = NodeHierarchy::new_root();
+        for (node_path, property) in root_node.property_iter() {
+            let mut formatted_node_path =
+                node_path.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/");
+            // We must append a "/" because the absolute monikers end in slash and
+            // hierarchy node paths don't, but we want to reuse the regex logic.
+            formatted_node_path.push('/');
+            let matching_indices: Vec<usize> =
+                path_selectors.matches(&formatted_node_path).into_iter().collect();
+            let mut property_regex_strings: Vec<&str> = Vec::new();
+
+            // TODO(4601): We only need to recompile the property selector regex
+            // if our iteration brings us to a new node.
+            for property_index in matching_indices {
+                let property_selector: &Regex = &property_selectors[property_index];
+                property_regex_strings.push(property_selector.as_str());
+            }
+
+            let property_regex_set = RegexSet::new(property_regex_strings)?;
+
+            if property_regex_set.is_match(property.name()) {
+                // TODO(4601): We can keep track of the prefix string identifying
+                // the "curr_node" and only insert from root if our iteration has
+                // brought us to a new node higher up the hierarchy. Right now, we
+                // insert from root for every new property.
+                new_root.add(node_path, property.clone());
+            }
+        }
+
+        Ok(new_root)
+    }
+
     /// Reads all relevant inspect data based off of the active_selectors
     /// and data exposed to the service, and formats it into a single text dump
     /// with format controlled by `text_settings`.
@@ -291,54 +363,81 @@ impl ReaderServer {
     ) -> Result<(fidl_fuchsia_mem::Buffer), Error> {
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into the futures.
-        let inspect_data_directories = {
+        let inspect_repo_data = {
             let locked_inspect_repo = self.inspect_repo.lock().unwrap();
             locked_inspect_repo.fetch_data()
         };
 
-        let mut populated_inspect_collectors: Vec<Result<InspectDataCollector, Error>> =
-            join_all(inspect_data_directories.into_iter().map(move |dir_proxy| {
+        let mut pumped_data_tuple_results =
+            join_all(inspect_repo_data.into_iter().map(move |inspect_data_packet| {
                 async move {
                     let mut collector = InspectDataCollector::new();
-                    match collector.populate_data_map(&dir_proxy).await {
-                        Ok(_) => return Ok(collector),
+                    match collector
+                        .populate_data_map(&inspect_data_packet.component_out_proxy)
+                        .await
+                    {
+                        Ok(_) => {
+                            return Ok((
+                                inspect_data_packet.component_out_dir_path,
+                                collector,
+                                inspect_data_packet.component_node_selector,
+                                inspect_data_packet.node_property_selectors,
+                            ))
+                        }
                         Err(e) => return Err(e),
                     };
                 }
             }))
             .await;
 
-        let aggregated_vmo_string = populated_inspect_collectors.drain(0..).fold(
-            String::new(),
-            |mut accumulator, populated_collector| {
-                match populated_collector {
-                    Ok(collector) => {
-                        let collector: Box<dyn DataCollector> = Box::new(collector);
+        // We drain the vector of pumped inspect data packets, consuming each inspect vmo
+        // and filtering it using the provided selector regular expressions. Each filtered
+        // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
+        // into a JSON string and returned.
+        let hierarchy_datas =
+            pumped_data_tuple_results.drain(0..).fold(Vec::new(), |mut acc, pumped_data_tuple| {
+                match pumped_data_tuple {
+                    Ok((path, populated_collector, selector_set, property_selectors)) => {
+                        let collector: Box<dyn DataCollector> = Box::new(populated_collector);
                         collector.take_data().and_then(|data_map| {
-                            data_map.into_iter().for_each(|(inspect_vmo_name, data)| match data {
+                            data_map.into_iter().for_each(|(_, data)| match data {
                                 Data::Vmo(vmo) => {
-                                    let new_inspect_string = format!(
-                                        "\n{name}:\n{vmo:#?}",
-                                        name = inspect_vmo_name,
-                                        vmo = vmo
-                                    );
-                                    accumulator.push_str(&new_inspect_string);
+                                    match ReaderServer::filter_inspect_vmo(
+                                        &vmo,
+                                        &selector_set,
+                                        &property_selectors,
+                                    ) {
+                                        Ok(filtered_hierarchy) => {
+                                            acc.push(HierarchyData {
+                                                hierarchy: filtered_hierarchy,
+                                                file_path: path
+                                                    .to_str()
+                                                    .expect("Can't have an invalid path here.")
+                                                    .to_string(),
+                                                fields: vec![],
+                                            });
+                                        }
+                                        // TODO(4601): Failing to parse a node hierarchy
+                                        // might be worth more than a silent failure.
+                                        Err(_) => {}
+                                    }
                                 }
                                 Data::Empty => {}
                             });
                             Some(())
                         });
-                        accumulator
+                        acc
                     }
 
                     // TODO(36761): What does it mean for IO to fail on a
                     // subset of directory data collections?
-                    Err(_) => accumulator,
+                    Err(_) => acc,
                 }
-            },
-        );
+            });
 
-        let vmo_size: u64 = aggregated_vmo_string.len() as u64;
+        let formatted_json_string = JsonFormatter::format(hierarchy_datas)?;
+
+        let vmo_size: u64 = formatted_json_string.len() as u64;
 
         // TODO(lukenicholson): Inspect dumps may be large enough that they should be split
         // over multiple VMOs and streamed to the client
@@ -346,7 +445,7 @@ impl ReaderServer {
             .map_err(|s| err_msg(format!("error creating buffer, zx status: {}", s)))?;
 
         dump_vmo
-            .write(aggregated_vmo_string.as_bytes(), 0)
+            .write(formatted_json_string.as_bytes(), 0)
             .map_err(|s| err_msg(format!("error writing buffer, zx status: {}", s)))?;
 
         let client_vmo = dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
@@ -427,8 +526,8 @@ mod tests {
     use super::*;
     use {
         crate::collection::DataCollector, fdio, fuchsia_async as fasync,
-        fuchsia_component::server::ServiceFs, fuchsia_zircon as zx, fuchsia_zircon::Peered,
-        futures::StreamExt,
+        fuchsia_component::server::ServiceFs, fuchsia_inspect::Inspector, fuchsia_zircon as zx,
+        fuchsia_zircon::Peered, futures::StreamExt,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -505,8 +604,22 @@ mod tests {
         // One is an inspect file, and one is not.
         let mut fs = ServiceFs::new();
         let vmo = zx::Vmo::create(4096).unwrap();
-        vmo.write(b"test", 0).unwrap();
-        fs.dir("objects").add_vmo_file_at("root.inspect", vmo, 0, 4096);
+        let inspector = Inspector::new();
+        let root = inspector.root();
+
+        let child_1 = root.create_child("child_1");
+        let _tmp1 = child_1.create_int("some-int", 2);
+
+        let child_1_1 = child_1.create_child("child_1_1");
+        let _tmp2 = child_1_1.create_int("some-int", 3);
+        let _tmp3 = child_1_1.create_int("not-wanted-int", 4);
+
+        let child_2 = root.create_child("child_2");
+        let _tmp2 = child_2.create_int("some-int", 2);
+
+        let data = inspector.copy_vmo_data().unwrap();
+        vmo.write(&data, 0).unwrap();
+        fs.dir("objects").add_vmo_file_at("test.inspect", vmo, 0, 4096);
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
@@ -528,8 +641,13 @@ mod tests {
             let mut executor = fasync::Executor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let glob_selector = selectors::parse_selector(r#"**:**:*"#).unwrap();
-                let mut inspect_repo = InspectDataRepository::new(vec![Arc::new(glob_selector)]);
+                let child_1_1_selector =
+                    selectors::parse_selector(r#"**:root/child_1/**:some-int"#).unwrap();
+                let child_2_selector = selectors::parse_selector(r#"**:root/child_2:*"#).unwrap();
+                let mut inspect_repo = InspectDataRepository::new(vec![
+                    Arc::new(child_1_1_selector),
+                    Arc::new(child_2_selector),
+                ]);
 
                 let out_dir_proxy =
                     InspectDataCollector::find_directory_proxy(&path).await.unwrap();
@@ -539,7 +657,7 @@ mod tests {
                 let absolute_moniker = vec!["a".to_string(), "b".to_string()];
 
                 inspect_repo
-                    .add("root.inspect".to_string(), absolute_moniker, path, out_dir_proxy)
+                    .add("test.inspect".to_string(), absolute_moniker, path, out_dir_proxy)
                     .unwrap();
 
                 let reader_server = ReaderServer::new(Arc::new(Mutex::new(inspect_repo)));
@@ -552,22 +670,25 @@ mod tests {
                 let mut buf = vec![0; inspect_data_dump.size as usize];
                 inspect_data_dump.vmo.read(&mut buf, 0).expect("reading vmo");
 
-                // Until we have an API for dumping inspect vmos in formatted ways, we rely on
-                // the vmo debug logic, which currently includes the handle number.
-                // So the full dump would look like:
-                // "root.inspect:
-                //  Vmo(
-                //      Handle(
-                //             3930929735,
-                //            ),
-                //     )"
-                // Which we cant match literally on since handle numbers change between runs.
-                // So we match on the start and end.
-                assert!(std::str::from_utf8(&buf)
-                    .unwrap()
-                    .starts_with("\nroot.inspect:\nVmo(\n    Handle(\n        "));
+                let expected_result = "[
+    {
+        \"contents\": {
+            \"root\": {
+                \"child_1\": {
+                    \"child_1_1\": {
+                        \"some-int\": 3
+                    }
+                },
+                \"child_2\": {
+                    \"some-int\": 2
+                }
+            }
+        },
+        \"path\": \"/test-bindings2/out\"
+    }
+]";
 
-                assert!(std::str::from_utf8(&buf).unwrap().ends_with(",\n    ),\n)"));
+                assert_eq!(std::str::from_utf8(&buf).unwrap(), expected_result);
 
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });

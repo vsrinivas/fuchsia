@@ -47,8 +47,12 @@ pub struct NodeHierarchy {
 }
 
 impl NodeHierarchy {
-    fn new() -> Self {
-        NodeHierarchy { name: "".to_string(), properties: vec![], children: vec![] }
+    pub fn new_root() -> Self {
+        NodeHierarchy { name: "root".to_string(), properties: vec![], children: vec![] }
+    }
+
+    fn new(name: impl Into<String>) -> Self {
+        NodeHierarchy { name: name.into(), properties: vec![], children: vec![] }
     }
 
     /// Sorts the properties and children of the node hierarchy by name.
@@ -66,6 +70,65 @@ impl NodeHierarchy {
         for child in self.children.iter_mut() {
             child.sort();
         }
+    }
+
+    /// Either returns an existing child of `self` with name `name` or creates
+    /// a new child with name `name`.
+    pub fn get_or_add_child_mut(
+        &mut self,
+        name: impl Into<String> + Copy,
+    ) -> Option<&mut NodeHierarchy> {
+        // We have to use indices to iterate here because the borrow checker cannot
+        // deduce that there are no borrowed values in the else-branch.
+        // TODO(4601): We could make this cleaner by changing the NodeHierarchy
+        // children to hashmaps.
+        match (0..self.children.len()).find(|&i| self.children[i].name == name.into()) {
+            Some(matching_index) => Some(&mut self.children[matching_index]),
+            None => {
+                self.children.push(NodeHierarchy::new(name.into()));
+                Some(
+                    self.children
+                        .last_mut()
+                        .expect("We just added an entry so we cannot get None here."),
+                )
+            }
+        }
+    }
+
+    /// Inserts a new Property into a Node whose location in a hierarchy
+    /// rooted at `self` is defined by node_path.
+    ///
+    /// Requires: a non-empty node_path vector.
+    /// Requires: that the first entry in node_path is the name of the
+    /// `self` node on which the method is called.
+    ///
+    /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
+    ///       the property is added to the first node found.
+    pub fn add(&mut self, node_path: Vec<impl Into<String> + Copy>, property: Property) {
+        assert!(!node_path.is_empty(), "Property insertion requires a valid node-path.");
+        let mut curr_node_option: Option<&mut NodeHierarchy> = None;
+
+        for node_path_entry in node_path {
+            match curr_node_option {
+                Some(curr_node) => {
+                    curr_node_option = curr_node.get_or_add_child_mut(node_path_entry);
+                }
+                None => {
+                    // This is the first node_path_entry we've seen, it is an invariant
+                    // of this inserter that we call add() at the root node of the
+                    // provided node_path.
+                    assert_eq!(self.name, node_path_entry.into());
+                    curr_node_option = Some(self);
+                }
+            }
+        }
+
+        curr_node_option
+            .expect(
+                "curr_node cannot be none, since a valid node-path is a requirement of insertion.",
+            )
+            .properties
+            .push(property);
     }
 
     // Provides an iterator over the node hierarchy returning properties in pre-order.
@@ -394,7 +457,7 @@ struct ScannedNode {
 
 impl ScannedNode {
     fn new() -> Self {
-        ScannedNode { hierarchy: NodeHierarchy::new(), child_nodes_count: 0, parent_index: 0 }
+        ScannedNode { hierarchy: NodeHierarchy::new_root(), child_nodes_count: 0, parent_index: 0 }
     }
 
     /// Sets the name and parent index of the node.
@@ -590,6 +653,7 @@ mod tests {
     use {
         super::*,
         crate::{
+            assert_inspect_tree,
             format::{bitfields::Payload, constants},
             ArrayProperty, ExponentialHistogramParams, HistogramProperty, LinearHistogramParams,
         },
@@ -904,6 +968,52 @@ mod tests {
         assert_eq!(buckets[1], ArrayBucket { floor: 1.0, upper: 3.0, count: 9.0 });
         assert_eq!(buckets[2], ArrayBucket { floor: 3.0, upper: 11.0, count: 11.0 });
         assert_eq!(buckets[3], ArrayBucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 });
+    }
+
+    #[test]
+    fn add_to_hierarchy() {
+        let mut hierarchy = NodeHierarchy::new_root();
+        let prop_1 = Property::String("x".to_string(), "foo".to_string());
+        let path_1 = vec!["root", "one"];
+        let prop_2 = Property::Uint("c".to_string(), 3);
+        let path_2 = vec!["root", "two"];
+        let prop_2_prime = Property::Int("z".to_string(), -4);
+        hierarchy.add(path_1, prop_1);
+        hierarchy.add(path_2.clone(), prop_2);
+        hierarchy.add(path_2, prop_2_prime);
+
+        assert_inspect_tree!(hierarchy,
+                             root: {
+                                 one: {
+                                     x: "foo",
+                                 },
+                                 two: {
+                                     c: 3u64,
+                                     z: -4i64,
+                                 }
+                             }
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    // Empty paths are meaningless on insertion and break the method invariant.
+    fn no_empty_paths_allowed() {
+        let mut hierarchy = NodeHierarchy::new_root();
+        let prop_1 = Property::String("x".to_string(), "foo".to_string());
+        let path_1: Vec<&String> = vec![];
+        hierarchy.add(path_1, prop_1);
+    }
+
+    #[test]
+    #[should_panic]
+    // Paths provided to add must begin at the node we're calling
+    // add() on.
+    fn path_must_start_at_self() {
+        let mut hierarchy = NodeHierarchy::new_root();
+        let prop_1 = Property::String("x".to_string(), "foo".to_string());
+        let path_1 = vec!["not_root", "a"];
+        hierarchy.add(path_1, prop_1);
     }
 
     #[test]
