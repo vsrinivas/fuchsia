@@ -218,12 +218,12 @@ void LaunchComponent(const Command& cmd) {
 
   auto launch_cb = [target = cmd.target()->GetWeakPtr()](const Err& err,
                                                          debug_ipc::LaunchReply reply) {
-    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
-        << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
     if (err.has_error()) {
       Console::get()->Output(err);
       return;
     }
+    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
+        << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
 
     if (reply.status != debug_ipc::kZxOk) {
       // TODO(donosoc): This should interpret the component termination reason values.
