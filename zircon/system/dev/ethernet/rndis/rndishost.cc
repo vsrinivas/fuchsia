@@ -430,6 +430,38 @@ zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
   return ZX_OK;
 }
 
+zx_status_t RndisHost::SetDeviceOid(uint32_t oid, const void* data, size_t data_length) {
+  rndis_set set{};
+  set.msg_type = RNDIS_SET_MSG;
+  set.msg_length = sizeof(set) - sizeof(set.info_buffer);
+  set.oid = oid;
+  if (data_length > 0) {
+    if (data_length > sizeof(set.info_buffer)) {
+      zxlogf(ERROR, "rndishost attempted to set OID %u with size %zu bytes (maximum is %zu)\n", oid,
+             data_length, sizeof(set.info_buffer));
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    set.msg_length += static_cast<uint32_t>(sizeof(set.info_buffer));
+    set.info_buffer_length = sizeof(set.info_buffer);
+    set.info_buffer_offset = offsetof(rndis_set, info_buffer) - offsetof(rndis_set, request_id);
+    memcpy(set.info_buffer, data, data_length);
+  }
+
+  zx_status_t status = Command(&set);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "rndishost issuing set command failed: %d\n", status);
+    return status;
+  }
+
+  rndis_set_complete* set_cmplt = reinterpret_cast<rndis_set_complete*>(control_receive_buffer_);
+  if (!command_succeeded(set_cmplt, RNDIS_SET_CMPLT)) {
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t RndisHost::StartThread() {
   zx_status_t status = InitializeDevice();
   if (status != ZX_OK) {
@@ -445,24 +477,13 @@ zx_status_t RndisHost::StartThread() {
          mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
 
   {
-    rndis_set set{};
-    set.msg_type = RNDIS_SET_MSG;
-    set.msg_length = sizeof(set);
-    set.oid = OID_GEN_CURRENT_PACKET_FILTER;
-    set.info_buffer_length = RNDIS_SET_INFO_BUFFER_LENGTH;
-    set.info_buffer_offset = offsetof(rndis_set, info_buffer) - offsetof(rndis_set, oid);
-    uint8_t* filter = set.info_buffer;
-    *filter = RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST |
-              RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_PROMISCUOUS;
-    status = Command(&set);
-    if (status < 0) {
-      zxlogf(ERROR, "rndishost could not set the packet filter.\n");
-      goto fail;
-    }
-
-    if (!command_succeeded(control_receive_buffer_, RNDIS_SET_CMPLT, sizeof(rndis_set_complete))) {
-      zxlogf(ERROR, "rndishost set filter failed.\n");
-      status = ZX_ERR_IO;
+    // The device's packet filter is initialized to 0, which blocks all traffic. Enable network
+    // traffic.
+    const uint32_t filter = RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST |
+                            RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_PROMISCUOUS;
+    status = SetDeviceOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "rndishost failed to set packet filter\n");
       goto fail;
     }
   }

@@ -144,10 +144,6 @@ typedef struct {
   uint32_t msg_length;
   uint32_t request_id;
   uint32_t status;
-  // TODO: Figure out why these fields aren't send in the reply. Maybe the
-  // Pixel I'm testing with implements the spec badly?
-  // uint32_t info_buffer_length;
-  // uint32_t info_buffer_offset;
 } __PACKED rndis_set_complete;
 
 typedef struct {
@@ -209,6 +205,7 @@ class RndisHost : public RndisHostType,
 
   zx_status_t InitializeDevice();
   zx_status_t QueryDevice(uint32_t oid, void* info_buffer_out, size_t expected_info_buffer_length);
+  zx_status_t SetDeviceOid(uint32_t oid, const void* data, size_t data_length);
 
   usb::UsbDevice usb_;
 
