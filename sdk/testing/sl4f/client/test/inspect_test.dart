@@ -39,7 +39,9 @@ void main(List<String> args) {
         findCommandStdOut: 'one\n$componentName\nthree\n',
         inspectCommandContentsRoot: [
           {
-            'contents': {'root': {'root': contentsRoot}}
+            'contents': {
+              'root': {'root': contentsRoot}
+            }
           },
         ],
         expectedInspectSuffix: componentName));
@@ -75,52 +77,6 @@ void main(List<String> args) {
       // Pass through for expected exception.
     }
   });
-
-  _testRetry('inspectComponentRoot retries on first find failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      findCommandExitCode: [-1, 0]);
-
-  _testRetry('inspectComponentRoot retries on second find failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      findCommandExitCode: [-1, -1, 0]);
-
-  _testRetry('inspectComponentRoot retries on third find failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      findCommandExitCode: [-1, -1, -1, 0]);
-
-  _testRetry('inspectComponentRoot fails on fourth find failure',
-      shouldFailDueToFind: true,
-      shouldFailDueToInspect: false,
-      findCommandExitCode: [-1, -1, -1, -1]);
-
-  _testRetry('inspectComponentRoot retries on first inspect failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      inspectCommandExitCode: [-1, 0]);
-
-  _testRetry('inspectComponentRoot retries on second inspect failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      inspectCommandExitCode: [-1, -1, 0]);
-
-  _testRetry('inspectComponentRoot retries on third inspect failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      inspectCommandExitCode: [-1, -1, -1, 0]);
-
-  _testRetry('inspectComponentRoot fails on fourth inspect failure',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: true,
-      inspectCommandExitCode: [-1, -1, -1, -1]);
-
-  _testRetry('inspectComponentRoot should succeed despite multiple failures',
-      shouldFailDueToFind: false,
-      shouldFailDueToInspect: false,
-      findCommandExitCode: [-1, -1, -1, 0],
-      inspectCommandExitCode: [-1, -1, -1, 0]);
 
   group(FreezeDetector, () {
     test('no freeze', () async {
@@ -177,50 +133,6 @@ void main(List<String> args) {
         expect(freezeDetector.isFrozen(), isFalse);
       });
     });
-  });
-}
-
-void _testRetry(
-  String name, {
-  bool shouldFailDueToFind,
-  bool shouldFailDueToInspect,
-  List<int> findCommandExitCode = const <int>[0],
-  List<int> inspectCommandExitCode = const <int>[0],
-}) {
-  test(name, () async {
-    const componentName = 'foo';
-    const contentsRoot = {'faz': 'bear'};
-
-    final fakeSsh = FakeSsh(
-        findCommandStdOut: 'one\n$componentName\n',
-        inspectCommandContentsRoot: [
-          {
-            'contents': {'root': contentsRoot}
-          }
-        ],
-        expectedInspectSuffix: '$componentName',
-        findCommandExitCode: findCommandExitCode,
-        inspectCommandExitCode: inspectCommandExitCode);
-
-    final inspect = Inspect(fakeSsh);
-
-    FakeAsync().run((fakeAsync) {
-      final result = inspect.inspectComponentRoot(componentName);
-      fakeAsync.flushTimers();
-
-      if (shouldFailDueToFind || shouldFailDueToInspect) {
-        expect(result, completion(isNull));
-      } else {
-        expect(result, completion(equals(contentsRoot)));
-      }
-
-      // Needed so that 'completion' above evaluates.
-      fakeAsync.flushMicrotasks();
-    });
-
-    expect(fakeSsh.findCommandCount, equals(findCommandExitCode.length));
-    expect(
-        fakeSsh.inspectCommandCount, anyOf(0, inspectCommandExitCode.length));
   });
 }
 
