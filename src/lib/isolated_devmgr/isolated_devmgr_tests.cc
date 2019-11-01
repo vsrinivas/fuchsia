@@ -62,7 +62,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
   fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> CreateTapDevice(
       const zx::channel& devfs) {
     fidl::SynchronousInterfacePtr<fuchsia::hardware::ethertap::TapControl> tapctl;
-    fdio_service_connect_at(devfs.get(), "misc/tapctl",
+    fdio_service_connect_at(devfs.get(), "test/tapctl",
                             tapctl.NewRequest().TakeChannel().release());
     fuchsia::hardware::ethertap::Config config;
     config.mtu = 1500;
@@ -97,7 +97,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 TEST_F(DevmgrTest, CreateTapSysdev) {
   auto devmgr = CreateDevmgrSysdev();
   ASSERT_TRUE(devmgr);
-  ASSERT_EQ(devmgr->WaitForFile("misc/tapctl"), ZX_OK);
+  ASSERT_EQ(devmgr->WaitForFile("test/tapctl"), ZX_OK);
 
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   devmgr->Connect(dir.NewRequest().TakeChannel());
@@ -125,7 +125,7 @@ TEST_F(DevmgrTest, DeviceEntryEnumerationTest) {
 TEST_F(DevmgrTest, DISABLED_ExceptionCallback) {
   auto devmgr = CreateDevmgrSysdev();
   ASSERT_TRUE(devmgr);
-  ASSERT_EQ(devmgr->WaitForFile("misc/tapctl"), ZX_OK);
+  ASSERT_EQ(devmgr->WaitForFile("test/tapctl"), ZX_OK);
   bool exception = false;
   devmgr->SetExceptionCallback([&exception]() { exception = true; });
   // TODO(brunodalbo): Cause devmgr crash here so we can

@@ -57,7 +57,7 @@ static constexpr zx::duration kPropagateDuration = zx::msec(200);
 namespace {
 
 const char kEthernetDir[] = "/dev/class/ethernet";
-const char kTapctl[] = "/dev/misc/tapctl";
+const char kTapctl[] = "/dev/test/tapctl";
 const uint8_t kTapMac[] = {0x12, 0x20, 0x30, 0x40, 0x50, 0x60};
 
 const char* mxstrerror(zx_status_t status) { return zx_status_get_string(status); }

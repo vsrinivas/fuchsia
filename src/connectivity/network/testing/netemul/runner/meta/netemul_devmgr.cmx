@@ -4,7 +4,7 @@
             "--svc_name=fuchsia.netemul.devmgr.IsolatedDevmgr",
             "--load_driver=/boot/driver/ethertap.so",
             "--load_driver=/boot/driver/ethernet.so",
-            "--wait_for=misc/tapctl"
+            "--wait_for=test/tapctl"
         ],
         "binary": "bin/isolated_devmgr"
     },

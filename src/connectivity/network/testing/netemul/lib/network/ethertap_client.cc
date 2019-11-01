@@ -4,7 +4,6 @@
 
 #include "ethertap_client.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -24,8 +23,10 @@
 #include <memory>
 #include <random>
 
-static const char kTapctl[] = "/dev/misc/tapctl";
-static const char kTapctlRelative[] = "misc/tapctl";
+#include <fbl/unique_fd.h>
+
+static const char kTapctl[] = "/dev/test/tapctl";
+static const char kTapctlRelative[] = "test/tapctl";
 
 #define MAC_LOCAL (0x02)
 #define MAC_MULTICAST (0x01)
