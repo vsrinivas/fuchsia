@@ -153,7 +153,7 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
        << message_direction << "request" << colors_.reset << ' ' << colors_.green
        << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_request->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
+      decoded_request->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
                                    display_options_.columns);
     } else {
       os << DocumentToString(&actual_request);
@@ -165,7 +165,7 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
        << message_direction << "response" << colors_.reset << ' ' << colors_.green
        << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_response->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
+      decoded_response->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
                                     display_options_.columns);
     } else {
       os << DocumentToString(&actual_response);

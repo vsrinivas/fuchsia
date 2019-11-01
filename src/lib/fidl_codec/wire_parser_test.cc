@@ -185,7 +185,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                    \
     std::stringstream result;                                                                      \
     if (object != nullptr) {                                                                       \
-      object->PrettyPrint(result, FakeColors, "", 0, 80, 80);                                      \
+      object->PrettyPrint(result, FakeColors, &header, "", 0, 80, 80);                             \
     }                                                                                              \
     ASSERT_EQ(result.str(), _pretty_print)                                                         \
         << "expected = " << _pretty_print << " actual = " << result.str();                         \
@@ -670,7 +670,7 @@ std::unique_ptr<T> GetStructUnionPtr(const std::string& v1, const std::string& v
 
 std::string IntUnionIntPretty(const std::string& name, int u, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
             ValueToPretty("variant_i", "int32", u) + " }\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -679,7 +679,7 @@ std::string IntUnionIntPretty(const std::string& name, int u, int v) {
 
 std::string StructUnionIntPretty(const std::string& name, const char* u1, const char* u2, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = {\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{\n";
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
@@ -695,7 +695,7 @@ std::string StructUnionIntPretty(const std::string& name, const char* u1, const 
 std::string IntIntUnionPretty(const std::string& name, int v, int u) {
   std::string result = "{\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
             ValueToPretty("variant_i", "int32", u) + " }\n";
   result += "}";
   return result;
@@ -704,7 +704,7 @@ std::string IntIntUnionPretty(const std::string& name, int v, int u) {
 std::string IntStructUnionPretty(const std::string& name, int v, const char* u1, const char* u2) {
   std::string result = "{\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = {\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{\n";
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
@@ -790,7 +790,7 @@ T GetUInt16Union(uint16_t i) {
 std::string ShortUnionPretty(const std::string& name, const char* field, const char* type, int u,
                              int v) {
   std::string result = "{\n";
-  result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
+  result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
             ValueToPretty(field, type, u) + " }\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -875,7 +875,7 @@ std::string TablePretty(std::optional<int16_t> first_int16, std::optional<std::s
       result += "    }\n";
     }
     if (third_union_val.has_value()) {
-      result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = {\n";
+      result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = v0!{\n";
       result += "      " + ValueToPretty("variant_i", "int32", *third_union_val) + "\n";
       result += "    }\n";
     }

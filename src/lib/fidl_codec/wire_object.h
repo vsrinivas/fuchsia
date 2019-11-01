@@ -45,7 +45,8 @@ class Value {
   virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
 
   // Pretty print of the value.
-  virtual void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+  virtual void PrettyPrint(std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
                            int tabs, int remaining_size, int max_line_size) const = 0;
 
   // Use a visitor on this value;
@@ -125,8 +126,9 @@ class RawValue : public InlineValue {
 
   int DisplaySize(int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -152,8 +154,9 @@ class NumericValue : public InlineValue {
                : 0;
   }
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override {
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override {
     if (data() == nullptr) {
       os << colors.red << "invalid" << colors.reset;
     } else {
@@ -178,8 +181,9 @@ class StringValue : public NullableValue {
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -195,8 +199,9 @@ class BoolValue : public InlineValue {
 
   int DisplaySize(int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 };
@@ -216,8 +221,9 @@ class Object : public NullableValue {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -245,8 +251,9 @@ class EnvelopeValue : public NullableValue {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -269,8 +276,9 @@ class TableValue : public NullableValue {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -297,8 +305,9 @@ class UnionValue : public NullableValue {
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -329,8 +338,9 @@ class ArrayValue : public Value {
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -351,8 +361,9 @@ class VectorValue : public NullableValue {
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -374,8 +385,9 @@ class EnumValue : public InlineValue {
 
   int DisplaySize(int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 
@@ -394,8 +406,9 @@ class HandleValue : public Value {
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
 

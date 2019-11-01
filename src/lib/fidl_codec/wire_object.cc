@@ -37,7 +37,7 @@ class JsonVisitor : public Visitor {
  private:
   void VisitValue(const Value* node) override {
     std::stringstream ss;
-    node->PrettyPrint(ss, WithoutColors, "", 0, 0, 0);
+    node->PrettyPrint(ss, WithoutColors, nullptr, "", 0, 0, 0);
     result_->SetString(ss.str(), *allocator_);
   }
 
@@ -176,6 +176,7 @@ void InlineValue::Visit(Visitor* visitor) const { visitor->VisitInlineValue(this
 int RawValue::DisplaySize(int /*remaining_size*/) const { return static_cast<int>(size_) * 3 - 1; }
 
 void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
+                           const fidl_message_header_t* /*header*/,
                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                            int /*max_line_size*/) const {
   if (size_ == 0) {
@@ -250,6 +251,7 @@ void StringValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
 }
 
 void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                              const fidl_message_header_t* /*header*/,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   os << colors.red;
@@ -272,6 +274,7 @@ int BoolValue::DisplaySize(int /*remaining_size*/) const {
 }
 
 void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                            const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
   if (data() == nullptr) {
@@ -325,7 +328,8 @@ void Object::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   Visit(&visitor);
 }
 
-void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+void Object::PrettyPrint(std::ostream& os, const Colors& colors,
+                         const fidl_message_header_t* header, std::string_view line_header,
                          int tabs, int remaining_size, int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
@@ -345,7 +349,7 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_vie
         os << ": " << colors.green << type_name << colors.reset;
       }
       os << " = ";
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
     }
     os << " }";
   } else {
@@ -365,7 +369,8 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_vie
       }
       size += 3;
       os << " = ";
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                         max_line_size);
       os << "\n";
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << '}';
@@ -404,9 +409,9 @@ void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 }
 
 void EnvelopeValue::PrettyPrint(std::ostream& os, const Colors& colors,
-                                std::string_view line_header, int tabs, int remaining_size,
-                                int max_line_size) const {
-  value_->PrettyPrint(os, colors, line_header, tabs, remaining_size, max_line_size);
+                                const fidl_message_header_t* header, std::string_view line_header,
+                                int tabs, int remaining_size, int max_line_size) const {
+  value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
 }
 
 TableValue::TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count)
@@ -456,7 +461,8 @@ void TableValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   }
 }
 
-void TableValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                             const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
   int display_size = DisplaySize(remaining_size);
   if (display_size == 2) {
@@ -472,7 +478,8 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
           os << ": " << colors.green << type_name << colors.reset;
         }
         os << " = ";
-        field.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
+        field.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
+                                   max_line_size);
       }
     }
     os << " }";
@@ -488,7 +495,7 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
           os << ": " << colors.green << type_name << colors.reset;
         }
         os << " = ";
-        field.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size,
+        field.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
                                    max_line_size);
         os << "\n";
       }
@@ -532,8 +539,12 @@ void UnionValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   }
 }
 
-void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                             const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
+  if (header != nullptr) {
+    os << (fidl_should_decode_union_from_xunion(header) ? "v1!" : "v0!");
+  }
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
@@ -549,7 +560,7 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
-    field_.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size,
+    field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
                                 max_line_size);
     os << " }";
   } else {
@@ -564,7 +575,7 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
-    field_.value()->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size,
+    field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
                                 max_line_size);
     os << '\n';
     os << line_header << std::string(tabs * kTabSize, ' ') << "}";
@@ -591,7 +602,8 @@ void ArrayValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/)
   FXL_LOG(FATAL) << "Value is defined inline";
 }
 
-void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                             const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
   if (values_.empty()) {
     os << "[]";
@@ -600,7 +612,7 @@ void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
     for (const auto& value : values_) {
       os << separator;
       separator = ", ";
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
     }
     os << " ]";
   } else {
@@ -608,7 +620,8 @@ void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string
     for (const auto& value : values_) {
       int size = (tabs + 1) * kTabSize;
       os << line_header << std::string((tabs + 1) * kTabSize, ' ');
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                         max_line_size);
       os << "\n";
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << ']';
@@ -659,7 +672,8 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   }
 }
 
-void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
+void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                              const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
@@ -696,7 +710,7 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
     for (const auto& value : values_) {
       os << separator;
       separator = ", ";
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
     }
     os << " ]";
   } else {
@@ -715,7 +729,8 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
         os << ", ";
         size += 2;
       }
-      value->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size, max_line_size);
+      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                         max_line_size);
       size += value_size;
     }
     os << '\n';
@@ -733,6 +748,7 @@ int EnumValue::DisplaySize(int /*remaining_size*/) const {
 }
 
 void EnumValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                            const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
   if (data() == nullptr) {
@@ -753,6 +769,7 @@ void HandleValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/
 }
 
 void HandleValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                              const fidl_message_header_t* /*header*/,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   DisplayHandle(colors, handle_, os);
