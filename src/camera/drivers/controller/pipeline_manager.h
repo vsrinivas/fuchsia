@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "configs/sherlock/internal-config.h"
-#include "controller-processing-node.h"
 #include "fbl/macros.h"
+#include "processing_node.h"
 namespace camera {
 struct PipelineInfo {
   InternalConfigNode node;
@@ -51,17 +51,17 @@ class PipelineManager {
   // 1. Creates the ISP stream protocol
   // 2. Creates the requested ISP stream
   // 3. Allocate buffers if needed
-  // 4. Creates the CameraProcessNode for the input node
+  // 4. Creates the ProcessNode for the input node
   zx_status_t CreateInputNode(PipelineInfo* info,
-                              std::unique_ptr<CameraProcessNode>* out_processing_node);
+                              std::unique_ptr<ProcessNode>* out_processing_node);
 
-  zx_status_t CreateOutputNode(CameraProcessNode* parent_node,
+  zx_status_t CreateOutputNode(ProcessNode* parent_node,
                                const InternalConfigNode& internal_output_node,
-                               CameraProcessNode** output_processing_node);
+                               ProcessNode** output_processing_node);
 
   // Create the stream pipeline graph
-  zx_status_t CreateGraph(PipelineInfo* info, CameraProcessNode* parent_node,
-                          CameraProcessNode** output_processing_node);
+  zx_status_t CreateGraph(PipelineInfo* info, ProcessNode* parent_node,
+                          ProcessNode** output_processing_node);
   // Gets the next node for the requested stream path
   const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
                                                   const InternalConfigNode& node);
@@ -78,7 +78,7 @@ class PipelineManager {
   ddk::IspProtocolClient isp_;
   __UNUSED ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
-  std::unique_ptr<CameraProcessNode> full_resolution_stream_;
+  std::unique_ptr<ProcessNode> full_resolution_stream_;
 };
 
 }  // namespace camera

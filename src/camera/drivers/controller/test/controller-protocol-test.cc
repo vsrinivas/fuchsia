@@ -135,7 +135,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
-    std::unique_ptr<CameraProcessNode> out_processing_node;
+    std::unique_ptr<ProcessNode> out_processing_node;
     EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &out_processing_node));
 
     EXPECT_NE(nullptr, out_processing_node->isp_stream_protocol());
@@ -163,13 +163,13 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
-    std::unique_ptr<CameraProcessNode> input_processing_node;
+    std::unique_ptr<ProcessNode> input_processing_node;
     EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &input_processing_node));
 
     EXPECT_NE(nullptr, input_processing_node->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, input_processing_node->type());
 
-    CameraProcessNode* output_processing_node;
+    ProcessNode* output_processing_node;
     EXPECT_EQ(ZX_OK, pipeline_manager_->CreateGraph(&info, input_processing_node.get(),
                                                     &output_processing_node));
     ASSERT_NE(nullptr, output_processing_node);

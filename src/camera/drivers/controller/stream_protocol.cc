@@ -8,12 +8,12 @@
 
 #include <fbl/auto_lock.h>
 
-#include "controller-processing-node.h"
+#include "processing_node.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, CameraProcessNode* output_node)
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
     : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
 
 StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }

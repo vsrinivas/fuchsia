@@ -79,8 +79,8 @@ zx_status_t PipelineManager::GetBuffers(const InternalConfigNode& producer, Pipe
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t PipelineManager::CreateInputNode(
-    PipelineInfo* info, std::unique_ptr<CameraProcessNode>* out_processing_node) {
+zx_status_t PipelineManager::CreateInputNode(PipelineInfo* info,
+                                             std::unique_ptr<ProcessNode>* out_processing_node) {
   uint8_t isp_stream_type;
   if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
@@ -101,8 +101,8 @@ zx_status_t PipelineManager::CreateInputNode(
   ConvertToBufferCollectionInfo(&buffers, &old_buffer_collection);
 
   // Create Input Node
-  auto processing_node = std::make_unique<camera::CameraProcessNode>(
-      info->node.type, std::move(buffers), old_buffer_collection);
+  auto processing_node = std::make_unique<camera::ProcessNode>(info->node.type, std::move(buffers),
+                                                               old_buffer_collection);
   if (!processing_node) {
     FX_LOGS(ERROR) << "Failed to create ISP stream protocol";
     return ZX_ERR_NO_MEMORY;
@@ -131,14 +131,13 @@ zx_status_t PipelineManager::CreateInputNode(
   return ZX_OK;
 }
 
-zx_status_t PipelineManager::CreateOutputNode(CameraProcessNode* parent_node,
+zx_status_t PipelineManager::CreateOutputNode(ProcessNode* parent_node,
                                               const InternalConfigNode& internal_output_node,
-                                              CameraProcessNode** output_processing_node) {
+                                              ProcessNode** output_processing_node) {
   // Create Output Node
-  auto output_node =
-      std::make_unique<camera::CameraProcessNode>(internal_output_node.type, parent_node);
+  auto output_node = std::make_unique<camera::ProcessNode>(internal_output_node.type, parent_node);
   if (!output_node) {
-    FX_LOGS(ERROR) << "Failed to create output CameraProcessNode";
+    FX_LOGS(ERROR) << "Failed to create output ProcessNode";
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -205,8 +204,8 @@ zx_status_t PipelineManager::LoadGdcConfiguration(const camera::GdcConfig& confi
   return ZX_OK;
 }
 
-zx_status_t PipelineManager::CreateGraph(PipelineInfo* info, CameraProcessNode* parent_node,
-                                         CameraProcessNode** output_processing_node) {
+zx_status_t PipelineManager::CreateGraph(PipelineInfo* info, ProcessNode* parent_node,
+                                         ProcessNode** output_processing_node) {
   auto next_node_internal = GetNextNodeInPipeline(info, info->node);
   if (!next_node_internal) {
     FX_LOGS(ERROR) << "Failed to get next node";
@@ -267,7 +266,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
       return status;
     }
 
-    CameraProcessNode* output_processing_node;
+    ProcessNode* output_processing_node;
     status = CreateGraph(info, full_resolution_stream_.get(), &output_processing_node);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to CreateGraph";

@@ -19,7 +19,7 @@
 #include "stream_protocol.h"
 namespace camera {
 
-class CameraProcessNode;
+class ProcessNode;
 class StreamImpl;
 
 // Output config details for HwAccelerator.
@@ -32,18 +32,18 @@ struct HwAcceleratorInfo {
 
 struct ChildNodeInfo {
   // Pointer to the child node.
-  std::shared_ptr<CameraProcessNode> child_node;
+  std::shared_ptr<ProcessNode> child_node;
   // The Stream type/identifier for the child node.
   ::fuchsia::camera2::CameraStreamType stream_type;
   // The frame rate for this node.
   ::fuchsia::camera2::FrameRate output_frame_rate;
 };
 
-class CameraProcessNode {
+class ProcessNode {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(CameraProcessNode);
-  CameraProcessNode(NodeType type, fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-                    fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection)
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
+  ProcessNode(NodeType type, fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+              fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection)
       : type_(type),
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
@@ -53,13 +53,13 @@ class CameraProcessNode {
     ZX_ASSERT(type == NodeType::kInputStream);
   }
 
-  explicit CameraProcessNode(NodeType type, CameraProcessNode* parent_node)
+  explicit ProcessNode(NodeType type, ProcessNode* parent_node)
       : type_(type), parent_node_(parent_node), enabled_(false) {
     ZX_ASSERT(type == NodeType::kOutputStream);
     ZX_ASSERT(parent_node_ != nullptr);
   }
 
-  ~CameraProcessNode() {
+  ~ProcessNode() {
     // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer collections
     // will be part of camera processing nodes, and they will get destructed and handles will be
     // released.
@@ -109,7 +109,7 @@ class CameraProcessNode {
  private:
   // Invoked by the ISP thread when a new frame is available.
   static void OnFrameAvailable(void* ctx, uint32_t buffer_id) {
-    static_cast<CameraProcessNode*>(ctx)->OnFrameAvailable(buffer_id);
+    static_cast<ProcessNode*>(ctx)->OnFrameAvailable(buffer_id);
   }
   bool AllChildNodesDisabled();
   // Type of node.
@@ -118,7 +118,7 @@ class CameraProcessNode {
   std::vector<ChildNodeInfo> child_nodes_info_;
   HwAcceleratorInfo hw_accelerator_;
   // Parent node
-  CameraProcessNode* const parent_node_;
+  ProcessNode* const parent_node_;
   // Input buffer collection is only valid for nodes other than
   // |kInputStream| and |kOutputStream|
   fuchsia::sysmem::BufferCollectionInfo_2 input_buffer_collection_;

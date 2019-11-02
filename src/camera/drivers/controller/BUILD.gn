@@ -50,7 +50,7 @@ source_set("controller-source") {
   sources = [
     "pipeline_manager.cc",
     "controller-device.cc",
-    "controller-processing-node.cc",
+    "processing_node.cc",
     "controller-protocol.cc",
     "memory_allocation.cc",
     "stream_protocol.cc",

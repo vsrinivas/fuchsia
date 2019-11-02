@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "controller-processing-node.h"
+#include "processing_node.h"
 
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -13,7 +13,7 @@
 
 namespace camera {
 
-void CameraProcessNode::OnReadyToProcess(uint32_t buffer_index) {
+void ProcessNode::OnReadyToProcess(uint32_t buffer_index) {
   // If it's the output stream node, we have to notify the client about
   // the frame being available
   if (type_ == NodeType::kOutputStream) {
@@ -24,7 +24,7 @@ void CameraProcessNode::OnReadyToProcess(uint32_t buffer_index) {
   // TODO(braval): Add support for other types of nodes
 }
 
-void CameraProcessNode::OnFrameAvailable(uint32_t buffer_index) {
+void ProcessNode::OnFrameAvailable(uint32_t buffer_index) {
   // This API is not in use for |kOutputStream|
   ZX_ASSERT(type_ != NodeType::kOutputStream);
 
@@ -42,7 +42,7 @@ void CameraProcessNode::OnFrameAvailable(uint32_t buffer_index) {
   }
 }
 
-void CameraProcessNode::OnReleaseFrame(uint32_t buffer_index) {
+void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
   // First release this nodes Frames (GDC, GE2D)
   switch (type_) {
     case NodeType::kGdc: {
@@ -72,7 +72,7 @@ void CameraProcessNode::OnReleaseFrame(uint32_t buffer_index) {
   parent_node_->OnReleaseFrame(buffer_index);
 }
 
-void CameraProcessNode::OnStartStreaming() {
+void ProcessNode::OnStartStreaming() {
   enabled_ = true;
   if (type_ == NodeType::kInputStream) {
     isp_stream_protocol_->Start();
@@ -81,7 +81,7 @@ void CameraProcessNode::OnStartStreaming() {
   parent_node_->OnStartStreaming();
 }
 
-bool CameraProcessNode::AllChildNodesDisabled() {
+bool ProcessNode::AllChildNodesDisabled() {
   for (auto& i : child_nodes_info_) {
     auto& child_node = i.child_node;
     if (child_node->enabled()) {
@@ -91,7 +91,7 @@ bool CameraProcessNode::AllChildNodesDisabled() {
   return true;
 }
 
-void CameraProcessNode::OnStopStreaming() {
+void ProcessNode::OnStopStreaming() {
   if (AllChildNodesDisabled()) {
     enabled_ = false;
     if (type_ == NodeType::kInputStream) {

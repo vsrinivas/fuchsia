@@ -14,9 +14,9 @@
 #include <ddktl/protocol/isp.h>
 
 #include "configs/sherlock/internal-config.h"
-#include "controller-processing-node.h"
 #include "isp_stream_protocol.h"
 #include "pipeline_manager.h"
+#include "processing_node.h"
 
 namespace camera {
 
