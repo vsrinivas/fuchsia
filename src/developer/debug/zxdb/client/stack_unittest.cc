@@ -116,6 +116,48 @@ std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
 
 }  // namespace
 
+// IndexForFrame is trivial when there's no inline frame, but when there is, the returned index
+// must take this into account.
+TEST_F(StackTest, IndexForFrame) {
+  MockStackDelegate delegate;
+  Stack stack(&delegate);
+  delegate.set_stack(&stack);
+
+  // Set some stack frames with inline frames. Nothing should start out as hidden.
+  auto frames = MakeInlineStackFrames();
+
+  // Make a function for the top stack frame. It needs this to get the ranges for the ambiguity
+  // comuptation.
+  auto func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  func->set_assigned_name("Inline");
+  // Must start exactly at kBottomAddr for the location to be ambiguous.
+  uint64_t ambiguous_address = frames[0]->GetLocation().address();
+  func->set_code_ranges(AddressRanges(AddressRange(ambiguous_address, ambiguous_address + 8)));
+
+  // Force the top frame to be ambiguous. For this it needs an inline function that starts at the
+  // current address.
+  Location ambig_loc(ambiguous_address, FileLine("file", 10), 0,
+                     SymbolContext::ForRelativeAddresses(), func);
+  auto new_top_frame = std::make_unique<MockFrame>(nullptr, nullptr, ambig_loc, kTopSP, kMiddleSP,
+                                                   std::vector<debug_ipc::Register>(), kTopSP,
+                                                   frames[0]->GetPhysicalFrame());
+  new_top_frame->set_is_ambiguous_inline(true);
+  frames[0] = std::move(new_top_frame);
+
+  stack.SetFramesForTest(std::move(frames), true);
+  ASSERT_EQ(1u, stack.GetAmbiguousInlineFrameCount());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
+
+  // The operator[] and the IndexForFrame results should match.
+  for (size_t i = 0; i < stack.size(); i++)
+    EXPECT_EQ(i, stack.IndexForFrame(stack[i])) << i;
+
+  // Hide some inline frames, the indices should still match.
+  stack.SetHideAmbiguousInlineFrameCount(1);
+  for (size_t i = 0; i < stack.size(); i++)
+    EXPECT_EQ(i, stack.IndexForFrame(stack[i])) << i;
+}
+
 // Tests fingerprint computations involving inline frames.
 TEST_F(StackTest, InlineFingerprint) {
   MockStackDelegate delegate;

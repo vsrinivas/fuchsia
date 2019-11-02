@@ -139,9 +139,9 @@ Stack::~Stack() = default;
 fxl::WeakPtr<Stack> Stack::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
-  for (size_t i = 0; i < frames_.size(); i++) {
+  for (size_t i = hide_ambiguous_inline_frame_count_; i < frames_.size(); i++) {
     if (frames_[i].get() == frame)
-      return i;
+      return i - hide_ambiguous_inline_frame_count_;
   }
   return std::nullopt;
 }
