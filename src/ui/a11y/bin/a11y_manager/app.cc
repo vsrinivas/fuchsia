@@ -19,6 +19,7 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       tts_manager_(startup_context_.get()),
       // For now, we use a simple Tts Engine which only logs the output.
       // On initialization, it registers itself with the Tts manager.
+      color_transform_manager_(startup_context_.get()),
       log_engine_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       settings_manager_bindings_.GetHandler(&settings_manager_));
@@ -59,11 +60,23 @@ void InternalSettingsCallback(fuchsia::accessibility::SettingsManagerStatus stat
 // This currently ignores errors in the internal settings API. That API is being removed in favor of
 // smaller feature-oriented APIs.
 void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings) {
+  // New codepath for color transforms.
+  bool color_inversion =
+      systemSettings.has_color_inversion() ? systemSettings.color_inversion() : false;
+  fuchsia::accessibility::ColorCorrectionMode color_blindness_type =
+      systemSettings.has_color_correction()
+          ? ConvertColorCorrection(systemSettings.color_correction())
+          : fuchsia::accessibility::ColorCorrectionMode::DISABLED;
+  color_transform_manager_.ChangeColorTransform(color_inversion, color_blindness_type);
+
   if (systemSettings.has_screen_reader()) {
     settings_provider_ptr_->SetScreenReaderEnabled(systemSettings.screen_reader(),
                                                    InternalSettingsCallback);
     ToggleScreenReaderSetting(systemSettings.screen_reader());
   }
+
+  // Everything below here in this method is old code for  the legacy settings API.
+  // TODO(17180): Remove this code when nothing else depends on it.
   if (systemSettings.has_color_inversion()) {
     settings_provider_ptr_->SetColorInversionEnabled(systemSettings.color_inversion(),
                                                      InternalSettingsCallback);
@@ -136,6 +149,23 @@ void App::ToggleScreenReaderSetting(bool new_screen_reader_enabled_value) {
   if (new_screen_reader_enabled_value != old_screen_reader_enabled_value) {
     OnAccessibilityPointerEventListenerEnabled(new_screen_reader_enabled_value);
     OnScreenReaderEnabled(new_screen_reader_enabled_value);
+  }
+}
+
+fuchsia::accessibility::ColorCorrectionMode App::ConvertColorCorrection(
+    fuchsia::settings::ColorBlindnessType color_blindness_type) {
+  switch (color_blindness_type) {
+    case fuchsia::settings::ColorBlindnessType::PROTANOMALY:
+      return fuchsia::accessibility::ColorCorrectionMode::CORRECT_PROTANOMALY;
+    case fuchsia::settings::ColorBlindnessType::DEUTERANOMALY:
+      return fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY;
+
+    case fuchsia::settings::ColorBlindnessType::TRITANOMALY:
+      return fuchsia::accessibility::ColorCorrectionMode::CORRECT_TRITANOMALY;
+    case fuchsia::settings::ColorBlindnessType::NONE:
+    // fall through
+    default:
+      return fuchsia::accessibility::ColorCorrectionMode::DISABLED;
   }
 }
 

@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
+#include "src/ui/a11y/lib/configuration/color_transform_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
@@ -45,6 +46,10 @@ class App {
   // Changes screen reader status when settings change.
   void ToggleScreenReaderSetting(bool enabled);
 
+  // Converts setui color blindess type to the relevant accessibility color correction mode.
+  fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
+      fuchsia::settings::ColorBlindnessType color_blindness_type);
+
   // Initializes Screen Reader pointer when screen reader is enabled, and destroys
   // the pointer when Screen Reader is disabled.
   void OnScreenReaderEnabled(bool enabled);
@@ -67,6 +72,7 @@ class App {
   a11y::SemanticsManager semantics_manager_;
   a11y::SettingsManager settings_manager_;
   a11y::TtsManager tts_manager_;
+  a11y::ColorTransformManager color_transform_manager_;
   // A simple Tts engine which logs output.
   a11y::LogEngine log_engine_;
   // The gesture manager is instantiated whenever a11y manager starts listening

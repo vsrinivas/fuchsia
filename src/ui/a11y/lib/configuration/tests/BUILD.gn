@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":configuration_tests",
+  ]
+}
+
+executable("configuration_tests") {
+  output_name = "configuration_tests"
+
+  testonly = true
+
+  sources = [
+    "color_transform_manager_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/vfs/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/a11y/lib/configuration",
+    "//third_party/rapidjson",
+  ]
+}

@@ -6,6 +6,7 @@ import("//build/test/test_package.gni")
 
 group("lib") {
   public_deps = [
+    "configuration",
     "gesture_manager",
     "screen_reader",
     "semantics",
@@ -24,6 +25,7 @@ group("tests") {
 
 test_package("a11y_lib_tests") {
   deps = [
+    "configuration/tests",
     "gesture_manager/arena/tests",
     "gesture_manager/recognizers/tests",
     "gesture_manager/tests",
@@ -87,6 +89,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "gesture_recognizers_tests"
+      environments = basic_envs
+    },
+    {
+      name = "configuration_tests"
       environments = basic_envs
     },
   ]

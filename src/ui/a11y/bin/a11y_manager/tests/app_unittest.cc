@@ -13,6 +13,7 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_color_transform_handler.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
@@ -277,6 +278,37 @@ TEST_F(AppUnitTest, WatchesSetUISettings) {
   EXPECT_TRUE(settings->has_color_correction());
   EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
             settings->color_correction());
+}
+
+TEST_F(AppUnitTest, ColorCorrectionApplied) {
+  // Create a mock color transform handler.
+  MockColorTransformHandler mock_color_transform_handler(&context_provider_);
+
+  // Create a mock setUI & configure initial settings (everything off).
+  MockSetUIAccessibility mock_setui(&context_provider_);
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(false);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  // Turn on color correction.
+  fuchsia::settings::AccessibilitySettings newAccessibilitySettings;
+  newAccessibilitySettings.set_color_correction(
+      fuchsia::settings::ColorBlindnessType::DEUTERANOMALY);
+  mock_setui.Set(std::move(newAccessibilitySettings), [](auto) {});
+  RunLoopUntilIdle();
+
+  // Verify that stuff changed
+  SettingsPtr settings = app.GetSettings();
+  EXPECT_TRUE(settings->has_color_correction());
+  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
+            settings->color_correction());
+  EXPECT_EQ(fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY,
+            mock_color_transform_handler.GetColorCorrectionMode());
 }
 
 }  // namespace

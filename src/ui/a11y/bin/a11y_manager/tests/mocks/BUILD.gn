@@ -4,6 +4,8 @@
 source_set("mocks") {
   testonly = true
   sources = [
+    "mock_color_transform_handler.cc",
+    "mock_color_transform_handler.h",
     "mock_pointer_event_registry.cc",
     "mock_pointer_event_registry.h",
     "mock_semantic_listener.cc",
