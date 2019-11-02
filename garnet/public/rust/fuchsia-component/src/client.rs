@@ -402,7 +402,7 @@ impl AppBuilder {
     /// * when the returned [`App`] is dropped, the launched application will be terminated.
     /// * stdout and stderr will use the the default stdout and stderr for the environment.
     pub fn spawn(self, launcher: &LauncherProxy) -> Result<App, Error> {
-        self.launch(launcher, Stdio::Inherit)
+        self.launch(launcher)
     }
 
     /// Launches the component using the provided `launcher` proxy, waits for it to finish, and
@@ -410,10 +410,12 @@ impl AppBuilder {
     ///
     /// By default, stdout and stderr are captured (and used to provide the resulting output).
     pub fn output(
-        self,
+        mut self,
         launcher: &LauncherProxy,
     ) -> Result<impl Future<Output = Result<Output, Error>>, Error> {
-        Ok(self.launch(launcher, Stdio::MakePipe)?.wait_with_output())
+        self.stdout = self.stdout.or(Some(Stdio::MakePipe));
+        self.stderr = self.stderr.or(Some(Stdio::MakePipe));
+        Ok(self.launch(launcher)?.wait_with_output())
     }
 
     /// Launches the component using the provided `launcher` proxy, waits for it to finish, and
@@ -425,10 +427,10 @@ impl AppBuilder {
         self,
         launcher: &LauncherProxy,
     ) -> Result<impl Future<Output = Result<ExitStatus, Error>>, Error> {
-        Ok(self.launch(launcher, Stdio::Inherit)?.wait())
+        Ok(self.launch(launcher)?.wait())
     }
 
-    fn launch(mut self, launcher: &LauncherProxy, default: Stdio) -> Result<App, Error> {
+    fn launch(mut self, launcher: &LauncherProxy) -> Result<App, Error> {
         let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
         let directory_request = if let Some(directory_request) = self.directory_request.take() {
             directory_request
@@ -439,13 +441,13 @@ impl AppBuilder {
         };
 
         let (stdout, remote_stdout) =
-            self.stdout.as_ref().unwrap_or(&default).to_local_and_remote()?;
+            self.stdout.unwrap_or(Stdio::Inherit).to_local_and_remote()?;
         if let Some(fd) = remote_stdout {
             self.launch_info.out = Some(Box::new(fd));
         }
 
         let (stderr, remote_stderr) =
-            self.stderr.as_ref().unwrap_or(&default).to_local_and_remote()?;
+            self.stderr.unwrap_or(Stdio::Inherit).to_local_and_remote()?;
         if let Some(fd) = remote_stderr {
             self.launch_info.err = Some(Box::new(fd));
         }
@@ -463,15 +465,18 @@ impl AppBuilder {
 pub enum Stdio {
     /// Use the default output sink for the environment.
     Inherit,
-    /// Provide a socket to the component to write output to.
+    /// Capture the component's output in a new socket.
     MakePipe,
+    /// Provide a handle (that is valid in a `fidl_fuchsia_sys::FileDescriptor`) to the component to
+    /// write output to.
+    Handle(zx::Handle),
 }
 
 impl Stdio {
     fn to_local_and_remote(
-        &self,
+        self,
     ) -> Result<(Option<fasync::Socket>, Option<FileDescriptor>), Error> {
-        match *self {
+        match self {
             Stdio::Inherit => Ok((None, None)),
             Stdio::MakePipe => {
                 let (local, remote) = Socket::create(SocketOpts::STREAM)?;
@@ -490,7 +495,24 @@ impl Stdio {
 
                 Ok((Some(local), Some(remote)))
             }
+            Stdio::Handle(handle) => Ok((
+                None,
+                Some(FileDescriptor {
+                    type0: HandleType::FileDescriptor as i32,
+                    type1: 0,
+                    type2: 0,
+                    handle0: Some(handle),
+                    handle1: None,
+                    handle2: None,
+                }),
+            )),
         }
+    }
+}
+
+impl<T: Into<zx::Handle>> From<T> for Stdio {
+    fn from(t: T) -> Self {
+        Self::Handle(t.into())
     }
 }
 

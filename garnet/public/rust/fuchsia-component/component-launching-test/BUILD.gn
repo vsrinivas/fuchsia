@@ -27,10 +27,18 @@ rustc_binary("injected_directory_checker_bin") {
   testonly = true
 }
 
+rustc_binary("stdio_writer_bin") {
+  name = "stdio_writer"
+  edition = "2018"
+  source_root = "src/stdio_writer.rs"
+  testonly = true
+}
+
 test_package("component-launching-tests") {
   deps = [
     ":driver",
     ":injected_directory_checker_bin",
+    ":stdio_writer_bin",
   ]
 
   binaries = [
@@ -38,12 +46,20 @@ test_package("component-launching-tests") {
       name = "injected_directory_checker"
       dest = "injected-directory-checker"
     },
+    {
+      name = "stdio_writer"
+      dest = "stdio-writer"
+    },
   ]
 
   meta = [
     {
       path = rebase_path("meta/injected-directory-checker.cmx")
       dest = "injected-directory-checker.cmx"
+    },
+    {
+      path = rebase_path("meta/stdio-writer.cmx")
+      dest = "stdio-writer.cmx"
     },
   ]
 

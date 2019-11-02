@@ -7,14 +7,19 @@
 use {
     fuchsia_async as fasync,
     fuchsia_component::client::{
-        launch_with_options, launcher, App, AppBuilder, LaunchOptions, Stdio::MakePipe,
+        launch_with_options, launcher, App, AppBuilder, LaunchOptions, Stdio,
     },
-    std::{fs::File, io::Write},
+    std::{
+        fs::{read_to_string, File},
+        io::{Read, Write},
+    },
     tempfile::TempDir,
 };
 
 const DIR_CHECKER_CMX: &str =
     "fuchsia-pkg://fuchsia.com/component-launching-tests#meta/injected-directory-checker.cmx";
+const STDIO_WRITER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/component-launching-tests#meta/stdio-writer.cmx";
 
 fn make_temp_dir_with_file() -> TempDir {
     let tmp_dir = TempDir::new().expect("tempdir creation");
@@ -25,8 +30,8 @@ fn make_temp_dir_with_file() -> TempDir {
     tmp_dir
 }
 
-async fn assert_dir_checker_success(dir_checker: App) {
-    let output = dir_checker.wait_with_output().await.expect("wait for injected-directory-checker");
+async fn assert_app_success(app: App) {
+    let output = app.wait_with_output().await.unwrap();
     assert!(
         output.exit_status.success(),
         "status: {:?}, out: {:?}, err: {:?}",
@@ -36,10 +41,10 @@ async fn assert_dir_checker_success(dir_checker: App) {
     );
 }
 
-async fn assert_dir_checker_success_app_builder(dir_checker: AppBuilder) {
+async fn assert_app_builder_success(app_builder: AppBuilder) {
     let launcher = launcher().expect("get launcher");
-    let dir_checker = dir_checker.spawn(&launcher).expect("injected-directory-checker to launch");
-    assert_dir_checker_success(dir_checker).await;
+    let app = app_builder.spawn(&launcher).unwrap();
+    assert_app_success(app).await;
 }
 
 async fn assert_dir_checker_success_launch_options(launch_options: LaunchOptions) {
@@ -47,11 +52,11 @@ async fn assert_dir_checker_success_launch_options(launch_options: LaunchOptions
     let dir_checker =
         launch_with_options(&launcher, DIR_CHECKER_CMX.to_string(), None, launch_options)
             .expect("launch injected-directory-checker");
-    assert_dir_checker_success(dir_checker).await;
+    assert_app_success(dir_checker).await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_app_builder_add_dir_to_namespace() {
+async fn app_builder_add_dir_to_namespace() {
     let injected_dir = make_temp_dir_with_file();
     let dir_checker = AppBuilder::new(DIR_CHECKER_CMX)
         .add_dir_to_namespace(
@@ -59,14 +64,14 @@ async fn test_app_builder_add_dir_to_namespace() {
             File::open(injected_dir.path()).expect("tempdir open"),
         )
         .expect("add_dir_to_namespace")
-        .stdout(MakePipe)
-        .stderr(MakePipe);
+        .stdout(Stdio::MakePipe)
+        .stderr(Stdio::MakePipe);
 
-    assert_dir_checker_success_app_builder(dir_checker).await;
+    assert_app_builder_success(dir_checker).await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_app_builder_add_handle_to_namespace() {
+async fn app_builder_add_handle_to_namespace() {
     let injected_dir = make_temp_dir_with_file();
     let dir_checker = AppBuilder::new(DIR_CHECKER_CMX)
         .add_handle_to_namespace(
@@ -74,14 +79,14 @@ async fn test_app_builder_add_handle_to_namespace() {
             fdio::transfer_fd(File::open(injected_dir.path()).expect("tempdir open"))
                 .expect("extract handle from file"),
         )
-        .stdout(MakePipe)
-        .stderr(MakePipe);
+        .stdout(Stdio::MakePipe)
+        .stderr(Stdio::MakePipe);
 
-    assert_dir_checker_success_app_builder(dir_checker).await;
+    assert_app_builder_success(dir_checker).await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_launch_options_add_dir_to_namespace() {
+async fn launch_options_add_dir_to_namespace() {
     let injected_dir = make_temp_dir_with_file();
     let mut launch_options = LaunchOptions::new();
     launch_options
@@ -95,7 +100,7 @@ async fn test_launch_options_add_dir_to_namespace() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_launch_options_add_handle_to_namespace() {
+async fn launch_options_add_handle_to_namespace() {
     let injected_dir = make_temp_dir_with_file();
     let mut launch_options = LaunchOptions::new();
     launch_options.add_handle_to_namespace(
@@ -105,4 +110,34 @@ async fn test_launch_options_add_handle_to_namespace() {
     );
 
     assert_dir_checker_success_launch_options(launch_options).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn app_builder_stdio_handle_as_file() {
+    let tmp_dir = TempDir::new().expect("tempdir creation");
+    let stdout = fdio::transfer_fd(File::create(tmp_dir.path().join("stdout")).unwrap()).unwrap();
+    let stderr = fdio::transfer_fd(File::create(tmp_dir.path().join("stderr")).unwrap()).unwrap();
+    let stdio_writer = AppBuilder::new(STDIO_WRITER_CMX).stdout(stdout).stderr(stderr);
+
+    assert_app_builder_success(stdio_writer).await;
+
+    assert_eq!(read_to_string(tmp_dir.path().join("stdout")).unwrap(), "going to stdout\n");
+    assert_eq!(read_to_string(tmp_dir.path().join("stderr")).unwrap(), "going to stderr\n");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn app_builder_stdio_handle_as_socket() {
+    let (mut stdout, stdout_socket) = fdio::pipe_half().unwrap();
+    let (mut stderr, stderr_socket) = fdio::pipe_half().unwrap();
+    let stdio_writer =
+        AppBuilder::new(STDIO_WRITER_CMX).stdout(stdout_socket).stderr(stderr_socket);
+
+    assert_app_builder_success(stdio_writer).await;
+
+    let mut s = String::new();
+    stdout.read_to_string(&mut s).unwrap();
+    assert_eq!(s, "going to stdout\n");
+    s.clear();
+    stderr.read_to_string(&mut s).unwrap();
+    assert_eq!(s, "going to stderr\n");
 }
