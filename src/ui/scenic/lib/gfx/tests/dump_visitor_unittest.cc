@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
@@ -81,19 +83,13 @@ TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
       view_linker.CreateImport(std::move(view_token), session()->error_reporter());
   ViewLinker::ExportLink export_link =
       view_linker.CreateExport(std::move(view_holder_token), session()->error_reporter());
-  fuchsia::ui::views::ViewRefControl control_ref;
-  fuchsia::ui::views::ViewRef view_ref;
-  {
-    zx_status_t status = zx::eventpair::create(
-        /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
-    FXL_DCHECK(status == ZX_OK);
-    // Remove signaling.
-    status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
-    FXL_DCHECK(status == ZX_OK);
-  }
+
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+
   ViewPtr view = fxl::MakeRefCounted<View>(
-      session(), next_id++, std::move(import_link), std::move(control_ref), std::move(view_ref),
-      "test_debug_name1", session()->shared_error_reporter(), session()->event_reporter());
+      session(), next_id++, std::move(import_link), std::move(view_ref_pair.control_ref),
+      std::move(view_ref_pair.view_ref), "test_debug_name1", session()->shared_error_reporter(),
+      session()->event_reporter());
 
   ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
       session(), session()->id(), next_id++, std::move(export_link), "test_debug_name2");
