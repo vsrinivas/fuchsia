@@ -483,7 +483,8 @@ void thread_suspend_test_fn(uintptr_t, uintptr_t) {
   zx_thread_exit();
 }
 
-TEST(ZxTestCase, ThreadSuspend) {
+// TODO(fxb/39288): Flaking.
+TEST(ZxTestCase, DISABLED_ThreadSuspend) {
   zx::thread thread;
   ASSERT_OK(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread));
 
