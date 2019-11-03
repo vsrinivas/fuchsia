@@ -30,7 +30,7 @@ struct CameraPipelineInfo {
 class CameraPipelineManager {
  public:
   CameraPipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
-                        ddk::IspProtocolClient& isp, ddk::GdcProtocolClient& gdc,
+                        const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device),
         dispatcher_(dispatcher),
@@ -39,8 +39,8 @@ class CameraPipelineManager {
         memory_allocator_(std::move(sysmem_allocator)) {}
 
   // For tests.
-  CameraPipelineManager(zx_device_t* device, ddk::IspProtocolClient& isp,
-                        ddk::GdcProtocolClient& gdc,
+  CameraPipelineManager(zx_device_t* device, const ddk::IspProtocolClient& isp,
+                        const ddk::GdcProtocolClient& gdc,
                         fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device), isp_(isp), gdc_(gdc), memory_allocator_(std::move(sysmem_allocator)) {}
 
@@ -52,17 +52,16 @@ class CameraPipelineManager {
   // 2. Creates the requested ISP stream
   // 3. Allocate buffers if needed
   // 4. Creates the CameraProcessNode for the input node
-  zx_status_t ConfigureInputNode(CameraPipelineInfo* info,
-                                 std::shared_ptr<CameraProcessNode>* out_processing_node);
+  zx_status_t CreateInputNode(CameraPipelineInfo* info,
+                              std::unique_ptr<CameraProcessNode>* out_processing_node);
 
-  zx_status_t ConfigureOutputNode(const std::shared_ptr<CameraProcessNode>& parent_node,
-                                  const InternalConfigNode* node,
-                                  std::shared_ptr<CameraProcessNode>* output_processing_node);
+  zx_status_t CreateOutputNode(CameraProcessNode* parent_node,
+                               const InternalConfigNode& internal_output_node,
+                               CameraProcessNode** output_processing_node);
 
   // Create the stream pipeline graph
-  zx_status_t CreateGraph(CameraPipelineInfo* info,
-                          const std::shared_ptr<CameraProcessNode>& parent_node,
-                          std::shared_ptr<CameraProcessNode>* output_processing_node);
+  zx_status_t CreateGraph(CameraPipelineInfo* info, CameraProcessNode* parent_node,
+                          CameraProcessNode** output_processing_node);
   // Gets the next node for the requested stream path
   const InternalConfigNode* GetNextNodeInPipeline(CameraPipelineInfo* info,
                                                   const InternalConfigNode& node);
@@ -76,10 +75,10 @@ class CameraPipelineManager {
  private:
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
-  ddk::IspProtocolClient& isp_;
-  __UNUSED ddk::GdcProtocolClient& gdc_;
+  ddk::IspProtocolClient isp_;
+  __UNUSED ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
-  std::shared_ptr<CameraProcessNode> full_resolution_stream_;
+  std::unique_ptr<CameraProcessNode> full_resolution_stream_;
 };
 
 }  // namespace camera

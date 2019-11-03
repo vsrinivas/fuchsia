@@ -23,8 +23,7 @@ class CameraProcessNode;
 // Server-side implementation of a stream.
 class StreamImpl : public fuchsia::camera2::Stream {
  public:
-  explicit StreamImpl(async_dispatcher_t* dispatcher,
-                      std::shared_ptr<CameraProcessNode> output_node);
+  explicit StreamImpl(async_dispatcher_t* dispatcher, CameraProcessNode* output_node);
   ~StreamImpl() override;
 
   // Binds a channel to the stream.
@@ -55,7 +54,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
   fbl::Mutex event_queue_lock_;
-  std::shared_ptr<CameraProcessNode> output_node_;
+  CameraProcessNode& output_node_;
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 

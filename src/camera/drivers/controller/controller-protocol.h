@@ -30,12 +30,12 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerImpl);
   ControllerImpl(zx_device_t* device,
                  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
-                 async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
-                 ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
+                 async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
+                 const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
-  explicit ControllerImpl(zx_device_t* device, ddk::IspProtocolClient& isp,
-                          ddk::GdcProtocolClient& gdc,
+  explicit ControllerImpl(zx_device_t* device, const ddk::IspProtocolClient& isp,
+                          const ddk::GdcProtocolClient& gdc,
                           fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : binding_(nullptr),
         camera_pipeline_manager_(device, isp, gdc, std::move(sysmem_allocator)) {}

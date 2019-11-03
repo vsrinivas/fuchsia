@@ -6,6 +6,7 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_CONTROLLER_PROCESSING_NODE_H_
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <zircon/assert.h>
 
 #include <vector>
 
@@ -44,12 +45,19 @@ class CameraProcessNode {
   CameraProcessNode(NodeType type, fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
                     fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection)
       : type_(type),
+        parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         old_output_buffer_collection_(old_output_buffer_collection),
         callback_{OnFrameAvailable, this},
-        enabled_(false) {}
+        enabled_(false) {
+    ZX_ASSERT(type == NodeType::kInputStream);
+  }
 
-  explicit CameraProcessNode(NodeType type) : type_(type), enabled_(false) {}
+  explicit CameraProcessNode(NodeType type, CameraProcessNode* parent_node)
+      : type_(type), parent_node_(parent_node), enabled_(false) {
+    ZX_ASSERT(type == NodeType::kOutputStream);
+    ZX_ASSERT(parent_node_ != nullptr);
+  }
 
   ~CameraProcessNode() {
     // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer collections
@@ -57,8 +65,10 @@ class CameraProcessNode {
     // released.
     // The ISP does not actually take ownership of the buffers upon creating the stream (they are
     // duplicated internally), so they must be manually released here.
-    ZX_ASSERT(ZX_OK == zx_handle_close_many(old_output_buffer_collection_.vmos,
-                                            old_output_buffer_collection_.buffer_count));
+    if (type_ == NodeType::kInputStream) {
+      ZX_ASSERT(ZX_OK == zx_handle_close_many(old_output_buffer_collection_.vmos,
+                                              old_output_buffer_collection_.buffer_count));
+    }
   }
 
   // Called when input is ready for this processing node.
@@ -77,9 +87,6 @@ class CameraProcessNode {
   void OnStopStreaming();
 
   // Helper APIs
-  void set_parent_node(const std::shared_ptr<CameraProcessNode> parent_node) {
-    parent_node_ = parent_node;
-  }
   void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
     isp_stream_protocol_ = std::move(isp_stream_protocol);
   }
@@ -111,7 +118,7 @@ class CameraProcessNode {
   std::vector<ChildNodeInfo> child_nodes_info_;
   HwAcceleratorInfo hw_accelerator_;
   // Parent node
-  std::shared_ptr<CameraProcessNode> parent_node_;
+  CameraProcessNode* const parent_node_;
   // Input buffer collection is only valid for nodes other than
   // |kInputStream| and |kOutputStream|
   fuchsia::sysmem::BufferCollectionInfo_2 input_buffer_collection_;

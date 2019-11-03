@@ -13,9 +13,8 @@
 
 namespace camera {
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<CameraProcessNode> output_node)
-    : dispatcher_(dispatcher), binding_(this), output_node_(std::move(output_node)) {}
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, CameraProcessNode* output_node)
+    : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
 
 StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
 
@@ -68,7 +67,7 @@ void StreamImpl::Stop() {
     return;
   }
 
-  output_node_->OnStopStreaming();
+  output_node_.OnStopStreaming();
   started_ = false;
 }
 
@@ -77,11 +76,11 @@ void StreamImpl::Start() {
     Shutdown(ZX_ERR_BAD_STATE);
     return;
   }
-  output_node_->OnStartStreaming();
+  output_node_.OnStartStreaming();
   started_ = true;
-}
+}  // namespace camera
 
-void StreamImpl::ReleaseFrame(uint32_t buffer_id) { output_node_->OnReleaseFrame(buffer_id); }
+void StreamImpl::ReleaseFrame(uint32_t buffer_id) { output_node_.OnReleaseFrame(buffer_id); }
 
 void StreamImpl::AcknowledgeFrameError() {
   FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";

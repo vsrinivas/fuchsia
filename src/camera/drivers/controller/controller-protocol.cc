@@ -13,8 +13,8 @@ namespace camera {
 
 ControllerImpl::ControllerImpl(zx_device_t* device,
                                fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
-                               async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
-                               ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
+                               async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
+                               const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                                fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : binding_(this),
       camera_pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
