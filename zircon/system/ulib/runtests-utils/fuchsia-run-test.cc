@@ -55,12 +55,6 @@ constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 // component url as its parameter.
 constexpr char kRunTestSuitePath[] = "/bin/run-test-suite";
 
-// Defines if binary at `kRunTestComponentPath` is valid.
-enum ComponentTestRunnerStatus { NOT_CHECKED, PRESENT, NOT_PRESENT };
-
-const int kNumberOfTriesForComponentTestRunner = 20;
-const int kSleepSecForComponentTestRunner = 20;
-
 fbl::String DirectoryName(const fbl::String& path) {
   char* cpath = strndup(path.data(), path.length());
   fbl::String ret(dirname(cpath));
@@ -207,37 +201,6 @@ void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
   ;
 }
 
-/// tries to open `path` as executable and returns status.
-static zx_status_t executable_status(const char* path) {
-  int fd;
-  zx_status_t status =
-      fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::vmo vmo;
-  status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
-  close(fd);
-  return status;
-}
-
-static ComponentTestRunnerStatus CheckComponentTestRunner(const char* component_runner_path) {
-  zx_status_t status = -1;
-  for (int i = 0; i < kNumberOfTriesForComponentTestRunner; i++) {
-    status = executable_status(component_runner_path);
-    if (status == ZX_OK) {
-      return ComponentTestRunnerStatus::PRESENT;
-    }
-    sleep(kSleepSecForComponentTestRunner);
-  }
-
-  fprintf(stderr, "WARNING: Cannot find '%s': %s", component_runner_path,
-          zx_status_get_string(status));
-
-  return ComponentTestRunnerStatus::NOT_PRESENT;
-}
-
 // If test is a component, this function will find appropriate component executor and modify launch
 // arguments.
 // Retuns:
@@ -246,10 +209,6 @@ static ComponentTestRunnerStatus CheckComponentTestRunner(const char* component_
 // |false|: if setup fails.
 bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_component_url,
                            fbl::String* out_component_executor) {
-  static ComponentTestRunnerStatus run_test_component_status =
-      ComponentTestRunnerStatus::NOT_CHECKED;
-  static ComponentTestRunnerStatus run_test_suite_status = ComponentTestRunnerStatus::NOT_CHECKED;
-
   // Values used when running the test as a component.
   ComponentInfo v1_info, v2_info;
   const char* test_path = argv[0];
@@ -265,31 +224,24 @@ bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_com
   struct stat s;
 
   const char* component_executor = "";
-  ComponentTestRunnerStatus* component_executor_status = nullptr;
   fbl::String component_url;
 
   // cmx file is present
   if (stat(v1_info.manifest_path.c_str(), &s) == 0) {
     component_executor = kRunTestComponentPath;
-    component_executor_status = &run_test_component_status;
     component_url = v1_info.component_url;
   } else if (stat(v2_info.manifest_path.c_str(), &s) == 0) {
     // cm file is present
     component_executor = kRunTestSuitePath;
     component_url = v2_info.component_url;
-    component_executor_status = &run_test_suite_status;
   } else {
     // Can't find either cmx or cm file, this test is not a component.
     return true;
   }
 
-  // make sure component_executor is present.
-  if (*component_executor_status == ComponentTestRunnerStatus::NOT_CHECKED) {
-    // this functions is only called once per component runner.
-    *component_executor_status = CheckComponentTestRunner(component_executor);
-  }
-
-  if (*component_executor_status == ComponentTestRunnerStatus::PRESENT) {
+  // Check whether the executor is present and print a more helpful error, rather than failing later
+  // in the fdio_spawn_etc call
+  if (stat(component_executor, &s) == 0) {
     *out_component_executor = component_executor;
     *out_component_url = std::move(component_url);
   } else {
