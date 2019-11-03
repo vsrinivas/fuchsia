@@ -13,6 +13,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdmmc.h>
+#include <lib/zx/time.h>
 #include <pretty/hexdump.h>
 
 namespace {
@@ -24,6 +25,8 @@ constexpr uint32_t kFreq25MHz = 25'000'000;
 constexpr uint64_t kMmcSectorSize = 512;  // physical sector size
 constexpr uint64_t kMmcBlockSize = 512;   // block size is 512 bytes always because it is the
                                           // required value if the card is in DDR mode
+
+constexpr uint32_t kSwitchStatusRetries = 3;
 
 }  // namespace
 
@@ -77,9 +80,18 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
     return st;
   }
 
+  // The GENERIC_CMD6_TIME field defines a maximum timeout value for CMD6 in tens of milliseconds.
+  // There does not appear to be any other way to check the status of CMD6, so just sleep for the
+  // maximum required time before issuing CMD13.
+  zx::nanosleep(zx::deadline_after(zx::msec(10 * raw_ext_csd_[MMC_EXT_CSD_GENERIC_CMD6_TIME])));
+
   // Check status after MMC_SWITCH
   uint32_t resp;
-  st = sdmmc_.SdmmcSendStatus(&resp);
+  st = ZX_ERR_BAD_STATE;
+  for (uint32_t i = 0; i < kSwitchStatusRetries && st != ZX_OK; i++) {
+    st = sdmmc_.SdmmcSendStatus(&resp);
+  }
+
   if (st == ZX_OK) {
     if (resp & MMC_STATUS_SWITCH_ERR) {
       zxlogf(ERROR, "mmc: mmc status error after MMC_SWITCH (0x%x=%d), status = 0x%08x\n", index,
@@ -90,7 +102,7 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
     zxlogf(ERROR, "mmc: failed to MMC_SEND_STATUS (%x=%d), retcode = %d\n", index, value, st);
   }
 
-  return ZX_OK;
+  return st;
 }
 
 zx_status_t SdmmcBlockDevice::MmcSetBusWidth(sdmmc_bus_width_t bus_width,

@@ -80,12 +80,13 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       break;
   }
 
+  req->status = ZX_OK;
+
   if (command_callbacks_.find(req->cmd_idx) != command_callbacks_.end()) {
     command_callbacks_[req->cmd_idx](req);
   }
 
-  req->status = ZX_OK;
-  return ZX_OK;
+  return req->status;
 }
 
 zx_status_t FakeSdmmcDevice::SdmmcRegisterInBandInterrupt(

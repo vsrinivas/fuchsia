@@ -489,4 +489,38 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
   EXPECT_TRUE(op5->private_storage()->completed);
 }
 
+TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusRetry) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_DEVICE_TYPE] = 1 << 4;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 1;
+  });
+  sdmmc_.set_command_callback(SDMMC_SEND_STATUS, [](sdmmc_req_t* req) {
+    // Fail twice before succeeding.
+    static uint32_t call_count = 0;
+    if (++call_count >= 3) {
+      req->status = ZX_OK;
+      call_count = 0;
+    } else {
+      req->status = ZX_ERR_IO_DATA_INTEGRITY;
+    }
+  });
+
+  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.ProbeMmc());
+}
+
+TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusFail) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_DEVICE_TYPE] = 1 << 4;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 1;
+  });
+  sdmmc_.set_command_callback(SDMMC_SEND_STATUS,
+                              [](sdmmc_req_t* req) { req->status = ZX_ERR_IO_DATA_INTEGRITY; });
+
+  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_NOT_OK(dut.ProbeMmc());
+}
+
 }  // namespace sdmmc

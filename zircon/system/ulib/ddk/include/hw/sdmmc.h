@@ -142,6 +142,7 @@ __BEGIN_CDECLS
 #define MMC_EXT_CSD_HS_TIMING_HS400 3
 
 #define MMC_EXT_CSD_DEVICE_TYPE 196
+#define MMC_EXT_CSD_GENERIC_CMD6_TIME 248
 
 // Device register (CMD13 response) fields (SD/MMC)
 #define MMC_STATUS_ADDR_OUT_OF_RANGE (1 << 31)
