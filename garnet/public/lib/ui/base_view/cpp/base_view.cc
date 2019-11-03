@@ -4,7 +4,7 @@
 
 #include "lib/ui/base_view/cpp/base_view.h"
 
-#include <lib/ui/gfx/cpp/math.h>
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>

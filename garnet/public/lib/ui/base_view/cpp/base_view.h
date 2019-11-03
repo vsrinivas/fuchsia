@@ -12,6 +12,7 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
+#include <lib/ui/base_view/cpp/math.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 

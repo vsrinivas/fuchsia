@@ -14,13 +14,13 @@ source_set("gesture") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/gfx/cpp",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
   ]
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//src/lib/syslog/cpp",
   ]
 }

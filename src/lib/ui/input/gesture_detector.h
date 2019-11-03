@@ -121,7 +121,7 @@ class GestureDetector {
 
   Delegate* const delegate_;
   std::map<DeviceId, DevicePointerState> devices_;
-  float drag_threshold_squared_;
+  float drag_threshold_;
 };
 
 }  // namespace input

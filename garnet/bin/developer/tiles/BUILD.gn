@@ -26,7 +26,6 @@ source_set("tiles_lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/gfx/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//src/lib/fxl",
   ]

@@ -27,6 +27,50 @@ namespace gfx {
 
 std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Value::Tag& tag);
 
+inline vec2 operator-(const vec2& v) { return {.x = -v.x, .y = -v.y}; }
+
+inline vec2& operator+=(vec2& a, const vec2& b) {
+  a.x += b.x;
+  a.y += b.y;
+  return a;
+}
+
+// Return a vec2 consisting of the component-wise sum of the two arguments.
+inline vec2 operator+(const vec2& a, const vec2& b) { return {.x = a.x + b.x, .y = a.y + b.y}; }
+
+// Return a vec2 consisting of the component-wise difference of the two args.
+inline vec2 operator-(const vec2& a, const vec2& b) { return {.x = a.x - b.x, .y = a.y - b.y}; }
+
+inline vec2 operator*(const vec2& v, float s) { return {.x = v.x * s, .y = v.y * s}; }
+
+inline vec2& operator/=(vec2& v, float s) {
+  v.x /= s;
+  v.y /= s;
+  return v;
+}
+
+inline vec2 operator/(const vec2& v, float s) { return {.x = v.x / s, .y = v.y / s}; }
+
+// Return a vec3 consisting of the component-wise sum of the two arguments.
+inline vec3 operator+(const vec3& a, const vec3& b) {
+  return {.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
+}
+
+// Return a vec3 consisting of the component-wise difference of the two args.
+inline vec3 operator-(const vec3& a, const vec3& b) {
+  return {.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z};
+}
+
+// Return a vec4 consisting of the component-wise sum of the two arguments.
+inline vec4 operator+(const vec4& a, const vec4& b) {
+  return {.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z, .w = a.w + b.w};
+}
+
+// Return a vec4 consisting of the component-wise difference of the two args.
+inline vec4 operator-(const vec4& a, const vec4& b) {
+  return {.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z, .w = a.w - b.w};
+}
+
 }  // namespace gfx
 }  // namespace ui
 }  // namespace fuchsia

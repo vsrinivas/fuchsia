@@ -4,7 +4,7 @@
 
 #include "garnet/testing/views/opacity_view.h"
 
-#include <lib/ui/gfx/cpp/math.h>
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"

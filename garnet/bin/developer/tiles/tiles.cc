@@ -4,8 +4,8 @@
 
 #include "garnet/bin/developer/tiles/tiles.h"
 
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/svc/cpp/services.h>
-#include <lib/ui/gfx/cpp/math.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <cmath>

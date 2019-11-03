@@ -4,7 +4,9 @@
 
 #include "src/lib/ui/input/gesture.h"
 
-#include "garnet/public/lib/ui/gfx/cpp/math.h"
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+
+#include <cmath>
 
 namespace input {
 
@@ -60,7 +62,7 @@ Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id,
       fuchsia::ui::gfx::vec2 old_relative = p.relative;
       float old_distance = p.distance;
       p.relative = p.absolute - centroid_;
-      p.distance = scenic::Length(p.relative);
+      p.distance = std::hypot(p.relative.x, p.relative.y);
 
       // For small displacements, this approximates radians.
       delta.rotation +=
@@ -102,7 +104,7 @@ void Gesture::UpdateRelative() {
   for (auto& entry : pointers_) {
     PointerInfo& p = entry.second;
     p.relative = p.absolute - centroid_;
-    p.distance = scenic::Length(p.relative);
+    p.distance = std::hypot(p.relative.x, p.relative.y);
   }
 }
 

@@ -4,11 +4,11 @@
 
 #include "src/lib/ui/input/gesture_detector.h"
 
-#include "garnet/public/lib/ui/gfx/cpp/math.h"
+#include <cmath>
+
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace input {
-
 namespace {
 
 GestureDetector::TapType ClassifyTap(const fuchsia::ui::input::PointerEvent& event,
@@ -83,7 +83,7 @@ void GestureDetector::Interaction::OnMultidrag(GestureDetector::TapType tap_type
 GestureDetector::Delegate::~Delegate() = default;
 
 GestureDetector::GestureDetector(Delegate* delegate, float drag_threshold)
-    : delegate_(delegate), drag_threshold_squared_(drag_threshold * drag_threshold) {}
+    : delegate_(delegate), drag_threshold_(drag_threshold) {}
 
 bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
   switch (event.phase) {
@@ -136,8 +136,9 @@ bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
         // Decide whether we've exceeded the threshold to start a multidrag.
         state.pending_delta += delta;
 
-        if (scenic::Distance2(state.origins[event.pointer_id], {event.x, event.y}) >=
-            drag_threshold_squared_) {
+        const float distance = std::hypot(state.origins[event.pointer_id].x - event.x,
+                                          state.origins[event.pointer_id].y - event.y);
+        if (distance >= drag_threshold_) {
           // Kill the tap and handle as a multidrag from now on.
           state.tap_type = 0;
           state.origins.clear();
