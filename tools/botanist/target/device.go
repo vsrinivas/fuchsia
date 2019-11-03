@@ -14,6 +14,7 @@ import (
 	"net"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/power/lib"
 	"go.fuchsia.dev/fuchsia/tools/build/api"
@@ -172,7 +173,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 	}()
 
 	// Mexec Zedboot
-	err = botanist.BootZedbootShim(ctx, t.Tftp(), images)
+	err = bootserver.BootZedbootShim(ctx, t.Tftp(), images)
 	if err != nil {
 		return err
 	}
@@ -180,11 +181,11 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 	// Boot Fuchsia.
 	var bootMode int
 	if t.opts.Netboot {
-		bootMode = botanist.ModeNetboot
+		bootMode = bootserver.ModeNetboot
 	} else {
-		bootMode = botanist.ModePave
+		bootMode = bootserver.ModePave
 	}
-	return botanist.Boot(ctx, t.Tftp(), bootMode, images, args, t.signers)
+	return bootserver.Boot(ctx, t.Tftp(), bootMode, images, args, t.signers)
 }
 
 // Restart restarts the target.

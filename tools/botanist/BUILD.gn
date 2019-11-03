@@ -25,6 +25,7 @@ go_library("target") {
   source_dir = "target"
   deps = [
     ":botanist_lib",
+    "//tools/bootserver:bootserver_lib",
     "//tools/botanist/power",
     "//tools/net/netutil",
     "//tools/net/serial",
@@ -60,18 +61,14 @@ go_test("botanist_cmd_tests") {
 }
 
 go_test("botanist_lib_tests") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/tools/botanist/lib",
-  ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/lib" ]
   deps = [
     ":botanist_lib",
   ]
 }
 
 go_test("botanist_target_tests") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/tools/botanist/target",
-  ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
   deps = [
     ":target",
   ]
