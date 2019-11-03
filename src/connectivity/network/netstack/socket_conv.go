@@ -295,6 +295,13 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 	case C.IPV6_PATHMTU:
 
+	case C.IPV6_TCLASS:
+		var v tcpip.IPv6TrafficClassOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		return int32(v), nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
 
@@ -335,6 +342,13 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		}
 
 		return int32(0), nil
+
+	case C.IP_TOS:
+		var v tcpip.IPv4TOSOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		return int32(v), nil
 
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
@@ -555,6 +569,19 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.MCAST_LEAVE_SOURCE_GROUP,
 		C.MCAST_UNBLOCK_SOURCE:
 
+	case C.IPV6_TCLASS:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		v := int32(binary.LittleEndian.Uint32(optVal))
+		if v < -1 || v > 255 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		if v == -1 {
+			v = 0
+		}
+		return ep.SetSockOpt(tcpip.IPv6TrafficClassOption(v))
+
 	default:
 		syslog.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
 
@@ -672,6 +699,16 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		// still allow setting TTL, and multicast-enable/disable type options.
 		return tcpip.ErrNotSupported
 
+	case C.IP_TOS:
+		if len(optVal) == 0 {
+			return nil
+		}
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+		return ep.SetSockOpt(tcpip.IPv4TOSOption(v))
+
 	case
 		C.IP_ADD_SOURCE_MEMBERSHIP,
 		C.IP_BIND_ADDRESS_NO_PORT,
@@ -695,7 +732,6 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.IP_RECVTOS,
 		C.IP_RECVTTL,
 		C.IP_RETOPTS,
-		C.IP_TOS,
 		C.IP_TRANSPARENT,
 		C.IP_TTL,
 		C.IP_UNBLOCK_SOURCE,

@@ -489,6 +489,10 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     return ERRNO(EBADF);
   }
 
+  if (optval == NULL || optlen == NULL) {
+    return ERRNO(EFAULT);
+  }
+
   // Handle client-maintained socket options.
   if (level == SOL_SOCKET) {
     const zx::duration* timeout = nullptr;
@@ -529,11 +533,25 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     return ERRNO(out_code);
   }
   auto out = response->optval;
-  if (out.count() > *optlen) {
-    return ERRNO(EINVAL);
+  socklen_t copy_len = MIN(*optlen, static_cast<socklen_t>(out.count()));
+  switch (optname) {
+    case IP_TOS:
+      // On Linux, when the optlen is < sizeof(int), only a single byte is
+      // copied. As the TOS size is just a byte value, we are not losing
+      // any information here.
+      if (*optlen > 0 && *optlen < sizeof(int)) {
+        copy_len = 1;
+      }
+      break;
+    case IPV6_TCLASS:
+      break;
+    default:
+      if (out.count() > *optlen) {
+        return ERRNO(EINVAL);
+      }
   }
-  memcpy(optval, out.data(), out.count());
-  *optlen = static_cast<socklen_t>(out.count());
+  memcpy(optval, out.data(), copy_len);
+  *optlen = copy_len;
   return 0;
 }
 
@@ -569,6 +587,24 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
       return 0;
     }
   }
+
+  // For each option, Linux handles the optval checks differently.
+  // ref: net/ipv4/ip_sockglue.c, net/ipv6/ipv6_sockglue.c
+  switch (optname) {
+    case IP_TOS:
+      if (optval == NULL) {
+        return ERRNO(EFAULT);
+      }
+      break;
+    case IPV6_TCLASS:
+      if (optval == NULL) {
+        return 0;
+      }
+      break;
+    default:
+      break;
+  }
+
   auto result = socket->control.SetSockOpt(
       static_cast<int16_t>(level), static_cast<int16_t>(optname),
       fidl::VectorView(static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));

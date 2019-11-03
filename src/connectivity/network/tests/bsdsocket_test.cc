@@ -151,6 +151,304 @@ TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
   ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0) << strerror(errno);
 }
 
+struct TOSOption {
+  int level;
+  int option;
+};
+
+constexpr int INET_ECN_MASK = 3;
+
+struct SocketKind {
+  std::string description;
+  int domain;
+  int type;
+  int protocol;
+};
+
+class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
+ protected:
+  SocketOptsTest() {
+    std::cout << "Testing with " << GetParam().description.c_str() << " socket." << std::endl;
+  }
+
+  fbl::unique_fd NewSocket() const {
+    SocketKind s = GetParam();
+    return fbl::unique_fd(socket(s.domain, s.type, s.protocol));
+  }
+
+  TOSOption GetTOSOption() {
+    TOSOption opt;
+    switch (GetParam().domain) {
+      case AF_INET:
+        opt.level = IPPROTO_IP;
+        opt.option = IP_TOS;
+        break;
+      case AF_INET6:
+        opt.level = IPPROTO_IPV6;
+        opt.option = IPV6_TCLASS;
+        break;
+    }
+    return opt;
+  }
+};
+
+// The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
+TEST_P(SocketOptsTest, TOSDefault) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  TOSOption t = GetTOSOption();
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  constexpr int kDefaultTOS = 0;
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, kDefaultTOS);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0xC0;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, set);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, NullTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  socklen_t set_sz = sizeof(int);
+  TOSOption t = GetTOSOption();
+  if (GetParam().domain == AF_INET) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), -1);
+    EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), 0) << strerror(errno);
+  }
+  socklen_t get_sz = sizeof(int);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, nullptr, &get_sz), -1);
+  EXPECT_EQ(errno, EFAULT);
+  int get = -1;
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, nullptr), -1);
+  EXPECT_EQ(errno, EFAULT);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, ZeroTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, set);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, InvalidLargeTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  // Test with exceeding the byte space.
+  int set = 256;
+  constexpr int kDefaultTOS = 0;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  if (GetParam().domain == AF_INET) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
+    EXPECT_EQ(errno, EINVAL);
+  }
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, kDefaultTOS);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, CheckSkipECN) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0xFF;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+  int expect = static_cast<uint8_t>(set);
+  if (GetParam().protocol == IPPROTO_TCP
+#ifdef __linux__
+      // gvisor-netstack`s implemention of setsockopt(..IPV6_TCLASS..)
+      // clears the ECN bits from the TCLASS value. This keeps gvisor
+      // in parity with the Linux test-hosts that run a custom kernel.
+      // But that is not the behavior of vanilla Linux kernels.
+      // This ifdef can be removed when we migrate away from gvisor-netstack.
+      && GetParam().domain != AF_INET6
+#endif
+      ) {
+    expect &= ~INET_ECN_MASK;
+  }
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, expect);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, ZeroTOSOptionSize) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0xC0;
+  socklen_t set_sz = 0;
+  TOSOption t = GetTOSOption();
+  if (GetParam().domain == AF_INET) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
+    EXPECT_EQ(errno, EINVAL);
+  }
+  int get = -1;
+  socklen_t get_sz = 0;
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, 0u);
+  EXPECT_EQ(get, -1);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SmallTOSOptionSize) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0xC0;
+  constexpr int kDefaultTOS = 0;
+  TOSOption t = GetTOSOption();
+  for (socklen_t i = 1; i < sizeof(int); i++) {
+    int expect_tos;
+    socklen_t expect_sz;
+    if (GetParam().domain == AF_INET) {
+      EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), 0) << strerror(errno);
+      expect_tos = set;
+      expect_sz = sizeof(uint8_t);
+    } else {
+      EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), -1);
+      EXPECT_EQ(errno, EINVAL);
+      expect_tos = kDefaultTOS;
+      expect_sz = i;
+    }
+    uint get = -1;
+    socklen_t get_sz = i;
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+    EXPECT_EQ(get_sz, expect_sz);
+    // Account for partial copies by getsockopt, retrieve the lower
+    // bits specified by get_sz, while comparing against expect_tos.
+    EXPECT_EQ(get & ~(~0 << (get_sz * 8)), static_cast<uint>(expect_tos));
+  }
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, LargeTOSOptionSize) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  char buffer[100];
+  int* set = reinterpret_cast<int*>(buffer);
+  // Point to a larger buffer so that the setsockopt does not overrun.
+  *set = 0xC0;
+  TOSOption t = GetTOSOption();
+  for (socklen_t i = sizeof(int); i < 10; i++) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, set, i), 0) << strerror(errno);
+    int get = -1;
+    socklen_t get_sz = i;
+    // We expect the system call handler to only copy atmost sizeof(int) bytes
+    // as asserted by the check below. Hence, we do not expect the copy to
+    // overflow in getsockopt.
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+    EXPECT_EQ(get_sz, sizeof(int));
+    EXPECT_EQ(get, *set);
+  }
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, NegativeTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = -1;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+  int expect;
+  if (GetParam().domain == AF_INET) {
+    expect = static_cast<uint8_t>(set);
+    if (GetParam().protocol == IPPROTO_TCP) {
+      expect &= ~INET_ECN_MASK;
+    }
+  } else {
+    // On IPv6 TCLASS, setting -1 has the effect of resetting the
+    // TrafficClass.
+    expect = 0;
+  }
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, expect);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, InvalidNegativeTOS) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = -2;
+  socklen_t set_sz = sizeof(set);
+  TOSOption t = GetTOSOption();
+  int expect;
+  if (GetParam().domain == AF_INET) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+    expect = static_cast<uint8_t>(set);
+    if (GetParam().protocol == IPPROTO_TCP) {
+      expect &= ~INET_ECN_MASK;
+    }
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
+    EXPECT_EQ(errno, EINVAL);
+    expect = 0;
+  }
+  int get = 0;
+  socklen_t get_sz = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(get, expect);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
+                         ::testing::Values(
+                              SocketKind{"IPv4 UDP", AF_INET, SOCK_DGRAM, IPPROTO_UDP},
+                              SocketKind{"IPv4 TCP", AF_INET, SOCK_STREAM, IPPROTO_TCP},
+                              SocketKind{"IPv6 UDP", AF_INET6, SOCK_DGRAM, IPPROTO_UDP},
+                              SocketKind{"IPv6 TCP", AF_INET6, SOCK_STREAM, IPPROTO_TCP}));
+
 TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
   int s;
   ASSERT_GE(s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
