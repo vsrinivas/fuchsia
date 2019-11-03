@@ -6,9 +6,10 @@
 #define IMAGE_PIPE_SURFACE_H
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <vulkan/vulkan.h>
 
 #include <vector>
+
+#include <vulkan/vulkan.h>
 
 struct VkLayerDispatchTable_;
 typedef struct VkLayerDispatchTable_ VkLayerDispatchTable;
@@ -42,7 +43,8 @@ class ImagePipeSurface {
 
   VkFlags SupportedUsage() {
     return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+           VK_IMAGE_USAGE_STORAGE_BIT;
   }
 
   virtual bool Init() { return true; }

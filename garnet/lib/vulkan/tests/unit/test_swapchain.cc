@@ -236,7 +236,8 @@ class TestSwapchain {
     init_ = true;
   }
 
-  VkResult CreateSwapchainHelper(VkSurfaceKHR surface, VkSwapchainKHR* swapchain_out) {
+  VkResult CreateSwapchainHelper(VkSurfaceKHR surface, VkImageUsageFlags usage,
+                                 VkSwapchainKHR* swapchain_out) {
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -248,7 +249,7 @@ class TestSwapchain {
         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         .imageArrayLayers = 1,
         .imageExtent = {100, 100},
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageUsage = usage,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,
         .pQueueFamilyIndices = nullptr,
@@ -286,7 +287,7 @@ class TestSwapchain {
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
-  void CreateSwapchain(int num_swapchains) {
+  void CreateSwapchain(int num_swapchains, VkImageUsageFlags usage) {
     ASSERT_TRUE(init_);
 
     zx::channel endpoint0, endpoint1;
@@ -307,7 +308,7 @@ class TestSwapchain {
 
     for (int i = 0; i < num_swapchains; ++i) {
       VkSwapchainKHR swapchain;
-      EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
+      EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, usage, &swapchain));
       destroy_swapchain_khr_(vk_device_, swapchain, nullptr);
     }
 
@@ -360,7 +361,7 @@ TEST_P(SwapchainTest, Create) {
   }
   ASSERT_TRUE(test.init_);
 
-  test.CreateSwapchain(1);
+  test.CreateSwapchain(1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 }
 
 TEST_P(SwapchainTest, CreateTwice) {
@@ -371,7 +372,18 @@ TEST_P(SwapchainTest, CreateTwice) {
   }
   ASSERT_TRUE(test.init_);
 
-  test.CreateSwapchain(2);
+  test.CreateSwapchain(2, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+}
+
+TEST_P(SwapchainTest, CreateForStorage) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.init_);
+
+  test.CreateSwapchain(1, VK_IMAGE_USAGE_STORAGE_BIT);
 }
 
 INSTANTIATE_TEST_SUITE_P(SwapchainTestSuite, SwapchainTest, ::testing::Bool());
@@ -404,7 +416,8 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
             vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info, nullptr, &surface));
 
   VkSwapchainKHR swapchain;
-  ASSERT_EQ(VK_SUCCESS, test.CreateSwapchainHelper(surface, &swapchain));
+  ASSERT_EQ(VK_SUCCESS,
+            test.CreateSwapchainHelper(surface, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &swapchain));
 
   VkQueue queue;
   vkGetDeviceQueue(test.vk_device_, 0, 0, &queue);
