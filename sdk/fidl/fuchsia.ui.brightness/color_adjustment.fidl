@@ -1,0 +1,30 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.brightness;
+
+/// Allows a presentation owner to register a handler for color adjustments.
+/// This API is implemented by the Brightness Manager and
+/// called by Root Presenter.
+[Discoverable]
+protocol ColorAdjustment {
+    /// Registers a handler for changes in the color adjustment configuration.
+    RegisterColorAdjustmentHandler(ColorAdjustmentHandler handler);
+};
+
+/// Handler implemented by the owner of the presentation.
+/// The brightness manager uses this protocol to request changes to the
+/// screen's color adjustment matrix.
+protocol ColorAdjustmentHandler {
+    /// Called when the color adjustment  has changed.
+    SetColorAdjustment(ColorAdjustmentTable color_adjustment);
+};
+
+/// The table for screen color tint adjustments.
+table ColorAdjustmentTable {
+    /// 3x3 Matrix in row-major form which will be used by root presenter
+    /// to apply color adjustment.
+    /// This field may be omitted to disable color adjustment.
+    1: array<float32>:9 matrix;
+};

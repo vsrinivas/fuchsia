@@ -7,5 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.brightness") {
   sources = [
     "brightness.fidl",
+    "color_adjustment.fidl",
   ]
 }
