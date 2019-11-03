@@ -15,6 +15,8 @@
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -24,6 +26,7 @@
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/job.h>
+#include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -42,15 +45,38 @@ typedef struct zx_service_provider_instance {
   // The service provider for which this structure is an instance.
   const zx_service_provider_t* provider;
 
+  // The loop on which the service provider runs.
+  async_loop_t* loop = nullptr;
+
+  // The thread on which the service provider runs.
+  thrd_t thread = {};
+
   // The |ctx| pointer returned by the provider's |init| function, if any.
   void* ctx;
 } zx_service_provider_instance_t;
 
 static zx_status_t provider_init(zx_service_provider_instance_t* instance) {
+  zx_status_t status = async_loop_create(&kAsyncLoopConfigNeverAttachToThread, &instance->loop);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status =
+      async_loop_start_thread(instance->loop, instance->provider->services[0], &instance->thread);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   if (instance->provider->ops->init) {
-    zx_status_t status = instance->provider->ops->init(&instance->ctx);
-    if (status != ZX_OK)
+    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(instance->loop);
+    status = async::PostTask(dispatcher, [instance]() {
+      auto status = instance->provider->ops->init(&instance->ctx);
+      ZX_ASSERT(status == ZX_OK);
+    });
+    if (status != ZX_OK) {
+      async_loop_destroy(instance->loop);
       return status;
+    }
   }
   return ZX_OK;
 }
@@ -67,9 +93,13 @@ static zx_status_t provider_publish(zx_service_provider_instance_t* instance,
     const char* service_name = provider->services[i];
     zx_status_t status = dir->AddEntry(
         service_name,
-        fbl::MakeRefCounted<fs::Service>([instance, dispatcher, service_name](zx::channel request) {
-          return instance->provider->ops->connect(instance->ctx, dispatcher, service_name,
-                                                  request.release());
+        fbl::MakeRefCounted<fs::Service>([instance, service_name](zx::channel request) {
+          async_dispatcher_t* dispatcher = async_loop_get_dispatcher(instance->loop);
+          return async::PostTask(dispatcher, [instance, dispatcher, service_name,
+                                              request = std::move(request)]() mutable {
+            instance->provider->ops->connect(instance->ctx, dispatcher, service_name,
+                                             request.release());
+          });
         }));
     if (status != ZX_OK) {
       for (size_t j = 0; j < i; ++j)
@@ -82,8 +112,11 @@ static zx_status_t provider_publish(zx_service_provider_instance_t* instance,
 }
 
 static void provider_release(zx_service_provider_instance_t* instance) {
-  if (instance->provider->ops->release)
-    instance->provider->ops->release(instance->ctx);
+  if (instance->provider->ops->release) {
+    async_dispatcher_t* dispatcher = async_loop_get_dispatcher(instance->loop);
+    async::PostTask(dispatcher, [instance]() { instance->provider->ops->release(instance->ctx); });
+  }
+  async_loop_destroy(instance->loop);
   instance->ctx = nullptr;
 }
 
