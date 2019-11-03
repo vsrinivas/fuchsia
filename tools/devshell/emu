@@ -35,6 +35,7 @@ NET=0
 DEBUGGER=0
 IFNAME=""
 AUDIO=0
+HEADLESS=0
 AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=no
@@ -139,7 +140,7 @@ while [[ $# -ge 1 ]]; do
     AUDIO=1
     ;;
   --headless)
-    AEMU="emulator-headless"
+    HEADLESS=1
     ;;
   --debugger)
     DEBUGGER=1
@@ -247,6 +248,10 @@ OPTIONS+=("-window-size" "$WINDOW_SIZE")
 OPTIONS+=("-gpu" "$GPU")
 if (( $DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
+fi
+
+if (( $HEADLESS )); then
+    OPTIONS+=("-no-window")
 fi
 
 # use port 5556 by default
