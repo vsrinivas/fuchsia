@@ -131,14 +131,21 @@ static void EarlyBootSeed(uint level) {
   entropy::Collector* collector = nullptr;
   if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
+  } else if (gCmdline.GetBool("kernel.cprng-seed-require.hw-rng", false)) {
+    panic("Failed to seed PRNG from required entropy source: hw-rng\n");
   }
   if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
     successful++;
+  } else if (gCmdline.GetBool("kernel.cprng-seed-require.jitterentropy", false)) {
+    panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
   }
 
   if (IntegrateCmdlineEntropy()) {
     successful++;
+  } else if (gCmdline.GetBool("kernel.cprng-seed-require.cmdline", false)) {
+    panic("Failed to seed PRNG from required entropy source: cmdline\n");
   }
+
   if (successful == 0) {
     printf(
         "WARNING: System has insufficient randomness.  It is completely "
@@ -169,10 +176,15 @@ static int ReseedPRNG(void* arg) {
     // Reseed using HW RNG and jitterentropy;
     if (entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
+    } else if (gCmdline.GetBool("kernel.cprng-reseed-require.hw-rng", false)) {
+      panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
     }
     if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
+    } else if (gCmdline.GetBool("kernel.cprng-reseed-require.jitterentropy", false)) {
+      panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");
     }
+
     if (successful == 0) {
       kGlobalPrng->SelfReseed();
       LTRACEF("Reseed PRNG with no new entropy source\n");

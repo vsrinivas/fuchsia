@@ -175,6 +175,30 @@ The compile switch setting overrides the cmdline parameter (if both are present)
 Note that both the compile switch and the cmdline parameter have the side effect
 of disabling irq driven uart Tx.
 
+## kernel.cprng-reseed-require.hw-rng=\<bool>
+
+When enabled and if HW RNG fails at reseeding, CPRNG panics. Defaults to false.
+
+## kernel.cprng-reseed-require.jitterentropy=\<bool>
+
+When enabled and if jitterentropy fails at reseeding, CPRNG panics. Defaults to
+false.
+
+## kernel.cprng-seed-require.hw-rng=\<bool>
+
+When enabled and if HW RNG fails at initial seeding, CPRNG panics. Defaults to
+false.
+
+## kernel.cprng-seed-require.jitterentropy=\<bool>
+
+When enabled and if jitterentrop fails initial seeding, CPRNG panics. Defaults
+to false.
+
+## kernel.cprng-seed-require.cmdline=\<bool>
+
+When enabled and if you do not provide entropy input from the kernel command
+line, CPRNG panics. Defaults to false.
+
 ## kernel.enable-debugging-syscalls=\<bool>
 
 When disabled, certain debugging-related syscalls will fail with
