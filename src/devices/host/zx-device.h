@@ -175,7 +175,12 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
   const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
   GetPowerStates() const;
+  const std::array<fuchsia_device_DevicePerformanceStateInfo,
+                   fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES>&
+  GetPerformanceStates() const;
   zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
+  zx_status_t SetPerformanceStates(
+      const device_performance_state_info_t* performance_states, uint8_t count);
   zx_status_t SetSystemPowerStateMapping(
       const std::array<fuchsia_device_SystemPowerStateInfo,
                        fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
@@ -229,6 +234,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>
       power_states_;
+  std::array<fuchsia_device_DevicePerformanceStateInfo,
+             fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES>
+      performance_states_;
   std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
       system_power_states_mapping_;
   fuchsia_device_DevicePowerState current_power_state_;

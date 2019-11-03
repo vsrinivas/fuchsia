@@ -5,12 +5,14 @@
 #ifndef DDKTL_DEVICE_H_
 #define DDKTL_DEVICE_H_
 
+#include <zircon/assert.h>
+
+#include <type_traits>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/unbind-txn.h>
-#include <type_traits>
-#include <zircon/assert.h>
 
 // ddk::Device<D, ...>
 //
@@ -267,10 +269,9 @@ class SuspendableNew : public base_mixin {
   }
 
  private:
-  static zx_status_t Suspend_New(void* ctx, uint8_t requested_state,
-                                   bool enable_wake, uint8_t* out_state) {
-    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake,
-                                               out_state);
+  static zx_status_t Suspend_New(void* ctx, uint8_t requested_state, bool enable_wake,
+                                 uint8_t* out_state) {
+    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake, out_state);
   }
 };
 
@@ -283,8 +284,7 @@ class ResumableNew : public base_mixin {
   }
 
  private:
-  static zx_status_t Resume_New(void* ctx, uint8_t requested_state,
-                                uint8_t* out_state) {
+  static zx_status_t Resume_New(void* ctx, uint8_t requested_state, uint8_t* out_state) {
     return static_cast<D*>(ctx)->DdkResumeNew(requested_state, out_state);
   }
 };
@@ -330,7 +330,9 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
                      const char* proxy_args = nullptr,
                      zx_handle_t client_remote = ZX_HANDLE_INVALID,
                      const device_power_state_info_t* power_states = nullptr,
-                     const uint8_t power_state_count = 0) {
+                     const uint8_t power_state_count = 0,
+                     const device_performance_state_info_t* perf_power_states = nullptr,
+                     const uint8_t perf_power_state_count = 0) {
     if (this->zxdev_ != nullptr) {
       return ZX_ERR_BAD_STATE;
     }
@@ -350,6 +352,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     args.client_remote = client_remote;
     args.power_states = power_states;
     args.power_state_count = power_state_count;
+    args.performance_states = perf_power_states;
+    args.performance_state_count = perf_power_state_count;
     AddProtocol(&args);
 
     return device_add(this->parent_, &args, &this->zxdev_);
@@ -456,8 +460,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // Convenience type for implementations that would like to override all
 // zx_protocol_device_t methods.
 template <class D>
-using FullDevice = Device<D, GetProtocolable, Openable, Closable, UnbindableNew, Readable,
-                          Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
+using FullDevice = Device<D, GetProtocolable, Openable, Closable, UnbindableNew, Readable, Writable,
+                          GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

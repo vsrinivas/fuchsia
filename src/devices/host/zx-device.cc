@@ -67,6 +67,12 @@ bool zx_device::PopTestCompatibilityConn(fs::FidlConnection* conn) {
   return true;
 }
 
+const std::array<fuchsia_device_DevicePerformanceStateInfo,
+                 fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES>&
+zx_device::GetPerformanceStates() const {
+  return performance_states_;
+}
+
 const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
 zx_device::GetPowerStates() const {
   return power_states_;
@@ -103,6 +109,33 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
   }
   if (!(power_states_[fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0].is_supported) ||
       !(power_states_[fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD].is_supported)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+zx_status_t zx_device::SetPerformanceStates(
+    const device_performance_state_info_t* performance_states, uint8_t count) {
+  if (count < fuchsia_device_MIN_DEVICE_PERFORMANCE_STATES ||
+      count > fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  bool visited[fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES] = {false};
+  for (uint8_t i = 0; i < count; i++) {
+    const auto& info = performance_states[i];
+    if (info.state_id >= fbl::count_of(visited)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (visited[info.state_id]) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    fuchsia_device_DevicePerformanceStateInfo* state =
+        &(performance_states_[info.state_id]);
+    state->state_id = info.state_id;
+    state->is_supported = true;
+    state->restore_latency = info.restore_latency;
+    visited[info.state_id] = true;
+  }
+  if (!(performance_states_[fuchsia_device_DEVICE_PERFORMANCE_STATE_P0].is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;

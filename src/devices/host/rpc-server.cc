@@ -611,6 +611,18 @@ static zx_status_t fidl_DeviceControllerGetDevicePowerCaps(void* ctx, fidl_txn_t
   return fuchsia_device_ControllerGetDevicePowerCaps_reply(txn, &result);
 }
 
+static zx_status_t fidl_DeviceControllerGetDevicePerformanceStates(void* ctx, fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  auto& perf_states = conn->dev->GetPerformanceStates();
+  ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES);
+  fuchsia_device_DevicePerformanceStateInfo
+      states[fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES];
+  for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES; i++) {
+    states[i] = perf_states[i];
+  }
+  return fuchsia_device_ControllerGetDevicePerformanceStates_reply(txn, states, ZX_OK);
+}
+
 static zx_status_t fidl_DeviceControllerSuspend(void* ctx,
                                                 fuchsia_device_DevicePowerState requested_state,
                                                 fidl_txn_t* txn) {
@@ -727,6 +739,7 @@ static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .DebugResume = fidl_DeviceControllerDebugResume,
     .RunCompatibilityTests = fidl_DeviceControllerRunCompatibilityTests,
     .GetDevicePowerCaps = fidl_DeviceControllerGetDevicePowerCaps,
+    .GetDevicePerformanceStates = fidl_DeviceControllerGetDevicePerformanceStates,
     .UpdatePowerStateMapping = fidl_DeviceControllerUpdatePowerStateMapping,
     .GetPowerStateMapping = fidl_DeviceControllerGetPowerStateMapping,
     .Suspend = fidl_DeviceControllerSuspend,

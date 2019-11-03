@@ -575,6 +575,13 @@ extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsRequestT
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kController_GetDevicePerformanceStates_Ordinal = 0x388bd0d000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_GetDevicePerformanceStates_GenOrdinal = 0x24890b74e37f3e62lu;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kController_UpdatePowerStateMapping_Ordinal = 0x5200982600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_UpdatePowerStateMapping_GenOrdinal = 0x185489481614d7a6lu;
@@ -1414,6 +1421,67 @@ Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePower
 }
 
 template <>
+Controller::ResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDevicePerformanceStatesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetDevicePerformanceStatesRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDevicePerformanceStatesRequest));
+  ::fidl::DecodedMessage<GetDevicePerformanceStatesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::GetDevicePerformanceStates(std::move(_client_end), Super::response_buffer()));
+}
+
+Controller::ResultOf::GetDevicePerformanceStates Controller::SyncClient::GetDevicePerformanceStates() {
+  return ResultOf::GetDevicePerformanceStates(zx::unowned_channel(this->channel_));
+}
+
+Controller::ResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(zx::unowned_channel _client_end) {
+  return ResultOf::GetDevicePerformanceStates(std::move(_client_end));
+}
+
+template <>
+Controller::UnownedResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDevicePerformanceStatesRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetDevicePerformanceStatesRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetDevicePerformanceStatesRequest));
+  ::fidl::DecodedMessage<GetDevicePerformanceStatesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::GetDevicePerformanceStates(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::GetDevicePerformanceStates Controller::SyncClient::GetDevicePerformanceStates(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetDevicePerformanceStates(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetDevicePerformanceStates(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::GetDevicePerformanceStatesResponse> Controller::InPlace::GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetDevicePerformanceStatesRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetDevicePerformanceStatesRequest> params(std::move(_request_buffer));
+  Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::GetDevicePerformanceStatesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetDevicePerformanceStatesRequest, GetDevicePerformanceStatesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::GetDevicePerformanceStatesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -1827,6 +1895,18 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       impl->GetDevicePowerCaps(
           Interface::GetDevicePowerCapsCompleter::Sync(txn));
+      return true;
+    }
+    case kController_GetDevicePerformanceStates_Ordinal:
+    case kController_GetDevicePerformanceStates_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetDevicePerformanceStatesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetDevicePerformanceStates(
+          Interface::GetDevicePerformanceStatesCompleter::Sync(txn));
       return true;
     }
     case kController_UpdatePowerStateMapping_Ordinal:
@@ -2415,6 +2495,44 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::Decod
 }
 
 
+void Controller::Interface::GetDevicePerformanceStatesCompleterBase::Reply(::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states, int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDevicePerformanceStatesResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetDevicePerformanceStatesResponse*>(_write_bytes);
+  Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesResponse(
+      ::fidl::DecodedMessage<GetDevicePerformanceStatesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetDevicePerformanceStatesResponse::PrimarySize,
+              GetDevicePerformanceStatesResponse::PrimarySize)));
+  _response.states = std::move(states);
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDevicePerformanceStatesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePerformanceStatesResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::GetDevicePerformanceStatesCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states, int32_t status) {
+  if (_buffer.capacity() < GetDevicePerformanceStatesResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetDevicePerformanceStatesResponse*>(_buffer.data());
+  Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesResponse(
+      ::fidl::DecodedMessage<GetDevicePerformanceStatesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetDevicePerformanceStatesResponse::PrimarySize,
+              GetDevicePerformanceStatesResponse::PrimarySize)));
+  _response.states = std::move(states);
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(GetDevicePerformanceStatesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetDevicePerformanceStatesResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::GetDevicePerformanceStatesCompleterBase::Reply(::fidl::DecodedMessage<GetDevicePerformanceStatesResponse> params) {
+  Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -2694,6 +2812,13 @@ void Controller::SetTransactionHeaderFor::GetDevicePowerCapsRequest(const ::fidl
 }
 void Controller::SetTransactionHeaderFor::GetDevicePowerCapsResponse(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDevicePowerCaps_Ordinal);
+}
+
+void Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesRequest(const ::fidl::DecodedMessage<Controller::GetDevicePerformanceStatesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDevicePerformanceStates_Ordinal);
+}
+void Controller::SetTransactionHeaderFor::GetDevicePerformanceStatesResponse(const ::fidl::DecodedMessage<Controller::GetDevicePerformanceStatesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDevicePerformanceStates_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::UpdatePowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingRequest>& _msg) {

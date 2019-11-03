@@ -45,6 +45,7 @@ struct Controller_GetDevicePowerCaps_Response;
 struct Controller_GetDevicePowerCaps_Result;
 struct Controller_Resume_Response;
 struct Controller_Resume_Result;
+struct DevicePerformanceStateInfo;
 struct Controller_UpdatePowerStateMapping_Response;
 struct Controller_UpdatePowerStateMapping_Result;
 class Controller;
@@ -354,6 +355,8 @@ class NameProvider final {
 
 constexpr uint32_t MIN_DEVICE_POWER_STATES = 2u;
 
+constexpr uint32_t MIN_DEVICE_PERFORMANCE_STATES = 1u;
+
 // Maximum length for a driver path
 constexpr uint64_t MAX_DRIVER_PATH_LEN = 1024u;
 
@@ -363,6 +366,8 @@ constexpr uint64_t MAX_DRIVER_NAME_LEN = 32u;
 // Maximum device power states. In future this should account
 // for performant states.
 constexpr uint32_t MAX_DEVICE_POWER_STATES = 5u;
+
+constexpr uint32_t MAX_DEVICE_PERFORMANCE_STATES = 20u;
 
 // Maximum length of a device path
 constexpr uint64_t MAX_DEVICE_PATH_LEN = 1024u;
@@ -773,6 +778,31 @@ struct Controller_Resume_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_DevicePerformanceStateInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_device_DevicePerformanceStateInfoTable;
+
+// Performance state info for a device. A performance state is relevant only
+// when the device is in non-sleeping working device power state.
+struct DevicePerformanceStateInfo {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_DevicePerformanceStateInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_DevicePerformanceStateInfoTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  int32_t state_id = {};
+
+  // Restore time for coming out of this state to fully working performant state.
+  int64_t restore_latency = {};
+
+  // Is this state supported?
+  bool is_supported = {};
+};
+
 // Signal that will be active on a device event handle if the device's write() method
 // will accept data.
 constexpr uint32_t DEVICE_SIGNAL_WRITABLE = 67108864u;
@@ -793,6 +823,9 @@ constexpr uint32_t DEVICE_SIGNAL_HANGUP = 268435456u;
 // Signal that will be active on a device event handle if the device has encountered an error.
 // This is primarily used by the PTY support.
 constexpr uint32_t DEVICE_SIGNAL_ERROR = 134217728u;
+
+// [MANDATORY] Default performant state when the device is in DEVICE_POWER_STATE_D0
+constexpr uint32_t DEVICE_PERFORMANCE_STATE_P0 = 0u;
 
 // Maximum length of a device name (without a null byte), based on
 // HOST_NAME_MAX as defined by <limits.h>.
@@ -969,6 +1002,10 @@ extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsRequestT
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePowerCapsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePerformanceStatesRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
@@ -1310,6 +1347,26 @@ class Controller final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using GetDevicePowerCapsRequest = ::fidl::AnyZeroArgMessage;
+
+  struct GetDevicePerformanceStatesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 504;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 504;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetDevicePerformanceStatesRequest = ::fidl::AnyZeroArgMessage;
 
   struct UpdatePowerStateMappingResponse final {
     FIDL_ALIGNDECL
@@ -1653,6 +1710,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetDevicePerformanceStates_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end);
+      ~GetDevicePerformanceStates_Impl() = default;
+      GetDevicePerformanceStates_Impl(GetDevicePerformanceStates_Impl&& other) = default;
+      GetDevicePerformanceStates_Impl& operator=(GetDevicePerformanceStates_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1731,6 +1804,7 @@ class Controller final {
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
+    using GetDevicePerformanceStates = GetDevicePerformanceStates_Impl<GetDevicePerformanceStatesResponse>;
     using UpdatePowerStateMapping = UpdatePowerStateMapping_Impl<UpdatePowerStateMappingResponse>;
     using GetPowerStateMapping = GetPowerStateMapping_Impl<GetPowerStateMappingResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
@@ -1951,6 +2025,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetDevicePerformanceStates_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDevicePerformanceStates_Impl() = default;
+      GetDevicePerformanceStates_Impl(GetDevicePerformanceStates_Impl&& other) = default;
+      GetDevicePerformanceStates_Impl& operator=(GetDevicePerformanceStates_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -2029,6 +2119,7 @@ class Controller final {
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
+    using GetDevicePerformanceStates = GetDevicePerformanceStates_Impl<GetDevicePerformanceStatesResponse>;
     using UpdatePowerStateMapping = UpdatePowerStateMapping_Impl<UpdatePowerStateMappingResponse>;
     using GetPowerStateMapping = GetPowerStateMapping_Impl<GetPowerStateMappingResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
@@ -2167,6 +2258,16 @@ class Controller final {
     // to manage power for this device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(::fidl::BytePart _response_buffer);
+
+    // Gets the device performance states. Used by the system wide power manager
+    // to manage power for this device.
+    // Allocates 520 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetDevicePerformanceStates GetDevicePerformanceStates();
+
+    // Gets the device performance states. Used by the system wide power manager
+    // to manage power for this device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(::fidl::BytePart _response_buffer);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
@@ -2337,6 +2438,16 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Gets the device performance states. Used by the system wide power manager
+    // to manage power for this device.
+    // Allocates 520 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(zx::unowned_channel _client_end);
+
+    // Gets the device performance states. Used by the system wide power manager
+    // to manage power for this device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
@@ -2430,6 +2541,10 @@ class Controller final {
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
     static ::fidl::DecodeResult<GetDevicePowerCapsResponse> GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Gets the device performance states. Used by the system wide power manager
+    // to manage power for this device.
+    static ::fidl::DecodeResult<GetDevicePerformanceStatesResponse> GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
@@ -2641,6 +2756,20 @@ class Controller final {
 
     virtual void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) = 0;
 
+    class GetDevicePerformanceStatesCompleterBase : public _Base {
+     public:
+      void Reply(::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states, int32_t status);
+      void Reply(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states, int32_t status);
+      void Reply(::fidl::DecodedMessage<GetDevicePerformanceStatesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetDevicePerformanceStatesCompleter = ::fidl::Completer<GetDevicePerformanceStatesCompleterBase>;
+
+    virtual void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync _completer) = 0;
+
     class UpdatePowerStateMappingCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result);
@@ -2757,6 +2886,8 @@ class Controller final {
     static void RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsResponse>& _msg);
     static void GetDevicePowerCapsRequest(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsRequest>& _msg);
     static void GetDevicePowerCapsResponse(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsResponse>& _msg);
+    static void GetDevicePerformanceStatesRequest(const ::fidl::DecodedMessage<Controller::GetDevicePerformanceStatesRequest>& _msg);
+    static void GetDevicePerformanceStatesResponse(const ::fidl::DecodedMessage<Controller::GetDevicePerformanceStatesResponse>& _msg);
     static void UpdatePowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingRequest>& _msg);
     static void UpdatePowerStateMappingResponse(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingResponse>& _msg);
     static void GetPowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::GetPowerStateMappingRequest>& _msg);
@@ -2839,6 +2970,14 @@ static_assert(sizeof(::llcpp::fuchsia::device::Controller_Resume_Response) == ::
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller_Resume_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Resume_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::DevicePerformanceStateInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::DevicePerformanceStateInfo>);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePerformanceStateInfo, state_id) == 0);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePerformanceStateInfo, restore_latency) == 8);
+static_assert(offsetof(::llcpp::fuchsia::device::DevicePerformanceStateInfo, is_supported) == 16);
+static_assert(sizeof(::llcpp::fuchsia::device::DevicePerformanceStateInfo) == ::llcpp::fuchsia::device::DevicePerformanceStateInfo::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response> : public std::true_type {};
@@ -2990,6 +3129,15 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetDevicePowerCapsRes
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse)
     == ::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse)
+    == ::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse, states) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetDevicePerformanceStatesResponse, status) == 496);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::UpdatePowerStateMappingRequest> : public std::true_type {};

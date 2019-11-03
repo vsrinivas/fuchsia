@@ -14,6 +14,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/alloc_checker.h>
 
+using llcpp::fuchsia::device::DevicePerformanceStateInfo;
 using llcpp::fuchsia::device::DevicePowerState;
 using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
@@ -35,9 +36,12 @@ class TestPowerDriver : public DeviceType,
     return ZX_OK;
   }
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
+                              ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
                               AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
+  void GetCurrentDevicePerformanceState(
+      GetCurrentDevicePerformanceStateCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -47,12 +51,15 @@ class TestPowerDriver : public DeviceType,
 
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
+  uint32_t current_performance_state_ = 0;
 };
 
 zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
 
-void TestPowerDriver::AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
-                                             AddDeviceWithPowerArgsCompleter::Sync completer) {
+void TestPowerDriver::AddDeviceWithPowerArgs(
+    ::fidl::VectorView<DevicePowerStateInfo> info,
+    ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
+    AddDeviceWithPowerArgsCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
   response.set_err(ZX_ERR_NOT_SUPPORTED);
   completer.Reply(std::move(response));
@@ -64,6 +71,18 @@ void TestPowerDriver::GetCurrentDevicePowerState(
   result.set_response(
       llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response{
           .cur_state = current_power_state_,
+      });
+
+  completer.Reply(std::move(result));
+}
+
+void TestPowerDriver::GetCurrentDevicePerformanceState(
+    GetCurrentDevicePerformanceStateCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result
+      result;
+  result.set_response(
+      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response{
+          .cur_state = static_cast<int32_t>(current_performance_state_),
       });
 
   completer.Reply(std::move(result));

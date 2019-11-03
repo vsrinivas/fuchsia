@@ -92,6 +92,19 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
 
+    if (args->performance_states && (args->performance_state_count != 0)) {
+      r = dev->SetPerformanceStates(args->performance_states,
+                                        args->performance_state_count);
+    } else {
+      device_performance_state_info_t perf_power_states[1];
+      perf_power_states[0].state_id = fuchsia_device_DEVICE_PERFORMANCE_STATE_P0;
+      r = dev->SetPerformanceStates(perf_power_states, 1);
+    }
+
+    if (r != ZX_OK) {
+      return r;
+    }
+
     // Set default system to device power state mapping. This can be later
     // updated by the system power manager.
     std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>

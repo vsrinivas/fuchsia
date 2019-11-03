@@ -98,6 +98,16 @@ typedef struct device_power_state_info {
   int32_t system_wake_state;
 } device_power_state_info_t;
 
+typedef struct device_performance_state_info {
+  uint32_t state_id;
+  // Restore time for coming out of this state to fully performant state.
+  zx_duration_t restore_latency;
+  // TODO(ravoorir): Figure out how best can a device have metadata that is
+  // specific to a performant state of a specific device. For ex: The power
+  // manager wants to know what a cpu device's operating point is for a
+  // particular performant state.
+} device_performance_state_info_t;
+
 typedef struct device_add_args {
   // DEVICE_ADD_ARGS_VERSION
   uint64_t version;
@@ -126,6 +136,13 @@ typedef struct device_add_args {
 
   // Number of power states in the list
   uint8_t power_state_count;
+
+  // List of performant states that the device supports.
+  // List cannot be more than MAX_DEVICE_PERFORMANCE_STATES size.
+  const device_performance_state_info_t* performance_states;
+
+  // Number of performant power states in the list
+  uint8_t performance_state_count;
 
   // Optional custom protocol for this device
   uint32_t proto_id;
