@@ -171,8 +171,8 @@ class Filesystems final {
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 48;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

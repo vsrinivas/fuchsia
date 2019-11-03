@@ -909,10 +909,11 @@ table TableWithOptionalUnion {
                                  .contains_union = true,
                              },
                              Expected{
-                                 .inline_size = 8,
+                                 // because |UnionOfThings| xunion header is inline
+                                 .inline_size = 24,
                                  .alignment = 8,
-                                 .max_out_of_line = 40,
-                                 .depth = 2,
+                                 .max_out_of_line = 16,
+                                 .depth = 1,
                                  .has_padding = true,
                                  .contains_union = true,
                              }));
@@ -1601,7 +1602,7 @@ xunion PaddingCheck {
                                                .inline_size = 24,
                                                .alignment = 8,
                                                .max_out_of_line = 8,
-                                               .depth = 2,
+                                               .depth = 1,
                                                .has_padding = true,
                                                .has_flexible_envelope = true,
                                            }));

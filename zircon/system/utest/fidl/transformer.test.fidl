@@ -38,6 +38,12 @@ struct Sandwich1 {
    uint32 after;
 };
 
+struct Sandwich1WithOptUnion {
+   uint32 before;
+   UnionSize8Aligned4? opt_union;
+   uint32 after;
+};
+
 struct Sandwich2 {
    uint32 before;
    UnionSize16Aligned4 the_union;

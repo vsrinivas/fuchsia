@@ -144,8 +144,14 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kService:
             return DataSize(kHandleSize);
           case flat::Decl::Kind::kStruct:
-          case flat::Decl::Kind::kUnion:
             return DataSize(8);
+          case flat::Decl::Kind::kUnion:
+            switch (wire_format()) {
+              case WireFormat::kOld:
+                return DataSize(8);
+              case WireFormat::kV1NoEe:
+                return DataSize(24);
+            }
           case flat::Decl::Kind::kXUnion:
             return DataSize(24);
           case flat::Decl::Kind::kBits:
@@ -435,9 +441,16 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kService:
             return DataSize(0);
           case flat::Decl::Kind::kStruct:
-          case flat::Decl::Kind::kUnion:
-          case flat::Decl::Kind::kXUnion:
             return DataSize(1) + Depth(object.type_decl);
+          case flat::Decl::Kind::kUnion:
+            switch (wire_format()) {
+              case WireFormat::kOld:
+                return DataSize(1) + Depth(object.type_decl);
+              case WireFormat::kV1NoEe:
+                return Depth(object.type_decl);
+            }
+          case flat::Decl::Kind::kXUnion:
+            return Depth(object.type_decl);
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
@@ -726,9 +739,16 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kService:
             return DataSize(0);
           case flat::Decl::Kind::kStruct:
-          case flat::Decl::Kind::kUnion:
             return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
                    MaxOutOfLine(object.type_decl);
+          case flat::Decl::Kind::kUnion:
+            switch (wire_format()) {
+              case WireFormat::kOld:
+                return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
+                      MaxOutOfLine(object.type_decl);
+              case WireFormat::kV1NoEe:
+                return MaxOutOfLine(object.type_decl);
+            }
           case flat::Decl::Kind::kXUnion:
             return MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kBits:

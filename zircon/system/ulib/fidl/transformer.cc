@@ -53,8 +53,14 @@ uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
     case fidl::kFidlTypeBits:
       return 8;
     case fidl::kFidlTypeStructPointer:
-    case fidl::kFidlTypeUnionPointer:
       return 8;
+    case fidl::kFidlTypeUnionPointer:
+      switch (wire_format) {
+        case WireFormat::kOld:
+          return 8;
+        case WireFormat::kV1:
+          return 24;  // xunion
+      }
     case fidl::kFidlTypeVector:
     case fidl::kFidlTypeString:
       return 16;
@@ -271,9 +277,12 @@ class TransformerBase {
         return TransformStructPointer(src_coded_struct, dst_coded_struct, position,
                                       out_traversal_result);
       }
-      case fidl::kFidlTypeUnionPointer:
-        assert(false && "nullable unions are no longer supported");
-        return ZX_ERR_BAD_STATE;
+      case fidl::kFidlTypeUnionPointer: {
+        const auto& src_coded_union = *type->coded_union_pointer.union_type;
+        const auto& dst_coded_union = *src_coded_union.alt_type;
+        return TransformUnionPointer(src_coded_union, dst_coded_union, position,
+                                     out_traversal_result);
+      }
       case fidl::kFidlTypeStruct: {
         const auto& src_coded_struct = type->coded_struct;
         const auto& dst_coded_struct = *src_coded_struct.alt_type;
@@ -681,6 +690,11 @@ class TransformerBase {
   virtual WireFormat From() const = 0;
   virtual WireFormat To() const = 0;
 
+  virtual zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
+                                            const fidl::FidlCodedUnion& dst_coded_union,
+                                            const Position& position,
+                                            TraversalResult* out_traversal_result) = 0;
+
   virtual zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
                                      const fidl::FidlCodedUnion& dst_coded_union,
                                      const Position& position,
@@ -706,6 +720,31 @@ class V1ToOld final : public TransformerBase {
 
   WireFormat From() const { return WireFormat::kV1; }
   WireFormat To() const { return WireFormat::kOld; }
+
+  zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
+                                    const fidl::FidlCodedUnion& dst_coded_union,
+                                    const Position& position,
+                                    TraversalResult* out_traversal_result) {
+    auto src_xunion = src_dst->Read<const fidl_xunion_t>(position);
+    if (src_xunion->envelope.presence != FIDL_ALLOC_PRESENT) {
+      src_dst->Write(position, FIDL_ALLOC_ABSENT);
+      return ZX_OK;
+    }
+
+    src_dst->Write(position, FIDL_ALLOC_PRESENT);
+
+    uint32_t aligned_dst_size = FIDL_ALIGN(dst_coded_union.size);
+    const auto union_position = Position{
+        position.src_inline_offset,
+        position.src_out_of_line_offset,
+        position.dst_out_of_line_offset,
+        position.dst_out_of_line_offset + aligned_dst_size,
+    };
+
+    out_traversal_result->out_of_line_size += aligned_dst_size;
+
+    return TransformUnion(src_coded_union, dst_coded_union, union_position, out_traversal_result);
+  }
 
   zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
                              const fidl::FidlCodedUnion& dst_coded_union, const Position& position,
@@ -795,6 +834,28 @@ class OldToV1 final : public TransformerBase {
   // TODO(apang): Could CRTP this.
   WireFormat From() const { return WireFormat::kOld; }
   WireFormat To() const { return WireFormat::kV1; }
+
+  zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
+                                    const fidl::FidlCodedUnion& dst_coded_union,
+                                    const Position& position,
+                                    TraversalResult* out_traversal_result) {
+    auto presence = *src_dst->Read<uint64_t>(position);
+    if (presence != FIDL_ALLOC_PRESENT) {
+      fidl_xunion_t absent = {};
+      src_dst->Write(position, absent);
+      return ZX_OK;
+    }
+
+    uint32_t aligned_src_size = FIDL_ALIGN(src_coded_union.size);
+    const auto union_position = Position{
+        position.src_out_of_line_offset,
+        position.src_out_of_line_offset + aligned_src_size,
+        position.dst_inline_offset,
+        position.dst_out_of_line_offset,
+    };
+
+    return TransformUnion(src_coded_union, dst_coded_union, union_position, out_traversal_result);
+  }
 
   zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
                              const fidl::FidlCodedUnion& dst_coded_union, const Position& position,
