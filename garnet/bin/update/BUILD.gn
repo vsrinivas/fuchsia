@@ -5,8 +5,8 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("omaha_client_ctl_bin") {
-  name = "omaha_client_ctl_bin"
+rustc_binary("bin") {
+  name = "update"
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -21,21 +21,20 @@ rustc_binary("omaha_client_ctl_bin") {
   ]
 }
 
-package("omaha_client_ctl") {
+package("update_bin") {
   deps = [
-    ":omaha_client_ctl_bin",
+    ":bin",
   ]
   binaries = [
     {
-      name = "omaha_client_ctl_bin"
-      dest = "omaha_client_ctl"
+      name = "update"
       shell = true
     },
   ]
   meta = [
     {
-      path = rebase_path("meta/omaha_client_ctl.cmx")
-      dest = "omaha_client_ctl.cmx"
+      path = rebase_path("meta/update.cmx")
+      dest = "update.cmx"
     },
   ]
 }

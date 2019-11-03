@@ -987,7 +987,7 @@ group("omaha_client") {
   public_deps = [
     "//garnet/bin/omaha_client",
     "//garnet/bin/omaha_client:omaha_client_config",
-    "//garnet/bin/omaha_client_ctl",
+    "//garnet/bin/update:update_bin",
   ]
 }
 

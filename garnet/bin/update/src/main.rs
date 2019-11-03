@@ -36,11 +36,11 @@ async fn monitor_state(monitor: MonitorProxy) -> Result<(), Error> {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     #[derive(Debug, StructOpt)]
-    #[structopt(name = "omaha_client_ctl")]
+    #[structopt(name = "update")]
     struct Opt {
         #[structopt(
             long = "server",
-            help = "URL of omaha client server",
+            help = "URL of fuchsia.update server",
             default_value = "fuchsia-pkg://fuchsia.com/omaha_client#meta/omaha_client_service.cmx"
         )]
         server_url: String,
@@ -52,19 +52,15 @@ async fn main() -> Result<(), Error> {
     #[structopt(rename_all = "kebab-case")]
     enum Command {
         // fuchsia.update.channelcontrol.ChannelControl protocol:
-        /// Get the current channel.
-        GetCurrent,
-        /// Get the target channel.
-        GetTarget,
-        /// Set the target channel.
-        SetTarget {
-            channel: String,
+        Channel {
+            #[structopt(subcommand)]
+            cmd: Channel,
         },
-        /// Get the list of known target channels.
-        GetTargetList,
 
         // fuchsia.update Manager protocol:
-        GetState,
+        /// Print the current update state.
+        State,
+        /// Start an update.
         CheckNow {
             /// The update check was initiated by a service, in the background.
             #[structopt(long = "service-initiated")]
@@ -74,7 +70,21 @@ async fn main() -> Result<(), Error> {
             #[structopt(long)]
             monitor: bool,
         },
+        /// Monitor an in-progress update.
         Monitor,
+    }
+
+    #[derive(Debug, StructOpt)]
+    #[structopt(rename_all = "kebab-case")]
+    enum Channel {
+        /// Get the current (running) channel.
+        Get,
+        /// Get the target channel.
+        Target,
+        /// Set the target channel.
+        Set { channel: String },
+        /// List of known target channels.
+        List,
     }
 
     // Launch the server and connect to the omaha client service.
@@ -83,27 +93,24 @@ async fn main() -> Result<(), Error> {
     let app =
         launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
     match cmd {
-        Command::GetCurrent
-        | Command::GetTarget
-        | Command::SetTarget { .. }
-        | Command::GetTargetList => {
+        Command::Channel { cmd } => {
             let channel_control = app
                 .connect_to_service::<ChannelControlMarker>()
                 .context("Failed to connect to channel control service")?;
 
             match cmd {
-                Command::GetCurrent => {
+                Channel::Get => {
                     let channel = channel_control.get_current().await?;
                     println!("current channel: {}", channel);
                 }
-                Command::GetTarget => {
+                Channel::Target => {
                     let channel = channel_control.get_target().await?;
                     println!("target channel: {}", channel);
                 }
-                Command::SetTarget { channel } => {
+                Channel::Set { channel } => {
                     channel_control.set_target(&channel).await?;
                 }
-                Command::GetTargetList => {
+                Channel::List => {
                     let channels = channel_control.get_target_list().await?;
                     if channels.is_empty() {
                         println!("known channels list is empty.");
@@ -114,16 +121,15 @@ async fn main() -> Result<(), Error> {
                         }
                     }
                 }
-                _ => {}
             }
         }
-        Command::GetState | Command::CheckNow { .. } | Command::Monitor => {
+        Command::State | Command::CheckNow { .. } | Command::Monitor => {
             let omaha_client = app
                 .connect_to_service::<ManagerMarker>()
                 .context("Failed to connect to omaha client manager service")?;
 
             match cmd {
-                Command::GetState => {
+                Command::State => {
                     let state = omaha_client.get_state().await?;
                     print_state(state);
                 }
