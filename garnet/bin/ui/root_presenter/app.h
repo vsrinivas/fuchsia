@@ -14,7 +14,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
@@ -32,6 +31,7 @@
 #include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/ui/input/input_device_impl.h"
 
 namespace root_presenter {
 

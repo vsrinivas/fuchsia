@@ -32,9 +32,9 @@ Some high-level functionality provided by DirectInput:
 * Receive low-level input reports from Zircon, via an
 [InputReader](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/input_reader/input_reader.h).
 * Manage input devices and associated state, via
-[InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/input/input_device_impl.h)
+[InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/input/input_device_impl.h)
 and
-[DeviceState](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/input/device_state.h).
+[DeviceState](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/input/device_state.h).
 * Transform low-level input report into a FIDL
 [InputEvent](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl)
 struct, via DeviceState.

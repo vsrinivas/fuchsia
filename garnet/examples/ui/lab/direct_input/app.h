@@ -10,6 +10,8 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/eventpair.h>
 
 #include <array>
@@ -17,13 +19,11 @@
 #include <unordered_map>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/component_context.h>
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/ui/input/device_state.h"
-#include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "src/lib/ui/input/device_state.h"
+#include "src/lib/ui/input/input_device_impl.h"
 
 namespace direct_input {
 

@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_INPUT_DEVICE_STATE_H_
-#define LIB_UI_INPUT_DEVICE_STATE_H_
+#ifndef SRC_LIB_UI_INPUT_DEVICE_STATE_H_
+#define SRC_LIB_UI_INPUT_DEVICE_STATE_H_
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <hid/hid.h>
-#include <hid/usages.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 
 #include <vector>
+
+#include <hid/hid.h>
+#include <hid/usages.h>
 
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -174,4 +175,4 @@ class DeviceState {
 
 }  // namespace ui_input
 
-#endif  // LIB_UI_INPUT_DEVICE_STATE_H_
+#endif  // SRC_LIB_UI_INPUT_DEVICE_STATE_H_

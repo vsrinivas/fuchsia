@@ -6,7 +6,6 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/tests/mocks/mock_input_device.h>
 #include <stdlib.h>
 
@@ -14,6 +13,7 @@
 #include "lib/async/dispatcher.h"
 #include "src/lib/component/cpp/testing/test_with_context.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/ui/input/input_device_impl.h"
 
 namespace root_presenter {
 namespace {

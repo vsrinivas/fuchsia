@@ -18,8 +18,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/ui/input/device_state.h>
-#include <lib/ui/input/input_device_impl.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
@@ -36,6 +34,8 @@
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/ui/input/device_state.h"
+#include "src/lib/ui/input/input_device_impl.h"
 
 namespace root_presenter {
 

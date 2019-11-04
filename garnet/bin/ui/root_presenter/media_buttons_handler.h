@@ -6,10 +6,10 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_MEDIA_BUTTONS_HANDLER_H_
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/ui/input/device_state.h>
-#include <lib/ui/input/input_device_impl.h>
 
 #include "garnet/bin/ui/root_presenter/activity_notifier.h"
+#include "src/lib/ui/input/device_state.h"
+#include "src/lib/ui/input/input_device_impl.h"
 
 namespace root_presenter {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/input/device_state.h"
+#include "src/lib/ui/input/device_state.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>

@@ -78,7 +78,7 @@ transforms it into an `InputReport`, and forwards it on
 `InputDevice::DispatchReport`.
 
 The
-[implementation of `DispatchReport`](/garnet/public/lib/ui/input/input_device_impl.h)
+[implementation of `DispatchReport`](/src/lib/ui/input/input_device_impl.h)
 forwards the `InputReport` to the registered `InputDeviceImpl::Listener`,
 typically the RootPresenter itself. In turn, the `InputReport` is forwarded to
 the active `Presentation`.
