@@ -331,6 +331,14 @@ void EmitArraySizeOf(std::ostream* file, const CGenerator::Member& member) {
   *file << "sizeof(" << member.element_type << ")";
 }
 
+void EmitMagicNumberCheck(std::ostream* file) {
+  *file << kIndent << "status = fidl_validate_txn_header(hdr);\n";
+  *file << kIndent << "if (status != ZX_OK) {\n";
+  *file << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
+  *file << kIndent << kIndent << "return status;\n";
+  *file << kIndent << "}\n";
+}
+
 // This function assumes the |params| are part of a [Layout="Simple"] protocol.
 // In particular, simple protocols don't have nullable structs or nested
 // vectors. The only secondary objects they contain are top-level vectors and
@@ -1424,8 +1432,9 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
   file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
   file_ << kIndent << "}\n";
-  file_ << kIndent << "fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;\n";
   file_ << kIndent << "zx_status_t status = ZX_OK;\n";
+  file_ << kIndent << "fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;\n";
+  EmitMagicNumberCheck(&file_);
   file_ << kIndent << "switch (hdr->ordinal) {\n";
 
   for (const auto& method_info : named_protocol.methods) {

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/txn_header.h>
 #include <string.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <fidl/test/echo/c/fidl.h>
 #include <unittest/unittest.h>
@@ -32,8 +35,8 @@ static bool dispatch_test(void) {
 
   fidl_test_echo_EchoEchoRequest request;
   memset(&request, 0, sizeof(request));
-  request.hdr.txid = 42;
-  request.hdr.ordinal = fidl_test_echo_EchoEchoOrdinal;
+  zx_txid_t txid = 42;
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
@@ -117,6 +120,9 @@ static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_msg_t* msg) {
   my_connection_t* my_txn = (my_connection_t*)txn;
   EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponse), msg->num_bytes, "");
   EXPECT_EQ(0u, msg->num_handles, "");
+
+  fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
+  EXPECT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial, "");
   ++my_txn->count;
   return ZX_OK;
 }
@@ -151,8 +157,8 @@ static bool error_test(void) {
 
   fidl_test_echo_EchoEchoRequest request;
   memset(&request, 0, sizeof(request));
-  request.hdr.txid = 42;
-  request.hdr.ordinal = fidl_test_echo_EchoEchoOrdinal;
+  zx_txid_t txid = 42;
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
@@ -175,8 +181,43 @@ static bool error_test(void) {
   END_TEST;
 }
 
+static bool incompatible_magic_test(void) {
+  BEGIN_TEST;
+
+  fidl_test_echo_Echo_ops_t ops = {
+      .Echo = return_async,
+  };
+
+  fidl_test_echo_EchoEchoRequest request;
+  memset(&request, 0, sizeof(request));
+  zx_txid_t txid = 42;
+  fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
+  request.hdr.magic_number = 0;
+  request.process = FIDL_HANDLE_PRESENT;
+  request.thread = FIDL_HANDLE_PRESENT;
+
+  zx_handle_t handles[2];
+  fidl_msg_t msg = {
+      .bytes = &request,
+      .handles = handles,
+      .num_bytes = sizeof(request),
+      .num_handles = 2,
+  };
+
+  fidl_txn_t txn;
+  memset(&txn, 0, sizeof(txn));
+
+  zx_status_t status = zx_eventpair_create(0, &handles[0], &handles[1]);
+  ASSERT_EQ(ZX_OK, status, "");
+  status = fidl_test_echo_Echo_try_dispatch(NULL, &txn, &msg, &ops);
+  ASSERT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, status, "");
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(server_tests)
 RUN_NAMED_TEST("fidl.test.echo.Echo dispatch test", dispatch_test)
 RUN_NAMED_TEST("fidl.test.echo.Echo reply test", reply_test)
 RUN_NAMED_TEST("fidl.test.echo.Echo error test", error_test)
+RUN_NAMED_TEST("fidl.test.echo.Echo incompatible magic test", incompatible_magic_test)
 END_TEST_CASE(server_tests);

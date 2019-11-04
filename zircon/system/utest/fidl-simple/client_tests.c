@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/txn_header.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <fidl/test/echo/c/fidl.h>
 #include <unittest/unittest.h>
-
-#include "zircon/types.h"
 
 static int echo_server(void* ctx) {
   zx_handle_t server = *(zx_handle_t*)ctx;
@@ -35,8 +35,7 @@ static int echo_server(void* ctx) {
       fidl_message_header_t* req = (fidl_message_header_t*)msg;
       fidl_test_echo_EchoEchoResponse response;
       memset(&response, 0, sizeof(response));
-      response.hdr.txid = req->txid;
-      response.hdr.ordinal = req->ordinal;
+      fidl_init_txn_header(&response.hdr, req->txid, req->ordinal);
       response.status = ZX_OK;
       status = zx_channel_write(server, 0, &response, sizeof(response), NULL, 0);
       ASSERT_EQ(ZX_OK, status, "");
@@ -109,5 +108,5 @@ bool magic_number_request_test(void) {
 
 BEGIN_TEST_CASE(client_tests)
 RUN_NAMED_TEST("fidl.test.echo.Echo test", echo_test)
-RUN_NAMED_TEST("fidl.test.echo.Echo magic number request", magic_number_request_test);
+RUN_NAMED_TEST("fidl.test.echo.Echo magic number request", magic_number_request_test)
 END_TEST_CASE(client_tests);

@@ -130,8 +130,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   bytes.set_actual(sizeof(basictypes::TestInterface::ConsumeSimpleStructRequest));
   fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest> request(
       std::move(bytes));
-  request.message()->_hdr.ordinal =
-      fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructOrdinal;
+  basictypes::TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructRequest(request);
   request.message()->arg.field = 123;
   // make sure array shape is as expected (5 by 4)
   constexpr size_t kNumRow = 5;
