@@ -174,6 +174,7 @@ gen_commands! {
     Cmd {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),
+        GetPlayStatus = ("get-play-status", [], "gets the status of the currently playing media at the TG"),
         SupportedEvents = ("get-supported-events", [], "gets the supported events of the target"),
         SendRawVendorCommand = ("send-raw-vendor-command", ["pdu_id", "payload"], "send a raw vendor AVC command"),
         IsConnected = ("connection-status", [], "checks if the current device is current connected"),
@@ -307,5 +308,10 @@ mod tests {
             .unwrap()
             .1
             .contains(&"get-supported-events".to_string()));
+        assert!(cmdhelper
+            .complete("get-pl", 0)
+            .unwrap()
+            .1
+            .contains(&"get-play-status".to_string()));
     }
 }

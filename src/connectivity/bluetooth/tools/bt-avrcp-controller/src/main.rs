@@ -75,6 +75,16 @@ async fn get_media<'a>(
     }
 }
 
+async fn get_play_status<'a>(
+    _args: &'a [&'a str],
+    controller: &'a ControllerProxy,
+) -> Result<String, Error> {
+    match controller.get_play_status().await? {
+        Ok(status) => Ok(format!("Play status {:#?}", status)),
+        Err(e) => Ok(format!("Error fetching play status {:?}", e)),
+    }
+}
+
 async fn get_events_supported<'a>(
     _args: &'a [&'a str],
     controller: &'a ControllerExtProxy,
@@ -177,6 +187,7 @@ async fn handle_cmd<'a>(
         let res = match cmd {
             Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
             Ok(Cmd::GetMediaAttributes) => get_media(args, &controller).await,
+            Ok(Cmd::GetPlayStatus) => get_play_status(args, &controller).await,
             Ok(Cmd::SendRawVendorCommand) => send_raw_vendor(args, &test_controller).await,
             Ok(Cmd::SupportedEvents) => get_events_supported(args, &test_controller).await,
             Ok(Cmd::IsConnected) => is_connected(args, &test_controller).await,
