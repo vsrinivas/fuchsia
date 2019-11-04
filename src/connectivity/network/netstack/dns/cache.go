@@ -5,6 +5,7 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -16,12 +17,19 @@ import (
 )
 
 const (
+	// https://github.com/gislik/djbdns-1.05g/blob/master/CHANGES
+	// djbdns dnscache allows 16 levels of aliases. The same value is used here.
+	maxCNAMELevel = 16
 	// TODO: Think about a good value. dnsmasq defaults to 150 names.
 	maxEntries = 1024
 	tag        = "DNS"
 )
 
-var testHookNow = func() time.Time { return time.Now() }
+var (
+	errCNAMELevel = errors.New("too many CNAME levels")
+	errCNAMELoop  = errors.New("loop in CNAME aliases")
+	testHookNow   = time.Now
+)
 
 // Single entry in the cache, like a TypeA resource holding an IPv4 address.
 type cacheEntry struct {
@@ -51,7 +59,19 @@ func newCache() cacheInfo {
 }
 
 // Returns a list of Resources that match the given Question (same class and type and matching domain name).
-func (cache *cacheInfo) lookup(question dnsmessage.Question) []dnsmessage.Resource {
+func (cache *cacheInfo) lookup(question dnsmessage.Question, visited map[dnsmessage.Name]struct{}, level uint8) ([]dnsmessage.Resource, error) {
+	if level > maxCNAMELevel {
+		syslog.WarnTf(tag, "The question %v lookup exceeds  maxCNAMELevel: %v.", question, maxCNAMELevel)
+		return []dnsmessage.Resource{}, errCNAMELevel
+	}
+	if _, ok := visited[question.Name]; ok {
+		// By the robustness principle, domain software should not fail when presented with CNAME chains or loops;
+		// CNAME chains should be followed and CNAME loops signalled as an error. (RFC 1034 Section 5.2.2)
+		syslog.ErrorTf(tag, "There is a loop of CNAME aliases.")
+		return nil, errCNAMELoop
+	}
+
+	visited[question.Name] = struct{}{}
 	entries := cache.m[question.Name]
 
 	rrs := make([]dnsmessage.Resource, 0, len(entries))
@@ -60,11 +80,16 @@ func (cache *cacheInfo) lookup(question dnsmessage.Question) []dnsmessage.Resour
 		if h.Class == question.Class && h.Name == question.Name {
 			switch body := entry.rr.Body.(type) {
 			case *dnsmessage.CNAMEResource:
-				rrs = append(rrs, cache.lookup(dnsmessage.Question{
+				newrrs, err := cache.lookup(dnsmessage.Question{
 					Name:  body.CNAME,
 					Class: question.Class,
 					Type:  question.Type,
-				})...)
+				}, visited, level+1)
+				if err != nil {
+					return []dnsmessage.Resource{}, err
+				}
+				rrs = append(rrs, newrrs...)
+
 			default:
 				if h.Type == question.Type {
 					rrs = append(rrs, entry.rr)
@@ -72,7 +97,7 @@ func (cache *cacheInfo) lookup(question dnsmessage.Question) []dnsmessage.Resour
 			}
 		}
 	}
-	return rrs
+	return rrs, nil
 }
 
 // Finds the minimum TTL value of any SOA resource in a response. Returns 0 if not found.
@@ -220,9 +245,10 @@ func newCachedResolver(fallback Resolver) Resolver {
 		}
 
 		cache.mu.Lock()
-		rrs := cache.lookup(question)
+		visited := make(map[dnsmessage.Name]struct{})
+		rrs, err := cache.lookup(question, visited, 0)
 		cache.mu.Unlock()
-		if len(rrs) != 0 {
+		if err == nil && len(rrs) != 0 {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
 		}
