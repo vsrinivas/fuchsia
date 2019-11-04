@@ -23,7 +23,7 @@ class SceneGraph;
 class ResourceLinker;
 class View;
 class ViewHolder;
-using ViewLinker = ObjectLinker<ViewHolder, View>;
+using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 
 // Contains dependencies needed by Session. Used to decouple Session from

@@ -73,26 +73,15 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
 TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
   ResourceId next_id = 1;
 
-  zx::eventpair view_token;
-  zx::eventpair view_holder_token;
-  zx_status_t status = zx::eventpair::create(
-      /*flags=*/0u, &view_token, &view_holder_token);
-
-  ViewLinker view_linker;
-  ViewLinker::ImportLink import_link =
-      view_linker.CreateImport(std::move(view_token), session()->error_reporter());
-  ViewLinker::ExportLink export_link =
-      view_linker.CreateExport(std::move(view_holder_token), session()->error_reporter());
-
   scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
   ViewPtr view = fxl::MakeRefCounted<View>(
-      session(), next_id++, std::move(import_link), std::move(view_ref_pair.control_ref),
+      session(), next_id++, std::move(view_ref_pair.control_ref),
       std::move(view_ref_pair.view_ref), "test_debug_name1", session()->shared_error_reporter(),
       session()->event_reporter());
 
-  ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
-      session(), session()->id(), next_id++, std::move(export_link), "test_debug_name2");
+  ViewHolderPtr view_holder =
+      fxl::MakeRefCounted<ViewHolder>(session(), session()->id(), next_id++, "test_debug_name2");
 
   std::ostringstream ostream;
   std::unordered_set<GlobalId, GlobalId::Hash> visited;

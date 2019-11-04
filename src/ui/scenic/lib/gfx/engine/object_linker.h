@@ -11,6 +11,7 @@
 #include <lib/zx/object_traits.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
@@ -28,23 +29,31 @@ class ObjectLinkerBase {
  public:
   virtual ~ObjectLinkerBase() = default;
 
-  // Returns the corresponding import's client object.
-  void* GetImport(zx_koid_t endpoint_id) {
-    auto it = imports_.find(endpoint_id);
-    return it != imports_.end() ? it->second.object : nullptr;
-  }
   size_t ExportCount() { return exports_.size(); }
   size_t UnresolvedExportCount() { return unresolved_exports_.size(); }
   size_t ImportCount() { return imports_.size(); }
   size_t UnresolvedImportCount() { return unresolved_imports_.size(); }
 
  protected:
+  class Link {
+   public:
+    virtual ~Link() = default;
+
+   protected:
+    virtual void Invalidate() = 0;
+    // Must be virtual so ObjectLinker::Link can pull the typed PeerObject from `peer_link`.
+    virtual void LinkResolved(ObjectLinkerBase::Link* peer_link) = 0;
+    void LinkFailed();
+
+    fit::closure link_failed_;
+
+    friend class ObjectLinkerBase;
+  };
+
   // Information for one end of a Link registered with the linker.
   struct Endpoint {
     zx_koid_t peer_endpoint_id = ZX_KOID_INVALID;
-    void* object = nullptr;  // Opaque pointer to client object
-    fit::function<void(void* linked_object)> link_resolved;
-    fit::closure link_failed;  // TODO(SCN-769): How to multiple imports?
+    Link* link = nullptr;
   };
 
   // Information used to match one end of a link with its peer(s) on the
@@ -72,9 +81,7 @@ class ObjectLinkerBase {
   // Puts the Endpoint pointed to by |endpoint_id| into an initialized state
   // by supplying it with an object and connection callbacks.  The Endpoint
   // will not be linked until its peer is also initialized.
-  void InitializeEndpoint(zx_koid_t endpoint_id, void* object,
-                          fit::function<void(void* linked_object)> link_resolved,
-                          fit::closure link_failed, bool is_import);
+  void InitializeEndpoint(ObjectLinkerBase::Link* link, zx_koid_t endpoint_id, bool is_import);
 
   // Attempts linking of the endpoints associated with |endpoint_id| and
   // |peer_endpoint_id|.
@@ -136,42 +143,41 @@ class ObjectLinker : public ObjectLinkerBase {
   // Links can be moved, but not copied.  Valid Links can only be constructed by
   // the CreateExport and CreateImport methods.
   template <bool is_import>
-  class Link {
+  class Link : public ObjectLinkerBase::Link {
    public:
     using Obj = typename std::conditional<is_import, Import, Export>::type;
     using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
-    Link() {}
-    ~Link() { Invalidate(); }
+    virtual ~Link() { Invalidate(); }
     Link(Link&& other) { *this = std::move(other); }
     Link& operator=(nullptr_t) { Invalidate(); }
     Link& operator=(Link&& other);
 
     bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
-    bool initialized() const { return valid() && initialized_; }
+    bool initialized() const { return valid() && link_resolved_; }
     zx_koid_t endpoint_id() const { return endpoint_id_; }
-    PeerObj* peer() { return peer_object_; }
+    void LinkResolved(ObjectLinkerBase::Link* peer_link) override;
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|
     // and |link_failed| events, making it ready for connection to its
     // peer.
-    void Initialize(
-        Obj* object, fit::function<void(PeerObj* peer_object)> link_resolved = [](PeerObj*) {},
-        fit::closure link_failed = []() {});
+    void Initialize(fit::function<void(PeerObj peer_object)> link_resolved = nullptr,
+                    fit::closure link_failed = nullptr);
 
    private:
     // Kept private so only an ObjectLinker can construct a valid Link.
-    Link(zx_koid_t endpoint_id, fxl::WeakPtr<ObjectLinker> linker)
-        : linker_(std::move(linker)), endpoint_id_(endpoint_id) {}
+    Link(Obj object, zx_koid_t endpoint_id, fxl::WeakPtr<ObjectLinker> linker)
+        : object_(std::move(object)), endpoint_id_(endpoint_id), linker_(std::move(linker)) {}
 
-    void Invalidate(bool destroy_endpoint = true);
+    void Invalidate() override;
 
-    fxl::WeakPtr<ObjectLinker> linker_;
+    Obj object_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
-    PeerObj* peer_object_ = nullptr;
-    bool initialized_ = false;
+    fxl::WeakPtr<ObjectLinker> linker_;
+    fit::function<void(PeerObj peer_link)> link_resolved_;
 
     friend class ObjectLinker;
+    friend class ObjectLinker::Link<!is_import>;
   };
   using ExportLink = Link<false>;
   using ImportLink = Link<true>;
@@ -193,9 +199,9 @@ class ObjectLinker : public ObjectLinkerBase {
   // The objects are linked as soon as the |Initialize()| method is called on
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
-  ExportLink CreateExport(T token, ErrorReporter* error_reporter) {
+  ExportLink CreateExport(Export export_obj, T token, ErrorReporter* error_reporter) {
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, false);
-    return ExportLink(endpoint_id, weak_factory_.GetWeakPtr());
+    return ExportLink(std::move(export_obj), endpoint_id, weak_factory_.GetWeakPtr());
   }
 
   // Creates an incoming cross-session ImportLink between two objects, which
@@ -210,9 +216,9 @@ class ObjectLinker : public ObjectLinkerBase {
 
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
-  ImportLink CreateImport(T token, ErrorReporter* error_reporter) {
+  ImportLink CreateImport(Import import_obj, T token, ErrorReporter* error_reporter) {
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, true);
-    return ImportLink(endpoint_id, weak_factory_.GetWeakPtr());
+    return ImportLink(std::move(import_obj), endpoint_id, weak_factory_.GetWeakPtr());
   }
 
  private:
@@ -226,13 +232,18 @@ auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> L
   // Invalidate the existing Link if its still valid.
   Invalidate();
 
-  // Move data from the other Link and invalidate it, so it won't destroy
+  // Move data from the other Link and manually invalidate it, so it won't destroy
   // its endpoint when it dies.
-  linker_ = other.linker_;
-  peer_object_ = other.peer_object_;
-  endpoint_id_ = other.endpoint_id_;
-  initialized_ = other.initialized_;
-  other.Invalidate(false /* destroy_endpoint */);
+  link_resolved_ = std::move(other.link_resolved_);
+  link_failed_ = std::move(other.link_failed_);
+  object_ = std::move(other.object_);
+  linker_ = std::move(other.linker_);
+  endpoint_id_ = std::move(other.endpoint_id_);
+  other.endpoint_id_ = ZX_KOID_INVALID;
+
+  if (initialized()) {
+    linker_->InitializeEndpoint(this, endpoint_id_, is_import);
+  }
 
   return *this;
 }
@@ -240,44 +251,36 @@ auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> L
 template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
-    Obj* object, fit::function<void(PeerObj* peer_object)> link_resolved,
-    fit::closure link_failed) {
+    fit::function<void(PeerObj peer_object)> link_resolved, fit::closure link_failed) {
   FXL_DCHECK(valid());
   FXL_DCHECK(!initialized());
-  FXL_DCHECK(!peer());
-  FXL_DCHECK(object);
   FXL_DCHECK(link_resolved);
-  FXL_DCHECK(link_failed);
 
-  linker_->InitializeEndpoint(
-      endpoint_id_, object,
-      [this, resolved_cb = std::move(link_resolved)](void* object) {
-        peer_object_ = static_cast<PeerObj*>(object);
-        resolved_cb(peer_object_);
-      },
-      // Be careful when invoking this closure! It needs to be moved out of the
-      // underlying endpoint before being invoked, because the underlying
-      // endpoint will be destroyed in Invalidate() and we don't want
-      // disconnected_cb to be destroyed along with it.
-      // TODO(SCN-1257): Make this safe to invoke.
-      [this, disconnected_cb = std::move(link_failed)]() {
-        Invalidate();
-        disconnected_cb();
-      },
-      is_import);
-  initialized_ = true;
+  link_resolved_ = std::move(link_resolved);
+  link_failed_ = std::move(link_failed);
+
+  linker_->InitializeEndpoint(this, endpoint_id_, is_import);
 }
 
 template <typename Export, typename Import>
 template <bool is_import>
-void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool destroy_endpoint) {
-  if (valid() && destroy_endpoint) {
+void ObjectLinker<Export, Import>::Link<is_import>::Invalidate() {
+  if (valid()) {
     linker_->DestroyEndpoint(endpoint_id_, is_import);
   }
   linker_.reset();
-  peer_object_ = nullptr;
+  link_resolved_ = nullptr;
   endpoint_id_ = ZX_KOID_INVALID;
-  initialized_ = false;
+}
+
+template <typename Export, typename Import>
+template <bool is_import>
+void ObjectLinker<Export, Import>::Link<is_import>::LinkResolved(
+    ObjectLinkerBase::Link* peer_link) {
+  if (link_resolved_) {
+    auto* typed_peer_link = static_cast<Link<!is_import>*>(peer_link);
+    link_resolved_(std::move(typed_peer_link->object_));
+  }
 }
 
 }  // namespace gfx

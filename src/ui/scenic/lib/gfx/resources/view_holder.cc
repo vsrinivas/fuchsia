@@ -19,24 +19,30 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceTy
                                                 "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-                       ViewLinker::ExportLink link, std::string debug_name)
+                       std::string debug_name)
     : Node(session, session_id, node_id, ViewHolder::kTypeInfo),
-      link_(std::move(link)),
-      view_holder_koid_(link_.endpoint_id()),
       gfx_session_(session),
       debug_name_(debug_name),
-      weak_factory_(this) {
-  FXL_DCHECK(link_.valid());
-  FXL_DCHECK(!link_.initialized());
+      weak_factory_(this) {}
 
-  gfx_session_->TrackViewHolder(GetWeakPtr());
+ViewHolder::~ViewHolder() {
+  // Don't check if the link is valid since it may have been invalidated by the Import closing.
+  // The view_holder_koid_ is the original value that was tracked anyway.
+  if (link_) {
+    gfx_session_->UntrackViewHolder(view_holder_koid_);
+  }
 }
 
-ViewHolder::~ViewHolder() { gfx_session_->UntrackViewHolder(view_holder_koid_); }
+void ViewHolder::Connect(ViewLinker::ExportLink link) {
+  FXL_DCHECK(!link_);
+  FXL_DCHECK(link.valid());
+  FXL_DCHECK(!link.initialized());
 
-void ViewHolder::Connect() {
-  link_.Initialize(this, fit::bind_member(this, &ViewHolder::LinkResolved),
-                   fit::bind_member(this, &ViewHolder::LinkDisconnected));
+  link_ = std::move(link);
+  view_holder_koid_ = link_->endpoint_id();
+  gfx_session_->TrackViewHolder(GetWeakPtr());
+  link_->Initialize(fit::bind_member(this, &ViewHolder::LinkResolved),
+                    fit::bind_member(this, &ViewHolder::LinkDisconnected));
 }
 
 void ViewHolder::LinkResolved(View* view) {

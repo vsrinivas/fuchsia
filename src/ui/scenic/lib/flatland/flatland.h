@@ -99,26 +99,12 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   using TransformId = uint64_t;
   using LinkId = uint64_t;
 
-  // TODO(36173): This struct exists so we can wrap a FIDL request (which has move semantics) in a
-  // heap object that can be placed in a shared reference. This is necessary to pass the request by
-  // pointer through the ObjectLinker class. Remove this class once ObjectLinker supports move
-  // semantics.
-  struct GraphLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> fidl_request;
-  };
-
-  // TODO(36173): This struct exists so we can wrap a FIDL request (which has move semantics) in a
-  // heap object that can be placed in a shared reference. This is necessary to pass the request by
-  // pointer through the ObjectLinker class. Remove this class once ObjectLinker supports move
-  // semantics.
-  struct ContentLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> fidl_request;
-  };
-
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
   // sharing link requests is a clean way to implement that functionality. This will become more
   // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<GraphLinkRequest, ContentLinkRequest>;
+  using ObjectLinker = scenic_impl::gfx::ObjectLinker<
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink>,
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink>>;
 
   // Pass the same ObjectLinker to multiple Flatland instances to allow them to link to each other
   // through token transactions (e.g., LinkToParent(), CreateLink()).

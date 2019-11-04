@@ -72,30 +72,23 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
-  auto link = std::make_unique<ParentLink>();
-  auto impl = std::make_shared<ContentLinkImpl>();
-  link->impl = impl;
-  link->exporter = linker_->CreateExport(std::move(token.value), /* error_reporter */ nullptr);
-
-  auto graph_link_request = std::make_unique<GraphLinkRequest>();
-  graph_link_request->fidl_request = std::move(graph_link);
+  auto link = std::unique_ptr<ParentLink>(new ParentLink({
+      .impl = std::make_shared<ContentLinkImpl>(),
+      .exporter = linker_->CreateExport(std::move(graph_link), std::move(token.value),
+                                        /* error_reporter */ nullptr),
+  }));
 
   link->exporter.Initialize(
-      graph_link_request.get(),
       /* link_resolved = */
-      [this, impl = std::move(impl)](ContentLinkRequest* request) {
+      [this, impl = link->impl](fidl::InterfaceRequest<ContentLink> request) {
         // Set up the link here, so that the channel is initialized, but don't actually change the
         // link in our member variable until present is called.
         //
         // TODO(37597): Calling LinkToParent()) a second time should clean up the previous link in
         // the binding set.
-        content_link_bindings_.AddBinding(impl, std::move(request->fidl_request));
+        content_link_bindings_.AddBinding(impl, std::move(request));
       },
-      /* link_failed = */
-      [request = std::move(graph_link_request)] {
-        // TODO(36173): This closure exists solely to keep the request allocation alive. Switch to
-        // move semantics once they become available.
-      });
+      /* link_failed = */ nullptr);
 
   // This portion of the method is feed-forward. Our Link should not actually be changed until
   // Present() is called, so that the update to the Link is atomic with all other operations in the
@@ -252,24 +245,18 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
                           fidl::InterfaceRequest<ContentLink> content_link) {
   // We can initialize the link importer immediately, since no state changes actually occur before
   // the feed-forward portion of this method.
-  auto impl = std::make_shared<GraphLinkImpl>();
-  auto link = std::make_unique<ChildLink>();
-  link->impl = impl;
-  link->importer = linker_->CreateImport(std::move(token.value), /* error_reporter */ nullptr);
+  auto link = std::unique_ptr<ChildLink>(new ChildLink({
+      .impl = std::make_shared<GraphLinkImpl>(),
+      .importer = linker_->CreateImport(std::move(content_link), std::move(token.value),
+                                        /* error_reporter */ nullptr),
+  }));
 
-  auto content_link_request = std::make_unique<ContentLinkRequest>();
-  content_link_request->fidl_request = std::move(content_link);
   link->importer.Initialize(
-      content_link_request.get(),
       /* link_resolved = */
-      [this, impl = std::move(impl)](GraphLinkRequest* request) {
-        graph_link_bindings_.AddBinding(impl, std::move(request->fidl_request));
+      [this, impl = link->impl](fidl::InterfaceRequest<GraphLink> request) {
+        graph_link_bindings_.AddBinding(impl, std::move(request));
       },
-      /* link_failed = */
-      [request = std::move(content_link_request)]() {
-        // TODO(36173): This closure exists solely to keep the request allocation alive. Switch to
-        // move semantics once they become available.
-      });
+      /* link_failed = */ nullptr);
 
   // This is the feed-forward portion of the method. Here, we add the link to the map, and
   // initialize its layout with the desired properties.

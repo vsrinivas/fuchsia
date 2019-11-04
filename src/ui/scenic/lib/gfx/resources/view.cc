@@ -17,12 +17,10 @@ namespace gfx {
 
 const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
-View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
-           fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
-           std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
-           EventReporter* event_reporter)
+View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
+           fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
+           std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter)
     : Resource(session, session->id(), id, View::kTypeInfo),
-      link_(std::move(link)),
       control_ref_(std::move(control_ref)),
       view_ref_(std::move(view_ref)),
       view_ref_koid_(fsl::GetKoid(view_ref_.reference.get())),
@@ -41,8 +39,6 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
   fidl::Clone(view_ref_, &clone);
   gfx_session_->view_tree_updates().push_back(ViewTreeNewRefNode{.view_ref = std::move(clone)});
 
-  FXL_DCHECK(link_.valid());
-  FXL_DCHECK(!link_.initialized());
   FXL_DCHECK(validate_viewref(control_ref_, view_ref_));
 }
 
@@ -53,9 +49,14 @@ View::~View() {
   node_->Detach(error_reporter_.get());
 }
 
-void View::Connect() {
-  link_.Initialize(this, fit::bind_member(this, &View::LinkResolved),
-                   fit::bind_member(this, &View::LinkDisconnected));
+void View::Connect(ViewLinker::ImportLink link) {
+  FXL_DCHECK(!link_);
+  FXL_DCHECK(link.valid());
+  FXL_DCHECK(!link.initialized());
+
+  link_ = std::move(link);
+  link_->Initialize(fit::bind_member(this, &View::LinkResolved),
+                    fit::bind_member(this, &View::LinkDisconnected));
 }
 
 void View::SignalRender() {
@@ -76,6 +77,7 @@ zx_koid_t View::view_ref_koid() const { return view_ref_koid_; }
 
 void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
+  FXL_DCHECK(view_holder);
   view_holder_ = view_holder;
 
   // Attaching our node to the holder should never fail.

@@ -11,6 +11,7 @@
 
 #include <trace/event.h>
 
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -1208,7 +1209,6 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
     }
-    view->As<View>()->Connect();  // Initiate the link.
     session->resources()->AddResource(id, std::move(view));
     return true;
   }
@@ -1229,7 +1229,6 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
     }
-    view->As<View>()->Connect();  // Initiate the link.
     session->resources()->AddResource(id, std::move(view));
     return true;
   }
@@ -1244,7 +1243,6 @@ bool GfxCommandApplier::ApplyCreateViewHolder(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateViewHolder(): no token provided.";
 
   if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
-    view_holder->As<ViewHolder>()->Connect();  // Initiate the ViewHolder link.
     session->resources()->AddResource(id, std::move(view_holder));
     return true;
   }
@@ -1381,14 +1379,6 @@ ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id)
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::ViewArgs args) {
-  ViewLinker* view_linker = session->session_context().view_linker;
-  ViewLinker::ImportLink link =
-      view_linker->CreateImport(std::move(args.token.value), session->error_reporter());
-
-  if (!link.valid()) {
-    return nullptr;  // Error out: link could not be registered.
-  }
-
   // TODO(SCN-1410): Deprecate in favor of ViewArgs3.
   fuchsia::ui::views::ViewRefControl control_ref;
   fuchsia::ui::views::ViewRef view_ref;
@@ -1402,10 +1392,20 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
     FXL_DCHECK(status == ZX_OK);
   }
 
-  // Create a View: Link was successful, view ref is valid.
-  return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(control_ref),
-                                   std::move(view_ref), *args.debug_name,
-                                   session->shared_error_reporter(), session->event_reporter());
+  // Create a View and Link, then connect and return if the Link is valid.
+  auto view = fxl::MakeRefCounted<View>(session, id, std::move(control_ref), std::move(view_ref),
+                                        *args.debug_name, session->shared_error_reporter(),
+                                        session->event_reporter());
+  ViewLinker* view_linker = session->session_context().view_linker;
+  ViewLinker::ImportLink link =
+      view_linker->CreateImport(view.get(), std::move(args.token.value), session->error_reporter());
+
+  if (!link.valid()) {
+    return nullptr;  // Error out: link could not be registered.
+  }
+
+  view->Connect(std::move(link));
+  return std::move(view);
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
@@ -1414,32 +1414,36 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
     return nullptr;  // Error out: view ref not usable.
   }
 
+  // Create a View and Link, then connect and return if the Link is valid.
+  auto view = fxl::MakeRefCounted<View>(
+      session, id, std::move(args.control_ref), std::move(args.view_ref), *args.debug_name,
+      session->shared_error_reporter(), session->event_reporter());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
-      view_linker->CreateImport(std::move(args.token.value), session->error_reporter());
+      view_linker->CreateImport(view.get(), std::move(args.token.value), session->error_reporter());
 
   if (!link.valid()) {
     return nullptr;  // Error out: link could not be registered.
   }
 
-  // Create a View: Link was successful, view ref is valid.
-  return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(args.control_ref),
-                                   std::move(args.view_ref), *args.debug_name,
-                                   session->shared_error_reporter(), session->event_reporter());
+  view->Connect(std::move(link));
+  return std::move(view);
 }
 
 ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::ViewHolderArgs args) {
+  // Create a ViewHolder and Link, then connect and return if the Link is valid.
+  auto view_holder = fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, *args.debug_name);
   ViewLinker* view_linker = session->session_context().view_linker;
-  ViewLinker::ExportLink link =
-      view_linker->CreateExport(std::move(args.token.value), session->error_reporter());
+  ViewLinker::ExportLink link = view_linker->CreateExport(
+      view_holder.get(), std::move(args.token.value), session->error_reporter());
 
-  // Create a ViewHolder if the Link was successfully registered.
-  if (link.valid()) {
-    return fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(link),
-                                           *args.debug_name);
+  if (!link.valid()) {
+    return nullptr;
   }
-  return nullptr;
+
+  view_holder->Connect(std::move(link));
+  return std::move(view_holder);
 }
 
 ResourcePtr GfxCommandApplier::CreateClipNode(Session* session, ResourceId id,

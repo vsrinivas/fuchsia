@@ -11,6 +11,8 @@
 #include <lib/fit/function.h>
 #include <lib/zx/handle.h>
 
+#include <optional>
+
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
@@ -26,7 +28,7 @@ namespace gfx {
 class Session;
 
 using ViewNodePtr = fxl::RefPtr<ViewNode>;
-using ViewLinker = ObjectLinker<ViewHolder, View>;
+using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 using ViewPtr = fxl::RefPtr<View>;
 
 // View and ViewHolder work together via the ViewLinker to allow scene
@@ -51,10 +53,9 @@ class View final : public Resource {
   // TODO(SCN-1504):  The caller must ensure that |error_reporter| and |event_reporter| outlive the
   // constructed |View|.  Currently, these both have the same lifetime as |session|; this invariant
   // must be maintained.  However, it would be better to pass strong pointers.
-  View(Session* session, ResourceId id, ViewLinker::ImportLink link,
-       fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
-       std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
-       EventReporter* event_reporter);
+  View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
+       fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
+       std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter);
 
   ~View() override;
 
@@ -75,8 +76,8 @@ class View final : public Resource {
 
   // Connection management.  Call once the View is created to initiate the link
   // to its partner ViewHolder.
-  void Connect();
-  bool connected() const { return link_.initialized(); }
+  void Connect(ViewLinker::ImportLink link);
+  bool connected() const { return link_->initialized(); }
 
   // Called by |ViewHolder| to set the handle of the render event. It is
   // triggered on the next render pass this View is involved in.
@@ -108,7 +109,7 @@ class View final : public Resource {
   void SendViewHolderConnectedEvent();
   void SendViewHolderDisconnectedEvent();
 
-  ViewLinker::ImportLink link_;
+  std::optional<ViewLinker::ImportLink> link_;
   ViewHolder* view_holder_ = nullptr;
 
   // The View's "phantom node". This is the node corresponding to the View in

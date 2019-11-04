@@ -14,6 +14,14 @@
 namespace scenic_impl {
 namespace gfx {
 
+void ObjectLinkerBase::Link::LinkFailed() {
+  Invalidate();
+  if (link_failed_) {
+    link_failed_();
+    link_failed_ = nullptr;
+  }
+}
+
 zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* error_reporter,
                                            bool is_import) {
   // Select imports or exports to operate on based on the flag.
@@ -48,7 +56,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* erro
   new_endpoint.peer_endpoint_id = peer_endpoint_id;
   new_unresolved_endpoint.peer_death_waiter = WaitForPeerDeath(token.get(), endpoint_id, is_import);
   new_unresolved_endpoint.token = std::move(token);
-  auto emplaced_endpoint = endpoints.emplace(endpoint_id, std::move(new_endpoint));
+  auto emplaced_endpoint = endpoints.emplace(endpoint_id, new_endpoint);
   auto emplaced_unresolved_endpoint =
       unresolved_endpoints.emplace(endpoint_id, std::move(new_unresolved_endpoint));
   FXL_DCHECK(emplaced_endpoint.second);
@@ -85,12 +93,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
     // This handles the case where the peer exists but Initialize() has not been
     // called on it yet (so no callbacks exist).
     peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
-    if (peer_endpoint.link_failed) {
-      // link_failed_cb() will destroy |peer_endpoint|, so we need to pull it
-      // out before we invoked it.
-      auto link_failed_cb = std::move(peer_endpoint.link_failed);
-      link_failed_cb();
-    }
+    peer_endpoint.link->LinkFailed();
   }
 
   // At this point it is safe to completely erase the endpoint for the object.
@@ -98,12 +101,9 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
   endpoints.erase(endpoint_iter);
 }
 
-void ObjectLinkerBase::InitializeEndpoint(zx_koid_t endpoint_id, void* object,
-                                          fit::function<void(void* linked_object)> link_resolved,
-                                          fit::closure link_failed, bool is_import) {
-  FXL_DCHECK(object);
-  FXL_DCHECK(link_resolved);
-  FXL_DCHECK(link_failed);
+void ObjectLinkerBase::InitializeEndpoint(ObjectLinkerBase::Link* link, zx_koid_t endpoint_id,
+                                          bool is_import) {
+  FXL_DCHECK(link);
 
   auto& endpoints = is_import ? imports_ : exports_;
 
@@ -111,10 +111,6 @@ void ObjectLinkerBase::InitializeEndpoint(zx_koid_t endpoint_id, void* object,
   auto endpoint_iter = endpoints.find(endpoint_id);
   FXL_DCHECK(endpoint_iter != endpoints.end());
   Endpoint& endpoint = endpoint_iter->second;
-  FXL_DCHECK(!endpoint.object);
-  endpoint.object = object;
-  endpoint.link_resolved = std::move(link_resolved);
-  endpoint.link_failed = std::move(link_failed);
 
   // If the endpoint is no longer valid (i.e. its peer no longer exists), then
   // immediately signal a disconnection (which will destroy the endpoint)
@@ -124,15 +120,18 @@ void ObjectLinkerBase::InitializeEndpoint(zx_koid_t endpoint_id, void* object,
   // endpoint is created, but before Initialize() is called on it.
   zx_koid_t peer_endpoint_id = endpoint.peer_endpoint_id;
   if (peer_endpoint_id == ZX_KOID_INVALID) {
-    // link_failed_cb() will destroy |peer_endpoint|, so we need to pull it
-    // out before we invoked it.
-    auto link_failed_cb = std::move(endpoint.link_failed);
-    link_failed_cb();
+    link->LinkFailed();
     return;
   }
 
-  // Attempt to locate and link with the endpoint's peer.
-  AttemptLinking(endpoint_id, peer_endpoint_id, is_import);
+  if (!endpoint.link) {
+    endpoint.link = link;
+
+    // Attempt to locate and link with the endpoint's peer.
+    AttemptLinking(endpoint_id, peer_endpoint_id, is_import);
+  } else {
+    endpoint.link = link;
+  }
 }
 
 void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endpoint_id,
@@ -152,7 +151,7 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endp
 
   Endpoint& endpoint = endpoint_iter->second;
   Endpoint& peer_endpoint = peer_endpoint_iter->second;
-  if (!peer_endpoint.object) {
+  if (!peer_endpoint.link) {
     return;  // Peer endpoint isn't connected yet, bail.
   }
 
@@ -167,11 +166,11 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endp
   // Always fire the callback for the Export first, so clients can rely on
   // callbacks firing in a certain order.
   if (is_import) {
-    peer_endpoint.link_resolved(endpoint.object);
-    endpoint.link_resolved(peer_endpoint.object);
+    peer_endpoint.link->LinkResolved(endpoint.link);
+    endpoint.link->LinkResolved(peer_endpoint.link);
   } else {
-    endpoint.link_resolved(peer_endpoint.object);
-    peer_endpoint.link_resolved(endpoint.object);
+    endpoint.link->LinkResolved(peer_endpoint.link);
+    peer_endpoint.link->LinkResolved(endpoint.link);
   }
 }
 
@@ -189,24 +188,24 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
   static_assert(ZX_EVENTPAIR_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_SOCKET_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
-  auto waiter = std::make_unique<async::Wait>(
-      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this, endpoint_id, is_import]() {
-        auto& endpoints = is_import ? imports_ : exports_;
-        auto endpoint_iter = endpoints.find(endpoint_id);
-        FXL_DCHECK(endpoint_iter != endpoints.end());
-        Endpoint& endpoint = endpoint_iter->second;
+  auto waiter = std::make_unique<async::Wait>(endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0,
+                                              std::bind([this, endpoint_id, is_import]() {
+                                                auto& endpoints = is_import ? imports_ : exports_;
+                                                auto endpoint_iter = endpoints.find(endpoint_id);
+                                                FXL_DCHECK(endpoint_iter != endpoints.end());
+                                                Endpoint& endpoint = endpoint_iter->second;
 
-        // Invalidate the endpoint.  If Initialize() has already been called on
-        // the endpoint, then close its connection (which will cause it to be
-        // destroyed).  Any future connection attempts will fail immediately
-        // with a link_failed call, due to peer_endpoint_id being marked
-        // as invalid.
-        endpoint.peer_endpoint_id = ZX_KOID_INVALID;
-        if (endpoint.object) {
-          auto link_failed_cb = std::move(endpoint.link_failed);
-          link_failed_cb();
-        }
-      }));
+                                                // Invalidate the endpoint.  If Initialize() has
+                                                // already been called on the endpoint, then close
+                                                // its connection (which will cause it to be
+                                                // destroyed).  Any future connection attempts will
+                                                // fail immediately with a link_failed call, due to
+                                                // peer_endpoint_id being marked as invalid.
+                                                endpoint.peer_endpoint_id = ZX_KOID_INVALID;
+                                                if (endpoint.link) {
+                                                  endpoint.link->LinkFailed();
+                                                }
+                                              }));
 
   zx_status_t status = waiter->Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);

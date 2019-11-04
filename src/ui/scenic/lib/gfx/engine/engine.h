@@ -49,7 +49,7 @@ class SessionHandler;
 class View;
 class ViewHolder;
 
-using ViewLinker = ObjectLinker<ViewHolder, View>;
+using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 using PresentationInfo = fuchsia::images::PresentationInfo;
 using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 

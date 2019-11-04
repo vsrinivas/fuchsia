@@ -10,6 +10,9 @@
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
+#include <optional>
+
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
@@ -21,7 +24,7 @@ namespace scenic_impl {
 namespace gfx {
 
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
-using ViewLinker = ObjectLinker<ViewHolder, View>;
+using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 
 // The public |ViewHolder| resource implemented as a Node. The |ViewHolder|
 // and |View| classes are linked to communicate state and enable scene graph
@@ -32,8 +35,7 @@ class ViewHolder final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-             ViewLinker::ExportLink link, std::string debug_name);
+  ViewHolder(Session* session, SessionId session_id, ResourceId node_id, std::string debug_name);
   ~ViewHolder() override;
 
   fxl::WeakPtr<ViewHolder> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -46,8 +48,8 @@ class ViewHolder final : public Node {
 
   // Connection management.  Call once the ViewHolder is created to initiate the
   // link to its partner View.
-  void Connect();
-  bool connected() const { return link_.initialized(); }
+  void Connect(ViewLinker::ExportLink link);
+  bool connected() const { return link_->initialized(); }
 
   std::string debug_name() { return debug_name_; }
 
@@ -92,9 +94,10 @@ class ViewHolder final : public Node {
   void SendViewDetachedFromSceneEvent();
   void SendViewStateChangedEvent();
 
-  ViewLinker::ExportLink link_;
-  // Cache the link's endpoint ID (koid); it may get reset (and forgotten) over the link's lifetime.
-  const zx_koid_t view_holder_koid_ = ZX_KOID_INVALID;
+  std::optional<ViewLinker::ExportLink> link_;
+  // Cache the link's endpoint ID (koid); it may get reset (and forgotten) over the link's
+  // lifetime but is required to untrack the ViewHolder at destruction.
+  zx_koid_t view_holder_koid_ = ZX_KOID_INVALID;
   View* view_ = nullptr;
 
   fuchsia::ui::gfx::ViewProperties view_properties_;
