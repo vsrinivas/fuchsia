@@ -14,12 +14,12 @@
 #include <ostream>
 #include <sstream>
 
-#include "garnet/testing/views/background_view.h"
-#include "garnet/testing/views/coordinate_test_view.h"
-#include "garnet/testing/views/rotated_square_view.h"
-#include "garnet/testing/views/test_view.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/ui/testing/views/background_view.h"
+#include "src/ui/testing/views/coordinate_test_view.h"
+#include "src/ui/testing/views/rotated_square_view.h"
+#include "src/ui/testing/views/test_view.h"
 
 namespace {
 

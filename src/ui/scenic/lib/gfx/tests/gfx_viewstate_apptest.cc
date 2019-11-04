@@ -16,12 +16,12 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/testing/views/embedder_view.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/testing/views/embedder_view.h"
 
 namespace {
 

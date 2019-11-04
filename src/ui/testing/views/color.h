@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_TESTING_VIEWS_COLOR_H_
-#define GARNET_TESTING_VIEWS_COLOR_H_
+#ifndef SRC_UI_TESTING_VIEWS_COLOR_H_
+#define SRC_UI_TESTING_VIEWS_COLOR_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
@@ -64,4 +64,4 @@ class Screenshot {
 
 }  // namespace scenic
 
-#endif  // GARNET_TESTING_VIEWS_COLOR_H_
+#endif  // SRC_UI_TESTING_VIEWS_COLOR_H_

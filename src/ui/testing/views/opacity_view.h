@@ -2,34 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_TESTING_VIEWS_BACKGROUND_VIEW_H_
-#define GARNET_TESTING_VIEWS_BACKGROUND_VIEW_H_
+#ifndef SRC_UI_TESTING_VIEWS_OPACITY_VIEW_H_
+#define SRC_UI_TESTING_VIEWS_OPACITY_VIEW_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
-#include "garnet/testing/views/color.h"
-#include "garnet/testing/views/test_view.h"
 #include "src/lib/ui/base_view/base_view.h"
+#include "src/ui/testing/views/color.h"
+#include "src/ui/testing/views/test_view.h"
 
 namespace scenic {
 
-// Test view with a solid background. This is a simplified |BaseView| that
-// exposes the present callback.
+// Test view with a solid background and a translucent foreground layer.  This
+// is a simplified |BaseView| that exposes the present callback.
 //
-// See also lib/ui/base_view.
-class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionListener {
+// See also //src/lib/ui/base_view.
+class OpacityView : public TestView, private fuchsia::ui::scenic::SessionListener {
  public:
   static constexpr float kBackgroundElevation = 0.f;
-  static constexpr Color kBackgroundColor = {0x67, 0x3a, 0xb7, 0xff};  // Deep Purple 500
+  static constexpr float kForegroundElevation = 10.f;
 
-  BackgroundView(ViewContext context, const std::string& debug_name = "BackgroundView");
+  explicit OpacityView(ViewContext context, const std::string& debug_name = "OpacityView");
 
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;
 
-  void SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info);
+  // Present() must be called afterward in order for any of these setters to
+  // take effect.
+  void set_foreground_opacity(float opacity);
+  void set_background_color(uint8_t r, uint8_t g, uint8_t b);
+  void set_foreground_color(uint8_t r, uint8_t g, uint8_t b);
 
  protected:
   Session* session() { return &session_; }
@@ -56,8 +60,13 @@ class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionList
   View view_;
 
   ShapeNode background_node_;
+  Material background_material_;
+  OpacityNodeHACK opacity_node_;
+  ShapeNode foreground_node_;
+  Material foreground_material_;
+
   Session::PresentCallback present_callback_;
 };
 
 }  // namespace scenic
-#endif  // GARNET_TESTING_VIEWS_BACKGROUND_VIEW_H_
+#endif  // SRC_UI_TESTING_VIEWS_OPACITY_VIEW_H_

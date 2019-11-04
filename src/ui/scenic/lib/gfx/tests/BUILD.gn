@@ -119,12 +119,12 @@ source_set("pixel_test") {
   ]
 
   public_deps = [
-    "//garnet/testing/views",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
+    "//src/ui/testing/views",
     "//zircon/public/lib/zx",
   ]
 
@@ -215,13 +215,13 @@ executable("pixeltests") {
     ":gfx_tests_main",
     ":pixel_test",
     ":testing_deps",
-    "//garnet/testing/views",
     "//sdk/fidl/fuchsia.images",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
     "//src/ui/lib/yuv",
+    "//src/ui/testing/views",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
@@ -240,7 +240,6 @@ executable("viewstate_apptests") {
     ":pixel_test",
     ":testing_deps",
     "//garnet/public/lib/gtest",
-    "//garnet/testing/views",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -249,8 +248,8 @@ executable("viewstate_apptests") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
-    "//src/lib/ui/base_view",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/testing/views",
   ]
 }
 

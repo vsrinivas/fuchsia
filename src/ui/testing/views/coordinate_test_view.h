@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
-#define GARNET_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
+#ifndef SRC_UI_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
+#define SRC_UI_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
 
-#include "garnet/testing/views/background_view.h"
+#include "src/ui/testing/views/background_view.h"
 
 namespace scenic {
 
@@ -31,4 +31,4 @@ class CoordinateTestView : public BackgroundView {
 };
 
 }  // namespace scenic
-#endif  // GARNET_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
+#endif  // SRC_UI_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_

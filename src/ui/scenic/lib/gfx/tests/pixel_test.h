@@ -15,9 +15,9 @@
 #include <memory>
 #include <string>
 
-#include "garnet/testing/views/color.h"
-#include "garnet/testing/views/test_view.h"
 #include "src/lib/ui/base_view/base_view.h"
+#include "src/ui/testing/views/color.h"
+#include "src/ui/testing/views/test_view.h"
 
 namespace gfx {
 

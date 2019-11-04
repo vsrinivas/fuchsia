@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/testing/views/opacity_view.h"
+#include "src/ui/testing/views/opacity_view.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <zircon/status.h>

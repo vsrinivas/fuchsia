@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/testing/views/color.h"
+#include "src/ui/testing/views/color.h"
 
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"

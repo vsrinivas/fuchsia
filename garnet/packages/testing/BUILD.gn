@@ -24,7 +24,7 @@ group("environment_delegating_runner") {
 group("views") {
   testonly = true
   public_deps = [
-    "//garnet/testing/views:test_views",
+    "//src/ui/testing/views:test_views",
   ]
 }
 
