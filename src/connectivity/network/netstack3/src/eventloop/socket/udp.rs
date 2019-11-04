@@ -296,12 +296,12 @@ impl UdpSocketWorker {
                 }
                 r
             }
-                // When the closure above finishes, that means `self` goes out
-                // of scope and is dropped, meaning that the event stream's
-                // underlying channel is closed.
-                // If any errors occured as a result of the closure, we just log
-                // them.
-                .unwrap_or_else(|e: Error| error!("UDP socket control request error: {:?}", e)),
+            // When the closure above finishes, that means `self` goes out
+            // of scope and is dropped, meaning that the event stream's
+            // underlying channel is closed.
+            // If any errors occured as a result of the closure, we just log
+            // them.
+            .unwrap_or_else(|e: Error| error!("UDP socket control request error: {:?}", e)),
         );
     }
 
@@ -607,7 +607,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                 }
                 (None, None) => {
                     // this is not a "sendto" call, just use the existing conn:
-                    send_udp_conn(&mut event_loop.ctx, conn_id, body);
+                    send_udp_conn(&mut event_loop.ctx, conn_id, body)?;
                 }
                 _ => {
                     return Err(format_err!("Unspecified address or port in UDP connection socket"))

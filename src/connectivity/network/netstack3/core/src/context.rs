@@ -575,11 +575,20 @@ pub(crate) mod testutil {
     /// A dummy [`FrameContext`].
     pub struct DummyFrameContext<Meta> {
         frames: Vec<(Meta, Vec<u8>)>,
+        should_error_for_frame: Option<Box<dyn Fn(&Meta) -> bool>>,
+    }
+
+    impl<Meta> DummyFrameContext<Meta> {
+        /// Closure which can decide to cause an error to be thrown when handling a
+        /// frame, based on the metadata.
+        pub fn set_should_error_for_frame<F: Fn(&Meta) -> bool + 'static>(&mut self, f: F) {
+            self.should_error_for_frame = Some(Box::new(f));
+        }
     }
 
     impl<Meta> Default for DummyFrameContext<Meta> {
         fn default() -> DummyFrameContext<Meta> {
-            DummyFrameContext { frames: Vec::new() }
+            DummyFrameContext { frames: Vec::new(), should_error_for_frame: None }
         }
     }
 
@@ -596,6 +605,12 @@ pub(crate) mod testutil {
             metadata: Meta,
             frame: S,
         ) -> Result<(), S> {
+            if let Some(should_error_for_frame) = &self.should_error_for_frame {
+                if should_error_for_frame(&metadata) {
+                    return Err(frame);
+                }
+            }
+
             self.frames.push(match frame.serialize_vec_outer() {
                 Ok(buffer) => (metadata, buffer.as_ref().to_vec()),
                 Err(_) => unreachable!(),

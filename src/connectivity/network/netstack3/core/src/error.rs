@@ -7,6 +7,7 @@
 use failure::Fail;
 use net_types::ip::{Ip, IpAddress};
 use net_types::MulticastAddress;
+use packet::Serializer;
 
 use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
@@ -34,6 +35,10 @@ pub enum NetstackError {
     /// Error when item is not found.
     #[fail(display = "Item not found")]
     NotFound,
+
+    /// Errors related to sending frames.
+    #[fail(display = "{}", _0)]
+    SendFrame(#[cause] SendFrameError),
     // Add error types here as we add more to the stack
 }
 
@@ -155,5 +160,24 @@ pub(crate) struct NotFoundError;
 impl From<NotFoundError> for NetstackError {
     fn from(_: NotFoundError) -> NetstackError {
         NetstackError::NotFound
+    }
+}
+
+/// Error type for send frame errors.
+#[derive(Fail, Debug, PartialEq)]
+pub enum SendFrameError {
+    // TODO(maufflick): Flesh this type out when the underlying error information becomes
+    // available (and probably remove this "unknown" error).
+    /// Frame failed to be sent for an unknown reason.
+    #[fail(display = "send_frame failed")]
+    UnknownSendFrameError,
+}
+
+// This conversion from a non-error type into an error isn't ideal.
+// TODO(maufflick): This will be unnecessary/require changes when send_frame returns a proper error.
+impl<S: Serializer> From<S> for NetstackError {
+    fn from(_s: S) -> NetstackError {
+        // TODO(maufflick): Include useful information about the underlying error once propagated.
+        NetstackError::SendFrame(SendFrameError::UnknownSendFrameError)
     }
 }

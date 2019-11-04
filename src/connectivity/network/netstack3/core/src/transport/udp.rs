@@ -18,6 +18,7 @@ use zerocopy::ByteSlice;
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
+use crate::error::NetstackError;
 use crate::ip::{
     BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
 };
@@ -572,20 +573,17 @@ pub fn send_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
     let tmp_conn = connect_udp(ctx, local_addr, local_port, remote_addr, remote_port);
-    send_udp_conn(ctx, tmp_conn, body);
+    // TODO(maufflick): Forward the result failure.
+    send_udp_conn(ctx, tmp_conn, body).expect("send_udp_conn failed");
     remove_udp_conn(ctx, tmp_conn);
 }
 
 /// Send a UDP packet on an existing connection.
-///
-/// # Panics
-///
-/// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
 pub fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
-) {
+) -> std::result::Result<(), NetstackError> {
     let state = ctx.get_state();
     let Conn { local_addr, local_port, remote_addr, remote_port } = *state
         .conn_state
@@ -593,8 +591,7 @@ pub fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
         .get_conn_by_id(conn.0)
         .expect("transport::udp::send_udp_conn: no such conn");
 
-    // TODO(rheacock): Handle an error result here.
-    let _ = ctx.send_frame(
+    ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
             local_addr.into_addr(),
@@ -602,7 +599,8 @@ pub fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
             Some(local_port),
             remote_port,
         )),
-    );
+    )
+    .map_err(Into::into)
 }
 
 /// Send a UDP packet on an existing listener.
@@ -900,6 +898,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
+    use crate::error::SendFrameError;
     use crate::ip::IpProto;
     use crate::testutil::{get_other_ip_address, set_logger_for_test};
 
@@ -1155,7 +1154,8 @@ mod tests {
         assert_eq!(pkt.body, &body[..]);
 
         // Now try to send something over this new connection:
-        send_udp_conn(&mut ctx, conn, Buf::new(body.to_owned(), ..));
+        send_udp_conn(&mut ctx, conn, Buf::new(body.to_owned(), ..))
+            .expect("send_udp_conn returned an error");
 
         let frames = ctx.frames();
         assert_eq!(frames.len(), 1);
@@ -1212,6 +1212,34 @@ mod tests {
         assert_eq!(packet.src_port().unwrap().get(), 100);
         assert_eq!(packet.dst_port().get(), 200);
         assert_eq!(packet.body(), &body[..]);
+    }
+
+    /// Tests that udp send failures are propagated as errors.
+    ///
+    /// Only tests with specified local port and address bounds.
+    #[ip_test]
+    fn test_udp_conn_failure<I: Ip>() {
+        set_logger_for_test();
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+        // create a UDP connection with a specified local port and local ip:
+        let conn = connect_udp::<I::Addr, _>(
+            &mut ctx,
+            Some(local_ip),
+            Some(NonZeroU16::new(100).unwrap()),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+        );
+
+        // Instruct the dummy frame context to throw errors.
+        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I::Addr>> =
+            ctx.as_mut();
+        frames.set_should_error_for_frame(|_frame_meta| true);
+
+        // Now try to send something over this new connection:
+        let send_err = send_udp_conn(&mut ctx, conn, Buf::new(vec![], ..)).unwrap_err();
+        assert_eq!(send_err, NetstackError::SendFrame(SendFrameError::UnknownSendFrameError));
     }
 
     /// Tests that if we have multiple listeners and connections, demuxing the
