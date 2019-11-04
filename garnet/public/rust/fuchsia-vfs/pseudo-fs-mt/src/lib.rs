@@ -17,9 +17,9 @@ pub mod service;
 
 pub mod tree_builder;
 
-mod common;
-mod execution_scope;
-mod path;
+pub mod common;
+pub mod execution_scope;
+pub mod path;
 
 // --- pseudo_directory ---
 
