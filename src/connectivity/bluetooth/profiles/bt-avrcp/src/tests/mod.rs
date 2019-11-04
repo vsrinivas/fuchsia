@@ -6,7 +6,7 @@ use {
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
     failure::{format_err, Error},
     fidl::endpoints::{create_endpoints, Proxy, RequestStream, ServiceMarker},
-    fidl_fuchsia_bluetooth_avrcp::*,
+    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -20,7 +20,7 @@ use {
 };
 
 use crate::{
-    packets::*,
+    packets::{PlaybackStatus, *},
     peer::PeerManager,
     profile::{
         AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
@@ -76,8 +76,9 @@ impl ProfileService for MockProfileService {
 // 4. Issues a GetCapabilities command using get_events_supported on the test controller FIDL
 // 5. Issues a SetAbsoluteVolume command on the controller FIDL
 // 6. Issues a GetElementAttributes command, encodes multiple packets, and handles continuations
-// 6. Register event notification for position change callbacks and mock responses.
-// 7. Waits until we have a response to all commands from our mock remote service return expected
+// 7. Issues a GetPlayStatus command on the controller FIDL.
+// 8. Register event notification for position change callbacks and mock responses.
+// 9. Waits until we have a response to all commands from our mock remote service return expected
 //    values and we have received enough position change events.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
@@ -202,6 +203,10 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     pin_mut!(get_media_attributes_fut);
     expected_commands += 1;
 
+    let get_play_status_fut = controller_proxy.get_play_status().fuse();
+    pin_mut!(get_play_status_fut);
+    expected_commands += 1;
+
     let mut additional_packets: Vec<Vec<u8>> = vec![];
 
     // set controller event filter to ones we support.
@@ -320,6 +325,17 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                     let _ = avc_command
                         .send_response(AvcResponseType::ImplementedStable, &response[..]);
                 }
+                PduId::GetPlayStatus => {
+                    let _get_play_status_comand = GetPlayStatusCommand::decode(body)
+                        .expect("GetPlayStatus: unable to packet body");
+                    // Reply back with arbitrary status response. Song pos not supported.
+                    let response =
+                        GetPlayStatusResponse::new(100, 0xFFFFFFFF, PlaybackStatus::Stopped)
+                            .encode_packet()
+                            .expect("unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
                 _ => {
                     // not entirely correct but just get it off our back for now.
                     let _ = avc_command.send_response(AvcResponseType::NotImplemented, &[]);
@@ -387,6 +403,13 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                 expected_commands -= 1;
                 let media_attributes = res?.expect("unable to parse media attributes");
                 assert_eq!(media_attributes.genre, &LOREM_IPSUM[100..250]);
+            }
+            res = get_play_status_fut => {
+                expected_commands -= 1;
+                let play_status = res?.expect("unable to parse play status");
+                assert_eq!(play_status.playback_status, Some(fidl_avrcp::PlaybackStatus::Stopped).into());
+                assert_eq!(play_status.song_length, Some(100));
+                assert_eq!(play_status.song_position, None);
             }
             event = event_stream.select_next_some() => {
                 match event? {

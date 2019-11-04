@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::packets::get_play_status::{SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED};
 
 #[derive(Debug, Clone)]
 pub enum ControllerEvent {
@@ -78,6 +79,31 @@ impl Controller {
     /// Returns the supported NotificationEventIds by the peer or an error.
     pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
         self.peer.get_supported_events().await
+    }
+
+    /// Send a GetPlayStatus command requesting current status of playing media.
+    /// Returns the PlayStatus of current media on the peer, or an error.
+    pub async fn get_play_status(&self) -> Result<PlayStatus, Error> {
+        let peer = self.peer.get_control_connection()?;
+        let cmd = GetPlayStatusCommand::new();
+        fx_vlog!(tag: "avrcp", 1, "get_play_status send command {:?}", cmd);
+        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let response =
+            GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        fx_vlog!(tag: "avrcp", 1, "get_play_status received response {:?}", response);
+        let mut play_status = PlayStatus::new_empty();
+        play_status.song_length = if response.song_length != SONG_LENGTH_NOT_SUPPORTED {
+            Some(response.song_length)
+        } else {
+            None
+        };
+        play_status.song_position = if response.song_position != SONG_POSITION_NOT_SUPPORTED {
+            Some(response.song_position)
+        } else {
+            None
+        };
+        play_status.playback_status = Some(response.playback_status.into());
+        Ok(play_status)
     }
 
     /// Sends a raw vendor dependent AVC command on the control channel. Returns the response

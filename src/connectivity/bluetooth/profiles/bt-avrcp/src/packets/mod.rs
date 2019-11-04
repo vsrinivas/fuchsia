@@ -4,13 +4,14 @@
 use {
     bt_avctp::pub_decodable_enum,
     failure::Fail,
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     std::{convert::TryFrom, result},
 };
 
 mod continuation;
 mod get_capabilities;
 mod get_element_attributes;
-mod get_play_status;
+pub mod get_play_status;
 mod notification;
 mod rejected;
 mod set_absolute_volume;
@@ -133,6 +134,32 @@ pub_decodable_enum! {
         FwdSeek => 0x03,
         RevSeek => 0x04,
         Error => 0xff,
+    }
+}
+
+impl From<fidl_avrcp::PlaybackStatus> for PlaybackStatus {
+    fn from(src: fidl_avrcp::PlaybackStatus) -> PlaybackStatus {
+        match src {
+            fidl_avrcp::PlaybackStatus::Stopped => PlaybackStatus::Stopped,
+            fidl_avrcp::PlaybackStatus::Playing => PlaybackStatus::Playing,
+            fidl_avrcp::PlaybackStatus::Paused => PlaybackStatus::Paused,
+            fidl_avrcp::PlaybackStatus::FwdSeek => PlaybackStatus::FwdSeek,
+            fidl_avrcp::PlaybackStatus::RevSeek => PlaybackStatus::RevSeek,
+            fidl_avrcp::PlaybackStatus::Error => PlaybackStatus::Error,
+        }
+    }
+}
+
+impl From<PlaybackStatus> for fidl_avrcp::PlaybackStatus {
+    fn from(src: PlaybackStatus) -> fidl_avrcp::PlaybackStatus {
+        match src {
+            PlaybackStatus::Stopped => fidl_avrcp::PlaybackStatus::Stopped,
+            PlaybackStatus::Playing => fidl_avrcp::PlaybackStatus::Playing,
+            PlaybackStatus::Paused => fidl_avrcp::PlaybackStatus::Paused,
+            PlaybackStatus::FwdSeek => fidl_avrcp::PlaybackStatus::FwdSeek,
+            PlaybackStatus::RevSeek => fidl_avrcp::PlaybackStatus::RevSeek,
+            PlaybackStatus::Error => fidl_avrcp::PlaybackStatus::Error,
+        }
     }
 }
 
@@ -316,5 +343,26 @@ impl FillExt<u8> for [u8] {
         for i in self {
             *i = v
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_bluetooth_avrcp as fidl;
+
+    #[test]
+    fn test_playback_status_to_fidl() {
+        let status = PlaybackStatus::Playing;
+        let status: fidl::PlaybackStatus = status.into();
+        let expected = fidl::PlaybackStatus::Playing;
+        assert_eq!(expected, status);
+    }
+    #[test]
+    fn test_playback_status_from_fidl() {
+        let status = fidl::PlaybackStatus::Stopped;
+        let status: PlaybackStatus = status.into();
+        let expected = PlaybackStatus::Stopped;
+        assert_eq!(expected, status);
     }
 }

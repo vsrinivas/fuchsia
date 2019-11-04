@@ -9,7 +9,7 @@ use {
     },
     failure::{format_err, Error as FailureError},
     fidl::encoding::Decodable as FidlDecodable,
-    fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes},
+    fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
     fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon as zx,

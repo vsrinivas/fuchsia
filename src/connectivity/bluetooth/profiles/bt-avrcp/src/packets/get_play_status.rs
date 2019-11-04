@@ -8,11 +8,9 @@ use super::*;
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.7.1 GetPlayStatus
-#[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
 pub struct GetPlayStatusCommand {}
 
 impl GetPlayStatusCommand {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new() -> GetPlayStatusCommand {
         Self {}
     }
@@ -40,13 +38,21 @@ impl Encodable for GetPlayStatusCommand {
     }
 }
 
+// The length of the current song, u32 represented as a 4 byte payload.
 const SONG_LENGTH_LEN: usize = 4;
+// The position of the current song, u32 represented as a 4 byte payload.
 const SONG_POSITION_LEN: usize = 4;
-const PLAYSTATUS_LEN: usize = 1;
-const RESPONSE_LEN: usize = SONG_LENGTH_LEN + SONG_POSITION_LEN + PLAYSTATUS_LEN;
+// The current status of playing media, 1 byte payload.
+const PLAY_STATUS_LEN: usize = 1;
+// The total length of the response payload.
+const RESPONSE_LEN: usize = SONG_LENGTH_LEN + SONG_POSITION_LEN + PLAY_STATUS_LEN;
+// If the TG doesn't support song_length, it shall respond with 0xFFFFFFFF.
+pub const SONG_LENGTH_NOT_SUPPORTED: u32 = 0xFFFFFFFF;
+// If the TG doesn't support song_position, it shall respond with 0xFFFFFFFF.
+pub const SONG_POSITION_NOT_SUPPORTED: u32 = 0xFFFFFFFF;
 
+#[derive(Debug)]
 /// AVRCP 1.6.1 section 6.7.1 GetPlayStatus
-#[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
 pub struct GetPlayStatusResponse {
     pub song_length: u32,
     pub song_position: u32,

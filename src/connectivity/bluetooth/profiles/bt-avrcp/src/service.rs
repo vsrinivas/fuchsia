@@ -87,7 +87,9 @@ impl AvrcpClientController {
                 )?;
             }
             ControllerRequest::GetPlayStatus { responder } => {
-                responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
+                responder.send(
+                    &mut self.controller.get_play_status().await.map_err(ControllerError::from),
+                )?;
             }
             ControllerRequest::InformBatteryStatus { battery_status: _, responder } => {
                 responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
