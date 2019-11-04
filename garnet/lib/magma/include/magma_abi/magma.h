@@ -278,7 +278,7 @@ void magma_unmap_buffer_gpu(
 /// \param page_offset Page offset into the buffer.
 /// \param page_count Number of pages to commit.
 ///
-void magma_commit_buffer(
+magma_status_t magma_commit_buffer(
     magma_connection_t connection,
     magma_buffer_t buffer,
     uint64_t page_offset,
