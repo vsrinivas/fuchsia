@@ -95,6 +95,11 @@ bool DirectoryWatcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDirectoryWatcher_OnEvent_Ordinal:
     case kDirectoryWatcher_OnEvent_GenOrdinal:
@@ -911,6 +916,10 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end, Node::Event
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kNode_OnOpen_Ordinal:
     case kNode_OnOpen_GenOrdinal:
@@ -953,6 +962,11 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kNode_Clone_Ordinal:
     case kNode_Clone_GenOrdinal:
@@ -2686,6 +2700,10 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end, File::Event
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kFile_OnOpen_Ordinal:
     case kFile_OnOpen_GenOrdinal:
@@ -2728,6 +2746,11 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kFile_Clone_Ordinal:
     case kFile_Clone_GenOrdinal:
@@ -4960,6 +4983,10 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end, Direct
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kDirectory_OnOpen_Ordinal:
     case kDirectory_OnOpen_GenOrdinal:
@@ -5002,6 +5029,11 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDirectory_Clone_Ordinal:
     case kDirectory_Clone_GenOrdinal:
@@ -7528,6 +7560,10 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end, D
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kDirectoryAdmin_OnOpen_Ordinal:
     case kDirectoryAdmin_OnOpen_GenOrdinal:
@@ -7570,6 +7606,11 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDirectoryAdmin_Clone_Ordinal:
     case kDirectoryAdmin_Clone_GenOrdinal:

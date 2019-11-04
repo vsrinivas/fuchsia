@@ -94,6 +94,11 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kProvider_Socket_Ordinal:
     case kProvider_Socket_GenOrdinal:
@@ -1364,6 +1369,10 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end, Control:
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kControl_OnOpen_Ordinal:
     case kControl_OnOpen_GenOrdinal:
@@ -1406,6 +1415,11 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kControl_Clone_Ordinal:
     case kControl_Clone_GenOrdinal:

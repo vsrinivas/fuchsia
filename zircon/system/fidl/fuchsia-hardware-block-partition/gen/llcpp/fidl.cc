@@ -636,6 +636,11 @@ bool Partition::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kPartition_GetInfo_Ordinal:
     case kPartition_GetInfo_GenOrdinal:

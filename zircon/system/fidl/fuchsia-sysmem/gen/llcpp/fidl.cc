@@ -190,6 +190,11 @@ bool BufferCollectionToken::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kBufferCollectionToken_Duplicate_Ordinal:
     case kBufferCollectionToken_Duplicate_GenOrdinal:
@@ -493,6 +498,11 @@ bool Heap::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kHeap_AllocateVmo_Ordinal:
     case kHeap_AllocateVmo_GenOrdinal:
@@ -743,6 +753,11 @@ bool DriverConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDriverConnector_Connect_Ordinal:
     case kDriverConnector_Connect_GenOrdinal:
@@ -1002,6 +1017,11 @@ bool Allocator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kAllocator_AllocateNonSharedCollection_Ordinal:
     case kAllocator_AllocateNonSharedCollection_GenOrdinal:
@@ -1338,6 +1358,11 @@ bool SecureMem::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kSecureMem_GetPhysicalSecureHeaps_Ordinal:
     case kSecureMem_GetPhysicalSecureHeaps_GenOrdinal:
@@ -1701,6 +1726,11 @@ bool BufferCollectionEvents::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fid
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal:
     case kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal:
@@ -2436,6 +2466,11 @@ bool BufferCollection::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kBufferCollection_SetEventSink_Ordinal:
     case kBufferCollection_SetEventSink_GenOrdinal:

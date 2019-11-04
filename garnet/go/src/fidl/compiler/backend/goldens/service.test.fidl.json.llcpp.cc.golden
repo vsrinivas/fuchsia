@@ -69,6 +69,11 @@ bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kSecondProtocol_MethodOnSecond_Ordinal:
     case kSecondProtocol_MethodOnSecond_GenOrdinal:
@@ -164,6 +169,11 @@ bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kFirstProtocol_MethodOnFirst_Ordinal:
     case kFirstProtocol_MethodOnFirst_GenOrdinal:

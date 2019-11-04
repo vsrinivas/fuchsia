@@ -603,6 +603,11 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kTestDevice_ScheduleWork_Ordinal:
     case kTestDevice_ScheduleWork_GenOrdinal:
@@ -1096,6 +1101,11 @@ bool OwnedChannelDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::T
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kOwnedChannelDevice_ScheduleWork_Ordinal:
     case kOwnedChannelDevice_ScheduleWork_GenOrdinal:

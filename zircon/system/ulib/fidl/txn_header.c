@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/txn_header.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
 
 void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64_t ordinal) {

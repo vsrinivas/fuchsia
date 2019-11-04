@@ -228,6 +228,11 @@ bool DebugDumper::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDebugDumper_DumpTree_Ordinal:
     case kDebugDumper_DumpTree_GenOrdinal:
@@ -507,6 +512,11 @@ bool Administrator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kAdministrator_Suspend_Ordinal:
     case kAdministrator_Suspend_GenOrdinal:
@@ -832,6 +842,11 @@ bool DevhostController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDevhostController_CreateDeviceStub_Ordinal:
     case kDevhostController_CreateDeviceStub_GenOrdinal:
@@ -2289,6 +2304,11 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDeviceController_BindDriver_Ordinal:
     case kDeviceController_BindDriver_GenOrdinal:
@@ -3778,6 +3798,11 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kCoordinator_AddDevice_Ordinal:
     case kCoordinator_AddDevice_GenOrdinal:

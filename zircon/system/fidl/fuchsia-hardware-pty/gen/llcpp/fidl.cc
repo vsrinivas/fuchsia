@@ -1684,6 +1684,10 @@ zx_status_t Device::Call::HandleEvents(zx::unowned_channel client_end, Device::E
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kDevice_OnOpen_Ordinal:
     case kDevice_OnOpen_GenOrdinal:
@@ -1726,6 +1730,11 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDevice_Clone_Ordinal:
     case kDevice_Clone_GenOrdinal:

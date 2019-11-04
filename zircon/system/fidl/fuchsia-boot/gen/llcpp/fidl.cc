@@ -88,6 +88,11 @@ bool WriteOnlyLog::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kWriteOnlyLog_Get_Ordinal:
     case kWriteOnlyLog_Get_GenOrdinal:
@@ -241,6 +246,11 @@ bool ReadOnlyLog::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kReadOnlyLog_Get_Ordinal:
     case kReadOnlyLog_Get_GenOrdinal:
@@ -397,6 +407,11 @@ bool Items::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kItems_Get_Ordinal:
     case kItems_Get_GenOrdinal:
@@ -554,6 +569,11 @@ bool FactoryItems::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kFactoryItems_Get_Ordinal:
     case kFactoryItems_Get_GenOrdinal:
@@ -710,6 +730,11 @@ bool RootResource::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kRootResource_Get_Ordinal:
     case kRootResource_Get_GenOrdinal:
@@ -863,6 +888,11 @@ bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kRootJob_Get_Ordinal:
     case kRootJob_Get_GenOrdinal:
@@ -1016,6 +1046,11 @@ bool RootJobForInspect::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kRootJobForInspect_Get_Ordinal:
     case kRootJobForInspect_Get_GenOrdinal:
@@ -1169,6 +1204,11 @@ bool Arguments::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kArguments_Get_Ordinal:
     case kArguments_Get_GenOrdinal:

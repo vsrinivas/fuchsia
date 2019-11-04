@@ -76,6 +76,10 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end, Con
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kConnectivity_OnNetworkReachable_Ordinal:
     case kConnectivity_OnNetworkReachable_GenOrdinal:
@@ -100,6 +104,11 @@ bool Connectivity::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     default: {
       return false;
@@ -500,6 +509,11 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kNameLookup_LookupIp_Ordinal:
     case kNameLookup_LookupIp_GenOrdinal:

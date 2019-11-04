@@ -120,6 +120,11 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kEvents_FunctionRegistered_Ordinal:
     case kEvents_FunctionRegistered_GenOrdinal:
@@ -453,6 +458,11 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDevice_SetConfiguration_Ordinal:
     case kDevice_SetConfiguration_GenOrdinal:

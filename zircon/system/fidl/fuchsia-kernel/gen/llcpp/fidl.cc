@@ -231,6 +231,11 @@ bool MexecBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kMexecBroker_PerformMexec_Ordinal:
     case kMexecBroker_PerformMexec_GenOrdinal:
@@ -421,6 +426,11 @@ bool DebugBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kDebugBroker_SendDebugCommand_Ordinal:
     case kDebugBroker_SendDebugCommand_GenOrdinal:
@@ -699,6 +709,11 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kCounter_GetInspectVmo_Ordinal:
     case kCounter_GetInspectVmo_GenOrdinal:
@@ -1062,6 +1077,11 @@ bool Stats::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kStats_GetMemoryStats_Ordinal:
     case kStats_GetMemoryStats_GenOrdinal:

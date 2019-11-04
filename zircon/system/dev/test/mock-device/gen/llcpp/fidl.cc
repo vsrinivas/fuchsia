@@ -282,6 +282,10 @@ zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end,
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kMockDeviceThread_AddDeviceDone_Ordinal:
     case kMockDeviceThread_AddDeviceDone_GenOrdinal:
@@ -316,6 +320,11 @@ bool MockDeviceThread::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kMockDeviceThread_PerformActions_Ordinal:
     case kMockDeviceThread_PerformActions_GenOrdinal:
@@ -1521,6 +1530,11 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kMockDevice_Bind_Ordinal:
     case kMockDevice_Bind_GenOrdinal:

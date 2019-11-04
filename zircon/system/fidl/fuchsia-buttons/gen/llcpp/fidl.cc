@@ -273,6 +273,10 @@ zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end, Buttons:
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kButtons_Notify_Ordinal:
     case kButtons_Notify_GenOrdinal:
@@ -297,6 +301,11 @@ bool Buttons::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kButtons_GetState_Ordinal:
     case kButtons_GetState_GenOrdinal:

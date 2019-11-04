@@ -1220,6 +1220,10 @@ zx_status_t Filesystems::Call::HandleEvents(zx::unowned_channel client_end, File
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kFilesystems_OnOpen_Ordinal:
     case kFilesystems_OnOpen_GenOrdinal:
@@ -1262,6 +1266,11 @@ bool Filesystems::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kFilesystems_Clone_Ordinal:
     case kFilesystems_Clone_GenOrdinal:
@@ -2238,6 +2247,11 @@ bool Registry::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kRegistry_RegisterFilesystem_Ordinal:
     case kRegistry_RegisterFilesystem_GenOrdinal:

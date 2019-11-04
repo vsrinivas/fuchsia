@@ -147,6 +147,11 @@ bool NameProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kNameProvider_GetDeviceName_Ordinal:
     case kNameProvider_GetDeviceName_GenOrdinal:
@@ -1736,6 +1741,11 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kController_Bind_Ordinal:
     case kController_Bind_GenOrdinal:

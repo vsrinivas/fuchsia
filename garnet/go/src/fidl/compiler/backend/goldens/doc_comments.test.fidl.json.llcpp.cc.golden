@@ -181,6 +181,10 @@ zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end, Interf
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kInterface_OnEvent_Ordinal:
     case kInterface_OnEvent_GenOrdinal:
@@ -204,6 +208,11 @@ bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kInterface_Method_Ordinal:
     case kInterface_Method_GenOrdinal:

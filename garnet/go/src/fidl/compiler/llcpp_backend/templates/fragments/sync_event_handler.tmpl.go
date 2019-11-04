@@ -88,6 +88,10 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end, {{ .
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if not .HasRequest }}

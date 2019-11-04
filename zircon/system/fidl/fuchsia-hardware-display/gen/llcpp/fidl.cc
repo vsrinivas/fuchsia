@@ -163,6 +163,11 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kProvider_OpenVirtconController_Ordinal:
     case kProvider_OpenVirtconController_GenOrdinal:
@@ -2699,6 +2704,10 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end, Contr
       .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
+  status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    return status;
+  }
   switch (hdr->ordinal) {
     case kController_DisplaysChanged_Ordinal:
     case kController_DisplaysChanged_GenOrdinal:
@@ -2743,6 +2752,11 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
   switch (hdr->ordinal) {
     case kController_ImportVmoImage_Ordinal:
     case kController_ImportVmoImage_GenOrdinal:
