@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
@@ -35,7 +36,8 @@ TEST(Conformance, {{ .name }}_Encode) {
     {{ .bytes }}
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes({{ .value_var }}, expected));
+  auto result = ::fidl::test::util::ValueToBytes<decltype({{ .value_var }}), {{ .encoder_type }}>({{ .value_var }}, expected);
+  EXPECT_TRUE(result);
 }
 
 {{end -}}
@@ -62,7 +64,7 @@ TEST(Conformance, {{ .name }}_Encode_Failure) {
 
   zx_status_t expected = {{ .error_code }};
 
-  ::fidl::test::util::CheckEncodeFailure({{ .value_var }}, expected);
+  ::fidl::test::util::CheckEncodeFailure<decltype({{ .value_var }}), {{ .encoder_type }}>({{ .value_var }}, expected);
 }
 
 {{end -}}
@@ -97,10 +99,11 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
 
 		if err := tmpls.ExecuteTemplate(wr, "EncodeSuccessCase", map[string]interface{}{
-			"name":        encodeSuccess.Name,
-			"value_build": valueBuilder.String(),
-			"value_var":   valueBuilder.lastVar,
-			"bytes":       bytesBuilder(encodeSuccess.Bytes),
+			"name":         encodeSuccess.Name,
+			"value_build":  valueBuilder.String(),
+			"value_var":    valueBuilder.lastVar,
+			"bytes":        bytesBuilder(encodeSuccess.Bytes),
+			"encoder_type": fmt.Sprintf("::fidl::test::util::EncoderFactory%s", fidlcommon.ToUpperCamelCase(encodeSuccess.WireFormat.String())),
 		}); err != nil {
 			return err
 		}
@@ -138,10 +141,11 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
 
 		if err := tmpls.ExecuteTemplate(wr, "EncodeFailureCase", map[string]interface{}{
-			"name":        encodeFailure.Name,
-			"value_build": valueBuilder.String(),
-			"value_var":   valueBuilder.lastVar,
-			"error_code":  cppErrorCode(encodeFailure.Err),
+			"name":         encodeFailure.Name,
+			"value_build":  valueBuilder.String(),
+			"value_var":    valueBuilder.lastVar,
+			"error_code":   cppErrorCode(encodeFailure.Err),
+			"encoder_type": fmt.Sprintf("::fidl::test::util::EncoderFactory%s", fidlcommon.ToUpperCamelCase(encodeFailure.WireFormat.String())),
 		}); err != nil {
 			return err
 		}

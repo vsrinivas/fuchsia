@@ -913,7 +913,7 @@ fn test_union_migration_single_variant_v1_encode() {
 fn test_union_size8_alignment4_encode() {
     let value = &mut conformance::SandwichUnionSize8Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize8Alignment4::Variant(4u32),
+        value: conformance::UnionSize8Alignment4::Variant(4u32),
         after: 20u32,
     };
     let bytes = &mut Vec::new();
@@ -931,7 +931,7 @@ fn test_union_size8_alignment4_encode() {
 fn test_union_size8_alignment4_v1_encode() {
     let value = &mut conformance::SandwichUnionSize8Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize8Alignment4::Variant(4u32),
+        value: conformance::UnionSize8Alignment4::Variant(4u32),
         after: 20u32,
     };
     let bytes = &mut Vec::new();
@@ -951,7 +951,7 @@ fn test_union_size8_alignment4_v1_encode() {
 fn test_union_size12_alignment4_encode() {
     let value = &mut conformance::SandwichUnionSize12Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
+        value: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
         after: 20u32,
     };
     let bytes = &mut Vec::new();
@@ -969,7 +969,7 @@ fn test_union_size12_alignment4_encode() {
 fn test_union_size12_alignment4_v1_encode() {
     let value = &mut conformance::SandwichUnionSize12Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
+        value: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
         after: 20u32,
     };
     let bytes = &mut Vec::new();
@@ -989,7 +989,7 @@ fn test_union_size12_alignment4_v1_encode() {
 fn test_union_size24_alignment8_encode() {
     let value = &mut conformance::SandwichUnionSize24Alignment8 {
         before: 10u32,
-        union: conformance::UnionSize24Alignment8::Variant(conformance::StructSize16Alignment8 {
+        value: conformance::UnionSize24Alignment8::Variant(conformance::StructSize16Alignment8 {
             f1: 1u64,
             f2: 2u64,
         }),
@@ -1011,7 +1011,7 @@ fn test_union_size24_alignment8_encode() {
 fn test_union_size24_alignment8_v1_encode() {
     let value = &mut conformance::SandwichUnionSize24Alignment8 {
         before: 10u32,
-        union: conformance::UnionSize24Alignment8::Variant(conformance::StructSize16Alignment8 {
+        value: conformance::UnionSize24Alignment8::Variant(conformance::StructSize16Alignment8 {
             f1: 1u64,
             f2: 2u64,
         }),
@@ -1034,7 +1034,7 @@ fn test_union_size24_alignment8_v1_encode() {
 fn test_union_size36_alignment4_encode() {
     let value = &mut conformance::SandwichUnionSize36Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize36Alignment4::Variant([
+        value: conformance::UnionSize36Alignment4::Variant([
             1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8, 16u8,
             17u8, 18u8, 19u8, 20u8, 21u8, 22u8, 23u8, 24u8, 25u8, 26u8, 27u8, 28u8, 29u8, 30u8,
             31u8, 32u8,
@@ -1058,7 +1058,7 @@ fn test_union_size36_alignment4_encode() {
 fn test_union_size36_alignment4_v1_encode() {
     let value = &mut conformance::SandwichUnionSize36Alignment4 {
         before: 10u32,
-        union: conformance::UnionSize36Alignment4::Variant([
+        value: conformance::UnionSize36Alignment4::Variant([
             1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8, 16u8,
             17u8, 18u8, 19u8, 20u8, 21u8, 22u8, 23u8, 24u8, 25u8, 26u8, 27u8, 28u8, 29u8, 30u8,
             31u8, 32u8,
@@ -1983,7 +1983,7 @@ fn test_union_size8_alignment4_decode() {
         *value,
         conformance::SandwichUnionSize8Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize8Alignment4::Variant(4u32),
+            value: conformance::UnionSize8Alignment4::Variant(4u32),
             after: 20u32
         }
     );
@@ -2003,7 +2003,7 @@ fn test_union_size8_alignment4_v1_decode() {
         *value,
         conformance::SandwichUnionSize8Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize8Alignment4::Variant(4u32),
+            value: conformance::UnionSize8Alignment4::Variant(4u32),
             after: 20u32
         }
     );
@@ -2021,7 +2021,7 @@ fn test_union_size12_alignment4_decode() {
         *value,
         conformance::SandwichUnionSize12Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
+            value: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
             after: 20u32
         }
     );
@@ -2041,7 +2041,7 @@ fn test_union_size12_alignment4_v1_decode() {
         *value,
         conformance::SandwichUnionSize12Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
+            value: conformance::UnionSize12Alignment4::Variant([1u8, 2u8, 3u8, 4u8, 5u8, 6u8]),
             after: 20u32
         }
     );
@@ -2060,7 +2060,7 @@ fn test_union_size24_alignment8_decode() {
         *value,
         conformance::SandwichUnionSize24Alignment8 {
             before: 10u32,
-            union: conformance::UnionSize24Alignment8::Variant(
+            value: conformance::UnionSize24Alignment8::Variant(
                 conformance::StructSize16Alignment8 { f1: 1u64, f2: 2u64 }
             ),
             after: 20u32
@@ -2082,7 +2082,7 @@ fn test_union_size24_alignment8_v1_decode() {
         *value,
         conformance::SandwichUnionSize24Alignment8 {
             before: 10u32,
-            union: conformance::UnionSize24Alignment8::Variant(
+            value: conformance::UnionSize24Alignment8::Variant(
                 conformance::StructSize16Alignment8 { f1: 1u64, f2: 2u64 }
             ),
             after: 20u32
@@ -2104,7 +2104,7 @@ fn test_union_size36_alignment4_decode() {
         *value,
         conformance::SandwichUnionSize36Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize36Alignment4::Variant([
+            value: conformance::UnionSize36Alignment4::Variant([
                 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8,
                 16u8, 17u8, 18u8, 19u8, 20u8, 21u8, 22u8, 23u8, 24u8, 25u8, 26u8, 27u8, 28u8, 29u8,
                 30u8, 31u8, 32u8
@@ -2129,7 +2129,7 @@ fn test_union_size36_alignment4_v1_decode() {
         *value,
         conformance::SandwichUnionSize36Alignment4 {
             before: 10u32,
-            union: conformance::UnionSize36Alignment4::Variant([
+            value: conformance::UnionSize36Alignment4::Variant([
                 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8,
                 16u8, 17u8, 18u8, 19u8, 20u8, 21u8, 22u8, 23u8, 24u8, 25u8, 26u8, 27u8, 28u8, 29u8,
                 30u8, 31u8, 32u8

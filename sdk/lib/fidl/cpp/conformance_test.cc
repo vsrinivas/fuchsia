@@ -54,7 +54,10 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInStruct_Encode) {
@@ -93,7 +96,10 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
@@ -142,7 +148,10 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
@@ -182,7 +191,10 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
@@ -227,7 +239,10 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
@@ -263,7 +278,10 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, EmptyStruct_Encode) {
@@ -274,7 +292,10 @@ TEST(Conformance, EmptyStruct_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, EmptyStructSandwich_Encode) {
@@ -297,7 +318,10 @@ TEST(Conformance, EmptyStructSandwich_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint8Uint16Uint32Uint64_Encode) {
@@ -321,7 +345,10 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint64Uint32Uint16Uint8_Encode) {
@@ -345,7 +372,10 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, SimpleTableEmpty_Encode) {
@@ -360,7 +390,10 @@ TEST(Conformance, SimpleTableEmpty_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, SimpleTableXAndY_Encode) {
@@ -387,7 +420,10 @@ TEST(Conformance, SimpleTableXAndY_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, SimpleTableJustY_Encode) {
@@ -410,7 +446,10 @@ TEST(Conformance, SimpleTableJustY_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
@@ -435,7 +474,10 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, SimpleTableThenUint64_Encode) {
@@ -465,7 +507,10 @@ TEST(Conformance, SimpleTableThenUint64_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, InlineXUnionInStruct_Encode) {
@@ -493,7 +538,10 @@ TEST(Conformance, InlineXUnionInStruct_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
@@ -514,7 +562,10 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
@@ -542,7 +593,10 @@ TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
@@ -569,7 +623,10 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
@@ -604,7 +661,10 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, StrictXUnion_Encode) {
@@ -623,7 +683,10 @@ TEST(Conformance, StrictXUnion_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, AddEthernetDeviceRequest_Encode) {
@@ -659,7 +722,10 @@ TEST(Conformance, AddEthernetDeviceRequest_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, FileGetAttrResponse_Encode) {
@@ -701,7 +767,10 @@ TEST(Conformance, FileGetAttrResponse_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Optionals_Encode) {
@@ -761,7 +830,10 @@ TEST(Conformance, Optionals_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Arrays_Encode) {
@@ -828,7 +900,10 @@ TEST(Conformance, Arrays_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Vectors_Encode) {
@@ -918,7 +993,10 @@ TEST(Conformance, Vectors_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, BoolTrue_Encode) {
@@ -932,7 +1010,10 @@ TEST(Conformance, BoolTrue_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, BoolFalse_Encode) {
@@ -946,7 +1027,10 @@ TEST(Conformance, BoolFalse_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, ByteZero_Encode) {
@@ -960,7 +1044,10 @@ TEST(Conformance, ByteZero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Byte255_Encode) {
@@ -974,7 +1061,10 @@ TEST(Conformance, Byte255_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int8Min_Encode) {
@@ -988,7 +1078,10 @@ TEST(Conformance, Int8Min_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int8Zero_Encode) {
@@ -1002,7 +1095,10 @@ TEST(Conformance, Int8Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int8Max_Encode) {
@@ -1016,7 +1112,10 @@ TEST(Conformance, Int8Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int16Min_Encode) {
@@ -1030,7 +1129,10 @@ TEST(Conformance, Int16Min_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int16Zero_Encode) {
@@ -1044,7 +1146,10 @@ TEST(Conformance, Int16Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int16Max_Encode) {
@@ -1058,7 +1163,10 @@ TEST(Conformance, Int16Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int32Min_Encode) {
@@ -1072,7 +1180,10 @@ TEST(Conformance, Int32Min_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int32Zero_Encode) {
@@ -1086,7 +1197,10 @@ TEST(Conformance, Int32Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int32Max_Encode) {
@@ -1100,7 +1214,10 @@ TEST(Conformance, Int32Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int64Min_Encode) {
@@ -1114,7 +1231,10 @@ TEST(Conformance, Int64Min_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int64Zero_Encode) {
@@ -1128,7 +1248,10 @@ TEST(Conformance, Int64Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Int64Max_Encode) {
@@ -1142,7 +1265,10 @@ TEST(Conformance, Int64Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint8Zero_Encode) {
@@ -1156,7 +1282,10 @@ TEST(Conformance, Uint8Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint8Max_Encode) {
@@ -1170,7 +1299,10 @@ TEST(Conformance, Uint8Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint16Zero_Encode) {
@@ -1184,7 +1316,10 @@ TEST(Conformance, Uint16Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint16Max_Encode) {
@@ -1198,7 +1333,10 @@ TEST(Conformance, Uint16Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint32Zero_Encode) {
@@ -1212,7 +1350,10 @@ TEST(Conformance, Uint32Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint32Max_Encode) {
@@ -1226,7 +1367,10 @@ TEST(Conformance, Uint32Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint64Zero_Encode) {
@@ -1240,7 +1384,10 @@ TEST(Conformance, Uint64Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Uint64Max_Encode) {
@@ -1254,7 +1401,10 @@ TEST(Conformance, Uint64Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float32Zero_Encode) {
@@ -1268,7 +1418,10 @@ TEST(Conformance, Float32Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float32One_Encode) {
@@ -1282,7 +1435,10 @@ TEST(Conformance, Float32One_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float32MinusOne_Encode) {
@@ -1296,7 +1452,10 @@ TEST(Conformance, Float32MinusOne_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float32Max_Encode) {
@@ -1310,7 +1469,10 @@ TEST(Conformance, Float32Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float64Zero_Encode) {
@@ -1324,7 +1486,10 @@ TEST(Conformance, Float64Zero_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float64One_Encode) {
@@ -1338,7 +1503,10 @@ TEST(Conformance, Float64One_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float64MinusOne_Encode) {
@@ -1352,7 +1520,10 @@ TEST(Conformance, Float64MinusOne_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, Float64Max_Encode) {
@@ -1366,7 +1537,10 @@ TEST(Conformance, Float64Max_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, UnionWithBoundString_Encode) {
@@ -1385,7 +1559,384 @@ TEST(Conformance, UnionWithBoundString_Encode) {
 
   };
 
-  EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionMigration_SingleVariant_Encode) {
+  conformance::SingleVariantUnionStruct v1;
+
+  conformance::SingleVariantUnion v2;
+
+  uint32_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionMigration_SingleVariant_v1_Encode) {
+  conformance::SingleVariantUnionStruct v1;
+
+  conformance::SingleVariantUnion v2;
+
+  uint32_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize8Alignment4_Encode) {
+  conformance::SandwichUnionSize8Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize8Alignment4 v3;
+
+  uint32_t v4 = 4ull;
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v5 = 20ull;
+  v1.after = std::move(v5);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x04, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize8Alignment4_v1_Encode) {
+  conformance::SandwichUnionSize8Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize8Alignment4 v3;
+
+  uint32_t v4 = 4ull;
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v5 = 20ull;
+  v1.after = std::move(v5);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize12Alignment4_Encode) {
+  conformance::SandwichUnionSize12Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize12Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
+                                    std::move(v7), std::move(v8), std::move(v9)};
+  v3.set_variant(std::move(v10));
+  v1.value = std::move(v3);
+
+  uint32_t v11 = 20ull;
+  v1.after = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize12Alignment4_v1_Encode) {
+  conformance::SandwichUnionSize12Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize12Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
+                                    std::move(v7), std::move(v8), std::move(v9)};
+  v3.set_variant(std::move(v10));
+  v1.value = std::move(v3);
+
+  uint32_t v11 = 20ull;
+  v1.after = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize24Alignment8_Encode) {
+  conformance::SandwichUnionSize24Alignment8 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize24Alignment8 v3;
+
+  conformance::StructSize16Alignment8 v4;
+
+  uint64_t v5 = 1ull;
+  v4.f1 = std::move(v5);
+
+  uint64_t v6 = 2ull;
+  v4.f2 = std::move(v6);
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v7 = 20ull;
+  v1.after = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize24Alignment8_v1_Encode) {
+  conformance::SandwichUnionSize24Alignment8 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize24Alignment8 v3;
+
+  conformance::StructSize16Alignment8 v4;
+
+  uint64_t v5 = 1ull;
+  v4.f1 = std::move(v5);
+
+  uint64_t v6 = 2ull;
+  v4.f2 = std::move(v6);
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v7 = 20ull;
+  v1.after = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize36Alignment4_Encode) {
+  conformance::SandwichUnionSize36Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize36Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  uint8_t v10 = 7ull;
+  uint8_t v11 = 8ull;
+  uint8_t v12 = 9ull;
+  uint8_t v13 = 10ull;
+  uint8_t v14 = 11ull;
+  uint8_t v15 = 12ull;
+  uint8_t v16 = 13ull;
+  uint8_t v17 = 14ull;
+  uint8_t v18 = 15ull;
+  uint8_t v19 = 16ull;
+  uint8_t v20 = 17ull;
+  uint8_t v21 = 18ull;
+  uint8_t v22 = 19ull;
+  uint8_t v23 = 20ull;
+  uint8_t v24 = 21ull;
+  uint8_t v25 = 22ull;
+  uint8_t v26 = 23ull;
+  uint8_t v27 = 24ull;
+  uint8_t v28 = 25ull;
+  uint8_t v29 = 26ull;
+  uint8_t v30 = 27ull;
+  uint8_t v31 = 28ull;
+  uint8_t v32 = 29ull;
+  uint8_t v33 = 30ull;
+  uint8_t v34 = 31ull;
+  uint8_t v35 = 32ull;
+  auto v36 = std::array<uint8_t, 32>{
+      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
+      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
+      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
+      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
+      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
+      std::move(v34), std::move(v35)};
+  v3.set_variant(std::move(v36));
+  v1.value = std::move(v3);
+
+  uint32_t v37 = 20ull;
+  v1.after = std::move(v37);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+      0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+      0x1d, 0x1e, 0x1f, 0x20, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, UnionSize36Alignment4_v1_Encode) {
+  conformance::SandwichUnionSize36Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize36Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  uint8_t v10 = 7ull;
+  uint8_t v11 = 8ull;
+  uint8_t v12 = 9ull;
+  uint8_t v13 = 10ull;
+  uint8_t v14 = 11ull;
+  uint8_t v15 = 12ull;
+  uint8_t v16 = 13ull;
+  uint8_t v17 = 14ull;
+  uint8_t v18 = 15ull;
+  uint8_t v19 = 16ull;
+  uint8_t v20 = 17ull;
+  uint8_t v21 = 18ull;
+  uint8_t v22 = 19ull;
+  uint8_t v23 = 20ull;
+  uint8_t v24 = 21ull;
+  uint8_t v25 = 22ull;
+  uint8_t v26 = 23ull;
+  uint8_t v27 = 24ull;
+  uint8_t v28 = 25ull;
+  uint8_t v29 = 26ull;
+  uint8_t v30 = 27ull;
+  uint8_t v31 = 28ull;
+  uint8_t v32 = 29ull;
+  uint8_t v33 = 30ull;
+  uint8_t v34 = 31ull;
+  uint8_t v35 = 32ull;
+  auto v36 = std::array<uint8_t, 32>{
+      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
+      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
+      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
+      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
+      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
+      std::move(v34), std::move(v35)};
+  v3.set_variant(std::move(v36));
+  v1.value = std::move(v3);
+
+  uint32_t v37 = 20ull;
+  v1.after = std::move(v37);
+
+  auto expected = std::vector<uint8_t>{
+      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+      0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
+      0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
 }
 
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
@@ -2887,6 +3438,370 @@ TEST(Conformance, UnionWithBoundString_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
+TEST(Conformance, UnionMigration_SingleVariant_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SingleVariantUnionStruct v1;
+
+  conformance::SingleVariantUnion v2;
+
+  uint32_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionMigration_SingleVariant_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SingleVariantUnionStruct v1;
+
+  conformance::SingleVariantUnion v2;
+
+  uint32_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize8Alignment4_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x02, 0x00,
+      0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize8Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize8Alignment4 v3;
+
+  uint32_t v4 = 4ull;
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v5 = 20ull;
+  v1.after = std::move(v5);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize8Alignment4_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize8Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize8Alignment4 v3;
+
+  uint32_t v4 = 4ull;
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v5 = 20ull;
+  v1.after = std::move(v5);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize12Alignment4_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize12Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize12Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
+                                    std::move(v7), std::move(v8), std::move(v9)};
+  v3.set_variant(std::move(v10));
+  v1.value = std::move(v3);
+
+  uint32_t v11 = 20ull;
+  v1.after = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize12Alignment4_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize12Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize12Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
+                                    std::move(v7), std::move(v8), std::move(v9)};
+  v3.set_variant(std::move(v10));
+  v1.value = std::move(v3);
+
+  uint32_t v11 = 20ull;
+  v1.after = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize24Alignment8_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize24Alignment8 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize24Alignment8 v3;
+
+  conformance::StructSize16Alignment8 v4;
+
+  uint64_t v5 = 1ull;
+  v4.f1 = std::move(v5);
+
+  uint64_t v6 = 2ull;
+  v4.f2 = std::move(v6);
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v7 = 20ull;
+  v1.after = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize24Alignment8_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize24Alignment8 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize24Alignment8 v3;
+
+  conformance::StructSize16Alignment8 v4;
+
+  uint64_t v5 = 1ull;
+  v4.f1 = std::move(v5);
+
+  uint64_t v6 = 2ull;
+  v4.f2 = std::move(v6);
+  v3.set_variant(std::move(v4));
+  v1.value = std::move(v3);
+
+  uint32_t v7 = 20ull;
+  v1.after = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize36Alignment4_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+      0x1d, 0x1e, 0x1f, 0x20, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SandwichUnionSize36Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize36Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  uint8_t v10 = 7ull;
+  uint8_t v11 = 8ull;
+  uint8_t v12 = 9ull;
+  uint8_t v13 = 10ull;
+  uint8_t v14 = 11ull;
+  uint8_t v15 = 12ull;
+  uint8_t v16 = 13ull;
+  uint8_t v17 = 14ull;
+  uint8_t v18 = 15ull;
+  uint8_t v19 = 16ull;
+  uint8_t v20 = 17ull;
+  uint8_t v21 = 18ull;
+  uint8_t v22 = 19ull;
+  uint8_t v23 = 20ull;
+  uint8_t v24 = 21ull;
+  uint8_t v25 = 22ull;
+  uint8_t v26 = 23ull;
+  uint8_t v27 = 24ull;
+  uint8_t v28 = 25ull;
+  uint8_t v29 = 26ull;
+  uint8_t v30 = 27ull;
+  uint8_t v31 = 28ull;
+  uint8_t v32 = 29ull;
+  uint8_t v33 = 30ull;
+  uint8_t v34 = 31ull;
+  uint8_t v35 = 32ull;
+  auto v36 = std::array<uint8_t, 32>{
+      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
+      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
+      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
+      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
+      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
+      std::move(v34), std::move(v35)};
+  v3.set_variant(std::move(v36));
+  v1.value = std::move(v3);
+
+  uint32_t v37 = 20ull;
+  v1.after = std::move(v37);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, UnionSize36Alignment4_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13,
+      0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+
+  };
+
+  conformance::SandwichUnionSize36Alignment4 v1;
+
+  uint32_t v2 = 10ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionSize36Alignment4 v3;
+
+  uint8_t v4 = 1ull;
+  uint8_t v5 = 2ull;
+  uint8_t v6 = 3ull;
+  uint8_t v7 = 4ull;
+  uint8_t v8 = 5ull;
+  uint8_t v9 = 6ull;
+  uint8_t v10 = 7ull;
+  uint8_t v11 = 8ull;
+  uint8_t v12 = 9ull;
+  uint8_t v13 = 10ull;
+  uint8_t v14 = 11ull;
+  uint8_t v15 = 12ull;
+  uint8_t v16 = 13ull;
+  uint8_t v17 = 14ull;
+  uint8_t v18 = 15ull;
+  uint8_t v19 = 16ull;
+  uint8_t v20 = 17ull;
+  uint8_t v21 = 18ull;
+  uint8_t v22 = 19ull;
+  uint8_t v23 = 20ull;
+  uint8_t v24 = 21ull;
+  uint8_t v25 = 22ull;
+  uint8_t v26 = 23ull;
+  uint8_t v27 = 24ull;
+  uint8_t v28 = 25ull;
+  uint8_t v29 = 26ull;
+  uint8_t v30 = 27ull;
+  uint8_t v31 = 28ull;
+  uint8_t v32 = 29ull;
+  uint8_t v33 = 30ull;
+  uint8_t v34 = 31ull;
+  uint8_t v35 = 32ull;
+  auto v36 = std::array<uint8_t, 32>{
+      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
+      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
+      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
+      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
+      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
+      std::move(v34), std::move(v35)};
+  v3.set_variant(std::move(v36));
+  v1.value = std::move(v3);
+
+  uint32_t v37 = 20ull;
+  v1.after = std::move(v37);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, StringExceedsLimit_Encode_Failure) {
   conformance::Length2StringWrapper v1;
 
@@ -2895,7 +3810,8 @@ TEST(Conformance, StringExceedsLimit_Encode_Failure) {
 
   zx_status_t expected = ZX_ERR_INVALID_ARGS;
 
-  ::fidl::test::util::CheckEncodeFailure(v1, expected);
+  ::fidl::test::util::CheckEncodeFailure<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+      v1, expected);
 }
 
 TEST(Conformance, UnionWithBoundString_ExceedsBounds_Encode_Failure) {
@@ -2909,7 +3825,8 @@ TEST(Conformance, UnionWithBoundString_ExceedsBounds_Encode_Failure) {
 
   zx_status_t expected = ZX_ERR_INVALID_ARGS;
 
-  ::fidl::test::util::CheckEncodeFailure(v1, expected);
+  ::fidl::test::util::CheckEncodeFailure<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+      v1, expected);
 }
 
 TEST(Conformance, NonEmptyStringWithNullPtrBody_Decode_Failure) {

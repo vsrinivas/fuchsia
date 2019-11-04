@@ -28,7 +28,7 @@ union UnionSize8Alignment4 {
 
 struct SandwichUnionSize8Alignment4 {
     uint32 before;
-    UnionSize8Alignment4 union;
+    UnionSize8Alignment4 value;
     uint32 after;
 };
 
@@ -41,7 +41,7 @@ union UnionSize12Alignment4 {
 
 struct SandwichUnionSize12Alignment4 {
     uint32 before;
-    UnionSize12Alignment4 union;
+    UnionSize12Alignment4 value;
     uint32 after;
 };
 
@@ -59,7 +59,7 @@ union UnionSize24Alignment8 {
 
 struct SandwichUnionSize24Alignment8 {
     uint32 before;
-    UnionSize24Alignment8 union;
+    UnionSize24Alignment8 value;
     uint32 after;
 };
 
@@ -72,6 +72,6 @@ union UnionSize36Alignment4 {
 
 struct SandwichUnionSize36Alignment4 {
     uint32 before;
-    UnionSize36Alignment4 union;
+    UnionSize36Alignment4 value;
     uint32 after;
 };
