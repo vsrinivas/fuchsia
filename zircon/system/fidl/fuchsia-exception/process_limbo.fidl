@@ -15,6 +15,12 @@ const uint64 MAX_EXCEPTIONS_PER_CALL = 32;
 /// feature that enables Just In Time (JIT) debugging.
 [Discoverable]
 protocol ProcessLimbo {
+    /// Hanging get for determining whether the limbo is currently active.
+    /// An active limbo could be empty (not have any processes waiting on an
+    /// exception). However, an inactive limbo is guaranteed to not have any
+    /// processes waiting in it.
+    WatchActive() -> (bool is_active);
+
     /// Returns information on all the processes currently waiting on an exception.
     /// The information provided is intended to correctly identify an exception
     /// and determine whether the caller wants to actually handle it.

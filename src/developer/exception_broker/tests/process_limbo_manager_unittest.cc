@@ -35,13 +35,20 @@ std::unique_ptr<TestContext> CreateTestContext() {
 bool RetrieveExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
   // By the time |SpawnCrasher| has returned, the process has already thrown an exception.
-  if (!SpawnCrasher(pe))
+  if (!SpawnCrasher(pe)) {
+    FXL_LOG(ERROR) << "Could not spawn crasher process.";
     return false;
+  }
 
   // We mark the exception to be handled. We need this because we pass on the exception to the
   // handler, which will resume it before we get the control back. If we don't mark it as handled,
   // the exception will bubble out of our environment.
-  return MarkExceptionAsHandled(pe);
+  if (!MarkExceptionAsHandled(pe)) {
+    FXL_LOG(ERROR) << "Could not mark exception as handled.";
+    return false;
+  }
+
+  return true;
 }
 
 ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
@@ -250,7 +257,7 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
   auto broker = ExceptionBroker::Create(test_context->loop.dispatcher(),
                                         test_context->services.service_directory());
   ASSERT_TRUE(broker);
-  broker->limbo_manager().set_active(true);
+  ASSERT_TRUE(broker->limbo_manager().SetActive(true));
 
   // We create multiple exceptions.
   ExceptionContext excps[3];
@@ -273,7 +280,7 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
   broker->OnException(std::move(excps[2].exception), infos[2], [&cb_call2]() { cb_call2 = true; });
 
   // There should not be an outgoing connection and no reports generated.
-  ASSERT_TRUE(broker->connections().empty());
+  ASSERT_EQ(broker->connections().size(), 0u);
 
   // There should be 3 exceptions on the limbo.
   auto& limbo = broker->limbo_manager().limbo();
@@ -287,6 +294,120 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
   excps[0].job.kill();
   excps[1].job.kill();
   excps[2].job.kill();
+}
+
+// WatchActive -------------------------------------------------------------------------------------
+
+std::unique_ptr<ProcessLimboHandler> CreateHandler(ProcessLimboManager* limbo_manager) {
+  auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager->GetWeakPtr());
+  limbo_manager->AddHandler(handler->GetWeakPtr());
+
+  return handler;
+}
+
+TEST(ProcessLimboManager, WatchActiveCalls) {
+  ProcessLimboManager limbo_manager;
+
+  auto handler = CreateHandler(&limbo_manager);
+
+  // As no hanging get has been made there should be no change.
+  ASSERT_TRUE(limbo_manager.SetActive(true));
+
+  // Making a get should return immediatelly.
+  bool called = false;
+  std::optional<bool> is_active_result = std::nullopt;
+  handler->WatchActive([&called, &is_active_result](bool is_active) {
+    called = true;
+    is_active_result = is_active;
+  });
+
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(is_active_result.has_value());
+  EXPECT_TRUE(is_active_result.value());
+
+  // A second change should not trigger an event (hanging get).
+  called = false;
+  is_active_result = std::nullopt;
+  handler->WatchActive([&called, &is_active_result](bool is_active) {
+    called = true;
+    is_active_result = is_active;
+  });
+
+  ASSERT_FALSE(called);
+
+  // Not making the state should no issue the call.
+  ASSERT_FALSE(limbo_manager.SetActive(true));
+  ASSERT_FALSE(called);
+
+  // Changing the state should trigger the callback.
+  ASSERT_TRUE(limbo_manager.SetActive(false));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(is_active_result.has_value());
+  EXPECT_FALSE(is_active_result.value());
+
+  // Making two get calls should only call the second.
+  bool called1 = false;
+  handler->WatchActive([&called1](bool) { called1 = true; });
+
+  bool called2 = false;
+  is_active_result = std::nullopt;
+  handler->WatchActive([&called2, &is_active_result](bool is_active) {
+    called2 = true;
+    is_active_result = is_active;
+  });
+
+  ASSERT_FALSE(called1);
+  ASSERT_FALSE(called2);
+
+  // Making the call should only call the second handler.
+  ASSERT_TRUE(limbo_manager.SetActive(true));
+
+  ASSERT_FALSE(called1);
+  ASSERT_TRUE(called2);
+  ASSERT_TRUE(is_active_result.has_value());
+  EXPECT_TRUE(is_active_result.value());
+}
+
+TEST(ProcessLimboManager, ManyHandlers) {
+  ProcessLimboManager limbo_manager;
+
+  std::vector<std::unique_ptr<ProcessLimboHandler>> handlers;
+
+  handlers.push_back(CreateHandler(&limbo_manager));
+  handlers.push_back(CreateHandler(&limbo_manager));
+  handlers.push_back(CreateHandler(&limbo_manager));
+
+  // Calling each handler should be call the callback immediatelly.
+  for (auto& handler : handlers) {
+    bool called = false;
+    std::optional<bool> result;
+    handler->WatchActive([&called, &result](bool active) {
+      called = true;
+      result = active;
+    });
+
+    ASSERT_TRUE(called);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_FALSE(result.value());
+  }
+
+  // Calling again should not return.
+  std::vector<bool> active_callbacks;
+  for (auto& handler : handlers) {
+    handler->WatchActive([&active_callbacks](bool active) { active_callbacks.push_back(active); });
+  }
+  ASSERT_EQ(active_callbacks.size(), 0u);
+
+  // Not changing the state should not issue any callbacks.
+  ASSERT_FALSE(limbo_manager.SetActive(false));
+  ASSERT_EQ(active_callbacks.size(), 0u);
+
+  // Changing the state should issue all the callbacks.
+  ASSERT_TRUE(limbo_manager.SetActive(true));
+  ASSERT_EQ(active_callbacks.size(), 3u);
+  EXPECT_TRUE(active_callbacks[0]);
+  EXPECT_TRUE(active_callbacks[1]);
+  EXPECT_TRUE(active_callbacks[2]);
 }
 
 }  // namespace

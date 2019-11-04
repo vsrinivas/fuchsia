@@ -340,6 +340,13 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mut
 namespace {
 
 [[maybe_unused]]
+constexpr uint64_t kProcessLimbo_WatchActive_Ordinal = 0x5400259f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_WatchActive_GenOrdinal = 0x7b4c6602af289428lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchActiveResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_Ordinal = 0x7bde19d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal = 0x43e1864bf356ef50lu;
@@ -362,6 +369,67 @@ extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRespons
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 }  // namespace
+template <>
+ProcessLimbo::ResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchActiveRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WatchActiveRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchActiveRequest));
+  ::fidl::DecodedMessage<WatchActiveRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      ProcessLimbo::InPlace::WatchActive(std::move(_client_end), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::WatchActive ProcessLimbo::SyncClient::WatchActive() {
+  return ResultOf::WatchActive(zx::unowned_channel(this->channel_));
+}
+
+ProcessLimbo::ResultOf::WatchActive ProcessLimbo::Call::WatchActive(zx::unowned_channel _client_end) {
+  return ResultOf::WatchActive(std::move(_client_end));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchActiveRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WatchActiveRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WatchActiveRequest));
+  ::fidl::DecodedMessage<WatchActiveRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      ProcessLimbo::InPlace::WatchActive(std::move(_client_end), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::SyncClient::WatchActive(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchActive(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::Call::WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchActive(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::WatchActiveResponse> ProcessLimbo::InPlace::WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WatchActiveRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WatchActiveRequest> params(std::move(_request_buffer));
+  ProcessLimbo::SetTransactionHeaderFor::WatchActiveRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::WatchActiveResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WatchActiveRequest, WatchActiveResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::WatchActiveResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 template <>
 ProcessLimbo::ResultOf::ListProcessesWaitingOnException_Impl<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>::ListProcessesWaitingOnException_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ListProcessesWaitingOnExceptionRequest, ::fidl::MessageDirection::kSending>();
@@ -561,6 +629,18 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
     return true;
   }
   switch (hdr->ordinal) {
+    case kProcessLimbo_WatchActive_Ordinal:
+    case kProcessLimbo_WatchActive_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WatchActiveRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WatchActive(
+          Interface::WatchActiveCompleter::Sync(txn));
+      return true;
+    }
     case kProcessLimbo_ListProcessesWaitingOnException_Ordinal:
     case kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal:
     {
@@ -612,6 +692,42 @@ bool ProcessLimbo::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }
   return found;
+}
+
+
+void ProcessLimbo::Interface::WatchActiveCompleterBase::Reply(bool is_active) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchActiveResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WatchActiveResponse*>(_write_bytes);
+  ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(
+      ::fidl::DecodedMessage<WatchActiveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchActiveResponse::PrimarySize,
+              WatchActiveResponse::PrimarySize)));
+  _response.is_active = std::move(is_active);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WatchActiveResponse>(std::move(_response_bytes)));
+}
+
+void ProcessLimbo::Interface::WatchActiveCompleterBase::Reply(::fidl::BytePart _buffer, bool is_active) {
+  if (_buffer.capacity() < WatchActiveResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WatchActiveResponse*>(_buffer.data());
+  ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(
+      ::fidl::DecodedMessage<WatchActiveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchActiveResponse::PrimarySize,
+              WatchActiveResponse::PrimarySize)));
+  _response.is_active = std::move(is_active);
+  _buffer.set_actual(sizeof(WatchActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WatchActiveResponse>(std::move(_buffer)));
+}
+
+void ProcessLimbo::Interface::WatchActiveCompleterBase::Reply(::fidl::DecodedMessage<WatchActiveResponse> params) {
+  ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(params);
+  CompleterBase::SendReply(std::move(params));
 }
 
 
@@ -771,6 +887,13 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::Decoded
 }
 
 
+
+void ProcessLimbo::SetTransactionHeaderFor::WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_Ordinal);
+}
+void ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_Ordinal);
+}
 
 void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ListProcessesWaitingOnException_Ordinal);

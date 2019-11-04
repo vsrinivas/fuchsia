@@ -13,18 +13,23 @@
 namespace fuchsia {
 namespace exception {
 
+class ProcessLimboHandler;
+
 class ProcessLimboManager {
  public:
   ProcessLimboManager();
 
-  void AddToLimbo(ProcessException);
-
   fxl::WeakPtr<ProcessLimboManager> GetWeakPtr();
 
-  const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
+  void AddToLimbo(ProcessException);
 
+  void AddHandler(fxl::WeakPtr<ProcessLimboHandler> handler);
+
+  // Returns true if there was a change of state.
+  bool SetActive(bool active);
   bool active() const { return active_; }
-  void set_active(bool active) { active_ = active; }
+
+  const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
 
  private:
   // TODO(donosoc): This is an extremely naive approach.
@@ -39,6 +44,8 @@ class ProcessLimboManager {
   //                Exposed for testing purposes.
   bool active_ = false;
 
+  std::vector<fxl::WeakPtr<ProcessLimboHandler>> handlers_;
+
   fxl::WeakPtrFactory<ProcessLimboManager> weak_factory_;
   friend class ProcessLimboHandler;
 };
@@ -48,9 +55,16 @@ class ProcessLimboManager {
 // common state all connections query.
 class ProcessLimboHandler : public ProcessLimbo {
  public:
-  ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager);
+  explicit ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager);
+  virtual ~ProcessLimboHandler();
+
+  fxl::WeakPtr<ProcessLimboHandler> GetWeakPtr();
+
+  virtual void ActiveStateChanged(bool state);
 
   // fuchsia.exception.ProcessLimbo implementation.
+
+  void WatchActive(WatchActiveCallback) override;
 
   void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback) override;
 
@@ -59,7 +73,13 @@ class ProcessLimboHandler : public ProcessLimbo {
   void ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback) override;
 
  private:
+  // WatchActive hanging get.
+  bool is_first_watch_active_call_ = true;
+  WatchActiveCallback is_active_callback_;
+
   fxl::WeakPtr<ProcessLimboManager> limbo_manager_;
+
+  fxl::WeakPtrFactory<ProcessLimboHandler> weak_factory_;
 };
 
 }  // namespace exception

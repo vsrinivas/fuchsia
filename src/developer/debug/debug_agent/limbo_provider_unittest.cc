@@ -26,6 +26,8 @@ namespace {
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
+  void WatchActive(WatchActiveCallback callback) override { callback(is_active_); }
+
   void ListProcessesWaitingOnException(
       ProcessLimbo::ListProcessesWaitingOnExceptionCallback callback) override {
     std::vector<ProcessExceptionMetadata> processes;
@@ -83,9 +85,13 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
   // Boilerplate needed for getting a FIDL binding to work in unit tests.
   fidl::InterfaceRequestHandler<ProcessLimbo> GetHandler() { return bindings_.GetHandler(this); }
 
+  void set_is_active(bool is_active) { is_active_ = is_active; }
+
  private:
   std::map<zx_koid_t, ProcessExceptionMetadata> processes_;
   fidl::BindingSet<ProcessLimbo> bindings_;
+
+  bool is_active_ = false;
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(

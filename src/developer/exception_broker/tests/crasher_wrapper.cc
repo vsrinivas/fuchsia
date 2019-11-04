@@ -15,24 +15,24 @@ namespace exception {
 bool SpawnCrasher(ExceptionContext* pe) {
   zx::unowned_job current_job(zx_job_default());
   if (zx_status_t res = zx::job::create(*current_job, 0, &pe->job); res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Coult not create current job handle.";
     return false;
   }
 
   if (zx_status_t res = pe->job.create_exception_channel(0, &pe->exception_channel); res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Could not create exception channel for job.";
     return false;
   }
 
   if (zx_status_t res = zx::port::create(0, &pe->port); res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Could not create a port.";
     return false;
   }
 
   constexpr uint64_t kKey = 0x1234;
   if (zx_status_t res = pe->exception_channel.wait_async(pe->port, kKey, ZX_CHANNEL_READABLE, 0);
       res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Could not wait async on exception channel.";
     return false;
   }
 
@@ -44,14 +44,14 @@ bool SpawnCrasher(ExceptionContext* pe) {
           fdio_spawn_etc(pe->job.get(), FDIO_SPAWN_CLONE_ALL, kCrasherPath, argv, nullptr, 0,
                          nullptr, pe->process.reset_and_get_address(), err_msg);
       res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << err_msg;
+    FX_PLOGS(ERROR, res) << "Could not spawn crasher process: " << err_msg;
     return false;
   }
 
   // Wait for the exception.
   zx_port_packet_t packet;
   if (zx_status_t res = pe->port.wait(zx::time::infinite(), &packet); res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << "Could not wait on port.";
     return false;
   }
 

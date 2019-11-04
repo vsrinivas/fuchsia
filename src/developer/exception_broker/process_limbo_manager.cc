@@ -8,6 +8,22 @@
 namespace fuchsia {
 namespace exception {
 
+namespace {
+
+// Removes all stale weak pointers from the handler list.
+void PruneStaleHandlers(std::vector<fxl::WeakPtr<ProcessLimboHandler>>* handlers) {
+  // We only move active handlers to the new list.
+  std::vector<fxl::WeakPtr<ProcessLimboHandler>> new_handlers;
+  for (auto& handler : *handlers) {
+    if (handler)
+      new_handlers.push_back(std::move(handler));
+  }
+
+  *handlers = std::move(new_handlers);
+}
+
+}  // namespace
+
 ProcessLimboManager::ProcessLimboManager() : weak_factory_(this) {}
 
 fxl::WeakPtr<ProcessLimboManager> ProcessLimboManager::GetWeakPtr() {
@@ -18,10 +34,54 @@ void ProcessLimboManager::AddToLimbo(ProcessException process_exception) {
   limbo_[process_exception.info().process_koid] = std::move(process_exception);
 }
 
+void ProcessLimboManager::AddHandler(fxl::WeakPtr<ProcessLimboHandler> handler) {
+  handlers_.push_back(std::move(handler));
+}
+
+bool ProcessLimboManager::SetActive(bool active) {
+  // Ignore if no change.
+  if (active == active_)
+    return false;
+  active_ = active;
+
+  PruneStaleHandlers(&handlers_);
+
+  for (auto& handler : handlers_) {
+    handler->ActiveStateChanged(active);
+  }
+
+  return true;
+}
+
 // ProcessLimboHandler -----------------------------------------------------------------------------
 
 ProcessLimboHandler::ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager)
-    : limbo_manager_(std::move(limbo_manager)) {}
+    : limbo_manager_(std::move(limbo_manager)), weak_factory_(this) {}
+ProcessLimboHandler::~ProcessLimboHandler() = default;
+
+fxl::WeakPtr<ProcessLimboHandler> ProcessLimboHandler::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
+
+void ProcessLimboHandler::ActiveStateChanged(bool state) {
+  if (!is_active_callback_)
+    return;
+  is_active_callback_(state);
+  is_active_callback_ = {};
+}
+
+void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
+  if (is_first_watch_active_call_) {
+    is_first_watch_active_call_ = false;
+
+    bool is_active = !!limbo_manager_ ? limbo_manager_->active() : false;
+    cb(is_active);
+    return;
+  }
+
+  // We store the latest callback for when the active status changes.
+  is_active_callback_ = std::move(cb);
+}
 
 void ProcessLimboHandler::ListProcessesWaitingOnException(
     ListProcessesWaitingOnExceptionCallback cb) {

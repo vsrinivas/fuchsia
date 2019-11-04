@@ -26,6 +26,7 @@ int main() {
   fidl::BindingSet<fuchsia::exception::Handler> handler_bindings;
   context->outgoing()->AddPublicService(handler_bindings.GetHandler(broker.get()));
 
+  // Crete a new handler for each connection.
   fidl::BindingSet<ProcessLimbo, std::unique_ptr<ProcessLimboHandler>> limbo_bindings;
   auto& limbo_manager = broker->limbo_manager();
   context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<ProcessLimbo>(
