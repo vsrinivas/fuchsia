@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -80,20 +79,8 @@ var transferOrder = map[string]int{
 	kernelNetsvcName:         13,
 }
 
-// Boot prepares and boots a device at the given IP address. Depending on bootMode, the
-// device will either be paved or netbooted with the provided images, command-line
-// arguments and a public SSH user key.
-func Boot(ctx context.Context, t tftp.Client, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
-	var bootArgs func(build.Image) []string
-	switch bootMode {
-	case ModePave:
-		bootArgs = func(img build.Image) []string { return img.PaveArgs }
-	case ModeNetboot:
-		bootArgs = func(img build.Image) []string { return img.NetbootArgs }
-	default:
-		return fmt.Errorf("invalid boot mode: %d", bootMode)
-	}
-
+// Boot prepares and boots a device at the given IP address.
+func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	var files []*netsvcFile
 	if len(cmdlineArgs) > 0 {
 		var buf bytes.Buffer
@@ -108,7 +95,7 @@ func Boot(ctx context.Context, t tftp.Client, bootMode int, imgs []build.Image, 
 	}
 
 	for _, img := range imgs {
-		for _, arg := range bootArgs(img) {
+		for _, arg := range img.Args {
 			name, ok := bootserverArgToName[arg]
 			if !ok {
 				return fmt.Errorf("unrecognized bootserver argument found: %s", arg)
@@ -121,7 +108,8 @@ func Boot(ctx context.Context, t tftp.Client, bootMode int, imgs []build.Image, 
 		}
 	}
 
-	if bootMode == ModePave && len(signers) > 0 {
+	// Convert the authorized keys into a netsvc file.
+	if len(signers) > 0 {
 		var authorizedKeys []byte
 		for _, s := range signers {
 			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
@@ -164,7 +152,7 @@ func Boot(ctx context.Context, t tftp.Client, bootMode int, imgs []build.Image, 
 // and mexec()'s it, it is intended to be executed before calling Boot().
 // This function serves to emulate zero-state, and will eventually be superseded by an
 // infra implementation.
-func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []build.Image) error {
+func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []Image) error {
 	files, err := filterZedbootShimImages(imgs)
 	if err != nil {
 		return err
@@ -185,13 +173,13 @@ func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []build.Image) err
 	return n.Reboot(t.RemoteAddr())
 }
 
-func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
+func filterZedbootShimImages(imgs []Image) ([]*netsvcFile, error) {
 	netsvcName := kernelNetsvcName
-	bootloaderImg := build.Image{}
-	vbmetaRImg := build.Image{}
-	zirconRImg := build.Image{}
+	bootloaderImg := Image{}
+	vbmetaRImg := Image{}
+	zirconRImg := Image{}
 	for _, img := range imgs {
-		for _, arg := range img.PaveArgs {
+		for _, arg := range img.Args {
 			// Find name by bootserver arg to ensure we are extracting the correct zircon-r.
 			// There may be more than one in images.json but only one should be passed to
 			// the bootserver for paving.

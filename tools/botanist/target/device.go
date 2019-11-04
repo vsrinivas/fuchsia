@@ -152,7 +152,7 @@ func (t *DeviceTarget) SSHKey() string {
 }
 
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []string) error {
+func (t *DeviceTarget) Start(ctx context.Context, buildImgs build.Images, args []string) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(t.Nodename())
 	if err != nil {
@@ -172,20 +172,31 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 		}
 	}()
 
+	// Get boot mode and ssh signers.
+	// We cannot have signers in netboot because there is no notion
+	// of a hardware backed key when you are not booting from disk
+	var bootMode int
+	var signers []ssh.Signer
+	if t.opts.Netboot {
+		bootMode = bootserver.ModeNetboot
+	} else {
+		bootMode = bootserver.ModePave
+		signers = t.signers
+	}
+
+	// Convert build images to bootserver images
+	imgs := bootserver.ConvertFromBuildImages(buildImgs, bootMode)
+
+	// TODO(fxbug.dev/38517): remove this once BootZedbootShim is deprecated
+	paveImgs := bootserver.ConvertFromBuildImages(buildImgs, bootserver.ModePave)
 	// Mexec Zedboot
-	err = bootserver.BootZedbootShim(ctx, t.Tftp(), images)
+	err = bootserver.BootZedbootShim(ctx, t.Tftp(), paveImgs)
 	if err != nil {
 		return err
 	}
 
 	// Boot Fuchsia.
-	var bootMode int
-	if t.opts.Netboot {
-		bootMode = bootserver.ModeNetboot
-	} else {
-		bootMode = bootserver.ModePave
-	}
-	return bootserver.Boot(ctx, t.Tftp(), bootMode, images, args, t.signers)
+	return bootserver.Boot(ctx, t.Tftp(), imgs, args, signers)
 }
 
 // Restart restarts the target.
