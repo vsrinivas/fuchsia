@@ -93,7 +93,16 @@ class CameraDemoTest : public gtest::RealLoopFixture {
 // Launch the demo and repeatedly take screenshots until content is observed.
 TEST_F(CameraDemoTest, ContentVisible) {
   bool content_found = false;
-  for (uint32_t attempt = 0; attempt < kMaxAttempts && !content_found; ++attempt) {
+  bool demo_terminated = false;
+
+  // Watch for unexpected shutdowns.
+  controller_.events().OnTerminated = [&](int64_t, fuchsia::sys::TerminationReason) {
+    EXPECT_TRUE(content_found) << "Demo closed unexpectedly";
+    demo_terminated = true;
+  };
+
+  for (uint32_t attempt = 0; attempt < kMaxAttempts && !content_found && !demo_terminated;
+       ++attempt) {
     bool screenshot_returned = false;
     scenic_->TakeScreenshot([&](fuchsia::ui::scenic::ScreenshotData data, bool success) {
       screenshot_returned = true;
