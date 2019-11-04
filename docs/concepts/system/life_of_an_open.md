@@ -188,10 +188,10 @@ optional -- if a filesystem server does not want to link against this library,
 they have no obligation to use it. To be a filesystem server, a process must
 merely understand the FIDL wire format. As a consequence, there could be
 any number of “VFS” implementations in a language, but at the time of writing,
-two well-known implementations exist: one written in C++ within the [libfs
-library](/zircon/system/ulib/fs/),
-and another written in Go in the [rpc package of
-ThinFS](/garnet/go/src/thinfs/zircon/rpc/rpc.go).
+two well-known implementations exist: one written in C++ within the
+[libfs library](/zircon/system/ulib/fs/),
+and another written in Go in the
+[rpc package of ThinFS](/garnet/go/src/thinfs/zircon/rpc/rpc.go).
 
 The VFS layer defines the interface of operations which may be routed to the
 underlying filesystem, including:
