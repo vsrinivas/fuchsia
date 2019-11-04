@@ -44,10 +44,6 @@ class FakeAudio : public fuchsia::media::Audio {
 
   void SetSystemMute(bool muted) override { FXL_NOTIMPLEMENTED(); }
 
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
  private:
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
   FakeAudioRenderer fake_audio_renderer_;

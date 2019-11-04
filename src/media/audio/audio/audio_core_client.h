@@ -33,10 +33,6 @@ class AudioCoreClient : public fuchsia::media::Audio {
 
   void SetSystemMute(bool muted) final { audio_core_->SetSystemMute(muted); };
 
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final {
-    audio_core_->SetRoutingPolicy(policy);
-  };
-
  private:
   void NotifyGainMuteChanged();
 

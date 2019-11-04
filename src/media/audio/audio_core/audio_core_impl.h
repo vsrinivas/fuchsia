@@ -61,7 +61,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
   void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
   void EnableDeviceSettings(bool enabled) final;
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;

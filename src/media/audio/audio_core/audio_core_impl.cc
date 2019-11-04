@@ -194,11 +194,6 @@ void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUs
   volume_manager_.SetUsageGainAdjustment(UsageFrom(capture_usage), db_gain);
 }
 
-void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SetRoutingPolicy");
-  FXL_LOG(WARNING) << "Deprecated SetRoutingPolicy called.";
-}
-
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
   TRACE_DURATION("audio", "AudioCoreImpl::EnableDeviceSettings");
   AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
