@@ -92,6 +92,10 @@ impl<T> SaltedID<T> {
     fn tpl(&self) -> (u32, u32) {
         (self.obfuscated_id, self.salt)
     }
+
+    fn new(id: u32, key: u32, salt: u32) -> Self {
+        Self { obfuscated_id: obfuscate(id, key), salt, _type: std::marker::PhantomData }
+    }
 }
 
 /// A slab-like data structure with indices that can be validated.
@@ -135,11 +139,7 @@ impl<T> SaltSlab<T> {
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (SaltedID<T>, &'a T)> {
         let key = self.key;
         self.values.iter().enumerate().filter_map(move |(id, wrapped)| {
-            let id = SaltedID {
-                obfuscated_id: obfuscate(id as u32, key),
-                salt: wrapped.salt,
-                _type: std::marker::PhantomData,
-            };
+            let id = SaltedID::new(id as u32, key, wrapped.salt);
             wrapped.value.as_ref().map(move |value| (id, value))
         })
     }
@@ -148,11 +148,7 @@ impl<T> SaltSlab<T> {
     pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = (SaltedID<T>, &'a mut T)> {
         let key = self.key;
         self.values.iter_mut().enumerate().filter_map(move |(id, wrapped)| {
-            let id = SaltedID {
-                obfuscated_id: obfuscate(id as u32, key),
-                salt: wrapped.salt,
-                _type: std::marker::PhantomData,
-            };
+            let id = SaltedID::new(id as u32, key, wrapped.salt);
             wrapped.value.as_mut().map(move |value| (id, value))
         })
     }
@@ -164,20 +160,12 @@ impl<T> SaltSlab<T> {
             assert!(value.value.is_none());
             value.salt = if value.salt == std::u32::MAX { 1 } else { value.salt + 1 };
             value.value = Some(new);
-            SaltedID {
-                obfuscated_id: obfuscate(index, self.key),
-                salt: value.salt,
-                _type: std::marker::PhantomData,
-            }
+            SaltedID::new(index, self.key, value.salt)
         } else {
             let index = self.values.len();
             assert!(index < (std::u32::MAX as usize));
             self.values.push(SaltWrapped { salt: 1, value: Some(new) });
-            SaltedID {
-                obfuscated_id: obfuscate(index as u32, self.key),
-                salt: 1,
-                _type: std::marker::PhantomData,
-            }
+            SaltedID::new(index as u32, self.key, 1)
         }
     }
 

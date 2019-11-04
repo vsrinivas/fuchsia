@@ -109,6 +109,7 @@ impl std::fmt::Debug for PeerConn {
 /// quic's notion of client/server).
 /// ConnectToService requests travel from the client -> server, and all subsequent streams are
 /// created on that connection.
+/// See Router for a description of LinkData.
 #[derive(Debug)]
 pub struct Peer<LinkData: Copy + Debug> {
     /// The quic connection between ourselves and this peer.
@@ -1550,6 +1551,9 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
 }
 
 /// Router maintains global state for one node_id.
+/// `LinkData` is a token identifying a link for layers above Router.
+/// `Time` is a representation of time for the Router, to assist injecting different platforms
+/// schemes.
 pub struct Router<LinkData: Copy + Debug, Time: RouterTime> {
     /// Our node id
     node_id: NodeId,
@@ -1977,7 +1981,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     log::warn!("{}", e);
                     return;
                 }
+                let mut last_sent = None;
                 while let Some(stream_id) = self.endpoints.link_status_updates.pop() {
+                    if last_sent == Some(stream_id) {
+                        continue;
+                    }
+                    last_sent = Some(stream_id);
                     if let Err(e) = self.endpoints.queue_send_raw_datagram(
                         stream_id,
                         Some(&mut bytes.clone()),

@@ -203,7 +203,10 @@ impl PingTracker {
 
         let new_round_trip_time = self.mean > 0
             && (self.published_mean <= 0
-                || (self.published_mean - self.mean).abs() > self.published_mean / 100);
+                || (self.published_mean - self.mean).abs() > self.published_mean / 10);
+        if new_round_trip_time {
+            self.published_mean = self.mean;
+        }
 
         let mut sched_send = !self.scheduled_send
             && self.last_ping_sent.map_or(true, |tm| now >= tm + self.ping_spacing);
@@ -302,5 +305,15 @@ mod test {
             PingTracker::new().1,
             PingTrackerResult { sched_send: true, new_round_trip_time: false, sched_timeout: None }
         );
+    }
+
+    #[test]
+    fn published_mean_updates() {
+        let (mut pt, _) = PingTracker::new();
+        let now = Instant::now();
+        let id = pt.send_ping(now).unwrap();
+        let r = pt.got_pong(now + Duration::from_millis(100), Pong { id, queue_time: 100 });
+        assert!(r.new_round_trip_time);
+        assert_ne!(pt.published_mean, 0);
     }
 }
