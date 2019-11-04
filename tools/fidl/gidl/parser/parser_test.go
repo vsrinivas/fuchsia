@@ -23,6 +23,7 @@ func TestParseValues(t *testing.T) {
 		{gidl: `-3.14`, expectedValue: float64(-3.14)},
 		{gidl: `"hello"`, expectedValue: "hello"},
 		{gidl: `true`, expectedValue: true},
+		{gidl: `null`, expectedValue: nil},
 		{gidl: `SomeObject {}`, expectedValue: ir.Object{
 			Name: "SomeObject",
 		}},
@@ -34,6 +35,17 @@ func TestParseValues(t *testing.T) {
 						Name: "the_field",
 					},
 					Value: uint64(5),
+				},
+			},
+		}},
+		{gidl: `SomeObject { the_field: null, }`, expectedValue: ir.Object{
+			Name: "SomeObject",
+			Fields: []ir.Field{
+				{
+					Key: ir.FieldKey{
+						Name: "the_field",
+					},
+					Value: nil,
 				},
 			},
 		}},
@@ -94,6 +106,7 @@ func TestParseValues(t *testing.T) {
 		{gidl: `[]`, expectedValue: []interface{}(nil)},
 		{gidl: `[1,]`, expectedValue: []interface{}{uint64(1)}},
 		{gidl: `[1,"hello",true,]`, expectedValue: []interface{}{uint64(1), "hello", true}},
+		{gidl: `[null,]`, expectedValue: []interface{}{nil}},
 	}
 	for _, tc := range testCases {
 		p := NewParser("", strings.NewReader(tc.gidl))
