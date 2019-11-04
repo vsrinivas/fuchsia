@@ -752,7 +752,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="total TCP segment length of 65536 bytes overflows length field of pseudo-header")]
     fn test_serialize_panic_segment_too_long_ipv4() {
         // Test that a segment length which overflows u16 is rejected because it
         // can't fit in the length field in the IPv4 pseudo-header.
@@ -764,7 +764,6 @@ mod tests {
 
     #[test]
     #[ignore] // this test panics with stack overflow; TODO(joshlf): Fix
-    #[should_panic]
     #[cfg(target_pointer_width = "64")] // 2^32 overflows on 32-bit platforms
     fn test_serialize_panic_segment_too_long_ipv6() {
         // Test that a segment length which overflows u32 is rejected because it

@@ -992,7 +992,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="internal error: entered unreachable code: Should never call this function if the packet does not have a fragment header")]
     fn test_ipv6_reassembly_not_needed() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();

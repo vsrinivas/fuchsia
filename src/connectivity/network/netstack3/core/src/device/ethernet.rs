@@ -1089,7 +1089,8 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     let groups = &mut device_state.ipv6_multicast_groups;
 
     // Will panic if `device_id` has not yet joined the multicast address.
-    let counter = groups.get_mut(&multicast_addr).unwrap();
+    let counter = groups.get_mut(&multicast_addr)
+        .expect("cannot leave not-yet-joined multicast group");
 
     if *counter == 1 {
         let mac = MulticastAddr::from(&multicast_addr);
@@ -1724,7 +1725,7 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic]
+    #[should_panic(expected="assertion failed: is_device_initialized(ctx.state(), device)")]
     fn receive_frame_uninitialized<I: Ip>() {
         test_receive_ip_frame::<I>(false);
     }
@@ -1763,7 +1764,7 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic]
+    #[should_panic(expected="assertion failed: is_device_usable(ctx.state(), device)")]
     fn test_send_frame_uninitialized<I: Ip>() {
         test_send_ip_frame::<I>(false);
     }
@@ -1782,7 +1783,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="assertion failed: state.is_uninitialized()")]
     fn initialize_multiple() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device =
@@ -2201,7 +2202,7 @@ mod tests {
     /// This method should always panic as leaving an unjoined multicast group is a panic
     /// condition.
     #[ip_test]
-    #[should_panic]
+    #[should_panic(expected="cannot leave not-yet-joined multicast group")]
     fn test_ip_leave_unjoined_multicast<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -2213,7 +2214,7 @@ mod tests {
         // Should not be in the multicast group yet.
         assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
 
-        // Leave it (this should panic.
+        // Leave it (this should panic).
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
     }
 

@@ -3090,7 +3090,7 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic]
+    #[should_panic(expected="loopback addresses should be handled before consulting the forwarding table")]
     fn test_lookup_table_address<I: Ip>() {
         let cfg = get_dummy_config::<I::Addr>();
         let ip_address = I::LOOPBACK_ADDRESS;

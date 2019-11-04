@@ -2316,7 +2316,10 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
     // but this is documented for this function.
-    let src_ip = ctx.get_link_local_addr(device_id).unwrap().try_into_permanent().unwrap();
+    let src_ip = ctx.get_link_local_addr(device_id)
+        .expect("cannot send router advertisement without a link-local address")
+        .try_into_permanent()
+        .expect("cannot send router advertisement with temporary link-local address");
 
     let is_final_ra_batch =
         ctx.get_state_with(device_id).final_router_advertisements_remaining != 0;
@@ -5775,7 +5778,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)")]
     fn test_send_router_advertisement_as_non_router_panic() {
         //
         // Attempting to send a router advertisement when a device is not a router should result in
@@ -5809,7 +5812,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="cannot send router advertisement with temporary link-local address")]
     fn test_send_router_advertisement_without_linklocal() {
         //
         // Attempting to send a router advertisement when a device does not yet have a link-local
@@ -5845,7 +5848,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected="assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)")]
     fn test_send_router_advertisement_with_should_send_advertisement_unset_panic() {
         //
         // Attempting to send a router advertisements when it is configured to not do so should
