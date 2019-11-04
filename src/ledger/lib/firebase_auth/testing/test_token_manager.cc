@@ -18,23 +18,22 @@ TestTokenManager::TestTokenManager(async_dispatcher_t* dispatcher) : dispatcher_
 
 TestTokenManager::~TestTokenManager() = default;
 
-void TestTokenManager::Authorize(AppConfig app_config,
-                                 fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+void TestTokenManager::Authorize(AppConfig /*app_config*/,
+                                 fidl::InterfaceHandle<AuthenticationUIContext> /*auth_ui_context*/,
                                  std::vector<std::string> /*app_scopes*/,
                                  fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
-                                 AuthorizeCallback callback /*callback*/) {
+                                 AuthorizeCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::GetAccessToken(AppConfig app_config, std::string /*user_profile_id*/,
+void TestTokenManager::GetAccessToken(AppConfig /*app_config*/, std::string /*user_profile_id*/,
                                       std::vector<std::string> /*app_scopes*/,
-                                      GetAccessTokenCallback callback /*callback*/) {
+                                      GetAccessTokenCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::GetIdToken(AppConfig app_config, std::string /*user_profile_id*/,
-                                  fidl::StringPtr /*audience*/,
-                                  GetIdTokenCallback callback /*callback*/) {
+void TestTokenManager::GetIdToken(AppConfig /*app_config*/, std::string /*user_profile_id*/,
+                                  fidl::StringPtr /*audience*/, GetIdTokenCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -53,19 +52,22 @@ void TestTokenManager::GetFirebaseToken(AppConfig /*app_config*/, std::string /*
 }
 
 void TestTokenManager::DeleteAllTokens(AppConfig /*app_config*/, std::string /*user_profile_id*/,
-                                       bool /*force*/, DeleteAllTokensCallback callback) {
+                                       bool /*force*/, DeleteAllTokensCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::ListProfileIds(AppConfig app_config, ListProfileIdsCallback callback) {
+void TestTokenManager::ListProfileIds(AppConfig /*app_config*/,
+                                      ListProfileIdsCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::Set(std::string id_token, std::string local_id, std::string email) {
+void TestTokenManager::Set(std::string id_token, std::string local_id, std::string email,
+                           uint64_t expires_in_sec) {
   token_to_return_ = fuchsia::auth::FirebaseToken::New();
-  token_to_return_->id_token = id_token;
-  token_to_return_->local_id = local_id;
-  token_to_return_->email = email;
+  token_to_return_->id_token = std::move(id_token);
+  token_to_return_->local_id = std::move(local_id);
+  token_to_return_->email = std::move(email);
+  token_to_return_->expires_in = expires_in_sec;
   status_to_return_ = fuchsia::auth::Status::OK;
 }
 

@@ -45,7 +45,7 @@ class TestTokenManager : public fuchsia::auth::TokenManager {
   void ListProfileIds(AppConfig app_config, ListProfileIdsCallback callback) override;
 
   // Sets the token to return with the provided parameters, and status to OK.
-  void Set(std::string id_token, std::string local_id, std::string email);
+  void Set(std::string id_token, std::string local_id, std::string email, uint64_t expires_in_sec);
 
   // Sets the token to return to null, and status to |status|.
   // |status| must not be OK.

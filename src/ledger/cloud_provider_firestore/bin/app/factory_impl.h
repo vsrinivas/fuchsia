@@ -16,13 +16,15 @@
 #include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace cloud_provider_firestore {
 
 class FactoryImpl : public Factory {
  public:
   explicit FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
-                       sys::ComponentContext* component_context, std::string cobalt_client_name);
+                       const timekeeper::Clock* clock, sys::ComponentContext* component_context,
+                       std::string cobalt_client_name);
 
   ~FactoryImpl() override;
 
@@ -46,6 +48,7 @@ class FactoryImpl : public Factory {
 
   async_dispatcher_t* const dispatcher_;
   rng::Random* random_;
+  const timekeeper::Clock* clock_;
   sys::ComponentContext* const component_context_;
   const std::string cobalt_client_name_;
   callback::CancellableContainer token_requests_;

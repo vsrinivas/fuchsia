@@ -28,6 +28,8 @@ source_set("firebase_auth") {
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
     "//zircon/public/lib/fit",
   ]
 }
@@ -45,5 +47,6 @@ source_set("unittests") {
     "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/backoff/testing",
     "//src/lib/fsl",
+    "//src/lib/timekeeper:testing",
   ]
 }

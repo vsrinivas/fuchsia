@@ -36,9 +36,11 @@ firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
 }  // namespace
 
 FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
-                         sys::ComponentContext* component_context, std::string cobalt_client_name)
+                         const timekeeper::Clock* clock, sys::ComponentContext* component_context,
+                         std::string cobalt_client_name)
     : dispatcher_(dispatcher),
       random_(random),
+      clock_(clock),
       component_context_(component_context),
       cobalt_client_name_(std::move(cobalt_client_name)),
       token_requests_(dispatcher),
@@ -64,7 +66,7 @@ void FactoryImpl::GetCloudProvider(
     GetCloudProviderCallback callback) {
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       GetFirebaseAuthConfig(config.api_key, config.user_profile_id, cobalt_client_name_),
-      dispatcher_, random_, token_manager.Bind(), component_context_);
+      dispatcher_, random_, clock_, token_manager.Bind(), component_context_);
 
   GetFirebaseCloudProvider(std::move(config), std::move(firebase_auth),
                            std::move(cloud_provider_request), std::move(callback));

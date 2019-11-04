@@ -7,12 +7,14 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+
 #include <trace-provider/provider.h>
 
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/factory_impl.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace cloud_provider_firestore {
 namespace {
@@ -30,7 +32,7 @@ class App : public fuchsia::modular::Lifecycle {
       : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         component_context_(sys::ComponentContext::Create()),
         trace_provider_(loop_.dispatcher()),
-        factory_impl_(loop_.dispatcher(), &random_, component_context_.get(),
+        factory_impl_(loop_.dispatcher(), &random_, &clock_, component_context_.get(),
                       app_params.disable_statistics ? "" : kCobaltClientName.ToString()) {
     FXL_DCHECK(component_context_);
   }
@@ -54,6 +56,7 @@ class App : public fuchsia::modular::Lifecycle {
  private:
   async::Loop loop_;
   rng::SystemRandom random_;
+  timekeeper::SystemClock clock_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   trace::TraceProviderWithFdio trace_provider_;
 

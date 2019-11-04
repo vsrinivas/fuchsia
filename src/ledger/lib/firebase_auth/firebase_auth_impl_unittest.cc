@@ -14,6 +14,8 @@
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/timekeeper/clock.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace firebase_auth {
 
@@ -26,10 +28,9 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   explicit MockCobaltLogger(int* called) : called_(called) {}
 
   void LogEvent(uint32_t metric_id, uint32_t event_code) override {}
-  void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,
-                     zx::duration period_duration, int64_t count) override {
-    EXPECT_EQ(metric_id, 4u);
-    // The value should contain the client name.
+  void LogEventCount(uint32_t metric_id, uint32_t /*event_code*/, const std::string& component,
+                     zx::duration /*period_duration*/, int64_t /*count*/) override {
+    EXPECT_EQ(4u, metric_id);
     EXPECT_TRUE(component.find("firebase-test") != std::string::npos);
     *called_ += 1;
   }
@@ -61,7 +62,7 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
         token_manager_binding_(&token_manager_),
         firebase_auth_(
             {"api_key", "user_id", /* collect_cobalt_metrics */ true, "firebase-test", 1},
-            dispatcher(), token_manager_binding_.NewBinding().Bind(), InitBackoff(),
+            dispatcher(), &clock_, token_manager_binding_.NewBinding().Bind(), InitBackoff(),
             std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
 
   ~FirebaseAuthImplTest() override = default;
@@ -74,6 +75,7 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
     return backoff;
   }
 
+  timekeeper::TestClock clock_;
   TestTokenManager token_manager_;
   fidl::Binding<fuchsia::auth::TokenManager> token_manager_binding_;
   FirebaseAuthImpl firebase_auth_;
@@ -84,8 +86,11 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
   FXL_DISALLOW_COPY_AND_ASSIGN(FirebaseAuthImplTest);
 };
 
+const uint64_t kTokenExpiry = 3600;
+
 TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
-  token_manager_.Set("this is a token", "some id", "me@example.com");
+  clock_.Set(zx::time());
+  token_manager_.Set("this is a token", "some id", "me@example.com", kTokenExpiry);
 
   bool called;
   AuthStatus auth_status;
@@ -103,6 +108,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_token;
+  clock_.Set(zx::time());
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseToken(
@@ -113,7 +119,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(backoff_->reset_count, 0);
   EXPECT_EQ(report_observation_count_, 0);
 
-  token_manager_.Set("this is a token", "some id", "me@example.com");
+  token_manager_.Set("this is a token", "some id", "me@example.com", kTokenExpiry);
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(auth_status, AuthStatus::OK);
@@ -124,7 +130,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
 }
 
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
-  token_manager_.Set("this is a token", "some id", "me@example.com");
+  clock_.Set(zx::time());
+  token_manager_.Set("this is a token", "some id", "me@example.com", kTokenExpiry);
 
   bool called;
   AuthStatus auth_status;
@@ -142,6 +149,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_id;
+  clock_.Set(zx::time());
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(
@@ -152,7 +160,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(backoff_->reset_count, 0);
   EXPECT_EQ(report_observation_count_, 0);
 
-  token_manager_.Set("this is a token", "some id", "me@example.com");
+  token_manager_.Set("this is a token", "some id", "me@example.com", kTokenExpiry);
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(auth_status, AuthStatus::OK);
@@ -165,6 +173,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   bool called;
   AuthStatus auth_status;
+  clock_.Set(zx::time());
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(
@@ -188,6 +197,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
 TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   bool called;
   AuthStatus auth_status;
+  clock_.Set(zx::time());
   token_manager_.SetError(fuchsia::auth::Status::INVALID_REQUEST);
   backoff_->SetOnGetNext(QuitLoopClosure());
   firebase_auth_.GetFirebaseUserId(
@@ -198,6 +208,55 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   EXPECT_EQ(backoff_->get_next_count, 0);
   EXPECT_EQ(backoff_->reset_count, 1);
   EXPECT_EQ(report_observation_count_, 1);
+}
+
+TEST_F(FirebaseAuthImplTest, GetCachedFirebaseToken) {
+  clock_.Set(zx::time());
+  token_manager_.Set("this is the first token", "some id", "me@example.com", kTokenExpiry);
+  bool called;
+  AuthStatus auth_status;
+  std::string firebase_token;
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
+  EXPECT_EQ("this is the first token", firebase_token);
+  EXPECT_EQ(0, report_observation_count_);
+
+  token_manager_.Set("this is the second token", "some id", "me@example.com", kTokenExpiry);
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
+  EXPECT_EQ("this is the first token", firebase_token);
+  EXPECT_EQ(0, report_observation_count_);
+}
+
+TEST_F(FirebaseAuthImplTest, GetFreshFirebaseTokenAfterExpiry) {
+  clock_.Set(zx::time());
+  token_manager_.Set("this is the first token", "some id", "me@example.com", kTokenExpiry);
+  bool called;
+  AuthStatus auth_status;
+  std::string firebase_token;
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
+  EXPECT_EQ("this is the first token", firebase_token);
+  EXPECT_EQ(0, report_observation_count_);
+
+  clock_.Set(clock_.Now() + zx::sec(kTokenExpiry));
+  token_manager_.Set("this is the second token", "some id", "me@example.com", kTokenExpiry);
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
+  EXPECT_EQ("this is the second token", firebase_token);
+  EXPECT_EQ(0, report_observation_count_);
 }
 
 }  // namespace

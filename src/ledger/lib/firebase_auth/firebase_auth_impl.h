@@ -20,6 +20,7 @@
 #include "src/lib/callback/cancellable.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace firebase_auth {
 
@@ -54,10 +55,10 @@ class FirebaseAuthImpl : public FirebaseAuth {
 
   // Creates an instance of FirebaseAuthImpl.
   FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher, rng::Random* random,
-                   fuchsia::auth::TokenManagerPtr token_manager,
+                   const timekeeper::Clock* clock, fuchsia::auth::TokenManagerPtr token_manager,
                    sys::ComponentContext* component_context);
   // For tests.
-  FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
+  FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher, const timekeeper::Clock* clock,
                    fuchsia::auth::TokenManagerPtr token_manager,
                    std::unique_ptr<backoff::Backoff> backoff,
                    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger);
@@ -72,18 +73,41 @@ class FirebaseAuthImpl : public FirebaseAuth {
       fit::function<void(firebase_auth::AuthStatus, std::string)> callback) override;
 
  private:
-  // Retrieves the Firebase token from the fuchsia::auth::TokenManager,
-  // transparently retrying the request up to |max_retries| times in case of
-  // non-fatal errors.
+  struct FirebaseToken {
+    // The content of a firebase ID token.
+    std::string content;
+    // The firebase User ID that token applies to, or an empty string if the
+    // User ID is not known.
+    std::string user_id;
+    // The time at which token will expire.
+    zx::time expiry_time;
+  };
+
+  // Retrieves the previously acquired Firebase token when one exists and is
+  // not past (or close to) expiry. Otherwise, aquires a fresh token from the
+  // fuchsia::auth::TokenManager, transparently retrying the request up to
+  // |max_retries| times in case of non-fatal errors.
   void GetToken(
       int max_retries,
-      fit::function<void(firebase_auth::AuthStatus, fuchsia::auth::FirebaseTokenPtr)> callback);
+      fit::function<void(firebase_auth::AuthStatus, std::shared_ptr<FirebaseToken>)> callback);
+
+  // Retrieves a Firebase token from the fuchsia::auth::TokenManager,
+  // transparently retrying the request up to |max_retries| times in case of
+  // non-fatal errors.
+  void GetTokenFromTokenManager(
+      int max_retries,
+      fit::function<void(firebase_auth::AuthStatus, std::shared_ptr<FirebaseToken>)> callback);
+
+  // Translates a fuchsia::auth::FirebaseTokenPtr to our internal representation.
+  std::shared_ptr<FirebaseToken> TranslateToken(fuchsia::auth::FirebaseTokenPtr);
 
   // Sends a Cobalt event for metric |metric_id| counting the error code
   // |status|, unless |cobalt_client_name_| is empty.
   void ReportError(int32_t metric_id, uint32_t status);
 
   const Config config_;
+  std::shared_ptr<FirebaseToken> firebase_token_;
+  const timekeeper::Clock* clock_;
   fuchsia::auth::TokenManagerPtr token_manager_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const int max_retries_;

@@ -5,6 +5,8 @@
 #include "src/ledger/lib/firebase_auth/firebase_auth_impl.h"
 
 #include <lib/fit/function.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
@@ -12,9 +14,13 @@
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/fsl/vmo/file.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace firebase_auth {
 namespace {
+
+// The minimum remaining lifetime that we allow when returning a cached token.
+const zx::duration kTokenExpiryPadding = zx::min(5);
 
 // Returns true if the authentication failure may be transient.
 bool IsRetriableError(fuchsia::auth::Status status) {
@@ -40,10 +46,11 @@ bool IsRetriableError(fuchsia::auth::Status status) {
 }  // namespace
 
 FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
-                                   rng::Random* random,
+                                   rng::Random* random, const timekeeper::Clock* clock,
                                    fuchsia::auth::TokenManagerPtr token_manager,
                                    sys::ComponentContext* component_context)
     : config_(std::move(config)),
+      clock_(clock),
       token_manager_(std::move(token_manager)),
       backoff_(std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>())),
       max_retries_(config_.max_retries),
@@ -58,10 +65,12 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher
 }
 
 FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
+                                   const timekeeper::Clock* clock,
                                    fuchsia::auth::TokenManagerPtr token_manager,
                                    std::unique_ptr<backoff::Backoff> backoff,
                                    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : config_(std::move(config)),
+      clock_(clock),
       token_manager_(std::move(token_manager)),
       backoff_(std::move(backoff)),
       max_retries_(config_.max_retries),
@@ -71,7 +80,7 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher
 
 void FirebaseAuthImpl::set_error_handler(fit::closure on_error) {
   token_manager_.set_error_handler(
-      [on_error = std::move(on_error)](zx_status_t status) { on_error(); });
+      [on_error = std::move(on_error)](zx_status_t /*status*/) { on_error(); });
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
@@ -83,7 +92,7 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken(max_retries_,
            [callback = cancellable->WrapCallback(std::move(callback))](auto status, auto token) {
-             callback(status, token ? token->id_token : "");
+             callback(status, token ? token->content : "");
            });
   return cancellable;
 }
@@ -93,13 +102,35 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken(max_retries_,
            [callback = cancellable->WrapCallback(std::move(callback))](auto status, auto token) {
-             callback(status, token ? token->local_id.value_or("") : "");
+             callback(status, token ? token->user_id : "");
            });
   return cancellable;
 }
 
 void FirebaseAuthImpl::GetToken(
-    int max_retries, fit::function<void(AuthStatus, fuchsia::auth::FirebaseTokenPtr)> callback) {
+    int max_retries,
+    fit::function<void(firebase_auth::AuthStatus, std::shared_ptr<FirebaseToken>)> callback) {
+  auto now = clock_->Now();
+  auto cached_token = firebase_token_;
+  if (cached_token && cached_token->expiry_time > now + kTokenExpiryPadding) {
+    callback(AuthStatus::OK, cached_token);
+    return;
+  }
+  GetTokenFromTokenManager(max_retries, [this, callback = std::move(callback)](
+                                            firebase_auth::AuthStatus status,
+                                            std::shared_ptr<FirebaseToken> token) mutable {
+    if (status == AuthStatus::OK) {
+      firebase_token_ = token;
+      callback(AuthStatus::OK, std::move(token));
+    } else {
+      callback(status, nullptr);
+    }
+  });
+}
+
+void FirebaseAuthImpl::GetTokenFromTokenManager(
+    int max_retries,
+    fit::function<void(firebase_auth::AuthStatus, std::shared_ptr<FirebaseToken>)> callback) {
   fuchsia::auth::AppConfig oauth_config;
   oauth_config.auth_provider_type = "google";
 
@@ -120,7 +151,7 @@ void FirebaseAuthImpl::GetToken(
           if (max_retries > 0 && IsRetriableError(status)) {
             task_runner_.PostDelayedTask(
                 [this, max_retries, callback = std::move(callback)]() mutable {
-                  GetToken(max_retries - 1, std::move(callback));
+                  GetTokenFromTokenManager(max_retries - 1, std::move(callback));
                 },
                 backoff_->GetNext());
             return;
@@ -129,13 +160,25 @@ void FirebaseAuthImpl::GetToken(
 
         backoff_->Reset();
         if (status == fuchsia::auth::Status::OK) {
-          callback(AuthStatus::OK, std::move(token));
+          callback(AuthStatus::OK, TranslateToken(std::move(token)));
         } else {
           ReportError(cobalt_registry::kFirebaseAuthenticationFailuresMetricId,
                       static_cast<uint32_t>(status));
-          callback(AuthStatus::ERROR, std::move(token));
+          callback(AuthStatus::ERROR, nullptr);
         }
       });
+}
+
+std::shared_ptr<FirebaseAuthImpl::FirebaseToken> FirebaseAuthImpl::TranslateToken(
+    fuchsia::auth::FirebaseTokenPtr token) {
+  if (!token) {
+    return nullptr;
+  }
+  FirebaseToken internal_token;
+  internal_token.content = token->id_token;
+  internal_token.user_id = token->local_id.value_or("");
+  internal_token.expiry_time = (clock_->Now() += zx::sec(token->expires_in));
+  return std::make_unique<FirebaseToken>(internal_token);
 }
 
 void FirebaseAuthImpl::ReportError(int32_t metric_id, uint32_t status) {
