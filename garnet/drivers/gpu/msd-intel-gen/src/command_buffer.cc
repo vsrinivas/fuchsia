@@ -105,14 +105,6 @@ bool CommandBuffer::InitializeResources(
   wait_semaphores_ = std::move(wait_semaphores);
   signal_semaphores_ = std::move(signal_semaphores);
 
-  for (uint32_t i = 0; i < num_resources(); i++) {
-    TRACE_DURATION("magma", "CommitPages");
-    uint64_t num_pages = AddressSpace::GetMappedSize(exec_resources_[i].length) >> PAGE_SHIFT;
-    DASSERT(magma::is_page_aligned(exec_resources_[i].offset));
-    uint64_t page_offset = exec_resources_[i].offset >> PAGE_SHIFT;
-    exec_resources_[i].buffer->platform_buffer()->CommitPages(page_offset, num_pages);
-  }
-
   return true;
 }
 
