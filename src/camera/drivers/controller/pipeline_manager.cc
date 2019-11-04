@@ -79,8 +79,8 @@ zx_status_t PipelineManager::GetBuffers(const InternalConfigNode& producer, Pipe
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t PipelineManager::CreateInputNode(PipelineInfo* info,
-                                             std::unique_ptr<ProcessNode>* out_processing_node) {
+fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateInputNode(
+    PipelineInfo* info) {
   uint8_t isp_stream_type;
   if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
@@ -92,7 +92,7 @@ zx_status_t PipelineManager::CreateInputNode(PipelineInfo* info,
   auto status = GetBuffers(info->node, info, &buffers);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get buffers";
-    return status;
+    return fit::error(status);
   }
 
   // Temporary conversion since ISP protocol
@@ -105,14 +105,14 @@ zx_status_t PipelineManager::CreateInputNode(PipelineInfo* info,
                                                                old_buffer_collection);
   if (!processing_node) {
     FX_LOGS(ERROR) << "Failed to create ISP stream protocol";
-    return ZX_ERR_NO_MEMORY;
+    return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   // Create stream with ISP
   auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
   if (!isp_stream_protocol) {
     FX_LOGS(ERROR) << "Failed to create ISP stream protocol";
-    return ZX_ERR_INTERNAL;
+    return fit::error(ZX_ERR_INTERNAL);
   }
 
   // TODO(braval): create FR or DS depending on what stream is requested
@@ -121,36 +121,33 @@ zx_status_t PipelineManager::CreateInputNode(PipelineInfo* info,
       STREAM_TYPE_FULL_RESOLUTION, processing_node->callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create output stream on ISP";
-    return ZX_ERR_INTERNAL;
+    return fit::error(ZX_ERR_INTERNAL);
   }
 
   // Update the input node with the ISP stream protocol
   processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
 
-  *out_processing_node = std::move(processing_node);
-  return ZX_OK;
+  return fit::ok(std::move(processing_node));
 }
 
-zx_status_t PipelineManager::CreateOutputNode(ProcessNode* parent_node,
-                                              const InternalConfigNode& internal_output_node,
-                                              ProcessNode** output_processing_node) {
+fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
+    ProcessNode* parent_node, const InternalConfigNode& internal_output_node) {
   // Create Output Node
   auto output_node = std::make_unique<camera::ProcessNode>(internal_output_node.type, parent_node);
   if (!output_node) {
     FX_LOGS(ERROR) << "Failed to create output ProcessNode";
-    return ZX_ERR_NO_MEMORY;
+    return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher_, output_node.get());
   if (!client_stream) {
     FX_LOGS(ERROR) << "Failed to create StreamImpl";
-    return ZX_ERR_INTERNAL;
+    return fit::error(ZX_ERR_INTERNAL);
   }
 
   // Set the client stream
   output_node->set_client_stream(std::move(client_stream));
-
-  *output_processing_node = output_node.get();
+  auto result = fit::ok(output_node.get());
 
   // Add child node info.
   ChildNodeInfo child_info;
@@ -158,7 +155,7 @@ zx_status_t PipelineManager::CreateOutputNode(ProcessNode* parent_node,
   child_info.stream_type = internal_output_node.output_stream_type;
   child_info.output_frame_rate = internal_output_node.output_frame_rate;
   parent_node->AddChildNodeInfo(child_info);
-  return ZX_OK;
+  return result;
 }
 
 const char* ToString(const camera::GdcConfig& config_type) {
@@ -204,43 +201,42 @@ zx_status_t PipelineManager::LoadGdcConfiguration(const camera::GdcConfig& confi
   return ZX_OK;
 }
 
-zx_status_t PipelineManager::CreateGraph(PipelineInfo* info, ProcessNode* parent_node,
-                                         ProcessNode** output_processing_node) {
+fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(PipelineInfo* info,
+                                                                    ProcessNode* parent_node) {
+  fit::result<ProcessNode*, zx_status_t> result;
   auto next_node_internal = GetNextNodeInPipeline(info, info->node);
   if (!next_node_internal) {
     FX_LOGS(ERROR) << "Failed to get next node";
-    return ZX_ERR_INTERNAL;
+    return fit::error(ZX_ERR_INTERNAL);
   }
 
   switch (next_node_internal->type) {
     // Input Node
     case NodeType::kInputStream: {
       FX_LOGS(ERROR) << "Child node cannot be input node";
-      return ZX_ERR_INVALID_ARGS;
+      return fit::error(ZX_ERR_INVALID_ARGS);
     }
     // GDC
     case NodeType::kGdc: {
-      return ZX_ERR_NOT_SUPPORTED;
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     // GE2D
     case NodeType::kGe2d: {
-      return ZX_ERR_NOT_SUPPORTED;
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
     // Output Node
     case NodeType::kOutputStream: {
-      auto status = CreateOutputNode(parent_node, *next_node_internal, output_processing_node);
-      if (status != ZX_OK) {
+      result = CreateOutputNode(parent_node, *next_node_internal);
+      if (result.is_error()) {
         FX_LOGS(ERROR) << "Failed to configure Output Node";
         // TODO(braval): Handle already configured nodes
-        return status;
+        return result;
       }
       break;
     }
-    default: {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+    default: { return fit::error(ZX_ERR_NOT_SUPPORTED); }
   }
-  return ZX_OK;
+  return result;
 }
 
 zx_status_t PipelineManager::ConfigureStreamPipeline(
@@ -260,20 +256,20 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
 
     // Configure Input node
-    auto status = CreateInputNode(info, &full_resolution_stream_);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to ConfigureInputNode";
-      return status;
+    auto input_result = CreateInputNode(info);
+    if (input_result.is_error()) {
+      FX_PLOGS(ERROR, input_result.error()) << "Failed to ConfigureInputNode";
+      return input_result.error();
+    }
+    full_resolution_stream_ = std::move(input_result.value());
+
+    auto graph_result = CreateGraph(info, full_resolution_stream_.get());
+    if (graph_result.is_error()) {
+      FX_PLOGS(ERROR, graph_result.error()) << "Failed to CreateGraph";
+      return graph_result.error();
     }
 
-    ProcessNode* output_processing_node;
-    status = CreateGraph(info, full_resolution_stream_.get(), &output_processing_node);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to CreateGraph";
-      return status;
-    }
-
-    status = output_processing_node->client_stream()->Attach(stream.TakeChannel(), [this]() {
+    auto status = graph_result.value()->client_stream()->Attach(stream.TakeChannel(), [this]() {
       FX_LOGS(INFO) << "Stream client disconnected";
       full_resolution_stream_ = nullptr;
     });

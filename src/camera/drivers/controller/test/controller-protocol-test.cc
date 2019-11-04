@@ -135,11 +135,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
-    std::unique_ptr<ProcessNode> out_processing_node;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &out_processing_node));
+    auto result = pipeline_manager_->CreateInputNode(&info);
+    EXPECT_EQ(true, result.is_ok());
 
-    EXPECT_NE(nullptr, out_processing_node->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, out_processing_node->type());
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
   }
 
   void TestConfigureOutputNode_DebugConfig() {
@@ -163,18 +163,18 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
-    std::unique_ptr<ProcessNode> input_processing_node;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateInputNode(&info, &input_processing_node));
+    auto result = pipeline_manager_->CreateInputNode(&info);
+    EXPECT_EQ(true, result.is_ok());
 
-    EXPECT_NE(nullptr, input_processing_node->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, input_processing_node->type());
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
 
-    ProcessNode* output_processing_node;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->CreateGraph(&info, input_processing_node.get(),
-                                                    &output_processing_node));
-    ASSERT_NE(nullptr, output_processing_node);
-    EXPECT_NE(nullptr, output_processing_node->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, output_processing_node->type());
+    auto graph_result = pipeline_manager_->CreateGraph(&info, result.value().get());
+    EXPECT_EQ(true, graph_result.is_ok());
+
+    ASSERT_NE(nullptr, graph_result.value());
+    EXPECT_NE(nullptr, graph_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
   }
 
   void TestGdcConfigLoading() {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CAMERA_PIPELINE_MANAGER_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CAMERA_PIPELINE_MANAGER_H_
+#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_PIPELINE_MANAGER_H_
+#define SRC_CAMERA_DRIVERS_CONTROLLER_PIPELINE_MANAGER_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
@@ -52,16 +52,14 @@ class PipelineManager {
   // 2. Creates the requested ISP stream
   // 3. Allocate buffers if needed
   // 4. Creates the ProcessNode for the input node
-  zx_status_t CreateInputNode(PipelineInfo* info,
-                              std::unique_ptr<ProcessNode>* out_processing_node);
+  fit::result<std::unique_ptr<ProcessNode>, zx_status_t> CreateInputNode(PipelineInfo* info);
 
-  zx_status_t CreateOutputNode(ProcessNode* parent_node,
-                               const InternalConfigNode& internal_output_node,
-                               ProcessNode** output_processing_node);
+  fit::result<ProcessNode*, zx_status_t> CreateOutputNode(
+      ProcessNode* parent_node, const InternalConfigNode& internal_output_node);
 
   // Create the stream pipeline graph
-  zx_status_t CreateGraph(PipelineInfo* info, ProcessNode* parent_node,
-                          ProcessNode** output_processing_node);
+  fit::result<ProcessNode*, zx_status_t> CreateGraph(PipelineInfo* info, ProcessNode* parent_node);
+
   // Gets the next node for the requested stream path
   const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
                                                   const InternalConfigNode& node);
@@ -83,4 +81,4 @@ class PipelineManager {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CAMERA_PIPELINE_MANAGER_H_
+#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_PIPELINE_MANAGER_H_
