@@ -6,28 +6,30 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "qmi_snoop"
+  name = "tel_snoop_cli"
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//src/connectivity/telephony/lib/qmi",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:itertools",
     "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]
 }
 
-package("qmi-snoop") {
+package("tel-snoop-cli") {
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
-      name = "qmi_snoop"
+      name = "tel_snoop_cli"
+      dest = "tel-snoop-cli"
+      path = "rust_crates/tel_snoop_cli"
       shell = true
     },
   ]

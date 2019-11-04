@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("simple-qmi-query") {
+group("fake-qmi-query") {
   testonly = true
   public_deps = [
-    "simple-qmi-query:telephony-comp-int-test-simple-qmi-query",
+    "fake-qmi-query",
+  ]
+}
+
+group("snooper") {
+  testonly = true
+  public_deps = [
+    "snooper:single-client",
   ]
 }

@@ -16,6 +16,7 @@
 
 #include <ddktl/fidl.h>
 
+#define QMI_MAX_PACKET_LEN 2048
 #define QMI_INIT_REQ \
   { 1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 2 }
 #define QMI_INIT_RESP \
@@ -83,6 +84,7 @@ void Device::SetChannel(::zx::channel transport,
       CloseQmiChannel();
     }
   }
+  zxlogf(INFO, "fake-qmi-transport: QMI channel set\n");
 done:
   return;
 }
@@ -104,6 +106,7 @@ void Device::SetSnoopChannel(
     result.set_err(set_snoop_res);
   }
   completer.Reply(std::move(result));
+  zxlogf(INFO, "fake-qmi-transport: Snoop channel set\n");
 }
 
 zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -162,6 +165,8 @@ zx_status_t Device::CloseQmiChannel() {
 
 zx_handle_t Device::GetQmiChannel() { return qmi_channel_; }
 
+zx_handle_t Device::GetQmiChannelPort() { return qmi_channel_port_; }
+
 zx_status_t Device::SetAsyncWait() {
   zx_status_t status =
       zx_object_wait_async(qmi_channel_, qmi_channel_port_, CHANNEL_MSG,
@@ -183,12 +188,15 @@ void Device::SnoopQmiMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
   if (snoop_channel_) {
     fidl_tel_snoop::Message snoop_msg;
     fidl_tel_snoop::QmiMessage qmi_msg;
-    uint32_t current_length = sizeof(qmi_msg.opaque_bytes);
+    uint32_t current_length = MIN(snoop_data_len, sizeof(qmi_msg.opaque_bytes));
     qmi_msg.is_partial_copy = snoop_data_len > current_length;
     qmi_msg.direction = direction;
     qmi_msg.timestamp = zx_clock_get_monotonic();
     memcpy(qmi_msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(qmi_msg);
+    zxlogf(INFO, "qmi-fake-transport: snoop msg %u %u %u %u sent\n", qmi_msg.opaque_bytes.data_[0],
+           qmi_msg.opaque_bytes.data_[1], qmi_msg.opaque_bytes.data_[2],
+           qmi_msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(snoop_channel_),
                                                  std::move(snoop_msg));
   }
@@ -198,23 +206,23 @@ void Device::ReplyQmiMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_
   memset(resp, 170, resp_size);
   if (0 == memcmp(req, qmi_init_req, sizeof(qmi_init_req))) {
     memcpy(resp, qmi_perio_event, MIN(sizeof(qmi_perio_event), resp_size));
-    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     sent_fake_qmi_msg(qmi_channel_, resp, resp_size);
+    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     memcpy(resp, qmi_init_resp, MIN(sizeof(qmi_init_resp), resp_size));
-    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     sent_fake_qmi_msg(qmi_channel_, resp, resp_size);
+    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
   } else if (0 == memcmp(req, qmi_imei_req, sizeof(qmi_imei_req))) {
     memcpy(resp, qmi_imei_resp, MIN(sizeof(qmi_imei_resp), resp_size));
-    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     sent_fake_qmi_msg(qmi_channel_, resp, resp_size);
+    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     memcpy(resp, qmi_perio_event, MIN(sizeof(qmi_perio_event), resp_size));
-    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     sent_fake_qmi_msg(qmi_channel_, resp, resp_size);
+    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
   } else {
     zxlogf(ERROR, "qmi-fake-driver: unexpected qmi msg received\n");
     memcpy(resp, qmi_nonsense_resp, MIN(sizeof(qmi_nonsense_resp), resp_size));
-    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
     sent_fake_qmi_msg(qmi_channel_, resp, resp_size);
+    SnoopQmiMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
   }
 }
 
@@ -225,47 +233,45 @@ zx_status_t Device::EventLoopCleanup() {
 static int qmi_fake_transport_thread(void* cookie) {
   assert(cookie != NULL);
   Device* device_ptr = static_cast<Device*>(cookie);
-  if (device_ptr->max_packet_size_ > 2048) {
-    zxlogf(ERROR, "qmi-fake-transport: packet too big: %d\n", device_ptr->max_packet_size_);
-    return ZX_ERR_IO_REFUSED;
-  }
-  uint8_t buffer[device_ptr->max_packet_size_];
-  uint8_t repl_buffer[device_ptr->max_packet_size_];
-  uint32_t length = sizeof(repl_buffer);
-  uint32_t length_read = 0;
+  uint32_t req_len = 0;
+  uint8_t req_buf[QMI_MAX_PACKET_LEN];
+  uint8_t resp_buf[QMI_MAX_PACKET_LEN];
+
   zx_port_packet_t packet;
   zxlogf(INFO, "qmi-fake-transport: event loop initialized\n");
   while (true) {
-    zx_status_t status = zx_port_wait(device_ptr->qmi_channel_port_, ZX_TIME_INFINITE, &packet);
+    zx_status_t status = zx_port_wait(device_ptr->GetQmiChannelPort(), ZX_TIME_INFINITE, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
       zxlogf(ERROR, "qmi-fake-transport: timed out: %s\n", zx_status_get_string(status));
     } else if (status == ZX_OK) {
-      if (packet.key == CHANNEL_MSG) {
-        if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
-          zxlogf(ERROR, "qmi-fake-transport: channel closed\n");
-          status = device_ptr->CloseQmiChannel();
-          continue;
-        }
-        status = zx_channel_read(device_ptr->GetQmiChannel(), 0, buffer, NULL, sizeof(buffer), 0,
-                                 &length_read, NULL);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "qmi-fake-transport: failed to read channel: %s\n",
-                 zx_status_get_string(status));
-          return status;
-        }
-        device_ptr->SnoopQmiMsg(buffer, sizeof(buffer), fidl_tel_snoop::Direction::TO_MODEM);
-        // TODO (jiamingw): parse QMI msg, form reply and write back to channel.
-        device_ptr->ReplyQmiMsg(buffer, length_read, repl_buffer, length);
-        status = device_ptr->SetAsyncWait();
-        if (status != ZX_OK) {
-          return status;
-        }
-      } else if (packet.key == TERMINATE_MSG) {
-        device_ptr->EventLoopCleanup();
-        return 0;
-      } else {
-        zxlogf(ERROR, "qmi-fake-transport: qmi_port undefined key %lu\n", packet.key);
-        assert(0);
+      switch (packet.key) {
+        case CHANNEL_MSG:
+          if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
+            zxlogf(ERROR, "qmi-fake-transport: channel closed\n");
+            status = device_ptr->CloseQmiChannel();
+            continue;
+          }
+          status = zx_channel_read(device_ptr->GetQmiChannel(), 0, req_buf, NULL,
+                                   QMI_MAX_PACKET_LEN, 0, &req_len, NULL);
+          if (status != ZX_OK) {
+            zxlogf(ERROR, "qmi-fake-transport: failed to read channel: %s\n",
+                   zx_status_get_string(status));
+            return status;
+          }
+          device_ptr->SnoopQmiMsg(req_buf, QMI_MAX_PACKET_LEN, fidl_tel_snoop::Direction::TO_MODEM);
+          // TODO (jiamingw): parse QMI msg, form reply and write back to channel.
+          device_ptr->ReplyQmiMsg(req_buf, req_len, resp_buf, QMI_MAX_PACKET_LEN);
+          status = device_ptr->SetAsyncWait();
+          if (status != ZX_OK) {
+            return status;
+          }
+          break;
+        case TERMINATE_MSG:
+          device_ptr->EventLoopCleanup();
+          return 0;
+        default:
+          zxlogf(ERROR, "qmi-fake-transport: qmi_port undefined key %lu\n", packet.key);
+          assert(0);
       }
     } else {
       zxlogf(ERROR, "qmi-fake-transport: qmi_port err %d\n", status);
@@ -284,6 +290,10 @@ zx_status_t Device::Bind() {
     return status;
   }
 
+  qmi_channel_ = ZX_HANDLE_INVALID;
+  snoop_channel_ = ZX_HANDLE_INVALID;
+  snoop_channel_port_ = ZX_HANDLE_INVALID;
+
   // create the handler thread
   int thread_result = thrd_create_with_name(&fake_qmi_thread_, qmi_fake_transport_thread,
                                             (void*)this, "qmi_fake_transport_thread");
@@ -291,6 +301,7 @@ zx_status_t Device::Bind() {
     zxlogf(ERROR, "qmi-fake-transport: failed to create transport thread (%d)\n", thread_result);
     EventLoopCleanup();
     status = ZX_ERR_INTERNAL;
+    return status;
   }
 
   device_add_args_t args = {};
@@ -310,9 +321,6 @@ zx_status_t Device::Bind() {
     thrd_join(fake_qmi_thread_, NULL);
     return status;
   }
-
-  // set max_packet_size_ to maximum for now
-  max_packet_size_ = 0x7FF;
   return status;
 }
 

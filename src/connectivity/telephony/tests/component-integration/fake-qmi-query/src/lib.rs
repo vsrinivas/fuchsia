@@ -15,7 +15,7 @@ use {
     fuchsia_zircon as zx, qmi,
     std::fs::File,
     std::path::Path,
-    tel_dev::isolated_devmgr,
+    tel_dev::{component_test::*, isolated_devmgr},
 };
 
 const RIL_URL: &str = fuchsia_single_component_package_url!("ril-qmi");
@@ -35,7 +35,7 @@ async fn qmi_query_test() -> Result<(), Error> {
     const TEL_PATH: &str = "class/qmi-transport";
     let tel_dir =
         isolated_devmgr::open_dir_in_isolated_devmgr(TEL_PATH).expect("opening qmi-transport dir");
-    let mut directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
+    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(fdio::clone_channel(&tel_dir)?)?,
     );
     let mut tel_devices = files_async::readdir(&directory_proxy).await?;
@@ -59,11 +59,13 @@ async fn qmi_query_test() -> Result<(), Error> {
     fx_log_info!("received and verified responses");
     unbind_fake_device(&found_device)?;
     fx_log_info!("unbinded device");
-    directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
-        fdio::clone_channel(&tel_dir)?,
-    )?);
-    fx_log_info!("dirproxy created");
-    tel_devices = files_async::readdir(&directory_proxy).await?;
+    for _ in 0..5 {
+        tel_devices = files_async::readdir(&directory_proxy).await?;
+        if tel_devices.len() == 0 {
+            break;
+        }
+        wait_in_nanos(DEVICE_UNBIND_TIMEOUT_IN_NANOS).await;
+    }
     assert_eq!(tel_devices.len(), 0);
     Ok(())
 }

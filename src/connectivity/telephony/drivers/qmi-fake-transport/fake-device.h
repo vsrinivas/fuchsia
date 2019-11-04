@@ -44,18 +44,17 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
                    ::llcpp::fuchsia::telephony::snoop::Direction direction);
   zx_status_t CloseQmiChannel();
   zx_handle_t GetQmiChannel();
+  zx_handle_t GetQmiChannelPort();
   zx_status_t SetAsyncWait();
   zx_status_t EventLoopCleanup();
-
-  uint32_t max_packet_size_;
-  zx_handle_t qmi_channel_;
-  zx_handle_t qmi_channel_port_;
 
  private:
   void SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) override;
   void SetNetwork(bool connected, SetNetworkCompleter::Sync completer) override;
   void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) override;
 
+  zx_handle_t qmi_channel_;
+  zx_handle_t qmi_channel_port_;
   zx_handle_t snoop_channel_port_;
   zx_handle_t snoop_channel_;
   bool connected_;

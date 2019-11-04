@@ -4,8 +4,9 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("telephony-comp-int-test-simple-qmi-query") {
-  name = "telephony_comp_int_test_simple_qmi_query"
+rustc_test("single-client") {
+  name = "tel_snooper_single_client"
+  source_root = "src/single_client.rs"
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
@@ -14,18 +15,13 @@ rustc_test("telephony-comp-int-test-simple-qmi-query") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
-    "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:pin-utils",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

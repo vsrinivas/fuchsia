@@ -5,7 +5,7 @@
 group("tools") {
   testonly = true
   deps = [
-    "qmi-snoop",
     "ril-ctl",
+    "tel-snoop-cli",
   ]
 }

@@ -1,0 +1,37 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tel.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/tel_devmgr_component_test#meta/tel_devmgr_component_test.cmx"
+                ],
+                "fuchsia.telephony.snoop.Snooper": [
+                    "fuchsia-pkg://fuchsia.com/telephony-snooper#meta/telephony-snooper.cmx",
+                    "-t"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/tel_snooper_single_client"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/qmi-transport",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tel.devmgr.IsolatedDevmgr",
+            "fuchsia.telephony.snoop.Snooper"
+        ],
+        "system": [
+            "driver/qmi-fake-transport.so"
+        ]
+    }
+}

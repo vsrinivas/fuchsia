@@ -794,6 +794,7 @@ group("network_time") {
 group("telephony") {
   testonly = true
   public_deps = [
+    "//src/connectivity/telephony:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
   ]
 }

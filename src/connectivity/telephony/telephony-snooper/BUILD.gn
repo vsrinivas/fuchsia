@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "telephony_snooper"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/connectivity/telephony/lib/qmi",
+    "//src/connectivity/telephony/tests/tel-dev:tel_dev",
+    "//src/lib/argh",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
+  ]
+}
+
+package("telephony-snooper") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "telephony_snooper"
+  binaries = [
+    {
+      name = "telephony_snooper"
+      dest = "telephony-snooper"
+      path = "telephony_snooper"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/telephony-snooper.cmx")
+      dest = "telephony-snooper.cmx"
+    },
+  ]
+}

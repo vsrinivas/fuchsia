@@ -14,7 +14,8 @@ test_package("telephony-tests") {
 
   public_deps = [
     ":devmgr-manifest",
-    "component-integration:simple-qmi-query",
+    "component-integration:fake-qmi-query",
+    "component-integration:snooper",
     "driver-integration:telephony-qmi-usb-integration-test",
   ]
 
@@ -26,7 +27,11 @@ test_package("telephony-tests") {
       environments = basic_envs
     },
     {
-      name = "telephony_comp_int_test_simple_qmi_query"
+      name = "tel_fake_qmi_query"
+      environments = basic_envs
+    },
+    {
+      name = "tel_snooper_single_client"
       environments = basic_envs
     },
   ]

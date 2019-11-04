@@ -215,6 +215,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_FALLBACK_RTC_TEST  12
 #define PDEV_PID_SCHEDULE_WORK_TEST 13
 #define PDEV_PID_DEVHOST_TEST       14
+#define PDEV_PID_TEL_TEST           15
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2
@@ -234,6 +235,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_COMPOSITE_2   16
 #define PDEV_DID_TEST_SPI           18
 #define PDEV_DID_TEST_CAMERA_SENSOR 19
+#define PDEV_DID_TEST_QMI_MODEM     20
 
 // ARM
 #define PDEV_VID_ARM                18

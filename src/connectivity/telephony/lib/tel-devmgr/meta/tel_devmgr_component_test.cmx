@@ -3,10 +3,11 @@
         "args": [
             "--svc_name=fuchsia.tel.devmgr.IsolatedDevmgr",
             "--add_namespace=/system/driver",
+            "--sys_device=/boot/driver/platform-bus.so",
             "--search_driver=/boot/driver",
             "--load_driver=/system/driver/qmi-fake-transport.so",
-            "--load_driver=/system/driver/qmi-transport.so",
-            "--wait_for=test/qmi-fake"
+            "--device_vid_pid_did=11:f:14",
+            "--wait_for=class/qmi-transport/000"
         ],
         "binary": "bin/isolated_devmgr"
     },

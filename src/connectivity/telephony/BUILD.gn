@@ -9,8 +9,7 @@ group("telephony") {
     "//src/connectivity/telephony/config",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/telephony",
-    "//src/connectivity/telephony/tools/qmi-snoop",
-    "//src/connectivity/telephony/tools/ril-ctl",
+    "//src/connectivity/telephony/tools",
   ]
 }
 
@@ -19,6 +18,7 @@ group("tests") {
   public_deps = [
     "//src/connectivity/telephony/lib:tel_devmgr",
     "//src/connectivity/telephony/telephony:tests",
+    "//src/connectivity/telephony/telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",
     "//src/connectivity/telephony/tests/fake-drivers",
     "//src/lib/isolated_devmgr",
@@ -28,6 +28,6 @@ group("tests") {
 group("drivers") {
   testonly = true
   public_deps = [
-    "//src/connectivity/telephony/drivers/qmi-usb-transport",
+    "//src/connectivity/telephony/drivers",
   ]
 }

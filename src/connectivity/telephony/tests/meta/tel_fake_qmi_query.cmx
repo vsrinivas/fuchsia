@@ -9,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/telephony_comp_int_test_simple_qmi_query"
+        "binary": "test/tel_fake_qmi_query"
     },
     "sandbox": {
         "boot": [
