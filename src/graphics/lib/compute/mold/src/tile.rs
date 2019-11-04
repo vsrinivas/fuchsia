@@ -4,7 +4,7 @@
 
 use std::{
     cell::{Cell, RefCell},
-    collections::{BTreeMap, HashSet},
+    collections::BTreeMap,
     mem,
     ops::{Index, IndexMut, Range},
     ptr,
@@ -12,6 +12,8 @@ use std::{
 
 #[cfg(feature = "tracing")]
 use fuchsia_trace::{self, duration};
+use rayon::prelude::*;
+use rustc_hash::FxHashSet;
 
 use crate::{
     painter::{Context, Painter},
@@ -24,6 +26,8 @@ use crate::{
 pub use crate::painter::{ColorBuffer, PixelFormat};
 
 pub(crate) const TILE_SIZE: usize = 32;
+pub(crate) const TILE_SHIFT: i32 = TILE_SIZE.trailing_zeros() as i32;
+pub(crate) const TILE_MASK: i32 = !-(TILE_SIZE as i32);
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
@@ -168,6 +172,31 @@ impl Tiles {
             });
         }
     }
+
+    fn render_all<B: ColorBuffer>(
+        &self,
+        tile_width: usize,
+        width: usize,
+        height: usize,
+        layers: &Layers,
+        buffer: B,
+    ) {
+        self.tiles
+            .par_iter()
+            .map(|tile| Context {
+                tile,
+                index: tile.tile_i + tile.tile_j * tile_width,
+                width,
+                height,
+                layers,
+                buffer: buffer.clone(),
+            })
+            .for_each(|context| {
+                PAINTER.with(|painter| {
+                    painter.borrow_mut().execute(context);
+                });
+            });
+    }
 }
 
 impl Index<usize> for Tiles {
@@ -195,27 +224,28 @@ fn segment_tile(segment: &Segment<i32>) -> (i32, i32) {
     let min_x = p0.x.min(p1.x);
     let min_y = p0.y.min(p1.y);
 
-    let mut i = min_x / TILE_SIZE as i32;
-    let mut j = min_y / TILE_SIZE as i32;
-
-    if min_x < 0 {
-        i -= 1;
-    }
-    if min_y < 0 {
-        j -= 1;
-    }
+    let i = min_x >> TILE_SHIFT;
+    let j = min_y >> TILE_SHIFT;
 
     (i, j)
 }
 
 #[derive(Debug)]
 pub(crate) struct TileContourBuilder {
-    tiles: HashSet<(i32, i32)>,
+    // Using FxHashSet here instead of HashSet has a noticeable impact in performance, especially
+    // since in the case of geometry-heavy scenes that create a lot of segments. (e.g. 25%
+    // less time spent rasterization when rendering a detailed map of Paris)
+    //
+    // Tile indices are outside of user-control and, while the theoretical bounds can be quite
+    // large, in practice the bounds will be very tight so the attack surface for a possible DoS
+    // attack is not large enough. (in an 8K display resolution, the HashSet can have at most 2
+    // objects in one bucket before it gets reallocated)
+    tiles: FxHashSet<(i32, i32)>,
 }
 
 impl TileContourBuilder {
     pub fn new() -> Self {
-        Self { tiles: HashSet::new() }
+        Self { tiles: FxHashSet::default() }
     }
 
     pub fn empty() -> TileContour {
@@ -236,31 +266,23 @@ impl TileContourBuilder {
     fn enclose_tile(&mut self, tile: (i32, i32), mut translation: Point<i32>) {
         mem::swap(&mut translation.x, &mut translation.y);
 
-        let translated =
-            (tile.0 + translation.x / TILE_SIZE as i32, tile.1 + translation.y / TILE_SIZE as i32);
+        let translated = (
+            tile.0 + (translation.x >> TILE_SHIFT),
+            tile.1 + (translation.y >> TILE_SHIFT),
+        );
         self.tiles.insert(translated);
 
-        if translation.x % TILE_SIZE as i32 != 0 {
-            if translation.x > 0 {
-                self.tiles.insert((translated.0 + 1, translated.1));
-            } else {
-                self.tiles.insert((translated.0 - 1, translated.1));
-            }
+        let sub_pixel_x_translation = translation.x & TILE_MASK != 0;
+        let sub_pixel_y_translation = translation.y & TILE_MASK != 0;
+
+        if sub_pixel_x_translation {
+            self.tiles.insert((translated.0 + 1, translated.1));
         }
-        if translation.y % TILE_SIZE as i32 != 0 {
-            if translation.y > 0 {
-                self.tiles.insert((translated.0, translated.1 + 1));
-            } else {
-                self.tiles.insert((translated.0, translated.1 - 1));
-            }
+        if sub_pixel_y_translation {
+            self.tiles.insert((translated.0, translated.1 + 1));
         }
-        if translation.x % TILE_SIZE as i32 != 0 && translation.y % TILE_SIZE as i32 != 0 {
-            match (translation.x > 0, translation.y > 0) {
-                (true, true) => self.tiles.insert((translated.0 + 1, translated.1 + 1)),
-                (true, false) => self.tiles.insert((translated.0 + 1, translated.1 - 1)),
-                (false, true) => self.tiles.insert((translated.0 - 1, translated.1 + 1)),
-                (false, false) => self.tiles.insert((translated.0 - 1, translated.1 - 1)),
-            };
+        if sub_pixel_x_translation && sub_pixel_y_translation {
+            self.tiles.insert((translated.0 + 1, translated.1 + 1));
         }
     }
 
@@ -584,34 +606,13 @@ impl Map {
         duration!("gfx", "Map::render");
         self.reprint_all();
 
-        let tiles = &self.tiles;
-        let tile_width = self.tiles.width;
-        let tile_height = self.tiles.height;
-
-        let width = self.width;
-        let height = self.height;
-
-        let layers = &Layers::new(&mut self.layers);
-
-        rayon::scope(|s| {
-            for j in 0..tile_height {
-                for i in 0..tile_width {
-                    let index = i + j * tile_width;
-                    let tile = &tiles[index];
-
-                    if tile.needs_render {
-                        let context =
-                            Context { tile, index, width, height, layers, buffer: buffer.clone() };
-
-                        s.spawn(move |_| {
-                            PAINTER.with(|painter| {
-                                painter.borrow_mut().execute(context);
-                            });
-                        });
-                    }
-                }
-            }
-        });
+        self.tiles.render_all(
+            self.tiles.width,
+            self.width,
+            self.height,
+            &Layers::new(&mut self.layers),
+            buffer,
+        );
 
         for j in 0..self.tiles.height {
             for i in 0..self.tiles.width {

@@ -13,6 +13,7 @@ rustc_library("mold") {
   edition = "2018"
   deps = [
     "//third_party/rust_crates:rayon",
+    "//third_party/rust_crates:rustc-hash",
   ]
   if (is_fuchsia) {
     features = [
