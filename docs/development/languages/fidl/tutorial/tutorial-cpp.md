@@ -47,11 +47,11 @@ fx build
 
 Building runs the FIDL compiler automatically.
 It writes the glue code that allows the protocols to be used from different languages.
-Below are the implementation files created for C++, assuming that your build flavor is `x64`.
+Below are the implementation files created for C++.
 
 ```
-./out/x64/fidling/gen/fidl/examples/echo/cpp/fidl.cc
-./out/x64/fidling/gen/fidl/examples/echo/cpp/fidl.h
+./out/default/fidling/gen/garnet/examples/fidl/services/fidl/examples/echo/cpp/fidl.cc
+./out/default/fidling/gen/garnet/examples/fidl/services/fidl/examples/echo/cpp/fidl.h
 ```
 
 ## `Echo` server
