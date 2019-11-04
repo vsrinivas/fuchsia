@@ -350,6 +350,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[ignore] // fxb/40189
     fn find_expose_service_sources_with_unexpected_capability() {
         let capability = RoutedCapability::Storage(StorageDecl {
             name: "".to_string(),
@@ -445,6 +446,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[ignore] // fxb/40189
     fn find_offer_service_sources_with_unexpected_capability() {
         let capability = RoutedCapability::Storage(StorageDecl {
             name: "".to_string(),
