@@ -37,8 +37,11 @@ class Queue {
            std::optional<fuchsia::mem::Buffer> minidump,
            std::map<std::string, std::string> annotations);
 
-  // Process the pending reports based on the queue's internal state.
-  void ProcessAll();
+  // Processes the pending reports based on the queue's internal state. Returns the number of
+  // reports successfully processed.
+  //
+  // If a report is left as pending, it is not counted as being successfully processed.
+  size_t ProcessAll();
 
   uint64_t Size() const { return pending_reports_.size(); }
   bool IsEmpty() const { return pending_reports_.empty(); }
@@ -56,12 +59,13 @@ class Queue {
     LeaveAsPending,
   };
 
-  // Archives all pending reports and clears the queue.
-  void ArchiveAll();
+  // Archives all pending reports and clears the queue. Returns the number of reports successfully
+  // archived.
+  size_t ArchiveAll();
 
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
-  // queue.
-  void UploadAll();
+  // queue. Returns the number of reports successfully uploaded.
+  size_t UploadAll();
 
   // Attempts to upload a report.
   //

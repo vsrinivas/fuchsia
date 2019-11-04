@@ -156,8 +156,7 @@ class QueueTest : public gtest::TestLoopFixture {
           SetExpectedQueueContents();
           break;
         case QueueOps::ProcessAll:
-          SetExpectedQueueContents();
-          queue_->ProcessAll();
+          EXPECT_EQ(SetExpectedQueueContents(), queue_->ProcessAll());
           break;
       }
     }
@@ -203,9 +202,11 @@ class QueueTest : public gtest::TestLoopFixture {
     }
   }
 
-  void SetExpectedQueueContents() {
+  size_t SetExpectedQueueContents() {
     if (state_ == QueueOps::SetStateToArchive) {
+      const size_t old_size = expected_queue_contents_.size();
       expected_queue_contents_.clear();
+      return old_size;
     } else if (state_ == QueueOps::SetStateToUpload) {
       std::vector<UUID> new_queue_contents;
       for (const auto& uuid : expected_queue_contents_) {
@@ -216,7 +217,9 @@ class QueueTest : public gtest::TestLoopFixture {
         ++next_upload_attempt_result_;
       }
       expected_queue_contents_.swap(new_queue_contents);
+      return new_queue_contents.size() - expected_queue_contents_.size();
     }
+    return 0;
   }
 
   size_t program_id_ = 1;

@@ -83,16 +83,14 @@ bool Queue::Add(const std::string& program_name,
   return true;
 }
 
-void Queue::ProcessAll() {
+size_t Queue::ProcessAll() {
   switch (state_) {
     case State::Archive:
-      ArchiveAll();
-      break;
+      return ArchiveAll();
     case State::Upload:
-      UploadAll();
-      break;
+      return UploadAll();
     case State::LeaveAsPending:
-      break;
+      return 0;
   }
 }
 
@@ -120,22 +118,30 @@ bool Queue::Upload(const UUID& local_report_id) {
   return false;
 }
 
-void Queue::UploadAll() {
+size_t Queue::UploadAll() {
   std::vector<UUID> new_pending_reports;
   for (const auto& local_report_id : pending_reports_) {
     if (!Upload(local_report_id)) {
       new_pending_reports.push_back(local_report_id);
     }
   }
+
   pending_reports_.swap(new_pending_reports);
+
+  // |new_pending_reports| now contains the pending reports before attempting to upload them.
+  return new_pending_reports.size() - pending_reports_.size();
 }
 
-void Queue::ArchiveAll() {
+size_t Queue::ArchiveAll() {
+  size_t successful = 0;
   for (const auto& local_report_id : pending_reports_) {
-    database_->Archive(local_report_id);
+    if (database_->Archive(local_report_id)) {
+      ++successful;
+    }
   }
 
   pending_reports_.clear();
+  return successful;
 }
 
 // The queue is inheritly conservative with uploading crash reports meaning that a report that is
@@ -163,8 +169,9 @@ void Queue::ProcessAllEveryHour() {
   if (const auto status = PostDelayedTask(
           dispatcher_,
           [this] {
-            FX_LOGS(INFO) << "Hourly processing of pending crash reports queue";
-            ProcessAll();
+            if (ProcessAll() != 0) {
+              FX_LOGS(INFO) << "Hourly processing of pending crash reports queue";
+            }
             ProcessAllEveryHour();
           },
           zx::hour(1));

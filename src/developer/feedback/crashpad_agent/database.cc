@@ -115,6 +115,11 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   const UUID local_report_id = upload_report->GetUUID();
 
   inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
+
+  // We need to clean up before finalizing the report in the crashpad database as the operation may
+  // fail.
+  CleanUp(local_report_id);
+
   if (const auto status =
           database_->RecordUploadComplete(upload_report->TransferUploadReport(), server_report_id);
       status != OperationStatus::kNoError) {
@@ -124,13 +129,15 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
     return false;
   }
 
-  CleanUp(local_report_id);
   return true;
 }
 
 bool Database::Archive(const crashpad::UUID& local_report_id) {
   FX_LOGS(INFO) << fxl::StringPrintf("Archiving local crash report, ID %s, under %s",
                                      local_report_id.ToString().c_str(), kCrashpadDatabasePath);
+  // We need to clean up before finalizing the report in the crashpad database as the operation may
+  // fail.
+  CleanUp(local_report_id);
 
   inspect_manager_->MarkReportAsArchived(local_report_id.ToString());
 
@@ -143,7 +150,6 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
     return false;
   }
 
-  CleanUp(local_report_id);
   return true;
 }
 
