@@ -25,14 +25,12 @@ class MockSimpleAudio : public SimpleAudioStream {
 
   MockSimpleAudio(zx_device_t* parent) : SimpleAudioStream(parent, false /* is input */) {}
 
-  zx_status_t SetPlugState(bool plugged) {
-    ScopedToken t(domain_token());  // Not true, asserted here to simplify testing.
-    return SimpleAudioStream::SetPlugState(plugged);
-  }
-
-  void GetPlugState(audio_pd_notify_flags_t* flags) {
-    ScopedToken t(domain_token());  // Not true, asserted here to simplify testing.
-    *flags = pd_flags_;
+  zx_status_t PostSetPlugState(bool plugged) {
+    async::PostTask(dispatcher(), [this, plugged]() {
+      ScopedToken t(domain_token());
+      SimpleAudioStream::SetPlugState(plugged);
+    });
+    return ZX_OK;
   }
 
  protected:
@@ -252,13 +250,11 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   channel_client1->SetStreamChannel(std::move(channel_wrap1->ch));
   channel_client2->SetStreamChannel(std::move(channel_wrap2->ch));
 
-  server->SetPlugState(true);
-
   audio_stream_cmd_plug_detect_resp resp = {};
   channel_client1->GetPlugState(&resp, false);
-  ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY | AUDIO_PDNF_PLUGGED);
+  ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY);
   channel_client2->GetPlugState(&resp, true);
-  ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY | AUDIO_PDNF_PLUGGED);
+  ASSERT_EQ(resp.flags, AUDIO_PDNF_CAN_NOTIFY);
 }
 
 TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
@@ -267,7 +263,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_NOT_NULL(server);
 
   Device::SyncClient client(std::move(tester.FidlClient()));
-  // We get multiple channels from the one FIDL channel acquired via FidlClient() using GetChannel.
+  // We get multiple channels from the one FIDL channel acquired via FidlClient() using
+  // GetChannel.
   Device::ResultOf::GetChannel channel_wrap1 = client.GetChannel();
   Device::ResultOf::GetChannel channel_wrap2 = client.GetChannel();
   Device::ResultOf::GetChannel channel_wrap3 = client.GetChannel();
@@ -295,19 +292,26 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
     return client_notified ? 0 : 1;
   };
 
+  audio_stream_cmd_plug_detect_resp_t resp = {};
+  // GetPlugState() enables notifications now, so the channel message from SetPlugState is ready
+  // when PlugMonitor is run.  GetPlugState is a blocking call.
+  channel_client1->GetPlugState(&resp, true);
+  channel_client2->GetPlugState(&resp, true);
+  channel_client3->GetPlugState(&resp, true);
+  server->PostSetPlugState(true);
+
   thrd_t thread1, thread2, thread3;
   ASSERT_OK(thrd_create_with_name(&thread1, f, channel_client1.get(), "test-thread-1"));
   ASSERT_OK(thrd_create_with_name(&thread2, f, channel_client2.get(), "test-thread-2"));
   ASSERT_OK(thrd_create_with_name(&thread3, f, channel_client3.get(), "test-thread-3"));
 
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));  // Start unplugged, and plug after 100ms.
-  server->SetPlugState(true);
-
-  int result = 1;
+  int result = -1;
   thrd_join(thread1, &result);
   ASSERT_EQ(result, 0);
+  result = -1;
   thrd_join(thread2, &result);
   ASSERT_EQ(result, 0);
+  result = -1;
   thrd_join(thread3, &result);
   ASSERT_EQ(result, 0);
 }
