@@ -23,19 +23,41 @@ bool InspectNodeManager::ManagedNodeBase::HasChild(const std::string& child) con
 InspectNodeManager::ManagedNode& InspectNodeManager::ManagedNodeBase::GetChild(
     const std::string& child) {
   if (!HasChild(child)) {
-    children_.emplace(child, ManagedNode(GetNode()->CreateChild(child)));
+    children_.emplace(child, ManagedNode(GetNode().CreateChild(child)));
   }
   return children_.at(child);
 }
 
-Node* InspectNodeManager::Get(const std::string& path) {
-  ManagedNodeBase* parent = &root_;
+bool InspectNodeManager::ManagedNodeBase::RemoveChild(const std::string& child) {
+  return children_.erase(child) != 0;
+}
+
+Node& InspectNodeManager::Get(const std::string& path) {
+  ManagedNodeBase* node = &root_;
   for (const auto& child : SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty)) {
     // Create the child if it doesn't exist, then get the child.
-    parent = &parent->GetChild(child);
+    node = &node->GetChild(child);
   }
 
-  return parent->GetNode();
+  return node->GetNode();
+}
+
+bool InspectNodeManager::Remove(const std::string& path) {
+  ManagedNodeBase* node = &root_;
+
+  const std::vector<std::string> split_path =
+      SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty);
+
+  // Find the parent node.
+  for (size_t i = 0; i < split_path.size() - 1; ++i) {
+    // Return early if a node in the path doesn't exist.
+    if (!node->HasChild(split_path[i])) {
+      return false;
+    }
+    node = &node->GetChild(split_path[i]);
+  }
+
+  return node->RemoveChild(split_path.back());
 }
 
 }  // namespace feedback

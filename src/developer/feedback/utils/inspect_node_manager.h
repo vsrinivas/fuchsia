@@ -23,7 +23,12 @@ class InspectNodeManager {
   InspectNodeManager(inspect::Node* root_node) : root_(root_node) {}
 
   // Get the Inspect node at the provided path, creating nodes along the way if need be.
-  inspect::Node* Get(const std::string& path);
+  inspect::Node& Get(const std::string& path);
+
+  // Remove an Inspect node at the provided path.
+  //
+  // Return false, if any node in the path doesn't exist.
+  bool Remove(const std::string& path);
 
  private:
   class ManagedNode;
@@ -36,7 +41,10 @@ class InspectNodeManager {
     // Get a child of the current node. If the child doesn't exist, create it.
     ManagedNode& GetChild(const std::string& child);
 
-    virtual inspect::Node* GetNode() = 0;
+    // Remove a child of the current node. If the child doesn't exist, return false.
+    bool RemoveChild(const std::string& child);
+
+    virtual inspect::Node& GetNode() = 0;
 
    protected:
     std::map<std::string, ManagedNode> children_;
@@ -52,7 +60,7 @@ class InspectNodeManager {
     ManagedNode(const ManagedNode& other) = delete;
     ManagedNode& operator=(const ManagedNode other) = delete;
 
-    inspect::Node* GetNode() override { return &node_; }
+    inspect::Node& GetNode() override { return node_; }
 
    private:
     inspect::Node node_;
@@ -62,7 +70,7 @@ class InspectNodeManager {
    public:
     RootManagedNode(inspect::Node* root_node) : node_(root_node) {}
 
-    inspect::Node* GetNode() override { return node_; }
+    inspect::Node& GetNode() override { return *node_; }
 
    private:
     inspect::Node* node_;

@@ -46,7 +46,7 @@ bool InspectManager::AddReport(const std::string& program_name,
 
   reports_.emplace(local_report_id, report_path);
   reports_.at(local_report_id).creation_time_ =
-      node_manager_.Get(report_path)->CreateString("creation_time", CurrentTime());
+      node_manager_.Get(report_path).CreateString("creation_time", CurrentTime());
 
   return true;
 }
@@ -60,7 +60,7 @@ bool InspectManager::IncrementUploadAttempt(const std::string& local_report_id) 
   Report& report = reports_.at(local_report_id);
 
   if (!report.upload_attempts_) {
-    report.upload_attempts_ = node_manager_.Get(report.Path())->CreateUint("upload_attempts", 1u);
+    report.upload_attempts_ = node_manager_.Get(report.Path()).CreateUint("upload_attempts", 1u);
   } else {
     report.upload_attempts_.Add(1u);
   }
@@ -76,14 +76,14 @@ bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
   }
 
   Report& report = reports_.at(local_report_id);
-  report.final_state_ = node_manager_.Get(report.Path())->CreateString("final_state", "uploaded");
+  report.final_state_ = node_manager_.Get(report.Path()).CreateString("final_state", "uploaded");
 
   const std::string server_path = JoinPath(report.Path(), "crash_server");
 
-  inspect::Node* server = node_manager_.Get(server_path);
+  inspect::Node& server = node_manager_.Get(server_path);
 
-  report.server_id_ = server->CreateString("id", server_properties_report_id);
-  report.server_creation_time_ = server->CreateString("creation_time", CurrentTime());
+  report.server_id_ = server.CreateString("id", server_properties_report_id);
+  report.server_creation_time_ = server.CreateString("creation_time", CurrentTime());
 
   return true;
 }
@@ -95,7 +95,7 @@ bool InspectManager::MarkReportAsArchived(const std::string& local_report_id) {
   }
 
   Report& report = reports_.at(local_report_id);
-  report.final_state_ = node_manager_.Get(report.Path())->CreateString("final_state", "archived");
+  report.final_state_ = node_manager_.Get(report.Path()).CreateString("final_state", "archived");
 
   return true;
 }
@@ -108,7 +108,7 @@ bool InspectManager::MarkReportAsGarbageCollected(const std::string& local_repor
 
   Report& report = reports_.at(local_report_id);
   report.final_state_ =
-      node_manager_.Get(report.Path())->CreateString("final_state", "garbage_collected");
+      node_manager_.Get(report.Path()).CreateString("final_state", "garbage_collected");
 
   return true;
 }
@@ -117,16 +117,16 @@ void InspectManager::ExposeConfig(const feedback::Config& config) {
   auto* crashpad_database = &config_.crashpad_database;
   auto* crash_server = &config_.crash_server;
 
-  inspect::Node* server = node_manager_.Get("/config/crash_server");
+  inspect::Node& server = node_manager_.Get("/config/crash_server");
 
   crashpad_database->max_size_in_kb =
       node_manager_.Get("/config/crashpad_database")
-          ->CreateUint(kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
+          .CreateUint(kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
-  crash_server->upload_policy = server->CreateString(kCrashServerUploadPolicyKey,
-                                                     ToString(config.crash_server.upload_policy));
+  crash_server->upload_policy =
+      server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
   if (config.crash_server.url) {
-    crash_server->url = server->CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
+    crash_server->url = server.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
   }
 }
 
@@ -146,7 +146,7 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
   // needed.
   if (!settings_.upload_policy) {
     settings_.upload_policy =
-        node_manager_.Get("/settings")->CreateString("upload_policy", ToString(upload_policy));
+        node_manager_.Get("/settings").CreateString("upload_policy", ToString(upload_policy));
   } else {
     settings_.upload_policy.Set(ToString(upload_policy));
   }

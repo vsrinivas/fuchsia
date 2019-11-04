@@ -55,15 +55,15 @@ class InspectNodeManagerTest : public testing::Test {
 };
 
 TEST_F(InspectNodeManagerTest, Check_Get_RootNode) {
-  EXPECT_TRUE(inspect_node_manager_->Get(""));
-  EXPECT_TRUE(inspect_node_manager_->Get("/"));
+  inspect_node_manager_->Get("");
+  inspect_node_manager_->Get("/");
   EXPECT_THAT(InspectTree(), ChildrenMatch(IsEmpty()));
 }
 
 TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelOneNodes) {
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->Get("/child2"));
-  EXPECT_TRUE(inspect_node_manager_->Get("/child3"));
+  inspect_node_manager_->Get("/child1");
+  inspect_node_manager_->Get("/child2");
+  inspect_node_manager_->Get("/child3");
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches("child1")),
@@ -73,8 +73,8 @@ TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelOneNodes) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Get_NodeAlreadyExists) {
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
+  inspect_node_manager_->Get("/child1");
+  inspect_node_manager_->Get("/child1");
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches("child1")),
@@ -82,7 +82,7 @@ TEST_F(InspectNodeManagerTest, Check_Get_NodeAlreadyExists) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Get_OneLevelTwoNode) {
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1"));
+  inspect_node_manager_->Get("/child1/grandchild1.1");
 
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(
@@ -91,9 +91,9 @@ TEST_F(InspectNodeManagerTest, Check_Get_OneLevelTwoNode) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelTwoNodes) {
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1"));
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.2"));
+  inspect_node_manager_->Get("/child1");
+  inspect_node_manager_->Get("/child1/grandchild1.1");
+  inspect_node_manager_->Get("/child1/grandchild1.2");
 
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("child1")),
@@ -104,7 +104,7 @@ TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelTwoNodes) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Get_OneLevelThreeNode) {
-  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1"));
+  inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
 
   EXPECT_THAT(
       InspectTree(),
@@ -117,10 +117,9 @@ TEST_F(InspectNodeManagerTest, Check_Get_OneLevelThreeNode) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
-  inspect::Node* node = inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
-  ASSERT_TRUE(node);
+  inspect::Node& node = inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
 
-  inspect::StringProperty s = node->CreateString("string", "value");
+  inspect::StringProperty s = node.CreateString("string", "value");
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(
                   AllOf(NodeMatches(NameMatches("child1")),
@@ -131,10 +130,7 @@ TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
                                       PropertyList(ElementsAre(StringIs("string", "value")))))))),
                         }))))));
 
-  node = inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
-  ASSERT_TRUE(node);
-
-  inspect::UintProperty u = node->CreateUint("uint", 10u);
+  inspect::UintProperty u = node.CreateUint("uint", 10u);
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("child1")),
                                               ChildrenMatch(UnorderedElementsAreArray({
@@ -146,6 +142,45 @@ TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
                                                                 UintIs("uint", 10u),
                                                             }))))))),
                                               }))))));
+}
+
+TEST_F(InspectNodeManagerTest, Check_Remove_LevelOneNode) {
+  inspect_node_manager_->Get("/child1");
+
+  EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
+                                 NodeMatches(NameMatches("child1")),
+                             })));
+
+  EXPECT_TRUE(inspect_node_manager_->Remove("/child1"));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsEmpty()));
+}
+
+TEST_F(InspectNodeManagerTest, Check_Remove_LevelTwoNode) {
+  inspect_node_manager_->Get("/child1/grandchild1.1");
+
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(ElementsAre(
+                  AllOf(NodeMatches(NameMatches("child1")),
+                        ChildrenMatch(ElementsAre(NodeMatches(NameMatches("grandchild1.1"))))))));
+
+  EXPECT_TRUE(inspect_node_manager_->Remove("/child1/grandchild1.1"));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("child1")),
+                                                             ChildrenMatch(IsEmpty())))));
+}
+
+TEST_F(InspectNodeManagerTest, Attempt_Remove_NodesDoNotExist) {
+  // Try to remove a node that doesn't exist, then create it.
+  EXPECT_FALSE(inspect_node_manager_->Remove("/child1"));
+  inspect_node_manager_->Get("/child1");
+
+  // Try to remove a node that doesn't exist, then create it.
+  EXPECT_FALSE(inspect_node_manager_->Remove("/child1/grandchild1.1"));
+  inspect_node_manager_->Get("/child1/grandchild1.1");
+
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(ElementsAre(
+                  AllOf(NodeMatches(NameMatches("child1")),
+                        ChildrenMatch(ElementsAre(NodeMatches(NameMatches("grandchild1.1"))))))));
 }
 
 }  // namespace
