@@ -16,26 +16,53 @@ protocol Registry {
     /// Set shortcut activation listener.
     SetView(fuchsia.ui.views.ViewRef view_ref, Listener listener);
 
-    /// Register new trigger for the listener.
+    /// Register new shortcut activation listener.
     RegisterShortcut(Shortcut shortcut) -> ();
 };
 
 /// Shortcut descriptor.
 table Shortcut {
-    /// Client-generated identifier, to distinguish shortcuts triggered.
+    /// Client-generated identifier, to distinguish activated shortcuts.
     1: uint32 id;
 
-    /// Keys or locks to be activated for triggering the shortcut.
+    /// Modifier keys to be enabled for the shortcut activation.
     2: fuchsia.ui.input2.Modifiers modifiers;
 
-    /// Optional: Key to be pressed to trigger the shortcut.
-    /// Omit for modifier-only shortcuts.
+    /// Optional: Key to be pressed to activate the shortcut.
+    /// If not set, shortcut is interpreted as a modifiers-only shortcut.
     3: fuchsia.ui.input2.Key key;
 
-    /// When this flag is set to true, the parent's shortcuts take priority
+    /// Optional: When set to true, parent's shortcuts take priority
     /// and are matched before those of its children.
-    /// Defaults to false.
+    /// When use_priority is not set, shortcut uses use_priority == false.
     4: bool use_priority;
+
+    /// Optional: Shortcut activation trigger.
+    /// When trigger is not set, shortcuts are activated on Trigger.KEY_PRESSED.
+    /// Activating a shortcut on one trigger (e.g. Trigger.KEY_PRESSED) will disable
+    /// matching keys used for it for other Trigger options for other shortcuts.
+    ///
+    /// Example:
+    ///   Shortcuts registered for:
+    ///     1. Modifiers.META + Key.Q with with Trigger.KEY_PRESSED
+    ///     2. Modifiers.META with Trigger.KEY_PRESSED_AND_RELEASED
+    ///   In this case, pressing Meta + Q will activate only shortcut (1), while
+    ///   pressing and releasing Meta key alone will activate shortcut (2).
+    5: Trigger trigger;
+};
+
+/// Shortcut activation variations.
+/// Enumerates keyboard interaction options for shortcuts' activations.
+enum Trigger {
+    /// Activate shortcut on key press.
+    KEY_PRESSED = 1;
+
+    /// Activate shortcut on key release which is preceded by a key press.
+    KEY_PRESSED_AND_RELEASED = 2;
+
+    // TODO: add later when needed
+    // KEY_LONG_PRESSED = 3;
+    // KEY_PRESSED_REPEATEDLY = 4;
 };
 
 /// Client should implement this protocol to get notified of shortcut activation.

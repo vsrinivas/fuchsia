@@ -185,6 +185,7 @@ mod test {
             modifiers: Some(ui_input::Modifiers::Shift),
             key: Some(ui_input::Key::A),
             use_priority: None,
+            trigger: None,
         };
         registry.register_shortcut(shortcut).await.expect("register_shortcut shift");
 
@@ -194,6 +195,7 @@ mod test {
             modifiers: Some(ui_input::Modifiers::RightControl),
             key: Some(ui_input::Key::B),
             use_priority: None,
+            trigger: None,
         };
         registry.register_shortcut(shortcut).await.expect("register_shortcut right_control");
 

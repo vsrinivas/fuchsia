@@ -44,6 +44,7 @@ async fn shortcut_detection() -> Result<(), Error> {
         modifiers: None,
         key: Some(ui_input::Key::A),
         use_priority: None,
+        trigger: None,
     };
     registry.register_shortcut(shortcut).await.expect("register_shortcut");
 
