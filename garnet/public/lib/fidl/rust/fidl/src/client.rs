@@ -478,6 +478,9 @@ impl ClientInner {
 
             let (header, body_bytes) =
                 decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            if !header.is_compatible() {
+                return Err(Error::IncompatibleMagicNumber(header.magic_number));
+            }
             if header.ordinal == EPITAPH_ORDINAL {
                 // Received an epitaph. Record this so that future operations receive the same
                 // epitaph.
@@ -940,6 +943,32 @@ mod tests {
                 stream.into_future()
             })
             .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"));
+
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let recv =
+            recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
+
+        recv.await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn event_incompatible_format() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = fasync::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // Send the event from the server
+        let server = fasync::Channel::from_channel(server_end).unwrap();
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        let header = TransactionHeader { tx_id: 0, flags: [0; 3], magic_number: 0, ordinal: 5 };
+        encode_transaction(header, bytes, handles);
+        server.write(bytes, handles).expect("Server channel write failed");
+        drop(server);
+
+        let mut event_receiver = client.take_event_receiver();
+        let recv = event_receiver.next().map(|event| {
+            assert_matches!(event, Some(Err(crate::Error::IncompatibleMagicNumber(0))))
+        });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let recv =

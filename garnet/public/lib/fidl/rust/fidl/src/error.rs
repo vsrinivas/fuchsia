@@ -27,6 +27,10 @@ pub enum Error {
     #[fail(display = "Invalid header for a FIDL buffer.")]
     InvalidHeader,
 
+    /// Unsupported wire format.
+    #[fail(display = "Incompatible wire format magic number: {}.", _0)]
+    IncompatibleMagicNumber(u8),
+
     /// Invalid FIDL buffer.
     #[fail(display = "Invalid FIDL buffer.")]
     Invalid,

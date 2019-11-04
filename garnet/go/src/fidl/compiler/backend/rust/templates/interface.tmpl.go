@@ -458,6 +458,9 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+			if !header.is_compatible() {
+				return futures::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			futures::Poll::Ready(Some(match header.ordinal {

@@ -2591,6 +2591,14 @@ pub struct TransactionHeader {
     pub ordinal: u64,
 }
 
+impl TransactionHeader {
+    /// Returns whether the message containing this TransactionHeader is in a
+    /// compatible wire format
+    pub fn is_compatible(&self) -> bool {
+        self.magic_number == MAGIC_NUMBER_INITIAL
+    }
+}
+
 fidl_struct! {
     name: TransactionHeader,
     members: [
