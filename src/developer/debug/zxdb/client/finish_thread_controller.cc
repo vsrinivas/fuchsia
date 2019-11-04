@@ -37,7 +37,10 @@ FinishThreadController::~FinishThreadController() = default;
 
 FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     debug_ipc::ExceptionType stop_type,
-    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+    const std::vector<fxl::WeakPtr<Breakpoint>>& input_hit_breakpoints) {
+  // May need to get cleared before passing to sub-controllers.
+  auto hit_breakpoints = input_hit_breakpoints;
+
   if (finish_physical_controller_) {
     Log("Dispatching to physical frame finisher.");
     if (auto op = finish_physical_controller_->OnThreadStop(stop_type, hit_breakpoints);
@@ -56,10 +59,10 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
       return kStopDone;  // No inline frames to step out of, we're done.
     }
 
-    // Clear the exception type since it will typically be a software
-    // breakpoint from the finish controller which the step controllers don't
-    // expect.
+    // Clear the exception type and breakpoint information since it will typically be a software
+    // breakpoint from the finish controller which the step controllers don't expect.
     stop_type = debug_ipc::ExceptionType::kNone;
+    hit_breakpoints.clear();
   }
 
   if (step_over_controller_) {
@@ -70,6 +73,11 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
 
     // Current step controller said stop so it's done.
     step_over_controller_.reset();
+
+    // As above, the exception and breakpoints have been "consumed" by the step over controller,
+    // don't forward to the new one we're creating below.
+    stop_type = debug_ipc::ExceptionType::kNone;
+    hit_breakpoints.clear();
   }
 
   // See if there's an inline frame that needs stepping out of.

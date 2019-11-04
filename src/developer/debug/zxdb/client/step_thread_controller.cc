@@ -128,9 +128,10 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // A "none" type means to ignore the exception type and evaluate the
     // current code location. It is used when this controller is nested. A
     // synthetic exception is used to step into inline functions.
-    if (stop_type != debug_ipc::ExceptionType::kNone &&
-        stop_type != debug_ipc::ExceptionType::kSynthetic &&
-        stop_type != debug_ipc::ExceptionType::kSingleStep) {
+    if ((stop_type != debug_ipc::ExceptionType::kNone &&
+         stop_type != debug_ipc::ExceptionType::kSynthetic &&
+         stop_type != debug_ipc::ExceptionType::kSingleStep) ||
+        !hit_breakpoints.empty()) {
       Log("Not our exception type, stop is somebody else's.");
       return kUnexpected;
     }

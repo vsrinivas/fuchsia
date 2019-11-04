@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
 
@@ -142,6 +143,91 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
+}
+
+// This sets up a situation where the finish controller creates a "step over" controller in response
+// to a breakpoint hit exception. The step over controller should not see the breakpoint hit and
+// should continue as if it was not created from within a breakpoint hit.
+//
+// The situation where this can happen is:
+//
+//   FinishThreadController (FINISH#1) creates a new StepOverThreadController (OVER#1).
+//     OVER finds a physical function call and
+//       Creates a FinishThreadController (FINISH#2) to get out of it.
+//       FINISH#2 creates a FinishPhysicalFrameThreadController (PHYSICAL) to get out of it.
+//   The breakpoint for PHYSICAL is hit.
+//     FINISH#2 completes.
+//     OVER#1 completes.
+//       FINISH#1 notices a new inline subframe immediately following the first.
+//       FINISH#1 creates a new StepOverThreadController (OVER#2)
+TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline2) {
+  // Stack:
+  //   [0] MiddleInline2  <- OVER#1
+  //   [1] MiddleInline1  <- finishing this one.
+  //   [2] Middle
+  //   [3] Bottom
+  auto stack = GetStack();
+  stack.erase(stack.begin(), stack.begin() + 2);  // Drop the "top" frames from the mock input.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+
+  // Create FINISH#1 from above. This should notice we're in an inline frame, create OVER#1, and
+  // continue.
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+  bool continued = false;
+  thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
+
+  // Simulate a physical frame call.
+  //
+  // Stack:
+  //   [0] Top            <- PHYSICAL
+  //   [1] MiddleInline2  <- OVER#1
+  //   [2] MiddleInline1  <- finishing this one.
+  //   [3] Middle
+  //   [4] Bottom
+  stack = GetStack();
+  stack.erase(stack.begin(), stack.begin() + 1);  // Drop the top inline frame from the mock input.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+  // That should have created PHYSICAL which will set a breakpoint on the return addr.
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(1, mock_remote_api()->breakpoint_add_count());
+
+  // Simulate a return from the physical frame call to a new inline frame
+  //
+  // Stack:
+  //   [1] MiddleInline2.2  <- OVER#2
+  //   [2] MiddleInline1    <- finishing this one.
+  //   [3] Middle
+  //   [4] Bottom
+  stack = GetStack();
+  stack.erase(stack.begin(), stack.begin() + 2);  // Drop both "top" frames.
+
+  // Fix up the location so the MiddleInlin2 becomes MiddleInline2.2, a different inline function
+  // immediately following it.
+  const AddressRange middle_2_2_range(kMiddleInline2FunctionRange.end(),
+                                      kMiddleInline2FunctionRange.end() + 2);
+  auto middle2_2_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  middle2_2_func->set_assigned_name("MiddleInline2.2");
+  middle2_2_func->set_code_ranges(AddressRanges(middle_2_2_range));
+  stack[0]->set_location(Location(middle_2_2_range.begin(), kMiddleInline2FileLine, 0,
+                                  SymbolContext::ForRelativeAddresses(), middle2_2_func));
+
+  // Send the software breakpoint exception for PHYSICAL to finish.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSoftware,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+  // That should have finished PHYSICAL (deleting the temporary breakpoint) and OVER#1. Then started
+  // stepping over OVER#2 which should continue.
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
 }
 
 }  // namespace zxdb

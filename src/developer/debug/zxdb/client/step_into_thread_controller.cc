@@ -103,7 +103,11 @@ ThreadController::StopOp StepIntoThreadController::OnThreadStop(
       AddressRanges(AddressRange(current_ip, after_prologue.address())));
   // Init for this object is guaranteed synchronous so we don't have to wait for the callback.
   skip_prologue_->InitWithThread(thread(), [](const Err&) {});
-  return skip_prologue_->OnThreadStop(stop_type, hit_breakpoints);
+
+  // Don't pass the exception type or breakpoints to the new controller. Depending on how we got
+  // here, the exception type may not match what the step controller expects. it just needs to know
+  // that execution stopped.
+  return skip_prologue_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
 }
 
 }  // namespace zxdb

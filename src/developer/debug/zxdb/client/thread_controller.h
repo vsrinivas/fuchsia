@@ -132,6 +132,18 @@ class ThreadController {
   // Notification that the thread has stopped. The return value indicates what
   // the thread should do in response.
   //
+  // The exception type may be "kNone" if the exception type shouldn't matter to this controller.
+  // Controllers should treak "kNone" as being relevant to themselves. When a controller is used
+  // as a component of another controller, the exception type may have been "consumed" and a
+  // nested controller merely needs to evaluate its opinion of the current location.
+  //
+  // The stop type and breakpoint information should be passed to the first thread controller
+  // that handles the stop (this might be a sub controller if a controller is delegating the current
+  // execution to another one). Other controllers that might handle the stop (say, if a second
+  // sub-controller is created when the first one is done) don't care and might get confused by stop
+  // information originally handled by another one. In this second case, "kNone" and an empty
+  // breakpoint list should be sent to OnThreadStop().
+  //
   // If the ThreadController returns |kStop|, its assumed the controller has
   // completed its job and it will be deleted. |kContinue| doesn't necessarily
   // mean the thread will continue, as there could be multiple controllers
