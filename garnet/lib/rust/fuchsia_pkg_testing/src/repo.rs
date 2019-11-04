@@ -12,12 +12,12 @@ use {
         MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
         RepositoryKey,
     },
-    fidl_fuchsia_sys::{ComponentControllerProxy, LauncherProxy},
+    fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, AppBuilder, Output, Stdio},
+    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::{self as zx, sys::zx_handle_t, DurationNum, Status},
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         future::BoxFuture,
@@ -30,6 +30,7 @@ use {
         fmt,
         fs::{self, File},
         io::{self, Cursor, Read, Write},
+        os::unix::io::AsRawFd,
         path::PathBuf,
         sync::Arc,
         time::Duration,
@@ -331,8 +332,8 @@ impl Repository {
         let indir = tempfile::tempdir().context("create /in")?;
         let port_file_dir = tempfile::tempdir().unwrap();
         let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .stdout(Stdio::MakePipe)
-            .stderr(Stdio::MakePipe)
+            .stdout(stdout_handle())
+            .stderr(stdout_handle())
             .arg("serve")
             .arg("-l=127.0.0.1:0")
             .arg("-f=/port-file-dir/port-file")
@@ -352,12 +353,11 @@ impl Repository {
         }
 
         let pm = pm.spawn(launcher)?;
-        let pm_controller = pm.controller().clone();
 
         // Wait for "pm serve" to either create the port file (giving up after a 20 seconds) or
         // exit, whichever happens first.
 
-        let wait_pm_down = pm.wait_with_output();
+        let wait_pm_down = ExitStatus::from_event_stream(pm.controller().take_event_stream());
 
         // Under high load, a fast retry timeout can prevent pm from starting up. Start out fast,
         // but slow down if pm doesn't come up quickly.
@@ -389,22 +389,16 @@ impl Repository {
         let (wait_pm_down, port) = match future::select(wait_pm_up, wait_pm_down).await {
             future::Either::Left((res, wait_pm_down)) => match res {
                 Err(e) => {
-                    pm_controller.kill().unwrap();
-                    let output = wait_pm_down.await.unwrap().ok();
-                    panic!(
-                        "'pm serve' took too long to create the port file {:?}\n{:?}",
-                        e, output
-                    );
+                    panic!("'pm serve' took too long to create the port file {:?}", e,);
                 }
                 Ok(port) => (wait_pm_down.boxed(), port),
             },
-            future::Either::Right((output, _)) => {
-                let output = output.unwrap().ok();
-                panic!("'pm serve' exited too soon {:?}", output,);
+            future::Either::Right((exit_status, _)) => {
+                panic!("'pm serve' exited too soon: {:?}", exit_status);
             }
         };
 
-        Ok(ServedRepository { repo: self, port, _indir: indir, pm: pm_controller, wait_pm_down })
+        Ok(ServedRepository { repo: self, port, _indir: indir, pm, wait_pm_down })
     }
 }
 
@@ -413,8 +407,8 @@ pub struct ServedRepository<'a> {
     repo: &'a Repository,
     port: u16,
     _indir: TempDir,
-    pm: ComponentControllerProxy,
-    wait_pm_down: BoxFuture<'a, Result<Output, Error>>,
+    pm: App,
+    wait_pm_down: BoxFuture<'a, Result<ExitStatus, Error>>,
 }
 
 impl<'a> ServedRepository<'a> {
@@ -445,7 +439,7 @@ impl<'a> ServedRepository<'a> {
     }
 
     /// Kill the pm component and wait for it to exit.
-    pub async fn stop(self) {
+    pub async fn stop(mut self) {
         self.pm.kill().expect("pm to have been running");
         self.wait_pm_down.await.expect("pm to exit");
     }
@@ -463,6 +457,20 @@ pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let body = response.into_body().compat().try_concat().await?.collect();
 
     Ok(body)
+}
+
+fn clone_fd(raw_fd: impl AsRawFd) -> Result<zx::Handle, zx::Status> {
+    let raw_fd = raw_fd.as_raw_fd();
+    let mut handle: zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
+    let handle_ptr: *mut zx_handle_t = &mut handle;
+    // `handle_ptr` is the only reference to `handle`.
+    Status::ok(unsafe { fdio::fdio_sys::fdio_fd_clone(raw_fd, handle_ptr) })?;
+    // No other value owns `handle`.
+    Ok(unsafe { zx::Handle::from_raw(handle) })
+}
+
+fn stdout_handle() -> zx::Handle {
+    clone_fd(io::stdout()).unwrap()
 }
 
 #[cfg(test)]
