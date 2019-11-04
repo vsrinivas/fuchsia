@@ -1032,40 +1032,6 @@ const ZxPacketSignal* ZxPacketSignal::GetClass() {
   return instance_;
 }
 
-class ZxPacketException : public Class<zx_packet_exception_t> {
- public:
-  static const ZxPacketException* GetClass();
-
-  static uint64_t pid(const zx_packet_exception_t* from) { return from->pid; }
-  static uint64_t tid(const zx_packet_exception_t* from) { return from->tid; }
-  static uint64_t reserved0(const zx_packet_exception_t* from) { return from->reserved0; }
-  static uint64_t reserved1(const zx_packet_exception_t* from) { return from->reserved1; }
-
- private:
-  ZxPacketException() : Class("zx_packet_exception_t") {
-    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
-        "pid", SyscallType::kUint64, pid));
-    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
-        "tid", SyscallType::kUint64, tid));
-    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
-        "reserved0", SyscallType::kUint64, reserved0));
-    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
-        "reserved1", SyscallType::kUint64, reserved1));
-  }
-  ZxPacketException(const ZxPacketException&) = delete;
-  ZxPacketException& operator=(const ZxPacketException&) = delete;
-  static ZxPacketException* instance_;
-};
-
-ZxPacketException* ZxPacketException::instance_ = nullptr;
-
-const ZxPacketException* ZxPacketException::GetClass() {
-  if (instance_ == nullptr) {
-    instance_ = new ZxPacketException;
-  }
-  return instance_;
-}
-
 class ZxPacketGuestBell : public Class<zx_packet_guest_bell_t> {
  public:
   static const ZxPacketGuestBell* GetClass();
@@ -1707,9 +1673,6 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
   static zx_status_t status(const zx_port_packet_t* from) { return from->status; }
   static const zx_packet_user_t* user(const zx_port_packet_t* from) { return &from->user; }
   static const zx_packet_signal_t* signal(const zx_port_packet_t* from) { return &from->signal; }
-  static const zx_packet_exception_t* exception(const zx_port_packet_t* from) {
-    return &from->exception;
-  }
   static const zx_packet_guest_bell_t* guest_bell(const zx_port_packet_t* from) {
     return &from->guest_bell;
   }
@@ -1732,8 +1695,6 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
     return &from->page_request;
   }
 
-  static constexpr uint32_t kExceptionMask = 0xff;
-
  private:
   ZxPortPacket() : Class("zx_port_packet_t") {
     AddField(
@@ -1751,9 +1712,6 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_signal_t>>(
                  "signal", signal, ZxPacketSignal::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_SIGNAL_REP));
-    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_exception_t>>(
-                 "exception", exception, ZxPacketException::GetClass()))
-        ->DisplayIfMaskedEqual(type_field, kExceptionMask, uint32_t(ZX_PKT_TYPE_EXCEPTION(0)));
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_bell_t>>(
                  "guest_bell", guest_bell, ZxPacketGuestBell::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_BELL));
@@ -3785,25 +3743,6 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_task_bind_exception_port =
-        Add("zx_task_bind_exception_port", SyscallReturnType::kStatus);
-    // Arguments
-    auto handle = zx_task_bind_exception_port->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto port = zx_task_bind_exception_port->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto key = zx_task_bind_exception_port->Argument<uint64_t>(SyscallType::kUint64);
-    auto options = zx_task_bind_exception_port->Argument<uint32_t>(SyscallType::kUint32);
-    // Inputs
-    zx_task_bind_exception_port->Input<zx_handle_t>(
-        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
-    zx_task_bind_exception_port->Input<zx_handle_t>(
-        "port", std::make_unique<ArgumentAccess<zx_handle_t>>(port));
-    zx_task_bind_exception_port->Input<uint64_t>("key",
-                                                 std::make_unique<ArgumentAccess<uint64_t>>(key));
-    zx_task_bind_exception_port->Input<uint32_t>(
-        "options", std::make_unique<ArgumentAccess<uint32_t>>(options));
-  }
-
-  {
     Syscall* zx_task_suspend = Add("zx_task_suspend", SyscallReturnType::kStatus);
     // Arguments
     auto handle = zx_task_suspend->Argument<zx_handle_t>(SyscallType::kHandle);
@@ -3827,22 +3766,6 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_task_suspend_token->Output<zx_handle_t>(
         ZX_OK, "token", std::make_unique<ArgumentAccess<zx_handle_t>>(token));
-  }
-
-  {
-    Syscall* zx_task_resume_from_exception =
-        Add("zx_task_resume_from_exception", SyscallReturnType::kStatus);
-    // Arguments
-    auto handle = zx_task_resume_from_exception->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto port = zx_task_resume_from_exception->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto options = zx_task_resume_from_exception->Argument<uint32_t>(SyscallType::kUint32);
-    // Inputs
-    zx_task_resume_from_exception->Input<zx_handle_t>(
-        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
-    zx_task_resume_from_exception->Input<zx_handle_t>(
-        "port", std::make_unique<ArgumentAccess<zx_handle_t>>(port));
-    zx_task_resume_from_exception->Input<uint32_t>(
-        "options", std::make_unique<ArgumentAccess<uint32_t>>(options));
   }
 
   {

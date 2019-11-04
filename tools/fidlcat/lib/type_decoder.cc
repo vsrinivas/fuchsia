@@ -331,10 +331,6 @@ void PolicyTopicName(uint32_t topic, std::ostream& os) {
   }
 }
 
-constexpr uint32_t kExceptionMask = 0xff;
-constexpr int kExceptionNumberShift = 8;
-constexpr uint32_t kExceptionNumberMask = 0xff;
-
 #define PortPacketTypeNameCase(name) \
   case name:                         \
     os << #name;                     \
@@ -352,11 +348,6 @@ void PortPacketTypeName(uint32_t type, std::ostream& os) {
     PortPacketTypeNameCase(ZX_PKT_TYPE_INTERRUPT);
     PortPacketTypeNameCase(ZX_PKT_TYPE_PAGE_REQUEST);
     default:
-      if ((type & kExceptionMask) == ZX_PKT_TYPE_EXCEPTION(0)) {
-        os << "ZX_PKT_TYPE_EXCEPTION(" << ((type >> kExceptionNumberShift) & kExceptionNumberMask)
-           << ')';
-        return;
-      }
       os << "port_packet_type=" << type;
       return;
   }
