@@ -137,6 +137,12 @@ static zx_status_t get_interrupt_controller_info(fuchsia_sysinfo_InterruptContro
 
 #endif  // __aarch64__
 
+// Setup a guest in fixture |test|.
+//
+// |start| and |end| point to the start and end of the code that will be copied into the guest for
+// execution. If |start| and |end| are null, no code is copied.
+//
+// Returns true on success, false on failure.
 static bool setup(test_t* test, const char* start, const char* end) {
   BEGIN_HELPER;
 
@@ -174,7 +180,10 @@ static bool setup(test_t* test, const char* start, const char* end) {
   *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
   entry = GUEST_ENTRY;
 #endif  // __x86_64__
-  memcpy((void*)(test->host_addr + entry), start, end - start);
+
+  if (start != nullptr && end != nullptr) {
+    memcpy((void*)(test->host_addr + entry), start, end - start);
+  }
 
   status = zx::vcpu::create(test->guest, 0, entry, &test->vcpu);
   test->supported = status != ZX_ERR_NOT_SUPPORTED;
@@ -962,6 +971,40 @@ static bool vcpu_extended_registers() {
   END_TEST;
 }
 
+// Verify that write_state with ZX_VCPU_IO only accepts valid access sizes.
+static bool vcpu_write_state_io_invalid_size() {
+  BEGIN_TEST;
+
+  test_t test;
+  // Passing nullptr for start and end since we don't need to actually run the guest for this test.
+  ASSERT_TRUE(setup(&test, nullptr, nullptr));
+  if (!test.supported) {
+    // The hypervisor isn't supported, so don't run the test.
+    return true;
+  }
+
+  // valid access sizes
+  zx_vcpu_io_t io{};
+  io.access_size = 1;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_OK);
+  io.access_size = 2;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_OK);
+  io.access_size = 4;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_OK);
+
+  // invalid access sizes
+  io.access_size = 0;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
+  io.access_size = 3;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
+  io.access_size = 5;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
+  io.access_size = 255;
+  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
+
+  END_TEST;
+}
+
 static bool guest_set_trap_with_io() {
   BEGIN_TEST;
 
@@ -1018,6 +1061,7 @@ RUN_TEST(vcpu_sysenter)
 RUN_TEST(vcpu_sysenter_compat)
 RUN_TEST(vcpu_vmcall)
 RUN_TEST(vcpu_extended_registers)
+RUN_TEST(vcpu_write_state_io_invalid_size)
 RUN_TEST(guest_set_trap_with_io)
 #endif
 END_TEST_CASE(guest)

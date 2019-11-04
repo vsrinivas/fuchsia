@@ -928,6 +928,8 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buf, size_t len) {
       if (len != sizeof(zx_vcpu_io_t))
         break;
       auto io = static_cast<const zx_vcpu_io_t*>(buf);
+      if ((io->access_size != 1) && (io->access_size != 2) && (io->access_size != 4))
+        break;
       memcpy(&vmx_state_.guest_state.rax, io->data, io->access_size);
       return ZX_OK;
     }
