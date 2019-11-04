@@ -330,10 +330,10 @@ auto timeout = [](int optname, int client_fd, zx::socket server_socket) {
 
   // TODO(fxb/40135) Only the lower bound of the elapsed time is checked. The upper bound check is
   // ignored as the syscall could far miss the defined deadline to return.
-  EXPECT_LT(elapsed, timeout + margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
+  EXPECT_GT(elapsed, timeout - margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
             elapsed_ms.count(), margin.count(), std::chrono::milliseconds(timeout).count());
 
-  // Remove the timeout
+  // Remove the timeout.
   const struct timeval tv = {};
   ASSERT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
   // Wrap the read/write in a future to enable a timeout. We expect the future
