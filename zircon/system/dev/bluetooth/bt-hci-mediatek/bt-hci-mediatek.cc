@@ -684,7 +684,7 @@ zx_status_t BtHciMediatek::CardDownloadFirmware(const zx::vmo& fw_vmo, size_t fw
   }
 
   fzl::VmoMapper fw_mapper;
-  if ((status = fw_mapper.Map(fw_vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) != ZX_OK) {
+  if ((status = fw_mapper.Map(fw_vmo, 0, 0, ZX_VM_PERM_READ)) != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to map firmware VMO\n", __FILE__);
     return status;
   }
