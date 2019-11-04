@@ -41,6 +41,7 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
+#include "src/sys/appmgr/allowlist.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/namespace_builder.h"
@@ -57,7 +58,23 @@ constexpr char kBinaryKey[] = "binary";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
+constexpr char kDeprecatedShellAllowlist[] =
+    "/pkgfs/packages/config-data/0/data/appmgr/allowlist/deprecated_shell.txt";
+// Delete this when b/140175266 is fixed
+constexpr char kOpalTest[] = "opal_test.cmx";
+
 using fuchsia::sys::TerminationReason;
+
+bool is_allowed_to_use_deprecated_shell(std::string ns_id) {
+  Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
+  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
+    return true;
+  }
+  // Delete the below when b/140175266 is fixed
+  const std::string opal_test = kOpalTest;
+  return ns_id.size() >= opal_test.size() &&
+         ns_id.compare(ns_id.size() - opal_test.size(), opal_test.size(), opal_test) == 0;
+}
 
 void PushHandle(uint32_t id, zx_handle_t handle, std::vector<fdio_spawn_action_t>* actions) {
   actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = id, .handle = handle}});
@@ -524,6 +541,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::URL_INVALID);
     return;
   }
+
   std::string canon_url = CanonicalizeURL(launch_info.url);
   if (canon_url.empty()) {
     FXL_LOG(ERROR) << "Cannot run " << launch_info.url
@@ -833,6 +851,14 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
     if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
       should_have_ambient_executable = true;
+    }
+
+    if (sandbox.HasFeature("deprecated-shell")
+        && !is_allowed_to_use_deprecated_shell(fp.ToString())) {
+      FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
+                     << "deprecated-shell. go/fx-hermetic-sandboxes";
+      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
+      return;
     }
   }
   if (!should_have_ambient_executable) {

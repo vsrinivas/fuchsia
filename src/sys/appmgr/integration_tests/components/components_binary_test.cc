@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
@@ -12,6 +13,7 @@
 namespace component {
 namespace {
 
+using fuchsia::sys::TerminationReason;
 using sys::testing::EnclosingEnvironment;
 
 constexpr char kRealm[] = "test";
@@ -47,17 +49,24 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
                              cmx.c_str());
   }
 
-  void RunComponent(const std::string& url, const std::vector<std::string>& args = {}) {
+  void RunComponent(const std::string& url, int64_t* return_code = nullptr,
+                    TerminationReason* termination_reason = nullptr,
+                    const std::vector<std::string>& args = {}) {
     fuchsia::sys::ComponentControllerPtr controller;
     environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)), controller.NewRequest());
 
-    int64_t return_code = INT64_MIN;
-    controller.events().OnTerminated = [&return_code](int64_t code,
-                                                      fuchsia::sys::TerminationReason reason) {
-      return_code = code;
+    bool terminated = false;
+    controller.events().OnTerminated =
+        [&terminated, &return_code, &termination_reason](int64_t code, TerminationReason reason) {
+      if (return_code != nullptr) {
+        *return_code = code;
+      }
+      if (termination_reason != nullptr) {
+        *termination_reason = reason;
+      }
+      terminated = true;
     };
-    RunLoopUntil([&return_code] { return return_code != INT64_MIN; });
-    EXPECT_EQ(0, return_code);
+    RunLoopUntil([&terminated] { return terminated; });
   }
 
   ComponentsBinaryTest() {
@@ -77,27 +86,43 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
 // argv0 properly propagates the binary path, and that the args field in the
 // manifest is being properly passed through to the component.
 TEST_F(ComponentsBinaryTest, EchoNoArgs) {
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo1.cmx"));
+  int64_t return_code = -1;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo1.cmx"), &return_code);
+  EXPECT_EQ(0, return_code);
   std::string output = ReadOutFile();
   ASSERT_EQ(output, "/pkg/bin/echo1\n");
 }
 
 TEST_F(ComponentsBinaryTest, EchoHelloWorld) {
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo2.cmx"));
+  int64_t return_code = -1;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo2.cmx"), &return_code);
+  EXPECT_EQ(0, return_code);
   std::string output = ReadOutFile();
   ASSERT_EQ(output, "/pkg/bin/echo2 helloworld\n");
 }
 
 TEST_F(ComponentsBinaryTest, GetEnvMatched) {
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv1.cmx"));
+  int64_t return_code = -1;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv1.cmx"), &return_code);
+  EXPECT_EQ(0, return_code);
   std::string output = ReadOutFile();
   ASSERT_EQ(output, "FOO=bar BAR=baz\n");
 }
 
 TEST_F(ComponentsBinaryTest, GetEnvMismatch) {
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv2.cmx"));
+  int64_t return_code = -1;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("getenv2.cmx"), &return_code);
+  EXPECT_EQ(0, return_code);
   std::string output = ReadOutFile();
   ASSERT_EQ(output, "FOO=bar BAR=NULL\n");
+}
+  
+TEST_F(ComponentsBinaryTest, UnallowedDeprecatedShellFailsToLaunch) {
+  int64_t return_code = -1;
+  TerminationReason termination_reason;
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo_deprecated_shell.cmx"),
+               &return_code, &termination_reason);
+  EXPECT_NE(TerminationReason::EXITED, termination_reason);
 }
 
 }  // namespace

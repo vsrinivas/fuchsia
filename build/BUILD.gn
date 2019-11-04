@@ -76,6 +76,7 @@ group("deprecated_shell_allowlist") {
   # components.
   visibility = [
     "//src/sys/appmgr:appmgr_unittests",
+    "//src/sys/appmgr/integration_tests/components:components_binary_tests",
     "//src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell",
     "//src/sys/appmgr/integration_tests/sandbox/features/shell:has_deprecated_shell_ends_with_opal_test",
     "//src/sys/appmgr/integration_tests/sandbox/features/hub:has_hub_deprecated_shell",

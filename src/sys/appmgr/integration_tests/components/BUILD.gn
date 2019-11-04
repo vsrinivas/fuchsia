@@ -64,6 +64,8 @@ executable("components_binary_test") {
 }
 
 test_package("components_binary_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":components_binary_test",
     ":echo1",
@@ -90,6 +92,10 @@ test_package("components_binary_tests") {
     {
       path = rebase_path("meta/echo1.cmx")
       dest = "echo1.cmx"
+    },
+    {
+      path = rebase_path("meta/echo_deprecated_shell.cmx")
+      dest = "echo_deprecated_shell.cmx"
     },
     {
       path = rebase_path("meta/echo2.cmx")

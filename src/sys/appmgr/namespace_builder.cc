@@ -29,21 +29,6 @@ constexpr char kBlockedDataName[] = "data";
 constexpr char kGlobalDataAllowlist[] =
     "/pkgfs/packages/config-data/0/data/appmgr/allowlist/global_data.txt";
 
-constexpr char kDeprecatedShellAllowlist[] =
-    "/pkgfs/packages/config-data/0/data/appmgr/allowlist/deprecated_shell.txt";
-
-// Delete this when b/140175266 is fixed
-constexpr char kOpalTest[] = "opal_test.cmx";
-
-bool is_allowed_to_use_deprecated_shell(std::string ns_id) {
-  Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
-  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
-    return true;
-  }
-  // Delete this when b/140175266 is fixed
-  return ns_id.compare(ns_id.size() - sizeof(kOpalTest), sizeof(kOpalTest), kOpalTest) == 0;
-}
-
 NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
@@ -154,11 +139,6 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     } else if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
     } else if (feature == "deprecated-shell") {
-      if (!is_allowed_to_use_deprecated_shell(ns_id)) {
-        FXL_LOG(WARNING) << "Component " << ns_id << " is not allowed to use deprecated-shell. "
-                         << "This will be blocked in the near future. "
-                         << "go/fx-hermetic-sandboxes";
-      }
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
       PushDirectoryFromPath("/blob");
