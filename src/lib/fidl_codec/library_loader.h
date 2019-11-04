@@ -213,7 +213,7 @@ class Struct {
   void DecodeResponseTypes();
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes(std::string_view container_type, const char* size_name, const char* member_name);
+  void DecodeTypes(std::string_view container_name, const char* size_name, const char* member_name);
 
   Library* enclosing_library_;
   const rapidjson::Value& value_;
