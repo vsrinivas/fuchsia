@@ -89,6 +89,7 @@ class PaperRenderer final : public Renderer {
   // these steps:
   //   - |BeginFrame()|
   //   - |Draw()| each object in the scene.
+  //   - |FinalizeFrame()|
   //   - |EndFrame()| emits the Vulkan commands that actually render the scene.
   //
   // Multiple cameras are supported, each rendering into its own viewport.
@@ -96,16 +97,24 @@ class PaperRenderer final : public Renderer {
   // the scene contents.  For use-cases such as stereo rendering this is not a
   // problem, however there can be problems with e.g. translucent objects if two
   // cameras have dramatically different positions.
-  void BeginFrame(const FramePtr& frame, const PaperScenePtr& scene,
-                  const std::vector<Camera>& cameras, const escher::ImagePtr& output_image);
+  void BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> uploader,
+                  const PaperScenePtr& scene, const std::vector<Camera>& cameras,
+                  const escher::ImagePtr& output_image);
+
+  // After calling |FinalizeFrame()|:
+  // - No more upload requests will be made for this frame.  Therefore, it is safe for the
+  //   client to call |BatchGpuUploader::Submit()| on the uploader that was passed to
+  //   |BeginFrame()|.
+  // - It is illegal to make any additional draw calls.
+  void FinalizeFrame();
 
   // See |BeginFrame()|.  After telling the renderer to draw the scene content,
   // |EndFrame()| emits commands into a Vulkan command buffer.  Submitting this
   // command buffer causes the scene to be rendered into |output_image|.
-  void EndFrame();
+  void EndFrame(SemaphorePtr upload_wait_semaphore);
 
-  // The following methods may only be used between during a frame, i.e. between
-  // calls to |BeginFrame()| and |EndFrame()|.
+  // The following methods may only be used during an unfinalized frame, i.e. between
+  // calls to |BeginFrame()| and |FinalizeFrame()|.
 
   // Return the transform stack, which affects the transform and clipping that
   // is applied to subsequently-drawn |PaperDrawables|.
@@ -202,7 +211,8 @@ class PaperRenderer final : public Renderer {
 
   // Stores all per-frame data in one place.
   struct FrameData {
-    FrameData(const FramePtr& frame, const PaperScenePtr& scene, const ImagePtr& output_image,
+    FrameData(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> gpu_uploader,
+              const PaperScenePtr& scene, const ImagePtr& output_image,
               std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
               const std::vector<Camera>& cameras);
     ~FrameData();
@@ -226,7 +236,9 @@ class PaperRenderer final : public Renderer {
     // these UniformBindings.
     std::vector<UniformBinding> scene_uniform_bindings;
 
-    std::unique_ptr<BatchGpuUploader> gpu_uploader;
+    std::shared_ptr<BatchGpuUploader> gpu_uploader;
+
+    bool scene_finalized = false;
   };
 
   // Called in BeginFrame() to obtain suitable render targets.

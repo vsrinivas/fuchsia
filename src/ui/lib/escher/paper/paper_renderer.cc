@@ -55,8 +55,9 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
 
 PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 
-PaperRenderer::FrameData::FrameData(const FramePtr& frame_in, const PaperScenePtr& scene_in,
-                                    const ImagePtr& output_image_in,
+PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
+                                    std::shared_ptr<BatchGpuUploader> gpu_uploader_in,
+                                    const PaperScenePtr& scene_in, const ImagePtr& output_image_in,
                                     std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
                                     const std::vector<Camera>& cameras_in)
     : frame(frame_in),
@@ -64,7 +65,7 @@ PaperRenderer::FrameData::FrameData(const FramePtr& frame_in, const PaperScenePt
       output_image(output_image_in),
       depth_texture(std::move(depth_and_msaa_textures.first)),
       msaa_texture(std::move(depth_and_msaa_textures.second)),
-      gpu_uploader(BatchGpuUploader::New(frame->escher()->GetWeakPtr())) {
+      gpu_uploader(std::move(gpu_uploader_in)) {
   // Scale the camera viewports to pixel coordinates in the output framebuffer.
   for (auto& cam : cameras_in) {
     vk::Rect2D rect = cam.viewport().vk_rect_2d(output_image->width(), output_image->height());
@@ -166,13 +167,16 @@ bool PaperRenderer::SupportsShadowType(PaperRendererShadowType shadow_type) cons
          shadow_type == PaperRendererShadowType::kShadowVolume;
 }
 
-void PaperRenderer::BeginFrame(const FramePtr& frame, const PaperScenePtr& scene,
-                               const std::vector<Camera>& cameras, const ImagePtr& output_image) {
+void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> uploader,
+                               const PaperScenePtr& scene, const std::vector<Camera>& cameras,
+                               const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "PaperRenderer::BeginFrame");
-  FXL_DCHECK(!frame_data_ && !cameras.empty());
+  FXL_DCHECK(!frame_data_) << "already in a frame.";
+  FXL_DCHECK(frame && uploader && scene && !cameras.empty() && output_image);
 
-  frame_data_ = std::make_unique<FrameData>(
-      frame, scene, output_image, ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
+  frame_data_ =
+      std::make_unique<FrameData>(frame, std::move(uploader), scene, output_image,
+                                  ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
 
   frame->command_buffer()->TakeWaitSemaphore(
       output_image,
@@ -204,9 +208,10 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, const PaperScenePtr& scene
   }
 }
 
-void PaperRenderer::EndFrame() {
-  TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
+void PaperRenderer::FinalizeFrame() {
+  TRACE_DURATION("gfx", "PaperRenderer::FinalizeFrame");
   FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized && frame_data_->gpu_uploader);
 
   // We may need to lazily instantiate |debug_font|, or delete it. If the former, this needs to be
   // done before we submit the GPU uploader's tasks.
@@ -224,6 +229,8 @@ void PaperRenderer::EndFrame() {
     debug_font_.reset();
   }
 
+  GraphDebugData();
+
   // TODO(ES-247): Move graphing out of escher.
   if (!frame_data_->lines.empty() || !debug_times_.empty()) {
     if (!debug_lines_) {
@@ -233,10 +240,24 @@ void PaperRenderer::EndFrame() {
     debug_lines_.reset();
   }
 
-  // TODO(ES-206): obtain a semaphore here that will be signalled by the
-  // uploader and waited-upon by the "render command buffer".
-  frame_data_->gpu_uploader->Submit();
+  // At this point, all uploads are finished, and no Vulkan commands that depend on these
+  // uploads have yet been generated.  After this point, no additional uploads are allowed.
+  frame_data_->scene_finalized = true;
+  frame_data_->gpu_uploader.reset();
+}
 
+void PaperRenderer::EndFrame(SemaphorePtr upload_wait_semaphore) {
+  TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(frame_data_->scene_finalized && !frame_data_->gpu_uploader);
+
+  if (upload_wait_semaphore) {
+    frame_data_->frame->cmds()->AddWaitSemaphore(
+        std::move(upload_wait_semaphore),
+        vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader);
+  }
+
+  // Generate the Vulkan commands to render the frame.
   render_queue_.Sort();
   {
     for (uint32_t camera_index = 0; camera_index < frame_data_->cameras.size(); ++camera_index) {
@@ -265,6 +286,8 @@ void PaperRenderer::EndFrame() {
 
 void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale) {
   FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
+
   // TODO(ES-245): Add error checking to make sure math will not cause negative
   // values or the bars to go off screen.
   frame_data_->texts.push_back({text, offset, scale});
@@ -272,6 +295,9 @@ void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t
 
 void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord, int32_t y_start,
                               uint32_t y_end, uint32_t thickness) {
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
+
   vk::Rect2D rect;
   vk::Offset2D offset = {static_cast<int32_t>(x_coord), y_start};
   vk::Extent2D extent = {static_cast<uint32_t>(x_coord + thickness), y_end};
@@ -289,6 +315,9 @@ void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord
 
 void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord, int32_t x_start,
                               uint32_t x_end, int32_t thickness) {
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
+
   vk::Rect2D rect;
   vk::Offset2D offset = {x_start, static_cast<int32_t>(y_coord)};
   vk::Extent2D extent = {x_end, static_cast<uint32_t>(y_coord + thickness)};
@@ -306,6 +335,9 @@ void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord,
 
 void PaperRenderer::DrawDebugGraph(std::string x_label, std::string y_label,
                                    DebugRects::Color lineColor) {
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
+
   const int32_t frame_width = frame_data_->output_image->width();
   const int32_t frame_height = frame_data_->output_image->height();
 
@@ -335,6 +367,8 @@ void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
 
 void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::Draw");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   // For restoring state afterward.
   size_t transform_stack_size = transform_stack_.size();
@@ -347,6 +381,8 @@ void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
 void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
                                PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawCircle");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   if (!material)
     return;
@@ -356,6 +392,8 @@ void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
 void PaperRenderer::DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material,
                              PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRect");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   if (!material)
     return;
@@ -372,6 +410,8 @@ void PaperRenderer::DrawRect(float width, float height, const PaperMaterialPtr& 
 void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
                                     PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRoundedRect");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   if (!material)
     return;
@@ -381,6 +421,8 @@ void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMate
 void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
                                     PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawBoundingBox");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   if (!material) {
     return;
@@ -400,6 +442,8 @@ void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialP
 void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& material,
                              PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawMesh");
+  FXL_DCHECK(frame_data_);
+  FXL_DCHECK(!frame_data_->scene_finalized);
 
   if (!material) {
     return;
@@ -720,8 +764,6 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
-
-  GraphDebugData();
 
   for (std::size_t i = 0; i < frame_data_->texts.size(); i++) {
     const TextData& td = frame_data_->texts[i];

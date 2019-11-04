@@ -38,8 +38,14 @@ class Frame : public Resource {
 
   ~Frame();
 
-  // Obtain a CommandBuffer, to record commands for the current frame.
+  // Submit the current CommandBuffer, and obtain a new CommandBuffer for subsequent commands.  If
+  // |partial_frame_done| is not null, it will be signaled when the submitted CommandBuffer is
+  // finished.
   void SubmitPartialFrame(const SemaphorePtr& partial_frame_done);
+
+  // Submit the frame's final CommandBuffer.  When it is finished, |frame_done| will be signaled and
+  // |frame_retired_callback| will be invoked; the latter occurs when the command-buffer in
+  // Escher::Cleanup(), perhaps more than a millisecond later.
   void EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback);
 
   // If profiling is enabled, inserts a Vulkan timestamp query into the frame's

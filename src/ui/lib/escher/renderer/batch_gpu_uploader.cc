@@ -238,19 +238,20 @@ void BatchGpuUploader::PostReader(std::unique_ptr<BatchGpuUploader::Reader> read
   reader.reset();
 }
 
-void BatchGpuUploader::Submit(fit::function<void()> callback) {
+SemaphorePtr BatchGpuUploader::Submit(fit::function<void()> callback) {
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
   FXL_DCHECK(writer_count_ == 0 && reader_count_ == 0);
   if (!is_initialized_) {
     // This uploader was never used, nothing to submit.
-    return;
+    return SemaphorePtr();
   }
   FXL_DCHECK(frame_);
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
-  frame_->EndFrame(Semaphore::New(frame_->cmds()->vk_device()),
+  auto uploads_finished_sema = Semaphore::New(frame_->cmds()->vk_device());
+  frame_->EndFrame(uploads_finished_sema,
                    [callback = std::move(callback), read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
                        auto buffer = pair.first;
@@ -261,6 +262,7 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
                      }
                    });
   frame_ = nullptr;
+  return uploads_finished_sema;
 }
 
 }  // namespace escher

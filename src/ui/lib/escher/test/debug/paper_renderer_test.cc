@@ -95,9 +95,13 @@ VK_TEST_F(PaperRendererTest, Text) {
     // number of black pixels in the glyph after scaling is 16.
     std::function<void(std::string, size_t)> draw_and_check_histogram = [&](std::string glyphs,
                                                                             size_t expected_black) {
-      ren->BeginFrame(fd.frame, scene, cameras, fd.color_attachment);
+      auto gpu_uploader =
+          std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
+
+      ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
       ren->DrawDebugText(glyphs, {0, 10 * scale}, scale);
-      ren->EndFrame();
+      ren->FinalizeFrame();
+      ren->EndFrame(gpu_uploader->Submit());
 
       const int32_t scale_squared = scale * scale;
 
@@ -149,18 +153,27 @@ VK_TEST_F(PaperRendererTest, Lines) {
         [&](DebugRects::Color kColor, uint8_t endCoord) {
           auto expected_colored = endCoord * thickness;
 
-          ren->BeginFrame(fd.frame, scene, cameras, fd.color_attachment);
-          ren->DrawVLine(kColor, 0, 0, endCoord, thickness);
-          ren->EndFrame();
-
+          {
+            auto gpu_uploader =
+                std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
+            ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
+            ren->DrawVLine(kColor, 0, 0, endCoord, thickness);
+            ren->FinalizeFrame();
+            ren->EndFrame(gpu_uploader->Submit());
+          }
           EXPECT_EQ(expected_colored, get_colored_data(kColor))
               << "FAILED WHILE DRAWING VERTICAL LINE OF COLOR \"" << kColor
               << "\" AT THICKNESS: " << thickness;
 
-          ren->BeginFrame(fd.frame, scene, cameras, fd.color_attachment);
-          ren->DrawHLine(kColor, 0, 0, endCoord, thickness);
-          ren->EndFrame();
+          {
+            auto gpu_uploader =
+                std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
+            ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
 
+            ren->DrawHLine(kColor, 0, 0, endCoord, thickness);
+            ren->FinalizeFrame();
+            ren->EndFrame(gpu_uploader->Submit());
+          }
           EXPECT_EQ(expected_colored, get_colored_data(kColor))
               << "FAILED WHILE DRAWING HORIZONTAL LINE OF COLOR \"" << kColor
               << "\" AT THICKNESS: " << thickness;
@@ -186,7 +199,10 @@ VK_TEST_F(PaperRendererTest, Data) {
     // not negative. All other values are 0 to simplify the test.
     std::function<void(int8_t, int8_t)> draw_and_check_histogram = [&](uint8_t start_time,
                                                                        uint8_t done_time) {
-      ren->BeginFrame(fd.frame, scene, cameras, fd.color_attachment);
+      auto gpu_uploader =
+          std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
+
+      ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
 
       escher::PaperRenderer::TimeStamp ts;
       ts.latch_point = 0;
@@ -197,7 +213,8 @@ VK_TEST_F(PaperRendererTest, Data) {
       ts.actual_present = 0;
 
       ren->AddDebugTimeStamp(ts);
-      ren->EndFrame();
+      ren->FinalizeFrame();
+      ren->EndFrame(gpu_uploader->Submit());
 
       int16_t render_time = done_time - start_time;
 

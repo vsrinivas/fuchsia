@@ -236,29 +236,32 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
     });
   }
 
+  auto gpu_uploader = std::make_shared<escher::BatchGpuUploader>(escher_, frame->frame_number());
+
   paper_renderer_->BeginFrame(
-      frame, paper_scene,
+      frame, gpu_uploader, paper_scene,
       GenerateEscherCamerasForPaperRenderer(frame, camera, layer->GetViewingVolume(),
                                             target_presentation_time),
       output_image);
 
   // TODO(SCN-1256): scene-visitation should generate cameras, collect
   // lights, etc.
-  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
+
   // Using resources allocated with protected memory on non-protected CommandBuffers is not allowed.
   // In order to avoid breaking access rules, we should replace them with non-protected materials
   // when using a non-protected |frame|.
   const bool hide_protected_memory = !frame->use_protected_memory();
-  EngineRendererVisitor visitor(paper_renderer_.get(), &gpu_uploader, hide_protected_memory,
+  EngineRendererVisitor visitor(paper_renderer_.get(), gpu_uploader.get(), hide_protected_memory,
                                 hide_protected_memory ? GetReplacementMaterial() : nullptr);
   visitor.Visit(camera->scene().get());
-
-  gpu_uploader.Submit();
 
   // TODO(SCN-1270): support for multiple layers.
   FXL_DCHECK(overlay_model.objects().empty());
 
-  paper_renderer_->EndFrame();
+  paper_renderer_->FinalizeFrame();
+
+  auto upload_semaphore = gpu_uploader->Submit();
+  paper_renderer_->EndFrame(std::move(upload_semaphore));
 }
 
 escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32_t height,

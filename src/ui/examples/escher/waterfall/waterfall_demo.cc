@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/scene/camera.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -315,13 +316,18 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_imag
   // Animate light positions and intensities.
   UpdateLighting(paper_scene_.get(), stopwatch_, renderer_config_.shadow_type);
 
-  renderer_->BeginFrame(frame, paper_scene_, std::move(cameras), output_image);
+  auto gpu_uploader =
+      std::make_shared<BatchGpuUploader>(escher()->GetWeakPtr(), frame->frame_number());
+
+  renderer_->BeginFrame(frame, gpu_uploader, paper_scene_, std::move(cameras), output_image);
   {
     TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame[scene]");
     demo_scenes_[current_scene_]->Update(animation_stopwatch_, frame_count(), paper_scene_.get(),
                                          renderer_.get());
   }
-  renderer_->EndFrame();
+  renderer_->FinalizeFrame();
+  auto upload_semaphore = gpu_uploader->Submit();
+  renderer_->EndFrame(std::move(upload_semaphore));
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();

@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
@@ -31,6 +32,32 @@ std::unique_ptr<Escher> GetEscherWithProtectedMemoryEnabled() {
     return nullptr;
   }
   return escher;
+}
+
+// Encapsulates boilerplate of rendering a simple scene using PaperRenderer.
+void RenderFrameForProtectedMemoryTest(const PaperRendererPtr& renderer, const FramePtr& frame,
+                                       const ImagePtr& image) {
+  image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+
+  // Create simple scene/camera.
+  auto scene = fxl::MakeRefCounted<PaperScene>();
+  scene->point_lights.resize(1);
+  scene->bounding_box = BoundingBox(vec3(0), vec3(32));
+  const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
+  escher::Camera cam = escher::Camera::NewOrtho(volume);
+  auto cameras = {cam};
+
+  auto gpu_uploader = std::make_shared<escher::BatchGpuUploader>(frame->escher()->GetWeakPtr(),
+                                                                 frame->frame_number());
+
+  renderer->BeginFrame(frame, gpu_uploader, scene, cameras, image);
+  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
+
+  renderer->FinalizeFrame();
+  auto upload_semaphore = gpu_uploader->Submit();
+
+  renderer->EndFrame(std::move(upload_semaphore));
+  frame->EndFrame(SemaphorePtr(), [] {});
 }
 
 using ProtectedMemoryTest = escher::test::TestWithVkValidationLayer;
@@ -75,12 +102,6 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
   }
 
   auto renderer = PaperRenderer::New(escher->GetWeakPtr());
-  auto scene = fxl::MakeRefCounted<PaperScene>();
-  scene->point_lights.resize(1);
-  scene->bounding_box = BoundingBox(vec3(0), vec3(32));
-  const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
-  escher::Camera cam = escher::Camera::NewOrtho(volume);
-  auto cameras = {cam};
 
   auto protected_image = image_utils::NewImage(
       escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
@@ -90,11 +111,8 @@ VK_TEST_F(ProtectedMemoryTest, CreateProtectedEnabledPaperRenderer) {
   auto protected_frame =
       escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
                        /*use_protected_memory=*/true);
-  protected_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
-  renderer->BeginFrame(protected_frame, scene, cameras, protected_image);
-  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
-  renderer->EndFrame();
-  protected_frame->EndFrame(SemaphorePtr(), [] {});
+
+  RenderFrameForProtectedMemoryTest(renderer, protected_frame, protected_image);
 
   escher->vk_device().waitIdle();
   ASSERT_TRUE(escher->Cleanup());
@@ -109,39 +127,31 @@ VK_TEST_F(ProtectedMemoryTest, PaperRendererSwitchToProtected) {
   }
 
   auto renderer = PaperRenderer::New(escher->GetWeakPtr());
-  auto scene = fxl::MakeRefCounted<PaperScene>();
-  scene->point_lights.resize(1);
-  scene->bounding_box = BoundingBox(vec3(0), vec3(32));
-  const escher::ViewingVolume& volume = ViewingVolume(scene->bounding_box);
-  escher::Camera cam = escher::Camera::NewOrtho(volume);
-  auto cameras = {cam};
 
   // Send a non-protected frame first.
-  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
-                                     vk::ImageUsageFlagBits::eColorAttachment |
-                                         vk::ImageUsageFlagBits::eTransferSrc |
-                                         vk::ImageUsageFlagBits::eTransferDst);
-  image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
-  auto frame = escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics);
-  renderer->BeginFrame(frame, scene, cameras, image);
-  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
-  renderer->EndFrame();
-  frame->EndFrame(SemaphorePtr(), [] {});
+  {
+    auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
+                                       vk::ImageUsageFlagBits::eColorAttachment |
+                                           vk::ImageUsageFlagBits::eTransferSrc |
+                                           vk::ImageUsageFlagBits::eTransferDst);
+    auto frame = escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics);
+
+    RenderFrameForProtectedMemoryTest(renderer, frame, image);
+  }
 
   // Send a protected frame after.
-  auto protected_image = image_utils::NewImage(
-      escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
-      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
-          vk::ImageUsageFlagBits::eTransferDst,
-      vk::MemoryPropertyFlagBits::eProtected);
-  protected_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
-  auto protected_frame =
-      escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
-                       /*use_protected_memory=*/true);
-  renderer->BeginFrame(protected_frame, scene, cameras, protected_image);
-  renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
-  renderer->EndFrame();
-  protected_frame->EndFrame(SemaphorePtr(), [] {});
+  {
+    auto protected_image = image_utils::NewImage(
+        escher->image_cache(), vk::Format::eB8G8R8A8Unorm, 32, 32,
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+            vk::ImageUsageFlagBits::eTransferDst,
+        vk::MemoryPropertyFlagBits::eProtected);
+    auto protected_frame =
+        escher->NewFrame("test_frame", 0, false, escher::CommandBuffer::Type::kGraphics,
+                         /*use_protected_memory=*/true);
+
+    RenderFrameForProtectedMemoryTest(renderer, protected_frame, protected_image);
+  }
 
   escher->vk_device().waitIdle();
   ASSERT_TRUE(escher->Cleanup());

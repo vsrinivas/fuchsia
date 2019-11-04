@@ -287,10 +287,12 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   PaperDrawCallFactory* draw_call_factory = paper_renderer->draw_call_factory();
   draw_call_factory->set_track_cache_entries(true);
 
-  paper_renderer->BeginFrame(frame, paper_scene, {camera}, output_image);
+ auto gpu_uploader =
+      std::make_shared<BatchGpuUploader>(escher, frame->frame_number());
 
-  BatchGpuUploader gpu_uploader(escher, frame->frame_number());
-  EngineRendererVisitor visitor(paper_renderer.get(), &gpu_uploader,
+  paper_renderer->BeginFrame(frame, gpu_uploader, paper_scene, {camera}, output_image);
+
+  EngineRendererVisitor visitor(paper_renderer.get(), gpu_uploader.get(),
                                 /*hide_protected_memory=*/false, nullptr);
   visitor.Visit(scene.get());
 
@@ -327,7 +329,7 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   planes.push_back(plane3(vec3(0, 0, -1), -1));
 
   PaperShapeCache cache(escher, PaperRendererConfig());
-  cache.BeginFrame(&gpu_uploader, 0);
+  cache.BeginFrame(gpu_uploader.get(), 0);
 
   const PaperShapeCacheEntry& entry2 = cache.GetRoundedRectMesh(spec, planes.data(), 6);
 
@@ -336,10 +338,10 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   EXPECT_EQ(entry.num_indices, entry2.num_indices);
   EXPECT_EQ(entry.num_shadow_volume_indices, entry2.num_shadow_volume_indices);
 
-  gpu_uploader.Submit();
-
   // End frame
-  paper_renderer->EndFrame();
+  paper_renderer->FinalizeFrame();
+  auto upload_semaphore = gpu_uploader->Submit();
+  paper_renderer->EndFrame(std::move(upload_semaphore));
   cache.EndFrame();
 
   auto frame_done_semaphore = Semaphore::New(escher->vk_device());

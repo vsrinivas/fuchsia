@@ -125,9 +125,10 @@ class BatchGpuUploader {
   void PostReader(std::unique_ptr<Reader> reader,
                   fit::function<void(escher::BufferPtr buffer)> callback);
 
-  // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
-  // can be posted once Submit is called.
-  void Submit(fit::function<void()> callback = nullptr);
+  // Submits all Writers' and Reader's work to the GPU. No Writers or Readers can be posted once
+  // Submit is called.  Returns a semaphore that can be waited upon to guarantee that all reads and
+  // writes have completed (null if there were none).
+  SemaphorePtr Submit(fit::function<void()> callback = nullptr);
 
  private:
   static void SemaphoreAssignmentHelper(WaitableResource* resource, CommandBuffer* command_buffer);
