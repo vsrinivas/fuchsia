@@ -4,15 +4,19 @@
 
 For information about launching fidlcat: [fidlcat](../fidl_inspecting).
 
-## Disclaimer
+{% dynamic if request.tld != "dev" %}
 
-This file only renders correctly within [fuchsia.dev](https://fuchsia.dev). If
-you don't see the examples, navigate to
-[https://fuchsia.dev/fuchsia-src/development/fidl_inspecting/fidlcat_usage](https://fuchsia.dev/fuchsia-src/development/fidl_inspecting/fidlcat_usage)
+>> #  Notice
+>>
+>> This file only renders correctly from fuchsia.dev. Please navigate to
+>> https://fuchsia.dev/fuchsia-src/development/tools/fidl_inspecting/fidlcat_usage.md to see the examples correctly!
+
+{% dynamic endif %}
 
 ## Default display
 
 The default display for fidlcat is:
+
 
 <pre>echo_client_cpp_synchronous <font color="#CC0000">180768</font>:<font color="#CC0000">180781</font> zx_channel_call(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">14b21e1b</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, deadline:<font color="#4E9A06">time</font>: <font color="#3465A4">ZX_TIME_INFINITE</font>, rd_num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">65536</font>, rd_num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>)
   <span style="background-color:#75507B"><font color="#D3D7CF">sent request</font></span> <font color="#4E9A06">fidl.examples.echo/Echo.EchoString</font> = {
@@ -23,6 +27,7 @@ The default display for fidlcat is:
       response: <font color="#4E9A06">string</font> = <font color="#CC0000">&quot;hello synchronous world&quot;</font>
     }
 </pre>
+
 
 We have the following information:
 
@@ -64,12 +69,14 @@ display may be interleaved. When the system call returns, we display:
 
 For **zx_channel_read** we can have this display:
 
+
 <pre>echo_client_rust <font color="#CC0000">256109</font>:<font color="#CC0000">256122</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">e4c7c57f</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">48</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>)
   -&gt; <font color="#4E9A06">ZX_OK</font>
     <span style="background-color:#75507B"><font color="#D3D7CF">received response</font></span> <font color="#4E9A06">fidl.examples.echo/Echo.EchoString</font> = {
       response: <font color="#4E9A06">string</font> = <font color="#CC0000">&quot;hello world!&quot;</font>
     }
 </pre>
+
 
 But, if there is an error, we can have:
 

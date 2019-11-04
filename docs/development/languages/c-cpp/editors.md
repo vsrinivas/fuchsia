@@ -50,7 +50,7 @@ you are trying to solve.
 
 See [Helpful Vim tools for Fuchsia development](/scripts/vim/README.md).
 
-## Visual Studio Code (vscode)
+## Visual Studio Code (vscode) {#visual-studio-code}
 
 There are multiple vscode setups known to work to different degrees. The
 sections below describe the different setups (pick one).

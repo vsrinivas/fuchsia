@@ -5,7 +5,7 @@
 A prebuilt Dart SDK is available for IDE consumption at:
 `third_party/dart/tools/sdks/dart-sdk/`.
 
-## Visual Studio Code
+## Visual Studio Code {#visual-studio-code}
 
 1.  Download and install [Visual Studio Code](https://code.visualstudio.com/)
 1.  [optional] Setup VS Code to launch from the command line

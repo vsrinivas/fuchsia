@@ -249,10 +249,6 @@ of the text shells. In order to use the text shell, you will need to enter "cons
 pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
 section, and pressing Alt-Escape again will take you back to the graphical shell.
 
-If you would like to use a text shell inside a terminal emulator from within the graphical shell
-you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/term) by selecting the
-"Ask Anything" box and typing `moterm`.
-
 ## Running tests
 
 Compiled test binaries are cached in pkgfs like other components, and are referenced by a URI.

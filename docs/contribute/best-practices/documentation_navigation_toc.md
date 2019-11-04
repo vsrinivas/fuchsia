@@ -7,7 +7,7 @@ side of every page on fuchsia.dev. It is represented by a hierarchical set of
 
 If you add a new document or if you want to change how existing documents are
 organized in the source documentation section of
-[fuchsia.dev](https://fuchsia.dev/fuchsia-src), you need to change the navigation table of contents, defined in
+[fuchsia.dev](/docs), you need to change the navigation table of contents, defined in
 `_toc.yaml` files. These files are located in the same directory of
 the documentation file or in a parent directory.
 
@@ -21,7 +21,7 @@ To change the documentation navigation for an existing document:
    For example, if you want to modify the navigation for the
    [concepts page of Zircon](/docs/concepts/kernel/concepts.md),
    you can see that there is a
-   [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml)
+   [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/concepts/kernel/_toc.yaml)
    file in the same directory.
 
 1. Edit the `_toc.yaml` file.
@@ -60,12 +60,12 @@ with multiple entries:
     must have a file named `README.md`.
 
   For example, to add an entry for the Zircon `concepts.md`
-  page in its respective [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml),
+  page in its respective [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/concepts/kernel/_toc.yaml),
   you should add an entry:
 
   ```
-  - title: "Concepts"
-    path: /docs/zircon/concepts.md
+  - title: "Kernel concepts"
+    path: /docs/concepts/kernel/concepts.md
   ```
 
 * Expandable section
@@ -73,7 +73,7 @@ with multiple entries:
   An expandable section is an expandable group of multiple entries in a table
   of contents. For example, see the expandable sections, such as Networking
   and Graphics, in the
-  [System section](https://fuchsia.dev/fuchsia-src/the-book). Each expandable
+  [Concepts section](/docs/concepts/README.md). Each expandable
   section has an arrow to the left of the section name.
 
   You can create a group of entries with a `section` element. Each section must
@@ -81,18 +81,13 @@ with multiple entries:
   you can add single entries to the section.
 
   For example, to add a section in the "System" table of contents
-  [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/the-book/_toc.yaml),
-  add a `section` group and its corresponding entries:
+  [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/concepts/_toc.yaml),
+  add a `section` group and its corresponding entries. Usually the entries are included from another _toc.yaml file:
 
-  ```
+  ```yaml
   - title: "Zircon kernel"
     section:
-    - title: "Concepts"
-      path: /docs/zircon/concepts
-    - title: "System calls"
-      path: /docs/zircon/syscalls.md
-    - title: "vDSO (libzircon)"
-      path: /docs/zircon/vdso.md
+    - include: /docs/concepts/kernel/_toc.yaml
   ```
 
 Once you have made these changes, you can submit your changes for review.

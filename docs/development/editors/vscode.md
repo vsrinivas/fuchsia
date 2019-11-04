@@ -51,7 +51,7 @@ Add a directory pattern you want to exclude the search from. Alternatively one c
 ## Language specifics
 Each language may require extra configuration. See more for
 
-* [Rust](https://fuchsia.dev/fuchsia-src/development/languages/rust/editors#visual_studio_code)
-* [Dart](https://fuchsia.dev/fuchsia-src/development/languages/dart/ides#visual_studio_code)
-* [C/C++](https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/editors#visual_studio_code_vscode)
-* [FIDL](https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/editors#visual_studio_code)
+* [Rust](/docs/development/languages/rust/editors.md#visual-studio-code)
+* [Dart](/docs/development/languages/dart/ides.md#visual-studio-code)
+* [C/C++](/docs/development/languages/c-cpp/editors.md#visual-studio-code)
+* [FIDL](/docs/development/languages/fidl/reference/editors.md#visual-studio-code)
