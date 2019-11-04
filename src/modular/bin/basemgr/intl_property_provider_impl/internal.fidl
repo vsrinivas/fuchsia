@@ -5,6 +5,13 @@
 library fuchsia.modular.intl.internal;
 
 using fuchsia.intl;
+using fuchsia.setui;
+
+/// Stores the optional hour cycle setting.  An enum can not be optional so we
+/// wrap it here.
+struct HourCycle {
+    fuchsia.setui.HourCycle setting;
+};
 
 /// Raw inputs for producing a `fuchsia.intl.Profile`. This is only used internally in
 /// `IntlPropertyProviderImpl`, for keeping track of incoming settings before assembling a
@@ -15,4 +22,7 @@ struct RawProfileData {
     vector<fuchsia.intl.TimeZoneId> time_zone_ids;
     vector<fuchsia.intl.CalendarId> calendar_ids;
     fuchsia.intl.TemperatureUnit temperature_unit;
+    // If set, the hour cycle is taken from this setting, and is otherwise defaulted from the
+    // locale.
+    HourCycle? hour_cycle;
 };

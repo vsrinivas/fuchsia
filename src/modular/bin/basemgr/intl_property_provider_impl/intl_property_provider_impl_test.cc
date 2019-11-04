@@ -275,8 +275,6 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnTimeZoneChange) {
 TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
   setui_service_->SetIntl(fuchsia::setui::IntlSettings{
       .locales = {"nl-NL"},
-      // Is hour cycle supposed to be overridden by the locale?  Note below that the locale is
-      // '-u-...-hc-h23'.
       .hour_cycle = fuchsia::setui::HourCycle::H12,
       .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
   });
@@ -286,7 +284,7 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
   expected_a.set_locales({LocaleId{.id = "nl-NL-u"
                                          "-ca-gregory"
                                          "-fw-mon"
-                                         "-hc-h23"
+                                         "-hc-h12"
                                          "-ms-metric"
                                          "-nu-latn"
                                          "-tz-utc"}});
@@ -306,8 +304,6 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
   RunLoopUntilIdle();
   ASSERT_FALSE(changed);
 
-  // Changing the locale to "ru-RU", and hours implies changes to the unit system, week start/end
-  // as well as the explicit settings given below.
   setui_service_->SetIntl(fuchsia::setui::IntlSettings{
       .locales = {"ru-RU"},
       .hour_cycle = fuchsia::setui::HourCycle::H23,
@@ -352,7 +348,7 @@ TEST_F(IntlPropertyProviderImplTest, SettingMix) {
   expected.set_locales({LocaleId{.id = "nl-NL-u"
                                        "-ca-gregory"
                                        "-fw-mon"
-                                       "-hc-h23"
+                                       "-hc-h12"
                                        "-ms-metric"
                                        "-nu-latn"
                                        "-tz-nlams"}});
@@ -402,11 +398,10 @@ TEST_F(IntlPropertyProviderImplTest, Multilocale) {
   RunLoopUntilIdle();
 
   Profile expected{};
-  // Hmmm, is it expected that all hours are overridden to H23, despite user setting?
   expected.set_locales({
-      LocaleId{.id = "nl-NL-u-ca-gregory-fw-mon-hc-h23-ms-metric-nu-latn-tz-nlams"},
-      LocaleId{.id = "nl-BE-u-ca-gregory-fw-mon-hc-h23-ms-metric-nu-latn-tz-nlams"},
-      LocaleId{.id = "nl-u-ca-gregory-fw-mon-hc-h23-ms-metric-nu-latn-tz-nlams"},
+      LocaleId{.id = "nl-NL-u-ca-gregory-fw-mon-hc-h12-ms-metric-nu-latn-tz-nlams"},
+      LocaleId{.id = "nl-BE-u-ca-gregory-fw-mon-hc-h12-ms-metric-nu-latn-tz-nlams"},
+      LocaleId{.id = "nl-u-ca-gregory-fw-mon-hc-h12-ms-metric-nu-latn-tz-nlams"},
       LocaleId{.id = "fr-FR-u-ca-gregory-fw-mon-hc-h12-ms-metric-nu-latn-tz-nlams"},
   });
   expected.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});

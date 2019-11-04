@@ -28,6 +28,7 @@ using fuchsia::intl::LocaleId;
 using fuchsia::intl::Profile;
 using fuchsia::intl::TemperatureUnit;
 using fuchsia::intl::TimeZoneId;
+using fuchsia::modular::intl::internal::HourCycle;
 using fuchsia::modular::intl::internal::RawProfileData;
 using intl::ExpandLocaleId;
 using intl::ExtractBcp47CalendarId;
@@ -70,6 +71,20 @@ fit::result<std::map<std::string, std::string>, zx_status_t> GetUnicodeExtension
 
   std::map<std::string, std::string> extensions{{LocaleKeys::kCalendar, primary_calendar_id},
                                                 {LocaleKeys::kTimeZone, primary_tz_id}};
+  if (raw_data.hour_cycle != nullptr) {
+    switch (raw_data.hour_cycle->setting) {
+      case fuchsia::setui::HourCycle::H12:
+        extensions[LocaleKeys::kHourCycle] = "h12";
+        break;
+      case fuchsia::setui::HourCycle::H23:
+        extensions[LocaleKeys::kHourCycle] = "h23";
+        break;
+      default:
+        // If we ever add a different hour cycle setting, e.g. "locale default", this will work.
+        // So, a bit of future-proofing here.  I wonder if it's going to be such.
+        break;
+    }
+  }
   return fit::ok(extensions);
 }
 
@@ -196,6 +211,11 @@ void MergeIntl(const std::optional<fuchsia::setui::IntlSettings>& intl_settings,
         << "fuchsia.setui returned locale settings with no locales; this is not a valid "
            "fuchsia.intl.Profile; not touching the current language settings and proceeding.";
   }
+  // Setui does not have a way to leave hour cycle setting to the locale, so we always set it
+  // here.  However, if an option comes in to set it, we can do that too.
+  new_profile_data->hour_cycle = std::make_unique<HourCycle>(HourCycle{
+      .setting = intl_settings->hour_cycle,
+  });
 }
 
 // Sinks the setting into new_profile_data, by overwriting the content of new_profile_data with the
