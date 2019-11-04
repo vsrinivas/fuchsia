@@ -33,27 +33,27 @@ union UnionSize24Alignement8 {
 };
 
 struct Sandwich1 {
-   uint32 before;
-   UnionSize8Aligned4 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize8Aligned4 the_union;
+    uint32 after;
 };
 
 struct Sandwich1WithOptUnion {
-   uint32 before;
-   UnionSize8Aligned4? opt_union;
-   uint32 after;
+    uint32 before;
+    UnionSize8Aligned4? opt_union;
+    uint32 after;
 };
 
 struct Sandwich2 {
-   uint32 before;
-   UnionSize16Aligned4 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize16Aligned4 the_union;
+    uint32 after;
 };
 
 struct Sandwich3 {
-   uint32 before;
-   UnionSize24Alignement8 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize24Alignement8 the_union;
+    uint32 after;
 };
 
 union UnionSize36Alignment4 {
@@ -213,6 +213,17 @@ struct Size5Alignment1Array {
 
 struct Size5Alignment4Array {
     array<Size5Alignment4>:3 a;
+};
+
+// compatibility_test turned up a problem with this StringUnion & ArrayStruct
+// definitions.
+union StringUnion {
+    string s; // 0x80BB5F4B
+};
+
+struct ArrayStruct {
+    array<StringUnion>:3 unions;
+    array<StringUnion?>:3 optional_unions;
 };
 
 // TODO(apang): Union containing a table (to test out-of-line sizing)

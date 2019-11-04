@@ -4,6 +4,7 @@
 
 #include <lib/fidl/transformer.h>
 
+#include <cstring>
 #include <iostream>
 
 #include <unittest/unittest.h>
@@ -1035,10 +1036,160 @@ uint8_t xunionwithunknownordinal_old_and_v1[] = {
     0x0D, 0x0E, 0x0E, 0x0F,  // random data [cont.]
 };
 
+uint8_t arraystruct_v1[] = {
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[0].tag  0x00
+    0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[0].envelope.num_bytes
+    0x00, 0x00, 0x00, 0x00,  // unions[0].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].presence  0x10
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].presence [cont.]
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[1].tag
+    0x00, 0x00, 0x00, 0x00,  // unions[1].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[1].envelope.num_bytes  0x20
+    0x00, 0x00, 0x00, 0x00,  // unions[1].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].presence [cont.]
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[2].tag  0x30
+    0x00, 0x00, 0x00, 0x00,  // unions[2].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[2].envelope.num_bytes
+    0x00, 0x00, 0x00, 0x00,  // unions[2].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].presence  0x40
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].presence [cont.]
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[3].tag
+    0x00, 0x00, 0x00, 0x00,  // unions[3].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[3].envelope.num_bytes  0x50
+    0x00, 0x00, 0x00, 0x00,  // unions[3].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[3].presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[3].presence [cont.]
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[4].tag  0x60
+    0x00, 0x00, 0x00, 0x00,  // unions[4].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[4].envelope.num_bytes
+    0x00, 0x00, 0x00, 0x00,  // unions[4].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[4].presence  0x70
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[4].presence [cont.]
+    0x80, 0xBB, 0x5F, 0x4B,  // unions[5].tag
+    0x00, 0x00, 0x00, 0x00,  // unions[5].tag (padding)
+    0x18, 0x00, 0x00, 0x00,  // unions[5].envelope.num_bytes  0x80
+    0x00, 0x00, 0x00, 0x00,  // unions[5].envelope.num_handles
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[5].presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[5].presence [cont.]
+
+    0x03, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s.size  0x90
+    0x00, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0] data: StringUnion.s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0] data: StringUnion.s.presence [cont.]
+    0x6F, 0x6E, 0x65, 0x00,  // unions[0] data: StringUnion.s data ("one")  0xa0
+    0x00, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s data padding
+
+    0x03, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s.size
+    0x00, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1] data: StringUnion.s.presence 0xb0
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1] data: StringUnion.s.presence [cont.]
+    0x74, 0x77, 0x6F, 0x00,  // unions[1].s data ("two")
+    0x00, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s data padding
+
+    0x05, 0x00, 0x00, 0x00,  // unions[2] data: StringUnion.s.size  0xc0
+    0x00, 0x00, 0x00, 0x00,  // unions[2] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2] data: StringUnion.s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2] data: StringUnion.s.presence [cont.]
+    0x74, 0x68, 0x72, 0x65,  // unions[2].s data ("three")  0xd0
+    0x65, 0x00, 0x00, 0x00,  // padding
+
+    0x04, 0x00, 0x00, 0x00,  // unions[3] data: StringUnion.s.size
+    0x00, 0x00, 0x00, 0x00,  // unions[3] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[3] data: StringUnion.s.presence  0xe0
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[3] data: StringUnion.s.presence [cont.]
+    0x66, 0x6F, 0x75, 0x72,  // optional_unions[0].s data ("four")
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s data padding
+
+    0x04, 0x00, 0x00, 0x00,  // unions[4] data: StringUnion.s.size  0xf0
+    0x00, 0x00, 0x00, 0x00,  // unions[4] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[4] data: StringUnion.s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[4] data: StringUnion.s.presence [cont.]
+    0x66, 0x69, 0x76, 0x65,  // optional_unions[1].s data ("five")
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s data padding
+
+    0x03, 0x00, 0x00, 0x00,  // unions[5] data: StringUnion.s.size
+    0x00, 0x00, 0x00, 0x00,  // unions[5] data: StringUnion.s.size [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[5] data: StringUnion.s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[5] data: StringUnion.s.presence [cont.]
+    0x73, 0x69, 0x78, 0x00,  // optional_unions[2].s data ("six")
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
+};
+
+uint8_t arraystruct_old[] = {
+    0x00, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
+    0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
+    0x03, 0x00, 0x00, 0x00,  // unions[0].s.length
+    0x00, 0x00, 0x00, 0x00,  // unions[0].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].s.presence  0x10
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].s.presence [cont.]
+
+    0x00, 0x00, 0x00, 0x00,  // unions[1].tag
+    0x00, 0x00, 0x00, 0x00,  // unions[1].tag (padding)
+    0x03, 0x00, 0x00, 0x00,  // unions[1].s.length  0x20
+    0x00, 0x00, 0x00, 0x00,  // unions[1].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].s.presence [cont.]
+
+    0x00, 0x00, 0x00, 0x00,  // unions[2].tag  0x30
+    0x00, 0x00, 0x00, 0x00,  // unions[2].tag (padding)
+    0x05, 0x00, 0x00, 0x00,  // unions[2].s.length
+    0x00, 0x00, 0x00, 0x00,  // unions[2].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].s.presence  0x40
+    0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].s.presence [cont.]
+
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0] presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0] presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1] presence  0x50
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1] presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2] presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2] presence
+
+    0x6F, 0x6E, 0x65, 0x00,  // unions[0].s data ("one")  0x60
+    0x00, 0x00, 0x00, 0x00,  // padding
+
+    0x74, 0x77, 0x6F, 0x00,  // unions[1].s data ("two")
+    0x00, 0x00, 0x00, 0x00,  // padding
+
+    0x74, 0x68, 0x72, 0x65,  // unions[2].s data ("three")  0x70
+    0x65, 0x00, 0x00, 0x00,  // padding
+
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[0].tag
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[0].tag (padding)
+    0x04, 0x00, 0x00, 0x00,  // optional_unions[0].s.length  0x80
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].s.presence [cont.]
+    0x66, 0x6F, 0x75, 0x72,  // optional_unions[0].s data ("four")  0x90
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s data padding
+
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[1].tag
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[1].tag (padding)
+    0x04, 0x00, 0x00, 0x00,  // optional_unions[1].s.length
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].s.presence [cont.]
+    0x66, 0x69, 0x76, 0x65,  // optional_unions[1].s data ("five")
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s data padding
+
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[2].tag
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[2].tag (padding)
+    0x03, 0x00, 0x00, 0x00,  // optional_unions[2].s.length
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s.length [cont.]
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].s.presence
+    0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].s.presence [cont.]
+    0x73, 0x69, 0x78, 0x00,  // optional_unions[2].s data ("six")
+    0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
+};
+
 bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
                         const uint8_t* v1_bytes, uint32_t v1_num_bytes, const uint8_t* old_bytes,
                         uint32_t old_num_bytes) {
   BEGIN_HELPER;
+
+  // TODO(apang): Refactor this function out so that we have individual test
+  // cases for V1ToOld and OldToV1.
 
   {
     uint8_t actual_old_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -1090,9 +1241,10 @@ bool sandwich1() {
 bool sandwich1_with_opt_union_present() {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
-                                 sandwich1_with_opt_union_present_v1, sizeof(sandwich1_with_opt_union_present_v1),
-                                 sandwich1_with_opt_union_present_old, sizeof(sandwich1_with_opt_union_present_old)));
+  ASSERT_TRUE(run_fidl_transform(
+      &v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_present_v1, sizeof(sandwich1_with_opt_union_present_v1),
+      sandwich1_with_opt_union_present_old, sizeof(sandwich1_with_opt_union_present_old)));
 
   END_TEST;
 }
@@ -1100,9 +1252,10 @@ bool sandwich1_with_opt_union_present() {
 bool sandwich1_with_opt_union_absent() {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
-                                 sandwich1_with_opt_union_absent_v1, sizeof(sandwich1_with_opt_union_absent_v1),
-                                 sandwich1_with_opt_union_absent_old, sizeof(sandwich1_with_opt_union_absent_old)));
+  ASSERT_TRUE(run_fidl_transform(
+      &v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_absent_v1, sizeof(sandwich1_with_opt_union_absent_v1),
+      sandwich1_with_opt_union_absent_old, sizeof(sandwich1_with_opt_union_absent_old)));
 
   END_TEST;
 }
@@ -1418,9 +1571,19 @@ bool xunionwithunknownordinal() {
                  xunionwithunknownordinal_old_and_v1);
 }
 
+bool arraystruct() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(run_fidl_transform(&v1_example_ArrayStructTable, &example_ArrayStructTable,
+                                 arraystruct_v1, sizeof(arraystruct_v1), arraystruct_old,
+                                 sizeof(arraystruct_old)));
+
+  END_TEST;
+}
+
 }  // namespace
 
-BEGIN_TEST_CASE(transformer_v1_to_old)
+BEGIN_TEST_CASE(transformer)
 RUN_TEST(sandwich1)
 RUN_TEST(sandwich1_with_opt_union_present)
 RUN_TEST(sandwich1_with_opt_union_absent)
@@ -1456,4 +1619,5 @@ RUN_TEST(table_unionwithvector_reservedsandwich)
 RUN_TEST(table_unionwithvector_structsandwich)
 RUN_TEST(xunionwithstruct)
 RUN_TEST(xunionwithunknownordinal)
-END_TEST_CASE(transformer_v1_to_old)
+RUN_TEST(arraystruct)
+END_TEST_CASE(transformer)
