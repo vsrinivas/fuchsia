@@ -138,6 +138,27 @@ impl StreamEndpoint {
         self.update_callback.as_ref().map(|cb| cb(self));
     }
 
+    /// Build a new StreamEndpoint from a StreamInformation and associated Capabilities.
+    /// This makes it easy to build from AVDTP Discover and GetCapabilities procedures.
+    /// StreamEndpooints start in the Idle state.
+    pub fn from_info(
+        info: &StreamInformation,
+        capabilities: Vec<ServiceCapability>,
+    ) -> StreamEndpoint {
+        StreamEndpoint {
+            id: info.id().clone(),
+            capabilities: capabilities,
+            media_type: info.media_type().clone(),
+            endpoint_type: info.endpoint_type().clone(),
+            state: StreamState::Idle,
+            transport: None,
+            stream_held: Arc::new(Mutex::new(false)),
+            remote_id: None,
+            configuration: vec![],
+            update_callback: None,
+        }
+    }
+
     /// Attempt to Configure this stream using the capabilities given.
     /// If the stream is not in an Idle state, fails with Err(InvalidState).
     /// Used for the Stream Configuration procedure, see Section 6.9
@@ -454,6 +475,20 @@ mod tests {
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
         remote
+    }
+
+    #[test]
+    fn from_info() {
+        let seid = StreamEndpointId::try_from(5).unwrap();
+        let info =
+            StreamInformation::new(seid.clone(), false, MediaType::Audio, EndpointType::Sink);
+        let capabilities = vec![ServiceCapability::MediaTransport];
+
+        let endpoint = StreamEndpoint::from_info(&info, capabilities);
+
+        assert_eq!(&seid, endpoint.local_id());
+        assert_eq!(&false, endpoint.information().in_use());
+        assert_eq!(1, endpoint.capabilities().len());
     }
 
     #[test]
