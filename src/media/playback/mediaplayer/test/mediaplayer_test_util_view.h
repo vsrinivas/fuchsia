@@ -11,11 +11,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/timeline_function.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 
 #include <memory>
 #include <queue>
 
+#include "src/lib/ui/base_view/base_view.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 

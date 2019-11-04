@@ -11,13 +11,13 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/svc/cpp/services.h>
-#include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <fs/service.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/ui/base_view/embedded_view_utils.h"
 
 namespace examples {
 

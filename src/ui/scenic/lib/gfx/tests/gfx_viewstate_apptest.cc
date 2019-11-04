@@ -10,8 +10,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/ui/base_view/cpp/base_view.h>
-#include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
@@ -20,6 +18,8 @@
 
 #include "garnet/testing/views/embedder_view.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/ui/base_view/base_view.h"
+#include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 

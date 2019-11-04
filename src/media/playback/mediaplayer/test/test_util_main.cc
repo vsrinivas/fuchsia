@@ -4,9 +4,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/ui/base_view/view_provider_component.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_view.h"
 

@@ -6,9 +6,10 @@
 #define GARNET_TESTING_VIEWS_EMBEDDER_VIEW_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
+
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace scenic {
 

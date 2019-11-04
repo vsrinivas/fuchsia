@@ -15,10 +15,10 @@ executable("simplest_embedder") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/ui/base_view",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",

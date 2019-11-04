@@ -10,7 +10,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/eventpair.h>
 
@@ -23,6 +22,7 @@
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace examples {
 

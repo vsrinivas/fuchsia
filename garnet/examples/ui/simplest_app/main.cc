@@ -7,7 +7,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -18,6 +17,7 @@
 #include "garnet/examples/ui/simplest_app/view.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/ui/base_view/view_provider_component.h"
 
 using namespace simplest_app;
 

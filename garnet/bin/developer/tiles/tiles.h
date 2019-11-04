@@ -12,9 +12,10 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
+
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace tiles {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/base_view/cpp/embedded_view_utils.h"
+#include "src/lib/ui/base_view/embedded_view_utils.h"
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 

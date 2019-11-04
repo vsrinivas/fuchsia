@@ -45,13 +45,13 @@ executable("mediaplayer_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/media/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/ui/base_view",
     "//src/media/playback/mediaplayer/core",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/fidl",
@@ -80,11 +80,11 @@ executable("mediaplayer_test_util_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//src/lib/ui/base_view",
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",
@@ -143,7 +143,6 @@ executable("mediaplayer_tests_bin") {
   deps = [
     ":mediaplayer_bin",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -152,6 +151,7 @@ executable("mediaplayer_tests_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/ui/base_view",
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",

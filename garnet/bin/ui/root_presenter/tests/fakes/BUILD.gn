@@ -16,8 +16,8 @@ source_set("fakes") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.accessibility",
     "//src/lib/fsl",
+    "//src/lib/ui/base_view",
   ]
 }

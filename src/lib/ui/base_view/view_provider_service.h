@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
-#define LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
+#ifndef SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_SERVICE_H_
+#define SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_SERVICE_H_
 
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 
 #include <vector>
+
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace scenic {
 
@@ -51,4 +52,4 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
 
 }  // namespace scenic
 
-#endif  // LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_SERVICE_H_
+#endif  // SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_SERVICE_H_

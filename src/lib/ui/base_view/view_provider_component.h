@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_COMPONENT_H_
-#define LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_COMPONENT_H_
+#ifndef SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_COMPONENT_H_
+#define SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_COMPONENT_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/view_provider_service.h>
 
 #include <memory>
+
+#include "src/lib/ui/base_view/view_provider_service.h"
 
 namespace scenic {
 
@@ -75,4 +76,4 @@ class ViewProviderComponent {
 
 }  // namespace scenic
 
-#endif  // LIB_UI_BASE_VIEW_CPP_VIEW_PROVIDER_COMPONENT_H_
+#endif  // SRC_LIB_UI_BASE_VIEW_VIEW_PROVIDER_COMPONENT_H_

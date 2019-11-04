@@ -1,7 +1,7 @@
 # Simplest Embedder
 
 This is the usage example for the
-[`scenic::BaseView`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/base_view/cpp/base_view.h)
+[`scenic::BaseView`](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/base_view/base_view.h)
 class, which simplifies the creation of components that can act as both parents
 and children in the Scenic view tree.
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ui/base_view/cpp/view_provider_service.h>
+#include "src/lib/ui/base_view/view_provider_service.h"
+
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <algorithm>

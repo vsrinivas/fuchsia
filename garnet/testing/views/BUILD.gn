@@ -24,9 +24,9 @@ source_set("views") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/ui/base_view",
   ]
 
   deps = [

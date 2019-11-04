@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_BASE_VIEW_CPP_MATH_H_
-#define LIB_UI_BASE_VIEW_CPP_MATH_H_
+#ifndef SRC_LIB_UI_BASE_VIEW_MATH_H_
+#define SRC_LIB_UI_BASE_VIEW_MATH_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
@@ -66,4 +66,4 @@ inline fuchsia::ui::gfx::vec3 Min(const fuchsia::ui::gfx::vec3& v, float max_val
 
 }  // namespace scenic
 
-#endif  // LIB_UI_BASE_VIEW_CPP_MATH_H_
+#endif  // SRC_LIB_UI_BASE_VIEW_MATH_H_

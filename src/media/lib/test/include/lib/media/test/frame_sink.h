@@ -10,7 +10,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 
@@ -18,6 +17,7 @@
 #include <set>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/ui/base_view/view_provider_component.h"
 
 class FrameSinkView;
 

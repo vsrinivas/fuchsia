@@ -5,9 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "garnet/examples/ui/spinning_square/spinning_square_view.h"
+#include "src/lib/ui/base_view/view_provider_component.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

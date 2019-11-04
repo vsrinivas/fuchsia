@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_BASE_VIEW_CPP_EMBEDDED_VIEW_UTILS_H_
-#define LIB_UI_BASE_VIEW_CPP_EMBEDDED_VIEW_UTILS_H_
+#ifndef SRC_LIB_UI_BASE_VIEW_EMBEDDED_VIEW_UTILS_H_
+#define SRC_LIB_UI_BASE_VIEW_EMBEDDED_VIEW_UTILS_H_
 
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
@@ -59,4 +59,4 @@ EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& l
 
 }  // namespace scenic
 
-#endif  // LIB_UI_BASE_VIEW_CPP_EMBEDDED_VIEW_UTILS_H_
+#endif  // SRC_LIB_UI_BASE_VIEW_EMBEDDED_VIEW_UTILS_H_

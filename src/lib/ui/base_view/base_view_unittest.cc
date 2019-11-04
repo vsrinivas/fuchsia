@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/ui/base_view/base_view.h"
+
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
@@ -9,7 +11,6 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gmock/gmock.h>

@@ -5,7 +5,7 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-source_set("cpp") {
+source_set("base_view") {
   sources = [
     "base_view.cc",
     "base_view.h",
@@ -44,7 +44,7 @@ executable("base_view_unittest") {
   ]
 
   deps = [
-    ":cpp",
+    ":base_view",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -60,7 +60,7 @@ executable("math_unittest") {
   ]
 
   deps = [
-    ":cpp",
+    ":base_view",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

@@ -12,10 +12,11 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace {
 

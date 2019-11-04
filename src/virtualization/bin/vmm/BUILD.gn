@@ -99,10 +99,10 @@ source_set("lib") {
 
   deps = [
     "//garnet/lib/magma/include/virtio",
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//src/lib/fsl",
+    "//src/lib/ui/base_view",
     "//src/virtualization/third_party/fdt",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",

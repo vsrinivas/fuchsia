@@ -5,11 +5,11 @@
 #ifndef GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace examples {
 

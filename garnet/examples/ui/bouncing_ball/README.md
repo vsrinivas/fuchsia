@@ -421,8 +421,8 @@ void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
 
 Congratulations! You've learned how to create a component that can display some cool content! Here are some next steps:
 
-* Learn to use `BaseView`, which is a class that helps avoid some of the boilerplate we wrote here.
-   * Library: [//garnet/public/lib/ui/base_view/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/base_view/cpp)
+* Learn to use `BaseView`, which is a library that helps avoid some of the boilerplate we wrote here.
+   * Library: [//src/lib/ui/base_view](https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/ui/base_view)
    * Example: [Spinning Square](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/spinning_square/spinning_square_view.cc)
 * Learn to use the Scenic cpp library, which creates an abstraction of a more object-oriented interface to Scenic `Resources`, rather than using `Commands` directly like we have here.
    * Library: [//sdk/lib/ui/scenic/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/scenic/cpp)

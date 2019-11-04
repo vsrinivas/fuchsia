@@ -6,8 +6,8 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GUEST_VIEW_H_
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 
+#include "src/lib/ui/base_view/base_view.h"
 #include "src/virtualization/bin/vmm/device/gpu_scanout.h"
 
 class GuestView : public scenic::BaseView {

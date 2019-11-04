@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_BASE_VIEW_CPP_BASE_VIEW_H_
-#define LIB_UI_BASE_VIEW_CPP_BASE_VIEW_H_
+#ifndef SRC_LIB_UI_BASE_VIEW_BASE_VIEW_H_
+#define SRC_LIB_UI_BASE_VIEW_BASE_VIEW_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -11,10 +11,11 @@
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/ui/base_view/cpp/embedded_view_utils.h>
-#include <lib/ui/base_view/cpp/math.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
+
+#include "src/lib/ui/base_view/embedded_view_utils.h"
+#include "src/lib/ui/base_view/math.h"
 
 namespace scenic {
 
@@ -203,4 +204,4 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
 
 }  // namespace scenic
 
-#endif  // LIB_UI_BASE_VIEW_CPP_BASE_VIEW_H_
+#endif  // SRC_LIB_UI_BASE_VIEW_BASE_VIEW_H_

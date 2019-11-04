@@ -7,10 +7,10 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/zx/eventpair.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/ui/base_view/base_view.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 
 namespace modular_example {

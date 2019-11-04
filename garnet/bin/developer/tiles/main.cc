@@ -7,12 +7,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/ui/base_view/base_view.h"
 
 void Usage() {
   printf(

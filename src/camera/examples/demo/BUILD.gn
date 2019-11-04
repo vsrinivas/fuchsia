@@ -16,12 +16,12 @@ executable("demo_bin") {
   deps = [
     "stream_provider",
     "text_node",
-    "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//src/camera/stream_utils",
     "//src/lib/fsl",
+    "//src/lib/ui/base_view",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",

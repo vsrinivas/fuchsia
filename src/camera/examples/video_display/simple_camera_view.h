@@ -6,7 +6,6 @@
 #define SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 
 #include <fuchsia/simplecamera/cpp/fidl.h>
-#include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <deque>
@@ -15,6 +14,7 @@
 #include <fbl/vector.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/ui/base_view/base_view.h"
 
 namespace video_display {
 
