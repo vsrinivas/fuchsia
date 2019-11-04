@@ -5,6 +5,8 @@
 #ifndef SRC_LEDGER_LIB_COROUTINE_COROUTINE_WAITER_H_
 #define SRC_LEDGER_LIB_COROUTINE_COROUTINE_WAITER_H_
 
+#include <lib/fit/defer.h>
+
 #include <utility>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -14,17 +16,18 @@
 
 namespace coroutine {
 
-// Wait on a callback::Waiter (and other waiter utilities). This method will
-// interrupt the coroutine until the finalizer of the waiter is executed. The
-// results of the waiter will be stored in |parameters|. If |Wait| returns
-// |INTERRUPTED|, the coroutine must unwind its stack and terminate.
+// Waits on a callback::Waiter (and other waiter utilities). This method interrupts the coroutine
+// until the finalizer of the waiter is executed. The results of the waiter are stored in
+// |parameters|. If |Wait| returns |INTERRUPTED|, the coroutine must unwind its stack and terminate.
+// Cancels the waiter when Wait terminates: callbacks scoped to the waiter may safely use the
+// coroutine's stack.
 
 template <typename A, typename... Args>
 FXL_WARN_UNUSED_RESULT ContinuationStatus Wait(coroutine::CoroutineHandler* handler, A waiter,
                                                Args... parameters) {
+  auto cleanup = fit::defer([&waiter] { waiter->Cancel(); });
   return coroutine::SyncCall(
-      handler,
-      [waiter = std::move(waiter)](auto callback) { waiter->Finalize(std::move(callback)); },
+      handler, [&waiter](auto callback) { waiter->Finalize(std::move(callback)); },
       std::forward<Args>(parameters)...);
 }
 

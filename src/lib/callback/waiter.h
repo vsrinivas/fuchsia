@@ -246,6 +246,9 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
   // Cancels the waiter.
   void Cancel() {
+    if (state_ == State::FINISHED) {
+      return;
+    }
     state_ = State::CANCELLED;
     // Ensure the callback is not retained.
     result_callback_ = nullptr;

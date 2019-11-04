@@ -24,5 +24,21 @@ TEST(CoroutineWaiterTest, Wait) {
 
   on_done();
 }
+
+TEST(CoroutineWaiterTest, Cancel) {
+  CoroutineServiceImpl coroutine_service;
+  CoroutineHandler* coroutine_handler;
+
+  fit::closure scoped_callback;
+  coroutine_service.StartCoroutine([&](CoroutineHandler* handler) {
+    coroutine_handler = handler;
+    auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+    scoped_callback = waiter->MakeScoped(
+        [callback = waiter->NewCallback()] { FAIL() << "Should not be called"; });
+    EXPECT_EQ(ContinuationStatus::INTERRUPTED, Wait(handler, std::move(waiter)));
+  });
+  coroutine_handler->Resume(ContinuationStatus::INTERRUPTED);
+  scoped_callback();
+}
 }  // namespace
 }  // namespace coroutine
