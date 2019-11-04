@@ -30,7 +30,9 @@ def read_build_id_dir(build_id_dir):
         if len(files) != 0 and len(dirs) != 0:
             raise Exception("%s is not a valid .build-id directory" % build_id_dir)
         for f in files:
-            out[os.path.basename(root) + f] = os.path.join(root, f)
+            suffix = ".debug"
+            if f.endswith(suffix):
+                out[os.path.basename(root) + f[:-len(suffix)]] = os.path.join(root, f)
     return out
 
 def link(src, dst):
