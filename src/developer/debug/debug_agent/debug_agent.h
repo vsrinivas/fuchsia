@@ -19,7 +19,6 @@
 #include "src/developer/debug/debug_agent/limbo_provider.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
-#include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -40,8 +39,7 @@ struct SystemProviders {
 // Main state and control for the debug agent.
 class DebugAgent : public RemoteAPI,
                    public ProcessStartHandler,
-                   public Breakpoint::ProcessDelegate,
-                   public Watchpoint::ProcessDelegate {
+                   public Breakpoint::ProcessDelegate {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -69,8 +67,6 @@ class DebugAgent : public RemoteAPI,
   void RemoveDebuggedJob(zx_koid_t job_koid);
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
-
-  void RemoveWatchpoint(uint32_t watchpoint_id);
 
   void OnProcessStart(const std::string& filter, zx::process) override;
 
@@ -132,16 +128,6 @@ class DebugAgent : public RemoteAPI,
   void SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
 
-  // Watchpoint::ProcessDelegate implementation ----------------------------------------------------
-
-  zx_status_t RegisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
-                                 const debug_ipc::AddressRange&) override;
-  void UnregisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
-                            const debug_ipc::AddressRange&) override;
-
-  void SetupWatchpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
-                       debug_ipc::AddOrChangeBreakpointReply* reply);
-
   // Job/Process/Thread Management -----------------------------------------------------------------
 
   zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
@@ -167,7 +153,6 @@ class DebugAgent : public RemoteAPI,
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 
   std::map<uint32_t, Breakpoint> breakpoints_;
-  std::map<uint32_t, Watchpoint> watchpoints_;
 
   // Normally the debug agent would be attached to the root job or the
   // component root job and give the client the koid. This is a job koid needed

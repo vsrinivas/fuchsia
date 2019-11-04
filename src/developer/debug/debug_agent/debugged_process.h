@@ -132,21 +132,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
   virtual HardwareBreakpoint* FindHardwareBreakpoint(uint64_t address) const;
 
-  // Find a process watchpoint whose range starts at |address|.
-  // Returns nullptr if no watchpoint is at that address.
-  ProcessWatchpoint* FindWatchpointByAddress(uint64_t address);
-
   // Notifications when breakpoints are added or removed that affect this
   // process.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
-
-  zx_status_t RegisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
-  void UnregisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
-
-  const std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>>& watchpoints() const {
-    return watchpoints_;
-  }
 
   // Each time a thread attempts to step over a breakpoint, the breakpoint will enqueue itself and
   // the thread into the step over queue. The step over queue is used so that there is only one
@@ -242,10 +231,6 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   // Maps addresses to the ProcessBreakpoint at a location.
   std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>> software_breakpoints_;
   std::map<uint64_t, std::unique_ptr<HardwareBreakpoint>> hardware_breakpoints_;
-
-  // Each watchpoint holds the information about what range of addresses
-  // it spans. They're keyed by the first address of their range.
-  std::map<uint64_t, std::unique_ptr<ProcessWatchpoint>> watchpoints_;
 
   std::deque<StepOverTicket> step_over_queue_;
 

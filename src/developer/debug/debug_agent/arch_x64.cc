@@ -106,10 +106,11 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
   ExceptionInfo(const DebuggedThread& thread) : thread_(thread) {}
 
   bool AddrIsWatchpoint(uint64_t addr) override {
-    for (auto& [address, watchpoint] : thread_.process()->watchpoints()) {
-      if (address == addr)
-        return true;
-    }
+    // TODO(donosoc): Reactivate when watchpoints have been migrated.
+    /* for (auto& [address, watchpoint] : thread_.process()->watchpoints()) { */
+    /*   if (address == addr) */
+    /*     return true; */
+    /* } */
 
     return false;
   }

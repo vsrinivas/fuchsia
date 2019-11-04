@@ -10,60 +10,45 @@
 
 #include <set>
 
-#include "src/developer/debug/ipc/records.h"
-#include "src/lib/fxl/logging.h"
+#include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/process_breakpoint.h"
 
 namespace debug_agent {
 
-class Watchpoint {
+class Watchpoint : public ProcessBreakpoint {
  public:
-  // In charge of knowing how to install a watchpoint into the corresponding
-  // processes. Having a delegate do it enables to easily mock that
-  // functionality.
-  //
-  // Must outlive the Watchpoint.
-  class ProcessDelegate {
-   public:
-    // Will call AppendProcessWatchpoint will the unique ID that the particular
-    // process assigned to that process watchpoint installation.
-    virtual zx_status_t RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
-                                           const debug_ipc::AddressRange&) = 0;
-    virtual void UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
-                                      const debug_ipc::AddressRange&) = 0;
-  };
-
-  explicit Watchpoint(ProcessDelegate* delegate);
+  explicit Watchpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                      std::shared_ptr<arch::ArchProvider> arch_provider,
+                      const debug_ipc::AddressRange& range);
   ~Watchpoint();
 
-  uint32_t id() const { return settings_.id; }
+  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kWatchpoint; }
+  bool Installed(zx_koid_t thread_koid) const override;
 
-  zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
+  zx_status_t Update() override;
 
-  // Returns the list of threads that this Watchpoint spans for a process.
-  // Returns false if the watchpoint doesn't span the process.
-  // If |out| is empty, it means all the threads.
-  bool ThreadsToInstall(zx_koid_t process_koid, std::set<zx_koid_t>* out) const;
+  const debug_ipc::AddressRange& range() const { return range_; }
 
-  debug_ipc::BreakpointStats OnHit();
+  const std::set<zx_koid_t>& installed_threads() const { return installed_threads_; }
+
+  // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
+  void EndStepOver(DebuggedThread* thread) override;
+  void ExecuteStepOver(DebuggedThread* thread) override;
+
+  void StepOverCleanup(DebuggedThread* thread) override {}
 
  private:
-  // This is a pair of process and the id of the ProcessWatchpoint installed
-  // within it.
-  struct WatchpointInstallation {
-    zx_koid_t process_koid;
-    debug_ipc::AddressRange range;
+  zx_status_t Install(DebuggedThread* thread);
 
-    bool operator<(const WatchpointInstallation&) const;
-  };
+  zx_status_t Uninstall(DebuggedThread* thread) override;
+  zx_status_t Uninstall() override;
 
-  ProcessDelegate* delegate_ = nullptr;  // Not-owning.
-  debug_ipc::BreakpointSettings settings_ = {};
+  debug_ipc::AddressRange range_;
 
-  debug_ipc::BreakpointStats stats_;
+  std::shared_ptr<arch::ArchProvider> arch_provider_;
 
-  std::set<WatchpointInstallation> installed_watchpoints_ = {};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Watchpoint);
+  std::set<zx_koid_t> installed_threads_;
+  std::set<zx_koid_t> current_stepping_over_threads_;
 };
 
 }  // namespace debug_agent

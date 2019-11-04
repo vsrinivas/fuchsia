@@ -54,9 +54,7 @@ Breakpoint::~Breakpoint() {
 
 zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
                                     const debug_ipc::BreakpointSettings& settings) {
-  FXL_DCHECK(type == debug_ipc::BreakpointType::kSoftware ||
-             type == debug_ipc::BreakpointType::kHardware)
-      << "Got: " << debug_ipc::BreakpointTypeToString(type);
+  FXL_DCHECK(type != debug_ipc::BreakpointType::kLast);
   type_ = type;
   settings_ = settings;
   LogSetSettings(FROM_HERE, this);

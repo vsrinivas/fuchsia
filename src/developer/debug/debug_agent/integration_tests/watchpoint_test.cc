@@ -85,7 +85,7 @@ std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetWatchpoin
     const WatchpointStreamBackend& backend, uint64_t address);
 
 #if defined(__x86_64__)
-TEST(Watchpoint, DefaultCase) {
+TEST(Watchpoint, DISABLED_DefaultCase) {
 // Arm64 implementation is not done yet.
 #elif defined(__aarch64__)
 TEST(Watchpoint, DISABLED_DefaultCase) {
@@ -142,8 +142,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     ASSERT_EQ(exceptions.size(), 1u);
 
     auto& exception = exceptions[0];
-    EXPECT_EQ(exception.type, ExceptionType::kWatchpoint)
-        << ExceptionTypeToString(exception.type);
+    EXPECT_EQ(exception.type, ExceptionType::kWatchpoint) << ExceptionTypeToString(exception.type);
     EXPECT_EQ(exception.thread.process_koid, backend.process_koid());
     EXPECT_EQ(exception.thread.thread_koid, backend.thread_koid());
 

@@ -124,12 +124,6 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
     breakpoints_.erase(found);
 }
 
-void DebugAgent::RemoveWatchpoint(uint32_t watchpoint_id) {
-  auto found = watchpoints_.find(watchpoint_id);
-  if (found != watchpoints_.end())
-    watchpoints_.erase(found);
-}
-
 void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                                debug_ipc::ConfigAgentReply* reply) {
   reply->results = HandleActions(request.actions, &configuration_);
@@ -339,7 +333,8 @@ void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointR
     case debug_ipc::BreakpointType::kHardware:
       return SetupBreakpoint(request, reply);
     case debug_ipc::BreakpointType::kWatchpoint:
-      return SetupWatchpoint(request, reply);
+      FXL_NOTREACHED() << "Not implemented.";
+      break;
     case debug_ipc::BreakpointType::kLast:
       break;
   }
@@ -437,43 +432,6 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
   }
 
   reply->status = found->second.SetSettings(request.breakpoint_type, request.breakpoint);
-}
-
-zx_status_t DebugAgent::RegisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
-                                           const debug_ipc::AddressRange& range) {
-  DebuggedProcess* process = GetDebuggedProcess(process_koid);
-  if (!process) {
-    // The process might legitimately be not found if there was a race between
-    // the process terminating and a watchpoint add/change.
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  return process->RegisterWatchpoint(wp, range);
-}
-
-void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
-                                      const debug_ipc::AddressRange& range) {
-  // The process might legitimately be not found if there was a race between
-  // the process terminating and a watchpoint add/change.
-  DebuggedProcess* process = GetDebuggedProcess(process_koid);
-  if (!process)
-    return;
-
-  process->UnregisterWatchpoint(wp, range);
-}
-
-void DebugAgent::SetupWatchpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
-                                 debug_ipc::AddOrChangeBreakpointReply* reply) {
-  auto id = request.breakpoint.id;
-
-  auto wp_it = watchpoints_.find(id);
-  if (wp_it == watchpoints_.end()) {
-    wp_it = watchpoints_
-                .emplace(std::piecewise_construct, std::forward_as_tuple(id),
-                         std::forward_as_tuple(this))
-                .first;
-  }
-  reply->status = wp_it->second.SetSettings(request.breakpoint);
 }
 
 void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,

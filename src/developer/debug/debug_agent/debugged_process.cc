@@ -17,7 +17,6 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
-#include "src/developer/debug/debug_agent/process_watchpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -422,14 +421,6 @@ HardwareBreakpoint* DebuggedProcess::FindHardwareBreakpoint(uint64_t address) co
   return it->second.get();
 }
 
-ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
-  DEBUG_LOG(Process) << LogPreamble(this) << "WP address 0x" << std::hex << address;
-  auto it = watchpoints_.find(address);
-  if (it == watchpoints_.end())
-    return nullptr;
-  return it->second.get();
-}
-
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
@@ -467,29 +458,6 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   }
 
   FXL_NOTREACHED();
-}
-
-zx_status_t DebuggedProcess::RegisterWatchpoint(Watchpoint* wp,
-                                                const debug_ipc::AddressRange& range) {
-  // We should not install the same watchpoint twice.
-  FXL_DCHECK(watchpoints_.find(range.begin()) == watchpoints_.end());
-
-  DEBUG_LOG(Process) << LogPreamble(this) << "Registering watchpoint: " << wp->id() << " on "
-                     << range.ToString() << ".";
-
-  auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, arch_provider_, range);
-  if (zx_status_t res = process_wp->Init(); res != ZX_OK)
-    return res;
-
-  // We let the associated Watchpoint know about this installed process wp.
-  watchpoints_[range.begin()] = std::move(process_wp);
-  return ZX_OK;
-}
-
-void DebuggedProcess::UnregisterWatchpoint(Watchpoint* wp, const debug_ipc::AddressRange& range) {
-  // The process watchpoint owns the resource and will free it upon destruction.
-  auto node = watchpoints_.extract(range.begin());
-  FXL_DCHECK(!node.empty());
 }
 
 void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,

@@ -4,85 +4,236 @@
 
 #include "src/developer/debug/debug_agent/watchpoint.h"
 
+#include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
-Watchpoint::Watchpoint(ProcessDelegate* delegate) : delegate_(delegate) {}
+namespace {
 
-Watchpoint::~Watchpoint() {
-  for (auto& [process_koid, range] : installed_watchpoints_) {
-    delegate_->UnregisterWatchpoint(this, process_koid, range);
-  }
-}
+std::string LogPreamble(ProcessBreakpoint* b) {
+  std::stringstream ss;
 
-zx_status_t Watchpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
-  zx_status_t result = ZX_OK;
-  settings_ = settings;
-  stats_.id = settings_.id;
+  ss << "[WP 0x" << std::hex << b->address();
+  bool first = true;
 
-  // The updated set of locations.
-  std::set<WatchpointInstallation> updated_locations;
-  for (const auto& cur : settings.locations) {
-    WatchpointInstallation installation = {cur.process_koid, cur.address_range};
-    updated_locations.insert(std::move(installation));
-  }
-
-  // Removed locations.
-  for (const auto& loc : installed_watchpoints_) {
-    if (updated_locations.find(loc) == updated_locations.end())
-      delegate_->UnregisterWatchpoint(this, loc.process_koid, loc.range);
-  }
-
-  // Added locations.
-  for (const auto& loc : updated_locations) {
-    if (installed_watchpoints_.find(loc) == installed_watchpoints_.end()) {
-      zx_status_t process_status = delegate_->RegisterWatchpoint(this, loc.process_koid, loc.range);
-      if (process_status != ZX_OK)
-        result = process_status;
+  // Add the names of all the breakpoints associated with this process breakpoint.
+  ss << " (";
+  for (Breakpoint* breakpoint : b->breakpoints()) {
+    if (!first) {
+      first = false;
+      ss << ", ";
     }
+    ss << breakpoint->settings().name;
   }
 
-  installed_watchpoints_ = std::move(updated_locations);
-  return result;
+  ss << ")] ";
+  return ss.str();
 }
 
-bool Watchpoint::ThreadsToInstall(zx_koid_t process_koid, std::set<zx_koid_t>* out) const {
-  std::set<zx_koid_t> thread_koids = {};
-  for (const auto& location : settings_.locations) {
-    if (location.process_koid != process_koid)
+enum class WarningType {
+  kInstall,
+  kUninstall,
+};
+
+void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address, zx_status_t status) {
+  // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
+  // making the system ignore our uninstall requests.
+  if (status == ZX_ERR_NOT_FOUND)
+    return;
+
+  const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
+  FXL_LOG(WARNING) << fxl::StringPrintf(
+      "Could not %s HW breakpoint for thread %u at "
+      "%" PRIX64 ": %s",
+      verb, static_cast<uint32_t>(thread_koid), address, zx_status_get_string(status));
+}
+
+std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
+  std::set<zx_koid_t> ids;
+  bool all_threads = false;
+  for (Breakpoint* bp : watchpoint.breakpoints()) {
+    // We only care about hardware breakpoints.
+    if (bp->type() != debug_ipc::BreakpointType::kWatchpoint)
       continue;
 
-    // |thread_koid| == 0 means all the threads.
-    if (location.thread_koid == 0) {
-      *out = {};
-      return true;
+    for (auto& location : bp->settings().locations) {
+      // We only install for locations that match this process breakpoint.
+      if (location.address_range != watchpoint.range())
+        continue;
+
+      auto thread_id = location.thread_koid;
+      if (thread_id == 0) {
+        all_threads = true;
+        break;
+      } else {
+        ids.insert(thread_id);
+      }
     }
 
-    thread_koids.insert(location.thread_koid);
+    // No need to continue searching if a breakpoint wants all threads.
+    if (all_threads)
+      break;
   }
 
-  if (thread_koids.empty())
-    return false;
+  // If all threads are required, add them all.
+  if (all_threads) {
+    for (DebuggedThread* thread : watchpoint.process()->GetThreads())
+      ids.insert(thread->koid());
+  }
 
-  *out = std::move(thread_koids);
-  return true;
+  return ids;
 }
 
-bool Watchpoint::WatchpointInstallation::operator<(const WatchpointInstallation& other) const {
-  if (process_koid != other.process_koid)
-    return process_koid < other.process_koid;
+}  // namespace
 
-  debug_ipc::AddressRangeEqualityCmp comparer;
-  return comparer(range, other.range);
+Watchpoint::Watchpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                       std::shared_ptr<arch::ArchProvider> arch_provider,
+                       const debug_ipc::AddressRange& range)
+    : ProcessBreakpoint(breakpoint, process, range.begin()),
+      range_(range),
+      arch_provider_(std::move(arch_provider)) {}
+
+Watchpoint::~Watchpoint() { Uninstall(); }
+
+bool Watchpoint::Installed(zx_koid_t thread_koid) const {
+  return installed_threads_.count(thread_koid) > 0;
 }
 
-debug_ipc::BreakpointStats Watchpoint::OnHit() {
-  stats_.hit_count++;
-  if (settings_.one_shot)
-    stats_.should_delete = true;
+// ProcessBreakpoint Implementation ----------------------------------------------------------------
 
-  return stats_;
+void Watchpoint::ExecuteStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) == 0);
+  FXL_DCHECK(!thread->stepping_over_breakpoint());
+
+  DEBUG_LOG(Watchpoint) << LogPreamble(this) << "Thread " << thread->koid() << " is stepping over.";
+  thread->set_stepping_over_breakpoint(true);
+  current_stepping_over_threads_.insert(thread->koid());
+
+  // HW breakpoints don't need to suspend any threads.
+  Uninstall(thread);
+
+  // The thread now can continue with the step over.
+  thread->ResumeException();
+}
+
+void Watchpoint::EndStepOver(DebuggedThread* thread) {
+  FXL_DCHECK(thread->stepping_over_breakpoint());
+  FXL_DCHECK(current_stepping_over_threads_.count(thread->koid()) > 0);
+
+  DEBUG_LOG(Watchpoint) << LogPreamble(this) << "Thread " << thread->koid() << " ending step over.";
+
+  thread->set_stepping_over_breakpoint(false);
+  current_stepping_over_threads_.erase(thread->koid());
+
+  // We reinstall this breakpoint for the thread.
+  Install(thread);
+
+  // Tell the process we're done stepping over.
+  process_->OnBreakpointFinishedSteppingOver();
+}
+
+// Update ------------------------------------------------------------------------------------------
+
+zx_status_t Watchpoint::Update() {
+  // We get a snapshot of which threads are already installed.
+  auto current_koids = installed_threads_;
+  auto koids_to_install = ThreadsTargeted(*this);
+
+  // Uninstall pass.
+  for (zx_koid_t thread_koid : current_koids) {
+    if (koids_to_install.count(thread_koid) > 0)
+      continue;
+
+    // The ProcessBreakpoint not longer tracks this. Remove.
+    DebuggedThread* thread = process()->GetThread(thread_koid);
+    if (thread) {
+      zx_status_t status = Uninstall(thread);
+      if (status != ZX_OK)
+        continue;
+    }
+
+    installed_threads_.erase(thread_koid);
+  }
+
+  // Install pass.
+  for (zx_koid_t thread_koid : koids_to_install) {
+    // If it's already installed, ignore.
+    if (installed_threads_.count(thread_koid) > 0)
+      continue;
+
+    DebuggedThread* thread = process()->GetThread(thread_koid);
+    if (!thread)
+      continue;
+
+    zx_status_t status = Install(thread);
+    if (status != ZX_OK)
+      continue;
+
+    installed_threads_.insert(thread_koid);
+  }
+
+  return ZX_OK;
+}
+
+// Install -----------------------------------------------------------------------------------------
+
+zx_status_t Watchpoint::Install(DebuggedThread* thread) {
+  if (!thread) {
+    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  DEBUG_LOG(Watchpoint) << "Installing watchpoint on thread " << thread->koid() << " on address 0x"
+                        << std::hex << address();
+
+  auto suspend_token = thread->RefCountedSuspend(true);
+
+  // Do the actual installation.
+  zx_status_t status = arch_provider_->InstallWatchpoint(&thread->handle(), range_);
+  if (status != ZX_OK) {
+    Warn(WarningType::kInstall, thread->koid(), address(), status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+// Uninstall ---------------------------------------------------------------------------------------
+
+zx_status_t Watchpoint::Uninstall() {
+  for (zx_koid_t thread_koid : installed_threads_) {
+    DebuggedThread* thread = process()->GetThread(thread_koid);
+    if (!thread)
+      continue;
+
+    zx_status_t res = Uninstall(thread);
+    if (res != ZX_OK)
+      continue;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
+  if (!thread) {
+    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  DEBUG_LOG(Watchpoint) << "Removing watchpoint on thread " << thread->koid() << " on address 0x"
+                        << std::hex << address();
+
+  auto suspend_token = thread->RefCountedSuspend(true);
+
+  zx_status_t status = arch_provider_->UninstallWatchpoint(&thread->handle(), range_);
+  if (status != ZX_OK) {
+    Warn(WarningType::kInstall, thread->koid(), address(), status);
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace debug_agent
