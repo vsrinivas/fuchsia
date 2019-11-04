@@ -13,6 +13,7 @@ class Empty;
 class Empty final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint8_t __reserved = 0u;
 

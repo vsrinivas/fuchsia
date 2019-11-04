@@ -1,3 +1,5 @@
+#include <lib/fidl/internal.h>
+
 #include <cstdint>
 #include <ios>
 #include <iostream>

@@ -121,7 +121,9 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 			"name":        decodeSuccess.Name,
 			"value_build": valueBuilder.String(),
 			"value_var":   valueBuilder.lastVar,
-			"bytes":       bytesBuilder(decodeSuccess.Bytes),
+			"bytes": bytesBuilder(append(
+				transactionHeaderBytes(decodeSuccess.WireFormat),
+				decodeSuccess.Bytes...)),
 		}); err != nil {
 			return err
 		}
@@ -156,6 +158,25 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	}
 
 	return nil
+}
+
+func transactionHeaderBytes(wf gidlir.WireFormat) []byte {
+	// See the FIDL wire format specif for the transaction header layout.
+	switch wf {
+	case gidlir.V1WireFormat:
+		// Flags[0] == 1 (union represented as xunion bytes)
+		return []byte{
+			0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		}
+	case gidlir.OldWireFormat:
+		return []byte{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		}
+	default:
+		panic("unknown wire format")
+	}
 }
 
 func cppErrorCode(code gidlir.ErrorCode) string {

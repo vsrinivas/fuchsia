@@ -133,6 +133,8 @@ void Union::set_Field(int32_t value) {
 }
 extern "C" const fidl_type_t test_name_TableTable;
 const fidl_type_t* Table::FidlType = &test_name_TableTable;
+extern "C" const fidl_type_t v1_test_name_TableTable;
+const fidl_type_t* Table::FidlTypeV1 = &v1_test_name_TableTable;
 
 Table::Table() :
   has_Field_(false) {
@@ -237,6 +239,8 @@ zx_status_t Table::Clone(Table* result) const {
 }
 extern "C" const fidl_type_t test_name_StructTable;
 const fidl_type_t* Struct::FidlType = &test_name_StructTable;
+extern "C" const fidl_type_t v1_test_name_StructTable;
+const fidl_type_t* Struct::FidlTypeV1 = &v1_test_name_StructTable;
 
 void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {

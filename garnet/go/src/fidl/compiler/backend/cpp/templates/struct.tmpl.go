@@ -16,6 +16,7 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
 
   {{- if .IsResultValue }}
   {{ .Name }}() = default;
@@ -71,6 +72,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- define "StructDefinition" }}
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+extern "C" const fidl_type_t {{ .V1TableType }};
+const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {

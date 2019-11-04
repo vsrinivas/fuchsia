@@ -99,6 +99,7 @@ TEST(Conformance, EncodeUnionAsXUnion) {
 
 TEST(Conformance, UnionMigration_SingleVariant_v1_Decode) {
   auto input = std::vector<uint8_t>{
+
       // Header:
       0x00, 0x00, 0x00, 0x00, // TXID
       0x01, 0x00, 0x00, // Flags

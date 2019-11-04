@@ -8,6 +8,8 @@ namespace name {
 
 extern "C" const fidl_type_t test_name_HandlesTable;
 const fidl_type_t* Handles::FidlType = &test_name_HandlesTable;
+extern "C" const fidl_type_t v1_test_name_HandlesTable;
+const fidl_type_t* Handles::FidlTypeV1 = &v1_test_name_HandlesTable;
 
 void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {

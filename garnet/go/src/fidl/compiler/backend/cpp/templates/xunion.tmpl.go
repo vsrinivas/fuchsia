@@ -16,6 +16,7 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
  static const fidl_type_t* FidlType;
+ static const fidl_type_t* FidlTypeV1;
 
   {{ .Name }}();
   ~{{ .Name }}();
@@ -151,6 +152,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- define "XUnionDefinition" }}
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+extern "C" const fidl_type_t {{ .V1TableType }};
+const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
 
 {{ .Name }}::{{ .Name }}() {}
 

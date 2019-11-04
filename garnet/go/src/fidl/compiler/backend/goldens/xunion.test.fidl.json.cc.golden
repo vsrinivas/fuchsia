@@ -8,6 +8,8 @@ namespace name {
 
 extern "C" const fidl_type_t test_name_StructWithNullableXUnionTable;
 const fidl_type_t* StructWithNullableXUnion::FidlType = &test_name_StructWithNullableXUnionTable;
+extern "C" const fidl_type_t v1_test_name_StructWithNullableXUnionTable;
+const fidl_type_t* StructWithNullableXUnion::FidlTypeV1 = &v1_test_name_StructWithNullableXUnionTable;
 
 void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {
@@ -33,6 +35,8 @@ zx_status_t StructWithNullableXUnion::Clone(StructWithNullableXUnion* _result) c
 }
 extern "C" const fidl_type_t test_name_StrictSimpleXUnionTable;
 const fidl_type_t* StrictSimpleXUnion::FidlType = &test_name_StrictSimpleXUnionTable;
+extern "C" const fidl_type_t v1_test_name_StrictSimpleXUnionTable;
+const fidl_type_t* StrictSimpleXUnion::FidlTypeV1 = &v1_test_name_StrictSimpleXUnionTable;
 
 StrictSimpleXUnion::StrictSimpleXUnion() {}
 
@@ -229,6 +233,8 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 extern "C" const fidl_type_t test_name_StrictBoundedXUnionTable;
 const fidl_type_t* StrictBoundedXUnion::FidlType = &test_name_StrictBoundedXUnionTable;
+extern "C" const fidl_type_t v1_test_name_StrictBoundedXUnionTable;
+const fidl_type_t* StrictBoundedXUnion::FidlTypeV1 = &v1_test_name_StrictBoundedXUnionTable;
 
 StrictBoundedXUnion::StrictBoundedXUnion() {}
 
@@ -367,6 +373,8 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 extern "C" const fidl_type_t test_name_OlderSimpleUnionTable;
 const fidl_type_t* OlderSimpleUnion::FidlType = &test_name_OlderSimpleUnionTable;
+extern "C" const fidl_type_t v1_test_name_OlderSimpleUnionTable;
+const fidl_type_t* OlderSimpleUnion::FidlTypeV1 = &v1_test_name_OlderSimpleUnionTable;
 
 OlderSimpleUnion::OlderSimpleUnion() {}
 
@@ -792,6 +800,8 @@ zx_status_t TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocat
 
 extern "C" const fidl_type_t test_name_NewerSimpleUnionTable;
 const fidl_type_t* NewerSimpleUnion::FidlType = &test_name_NewerSimpleUnionTable;
+extern "C" const fidl_type_t v1_test_name_NewerSimpleUnionTable;
+const fidl_type_t* NewerSimpleUnion::FidlTypeV1 = &v1_test_name_NewerSimpleUnionTable;
 
 NewerSimpleUnion::NewerSimpleUnion() {}
 
@@ -1013,6 +1023,8 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 extern "C" const fidl_type_t test_name_ExplicitXUnionTable;
 const fidl_type_t* ExplicitXUnion::FidlType = &test_name_ExplicitXUnionTable;
+extern "C" const fidl_type_t v1_test_name_ExplicitXUnionTable;
+const fidl_type_t* ExplicitXUnion::FidlTypeV1 = &v1_test_name_ExplicitXUnionTable;
 
 ExplicitXUnion::ExplicitXUnion() {}
 
@@ -1189,6 +1201,8 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 extern "C" const fidl_type_t test_name_EmptyTable;
 const fidl_type_t* Empty::FidlType = &test_name_EmptyTable;
+extern "C" const fidl_type_t v1_test_name_EmptyTable;
+const fidl_type_t* Empty::FidlTypeV1 = &v1_test_name_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {
@@ -1214,6 +1228,8 @@ zx_status_t Empty::Clone(Empty* _result) const {
 }
 extern "C" const fidl_type_t test_name_XUnionContainingEmptyStructTable;
 const fidl_type_t* XUnionContainingEmptyStruct::FidlType = &test_name_XUnionContainingEmptyStructTable;
+extern "C" const fidl_type_t v1_test_name_XUnionContainingEmptyStructTable;
+const fidl_type_t* XUnionContainingEmptyStruct::FidlTypeV1 = &v1_test_name_XUnionContainingEmptyStructTable;
 
 XUnionContainingEmptyStruct::XUnionContainingEmptyStruct() {}
 

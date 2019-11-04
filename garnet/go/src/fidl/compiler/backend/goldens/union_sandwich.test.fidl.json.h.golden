@@ -89,6 +89,7 @@ using UnionSize8Alignment4Ptr = ::std::unique_ptr<UnionSize8Alignment4>;
 class SandwichUnionSize8Alignment4 final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint32_t before{};
   
@@ -180,6 +181,7 @@ using UnionSize36Alignment4Ptr = ::std::unique_ptr<UnionSize36Alignment4>;
 class SandwichUnionSize36Alignment4 final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint32_t before{};
   
@@ -271,6 +273,7 @@ using UnionSize12Alignment4Ptr = ::std::unique_ptr<UnionSize12Alignment4>;
 class SandwichUnionSize12Alignment4 final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint32_t before{};
   
@@ -295,6 +298,7 @@ using SandwichUnionSize12Alignment4Ptr = ::std::unique_ptr<SandwichUnionSize12Al
 class StructSize16Alignment8 final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint64_t f1{};
   
@@ -384,6 +388,7 @@ using UnionSize24Alignment8Ptr = ::std::unique_ptr<UnionSize24Alignment8>;
 class SandwichUnionSize24Alignment8 final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   uint32_t before{};
   

@@ -5,12 +5,12 @@
 #ifndef LIB_FIDL_CPP_MESSAGE_H_
 #define LIB_FIDL_CPP_MESSAGE_H_
 
-#include <vector>
-
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
+
+#include <vector>
 
 namespace fidl {
 

@@ -48,12 +48,28 @@ template <class Output>
 Output DecodedBytes(std::vector<uint8_t> input) {
   Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
 
+  fidl::FidlStructField fields_v1[] = {
+      fidl::FidlStructField(Output::FidlTypeV1, sizeof(fidl_message_header_t), 0u, nullptr)};
+  assert(Output::FidlTypeV1->type_tag == kFidlTypeStruct);
+  fidl_type_t obj_with_header_v1 = fidl_type_t(fidl::FidlCodedStruct(
+      fields_v1, 1u,
+      sizeof(fidl_message_header_t) + FIDL_ALIGN(Output::FidlTypeV1->coded_struct.size), "",
+      nullptr));
+
+  fidl::FidlStructField fields_old[] = {
+      fidl::FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u, &fields_v1[0])};
+  assert(Output::FidlType->type_tag == kFidlTypeStruct);
+  fidl_type_t obj_with_header_old = fidl_type_t(fidl::FidlCodedStruct(
+      fields_old, 1u,
+      sizeof(fidl_message_header_t) + FIDL_ALIGN(Output::FidlType->coded_struct.size), "",
+      &obj_with_header_v1.coded_struct));
+
   const char* error = nullptr;
-  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error)) << error;
+  EXPECT_EQ(ZX_OK, message.Decode(&obj_with_header_old, &error)) << error;
 
   fidl::Decoder decoder(std::move(message));
   Output output;
-  Output::Decode(&decoder, &output, 0);
+  Output::Decode(&decoder, &output, sizeof(fidl_message_header_t));
 
   return output;
 }

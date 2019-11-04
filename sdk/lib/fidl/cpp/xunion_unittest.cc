@@ -36,6 +36,8 @@ TEST(XUnion, FlexibleXUnionWithUnknownData) {
   using test::misc::SampleXUnionInStruct;
 
   std::vector<uint8_t> input = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
       0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
@@ -47,7 +49,9 @@ TEST(XUnion, FlexibleXUnionWithUnknownData) {
 
   EXPECT_EQ(xu.Which(), SampleXUnion::Tag::kUnknown);
   EXPECT_EQ(xu.Ordinal(), 0xba5eba11);
-  EXPECT_EQ(*xu.UnknownData(), std::vector<uint8_t>(input.cbegin() + 24, input.cend()));
+  EXPECT_EQ(*xu.UnknownData(), std::vector<uint8_t>(input.cbegin() + sizeof(fidl_message_header_t) +
+                                                        sizeof(fidl_xunion_t),
+                                                    input.cend()));
 
   // Reset the xunion to a known field, and ensure it behaves correctly.
   xu.set_i(5);
@@ -68,6 +72,8 @@ TEST(XUnion, FlexibleXUnionsEquality) {
   using test::misc::SampleXUnionInStruct;
 
   std::vector<uint8_t> input = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // transaction header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
       0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
@@ -82,13 +88,17 @@ TEST(XUnion, FlexibleXUnionsEquality) {
 
   EXPECT_EQ(xu.Which(), SampleXUnion::Tag::kUnknown);
   EXPECT_EQ(xu.Ordinal(), 0xba5eba11);
-  EXPECT_EQ(*xu.UnknownData(), std::vector<uint8_t>(input.cbegin() + 24, input.cend()));
+  EXPECT_EQ(*xu.UnknownData(), std::vector<uint8_t>(input.cbegin() + sizeof(fidl_message_header_t) +
+                                                        sizeof(fidl_xunion_t),
+                                                    input.cend()));
 
   EXPECT_EQ(xu.Ordinal(), xu2.Ordinal());
   EXPECT_EQ(*xu.UnknownData(), *xu2.UnknownData());
   EXPECT_TRUE(fidl::Equals(xu, xu2));
 
   std::vector<uint8_t> different_unknown_data = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // transaction header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
       0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
@@ -103,6 +113,8 @@ TEST(XUnion, FlexibleXUnionsEquality) {
   EXPECT_FALSE(fidl::Equals(xu, xu3));
 
   std::vector<uint8_t> different_ordinal = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // transaction header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
       0xaa, 0xaa, 0xaa, 0xaa, 0x00, 0x00, 0x00, 0x00,  // DIFFERENT invalid ordinal + padding
       0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present

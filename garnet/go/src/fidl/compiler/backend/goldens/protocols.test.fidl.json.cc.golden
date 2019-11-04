@@ -8,6 +8,8 @@ namespace name {
 
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlTypeV1 = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {
@@ -206,6 +208,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::set_err(uint32_t value) {
 }
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlTypeV1 = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {
@@ -390,6 +394,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::set_err(uint32_t value) {
 }
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlTypeV1 = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (_encoder->ShouldEncodeUnionAsXUnion()) {

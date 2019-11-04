@@ -114,6 +114,7 @@ using UnionPtr = ::std::unique_ptr<Union>;
 class Table final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -194,6 +195,7 @@ using TablePtr = ::std::unique_ptr<Table>;
 class Struct final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   
   // struct member comment #1
   //

@@ -238,22 +238,22 @@ type StructMember struct {
 
 type Interface struct {
 	types.Attributes
-	Namespace             string
-	Name                  string
-	ClassName             string
-	ServiceName           string
-	ProxyName             string
-	StubName              string
-	EventSenderName       string
-	SyncName              string
-	SyncProxyName         string
-	RequestEncoderName    string
-	RequestDecoderName    string
-	ResponseEncoderName   string
-	ResponseDecoderName   string
-	Methods               []Method
-	HasEvents             bool
-	Kind                  interfaceKind
+	Namespace           string
+	Name                string
+	ClassName           string
+	ServiceName         string
+	ProxyName           string
+	StubName            string
+	EventSenderName     string
+	SyncName            string
+	SyncProxyName       string
+	RequestEncoderName  string
+	RequestDecoderName  string
+	ResponseEncoderName string
+	ResponseDecoderName string
+	Methods             []Method
+	HasEvents           bool
+	Kind                interfaceKind
 }
 
 type Service struct {

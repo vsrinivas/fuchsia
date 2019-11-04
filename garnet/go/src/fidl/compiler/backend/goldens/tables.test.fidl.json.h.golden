@@ -17,6 +17,7 @@ class EmptyTable;
 class SimpleTable final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -128,6 +129,7 @@ using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 class ReverseOrdinalTable final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -279,6 +281,7 @@ using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
 class OlderSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -350,6 +353,7 @@ using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 class NewerSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -501,6 +505,7 @@ using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
 
