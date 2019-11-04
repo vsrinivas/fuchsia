@@ -75,7 +75,8 @@ void ClientImpl<T>::Get(const std::string& source, zx::channel channel, Transfer
   get_request.set_source(source);
 
   GetCallData<T>* call_data = new GetCallData<T>(fd, std::move(callback));
-  call_data->reader_ = stub_->AsyncGet(&(call_data->ctx_), get_request, &cq_, call_data);
+  call_data->reader_ = stub_->PrepareAsyncGet(&(call_data->ctx_), get_request, &cq_);
+  call_data->reader_->StartCall(call_data);
 }
 
 template <class T>
@@ -89,8 +90,8 @@ void ClientImpl<T>::Put(zx::channel source_channel, const std::string& destinati
   }
 
   PutCallData<T>* call_data = new PutCallData<T>(fd, destination, std::move(callback));
-  call_data->writer_ =
-      stub_->AsyncPut(&(call_data->ctx_), &(call_data->response_), &cq_, call_data);
+  call_data->writer_ = stub_->PrepareAsyncPut(&(call_data->ctx_), &(call_data->response_), &cq_);
+  call_data->writer_->StartCall(call_data);
 }
 
 template <class T>
@@ -107,7 +108,8 @@ void ClientImpl<T>::Exec(const std::string& command,
 
   ExecCallData<T>* call_data =
       new ExecCallData<T>(command, env_vars, stdin_fd, stdout_fd, stderr_fd, std::move(listener));
-  call_data->rw_ = stub_->AsyncExec(call_data->ctx_.get(), &cq_, call_data);
+  call_data->rw_ = stub_->PrepareAsyncExec(call_data->ctx_.get(), &cq_);
+  call_data->rw_->StartCall(call_data);
 }
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_IMPL_H_

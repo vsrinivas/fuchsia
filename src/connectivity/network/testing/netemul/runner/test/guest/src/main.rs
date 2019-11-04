@@ -4,8 +4,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::FileMarker,
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, EnvironmentVariable, GuestDiscoveryMarker, GuestInteractionMarker,
     },
@@ -13,7 +11,7 @@ use {
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::io::AsyncReadExt,
-    netemul_guest_lib::wait_for_command_completion,
+    netemul_guest_lib::{file_to_client, wait_for_command_completion},
     rand::distributions::Alphanumeric,
     rand::{thread_rng, Rng},
     std::fs::File,
@@ -26,11 +24,6 @@ fn create_test_data(file_path: String, file_size: usize) -> Result<(), Error> {
     let mut test_file = File::create(file_path)?;
     test_file.write_all(file_contents.as_bytes())?;
     return Ok(());
-}
-
-fn file_to_client(file: &File) -> Result<ClientEnd<FileMarker>, Error> {
-    let channel = fdio::clone_channel(file)?;
-    return Ok(ClientEnd::new(channel));
 }
 
 async fn test_file_transfer() -> Result<(), Error> {

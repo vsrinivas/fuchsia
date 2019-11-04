@@ -16,6 +16,7 @@ group("test") {
     "easy_netstack_cfg",
     "env_build",
     "guest",
+    "guest_grpc_stress",
     "inheritance",
     "netstack_socks",
     "sandbox_service",
@@ -41,6 +42,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/dynamic_devices_test", "")
   write_file("$root_out_dir/netstack_intermediary_test", "")
   write_file("$root_out_dir/guest_test", "")
+  write_file("$root_out_dir/grpc_client_stress_test", "")
 }
 
 test_package("netemul_sandbox_test") {
@@ -178,6 +180,7 @@ test_package("netemul_guest_test") {
   deps = [
     ":netemul_empty_binaries",
     "guest",
+    "guest_grpc_stress",
   ]
 
   resources = [
@@ -189,6 +192,10 @@ test_package("netemul_guest_test") {
 
   meta = [
     {
+      path = rebase_path("meta/grpc_client_stress.cmx")
+      dest = "grpc_client_stress.cmx"
+    },
+    {
       path = rebase_path("meta/guest.cmx")
       dest = "guest.cmx"
     },
@@ -197,6 +204,9 @@ test_package("netemul_guest_test") {
   binaries = [
     {
       name = "netemul_guest"
+    },
+    {
+      name = "grpc_client_stress"
     },
   ]
 
@@ -209,10 +219,16 @@ test_package("netemul_guest_test") {
           dimensions = {
             device_type = "Intel NUC Kit NUC7i5DNHE"
           }
-
-          # There appears to be some flakiness in the gRPC communications with the guest.  Move this
-          # test to the flaky builders until that issue is resolved.
-          tags = [ "flaky" ]  # Bug: 37093
+        },
+      ]
+    },
+    {
+      name = "grpc_client_stress_test"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
         },
       ]
     },

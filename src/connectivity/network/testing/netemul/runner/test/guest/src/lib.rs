@@ -4,10 +4,29 @@
 
 use {
     failure::Error,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io::FileMarker,
     fidl_fuchsia_netemul_guest::{CommandListenerEvent, CommandListenerEventStream},
     fuchsia_zircon as zx,
     futures::TryStreamExt,
+    std::fs::File,
 };
+
+/// Converts a File to a FileMarker ClientEnd.
+///
+/// # Arguments
+///
+/// * `file` - An open File to be converted into a ClientEnd<FileMarker>.
+///
+/// # Example
+/// ```
+/// let local_file = "/data/local";
+/// let client_end = file_to_client(&File::create(local_file)?)?;
+/// ```
+pub fn file_to_client(file: &File) -> Result<ClientEnd<FileMarker>, Error> {
+    let channel = fdio::clone_channel(file)?;
+    Ok(ClientEnd::new(channel))
+}
 
 /// Ensures that a command executed on a guest starts and stops without error and feeds in any
 /// initial stdin.
