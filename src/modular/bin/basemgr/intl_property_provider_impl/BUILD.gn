@@ -60,13 +60,15 @@ executable("intl_property_provider_impl_test_bin") {
 
   deps = [
     ":intl_property_provider_impl",
+    "//garnet/bin/trace/tests:component_context",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
   ]
 }
 

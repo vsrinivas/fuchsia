@@ -38,14 +38,15 @@ namespace {
 
 const std::string kDefaultTimeZoneId = "America/Los_Angeles";
 
-// In the absence of real user preferences, make some very myopic assumptions.
-RawProfileData GetDefaultRawData() {
-  return RawProfileData{
-      .language_tags = {LocaleId{.id = "en-US"}},
-      .time_zone_ids = {TimeZoneId{.id = kDefaultTimeZoneId}},
-      .calendar_ids = {CalendarId{.id = "und-u-ca-gregory"}},
-      .temperature_unit = TemperatureUnit::FAHRENHEIT,
-  };
+// Returns the basis from which final values for RawProfileData are obtained.
+RawProfileData GetDefaultRawData(const std::optional<RawProfileData>& prototype) {
+  return prototype.has_value() ? CloneStruct(*prototype)
+                               : RawProfileData{
+                                     .language_tags = {LocaleId{.id = "en-US"}},
+                                     .time_zone_ids = {TimeZoneId{.id = kDefaultTimeZoneId}},
+                                     .calendar_ids = {CalendarId{.id = "und-u-ca-gregory"}},
+                                     .temperature_unit = TemperatureUnit::FAHRENHEIT,
+                                 };
 }
 
 // Collect key-value pairs of Unicode locale properties that will be applied to
@@ -128,18 +129,130 @@ fit::result<Profile, zx_status_t> GenerateProfile(const modular::RawProfileData&
 }
 
 // Extracts just the timezone ID from the setting object.  If the setting is not
-// well-formed or valid, an empty string is returned.
-std::string TimeZoneIdFrom(fuchsia::setui::SettingsObject setting) {
+// well-formed or not valid, no value is returned.
+std::optional<std::string> TimeZoneIdFrom(const fuchsia::setui::SettingsObject& setting) {
   if (setting.setting_type != fuchsia::setui::SettingType::TIME_ZONE) {
     // Should never happen since the Watch/Listen protocol ensures the setting matches.
-    return "";
+    return std::nullopt;
+  }
+  const fuchsia::setui::TimeZoneInfo& timezone_info = setting.data.time_zone_value();
+  if (timezone_info.current == nullptr) {
+    return std::nullopt;
   }
   const auto* timezone = setting.data.time_zone_value().current.get();
-  if (timezone == nullptr || timezone->id.empty()) {
+  if (timezone_info.current->id.empty()) {
     // Weird data in the timezone field causes us to not update anything.
-    return "";
+    return std::nullopt;
   }
-  return timezone->id;
+  return std::string(timezone->id);
+}
+
+// Safely extracts intl settings from a union.
+std::optional<fuchsia::setui::IntlSettings> IntlSettingsFrom(
+    const fuchsia::setui::SettingsObject& setting) {
+  if (!setting.data.is_intl()) {
+    return std::nullopt;
+  }
+  return setting.data.intl();
+}
+
+// Merges the timezone settings into new profile data.
+void MergeTimeZone(const std::optional<std::string>& timezone_id,
+                   RawProfileData* new_profile_data) {
+  if (!timezone_id.has_value()) {
+    return;
+  }
+  // Merge the new value with the old.
+  new_profile_data->time_zone_ids = {TimeZoneId{.id = *timezone_id}};
+}
+
+// Merges the intl settings into the new profile data.
+void MergeIntl(const std::optional<fuchsia::setui::IntlSettings>& intl_settings,
+               RawProfileData* new_profile_data) {
+  if (!intl_settings.has_value()) {
+    return;
+  }
+  // Replace the old settings with the new.
+  switch (intl_settings->temperature_unit) {
+    case fuchsia::setui::TemperatureUnit::CELSIUS:
+      new_profile_data->temperature_unit = fuchsia::intl::TemperatureUnit::CELSIUS;
+      break;
+    case fuchsia::setui::TemperatureUnit::FAHRENHEIT:
+      new_profile_data->temperature_unit = fuchsia::intl::TemperatureUnit::FAHRENHEIT;
+      break;
+    default:
+      FX_LOGS(WARNING) << "fuchsia.setui gave us an unknown temperature unit enum value: "
+                       << static_cast<uint32_t>(intl_settings->temperature_unit);
+  }
+  if (!intl_settings->locales.empty()) {
+    // Do not touch the current locale settings if setui tells us there are no languages
+    // set.
+    new_profile_data->language_tags.clear();
+    for (const auto& locale : intl_settings->locales) {
+      new_profile_data->language_tags.emplace_back(fuchsia::intl::LocaleId{.id = locale});
+    }
+  } else {
+    FX_LOGS(WARNING)
+        << "fuchsia.setui returned locale settings with no locales; this is not a valid "
+           "fuchsia.intl.Profile; not touching the current language settings and proceeding.";
+  }
+}
+
+// Sinks the setting into new_profile_data, by overwriting the content of new_profile_data with the
+// content provided by setting.
+void Merge(const fuchsia::setui::SettingsObject& setting, RawProfileData* new_profile_data) {
+  FX_CHECK(new_profile_data != nullptr);
+  // Using the same Notify function for all settings type, here we process on
+  // a case by case basis.
+  const auto setting_type = setting.setting_type;
+  switch (setting_type) {
+    case fuchsia::setui::SettingType::TIME_ZONE: {
+      const auto timezone_id = TimeZoneIdFrom(setting);
+      MergeTimeZone(timezone_id, new_profile_data);
+    } break;
+    case fuchsia::setui::SettingType::INTL: {
+      const auto intl = IntlSettingsFrom(setting);
+      MergeIntl(intl, new_profile_data);
+    } break;
+    default:
+      // The default branch should, in theory, not trigger since in the setup code we subscribe
+      // only to specific SettingsType values.   If it does, it could be a bug on the server side,
+      // or could be that we have a new setting interest but have not registered to process it.
+
+      // operator<< is not implemented for SettingType, so we just print the corresponding
+      // unsigned value.  See FIDL definition of the enum for the value mapping.
+      FX_LOGS(WARNING) << "Got unexpected setting type: " << static_cast<uint32_t>(setting_type);
+      break;
+  }
+}
+
+// Load initial ICU data if this hasn't been done already.
+//
+// TODO(kpozin): Eventually, this should solely be the responsibility of the client component that
+// links `IntlPropertyProviderImpl`, which has a better idea of what parameters ICU should be
+// initialized with.
+zx_status_t InitializeIcuIfNeeded() {
+  // It's okay if something else in the same process has already initialized
+  // ICU.
+  zx_status_t status = icu_data::Initialize();
+  switch (status) {
+    case ZX_OK:
+    case ZX_ERR_ALREADY_BOUND:
+      return ZX_OK;
+    default:
+      return status;
+  }
+}
+
+// Used to initialize the first, "empty" timezone info.
+fuchsia::setui::SettingsObject InitialSettingsObject() {
+  auto data = fuchsia::setui::SettingData::New();
+  data->set_time_zone_value(fuchsia::setui::TimeZoneInfo{});
+  fuchsia::setui::SettingsObject object{
+      .setting_type = fuchsia::setui::SettingType::TIME_ZONE,
+  };
+  FX_CHECK(data->Clone(&object.data) == ZX_OK);
+  return object;
 }
 
 }  // namespace
@@ -148,7 +261,9 @@ IntlPropertyProviderImpl::IntlPropertyProviderImpl(fuchsia::setui::SetUiServiceP
     : intl_profile_(std::nullopt),
       raw_profile_data_(std::nullopt),
       setui_client_(std::move(setui_client)),
-      setting_listener_binding_(this) {
+      setting_listener_binding_(this),
+      setting_listener_binding_intl_(this),
+      initial_settings_object_(InitialSettingsObject()) {
   Start();
 }
 
@@ -180,51 +295,35 @@ void IntlPropertyProviderImpl::GetProfile(
   ProcessGetProfileQueue();
 }
 
-zx_status_t IntlPropertyProviderImpl::InitializeIcuIfNeeded() {
-  // It's okay if something else in the same process has already initialized
-  // ICU.
-  zx_status_t status = icu_data::Initialize();
-  switch (status) {
-    case ZX_OK:
-    case ZX_ERR_ALREADY_BOUND:
-      return ZX_OK;
-    default:
-      return status;
-  }
-}
-
 void IntlPropertyProviderImpl::LoadInitialValues() {
-  auto set_initial_data = [this](std::string time_zone_id) {
-    // There is no stable source for this data right now, so we use arbitrary
-    // US-centric defaults.
-    RawProfileData new_data = GetDefaultRawData();
-    new_data.time_zone_ids = {TimeZoneId{.id = time_zone_id}};
-    UpdateRawData(new_data);
-
-    // TODO: Consider setting some other error handler for non-initial errors.
+  auto set_initial_data = [this](const fuchsia::setui::SettingsObject& setting) {
+    NotifyInternal(setting);
+    // TODO(kpozin): Consider setting some other error handler for non-initial errors.
     setui_client_.set_error_handler(nullptr);
-    StartSettingsWatchers();
+    StartSettingsWatcher(setting.setting_type);
   };
 
-  setui_client_.set_error_handler([set_initial_data](zx_status_t status __attribute__((unused))) {
-    set_initial_data(kDefaultTimeZoneId);
-  });
+  setui_client_.set_error_handler(
+      [this, set_initial_data](zx_status_t status __attribute__((unused))) {
+        // Sending an initial data request with empty time zone will initialize the time
+        // zone and other settings to their default empty values.
+        set_initial_data(initial_settings_object_);
+      });
 
   auto watch_callback = [set_initial_data](fuchsia::setui::SettingsObject setting) {
-    std::string timezone_id = TimeZoneIdFrom(std::move(setting));
-    if (timezone_id.empty()) {
-      return;
-    }
-    set_initial_data(timezone_id);
+    set_initial_data(setting);
   };
 
   setui_client_->Watch(fuchsia::setui::SettingType::TIME_ZONE, watch_callback);
+  setui_client_->Watch(fuchsia::setui::SettingType::INTL, watch_callback);
 }
 
-void IntlPropertyProviderImpl::StartSettingsWatchers() {
+void IntlPropertyProviderImpl::StartSettingsWatcher(fuchsia::setui::SettingType type) {
   fidl::InterfaceHandle<fuchsia::setui::SettingListener> handle;
-  setting_listener_binding_.Bind(handle.NewRequest());
-  setui_client_->Listen(fuchsia::setui::SettingType::TIME_ZONE, std::move(handle));
+  auto& binding = (type == fuchsia::setui::SettingType::TIME_ZONE) ? setting_listener_binding_
+                                                                   : setting_listener_binding_intl_;
+  binding.Bind(handle.NewRequest());
+  setui_client_->Listen(type, std::move(handle));
 }
 
 fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal() {
@@ -247,25 +346,25 @@ fit::result<Profile, zx_status_t> IntlPropertyProviderImpl::GetProfileInternal()
 bool IntlPropertyProviderImpl::IsRawDataInitialized() { return raw_profile_data_.has_value(); }
 
 bool IntlPropertyProviderImpl::UpdateRawData(modular::RawProfileData& new_raw_data) {
-  if (!IsRawDataInitialized() || (!fidl::Equals(*raw_profile_data_, new_raw_data))) {
-    raw_profile_data_ = std::move(new_raw_data);
-    // Invalidate the existing cached profile.
-    intl_profile_ = std::nullopt;
-    FX_VLOGS(1) << "Updated raw data";
-    NotifyOnChange();
-    ProcessGetProfileQueue();
-    return true;
+  if (IsRawDataInitialized() && fidl::Equals(*raw_profile_data_, new_raw_data)) {
+    return false;
   }
-  return false;
+  raw_profile_data_ = std::move(new_raw_data);
+  // Invalidate the existing cached profile.
+  intl_profile_ = std::nullopt;
+  FX_VLOGS(1) << "Updated raw data";
+  NotifyOnChange();
+  ProcessGetProfileQueue();
+  return true;
 }
 
 void IntlPropertyProviderImpl::Notify(fuchsia::setui::SettingsObject setting) {
-  std::string timezone_id = TimeZoneIdFrom(std::move(setting));
-  if (timezone_id.empty()) {
-    return;
-  }
-  RawProfileData new_profile_data = CloneStruct(*raw_profile_data_);
-  new_profile_data.time_zone_ids = {TimeZoneId{.id = std::move(timezone_id)}};
+  NotifyInternal(setting);
+}
+
+void IntlPropertyProviderImpl::NotifyInternal(const fuchsia::setui::SettingsObject& setting) {
+  RawProfileData new_profile_data = GetDefaultRawData(raw_profile_data_);
+  Merge(setting, &new_profile_data);
   UpdateRawData(new_profile_data);
 }
 
@@ -284,13 +383,15 @@ void IntlPropertyProviderImpl::ProcessGetProfileQueue() {
 
   auto profile_result = GetProfileInternal();
   if (profile_result.is_error()) {
+    FX_VLOGS(1) << "Profile not updated: error was: " << profile_result.error();
     return;
   }
 
   FX_VLOGS(1) << "Processing request queue (" << get_profile_queue_.size() << ")";
   while (!get_profile_queue_.empty()) {
     auto& callback = get_profile_queue_.front();
-    callback(CloneStruct(profile_result.value()));
+    auto var = CloneStruct(profile_result.value());
+    callback(std::move(var));
     get_profile_queue_.pop();
   }
 }

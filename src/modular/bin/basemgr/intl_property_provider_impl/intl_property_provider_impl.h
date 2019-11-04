@@ -16,7 +16,6 @@
 
 #include <sdk/lib/sys/cpp/component_context.h>
 
-
 namespace modular {
 
 // Implementation of `fuchsia.intl.PropertyProvider`.
@@ -51,15 +50,8 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
   void Notify(fuchsia::setui::SettingsObject settings) override;
 
  private:
-  // Load initial ICU data if this hasn't been done already.
-  //
-  // TODO(kpozin): Eventually, this should solely be the responsibility of the client component that
-  // links `IntlPropertyProviderImpl`, which has a better idea of what parameters ICU should be
-  // initialized with.
-  zx_status_t InitializeIcuIfNeeded();
-
-  // Start watching changes in user preferences.
-  void StartSettingsWatchers();
+  // Start watching changes in user preferences.  Each setting type is watched separately.
+  void StartSettingsWatcher(fuchsia::setui::SettingType type);
 
   // Load the initial profiles values from user preferences and defaults.
   void LoadInitialValues();
@@ -84,6 +76,9 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
   // Send the Profile to any queued callers of `GetProfile`.
   void ProcessGetProfileQueue();
 
+  // Updates the internal intl object state, const referenced.
+  void NotifyInternal(const fuchsia::setui::SettingsObject& settings);
+
   // A snapshot of the assembled intl `Profile`.
   std::optional<fuchsia::intl::Profile> intl_profile_;
 
@@ -95,12 +90,17 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
 
   fuchsia::setui::SetUiServicePtr setui_client_;
 
-  // A FIDL connection to the `setui.SettingListener` endpoint which will be called by the 
+  // A FIDL connection to the `setui.SettingListener` endpoint which will be called by the
   // `setui` server to deliver the `Notify` for a setting.
   fidl::Binding<fuchsia::setui::SettingListener> setting_listener_binding_;
+  // We need separate bindings per type.
+  fidl::Binding<fuchsia::setui::SettingListener> setting_listener_binding_intl_;
 
   // Queue of pending requests
   std::queue<fuchsia::intl::PropertyProvider::GetProfileCallback> get_profile_queue_;
+
+  // A setting object to use for initialization, must be live as long as this object lives.
+  const fuchsia::setui::SettingsObject initial_settings_object_;
 };
 
 }  // namespace modular
