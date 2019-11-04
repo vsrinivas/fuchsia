@@ -312,15 +312,15 @@ class TestMsdIntelDevice {
         MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
     EXPECT_NE(device, nullptr);
 
-    constexpr uint32_t max_freq = 1050;
+    constexpr uint32_t kMaxFreq = 1100;
     uint32_t current_freq = device->GetCurrentFrequency();
-    DLOG("current_freq %u max_freq %u", current_freq, max_freq);
-    EXPECT_LE(current_freq, max_freq);
+    DLOG("current_freq %u max_freq %u", current_freq, kMaxFreq);
+    EXPECT_LE(current_freq, kMaxFreq);
 
     device->RequestMaxFreq();
 
     uint32_t freq = device->GetCurrentFrequency();
-    EXPECT_LE(freq, max_freq);
+    EXPECT_LE(freq, kMaxFreq);
 
     EXPECT_GE(freq, current_freq);
   }
