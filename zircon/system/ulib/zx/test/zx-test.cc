@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
 #include <zircon/limits.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
@@ -478,13 +479,14 @@ TEST(ZxTestCase, ThreadSetProfile) {
   EXPECT_OK(thread.kill());
 }
 
-void thread_suspend_test_fn(uintptr_t, uintptr_t) {
+// No shadow call stack because this thread is directly zx_thread_start()d, and so won't have x18
+// set up on ARM. See fxb/39288.
+__NO_SAFESTACK void thread_suspend_test_fn(uintptr_t, uintptr_t) {
   zx_nanosleep(zx_deadline_after(ZX_SEC(1000)));
   zx_thread_exit();
 }
 
-// TODO(fxb/39288): Flaking.
-TEST(ZxTestCase, DISABLED_ThreadSuspend) {
+TEST(ZxTestCase, ThreadSuspend) {
   zx::thread thread;
   ASSERT_OK(zx::thread::create(*zx::process::self(), "test", 4, 0, &thread));
 
