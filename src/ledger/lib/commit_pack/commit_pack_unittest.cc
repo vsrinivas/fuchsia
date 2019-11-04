@@ -18,7 +18,7 @@ TEST_P(CommitPackTest, BackAndForth) {
   ASSERT_TRUE(EncodeCommitPack(commits, &commit_pack));
   std::vector<CommitPackEntry> result;
   ASSERT_TRUE(DecodeCommitPack(commit_pack, &result));
-  EXPECT_EQ(commits, result);
+  EXPECT_EQ(result, commits);
 }
 
 INSTANTIATE_TEST_SUITE_P(

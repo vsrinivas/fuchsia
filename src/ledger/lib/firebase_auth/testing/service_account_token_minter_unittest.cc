@@ -56,8 +56,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseToken) {
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
-  ASSERT_EQ("token", resp.id_token);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::OK);
+  ASSERT_EQ(resp.id_token, "token");
 }
 
 TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
@@ -67,8 +67,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
-  ASSERT_EQ("token", resp.id_token);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::OK);
+  ASSERT_EQ(resp.id_token, "token");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
@@ -76,8 +76,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
       GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
-  ASSERT_EQ("token", resp.id_token);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::OK);
+  ASSERT_EQ(resp.id_token, "token");
   EXPECT_FALSE(network_wrapper_.GetRequest());
 }
 
@@ -88,8 +88,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenNoCacheCache) {
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
-  ASSERT_EQ("token", resp.id_token);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::OK);
+  ASSERT_EQ(resp.id_token, "token");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
@@ -97,8 +97,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenNoCacheCache) {
       GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
-  ASSERT_EQ("token2", resp.id_token);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::OK);
+  ASSERT_EQ(resp.id_token, "token2");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
@@ -111,7 +111,7 @@ TEST_F(ServiceAccountTokenMinterTest, NetworkError) {
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::NETWORK_ERROR, resp.status);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::NETWORK_ERROR);
   EXPECT_TRUE(resp.id_token.empty());
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -122,7 +122,7 @@ TEST_F(ServiceAccountTokenMinterTest, AuthenticationError) {
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::AUTH_SERVER_ERROR, resp.status);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::AUTH_SERVER_ERROR);
   EXPECT_TRUE(resp.id_token.empty());
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -133,7 +133,7 @@ TEST_F(ServiceAccountTokenMinterTest, ResponseFormatError) {
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
-  ASSERT_EQ(ServiceAccountTokenMinter::Status::BAD_RESPONSE, resp.status);
+  ASSERT_EQ(resp.status, ServiceAccountTokenMinter::Status::BAD_RESPONSE);
   EXPECT_TRUE(resp.id_token.empty());
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }

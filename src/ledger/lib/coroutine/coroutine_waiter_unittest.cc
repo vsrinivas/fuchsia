@@ -19,7 +19,7 @@ TEST(CoroutineWaiterTest, Wait) {
   coroutine_service.StartCoroutine([&](CoroutineHandler* current_handler) {
     auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
     on_done = waiter->NewCallback();
-    EXPECT_EQ(ContinuationStatus::OK, Wait(current_handler, std::move(waiter)));
+    EXPECT_EQ(Wait(current_handler, std::move(waiter)), ContinuationStatus::OK);
   });
 
   on_done();
@@ -35,7 +35,7 @@ TEST(CoroutineWaiterTest, Cancel) {
     auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
     scoped_callback = waiter->MakeScoped(
         [callback = waiter->NewCallback()] { FAIL() << "Should not be called"; });
-    EXPECT_EQ(ContinuationStatus::INTERRUPTED, Wait(handler, std::move(waiter)));
+    EXPECT_EQ(Wait(handler, std::move(waiter)), ContinuationStatus::INTERRUPTED);
   });
   coroutine_handler->Resume(ContinuationStatus::INTERRUPTED);
   scoped_callback();

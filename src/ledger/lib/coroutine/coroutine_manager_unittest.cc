@@ -27,7 +27,7 @@ TEST_P(CoroutineManagerTest, CallbackIsCalled) {
       callback::SetWhenCalled(&called),
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -47,7 +47,7 @@ TEST_P(CoroutineManagerTest, MultipleCoroutines) {
       callback::SetWhenCalled(&called),
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -57,7 +57,7 @@ TEST_P(CoroutineManagerTest, MultipleCoroutines) {
       callback::SetWhenCalled(&called_2),
       [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
         handler_2 = current_handler_2;
-        EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+        EXPECT_EQ(handler_2->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -88,7 +88,7 @@ TEST_P(CoroutineManagerTest, InterruptCoroutineOnDestruction) {
   manager->StartCoroutine(callback::SetWhenCalled(&called),
                           [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
                             handler = current_handler;
-                            EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+                            EXPECT_EQ(handler->Yield(), ContinuationStatus::INTERRUPTED);
                             reached_callback = true;
                             callback();
                             executed_callback = true;
@@ -119,14 +119,14 @@ TEST_P(CoroutineManagerTest, CoroutineCallbackStartsCoroutine) {
         callback::SetWhenCalled(&called_2),
         [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
           handler_2 = current_handler_2;
-          EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+          EXPECT_EQ(handler_2->Yield(), ContinuationStatus::OK);
           callback();
         });
   };
   manager.StartCoroutine(std::move(callback), [&handler](CoroutineHandler* current_handler,
                                                          fit::function<void()> callback) {
     handler = current_handler;
-    EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+    EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
     callback();
   });
 
@@ -153,7 +153,7 @@ TEST_P(CoroutineManagerTest, Shutdown) {
   manager.StartCoroutine(callback::SetWhenCalled(&called),
                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
                            handler = current_handler;
-                           EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+                           EXPECT_EQ(handler->Yield(), ContinuationStatus::INTERRUPTED);
                            reached_callback = true;
                            callback();
                            executed_callback = true;
@@ -185,7 +185,7 @@ TEST_P(CoroutineManagerTest, NoCallback) {
   CoroutineHandler* handler = nullptr;
   manager.StartCoroutine([&handler](CoroutineHandler* current_handler) {
     handler = current_handler;
-    EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+    EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
   });
 
   ASSERT_TRUE(handler);
@@ -230,7 +230,7 @@ TEST(CoroutineManagerTest, DeleteInCallbackMultipleCoroutines) {
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
         // This coroutine will be resumed.
-        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
         callback();
       });
   bool called_2 = false;
@@ -240,7 +240,7 @@ TEST(CoroutineManagerTest, DeleteInCallbackMultipleCoroutines) {
       [&handler_2](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler_2 = current_handler;
         // This coroutine will be cancelled when the manager is deleted.
-        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler_2->Yield());
+        EXPECT_EQ(handler_2->Yield(), ContinuationStatus::INTERRUPTED);
         callback();
       });
   bool called_3 = false;
@@ -250,7 +250,7 @@ TEST(CoroutineManagerTest, DeleteInCallbackMultipleCoroutines) {
       [&handler_3](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler_3 = current_handler;
         // This point should never be reached, the coroutine will not even start.
-        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler_3->Yield());
+        EXPECT_EQ(handler_3->Yield(), ContinuationStatus::INTERRUPTED);
         callback();
       });
   // The first two tasks are started, the third one waits for a coroutine.
@@ -276,7 +276,7 @@ TEST(CoroutineManagerTest, MultipleConcurrentCoroutines) {
       callback::SetWhenCalled(&called),
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -286,7 +286,7 @@ TEST(CoroutineManagerTest, MultipleConcurrentCoroutines) {
       callback::SetWhenCalled(&called_2),
       [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
         handler_2 = current_handler_2;
-        EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+        EXPECT_EQ(handler_2->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -316,7 +316,7 @@ TEST(CoroutineManagerTest, MultipleSerializedCoroutines) {
       callback::SetWhenCalled(&called),
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -326,7 +326,7 @@ TEST(CoroutineManagerTest, MultipleSerializedCoroutines) {
       callback::SetWhenCalled(&called_2),
       [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
         handler_2 = current_handler_2;
-        EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+        EXPECT_EQ(handler_2->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -352,7 +352,7 @@ TEST(CoroutineManagerTest, MultipleSerializedCoroutines) {
       callback::SetWhenCalled(&called_3),
       [&handler_3](CoroutineHandler* current_handler_3, fit::function<void()> callback) {
         handler_3 = current_handler_3;
-        EXPECT_EQ(ContinuationStatus::OK, handler_3->Yield());
+        EXPECT_EQ(handler_3->Yield(), ContinuationStatus::OK);
         callback();
       });
 
@@ -374,7 +374,7 @@ TEST(CoroutineManagerTest, MultipleCoroutinesInterrupted) {
       callback::SetWhenCalled(&called),
       [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
         handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+        EXPECT_EQ(handler->Yield(), ContinuationStatus::INTERRUPTED);
         callback();
       });
 
@@ -384,7 +384,7 @@ TEST(CoroutineManagerTest, MultipleCoroutinesInterrupted) {
       callback::SetWhenCalled(&called_2),
       [&handler_2](CoroutineHandler* current_handler_2, fit::function<void()> callback) {
         handler_2 = current_handler_2;
-        EXPECT_EQ(ContinuationStatus::OK, handler_2->Yield());
+        EXPECT_EQ(handler_2->Yield(), ContinuationStatus::OK);
         callback();
       });
 

@@ -64,7 +64,7 @@ TEST(Context, SetContext) {
     SetContext(&context);
   }
 
-  EXPECT_EQ(2u, nb_calls);
+  EXPECT_EQ(nb_calls, 2u);
 }
 
 TEST(Context, MakeContext) {
@@ -85,8 +85,8 @@ TEST(Context, MakeContext) {
 
   SwapContext(&old_context, &new_context);
 
-  EXPECT_EQ(120u, f);
-  EXPECT_EQ(10, va_args_result);
+  EXPECT_EQ(f, 120u);
+  EXPECT_EQ(va_args_result, 10);
 }
 
 struct ThreadLocalContext {
@@ -118,7 +118,7 @@ TEST(Context, ThreadLocal) {
 
   SwapContext(&context.old_context, &new_context);
 
-  EXPECT_EQ(&c, context.ptr);
+  EXPECT_EQ(context.ptr, &c);
 }
 
 #if __has_feature(safe_stack) || __has_feature(shadow_call_stack)

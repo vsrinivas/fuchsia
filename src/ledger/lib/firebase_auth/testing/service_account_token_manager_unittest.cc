@@ -56,8 +56,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetToken) {
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  ASSERT_EQ(fuchsia::auth::Status::OK, status);
-  ASSERT_EQ("token", token->id_token);
+  ASSERT_EQ(status, fuchsia::auth::Status::OK);
+  ASSERT_EQ(token->id_token, "token");
 }
 
 TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
@@ -68,8 +68,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
   fuchsia::auth::Status status;
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::OK, status);
-  EXPECT_EQ("token", token->id_token);
+  EXPECT_EQ(status, fuchsia::auth::Status::OK);
+  EXPECT_EQ(token->id_token, "token");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
@@ -77,8 +77,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
       GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::OK, status);
-  EXPECT_EQ("token", token->id_token);
+  EXPECT_EQ(status, fuchsia::auth::Status::OK);
+  EXPECT_EQ(token->id_token, "token");
   EXPECT_FALSE(network_wrapper_.GetRequest());
 }
 
@@ -90,16 +90,16 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenNoCacheCache) {
   fuchsia::auth::Status status;
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::OK, status);
-  EXPECT_EQ("token", token->id_token);
+  EXPECT_EQ(status, fuchsia::auth::Status::OK);
+  EXPECT_EQ(token->id_token, "token");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.SetResponse(
       GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 0)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::OK, status);
-  EXPECT_EQ("token2", token->id_token);
+  EXPECT_EQ(status, fuchsia::auth::Status::OK);
+  EXPECT_EQ(token->id_token, "token2");
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
@@ -113,7 +113,7 @@ TEST_F(ServiceAccountTokenManagerTest, NetworkError) {
   fuchsia::auth::Status status;
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::NETWORK_ERROR, status);
+  EXPECT_EQ(status, fuchsia::auth::Status::NETWORK_ERROR);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -125,7 +125,7 @@ TEST_F(ServiceAccountTokenManagerTest, AuthenticationError) {
   fuchsia::auth::Status status;
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR, status);
+  EXPECT_EQ(status, fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -137,7 +137,7 @@ TEST_F(ServiceAccountTokenManagerTest, ResponseFormatError) {
   fuchsia::auth::Status status;
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
-  EXPECT_EQ(fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR, status);
+  EXPECT_EQ(status, fuchsia::auth::Status::AUTH_PROVIDER_SERVER_ERROR);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }

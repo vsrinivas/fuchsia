@@ -14,9 +14,9 @@ TEST(CredentialsTest, CorrectConfig) {
   auto config = Credentials::Parse(kTestServiceAccountConfig);
   EXPECT_TRUE(config);
 
-  EXPECT_EQ(kTestServiceAccountProjectId, config->project_id());
-  EXPECT_EQ(kTestServiceAccountClientEmail, config->client_email());
-  EXPECT_EQ(kTestServiceAccountClientId, config->client_id());
+  EXPECT_EQ(config->project_id(), kTestServiceAccountProjectId);
+  EXPECT_EQ(config->client_email(), kTestServiceAccountClientEmail);
+  EXPECT_EQ(config->client_id(), kTestServiceAccountClientId);
 }
 
 TEST(CredentialsTest, IncorrectConfig) {
@@ -30,11 +30,11 @@ TEST(CredentialsTest, Clone) {
   ASSERT_TRUE(config);
 
   auto cloned_config = config->Clone();
-  EXPECT_EQ(config->project_id(), cloned_config->project_id());
-  EXPECT_EQ(config->client_email(), cloned_config->client_email());
-  EXPECT_EQ(config->client_id(), cloned_config->client_id());
+  EXPECT_EQ(cloned_config->project_id(), config->project_id());
+  EXPECT_EQ(cloned_config->client_email(), config->client_email());
+  EXPECT_EQ(cloned_config->client_id(), config->client_id());
 
-  EXPECT_EQ(1, EVP_PKEY_cmp(config->private_key().get(), cloned_config->private_key().get()));
+  EXPECT_EQ(EVP_PKEY_cmp(config->private_key().get(), cloned_config->private_key().get()), 1);
 }
 
 }  // namespace

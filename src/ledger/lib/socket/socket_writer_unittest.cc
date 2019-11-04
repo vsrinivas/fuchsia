@@ -48,7 +48,7 @@ TEST_F(SocketWriterTest, WriteAndRead) {
   drainer->Start(std::move(socket.socket2), [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
-  EXPECT_EQ("bazinga\n", value);
+  EXPECT_EQ(value, "bazinga\n");
   EXPECT_TRUE(client.completed());
 }
 
@@ -71,7 +71,7 @@ TEST_F(SocketWriterTest, StringSocketWriter) {
   drainer->Start(std::move(socket.socket2), [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
-  EXPECT_EQ("bazinga\n", value);
+  EXPECT_EQ(value, "bazinga\n");
 }
 
 }  // namespace
