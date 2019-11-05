@@ -796,6 +796,24 @@
       },
       "members": [
         {
+          "ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 48,
+            "column": 5
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 49,
+            "column": 5
+          }
+        },
+        {
           "ordinal": 1,
           "reserved": false,
           "name": "i",
@@ -856,6 +874,15 @@
         "has_padding": true,
         "has_flexible_envelope": true,
         "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,

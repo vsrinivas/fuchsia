@@ -864,21 +864,31 @@
             "description": "Definition of a union member",
             "type": "object",
             "required": [
-                "type",
+                "xunion_ordinal",
+                "reserved",
                 "name",
+                "type",
                 "size",
                 "max_out_of_line",
                 "alignment",
                 "offset"
             ],
             "properties": {
-                "type": {
-                    "description": "Type of union member",
-                    "$ref": "#/definitions/type"
+                "xunion_ordinal": {
+                    "description": "Ordinal value of the member when this union is encoded/decoded as a xunion",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "reserved": {
+                    "description": "Flag indicating that the member is reserved",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Name of union member",
                     "$ref": "#/definitions/identifier"
+                },
+                "type": {
+                    "description": "Type of union member",
+                    "$ref": "#/definitions/type"
                 },
                 "location": {
                     "description": "Source location of the declaration",
@@ -972,8 +982,9 @@
             "type": "object",
             "required": [
                 "ordinal",
-                "type",
+                "reserved",
                 "name",
+                "type",
                 "size",
                 "max_out_of_line",
                 "alignment",
@@ -984,13 +995,17 @@
                     "description": "Ordinal value of extensible union member",
                     "$ref": "#/definitions/ordinal"
                 },
-                "type": {
-                    "description": "Type of extensible union member",
-                    "$ref": "#/definitions/type"
+                "reserved": {
+                    "description": "Flag indicating that the member is reserved",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Name of extensible union member",
                     "$ref": "#/definitions/identifier"
+                },
+                "type": {
+                    "description": "Type of extensible union member",
+                    "$ref": "#/definitions/type"
                 },
                 "location": {
                     "description": "Source location of the declaration",

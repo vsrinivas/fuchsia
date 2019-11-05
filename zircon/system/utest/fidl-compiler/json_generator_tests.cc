@@ -1182,6 +1182,24 @@ union ExplicitPizzaOrPasta {
       },
       "members": [
         {
+          "xunion_ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 18,
+            "column": 3
+          }
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 19,
+            "column": 3
+          }
+        },
+        {
           "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
@@ -1526,6 +1544,15 @@ strict xunion ExplicitStrictFoo {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 0
+        },
+        {
+          "ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 17,
+            "column": 3
+          }
         }
       ],
       "size": 24,
@@ -1572,6 +1599,15 @@ strict xunion ExplicitStrictFoo {
         "column": 15
       },
       "members": [
+        {
+          "ordinal": 1,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 21,
+            "column": 3
+          }
+        },
         {
           "ordinal": 3,
           "reserved": false,

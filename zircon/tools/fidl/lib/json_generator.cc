@@ -491,8 +491,6 @@ void JSONGenerator::Generate(const flat::Union& value) {
 }
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
-  // TODO(39429): remove once reserved is supported in the various backends
-  assert(value.maybe_used && "must wait for backends to ignore reserved members first");
   GenerateObject([&]() {
     GenerateObjectMember("xunion_ordinal", value.xunion_ordinal, Position::kFirst);
     if (value.maybe_used) {
@@ -534,8 +532,6 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 }
 
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
-  // TODO(39429): remove once reserved is supported in the various backends
-  assert(value.maybe_used && "must wait for backends to ignore reserved members first");
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
     if (value.maybe_used) {
