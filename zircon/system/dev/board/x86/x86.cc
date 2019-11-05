@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "x86.h"
+
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/status.h>
-#include <zircon/threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <fbl/alloc_checker.h>
 
 #include "acpi.h"
 #include "smbios.h"
@@ -20,60 +22,53 @@
 
 zx_handle_t root_resource_handle;
 
-typedef struct {
-  pbus_protocol_t pbus;
-  zx_device_t* parent;
-  zx_device_t* sys_root;
-  zx_device_t* acpi_root;
-} pbus_x86_t;
-
-static void x86_root_release(void* ctx) {
-  pbus_x86_t* x86 = ctx;
-
-  free(x86);
-}
-
-static zx_protocol_device_t acpi_root_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = x86_root_release,
-};
-
 static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) { return acpi_suspend(flags); }
 
-static int x86_start_thread(void* arg) {
-  pbus_x86_t* x86 = arg;
-  zx_status_t status = publish_sysmem(&x86->pbus);
+namespace x86 {
+
+int X86::Thread() {
+  pbus_protocol_t pbus;
+  pbus_.GetProto(&pbus);
+  zx_status_t status = publish_sysmem(&pbus);
   if (status != ZX_OK) {
     zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
-    goto fail;
+    return status;
   }
-  return publish_acpi_devices(x86->parent, x86->sys_root, x86->acpi_root);
-
-fail:
-  return status;
+  return publish_acpi_devices(parent(), sys_root_, zxdev());
 }
 
-static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
+zx_status_t X86::Start() {
+  int rc = thrd_create_with_name(
+      &thread_, [](void* arg) -> int { return reinterpret_cast<X86*>(arg)->Thread(); }, this,
+      "x86_start_thread");
+  if (rc != thrd_success) {
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
+void X86::DdkRelease() {
+  int exit_code;
+  thrd_join(thread_, &exit_code);
+  delete this;
+}
+
+zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
+  pbus_protocol_t pbus;
+
   // Please do not use get_root_resource() in new code. See ZX-1467.
   root_resource_handle = get_root_resource();
 
-  pbus_x86_t* x86 = calloc(1, sizeof(pbus_x86_t));
-  if (!x86) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &x86->pbus);
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
-    free(x86);
-    return ZX_ERR_NOT_SUPPORTED;
+    return status;
   }
 
   // Do ACPI init.
   status = acpi_init();
   if (status != ZX_OK) {
-    free(x86);
     zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
-    return ZX_ERR_INTERNAL;
+    return status;
   }
 
   // TODO(ZX-4858): Remove this use of device_get_parent().  For now, suppress this
@@ -83,26 +78,21 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
   zx_device_t* sys_root = device_get_parent(parent);
 #pragma GCC diagnostic pop
   if (sys_root == NULL) {
-    free(x86);
     zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)\n", __func__);
     return ZX_ERR_INTERNAL;
   }
 
-  // publish acpi root
-  device_add_args_t args2 = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "acpi",
-      .ctx = x86,
-      .ops = &acpi_root_device_proto,
-      .flags = DEVICE_ADD_NON_BINDABLE,
-  };
+  fbl::AllocChecker ac;
+  auto board = fbl::make_unique_checked<X86>(&ac, parent, &pbus, sys_root);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-  zx_device_t* acpi_root = NULL;
-  // We create the acpi root under /dev/sys/platform, and pci gets
-  // created under /dev/sys (to preserve compatibility).
-  status = device_add(parent, &args2, &acpi_root);
+  // publish the board as ACPI root under /dev/sys/platform. PCI will get created under /dev/sys
+  // (to preserve compatibility).
+  status = board->DdkAdd("acpi", DEVICE_ADD_NON_BINDABLE);
+
   if (status != ZX_OK) {
-    free(x86);
     zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)\n", status);
     return status;
   }
@@ -121,27 +111,19 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
     board_name_actual = strlen(board_name) + 1;
   }
 
-  // Publish board name to sysinfo driver
-  status = device_publish_metadata(acpi_root, "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
-                                   board_name, board_name_actual);
+  // Publish board name to sysinfo driver.
+  status = board->DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME, board_name,
+                                     board_name_actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
+    zxlogf(ERROR, "DdkPublishMetadata(board_name) failed: %d\n", status);
   }
 
   // Inform platform bus of our board name.
   pbus_board_info_t board_info = {};
   strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
-  pbus_set_board_info(&x86->pbus, &board_info);
-
-  x86->sys_root = sys_root;
-  x86->acpi_root = acpi_root;
-  x86->parent = parent;
-  thrd_t t;
-  int thrd_rc = thrd_create_with_name(&t, x86_start_thread, x86, "x86_start_thread");
-  if (thrd_rc != thrd_success) {
-    status = thrd_status_to_zx_status(thrd_rc);
-    zxlogf(ERROR, "%s: Failed to create start thread: %d\n", __func__, status);
-    goto fail;
+  status = board->pbus_.SetBoardInfo(&board_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);
   }
 
   // Set the "sys" suspend op in platform-bus.
@@ -151,22 +133,31 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
   // we must make sure that the coordinator code arranges for this suspend op to be
   // called last.
   pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
-  status = pbus_register_sys_suspend_callback(&x86->pbus, &suspend);
+  status = board->pbus_.RegisterSysSuspendCallback(&suspend);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not register suspend callback: %d\n", __func__, status);
   }
 
-  return ZX_OK;
-fail:
+  // Start up our protocol helpers and platform devices.
+  status = board->Start();
+  if (status == ZX_OK) {
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = board.release();
+  }
+
   return status;
 }
 
-static zx_driver_ops_t x86_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = x86_bind,
-};
+static zx_driver_ops_t x86_driver_ops = []() {
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = X86::Create;
+  return ops;
+}();
 
-ZIRCON_DRIVER_BEGIN(acpi_bus, x86_driver_ops, "zircon", "0.1", 3)
+}  // namespace x86
+
+ZIRCON_DRIVER_BEGIN(acpi_bus, x86::x86_driver_ops, "zircon", "0.1", 3)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_INTEL),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_X86), ZIRCON_DRIVER_END(acpi_bus)

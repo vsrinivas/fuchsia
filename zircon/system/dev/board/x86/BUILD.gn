@@ -69,7 +69,8 @@ zx_driver("platform-bus-x86") {
     "resources.c",
     "sysmem.c",
     "util.c",
-    "x86.c",
+    "x86.cc",
+    "x86.h",
   ]
 
   # Userspace PCI feature flag.  The scaffolding for the userspace pci bus
