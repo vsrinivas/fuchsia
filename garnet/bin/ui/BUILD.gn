@@ -17,7 +17,6 @@ group("ui") {
     "benchmarks",
     "gltf_export",
     "input",
-    "input_reader",
     "present_view",
     "print_input",
     "root_presenter",
@@ -34,9 +33,9 @@ group("ui") {
 
 test_package("scenic_tests") {
   deps = [
-    "input_reader/tests",
     "present_view/tests",
     "root_presenter/tests",
+    "//src/ui/lib/input_reader/tests",
     "//src/ui/scenic/lib/display/tests",
     "//src/ui/scenic/lib/flatland/tests",
     "//src/ui/scenic/lib/gfx/tests",

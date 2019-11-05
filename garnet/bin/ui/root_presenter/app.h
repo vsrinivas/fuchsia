@@ -22,7 +22,6 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/a11y_settings_watcher.h"
 #include "garnet/bin/ui/root_presenter/activity_notifier.h"
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
@@ -32,6 +31,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
+#include "src/ui/lib/input_reader/input_reader.h"
 
 namespace root_presenter {
 

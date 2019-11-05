@@ -12,7 +12,6 @@ executable("direct_input") {
   ]
 
   deps = [
-    "//garnet/bin/ui/input_reader",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
@@ -22,6 +21,7 @@ executable("direct_input") {
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//src/lib/ui/input",
+    "//src/ui/lib/input_reader",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",

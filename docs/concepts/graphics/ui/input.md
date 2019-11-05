@@ -53,12 +53,12 @@ The `InputEvent` is sent to Scenic.
 ### Implementation
 
 The
-[`InputReader` library](/garnet/bin/ui/input_reader/)
+[`InputReader` library](/src/ui/lib/input_reader/)
 is the code responsible for actually monitoring `/dev/class/input` for new
 peripherals, and reacting to new reports from existing peripherals. It forwards
 new events for processing to other parts of RootPresenter.
 More information on `InputReader` can be found
-[here](/garnet/bin/ui/input_reader/README.md).
+[here](/src/ui/lib/input_reader/README.md).
 
 For each new peripheral (an input device), `InputReader` assigns a new
 `InputInterpreter` object that reads the HID descriptor report for a single

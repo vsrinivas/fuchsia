@@ -18,12 +18,12 @@
 #include <memory>
 #include <unordered_map>
 
-#include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
+#include "src/ui/lib/input_reader/input_reader.h"
 
 namespace direct_input {
 

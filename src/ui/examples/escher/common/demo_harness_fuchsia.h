@@ -9,12 +9,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <trace-provider/provider.h>
 
 #include <memory>
 
-#include "garnet/bin/ui/input_reader/input_reader.h"
+#include <trace-provider/provider.h>
+
 #include "src/ui/examples/escher/common/demo_harness.h"
+#include "src/ui/lib/input_reader/input_reader.h"
 
 class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRegistry {
  public:

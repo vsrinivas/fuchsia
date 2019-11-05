@@ -7,7 +7,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
-#include "garnet/bin/ui/input_reader/input_reader.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -15,6 +14,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
+#include "src/ui/lib/input_reader/input_reader.h"
 
 namespace print_input {
 
