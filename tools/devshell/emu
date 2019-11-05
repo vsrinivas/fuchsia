@@ -318,7 +318,8 @@ if [[ ! -d "${img_dir}" ]]; then
   fx-error "Failed to create temporary directory"
   exit 1
 fi
-trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"' EXIT
+trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"; \
+      stty sane' EXIT
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 fx-zbi -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
