@@ -519,7 +519,8 @@ static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto status = _policy.copy_array_from_user(policy.get(), sizeof(zx_policy_basic) * count);
+  auto status =
+      _policy.reinterpret<const zx_policy_basic>().copy_array_from_user(policy.get(), count);
   if (status != ZX_OK) {
     return ZX_ERR_INVALID_ARGS;
   }
