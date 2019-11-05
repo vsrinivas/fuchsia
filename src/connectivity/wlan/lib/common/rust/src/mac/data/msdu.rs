@@ -83,37 +83,23 @@ impl<B: ByteSlice> Iterator for MsduIterator<B> {
 }
 
 impl<B: ByteSlice> MsduIterator<B> {
-    pub fn from_data_frame_parts(
-        fixed_fields: FixedDataHdrFields,
-        addr4: Option<Addr4>,
-        qos_ctrl: Option<QosControl>,
-        body: B,
-    ) -> Self {
-        let fc = fixed_fields.frame_ctrl;
-        if fc.data_subtype().null() {
-            MsduIterator::Null
-        } else if qos_ctrl.map_or(false, |x| x.amsdu_present()) {
-            MsduIterator::Amsdu(BufferReader::new(body))
-        } else {
-            MsduIterator::Llc {
-                dst_addr: data_dst_addr(&fixed_fields),
-                // Safe to unwrap because data frame parsing has been successful.
-                src_addr: data_src_addr(&fixed_fields, addr4).unwrap(),
-                body: Some(body),
-            }
-        }
-    }
-
     /// If `body_aligned` is |true| the frame's body is expected to be 4 byte aligned.
-    pub fn from_raw_data_frame(data_frame: B, body_aligned: bool) -> Option<Self> {
+    pub fn from_raw_data_frame(data_frame: B, body_aligned: bool) -> Option<MsduIterator<B>> {
         match MacFrame::parse(data_frame, body_aligned)? {
             MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                Some(Self::from_data_frame_parts(
-                    *fixed_fields,
-                    addr4.map(|a| *a),
-                    qos_ctrl.map(|x| x.get()),
-                    body,
-                ))
+                let fc = fixed_fields.frame_ctrl;
+                if fc.data_subtype().null() {
+                    Some(MsduIterator::Null)
+                } else if qos_ctrl.map_or(false, |x| x.get().amsdu_present()) {
+                    Some(MsduIterator::Amsdu(BufferReader::new(body)))
+                } else {
+                    Some(MsduIterator::Llc {
+                        dst_addr: data_dst_addr(&fixed_fields),
+                        // Safe to unwrap because data frame parsing has been successful.
+                        src_addr: data_src_addr(&fixed_fields, addr4.map(|a| *a)).unwrap(),
+                        body: Some(body),
+                    })
+                }
             }
             _ => None,
         }

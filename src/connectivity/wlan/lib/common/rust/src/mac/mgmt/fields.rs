@@ -35,8 +35,7 @@ use {
 pub struct CapabilityInfo(pub u16);
 
 // IEEE Std 802.11-2016, 9.4.1.11, Table Table 9-47
-#[derive(AsBytes, FromBytes, Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ActionCategory(u8);
 
 impl ActionCategory {
@@ -157,11 +156,4 @@ pub struct AssocRespHdr {
 #[repr(C, packed)]
 pub struct DisassocHdr {
     pub reason_code: ReasonCode,
-}
-
-// IEEE Std 802.11-2016, 9.3.3.14
-#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
-#[repr(C, packed)]
-pub struct ActionHdr {
-    pub action: ActionCategory,
 }
