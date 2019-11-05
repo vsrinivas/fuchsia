@@ -181,7 +181,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     // No callback is done after changing output res for GDC.
     return;
   }
-  __UNUSED auto input_buffer_index = info.index;
+  auto input_buffer_index = info.index;
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
   if (packet.key == kPortKeyIrqMsg) {
@@ -200,6 +200,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     f_info.buffer_id = task->GetOutputBufferIndex();
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
+    f_info.metadata.input_buffer_index = input_buffer_index;
     task->callback()->frame_ready(task->callback()->ctx, &f_info);
   }
 }

@@ -13,6 +13,7 @@ enum FrameStatus : uint8 {
 struct FrameMetadata {
     uint64 timestamp;
     uint32 image_format_index;
+    uint32 input_buffer_index;
 };
 
 struct FrameAvailableInfo {

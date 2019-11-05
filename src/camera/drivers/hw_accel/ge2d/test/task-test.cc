@@ -61,9 +61,9 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class TaskTest : public zxtest::Test {
  public:
-  void ProcessFrameCallback(uint32_t output_buffer_id) {
+  void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index) {
     fbl::AutoLock al(&lock_);
-    callback_check_.push_back(output_buffer_id);
+    callback_check_.emplace_back(input_buffer_index, output_buffer_index);
     frame_ready_ = true;
     event_.Signal();
   }
@@ -81,9 +81,14 @@ class TaskTest : public zxtest::Test {
     return callback_check_.size();
   }
 
-  uint32_t GetCallbackBack() {
+  uint32_t GetCallbackBackOutputBufferIndex() {
     fbl::AutoLock al(&lock_);
-    return callback_check_.back();
+    return callback_check_.back().second;
+  }
+
+  uint32_t GetCallbackBackInputBufferIndex() {
+    fbl::AutoLock al(&lock_);
+    return callback_check_.back().first;
   }
 
  protected:
@@ -135,7 +140,8 @@ class TaskTest : public zxtest::Test {
     callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
       EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
                 info->metadata.image_format_index);
-      return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->buffer_id);
+      return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->metadata.input_buffer_index,
+                                                               info->buffer_id);
     };
     callback_.ctx = this;
 
@@ -195,7 +201,7 @@ class TaskTest : public zxtest::Test {
   uint32_t output_image_format_index_;
 
  private:
-  std::vector<uint32_t> callback_check_;
+  std::vector<std::pair<uint32_t, uint32_t>> callback_check_;
   bool frame_ready_;
   fbl::Mutex lock_;
   fbl::ConditionVariable event_;
@@ -479,7 +485,7 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
   // There is no output buffer to release at the moment. But let's keep this code
   // in place so we can add a test for this later.
   ASSERT_NO_DEATH(([this, resize_task_id]() {
-    ge2d_device_->Ge2dReleaseFrame(resize_task_id, GetCallbackBack());
+    ge2d_device_->Ge2dReleaseFrame(resize_task_id, GetCallbackBackOutputBufferIndex());
   }));
 
   ASSERT_OK(ge2d_device_->StopThread());
@@ -507,7 +513,7 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
 
   // Test releasing an invalid frame (invalid task id).
   ASSERT_DEATH(([this, resize_task_id]() {
-    ge2d_device_->Ge2dReleaseFrame(resize_task_id + 1, GetCallbackBack());
+    ge2d_device_->Ge2dReleaseFrame(resize_task_id + 1, GetCallbackBackOutputBufferIndex());
   }));
 
   ASSERT_OK(ge2d_device_->StopThread());
@@ -541,6 +547,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
     // Check if the callback was called once.
     WaitAndReset();
     EXPECT_EQ(t, GetCallbackSize());
+    EXPECT_EQ(kNumberOfBuffers - t, GetCallbackBackInputBufferIndex());
   }
 
   // This time adding another frame to process while its
@@ -556,6 +563,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
     // Check if the callback was called once.
     WaitAndReset();
     EXPECT_EQ(t + 3, GetCallbackSize());
+    EXPECT_EQ(kNumberOfBuffers - (t + 3), GetCallbackBackInputBufferIndex());
   }
 
   ASSERT_OK(ge2d_device_->StopThread());
