@@ -65,7 +65,7 @@ void CodecAdapterSbcEncoder::ProcessInputLoop() {
 void CodecAdapterSbcEncoder::CleanUpAfterStream() { context_ = std::nullopt; }
 
 std::pair<fuchsia::media::FormatDetails, size_t> CodecAdapterSbcEncoder::OutputFormatDetails() {
-  FXL_DCHECK(context_);
+  FX_DCHECK(context_);
   fuchsia::media::AudioCompressedFormatSbc sbc;
   fuchsia::media::AudioCompressedFormat compressed_format;
   compressed_format.set_sbc(std::move(sbc));
@@ -252,7 +252,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
             // The stream is ending.
             return ChunkInputStream::kTerminate;
           }
-          FXL_DCHECK(*maybe_output_packet != nullptr);
+          FX_DCHECK(*maybe_output_packet != nullptr);
 
           output_packet_ = *maybe_output_packet;
           if (input_block.timestamp_ish) {
@@ -265,14 +265,14 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
           // The stream is ending.
           return ChunkInputStream::kTerminate;
         }
-        FXL_DCHECK(output_buffer_);
+        FX_DCHECK(output_buffer_);
 
         SBC_Encode(&context_->params,
                    reinterpret_cast<int16_t*>(const_cast<uint8_t*>(input_block.data)), output);
 
         if (output_offset_ + context_->sbc_frame_length() > output_buffer_->size() ||
             input_block.is_end_of_stream) {
-          FXL_DCHECK(output_packet_ != nullptr);
+          FX_DCHECK(output_packet_ != nullptr);
 
           output_packet_->SetBuffer(output_buffer_);
           output_packet_->SetValidLengthBytes(output_offset_);
@@ -294,8 +294,8 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
 //                multiple input packets if we're behind.
 CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
     CodecPacket* input_packet) {
-  FXL_DCHECK(context_);
-  FXL_DCHECK(chunk_input_stream_);
+  FX_DCHECK(context_);
+  FX_DCHECK(chunk_input_stream_);
 
   auto return_to_client = fit::defer([this, input_packet]() {
     if (input_packet) {
@@ -348,7 +348,7 @@ uint8_t* CodecAdapterSbcEncoder::NextOutputBlock() {
 
   // We assume sysmem has enforced our minimum requested buffer size of at
   // least one sbc frame length.
-  FXL_DCHECK(output_buffer_->size() >= context_->sbc_frame_length());
+  FX_DCHECK(output_buffer_->size() >= context_->sbc_frame_length());
 
   // Caller must set `output_buffer` to `nullptr` when space is insufficient.
   uint8_t* output = output_buffer_->base() + output_offset_;

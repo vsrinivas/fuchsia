@@ -8,7 +8,7 @@
 
 #include "../chunk_input_stream.h"
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "test_codec_packets.h"
 
 size_t AlignUp(size_t v, size_t alignment) {

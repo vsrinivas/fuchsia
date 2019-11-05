@@ -15,6 +15,7 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace codec_factory {
 

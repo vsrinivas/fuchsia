@@ -36,7 +36,6 @@ source_set("codec_runner_sw") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
 }

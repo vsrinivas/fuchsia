@@ -77,6 +77,7 @@ source_set("test_codec_packets") {
     "test_codec_packets.h",
   ]
   public_deps = [
+    "//src/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
     "//zircon/public/lib/fzl",
   ]
@@ -93,7 +94,6 @@ executable("chunk_input_stream_test_bin") {
 
   deps = [
     ":test_codec_packets",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/codec/codecs:chunk_input_stream",
   ]
@@ -123,7 +123,6 @@ executable("output_sink_test_bin") {
 
   deps = [
     ":test_codec_packets",
-    "//src/lib/fxl",
     "//src/media/codec/codecs:output_sink",
     "//third_party/googletest:gtest_main",
   ]

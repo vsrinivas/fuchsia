@@ -45,7 +45,7 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   if (run_result != ZX_OK) {
     // ignore/skip the driver that failed the channel already
     // The ~codec_factory takes care of un-binding.
-    FXL_LOG(ERROR) << "loop failed: " << zx_status_get_string(run_result);
+    FX_LOGS(ERROR) << "loop failed: " << zx_status_get_string(run_result);
     return;
   }
 
@@ -96,19 +96,19 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         zx::channel device_channel, device_remote;
         zx_status_t status = zx::channel::create(0, &device_channel, &device_remote);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
+          FX_LOGS(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
         zx::channel client_factory_channel, client_factory_remote;
         status = zx::channel::create(0, &client_factory_channel, &client_factory_remote);
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to create channel - status: " << status;
+          FX_LOGS(ERROR) << "Failed to create channel - status: " << status;
           return;
         }
 
         status = fdio_service_connect(device_path.c_str(), device_remote.release());
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to connect to device by filename -"
+          FX_LOGS(ERROR) << "Failed to connect to device by filename -"
                          << " status: " << status << " device_path: " << device_path;
           return;
         }
@@ -116,7 +116,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
         fuchsia::hardware::mediacodec::DevicePtr device_interface;
         status = device_interface.Bind(std::move(device_channel));
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to bind to interface -"
+          FX_LOGS(ERROR) << "Failed to bind to interface -"
                          << " status: " << status << " device_path: " << device_path;
           return;
         }
@@ -244,10 +244,10 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
       // when the first item is potentially ready.
       return;
     }
-    FXL_DCHECK(front->driver_codec_list.has_value());
+    FX_DCHECK(front->driver_codec_list.has_value());
 
     for (auto& codec_description : front->driver_codec_list.value()) {
-      FXL_LOG(INFO) << "registering - codec_type: "
+      FX_LOGS(INFO) << "registering - codec_type: "
                     << fidl::ToUnderlying(codec_description.codec_type)
                     << " mime_type: " << codec_description.mime_type
                     << " device_path: " << front->device_path;

@@ -95,7 +95,7 @@ void ForwardToIsolate(std::string component_url, sys::ComponentContext* componen
   launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
   sys::ServiceDirectory services(std::move(directory));
   component_controller.set_error_handler([component_url](zx_status_t status) {
-    FXL_LOG(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of " << component_url;
+    FX_LOGS(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of " << component_url;
   });
   fuchsia::mediacodec::CodecFactoryPtr factory_delegate;
   services.Connect(factory_delegate.NewRequest(),
@@ -165,7 +165,7 @@ void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
   binding_ = std::make_unique<BindingType>(std::move(self), std::move(request_temp_),
                                            app_->loop()->dispatcher());
   binding_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
+    FX_LOGS(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
     // this will also ~this
     binding_ = nullptr;
   });
@@ -175,12 +175,12 @@ void CodecFactoryImpl::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params params,
     fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) {
   if (!params.has_input_details()) {
-    FXL_LOG(WARNING) << "missing input_details";
+    FX_LOGS(WARNING) << "missing input_details";
     return;
   }
 
   if (!params.input_details().has_mime_type()) {
-    FXL_LOG(WARNING) << "input details missing mime type";
+    FX_LOGS(WARNING) << "input details missing mime type";
     // Without mime_type we cannot search for a decoder.
     return;
   }
@@ -206,7 +206,7 @@ void CodecFactoryImpl::CreateDecoder(
   }
 
   if (params.has_require_hw() && params.require_hw()) {
-    FXL_LOG(WARNING) << "require_hw, but no matching HW decoder factory found ("
+    FX_LOGS(WARNING) << "require_hw, but no matching HW decoder factory found ("
                      << params.input_details().mime_type() << "); closing";
     // TODO(dustingreen): Send epitaph when possible.
     // ~decoder
@@ -240,29 +240,29 @@ void CodecFactoryImpl::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
   if (!encoder_params.has_input_details()) {
-    FXL_LOG(WARNING) << "missing input_details";
+    FX_LOGS(WARNING) << "missing input_details";
     return;
   }
 
   if (!encoder_params.input_details().has_mime_type()) {
-    FXL_LOG(WARNING) << "missing mime_type";
+    FX_LOGS(WARNING) << "missing mime_type";
     return;
   }
 
   if (!encoder_params.input_details().has_encoder_settings()) {
-    FXL_LOG(WARNING) << "missing encoder_settings";
+    FX_LOGS(WARNING) << "missing encoder_settings";
     return;
   }
 
   if (encoder_params.has_require_hw() && encoder_params.require_hw()) {
-    FXL_LOG(WARNING) << "There are no hardware encoders yet.";
+    FX_LOGS(WARNING) << "There are no hardware encoders yet.";
     return;
   }
 
   auto maybe_encoder_isolate_url = FindEncoder(encoder_params.input_details().mime_type(),
                                                encoder_params.input_details().encoder_settings());
   if (!maybe_encoder_isolate_url) {
-    FXL_LOG(WARNING) << "No encoder supports " << encoder_params.input_details().mime_type()
+    FX_LOGS(WARNING) << "No encoder supports " << encoder_params.input_details().mime_type()
                      << " input with these settings.";
     return;
   }

@@ -11,6 +11,8 @@
 #include "codec_factory_app.h"
 
 int main(int argc, char* argv[]) {
+  syslog::InitLogger({"codec_factory"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   codec_factory::CodecFactoryApp app(&loop);

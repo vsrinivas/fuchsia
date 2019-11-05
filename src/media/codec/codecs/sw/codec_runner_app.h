@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "local_single_codec_factory.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // If a software can only provide an encoder or decoder, the other should be
 // assigned NoAdapter in the template arguments, e.g.:
@@ -37,7 +37,7 @@ class CodecRunnerApp {
                 fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
               // We RemoveService() near the end of the present lambda, so it
               // should be impossible to receive a second CodecFactory request.
-              FXL_DCHECK(!codec_factory_);
+              FX_DCHECK(!codec_factory_);
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
               component_context_->svc()->Connect(sysmem.NewRequest());

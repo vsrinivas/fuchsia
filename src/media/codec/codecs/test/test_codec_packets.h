@@ -12,7 +12,7 @@
 #include <map>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 constexpr uint32_t kBufferLifetimeOrdinal = 1;
 
@@ -26,7 +26,7 @@ fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
   fzl::VmoMapper mapper;
   zx_status_t err =
       mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_handle);
-  FXL_CHECK(err == ZX_OK) << "Failed to create and map vmo: " << err;
+  FX_CHECK(err == ZX_OK) << "Failed to create and map vmo: " << err;
 
   fuchsia::media::StreamBufferDataVmo vmo;
   vmo.set_vmo_handle(std::move(vmo_handle));

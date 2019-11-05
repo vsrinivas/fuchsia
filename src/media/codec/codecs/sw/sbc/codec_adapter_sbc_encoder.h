@@ -10,7 +10,7 @@
 
 #include "chunk_input_stream.h"
 #include "codec_adapter_sw.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "timestamp_extrapolator.h"
 
 // This must be included after fuchsia.media FIDL because it defines macros
@@ -62,7 +62,7 @@ class CodecAdapterSbcEncoder : public CodecAdapterSW<fit::deferred_action<fit::c
           return part + static_cast<size_t>(ceil(static_cast<double>(params.s16NumOfBlocks) *
                                                  static_cast<double>(params.s16BitPool) / 8.0));
         default:
-          FXL_LOG(FATAL) << "Channel mode enum became invalid value: "
+          FX_LOGS(FATAL) << "Channel mode enum became invalid value: "
                          << static_cast<int>(settings.channel_mode);
       }
     }
