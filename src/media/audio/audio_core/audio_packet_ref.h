@@ -8,31 +8,25 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
-#include <memory>
-
-#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
-
-class AudioCoreImpl;
 
 // TODO(johngro): Consider moving instances of this class to a slab allocation
 // pattern.  They are the most frequently allocated object in the mixer (easily
 // 100s per second) and they do not live very long at all (300-400mSec at most),
 // so they could easily be causing heap fragmentation issues.
-class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
-                       public fbl::Recyclable<AudioPacketRef>,
-                       public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
+class AudioPacketRef : public fbl::RefCounted<AudioPacketRef> {
  public:
   AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
                  fit::closure callback, fuchsia::media::StreamPacket packet,
                  uint32_t frac_frame_len, int64_t start_pts);
+
+  ~AudioPacketRef();
 
   // Accessors for starting and ending presentation time stamps expressed in
   // units of audio frames (note, not media time), as signed 50.13 fixed point
@@ -63,11 +57,7 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   uint32_t flags() const { return packet_.flags; }
   uint32_t payload_buffer_id() const { return packet_.payload_buffer_id; }
 
- protected:
-  friend class fbl::RefPtr<AudioPacketRef>;
-  friend class fbl::Recyclable<AudioPacketRef>;
-  friend class std::default_delete<AudioPacketRef>;
-
+ private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   fit::closure callback_;
   fuchsia::media::StreamPacket packet_;
@@ -76,8 +66,6 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   int64_t start_pts_;
   int64_t end_pts_;
 
- private:
-  void fbl_recycle();
   async_dispatcher_t* dispatcher_;
   trace_async_id_t nonce_ = TRACE_NONCE();
 };

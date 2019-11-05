@@ -7,39 +7,26 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-#include <memory>
-
-#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
 namespace media::audio {
 
-class AudioCoreImpl;
-
-class PendingFlushToken : public fbl::RefCounted<PendingFlushToken>,
-                          public fbl::Recyclable<PendingFlushToken>,
-                          public fbl::DoublyLinkedListable<std::unique_ptr<PendingFlushToken>> {
+class PendingFlushToken : public fbl::RefCounted<PendingFlushToken> {
  public:
   static fbl::RefPtr<PendingFlushToken> Create(
       async_dispatcher_t* dispatcher,
       fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback) {
-    return fbl::AdoptRef(new PendingFlushToken(dispatcher, std::move(callback)));
+    return fbl::MakeRefCounted<PendingFlushToken>(dispatcher, std::move(callback));
   }
-
- private:
-  friend class fbl::RefPtr<PendingFlushToken>;
-  friend class fbl::Recyclable<PendingFlushToken>;
-  friend class std::default_delete<PendingFlushToken>;
 
   PendingFlushToken(async_dispatcher_t* dispatcher,
                     fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback)
       : dispatcher_(dispatcher), callback_(std::move(callback)) {}
 
-  ~PendingFlushToken() = default;
+  ~PendingFlushToken();
 
-  void fbl_recycle();
-
+ private:
   async_dispatcher_t* dispatcher_;
   fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback_;
 };

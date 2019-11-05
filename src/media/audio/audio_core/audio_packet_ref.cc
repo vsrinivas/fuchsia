@@ -29,15 +29,12 @@ AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
-void AudioPacketRef::fbl_recycle() {
-  TRACE_DURATION("audio", "AudioPacketRef::fbl_recycle");
+AudioPacketRef::~AudioPacketRef() {
+  TRACE_DURATION("audio", "AudioPacketRef::~AudioPacketRef");
   TRACE_FLOW_END("audio.debug", "process_packet", nonce_);
-
   if (callback_) {
     async::PostTask(dispatcher_, std::move(callback_));
   }
-
-  delete this;
 }
 
 }  // namespace media::audio
