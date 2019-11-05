@@ -13,8 +13,10 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2018"
 
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/zerocopy",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
     "//src/connectivity/wlan/lib/span:wlan-span",

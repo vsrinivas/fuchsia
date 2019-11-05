@@ -83,6 +83,10 @@ MeshMlme::MeshMlme(DeviceInterface* device) : device_(device), seq_mgr_(NewSeque
 
 zx_status_t MeshMlme::Init() { return ZX_OK; }
 
+zx_status_t MeshMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 static wlan_mesh::MeshPathTable ConvertMeshTable(const PathTable::PathTableByTarget& table) {
   wlan_mesh::MeshPathTable fidl_table;
   for (const auto& it : table) {

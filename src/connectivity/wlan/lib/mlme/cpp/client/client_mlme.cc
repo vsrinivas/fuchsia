@@ -110,6 +110,10 @@ void ClientMlme::HwScanComplete(uint8_t result_code) {
   }
 }
 
+zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
     // Let the Scanner handle all MLME-SCAN.requests.

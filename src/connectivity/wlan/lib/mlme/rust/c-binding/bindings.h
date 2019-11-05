@@ -162,6 +162,8 @@ extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_span_t data_frame,
                                                 bool has_padding, bool controlled_port_open);
 
+extern "C" int32_t client_sta_handle_mlme_msg(wlan_client_sta_t *sta, wlan_span_t bytes);
+
 extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              mlme_buffer_provider_ops_t buf_provider,
                                              wlan_scheduler_ops_t scheduler,

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    log::error,
     wlan_mlme::{
         buffer::BufferProvider,
         client::Client,
@@ -44,6 +45,18 @@ pub extern "C" fn client_sta_timeout_fired(sta: &mut Client, event_id: EventId) 
 #[no_mangle]
 pub extern "C" fn client_sta_seq_mgr(sta: &mut Client) -> &mut SequenceManager {
     sta.seq_mgr()
+}
+
+#[no_mangle]
+pub extern "C" fn client_sta_handle_mlme_msg(sta: &mut Client, bytes: CSpan) -> i32 {
+    #[allow(deprecated)] // Allow until main message loop is in Rust.
+    match fidl_mlme::MlmeRequestMessage::decode(bytes.into(), &mut []) {
+        Ok(msg) => sta.handle_mlme_msg(msg).into_raw_zx_status(),
+        Err(e) => {
+            error!("error decoding MLME message: {}", e);
+            zx::Status::IO.into_raw()
+        }
+    }
 }
 
 #[no_mangle]

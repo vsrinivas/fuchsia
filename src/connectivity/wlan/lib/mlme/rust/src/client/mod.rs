@@ -151,6 +151,12 @@ impl Client {
         }
     }
 
+    #[allow(deprecated)] // Allow until main message loop is in Rust.
+    pub fn handle_mlme_msg(&mut self, _msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
+        // 0x90 for now.
+        Err(Error::Status(format!("MLME messages not supported"), zx::Status::NOT_SUPPORTED))
+    }
+
     /// Delivers a single MSDU to the STA's underlying device. The MSDU is delivered as an
     /// Ethernet II frame.
     /// Returns Err(_) if writing or delivering the Ethernet II frame failed.

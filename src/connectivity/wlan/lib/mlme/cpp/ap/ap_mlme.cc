@@ -45,6 +45,10 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
   return ZX_OK;
 }
 
+zx_status_t ApMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
     return HandleMlmeStartReq(*start_req);

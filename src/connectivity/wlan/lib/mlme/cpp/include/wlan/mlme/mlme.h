@@ -10,6 +10,7 @@
 
 #include <memory>
 
+#include <fbl/span.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
@@ -52,6 +53,9 @@ class Mlme {
  public:
   virtual ~Mlme() {}
   virtual zx_status_t Init() = 0;
+
+  // Temporary function to support processing inbound MLME messages in C++ and Rust.
+  virtual zx_status_t HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) = 0;
 
   virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) = 0;
   virtual zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) = 0;

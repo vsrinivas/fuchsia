@@ -206,6 +206,12 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
 
 template <typename Message>
 zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordinal) {
+  // Attempt to process encoded message in MLME.
+  if (auto status = mlme_->HandleEncodedMlmeMsg(span); status != ZX_ERR_NOT_SUPPORTED) {
+    return status;
+  }
+
+  // If the encoded message was not handled, manually decode and dispatch message.
   auto msg = MlmeMsg<Message>::Decode(span, ordinal);
   if (!msg.has_value()) {
     errorf("could not deserialize MLME primitive %lu: \n", ordinal);
