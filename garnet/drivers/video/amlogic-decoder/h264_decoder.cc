@@ -4,11 +4,12 @@
 
 #include "h264_decoder.h"
 
-#include <fbl/algorithm.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_packet.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/algorithm.h>
 
 #include "firmware_blob.h"
 #include "macros.h"
@@ -259,10 +260,9 @@ zx_status_t H264Decoder::LoadSecondaryFirmware(const uint8_t* data, uint32_t fir
   constexpr uint32_t kSecondaryFirmwareSize = 4 * 1024;
   constexpr uint32_t kSecondaryFirmwareBufferSize = kSecondaryFirmwareSize * 5;
   {
-    zx_status_t status =
-        io_buffer_init_aligned(&secondary_firmware_, owner_->bti()->get(),
-                               kSecondaryFirmwareBufferSize, kBufferAlignShift,
-                               IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init_aligned(&secondary_firmware_, owner_->bti()->get(),
+                                                kSecondaryFirmwareBufferSize, kBufferAlignShift,
+                                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make second firmware buffer: %d", status);
       return status;
@@ -291,7 +291,8 @@ zx_status_t H264Decoder::Initialize() {
     return status;
 
   if (owner_->is_tee_available()) {
-    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264, FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
+    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264,
+                                             FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
     if (status != ZX_OK) {
       LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
       return status;
@@ -341,7 +342,7 @@ zx_status_t H264Decoder::Initialize() {
   const uint32_t kCodecDataSize = 0x1ee000 + kBufferAlign;
   auto codec_data_create_result = InternalBuffer::Create(
       "H264CodecData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kCodecDataSize, is_secure_,
-      /*is_writable=*/true, /*is_mapping_needed*/false);
+      /*is_writable=*/true, /*is_mapping_needed*/ false);
   if (!codec_data_create_result.is_ok()) {
     LOG(ERROR, "Failed to make codec data buffer - status: %d", codec_data_create_result.error());
     return codec_data_create_result.error();
@@ -380,15 +381,16 @@ zx_status_t H264Decoder::Initialize() {
   constexpr uint32_t kSeiBufferSize = 8 * 1024 + kBufferAlign;
   // Sei data buffer must be readable from CPU (though we don't actually use it
   // yet).
-  auto sei_create_result = InternalBuffer::Create(
-      "H264SeiData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kSeiBufferSize, false,
-      /*is_writable=*/true, /*is_mapping_neede=*/false);
+  auto sei_create_result = InternalBuffer::Create("H264SeiData", &owner_->SysmemAllocatorSyncPtr(),
+                                                  owner_->bti(), kSeiBufferSize, false,
+                                                  /*is_writable=*/true, /*is_mapping_neede=*/false);
   if (!sei_create_result.is_ok()) {
     LOG(ERROR, "Failed to make sei data buffer - status: %d", sei_create_result.error());
     return sei_create_result.error();
   }
   sei_data_buffer_.emplace(sei_create_result.take_value());
-  zx_paddr_t sei_data_buffer_aligned_phys = fbl::round_up(sei_data_buffer_->phys_base(), kBufferAlign);
+  zx_paddr_t sei_data_buffer_aligned_phys =
+      fbl::round_up(sei_data_buffer_->phys_base(), kBufferAlign);
   // Sysmem has zeroed sei_data_buffer_, flushed the zeroes, and fenced the flush, to extent
   // possible.
 
@@ -487,7 +489,6 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_w
   returned_frames_.clear();
 
   uint32_t stride = coded_width;
-  uint64_t frame_vmo_bytes = stride * coded_height * 3 / 2;
   display_width_ = display_width;
   display_height_ = display_height;
 
@@ -496,51 +497,20 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_w
   // potentially-non-zero offset into the VMO, and allows sharing code further
   // down.
   std::vector<CodecFrame> frames;
-  if (initialize_frames_handler_) {
-    ::zx::bti duplicated_bti;
-    zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
-    if (dup_result != ZX_OK) {
-      DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
-      return dup_result;
+  ::zx::bti duplicated_bti;
+  zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
+  if (dup_result != ZX_OK) {
+    DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
+    return dup_result;
+  }
+  zx_status_t initialize_result = initialize_frames_handler_(
+      std::move(duplicated_bti), frame_count, coded_width, coded_height, stride, display_width,
+      display_height, has_sar, sar_width, sar_height);
+  if (initialize_result != ZX_OK) {
+    if (initialize_result != ZX_ERR_STOP) {
+      DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
     }
-    zx_status_t initialize_result = initialize_frames_handler_(
-        std::move(duplicated_bti), frame_count, coded_width, coded_height, stride, display_width,
-        display_height, has_sar, sar_width, sar_height);
-    if (initialize_result != ZX_OK) {
-      if (initialize_result != ZX_ERR_STOP) {
-        DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
-      }
-      return initialize_result;
-    }
-  } else {
-    for (uint32_t i = 0; i < frame_count; ++i) {
-      // aml_canvas_config() requires contiguous VMOs, and will validate that
-      // each frame VMO is actually physically contiguous.  So create with
-      // zx_vmo_create_contiguous() here.
-      ::zx::vmo frame_vmo;
-      zx_status_t vmo_create_result = zx_vmo_create_contiguous(
-          owner_->bti()->get(), frame_vmo_bytes, 0, frame_vmo.reset_and_get_address());
-      if (vmo_create_result != ZX_OK) {
-        DECODE_ERROR("H264Decoder::InitializeFrames() failed - status: %d\n", vmo_create_result);
-        return vmo_create_result;
-      }
-      fuchsia::media::StreamBufferData codec_buffer_data;
-      fuchsia::media::StreamBufferDataVmo data_vmo;
-      data_vmo.set_vmo_handle(std::move(frame_vmo));
-      data_vmo.set_vmo_usable_start(0);
-      data_vmo.set_vmo_usable_size(frame_vmo_bytes);
-      codec_buffer_data.set_vmo(std::move(data_vmo));
-      fuchsia::media::StreamBuffer buffer;
-      buffer.set_buffer_lifetime_ordinal(next_non_codec_buffer_lifetime_ordinal_);
-      buffer.set_buffer_index(i);
-      buffer.set_data(std::move(codec_buffer_data));
-      frames.emplace_back(CodecFrame{
-          .codec_buffer_spec = std::move(buffer),
-          .codec_buffer_ptr = nullptr,
-      });
-    }
-    next_non_codec_buffer_lifetime_ordinal_++;
-    InitializedFrames(std::move(frames), coded_width, coded_height, stride);
+    return initialize_result;
   }
 
   return ZX_OK;
@@ -616,9 +586,9 @@ zx_status_t H264Decoder::InitializeStream() {
       fbl::round_up(mb_height, 4u) * fbl::round_up(mb_width, 4u) * mb_mv_byte * max_reference_size;
   uint32_t mv_buffer_alloc_size = fbl::round_up(mv_buffer_size, ZX_PAGE_SIZE);
 
-  auto create_result = InternalBuffer::Create(
-      "H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), mv_buffer_alloc_size,
-      is_secure_, /*is_writable=*/true, /*is_mapping_needed*/false);
+  auto create_result = InternalBuffer::Create("H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(),
+                                              owner_->bti(), mv_buffer_alloc_size, is_secure_,
+                                              /*is_writable=*/true, /*is_mapping_needed*/ false);
   if (!create_result.is_ok()) {
     LOG(ERROR, "Couldn't allocate reference mv buffer - status: %d", create_result.error());
     return create_result.error();
@@ -626,7 +596,7 @@ zx_status_t H264Decoder::InitializeStream() {
   reference_mv_buffer_.emplace(create_result.take_value());
 
   // sysmem ensure that newly allocated buffers are zeroed and flushed to RAM and fenced, to the
-  // degree possible. 
+  // degree possible.
 
   BarrierAfterFlush();
   AvScratch1::Get()

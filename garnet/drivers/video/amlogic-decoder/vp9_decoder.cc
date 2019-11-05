@@ -467,6 +467,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
 void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                    uint32_t coded_height, uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+  ZX_ASSERT(owner_->IsDecoderCurrent(this));
   uint32_t frame_vmo_bytes = stride * coded_height * 3 / 2;
   for (uint32_t i = 0; i < frames_.size(); i++) {
     auto video_frame = std::make_shared<VideoFrame>();
@@ -543,6 +544,7 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   // both those things, and set the appropriate waiting bool back to true if we
   // still need to wait.
   if (waiting_for_output_ready_ || waiting_for_empty_frames_) {
+    ZX_ASSERT(owner_->IsDecoderCurrent(this));
     waiting_for_output_ready_ = false;
     waiting_for_empty_frames_ = false;
     PrepareNewFrame(true);
@@ -1149,65 +1151,29 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       }
     }
 
-    uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
-    if (initialize_frames_handler_) {
-      ::zx::bti duplicated_bti;
-      zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
-      if (dup_result != ZX_OK) {
-        DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
-        return false;
-      }
-      // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
-      // report "false, 1, 1" to indicate that the ES doesn't have a
-      // sample_aspect_ratio.  The Codec client may potentially obtain
-      // sample_aspect_ratio from other sources such as a .webm container. If
-      // those potential sources don't provide sample_aspect_ratio, then 1:1 is
-      // a reasonable default.
-      zx_status_t initialize_result = initialize_frames_handler_(
-          std::move(duplicated_bti), frames_.size(), coded_width, coded_height, stride,
-          display_width, display_height, false, 1, 1);
-      if (initialize_result != ZX_OK) {
-        if (initialize_result != ZX_ERR_STOP) {
-          DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
-        }
-        return false;
-      }
-      waiting_for_new_frames_ = true;
-      return false;
-    } else {
-      std::vector<CodecFrame> frames;
-      for (uint32_t i = 0; i < frames_.size(); i++) {
-        ::zx::vmo frame_vmo;
-        zx_status_t vmo_create_result = zx_vmo_create_contiguous(
-            owner_->bti()->get(), frame_vmo_bytes, 0, frame_vmo.reset_and_get_address());
-        if (vmo_create_result != ZX_OK) {
-          DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d\n", vmo_create_result);
-          return false;
-        }
-        fuchsia::media::StreamBufferData codec_buffer_data;
-        fuchsia::media::StreamBufferDataVmo data_vmo;
-        data_vmo.set_vmo_handle(std::move(frame_vmo));
-        data_vmo.set_vmo_usable_start(0);
-        data_vmo.set_vmo_usable_size(frame_vmo_bytes);
-        codec_buffer_data.set_vmo(std::move(data_vmo));
-        fuchsia::media::StreamBuffer buffer;
-        buffer.set_buffer_lifetime_ordinal(next_non_codec_buffer_lifetime_ordinal_);
-        buffer.set_buffer_index(0);
-        buffer.set_data(std::move(codec_buffer_data));
-        frames.emplace_back(CodecFrame{
-            .codec_buffer_spec = std::move(buffer),
-            .codec_buffer_ptr = nullptr,
-        });
-      }
-      next_non_codec_buffer_lifetime_ordinal_++;
-      waiting_for_new_frames_ = true;
-      InitializedFrames(std::move(frames), coded_width, coded_height, stride);
-      // InitializedFrames will call back into PrepareNewFrame to actually
-      // prepare for the decoding, so this call should return false so that the
-      // outer PrepareNewFrame call exits without trying to prepare decoding
-      // again.
+    ::zx::bti duplicated_bti;
+    zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
+    if (dup_result != ZX_OK) {
+      DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
       return false;
     }
+    // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
+    // report "false, 1, 1" to indicate that the ES doesn't have a
+    // sample_aspect_ratio.  The Codec client may potentially obtain
+    // sample_aspect_ratio from other sources such as a .webm container. If
+    // those potential sources don't provide sample_aspect_ratio, then 1:1 is
+    // a reasonable default.
+    zx_status_t initialize_result = initialize_frames_handler_(
+        std::move(duplicated_bti), frames_.size(), coded_width, coded_height, stride, display_width,
+        display_height, false, 1, 1);
+    if (initialize_result != ZX_OK) {
+      if (initialize_result != ZX_ERR_STOP) {
+        DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
+      }
+      return false;
+    }
+    waiting_for_new_frames_ = true;
+    return false;
   }
 
   Frame* new_frame = nullptr;

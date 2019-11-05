@@ -10,6 +10,7 @@
 #include "hevcdec.h"
 #include "macros.h"
 #include "pts_manager.h"
+#include "test_frame_allocator.h"
 #include "tests/test_support.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
@@ -126,6 +127,8 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
+    TestFrameAllocator frame_allocator(video.get());
+
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
@@ -141,6 +144,7 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      frame_allocator.set_decoder(video->video_decoder_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -220,6 +224,7 @@ class TestVP9 {
   static void DecodePerFrame() {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -241,6 +246,7 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      frame_allocator.set_decoder(video->video_decoder_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -295,6 +301,7 @@ class TestVP9 {
   static void DecodeResetHardware(const char* filename, bool use_parser) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -314,6 +321,7 @@ class TestVP9 {
     TestFrameProvider frame_provider;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      frame_allocator.set_decoder(video->video_decoder_);
       static_cast<Vp9Decoder*>(video->video_decoder_)->SetFrameDataProvider(&frame_provider);
       frame_provider.set_instance(video->current_instance());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
@@ -387,6 +395,7 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     std::vector<std::unique_ptr<TestFrameProvider>> frame_providers;
+    std::vector<std::unique_ptr<TestFrameAllocator>> frame_allocators;
 
     for (uint32_t i = 0; i < 2; i++) {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -394,6 +403,9 @@ class TestVP9 {
                                                   false, false);
       frame_providers.push_back(std::make_unique<TestFrameProvider>());
       decoder->SetFrameDataProvider(frame_providers.back().get());
+      auto frame_allocator = std::make_unique<TestFrameAllocator>(video.get());
+      frame_allocator->set_decoder(decoder.get());
+      frame_allocators.push_back(std::move(frame_allocator));
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));

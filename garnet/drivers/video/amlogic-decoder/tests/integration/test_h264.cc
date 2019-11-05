@@ -9,6 +9,7 @@
 #include "h264_decoder.h"
 #include "macros.h"
 #include "pts_manager.h"
+#include "test_frame_allocator.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
 
@@ -61,6 +62,7 @@ class TestH264 {
   static void Decode(bool use_parser) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -74,6 +76,7 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
                                 /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -137,6 +140,7 @@ class TestH264 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
+    TestFrameAllocator frame_allocator(video.get());
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -147,6 +151,7 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
                                 /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE, /*is_secure=*/false);
     EXPECT_EQ(ZX_OK, status);
@@ -209,6 +214,7 @@ class TestH264 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
+    TestFrameAllocator frame_allocator(video.get());
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -219,6 +225,7 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
                                 /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
