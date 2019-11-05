@@ -490,10 +490,10 @@ class CameraBase : public Resource {
   ~CameraBase() {}
   // Sets the camera's view parameters.
   void SetTransform(const float eye_position[3], const float eye_look_at[3], const float eye_up[3]);
-  // Sets the camera's clip-space transform. Translation is in Vulkan NDC
-  // ([-1, 1]^2), after scaling, so for example, under a scale of 3, (-3, -3)
-  // would translate to center the lower right corner, whereas (-2, -2) would
-  // align the lower right corner with that of the clipping volume.
+  // Sets the camera's 2-D clip-space transform. Translation is in Vulkan NDC ([-1, 1]^2), after
+  // scaling, so for example, under a scale of 3, (-3, -3) would translate to center the lower right
+  // corner, whereas (-2, -2) would align the lower right corner with that of the clipping volume.
+  // Scaling occurs on the x/y plane. z is unaffected.
   void SetClipSpaceTransform(float x, float y, float scale);
   // Sets the camera pose buffer
   void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64_t base_time,
