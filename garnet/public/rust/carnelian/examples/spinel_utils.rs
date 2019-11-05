@@ -1207,12 +1207,12 @@ impl Context for SpinelContext {
         let status = unsafe { spn_render(*self.context.borrow(), &rs) };
         assert_eq!(status, SpnSuccess);
 
+        // Unsealing the composition will block until rendering has completed.
         // TODO(reveman): Use fence instead of blocking.
-        const WAIT_TIMEOUT_NS: u64 = 1000 * 1000 * 1000 * 10;
-        let status = unsafe {
-            spn_vk_context_wait(*self.context.borrow(), 0, ptr::null_mut(), true, WAIT_TIMEOUT_NS)
-        };
-        assert_eq!(status, SpnSuccess);
+        unsafe {
+            let status = spn_composition_unseal(composition.composition);
+            assert_eq!(status, SpnSuccess);
+        }
     }
 }
 
