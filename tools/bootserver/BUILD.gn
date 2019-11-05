@@ -17,3 +17,24 @@ go_library("bootserver_lib") {
     "//tools/net/tftp",
   ]
 }
+
+go_library("main") {
+  name = "go.fuchsia.dev/fuchsia/tools/bootserver/cmd"
+  source_dir = "cmd"
+  deps = [
+    ":bootserver_lib",
+    "//tools/net/netboot",
+    "//tools/net/netutil",
+    "//tools/net/tftp",
+    "//tools/testing/runtests",
+  ]
+}
+
+go_binary("bootserver") {
+  # TODO(fxbug.dev/38517): Stop renaming once zircon bootserver goes away.
+  output_name = "bootserver_new"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/bootserver/cmd"
+  deps = [
+    ":main",
+  ]
+}
