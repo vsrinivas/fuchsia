@@ -44,10 +44,12 @@ typedef char* acpi_string;
 
 #define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
+#define be16_to_cpup(x) ((*(x) >> 8) | ((*(x)&0xff) << 8))
 #define le64_to_cpu(x) (x)
 #define le32_to_cpu(x) (x)
-#define le32_to_cpup(x) (*x)
+#define le32_to_cpup(x) (*(x))
 #define le16_to_cpu(x) (x)
+#define le16_to_cpup(x) (*(x))
 #define cpu_to_le64(x) (x)
 #define cpu_to_le32(x) (x)
 #define cpu_to_le16(x) (x)
@@ -276,6 +278,16 @@ static inline void list_splice_after_tail(list_node_t* splice_from, list_node_t*
   } else {
     list_splice_after(splice_from, list_peek_tail(pos));
   }
+}
+
+// The following MAC addresses are invalid addresses.
+//
+//   00:00:00:00:00:00
+//   *1:**:**:**:**:**  (multicast: the LSB of first byte is 1)
+//   FF:FF:FF:FF:FF:FF  (also a nulticast address)
+static inline bool is_valid_ether_addr(const uint8_t* mac) {
+  return !((!mac[0] && !mac[1] && !mac[2] && !mac[3] && !mac[4] && !mac[5]) ||  // 00:00:00:00:00:00
+           (mac[0] & 1));                                                       // multicast
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

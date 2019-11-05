@@ -37,6 +37,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NVM_REG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NVM_REG_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 /**
  * enum iwl_regulatory_and_nvm_subcmd_ids - regulatory/NVM commands
  */

@@ -107,6 +107,15 @@ using std::atomic_int;
 /* the maximum number of MAC interfaces in a MVM firmware */
 #define MAX_NUM_MVMVIF 4
 
+/* Default NVM size to read */
+#define IWL_NVM_DEFAULT_CHUNK_SIZE (2 * 1024)
+
+#define NVM_WRITE_OPCODE 1
+#define NVM_READ_OPCODE 0
+
+/* load nvm chunk response */
+enum { READ_NVM_CHUNK_SUCCEED = 0, READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1 };
+
 extern const struct ieee80211_ops iwl_mvm_hw_ops;
 
 /**

@@ -32,25 +32,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#include "iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
 
-#include <linux/etherdevice.h>
-#include <linux/export.h>
-#include <linux/firmware.h>
-#include <linux/pci.h>
-#include <linux/slab.h>
-#include <linux/types.h>
+#include <stdint.h>
 
-#include "fw/acpi.h"
-#include "fw/api/cmdhdr.h"
-#include "fw/api/commands.h"
-#include "fw/api/nvm-reg.h"
-#include "fw/img.h"
-#include "iwl-csr.h"
-#include "iwl-drv.h"
-#include "iwl-io.h"
-#include "iwl-modparams.h"
-#include "iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/cmdhdr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nvm-reg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 
 /* NVM offsets (in words) definitions */
 enum nvm_offsets {
@@ -99,14 +94,14 @@ enum nvm_sku_bits {
 /*
  * These are the channel numbers in the order that they are stored in the NVM
  */
-static const uint8_t iwl_nvm_channels[] = {
+__UNUSED static const uint8_t iwl_nvm_channels[] = {
     /* 2.4 GHz */
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     /* 5 GHz */
     36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149,
     153, 157, 161, 165};
 
-static const uint8_t iwl_ext_nvm_channels[] = {
+__UNUSED static const uint8_t iwl_ext_nvm_channels[] = {
     /* 2.4 GHz */
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     /* 5 GHz */
@@ -123,6 +118,7 @@ static const uint8_t iwl_ext_nvm_channels[] = {
 #define LAST_5GHZ_HT_FAMILY_8000 181
 #define N_HW_ADDR_MASK 0xF
 
+#if 0  // NEEDS_PORTING
 /* rate data (static) */
 static struct ieee80211_rate iwl_cfg80211_rates[] = {
     {
@@ -751,10 +747,13 @@ static void iwl_init_he_override(struct iwl_trans* trans, struct ieee80211_suppo
   }
 }
 #endif
+#endif  // NEEDS_PORTING
 
 static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
                             const __le16* nvm_ch_flags, uint8_t tx_chains, uint8_t rx_chains,
                             uint32_t sbands_flags) {
+  IWL_ERR(trans, "TODO(39658): unimplemented iwl_init_sbands()\n");
+#if 0   // NEEDS_PORTING
   struct device* dev = trans->dev;
   const struct iwl_cfg* cfg = trans->cfg;
   int n_channels;
@@ -790,6 +789,7 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   if (n_channels != n_used) {
     IWL_ERR_DEV(dev, "NVM: used only %d of %d channels\n", n_used, n_channels);
   }
+#endif  // NEEDS_PORTING
 }
 
 static int iwl_get_sku(const struct iwl_cfg* cfg, const __le16* nvm_sw, const __le16* phy_sku) {
@@ -848,6 +848,7 @@ static void iwl_set_radio_cfg(const struct iwl_cfg* cfg, struct iwl_nvm_data* da
   data->valid_rx_ant = EXT_NVM_RF_CFG_RX_ANT_MSK(radio_cfg);
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_flip_hw_address(__le32 mac_addr0, __le32 mac_addr1, uint8_t* dest) {
   const uint8_t* hw_addr;
 
@@ -861,8 +862,11 @@ static void iwl_flip_hw_address(__le32 mac_addr0, __le32 mac_addr1, uint8_t* des
   dest[4] = hw_addr[1];
   dest[5] = hw_addr[0];
 }
+#endif  // NEEDS_PORTING
 
 static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_data* data) {
+  IWL_ERR(trans, "unimplemented iwl_set_hw_address_from_csr()\n");
+#if 0   // NEEDS_PORTING
   __le32 mac_addr0 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr0_strap));
   __le32 mac_addr1 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr1_strap));
 
@@ -879,11 +883,14 @@ static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_
   mac_addr1 = cpu_to_le32(iwl_read32(trans, trans->cfg->csr->mac_addr1_otp));
 
   iwl_flip_hw_address(mac_addr0, mac_addr1, data->hw_addr);
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_set_hw_address_family_8000(struct iwl_trans* trans, const struct iwl_cfg* cfg,
                                            struct iwl_nvm_data* data, const __le16* mac_override,
                                            const __be16* nvm_hw) {
+  IWL_ERR(trans, "unimplemented iwl_set_hw_address_family_8000()\n");
+#if 0   // NEEDS_PORTING
   const uint8_t* hw_addr;
 
   if (mac_override) {
@@ -919,11 +926,12 @@ static void iwl_set_hw_address_family_8000(struct iwl_trans* trans, const struct
   }
 
   IWL_ERR(trans, "mac address is not found\n");
+#endif  // NEEDS_PORTING
 }
 
-static int iwl_set_hw_address(struct iwl_trans* trans, const struct iwl_cfg* cfg,
-                              struct iwl_nvm_data* data, const __be16* nvm_hw,
-                              const __le16* mac_override) {
+static zx_status_t iwl_set_hw_address(struct iwl_trans* trans, const struct iwl_cfg* cfg,
+                                      struct iwl_nvm_data* data, const __be16* nvm_hw,
+                                      const __le16* mac_override) {
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   struct iwl_dbg_cfg* dbg_cfg = &trans->dbg_cfg;
 
@@ -953,12 +961,14 @@ static int iwl_set_hw_address(struct iwl_trans* trans, const struct iwl_cfg* cfg
 
   if (!is_valid_ether_addr(data->hw_addr)) {
     IWL_ERR(trans, "no valid mac address was found\n");
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  IWL_INFO(trans, "base HW address: %pM\n", data->hw_addr);
+  IWL_INFO(trans, "base HW address: %02x:%02x:%02x:%02x:%02x:%02x\n", data->hw_addr[0],
+           data->hw_addr[1], data->hw_addr[2], data->hw_addr[3], data->hw_addr[4],
+           data->hw_addr[5]);
 
-  return 0;
+  return ZX_OK;
 }
 
 static bool iwl_nvm_no_wide_in_5ghz(struct device* dev, const struct iwl_cfg* cfg,
@@ -1003,12 +1013,11 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
   uint16_t lar_config;
   const __le16* ch_section;
 
-  if (cfg->nvm_type != IWL_NVM_EXT)
-    data = kzalloc(sizeof(*data) + sizeof(struct ieee80211_channel) * IWL_NVM_NUM_CHANNELS,
-                   GFP_KERNEL);
-  else
-    data = kzalloc(sizeof(*data) + sizeof(struct ieee80211_channel) * IWL_NVM_NUM_CHANNELS_EXT,
-                   GFP_KERNEL);
+  if (cfg->nvm_type != IWL_NVM_EXT) {
+    data = calloc(1, sizeof(*data) + sizeof(struct ieee80211_channel) * IWL_NVM_NUM_CHANNELS);
+  } else {
+    data = calloc(1, sizeof(*data) + sizeof(struct ieee80211_channel) * IWL_NVM_NUM_CHANNELS_EXT);
+  }
   if (!data) {
     return NULL;
   }
@@ -1050,7 +1059,7 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
     /* Checking for required sections */
     if (!nvm_calib) {
       IWL_ERR(trans, "Can't parse empty Calib NVM sections\n");
-      kfree(data);
+      free(data);
       return NULL;
     }
 
@@ -1068,8 +1077,8 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
   }
 
   /* If no valid mac address was found - bail out */
-  if (iwl_set_hw_address(trans, cfg, data, nvm_hw, mac_override)) {
-    kfree(data);
+  if (ZX_OK != iwl_set_hw_address(trans, cfg, data, nvm_hw, mac_override)) {
+    free(data);
     return NULL;
   }
 
@@ -1090,8 +1099,8 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
 
   return data;
 }
-IWL_EXPORT_SYMBOL(iwl_parse_nvm_data);
 
+#if 0  // NEEDS_PORTING
 static uint32_t iwl_nvm_get_regdom_bw_flags(const uint8_t* nvm_chan, int ch_idx, uint16_t nvm_flags,
                                             const struct iwl_cfg* cfg) {
   uint32_t flags = NL80211_RRF_NO_HT40;
@@ -1270,6 +1279,7 @@ IWL_EXPORT_SYMBOL(iwl_parse_nvm_mcc_info);
 #define IWL_MAX_NVM_SECTION_SIZE 0x1b58
 #define IWL_MAX_EXT_NVM_SECTION_SIZE 0x1ffc
 #define MAX_NVM_FILE_LEN 16384
+#endif  // NEEDS_PORTING
 
 void iwl_nvm_fixups(uint32_t hw_id, unsigned int section, uint8_t* data, unsigned int len) {
 #define IWL_4165_DEVICE_ID 0x5501
@@ -1282,8 +1292,8 @@ void iwl_nvm_fixups(uint32_t hw_id, unsigned int section, uint8_t* data, unsigne
     data[3] = ANT_B | (ANT_B << 4);
   }
 }
-IWL_EXPORT_SYMBOL(iwl_nvm_fixups);
 
+#if 0  // NEEDS_PORTING
 /*
  * Reads external NVM from a file into mvm->nvm_sections
  *
@@ -1552,3 +1562,4 @@ out:
   return ERR_PTR(ret);
 }
 IWL_EXPORT_SYMBOL(iwl_get_nvm);
+#endif  // NEEDS_PORTING

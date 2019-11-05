@@ -17,8 +17,11 @@ namespace testing {
 zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
   IWL_INSPECT_HOST_CMD(cmd);
   uint8_t opcode = iwl_cmd_opcode(cmd->id);
+  uint8_t group_id = iwl_cmd_groupid(cmd->id);
+  SimMvmResponse resp;  // Used by command functions to return packet.
+  zx_status_t ret;
 
-  switch (iwl_cmd_groupid(cmd->id)) {
+  switch (group_id) {
     case LONG_GROUP:
       switch (opcode) {  // enum iwl_legacy_cmds
         // No state change for the following commands.
@@ -31,28 +34,51 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
         case POWER_TABLE_CMD:
           return ZX_OK;
 
+        case NVM_ACCESS_CMD:
+          ret = nvm_.HandleCommand(cmd, &resp);
+          break;
+
         default:
           IWL_ERR(cmd, "unsupported long command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
+      break;
 
     case DATA_PATH_GROUP:
       switch (opcode) {  // enum iwl_data_path_subcmd_ids
         case DQA_ENABLE_CMD:
-          return ZX_OK;
+          ret = ZX_OK;
+          break;
 
         default:
           IWL_ERR(cmd, "unsupported data path command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
+      break;
 
     default:
       IWL_ERR(cmd, "unsupported command ID : %#x\n", cmd->id);
       IWL_INSPECT_HOST_CMD(cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
+
+  // Prepare the response packet buffer if the command requires a response.
+  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(resp_buf_);
+  if (cmd->flags & CMD_WANT_SKB) {
+    resp_pkt->len_n_flags = cpu_to_le32(resp.size());
+    resp_pkt->hdr.cmd = opcode;
+    resp_pkt->hdr.group_id = group_id;
+    resp_pkt->hdr.sequence = 0;
+    ZX_ASSERT(resp.size() <= sizeof(resp_buf_));  // avoid overflow
+    memcpy(resp_pkt->data, resp.data(), resp.size());
+    cmd->resp_pkt = resp_pkt;
+  } else {
+    cmd->resp_pkt = nullptr;
+  }
+
+  return ret;
 }
 
 }  // namespace testing

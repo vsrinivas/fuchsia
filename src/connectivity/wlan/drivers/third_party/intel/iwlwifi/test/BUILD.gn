@@ -18,7 +18,9 @@ source_set("iwlwifi_sim_trans_ss") {
   testonly = true
 
   sources = [
+    "sim-default-nvm.cc",
     "sim-mvm.cc",
+    "sim-nvm.cc",
     "trans-sim.cc",
   ]
 
@@ -103,6 +105,18 @@ executable("notif-wait_test") {
   deps = testing_deps
 }
 
+executable("nvm_test") {
+  output_name = "nvm_test"
+  testonly = true
+
+  sources = [
+    "nvm_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("pcie_test") {
   output_name = "pcie_test"
   testonly = true
@@ -167,6 +181,7 @@ unittest_package("iwlwifi_test") {
     ":iwl-phy-db_test",
     ":mvm_test",
     ":notif-wait_test",
+    ":nvm_test",
     ":pcie_test",
     ":phy-ctxt_test",
     ":utils_test",
@@ -188,6 +203,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "notif-wait_test"
+      environments = basic_envs
+    },
+    {
+      name = "nvm_test"
       environments = basic_envs
     },
     {

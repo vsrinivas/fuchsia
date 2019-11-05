@@ -33,27 +33,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/firmware.h>
-#include <linux/rtnetlink.h>
 
-#include "fw/acpi.h"
-#include "iwl-csr.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-eeprom-read.h"
-#include "iwl-nvm-parse.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-read.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-/* Default NVM size to read */
-#define IWL_NVM_DEFAULT_CHUNK_SIZE (2 * 1024)
-
-#define NVM_WRITE_OPCODE 1
-#define NVM_READ_OPCODE 0
-
-/* load nvm chunk response */
-enum { READ_NVM_CHUNK_SUCCEED = 0, READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1 };
-
+#if 0   // NEEDS_PORTING
 /*
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
@@ -95,16 +85,24 @@ static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t o
   iwl_free_resp(&cmd);
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset,
-                              uint16_t length, uint8_t* data) {
+// To read a chunk in a section.
+//
+// Args:
+//   section: the section index to read
+//   offset: the offset to read (used to read NVM and to store returned value in 'data').
+//   length: the length of 'data'.
+//   [out] data: to store output data (starting from 'offset').
+//   [out] bytes_read: return the actual bytes read from NVM.
+static zx_status_t iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset,
+                                      uint16_t length, uint8_t* data, size_t* bytes_read) {
   struct iwl_nvm_access_cmd nvm_access_cmd = {
       .offset = cpu_to_le16(offset),
       .length = cpu_to_le16(length),
       .type = cpu_to_le16(section),
       .op_code = NVM_READ_OPCODE,
   };
-  struct iwl_nvm_access_resp* nvm_resp;
   struct iwl_rx_packet* pkt;
   struct iwl_host_cmd cmd = {
       .id = NVM_ACCESS_CMD,
@@ -114,26 +112,26 @@ static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t of
               &nvm_access_cmd,
           },
   };
-  int ret, bytes_read, offset_read;
+  int offset_read;
   uint8_t* resp_data;
 
   cmd.len[0] = sizeof(struct iwl_nvm_access_cmd);
 
-  ret = iwl_mvm_send_cmd(mvm, &cmd);
-  if (ret) {
+  zx_status_t ret = iwl_mvm_send_cmd(mvm, &cmd);
+  if (ret != ZX_OK) {
     return ret;
   }
 
   pkt = cmd.resp_pkt;
 
   /* Extract NVM response */
-  nvm_resp = (void*)pkt->data;
-  ret = le16_to_cpu(nvm_resp->status);
-  bytes_read = le16_to_cpu(nvm_resp->length);
+  struct iwl_nvm_access_resp* nvm_resp = (void*)pkt->data;
+  int status = le16_to_cpu(nvm_resp->status);
+  *bytes_read = le16_to_cpu(nvm_resp->length);
   offset_read = le16_to_cpu(nvm_resp->offset);
   resp_data = nvm_resp->data;
-  if (ret) {
-    if ((offset != 0) && (ret == READ_NVM_CHUNK_NOT_VALID_ADDRESS)) {
+  if (status) {
+    if ((offset != 0) && (status == READ_NVM_CHUNK_NOT_VALID_ADDRESS)) {
       /*
        * meaning of NOT_VALID_ADDRESS:
        * driver try to read chunk from address that is
@@ -146,30 +144,31 @@ static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t of
           mvm->trans->dev,
           "NVM access command failed on offset 0x%x since that section size is multiple 2K\n",
           offset);
-      ret = 0;
+      *bytes_read = 0;
+      ret = ZX_OK;
     } else {
       IWL_DEBUG_EEPROM(mvm->trans->dev, "NVM access command failed with status %d (device: %s)\n",
                        ret, mvm->cfg->name);
-      ret = -ENODATA;
+      ret = ZX_ERR_NOT_FOUND;
     }
     goto exit;
   }
 
   if (offset_read != offset) {
     IWL_ERR(mvm, "NVM ACCESS response with invalid offset %d\n", offset_read);
-    ret = -EINVAL;
+    ret = ZX_ERR_IO;
     goto exit;
   }
 
   /* Write data to NVM */
-  memcpy(data + offset, resp_data, bytes_read);
-  ret = bytes_read;
+  memcpy(data + offset, resp_data, *bytes_read);
 
 exit:
   iwl_free_resp(&cmd);
   return ret;
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const uint8_t* data,
                                  uint16_t length) {
   int offset = 0;
@@ -191,6 +190,7 @@ static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const ui
 
   return 0;
 }
+#endif  // NEEDS_PORTING
 
 /*
  * Reads an NVM section completely.
@@ -202,37 +202,38 @@ static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const ui
  * the uCode fills the response with as much data as we can,
  * without overflowing, so no check is needed.
  */
-static int iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, uint8_t* data,
-                                uint32_t size_read) {
-  uint16_t length, offset = 0;
-  int ret;
+static zx_status_t iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, uint8_t* data,
+                                        uint32_t size_read, uint16_t* bytes_returned) {
+  uint16_t length;      // the size to read
+  uint16_t offset = 0;  // the offset for next read
 
   /* Set nvm section read length */
   length = IWL_NVM_DEFAULT_CHUNK_SIZE;
 
-  ret = length;
+  size_t bytes_read = length;
 
   /* Read the NVM until exhausted (reading less than requested) */
-  while (ret == length) {
+  while (bytes_read == length) {
     /* Check no memory assumptions fail and cause an overflow */
     if ((size_read + offset + length) > mvm->cfg->base_params->eeprom_size) {
       IWL_ERR(mvm, "EEPROM size is too small for NVM\n");
-      return -ENOBUFS;
+      return ZX_ERR_INVALID_ARGS;
     }
 
-    ret = iwl_nvm_read_chunk(mvm, section, offset, length, data);
-    if (ret < 0) {
-      IWL_DEBUG_EEPROM(mvm->trans->dev, "Cannot read NVM from section %d offset %d, length %d\n",
+    zx_status_t ret = iwl_nvm_read_chunk(mvm, section, offset, length, data, &bytes_read);
+    if (ret != ZX_OK) {
+      IWL_DEBUG_EEPROM(mvm->trans->dev, "Cannot read NVM from section %d offset %u, length %d\n",
                        section, offset, length);
       return ret;
     }
-    offset += ret;
+    offset += bytes_read;
   }
 
   iwl_nvm_fixups(mvm->trans->hw_id, section, data, offset);
 
+  *bytes_returned = offset;
   IWL_DEBUG_EEPROM(mvm->trans->dev, "NVM section %d read completed\n", section);
-  return offset;
+  return ZX_OK;
 }
 
 static struct iwl_nvm_data* iwl_parse_nvm_sections(struct iwl_mvm* mvm) {
@@ -292,6 +293,7 @@ static struct iwl_nvm_data* iwl_parse_nvm_sections(struct iwl_mvm* mvm) {
                             mvm->fw->valid_tx_ant, mvm->fw->valid_rx_ant, lar_enabled);
 }
 
+#if 0   // NEEDS_PORTING
 /* Loads the NVM data stored in mvm->nvm_sections into the NIC */
 int iwl_mvm_load_nvm_to_nic(struct iwl_mvm* mvm) {
   int i, ret = 0;
@@ -311,46 +313,49 @@ int iwl_mvm_load_nvm_to_nic(struct iwl_mvm* mvm) {
   }
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-int iwl_nvm_init(struct iwl_mvm* mvm) {
-  int ret, section;
+zx_status_t iwl_nvm_init(struct iwl_mvm* mvm) {
+  zx_status_t ret = ZX_OK;
+  int section;
   uint32_t size_read = 0;
   uint8_t *nvm_buffer, *temp;
-  const char* nvm_file_C = mvm->cfg->default_nvm_file_C_step;
 
   if (WARN_ON_ONCE(mvm->cfg->nvm_hw_section_num >= NVM_MAX_NUM_SECTIONS)) {
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   /* load NVM values from nic */
   /* Read From FW NVM */
   IWL_DEBUG_EEPROM(mvm->trans->dev, "Read from NVM\n");
 
-  nvm_buffer = kmalloc(mvm->cfg->base_params->eeprom_size, GFP_KERNEL);
+  nvm_buffer = malloc(mvm->cfg->base_params->eeprom_size);
   if (!nvm_buffer) {
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
   }
   for (section = 0; section < NVM_MAX_NUM_SECTIONS; section++) {
     /* we override the constness for initial read */
-    ret = iwl_nvm_read_section(mvm, section, nvm_buffer, size_read);
-    if (ret == -ENODATA) {
-      ret = 0;
+    uint16_t bytes_returned;
+    ret = iwl_nvm_read_section(mvm, section, nvm_buffer, size_read, &bytes_returned);
+    if (ret == ZX_ERR_NOT_FOUND) {
+      ret = ZX_OK;
       continue;
     }
-    if (ret < 0) {
+    if (ret != ZX_OK) {
       break;
     }
-    size_read += ret;
-    temp = kmemdup(nvm_buffer, ret, GFP_KERNEL);
+    size_read += bytes_returned;
+    temp = malloc(bytes_returned);
     if (!temp) {
-      ret = -ENOMEM;
+      ret = ZX_ERR_NO_MEMORY;
       break;
     }
+    memcpy(temp, nvm_buffer, bytes_returned);
 
-    iwl_nvm_fixups(mvm->trans->hw_id, section, temp, ret);
+    iwl_nvm_fixups(mvm->trans->hw_id, section, temp, bytes_returned);
 
     mvm->nvm_sections[section].data = temp;
-    mvm->nvm_sections[section].length = ret;
+    mvm->nvm_sections[section].length = bytes_returned;
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     switch (section) {
@@ -382,13 +387,16 @@ int iwl_nvm_init(struct iwl_mvm* mvm) {
   if (!size_read) {
     IWL_ERR(mvm, "OTP is blank\n");
   }
-  kfree(nvm_buffer);
+  free(nvm_buffer);
 
   /* Only if PNVM selected in the mod param - load external NVM  */
   if (mvm->nvm_file_name) {
+    IWL_ERR(mvm, "Loading external NVM is not supported (%s)\n", mvm->nvm_file_name);
+#if 0   // NEEDS_PORTING
     /* read External NVM file from the mod param */
     ret = iwl_read_external_nvm(mvm->trans, mvm->nvm_file_name, mvm->nvm_sections);
     if (ret) {
+      const char* nvm_file_C = mvm->cfg->default_nvm_file_C_step;
       mvm->nvm_file_name = nvm_file_C;
 
       if ((ret == -EFAULT || ret == -ENOENT) && mvm->nvm_file_name) {
@@ -401,18 +409,22 @@ int iwl_nvm_init(struct iwl_mvm* mvm) {
         return ret;
       }
     }
+#endif  // NEEDS_PORTING
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   /* parse the relevant nvm sections */
   mvm->nvm_data = iwl_parse_nvm_sections(mvm);
   if (!mvm->nvm_data) {
-    return -ENODATA;
+    IWL_ERR(mvm, "the NVM data parsing failed\n");
+    return ZX_ERR_NOT_FOUND;
   }
   IWL_DEBUG_EEPROM(mvm->trans->dev, "nvm version = %x\n", mvm->nvm_data->nvm_version);
 
-  return ret < 0 ? ret : 0;
+  return ret;
 }
 
+#if 0   // NEEDS_PORTING
 struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2,
                                                enum iwl_mcc_source src_id) {
   struct iwl_mcc_update_cmd mcc_update_cmd = {
@@ -583,3 +595,4 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* r
   regulatory_set_wiphy_regd(mvm->hw->wiphy, regd);
   kfree(regd);
 }
+#endif  // NEEDS_PORTING
