@@ -167,5 +167,149 @@ TEST_F(CoordinateTransformTest, Translated) {
   }
 }
 
+// This test verifies scaling applied to a view subgraph behind another.
+TEST_F(CoordinateTransformTest, ScaledBehind) {
+  // v1 is in front, not scaled
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  // v2 is in back but scaled 4x
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    scenic::ViewHolder holder_1(session, std::move(vh1), "holder_1"),
+        holder_2(session, std::move(vh2), "holder_2");
+
+    holder_1.SetViewProperties(k5x5x1);
+    holder_1.SetTranslation(1, 1, -5);
+    holder_2.SetViewProperties(k5x5x1);
+    holder_2.SetTranslation(1, 1, -4);
+    holder_2.SetScale(4, 4, 4);
+
+    scene->AddChild(holder_1);
+    scene->AddChild(holder_2);
+
+    RequestToPresent(session);
+  }
+
+  // Clients each vend a View to the global scene.
+  SessionWrapper client_1 = CreateClient("view_1", std::move(v1)),
+                 client_2 = CreateClient("view_2", std::move(v2));
+
+  // Multi-agent scene is now set up, send in the input.
+  {
+    scenic::Session* session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // Touch once at (2, 2)
+    session->Enqueue(pointer.Add(2, 2));
+    session->Enqueue(pointer.Down(2, 2));
+  }
+  RunLoopUntilIdle();
+
+  {
+    const std::vector<InputEvent>& events = client_1.events();
+
+    EXPECT_EQ(events.size(), 3u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5, 1.5));
+
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
+
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
+  }
+
+  {
+    const std::vector<InputEvent>& events = client_2.events();
+
+    EXPECT_EQ(events.size(), 2u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5 / 4, 1.5 / 4));
+
+    EXPECT_TRUE(events[1].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
+  }
+}
+
+// This test verifies scaling applied to a view subgraph in front of another.
+TEST_F(CoordinateTransformTest, ScaledInFront) {
+  // v1 is in front and scaled 4x
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  // v2 is in back but not scaled
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    scenic::ViewHolder holder_1(session, std::move(vh1), "holder_1"),
+        holder_2(session, std::move(vh2), "holder_2");
+
+    holder_1.SetViewProperties(k5x5x1);
+    holder_1.SetTranslation(1, 1, -5);
+    holder_1.SetScale(4, 4, 4);
+    holder_2.SetViewProperties(k5x5x1);
+    holder_2.SetTranslation(1, 1, -1);
+
+    scene->AddChild(holder_1);
+    scene->AddChild(holder_2);
+
+    RequestToPresent(session);
+  }
+
+  // Clients each vend a View to the global scene.
+  SessionWrapper client_1 = CreateClient("view_1", std::move(v1)),
+                 client_2 = CreateClient("view_2", std::move(v2));
+
+  // Multi-agent scene is now set up, send in the input.
+  {
+    scenic::Session* session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // Touch once at (2, 2)
+    session->Enqueue(pointer.Add(2, 2));
+    session->Enqueue(pointer.Down(2, 2));
+  }
+  RunLoopUntilIdle();
+
+  {
+    const std::vector<InputEvent>& events = client_1.events();
+
+    EXPECT_EQ(events.size(), 3u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5 / 4, 1.5 / 4));
+
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
+
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
+  }
+
+  {
+    const std::vector<InputEvent>& events = client_2.events();
+
+    EXPECT_EQ(events.size(), 2u);
+
+    EXPECT_TRUE(events[0].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5, 1.5));
+
+    EXPECT_TRUE(events[1].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
+  }
+}
+
 }  // namespace
 }  // namespace lib_ui_input_tests

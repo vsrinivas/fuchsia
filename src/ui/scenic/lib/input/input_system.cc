@@ -74,14 +74,15 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // We set the elevation for the origin point, and Z value for the direction,
   // such that we start above the scene and point into the scene.
   //
-  // Scenic flips around Vulkan's camera to the more intuitive "look
-  // forward" orientation. The ray must now be stated in terms of the camera's
-  // model space, so "taking a step back" translates to "negative Z origin".
-  // Similarly, "look at the scene" translates to "positive Z direction".
-  //
   // For hit testing, these values work in conjunction with
   // Camera::ProjectRayIntoScene to create an appropriate ray4 that works
   // correctly with the hit tester.
+  //
+  // TODO(38389): Scenic used to surface left-handed z, so |layer.cc| contains vestigial logic that
+  // flips z. As such, "taking a step back" translates to "positive Z origin" and "look at the
+  // scene" translates to "negative Z direction". We should be able to remove that flip and restore
+  // Vulkan's z-in semantics. Similarly since hit testing originates from the camera it should not
+  // be necessary to step back from the camera for the hit ray.
   //
   // During dispatch, we translate an arbitrary pointer's (x,y) device-space
   // coordinates to a View's (x', y') model-space coordinates. We clamp the

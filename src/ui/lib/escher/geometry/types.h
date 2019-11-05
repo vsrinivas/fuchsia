@@ -41,7 +41,7 @@ struct ray4 {
   glm::vec4 origin;
 
   // The ray's direction vector in space.
-  // Last component must be zero.
+  // This is not necessarily a unit vector. The last component must be zero.
   glm::vec4 direction;
 
   // Gets the coordinate point along the ray for a given parameterized distance.
@@ -52,7 +52,8 @@ struct ray4 {
 constexpr float kEpsilon = 0.000001f;
 
 inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
-  return ray4{matrix * ray.origin, glm::normalize(matrix * ray.direction)};
+  FXL_DCHECK(ray.direction.w == 0) << "Ray direction should not be subject to translation.";
+  return ray4{matrix * ray.origin, matrix * ray.direction};
 }
 
 // Oriented plane described by a normal vector and a distance from the origin

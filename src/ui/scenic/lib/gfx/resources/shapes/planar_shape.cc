@@ -17,13 +17,17 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray, float* out_distance) 
     return false;
 
   // Reject if the ray is not pointing down towards the Z=0 plane.
-  float delta_z = -ray.direction.z;
-  if (delta_z > std::numeric_limits<float>::epsilon())
+  float delta_z = ray.direction.z;
+  if (delta_z < std::numeric_limits<float>::epsilon())
     return false;
 
   // Compute the distance to the plane in multiples of the ray's direction
   // vector and the point of intersection.
-  float distance = ray.origin.z / delta_z;
+  //
+  // TODO(40161): Right now, this must be "* (1 / delta_z)" instead of "/ delta_z" for floating
+  // point behavior consistent with bounding box tests. We can change this to be the more direct "/
+  // delta_z" if we drop best-effort support for hit tests coplanar with view bounds.
+  float distance = -ray.origin.z * (1 / delta_z);
   escher::vec2 point =
       (escher::vec2(ray.origin) + distance * escher::vec2(ray.direction)) / ray.origin.w;
 

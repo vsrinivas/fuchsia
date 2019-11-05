@@ -32,8 +32,16 @@ using ViewPtr = fxl::RefPtr<View>;
 class Node : public Resource {
  public:
   // Per-node intersection data for HitTester object.
+  //
+  // The hit ray implicitly defines a 1-dimensional space ("ray space") with origin at the ray
+  // origin and unit length defined by the ray direction vector (which is not necessarily a unit
+  // vector).
+  //
+  // Hit testing is done in part by projecting 3-dimensional geometry onto the hit ray. The distance
+  // of the hit is its ray-space coordinate. This allows for direct comparison of hit distance
+  // amongst objects in different coordinate systems without needing further transformation.
   struct IntersectionInfo {
-    // Maximum possible hit distance allowed.
+    // Maximum possible hit distance allowed, in ray space.
     static constexpr float kMaximumDistance = 1000000000.f;
 
     // True if the ray intersects the given node.
@@ -42,10 +50,10 @@ class Node : public Resource {
     // True if hit tester should traverse the node's descendants.
     bool continue_with_children = true;
 
-    // Distance from ray origin to node hit point.
+    // Hit coordinate, in ray space.
     float distance = 0;
 
-    // Min and max extent of what can be hit.
+    // Min and max extent of what can be hit, in ray space.
     escher::Interval interval = escher::Interval(0.f, kMaximumDistance);
   };
 
@@ -105,15 +113,10 @@ class Node : public Resource {
   // Tests if the ray is clipped by the node's clip planes.
   bool ClipsRay(const escher::ray4& ray) const;
 
-  // Computes the closest point of intersection between the ray's origin
-  // and the front side of the node's own content, excluding its descendants.
-  // Does not apply clipping.
+  // Computes the closest point of intersection between the ray's origin and the front side of the
+  // node's own content, excluding its descendants. Does not apply clipping.
   //
-  // |out_distance| is set to the distance from the ray's origin to the
-  // closest point of intersection in multiples of the ray's direction vector.
-  //
-  // Returns true if there is an intersection, otherwise returns false and
-  // leaves |out_distance| unmodified.
+  // The ray is interpreted in the coordinate space of the node.
   virtual IntersectionInfo GetIntersection(const escher::ray4& ray,
                                            const IntersectionInfo& parent_intersection) const;
 

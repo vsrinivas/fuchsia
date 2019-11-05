@@ -15,59 +15,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-namespace {
-
-// Takes a ray in the coordinate system you are transforming to, the transform itself,
-// and a point in the original coordinate system, and gets the distance of the transformed
-// point to the ray origin. We assume that the point being passed in lies along the ray
-// direction in the original transform space, so this function does not generalize to
-// all possible points.
-float GetTransformedDistance(const escher::ray4& local_ray, const glm::mat4& transform,
-                             const glm::vec4& point) {
-  return glm::length((transform * point) - local_ray.origin);
-}
-
-// This function transforms an intersection struct from one coordinate system to the other.
-// Since the distances stored within a struct are the recorded distances between a ray
-// origin and a node in a given  space, they need to be updated when the coordinate
-// system changes.
-Node::IntersectionInfo GetTransformedIntersection(const Node::IntersectionInfo& intersection,
-                                                  const escher::ray4& outer_ray,
-                                                  const escher::ray4& local_ray,
-                                                  const glm::mat4& transform) {
-  Node::IntersectionInfo local_intersection = intersection;
-  // Get the coordinate points of the intersections based on the parameterized
-  // distances.
-  escher::Interval interval = intersection.interval;
-  glm::vec4 min_point = outer_ray.At(interval.min());
-  glm::vec4 max_point = outer_ray.At(interval.max());
-  glm::vec4 dist_point = outer_ray.At(intersection.distance);
-
-  // Transform the distances into the local coordinate system of the node and the
-  // local ray, so that the math lines up.
-  float local_min = GetTransformedDistance(local_ray, transform, min_point);
-  float local_max = GetTransformedDistance(local_ray, transform, max_point);
-
-  // Check for nan and inf in case the transformed distances got scaled beyond what
-  // floating point values can handle.
-  FXL_DCHECK(!std::isnan(local_min));
-  FXL_DCHECK(!std::isnan(local_max));
-  FXL_DCHECK(std::isfinite(local_max));
-  FXL_DCHECK(local_min >= 0) << local_min;
-  local_intersection.interval = escher::Interval(local_min, local_max);
-
-  // Only transform the hit distance if there was an actual hit.
-  if (intersection.did_hit) {
-    float local_dst = GetTransformedDistance(local_ray, transform, dist_point);
-    FXL_DCHECK(local_dst >= local_min) << local_dst << "," << local_min;
-    FXL_DCHECK(local_dst <= local_max) << local_dst << "," << local_max;
-    local_intersection.distance = local_dst;
-  }
-  return local_intersection;
-}
-
-}  // namespace
-
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(node);
   FXL_DCHECK(ray_info_ == nullptr);
@@ -114,16 +61,9 @@ void HitTester::AccumulateHitsOuter(Node* node) {
   escher::ray4 outer_ray = outer_ray_info->ray;
   escher::ray4 local_ray = local_ray_info.ray;
 
-  // Make outer and local intersections.
-  Node::IntersectionInfo* outer_intersection = intersection_info_;
-  Node::IntersectionInfo local_intersection =
-      GetTransformedIntersection(*outer_intersection, outer_ray, local_ray, inverse_transform);
-
   ray_info_ = &local_ray_info;
-  intersection_info_ = &local_intersection;
   AccumulateHitsInner(node);
   ray_info_ = outer_ray_info;
-  intersection_info_ = outer_intersection;
 }
 
 void HitTester::AccumulateHitsInner(Node* node) {

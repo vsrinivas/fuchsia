@@ -14,6 +14,7 @@
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,6 +32,9 @@
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
+
+#include <glm/gtc/epsilon.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -135,6 +139,133 @@ class HitTestTest : public gtest::TestLoopFixture {
 using SingleSessionHitTestTest = HitTestTest;
 using MultiSessionHitTestTest = HitTestTest;
 
+// Makes sure hit coordinates are correct.
+//
+// This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume.
+TEST_F(SingleSessionHitTestTest, HitCoordinates) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  enum : uint32_t {
+    kViewHolderId = 10,
+    kViewId,
+    kShapeId,
+    kRectId,
+    kMaterialId,
+  };
+
+  CustomSession sess = CreateRootSession(16, 9);
+  {
+    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
+                                              "MyViewHolder"));
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
+                                               {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
+
+    // Rectangle (full screen) and material
+    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
+    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
+    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 16, 9));
+
+    // Shape
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
+    sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
+
+    // Graph
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
+  }
+
+  {
+    // Hit from (1, 1.5) should be at (-7, -3, 0) local.
+    // Depth should be 1.999:
+    // * hit ray originates in device space (clip space with -z)
+    // * geometry is at z = -1 in global space
+    // * orthographic projection maps z [0, 1000] to [0, 1] in clip space (now at z = .999)
+    // * hit ray is at z = 1 (1 length behind the camera) with direction z = -1
+    //   (result: hit z = 1.999)
+    // TODO(38389): See if we can simplify this. At the very least we should be able to get rid of
+    // the -z and 1-offset, but it may also be possible to redefine device-space z in terms of the
+    // view volume depth (though the relative scale isn't used for anything user facing so it
+    // doesn't actually matter).
+    HitTester hit_tester;
+    const std::vector<Hit> hits = layer_stack()->HitTest(HitRay(1, 1.5f), &hit_tester);
+    ASSERT_FALSE(hits.empty());
+
+    const Hit& hit = hits.front();
+    EXPECT_EQ(hit.node->global_id(), GlobalId(0, kShapeId));
+    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
+    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 local = hit.ray.At(hit.distance);
+    static const glm::vec4 expected = {-7, -3, 0, 1};
+    EXPECT_TRUE(
+        glm::all(glm::epsilonEqual(local, expected, std::numeric_limits<float>::epsilon() * 1999)))
+        << "Local hit coordinates " << glm::to_string(local) << " should be approximately "
+        << glm::to_string(expected);
+  }
+}
+
+// Makes sure that scaling does not affect hit depth incorrectly.
+//
+// This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume. The
+// rectangle is scaled to 2x.
+TEST_F(SingleSessionHitTestTest, Scaling) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  enum : uint32_t {
+    kViewHolderId = 10,
+    kViewId,
+    kShapeId,
+    kRectId,
+    kMaterialId,
+  };
+
+  CustomSession sess = CreateRootSession(16, 9);
+  {
+    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
+                                              "MyViewHolder"));
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
+                                               {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
+
+    // Rectangle (half scale) and material
+    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
+    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
+    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 8, 4.5));
+
+    // Shape
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
+    sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
+    sess.Apply(scenic::NewSetScaleCmd(kShapeId, (float[]){2, 2, 2}));
+
+    // Graph
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
+  }
+
+  {
+    // Hit from (1, 1.5) should be at (-7, -3, 0) local and depth should be 1.999 (z = -1 in
+    // 1000-space, + 1 due to the ray origin).
+    HitTester hit_tester;
+    const std::vector<Hit> hits = layer_stack()->HitTest(HitRay(1, 1.5f), &hit_tester);
+    ASSERT_FALSE(hits.empty());
+
+    const Hit& hit = hits.front();
+    EXPECT_EQ(hit.node->global_id(), GlobalId(0, kShapeId));
+    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
+    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 local = hit.ray.At(hit.distance);
+    static const glm::vec4 expected = {-3.5f, -1.5f, 0, 1};
+    EXPECT_TRUE(
+        glm::all(glm::epsilonEqual(local, expected, std::numeric_limits<float>::epsilon() * 1999)))
+        << "Local hit coordinates " << glm::to_string(local) << " should be approximately "
+        << glm::to_string(expected);
+  }
+}
+
 // This unit test checks to make sure that geometry that is a child of
 // a view is not hit by a hit-test ray if the intersection point
 // with the ray lies outside of the view's bounding box.
@@ -193,22 +324,22 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeNodeId));
+  }
 
-    // Perform two hit tests on either side of the display.
-    std::vector<Hit> hits, hits2;
-    {
-      // First hit test should intersect the view's bounding box.
-      HitTester hit_tester;
-      hits = layer_stack()->HitTest(HitRay(5, layer_height() / 2), &hit_tester);
-      ASSERT_EQ(hits.size(), 1u) << "Should see a single hit on the rectangle";
-      EXPECT_EQ(hits[0].node->id(), kShapeNodeId);
+  // Perform two hit tests on either side of the display.
+  std::vector<Hit> hits, hits2;
+  {
+    // First hit test should intersect the view's bounding box.
+    HitTester hit_tester;
+    hits = layer_stack()->HitTest(HitRay(5, layer_height() / 2), &hit_tester);
+    ASSERT_EQ(hits.size(), 1u) << "Should see a single hit on the rectangle";
+    EXPECT_EQ(hits[0].node->id(), kShapeNodeId);
 
-      // Second hit test should completely miss the view's bounding box.
-      HitTester hit_tester2;
-      hits2 =
-          layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &hit_tester2);
-      EXPECT_EQ(hits2.size(), 0u) << "Should see no hits since its outside the view bounds";
-    }
+    // Second hit test should completely miss the view's bounding box.
+    HitTester hit_tester2;
+    hits2 =
+        layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &hit_tester2);
+    EXPECT_EQ(hits2.size(), 0u) << "Should see no hits since its outside the view bounds";
   }
 }
 
@@ -298,6 +429,64 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
 
   ASSERT_EQ(hits.size(), 1u);
   EXPECT_EQ(hits[0].node->id(), kHittableShapeNodeId);
+}
+
+// TODO(40161): This is fragile but we don't want this to regress if we can help it before
+// officially dropping support.
+//
+// This scene includes two rectangles: the one on the left is on the near plane of the view bound,
+// and the one on the right is on the far plane.
+//
+// vrrrrrrrrrrvvvvvvvvvvv
+// v                    v
+// vvvvvvvvvvvrrrrrrrrrrv
+TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  enum : uint32_t {
+    kViewHolderId = 10,
+    kViewId,
+    kShape1Id,
+    kShape2Id,
+    kRectId,
+    kMaterialId,
+  };
+
+  CustomSession sess = CreateRootSession(16, 9);
+  {
+    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
+                                              "MyViewHolder"));
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
+                                               {.bounding_box{.min{0, 0, -1}, .max{16, 9, 1}}}));
+
+    // Rectangle and material
+    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
+    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
+    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 8, 9));
+
+    // Shapes
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShape1Id));
+    sess.Apply(scenic::NewSetShapeCmd(kShape1Id, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShape1Id, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShape1Id, (float[]){4, 4.5f, -1}));
+
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShape2Id));
+    sess.Apply(scenic::NewSetShapeCmd(kShape2Id, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShape2Id, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShape2Id, (float[]){12, 4.5f, 1}));
+
+    // Graph
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShape1Id));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShape2Id));
+  }
+
+  {
+    HitTester hit_tester;
+    EXPECT_FALSE(layer_stack()->HitTest(HitRay(4, 4.5f), &hit_tester).empty());
+    EXPECT_FALSE(layer_stack()->HitTest(HitRay(12, 4.5f), &hit_tester).empty());
+  }
 }
 
 // Test to ensure the collision debug messages are correct.
@@ -437,10 +626,8 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kInnerShapeNodeId));
   }
 
-  // Perform two hit tests on either side of the display.
   std::vector<Hit> hits;
   {
-    // First hit test should intersect the view's bounding box.
     HitTester hit_tester;
     hits = layer_stack()->HitTest(HitRay(layer_width() / 2, layer_height() / 2), &hit_tester);
     ASSERT_EQ(hits.size(), 1u) << "Should only hit the shape encompassed by both views.";
