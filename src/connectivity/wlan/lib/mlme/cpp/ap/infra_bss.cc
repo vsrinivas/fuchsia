@@ -62,7 +62,18 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
         return BSS(bss)->device_->SetKey(key);
       },
   };
-  rust_ap_ = NewApStation(rust_device, rust_buffer_provider, bssid_);
+  wlan_scheduler_ops_t scheduler = {
+      .cookie = this,
+      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
+        TimeoutId id = {};
+        BSS(cookie)->timer_mgr_.Schedule(zx::time(deadline), RustEvent{}, &id);
+        return {._0 = id.raw()};
+      },
+      .cancel = [](void* cookie, wlan_scheduler_event_id_t id) {
+        BSS(cookie)->timer_mgr_.Cancel(TimeoutId(id._0));
+      },
+  };
+  rust_ap_ = NewApStation(rust_device, rust_buffer_provider, scheduler, bssid_);
 }
 
 InfraBss::~InfraBss() {
@@ -256,10 +267,24 @@ zx_status_t InfraBss::ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& clie
 void InfraBss::CancelTimeout(TimeoutId id) { timer_mgr_.Cancel(id); }
 
 zx_status_t InfraBss::HandleTimeout() {
-  zx_status_t status = timer_mgr_.HandleTimeout([&](auto _now, auto addr, auto timeout_id) {
-    if (auto client = GetClient(addr)) {
-      client->HandleTimeout(timeout_id);
-    }
+  zx_status_t status = timer_mgr_.HandleTimeout([&](auto _now, auto event, auto timeout_id) {
+    std::visit([&](auto const& event) {
+      using Event = std::decay_t<decltype(event)>;
+
+      if constexpr (std::is_same_v<Event, common::MacAddr>) {
+        if (auto client = GetClient(event)) {
+          client->HandleTimeout(timeout_id);
+        }
+      } else if constexpr (std::is_same_v<Event, RustEvent>) {
+        ap_sta_timeout_fired(rust_ap_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
+      } else {
+        // Note static_assert(false, ...) doesn't work here, because its value doesn't depend on
+        // the type Event and will therefore always trigger. Using is_same_v<Event, Event> forces
+        // the dependency on the type, and will only be evaluated if there are cases of Event
+        // that are not covered here.
+        static_assert(!std::is_same_v<Event, Event>, "cases are not exhaustive!");
+      }
+    }, event);
   });
   if (status != ZX_OK) {
     errorf("[infra-bss] failed to rearm the timer: %s\n", zx_status_get_string(status));

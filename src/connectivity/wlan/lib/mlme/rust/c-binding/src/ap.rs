@@ -4,16 +4,19 @@
 
 use {
     wlan_common::mac::{AuthAlgorithmNumber, Bssid},
-    wlan_mlme::{ap::Ap, buffer::BufferProvider, common::mac, device::Device, error::ResultExt},
+    wlan_mlme::{
+        ap::Ap, buffer::BufferProvider, common::mac, device::Device, error::ResultExt, timer::*,
+    },
 };
 
 #[no_mangle]
 pub extern "C" fn ap_sta_new(
     device: Device,
     buf_provider: BufferProvider,
+    scheduler: Scheduler,
     bssid: &[u8; 6],
 ) -> *mut Ap {
-    Box::into_raw(Box::new(Ap::new(device, buf_provider, Bssid(*bssid))))
+    Box::into_raw(Box::new(Ap::new(device, buf_provider, scheduler, Bssid(*bssid))))
 }
 
 #[no_mangle]
@@ -32,4 +35,9 @@ pub extern "C" fn ap_sta_delete(sta: *mut Ap) {
     if !sta.is_null() {
         unsafe { Box::from_raw(sta) };
     }
+}
+
+#[no_mangle]
+pub extern "C" fn ap_sta_timeout_fired(sta: &mut Ap, event_id: EventId) {
+    sta.handle_timed_event(event_id);
 }

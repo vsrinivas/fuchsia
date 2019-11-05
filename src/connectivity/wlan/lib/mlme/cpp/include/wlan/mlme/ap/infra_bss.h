@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <queue>
+#include <variant>
 
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/ap/beacon_sender.h>
@@ -80,6 +81,9 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   using ClientMap = std::unordered_map<common::MacAddr, std::unique_ptr<RemoteClientInterface>,
                                        common::MacAddrHasher>;
 
+  // Marker type for Rust events.
+  struct RustEvent { };
+
   void HandleEthFrame(EthFrame&&);
   void HandleAnyWlanFrame(std::unique_ptr<Packet>);
   void HandleAnyMgmtFrame(MgmtFrame<>&&);
@@ -125,7 +129,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   // MLME-START.request holds all information required to correctly configure
   // and start a BSS.
   ::fuchsia::wlan::mlme::StartRequest start_req_;
-  TimerManager<common::MacAddr> timer_mgr_;
+  TimerManager<std::variant<common::MacAddr, RustEvent>> timer_mgr_;
 };
 
 }  // namespace wlan

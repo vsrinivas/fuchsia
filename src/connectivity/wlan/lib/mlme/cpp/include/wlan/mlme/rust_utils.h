@@ -23,7 +23,7 @@ ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_op
                                wlan_scheduler_ops_t scheduler, common::MacAddr bssid,
                                common::MacAddr iface_mac);
 ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
-                       common::MacAddr bssid);
+                       wlan_scheduler_ops_t scheduler, common::MacAddr bssid);
 
 template <class T, typename = std::enable_if_t<std::is_class<T>::value>>
 static inline constexpr wlan_span_t AsWlanSpan(const T* data) {

@@ -110,14 +110,6 @@ typedef struct {
   mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
 } mlme_buffer_provider_ops_t;
 
-/**
- * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
- */
-typedef struct {
-  const uint8_t *data;
-  uintptr_t size;
-} wlan_span_t;
-
 typedef struct {
   uint64_t _0;
 } wlan_scheduler_event_id_t;
@@ -138,6 +130,14 @@ typedef struct {
 } wlan_scheduler_ops_t;
 
 /**
+ * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
+ */
+typedef struct {
+  const uint8_t *data;
+  uintptr_t size;
+} wlan_span_t;
+
+/**
  * ClientConfig affects time duration used for different timeouts.
  * Originally added to more easily control behavior in tests.
  */
@@ -150,10 +150,12 @@ extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
 
 extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
                                      mlme_buffer_provider_ops_t buf_provider,
-                                     const uint8_t (*bssid)[6]);
+                                     wlan_scheduler_ops_t scheduler, const uint8_t (*bssid)[6]);
 
 extern "C" int32_t ap_sta_send_open_auth_frame(wlan_ap_sta_t *sta, const uint8_t (*client_addr)[6],
                                                uint16_t status_code);
+
+extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id_t event_id);
 
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 

@@ -11,9 +11,10 @@ use {
         device::{Device, TxFlags},
         error::Error,
         key::KeyConfig,
+        timer::{EventId, Scheduler, Timer},
         write_eth_frame,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, log},
     std::{collections::HashMap, fmt},
     wlan_common::{
@@ -300,16 +301,35 @@ impl InfraBss {
     }
 }
 
+#[derive(Debug)]
+pub enum TimedEvent {
+    Beacon,
+}
+
 pub struct Context {
     device: Device,
     buf_provider: BufferProvider,
+    timer: Timer<TimedEvent>,
     seq_mgr: SequenceManager,
     bssid: Bssid,
 }
 
 impl Context {
-    pub fn new(device: Device, buf_provider: BufferProvider, bssid: Bssid) -> Self {
-        Self { device, buf_provider, seq_mgr: SequenceManager::new(), bssid }
+    pub fn new(
+        device: Device,
+        buf_provider: BufferProvider,
+        timer: Timer<TimedEvent>,
+        bssid: Bssid,
+    ) -> Self {
+        Self { device, timer, buf_provider, seq_mgr: SequenceManager::new(), bssid }
+    }
+
+    pub fn schedule_at(&mut self, deadline: zx::Time, event: TimedEvent) -> EventId {
+        self.timer.schedule_event(deadline, event)
+    }
+
+    pub fn cancel_event(&mut self, event_id: EventId) {
+        self.timer.cancel_event(event_id)
     }
 
     // MLME sender functions.
@@ -567,8 +587,21 @@ pub struct Ap {
 // TODO(37891): Use this code.
 #[allow(dead_code)]
 impl Ap {
-    pub fn new(device: Device, buf_provider: BufferProvider, bssid: Bssid) -> Self {
-        Self { ctx: Context::new(device, buf_provider, bssid), bss: None }
+    pub fn new(
+        device: Device,
+        buf_provider: BufferProvider,
+        scheduler: Scheduler,
+        bssid: Bssid,
+    ) -> Self {
+        Self {
+            ctx: Context::new(device, buf_provider, Timer::<TimedEvent>::new(scheduler), bssid),
+            bss: None,
+        }
+    }
+
+    // Timer handler functions.
+    pub fn handle_timed_event(&mut self, _event_id: EventId) {
+        // TODO(37891): Handle these.
     }
 
     // MLME handler functions.
@@ -679,6 +712,7 @@ mod tests {
             buffer::FakeBufferProvider,
             device::FakeDevice,
             key::{KeyType, Protection},
+            timer::FakeScheduler,
         },
         wlan_common::assert_variant,
     };
@@ -686,14 +720,15 @@ mod tests {
     const BSSID: Bssid = Bssid([2u8; 6]);
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
-    fn make_context(device: Device) -> Context {
-        Context::new(device, FakeBufferProvider::new(), BSSID)
+    fn make_context(device: Device, scheduler: Scheduler) -> Context {
+        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
     }
 
     #[test]
     fn send_mlme_auth_ind() {
         let mut fake_device = FakeDevice::new();
-        let ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_auth_ind(CLIENT_ADDR, fidl_mlme::AuthenticationTypes::OpenSystem)
             .expect("expected OK");
         let msg = fake_device
@@ -711,7 +746,8 @@ mod tests {
     #[test]
     fn send_mlme_deauth_ind() {
         let mut fake_device = FakeDevice::new();
-        let ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_deauth_ind(CLIENT_ADDR, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
             .expect("expected OK");
         let msg = fake_device
@@ -729,7 +765,8 @@ mod tests {
     #[test]
     fn send_mlme_assoc_ind() {
         let mut fake_device = FakeDevice::new();
-        let ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_assoc_ind(CLIENT_ADDR, 1, Some(b"coolnet".to_vec()), None)
             .expect("expected OK");
         let msg = fake_device
@@ -749,7 +786,8 @@ mod tests {
     #[test]
     fn send_mlme_disassoc_ind() {
         let mut fake_device = FakeDevice::new();
-        let ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_disassoc_ind(
             CLIENT_ADDR,
             fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
@@ -770,7 +808,8 @@ mod tests {
     #[test]
     fn send_mlme_eapol_ind() {
         let mut fake_device = FakeDevice::new();
-        let ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_mlme_eapol_ind(CLIENT_ADDR2, CLIENT_ADDR, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
         let msg = fake_device
@@ -787,9 +826,30 @@ mod tests {
     }
 
     #[test]
+    fn ctx_schedule_at() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let event_id = ctx.schedule_at(zx::Time::from_nanos(0), TimedEvent::Beacon);
+        assert_variant!(ctx.timer.triggered(&event_id), Some(TimedEvent::Beacon));
+        assert_variant!(ctx.timer.triggered(&event_id), None);
+    }
+
+    #[test]
+    fn ctx_cancel_event() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let event_id = ctx.schedule_at(zx::Time::from_nanos(0), TimedEvent::Beacon);
+        ctx.cancel_event(event_id);
+        assert_variant!(ctx.timer.triggered(&event_id), None);
+    }
+
+    #[test]
     fn ctx_send_auth_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_auth_frame(
             CLIENT_ADDR,
             AuthAlgorithmNumber::FAST_BSS_TRANSITION,
@@ -817,7 +877,8 @@ mod tests {
     #[test]
     fn ctx_send_assoc_resp_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_assoc_resp_frame(
             CLIENT_ADDR,
             mac::CapabilityInfo(0),
@@ -847,7 +908,8 @@ mod tests {
     #[test]
     fn ctx_send_disassoc_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_disassoc_frame(CLIENT_ADDR, mac::ReasonCode::LEAVING_NETWORK_DISASSOC)
             .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -868,7 +930,8 @@ mod tests {
     #[test]
     fn ctx_send_data_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_data_frame(CLIENT_ADDR2, CLIENT_ADDR, false, false, 0x1234, &[1, 2, 3, 4, 5])
             .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -892,7 +955,8 @@ mod tests {
     #[test]
     fn ctx_send_eapol_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.send_eapol_frame(CLIENT_ADDR2, CLIENT_ADDR, false, &[1, 2, 3, 4, 5])
             .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -916,7 +980,8 @@ mod tests {
     #[test]
     fn ctx_deliver_eth_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         ctx.deliver_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
         assert_eq!(fake_device.eth_queue.len(), 1);
@@ -933,7 +998,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_auth_resp() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -968,7 +1034,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_auth_resp_no_such_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -987,7 +1054,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_deauth_req() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1020,7 +1088,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_assoc_resp() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1056,7 +1125,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_disassoc_req() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1089,7 +1159,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_set_controlled_port_req() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1114,7 +1185,8 @@ mod tests {
     #[test]
     fn bss_handle_mlme_eapol_req() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1151,7 +1223,8 @@ mod tests {
     #[test]
     fn bss_handle_mgmt_frame_auth() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.handle_mgmt_frame(
@@ -1193,7 +1266,8 @@ mod tests {
     #[test]
     fn bss_handle_mgmt_frame_bad_ds_bits() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1227,7 +1301,8 @@ mod tests {
     #[test]
     fn bss_handle_mgmt_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1259,7 +1334,8 @@ mod tests {
     #[test]
     fn bss_handle_mgmt_frame_bogus() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1290,7 +1366,8 @@ mod tests {
     #[test]
     fn bss_handle_data_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1351,7 +1428,8 @@ mod tests {
     #[test]
     fn bss_handle_data_frame_bad_ds_bits() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1387,7 +1465,8 @@ mod tests {
     #[test]
     fn bss_handle_data_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1439,7 +1518,8 @@ mod tests {
     #[test]
     fn bss_handle_data_frame_client_not_associated() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
@@ -1502,7 +1582,8 @@ mod tests {
     #[test]
     fn bss_handle_eth_frame_no_rsn() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1548,7 +1629,8 @@ mod tests {
     #[test]
     fn bss_handle_eth_frame_no_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
 
         assert_variant!(
@@ -1563,7 +1645,8 @@ mod tests {
     #[test]
     fn bss_handle_eth_frame_is_rsn_eapol_controlled_port_closed() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1593,7 +1676,8 @@ mod tests {
     #[test]
     fn bss_handle_eth_frame_is_rsn_eapol_controlled_port_open() {
         let mut fake_device = FakeDevice::new();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1643,7 +1727,13 @@ mod tests {
     #[test]
     fn ap_on_eth_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1688,7 +1778,13 @@ mod tests {
     #[test]
     fn ap_on_eth_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.on_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..]);
     }
@@ -1696,7 +1792,13 @@ mod tests {
     #[test]
     fn ap_on_mac_frame() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.on_mac_frame(
             &[
@@ -1732,7 +1834,13 @@ mod tests {
     #[test]
     fn ap_on_mac_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.on_mac_frame(
             &[
@@ -1755,7 +1863,13 @@ mod tests {
     #[test]
     fn ap_on_mac_frame_bogus() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.on_mac_frame(&[0][..], false);
     }
@@ -1763,7 +1877,13 @@ mod tests {
     #[test]
     fn ap_handle_mlme_setkeys_request() {
         let mut fake_device = FakeDevice::new();
-        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
         ap.handle_mlme_setkeys_request(
             &[fidl_mlme::SetKeyDescriptor {
                 cipher_suite_oui: [1, 2, 3],

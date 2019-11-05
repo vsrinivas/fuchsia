@@ -582,8 +582,10 @@ mod tests {
     use {
         super::*,
         crate::{
+            ap::TimedEvent,
             buffer::FakeBufferProvider,
             device::{Device, FakeDevice},
+            timer::{FakeScheduler, Scheduler, Timer},
         },
         wlan_common::{
             assert_variant,
@@ -600,15 +602,21 @@ mod tests {
         RemoteClient::new(CLIENT_ADDR)
     }
 
-    fn make_context(device: Device) -> Context {
-        Context::new(device, FakeBufferProvider::new(), AP_ADDR)
+    fn make_context(device: Device, scheduler: Scheduler) -> Context {
+        Context::new(
+            device,
+            FakeBufferProvider::new(),
+            Timer::<TimedEvent>::new(scheduler),
+            AP_ADDR,
+        )
     }
 
     #[test]
     fn handle_mlme_auth_resp() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
             .expect("expected OK");
@@ -634,7 +642,8 @@ mod tests {
     fn handle_mlme_auth_resp_failure() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_auth_resp(
                 &mut ctx,
@@ -663,7 +672,8 @@ mod tests {
     fn handle_mlme_deauth_req() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_deauth_req(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
             .expect("expected OK");
@@ -687,7 +697,8 @@ mod tests {
     fn handle_mlme_assoc_resp() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_assoc_resp(
                 &mut ctx,
@@ -723,7 +734,8 @@ mod tests {
     fn handle_mlme_assoc_resp_no_rsn() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_assoc_resp(
                 &mut ctx,
@@ -743,7 +755,8 @@ mod tests {
     fn handle_mlme_assoc_resp_failure() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_assoc_resp(
                 &mut ctx,
@@ -777,7 +790,8 @@ mod tests {
     fn handle_mlme_disassoc_req() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_mlme_disassoc_req(
                 &mut ctx,
@@ -861,7 +875,8 @@ mod tests {
     fn handle_mlme_eapol_req() {
         let mut fake_device = FakeDevice::new();
         let r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta.handle_mlme_eapol_req(&mut ctx, CLIENT_ADDR2, &[1, 2, 3][..]).expect("expected OK");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -890,7 +905,8 @@ mod tests {
     fn handle_disassoc_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_disassoc_frame(
                 &mut ctx,
@@ -915,7 +931,8 @@ mod tests {
     fn handle_assoc_req_frame() {
         let mut fake_device = FakeDevice::new();
         let r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
             .handle_assoc_req_frame(&mut ctx, Some(b"coolnet".to_vec()), 1, None)
             .expect("expected OK");
@@ -938,7 +955,8 @@ mod tests {
     fn handle_auth_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.handle_auth_frame(&mut ctx, AuthAlgorithmNumber::SHARED_KEY).expect("expected OK");
         let msg = fake_device
@@ -957,7 +975,8 @@ mod tests {
     fn handle_auth_frame_unknown_algorithm() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.handle_auth_frame(&mut ctx, AuthAlgorithmNumber(0xffff)).expect("expected OK");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -982,7 +1001,8 @@ mod tests {
     fn handle_deauth_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta
             .handle_deauth_frame(
@@ -1017,7 +1037,8 @@ mod tests {
     fn handle_eapol_llc_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state = State::Associated { eapol_controlled_port: None };
         r_sta
@@ -1040,7 +1061,8 @@ mod tests {
     fn handle_llc_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state = State::Associated { eapol_controlled_port: None };
         r_sta
@@ -1061,7 +1083,8 @@ mod tests {
     fn handle_eth_frame_no_eapol_controlled_port() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state = State::Associated { eapol_controlled_port: None };
         r_sta
@@ -1089,7 +1112,8 @@ mod tests {
     fn handle_eth_frame_not_associated() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state = State::Authenticated;
         assert_variant!(
@@ -1104,7 +1128,8 @@ mod tests {
     fn handle_eth_frame_eapol_controlled_port_closed() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state = State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
@@ -1121,7 +1146,8 @@ mod tests {
     fn handle_eth_frame_eapol_controlled_port_open() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta.state =
             State::Associated { eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open) };
@@ -1151,7 +1177,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Authenticating;
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         assert_variant!(
             r_sta
@@ -1201,7 +1228,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Associated { eapol_controlled_port: None };
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta
             .handle_data_frame(
@@ -1234,7 +1262,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Associated { eapol_controlled_port: None };
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         let mut amsdu_data_frame_body = vec![];
         amsdu_data_frame_body.extend(&[
@@ -1280,7 +1309,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Authenticating;
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         r_sta
             .handle_mgmt_frame(
@@ -1308,7 +1338,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Authenticating;
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         assert_variant!(
             r_sta
@@ -1354,7 +1385,8 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         r_sta.state = State::Associated { eapol_controlled_port: None };
-        let mut ctx = make_context(fake_device.as_device());
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
         assert_variant!(
             r_sta
