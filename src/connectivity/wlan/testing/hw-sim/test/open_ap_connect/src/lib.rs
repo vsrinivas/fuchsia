@@ -130,7 +130,8 @@ async fn verify_assoc_resp(helper: &mut test_utils::TestHelper) {
                         assert_eq!({ assoc_resp_hdr.status_code }, mac::StatusCode::SUCCESS);
                         sender.take().map(|s| s.send(()));
                     }
-                    Some(mac::MgmtBody::Action { .. }) => {}
+                    Some(mac::MgmtBody::Unsupported { subtype })
+                        if subtype == mac::MgmtSubtype::ACTION => {}
                     other => {
                         panic!("expected association response frame, got {:?}", other);
                     }
