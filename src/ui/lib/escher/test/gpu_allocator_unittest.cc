@@ -13,6 +13,17 @@ using namespace escher;
 using namespace escher::test;
 using ::testing::_;
 
+// Comparison macro used for checking bytes_allocated.
+#define EXPECT_BETWEEN_INCL(x, left, right) EXPECT_TRUE((x) >= (left) && (x) <= (right))
+
+// Don't allow too much wasted memory.
+//
+// As VmaAllocator now treats memory heap less than 256MB as "small heaps"
+// (defined in escher/BUILD.gn), and will allocate 1/64 of heap size for all
+// small memory heaps, we set kMaxUnusedMemory = 4MB so that it will work
+// correctly on all devices.
+const vk::DeviceSize kMaxUnusedMemory = 4u * 1024 * 1024;
+
 VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
   VulkanInstance::Params instance_params({{}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
@@ -51,55 +62,117 @@ VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
   return vulkan_queues;
 }
 
-// vk_mem_alloc allocates power of 2 buffers by default, so this makes the
-// tests easier to verify.
-const vk::DeviceSize kMemorySize = 1024;
+struct AllocationStat {
+  int64_t bytes_allocated;
+  int64_t unused_bytes_allocated;
+  size_t total_bytes_allocated;
+  size_t total_unused_bytes_allocated;
+};
 
-// Don't allow too much wasted memory.
-const vk::DeviceSize kMaxUnusedMemory = 4u * 1024 * 1024;
+void UpdateAllocationCount(std::vector<AllocationStat>& allocation_stat_each_test,
+                           GpuAllocator* allocator) {
+  size_t total_bytes_allocated = allocator->GetTotalBytesAllocated();
+  size_t total_unused_bytes_allocated = allocator->GetUnusedBytesAllocated();
+
+  int64_t bytes_allocated = static_cast<int64_t>(total_bytes_allocated);
+  int64_t unused_bytes_allocated = static_cast<int64_t>(total_unused_bytes_allocated);
+  if (allocation_stat_each_test.size() >= 1) {
+    bytes_allocated -= allocation_stat_each_test.back().total_bytes_allocated;
+    unused_bytes_allocated -= allocation_stat_each_test.back().total_unused_bytes_allocated;
+  }
+
+  allocation_stat_each_test.push_back(
+      {.bytes_allocated = bytes_allocated,
+       .unused_bytes_allocated = unused_bytes_allocated,
+       .total_bytes_allocated = total_bytes_allocated,
+       .total_unused_bytes_allocated = total_unused_bytes_allocated});
+}
 
 void TestAllocationOfMemory(GpuAllocator* allocator) {
+  // vk_mem_alloc allocates power of 2 buffers by default, so this makes the
+  // tests easier to verify.
+  constexpr vk::DeviceSize kMemorySize = 1024;
+  constexpr vk::DeviceSize kMemorySizeAllowableError = 64;
+
+  std::vector<AllocationStat> allocation_stat_each_test;
+
   // Confirm that all memory has been released.
-  EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[0]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_unused_bytes_allocated);
 
   // Standard sub-allocation tests.
   auto alloc = allocator->AllocateMemory({kMemorySize, 0, 0xffffffff},
                                          vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[1]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
+
   // Adding sub-allocations doesn't increase slab-count.
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
   auto sub_alloc1 = alloc->Suballocate(kMemorySize, 0);
   auto sub_alloc1a = sub_alloc1->Suballocate(kMemorySize, 0);
   auto sub_alloc1b = sub_alloc1->Suballocate(kMemorySize, 0);
   auto sub_alloc2 = alloc->Suballocate(kMemorySize, 0);
   auto sub_alloc2a = sub_alloc2->Suballocate(kMemorySize, 0);
   auto sub_alloc2b = sub_alloc2->Suballocate(kMemorySize, 0);
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+
+  // We expect that we didn't allocate any new memory.
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[2]
+  EXPECT_EQ(0u, static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated));
+  EXPECT_EQ(0u, static_cast<size_t>(allocation_stat_each_test.back().unused_bytes_allocated));
 
   // Allocating then freeing increases/decreases the slab-count.
   auto alloc2 = allocator->AllocateMemory({kMemorySize, 0, 0xffffffff},
                                           vk::MemoryPropertyFlagBits::eHostVisible);
-  EXPECT_EQ(2U * kMemorySize, allocator->GetTotalBytesAllocated());
+
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[3]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
+
   alloc2 = nullptr;
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[4]
+  EXPECT_EQ(allocation_stat_each_test[2].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
 
   // Sub-allocations keep parent allocations alive.
   alloc = nullptr;
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[5]
+  EXPECT_EQ(allocation_stat_each_test[1].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
+
   sub_alloc1 = nullptr;
   sub_alloc1a = nullptr;
   sub_alloc1b = nullptr;
   sub_alloc2 = nullptr;
   sub_alloc2a = nullptr;
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[6]
+  EXPECT_EQ(allocation_stat_each_test[1].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
+
   sub_alloc2b = nullptr;
-  EXPECT_EQ(0U, allocator->GetTotalBytesAllocated());
-  EXPECT_GE(kMaxUnusedMemory, allocator->GetUnusedBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[7]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
 }
 
 void TestAllocationOfBuffers(GpuAllocator* allocator) {
+  // vk_mem_alloc allocates power of 2 buffers by default, so this makes the
+  // tests easier to verify.
+  constexpr vk::DeviceSize kMemorySize = 1024;
+  constexpr vk::DeviceSize kMemorySizeAllowableError = 64;
+
+  std::vector<AllocationStat> allocation_stat_each_test;
+
   // Confirm that all memory has been released.
-  EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[0]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_unused_bytes_allocated);
 
   const auto kBufferUsageFlags =
       vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
@@ -110,12 +183,21 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   // allocated.
   auto buffer0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
                                            kMemoryPropertyFlags, nullptr);
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[1]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
+
   EXPECT_NE(nullptr, buffer0->host_ptr());
   EXPECT_EQ(kMemorySize, buffer0->size());
+
   auto buffer1 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
                                            kMemoryPropertyFlags, nullptr);
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[2]
+  EXPECT_LE(kMemorySize, static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated));
+
   EXPECT_NE(nullptr, buffer1->host_ptr());
   EXPECT_EQ(kMemorySize, buffer1->size());
 
@@ -128,14 +210,24 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[3]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
 
   // Release the objects, buffer first, and confirm that both need to be
   // destroyed before the memory is reclaimed.
   buffer_dedicated0 = nullptr;
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[4]
+  EXPECT_EQ(allocation_stat_each_test[3].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
+
   ptr = nullptr;
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[5]
+  EXPECT_EQ(allocation_stat_each_test[2].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
 
   // Allocate another dedicated memory object.
   buffer_dedicated0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
@@ -144,13 +236,23 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[6]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
 
   // Release the objects in the opposite order, and perform the same test.
   ptr = nullptr;
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[7]
+  EXPECT_EQ(allocation_stat_each_test[6].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
+
   buffer_dedicated0 = nullptr;
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[8]
+  EXPECT_EQ(allocation_stat_each_test[5].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
 
   // Allocate non-power-of-two buffers, proving that, even though the allocator
   // could partition out a small pool, the requirement of an output memory
@@ -188,20 +290,25 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   ptr = nullptr;
 
   // Confirm that all memory has been released.
-  EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[9]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
 }
 
 void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory = false) {
-  // Confirm that all memory has been released.
-  EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
+  std::vector<AllocationStat> allocation_stat_each_test;
 
-  const auto kMemoryPropertyFlags =
-      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+  // Confirm that all memory has been released.
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[0]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_unused_bytes_allocated);
+
+  const auto kMemoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible;
 
   static const int kWidth = 64;
   static const int kHeight = 64;
   static const vk::Format kFormat = vk::Format::eR8G8B8A8Unorm;
   static const size_t kMemorySize = kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
+  static const vk::DeviceSize kMemorySizeAllowableError = 128;
   static const vk::ImageUsageFlags kUsage =
       vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 
@@ -211,6 +318,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   info.height = kHeight;
   info.usage = kUsage;
   info.tiling = vk::ImageTiling::eLinear;
+  info.memory_flags = kMemoryPropertyFlags;
   if (use_protected_memory) {
     info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }
@@ -218,14 +326,27 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   // Allocate some images, and confirm that the allocator is tracking the bytes
   // allocated.
   auto image0 = allocator->AllocateImage(nullptr, info);
-  EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[1]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
+
   // Protected memory should not be accessible by the host.
   EXPECT_TRUE(use_protected_memory || image0->host_ptr() != nullptr);
   EXPECT_EQ(kMemorySize, image0->size());
+
   auto image1 = allocator->AllocateImage(nullptr, info);
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+
   EXPECT_TRUE(use_protected_memory || image1->host_ptr() != nullptr);
   EXPECT_EQ(kMemorySize, image1->size());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[2]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
 
   // Allocate an image using dedicated memory and getting a separate managed
   // pointer to the memory.
@@ -235,14 +356,24 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[3]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_BETWEEN_INCL(static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated),
+                      kMemorySize, kMemorySize + kMemorySizeAllowableError);
 
   // Release the objects, image first, and confirm that both need to be
   // destroyed before the memory is reclaimed.
   image_dedicated0 = nullptr;
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[4]
+  EXPECT_EQ(allocation_stat_each_test[3].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
+
   ptr = nullptr;
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[5]
+  EXPECT_EQ(allocation_stat_each_test[2].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
 
   // Allocate another dedicated memory object.
   image_dedicated0 = allocator->AllocateImage(nullptr, info, &ptr);
@@ -250,13 +381,23 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[6]
+
+  // We ensure that for each allocation, the allocated byte size satisfies
+  //   kMemorySize <= bytes_allocated <= kMemorySize + kMemorySizeAllowableError
+  EXPECT_LE(kMemorySize, static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated));
+  EXPECT_GE(kMemorySize + kMemorySizeAllowableError,
+            static_cast<size_t>(allocation_stat_each_test.back().bytes_allocated));
 
   // Release the objects in the opposite order, and perform the same test.
   ptr = nullptr;
-  EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[7]
+  EXPECT_EQ(allocation_stat_each_test[6].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
   image_dedicated0 = nullptr;
-  EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[8]
+  EXPECT_EQ(allocation_stat_each_test[5].total_bytes_allocated,
+            allocation_stat_each_test.back().total_bytes_allocated);
 
   // Allocate non-power-of-two buffers, proving that, even though the allocator
   // could partition out a small pool, the requirement of an output memory
@@ -266,7 +407,8 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   small_image.width = 1;
   small_image.height = 1;
   small_image.usage = kUsage;
-  info.tiling = vk::ImageTiling::eLinear;
+  small_image.tiling = vk::ImageTiling::eLinear;
+  small_image.memory_flags = kMemoryPropertyFlags;
 
   auto image_dedicated1 = allocator->AllocateImage(nullptr, small_image, &ptr);
   EXPECT_EQ(0u, ptr->offset());
@@ -294,7 +436,8 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   image_dedicated5 = nullptr;
   ptr = nullptr;
   // Confirm that all memory has been released.
-  EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
+  UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[9]
+  EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
 }
 
 // The fake allocator is intended to be used when there is not a valid Vulkan

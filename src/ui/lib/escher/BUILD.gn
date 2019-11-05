@@ -139,6 +139,14 @@ config("thread_safety_warning") {
   ]
 }
 
+config("vk_mem_alloc_small_heap_max_size") {
+  # Set maximum small heap size to 256MB, which works for AEMU (which has 512MB
+  # memory heaps) and possibly other devices with limited memory size.
+  defines = [
+    "VMA_SMALL_HEAP_MAX_SIZE=(256ull * 1024 * 1024)"
+  ]
+}
+
 config("vk_mem_alloc_error_suppression") {
   cflags = [
     "-Wno-unused-variable",
@@ -157,7 +165,10 @@ source_set("vk_mem_alloc") {
     "vk/vk_mem_alloc.cc",
   ]
 
-  public_configs = [ ":vk_mem_alloc_error_suppression" ]
+  public_configs = [
+    ":vk_mem_alloc_error_suppression",
+    ":vk_mem_alloc_small_heap_max_size"
+  ]
 }
 
 source_set("escher") {
