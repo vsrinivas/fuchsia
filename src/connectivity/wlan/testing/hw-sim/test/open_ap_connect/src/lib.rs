@@ -133,7 +133,12 @@ async fn verify_assoc_resp(helper: &mut test_utils::TestHelper) {
                     Some(mac::MgmtBody::Unsupported { subtype })
                         if subtype == mac::MgmtSubtype::ACTION => {}
                     other => {
-                        panic!("expected association response frame, got {:?}", other);
+                        // We might still be servicing things from the channel after the initial
+                        // association frame but if the sender has not been taken, then we haven't
+                        // serviced an association frame at all.
+                        if sender.is_some() {
+                            panic!("expected association response frame, got {:?}", other);
+                        }
                     }
                 }
             }
