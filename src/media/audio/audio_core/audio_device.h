@@ -12,7 +12,6 @@
 
 #include <memory>
 
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -28,7 +27,7 @@ namespace media::audio {
 class AudioDriver;
 class RingBuffer;
 
-class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDevice>> {
+class AudioDevice : public AudioObject {
  public:
   // Wakeup
   //
@@ -52,7 +51,6 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   zx::time plug_time() const { return plug_time_; }
   AudioDriver* driver() const { return driver_.get(); }
   uint64_t token() const;
-  uint64_t GetKey() const { return token(); }
   bool activated() const { return activated_; }
 
   // AudioObjects with Type::Output must override this; this version should never be called.

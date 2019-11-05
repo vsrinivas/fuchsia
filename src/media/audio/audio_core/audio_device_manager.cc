@@ -22,8 +22,7 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
-                                       RouteGraph* route_graph,
+AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
                                        AudioDeviceSettingsPersistence* device_settings_persistence,
                                        const SystemGainMuteProvider& system_gain_mute)
     : threading_model_(*threading_model),
@@ -37,7 +36,7 @@ AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
-  FXL_DCHECK(devices_.is_empty());
+  FXL_DCHECK(devices_.empty());
 }
 
 // Configure this admin singleton object to manage audio device instances.
@@ -61,13 +60,12 @@ void AudioDeviceManager::Shutdown() {
   plug_detector_.Stop();
 
   std::vector<fit::promise<void>> device_promises;
-  while (!devices_pending_init_.is_empty()) {
-    auto device = devices_pending_init_.pop_front();
+  for (auto& [_, device] : devices_pending_init_) {
     device_promises.push_back(device->Shutdown());
   }
+  devices_pending_init_.clear();
 
-  while (!devices_.is_empty()) {
-    auto device = devices_.pop_front();
+  for (auto& [_, device] : devices_) {
     device_promises.push_back(
         fit::join_promises(device->Shutdown(), device_settings_persistence_.FinalizeSettings(
                                                    *device->device_settings()))
@@ -80,6 +78,7 @@ void AudioDeviceManager::Shutdown() {
               return fit::ok();
             }));
   }
+  devices_.clear();
 
   fit::run_single_threaded(fit::join_promise_vector(std::move(device_promises)));
 }
@@ -92,11 +91,12 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
 void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
   FXL_DCHECK(device != nullptr);
-  FXL_DCHECK(!device->InContainer());
 
   threading_model_.FidlDomain().executor()->schedule_task(
       device->Startup()
-          .and_then([this, device]() mutable { devices_pending_init_.insert(std::move(device)); })
+          .and_then([this, device]() mutable {
+            devices_pending_init_.insert({device->token(), std::move(device)});
+          })
           .or_else([device](zx_status_t& error) {
             FXL_PLOG(ERROR, error) << "AddDevice failed";
             REP(DeviceStartupFailed(*device));
@@ -110,7 +110,7 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
 
   // Have we already been removed from the pending list?  If so, the device is
   // already shutting down and there is nothing to be done.
-  if (!device->InContainer()) {
+  if (devices_pending_init_.find(device->token()) == devices_pending_init_.end()) {
     return;
   }
 
@@ -155,7 +155,7 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
   REP(ActivatingDevice(*device));
 
   // Move the device over to the set of active devices.
-  devices_.insert(devices_pending_init_.erase(*device));
+  devices_.insert(devices_pending_init_.extract(device->token()));
   device->SetActivated();
 
   // Now that we have our gain settings (restored from disk, cloned from
@@ -205,15 +205,13 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   device->Shutdown();
   device_settings_persistence_.FinalizeSettings(*device->device_settings());
 
-  if (device->InContainer()) {
-    auto& device_set = device->activated() ? devices_ : devices_pending_init_;
-    device_set.erase(*device);
+  auto& device_set = device->activated() ? devices_ : devices_pending_init_;
+  device_set.erase(device->token());
 
-    // If device was active: reset the default & notify clients of the removal.
-    if (device->activated()) {
-      for (auto& client : bindings_.bindings()) {
-        client->events().OnDeviceRemoved(device->token());
-      }
+  // If device was active: reset the default & notify clients of the removal.
+  if (device->activated()) {
+    for (auto& client : bindings_.bindings()) {
+      client->events().OnDeviceRemoved(device->token());
     }
   }
 }
@@ -243,11 +241,11 @@ void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& devi
 // catch changes to device gain coming from SetSystemGain OR SetDeviceGain.
 void AudioDeviceManager::OnSystemGain(bool changed) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnSystemGain");
-  for (auto& device : devices_) {
-    if (device.is_output() && (changed || device.system_gain_dirty)) {
-      UpdateDeviceToSystemGain(fbl::RefPtr(&device));
-      NotifyDeviceGainChanged(device);
-      device.system_gain_dirty = false;
+  for (auto& [_, device] : devices_) {
+    if (device->is_output() && (changed || device->system_gain_dirty)) {
+      UpdateDeviceToSystemGain(device);
+      NotifyDeviceGainChanged(*device);
+      device->system_gain_dirty = false;
     }
     // We intentionally route System Gain only to Output devices, not Inputs.
     // If needed, we could revisit this in the future.
@@ -258,12 +256,12 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
   TRACE_DURATION("audio", "AudioDeviceManager::GetDevices");
   std::vector<fuchsia::media::AudioDeviceInfo> ret;
 
-  for (const auto& dev : devices_) {
-    if (dev.token() != ZX_KOID_INVALID) {
+  for (const auto& [_, dev] : devices_) {
+    if (dev->token() != ZX_KOID_INVALID) {
       fuchsia::media::AudioDeviceInfo info;
-      dev.GetDeviceInfo(&info);
+      dev->GetDeviceInfo(&info);
       info.is_default =
-          (dev.token() == (dev.is_input() ? default_input_token_ : default_output_token_));
+          (dev->token() == (dev->is_input() ? default_input_token_ : default_output_token_));
       ret.push_back(std::move(info));
     }
   }
@@ -273,27 +271,30 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) {
   TRACE_DURATION("audio", "AudioDeviceManager::GetDeviceGain");
-  auto dev = devices_.find(device_token);
-
   fuchsia::media::AudioGainInfo info = {0};
-  if (dev.IsValid()) {
-    FXL_DCHECK(dev->device_settings() != nullptr);
-    dev->device_settings()->GetGainInfo(&info);
-    cbk(device_token, info);
-  } else {
+
+  auto it = devices_.find(device_token);
+  if (it == devices_.end()) {
     cbk(ZX_KOID_INVALID, info);
+    return;
   }
+
+  auto [_, dev] = *it;
+  FXL_DCHECK(dev->device_settings() != nullptr);
+  dev->device_settings()->GetGainInfo(&info);
+  cbk(device_token, info);
 }
 
 void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
                                        fuchsia::media::AudioGainInfo gain_info,
                                        uint32_t set_flags) {
   TRACE_DURATION("audio", "AudioDeviceManager::SetDeviceGain");
-  auto dev = devices_.find(device_token);
-
-  if (!dev.IsValid()) {
+  auto it = devices_.find(device_token);
+  if (it == devices_.end()) {
     return;
   }
+  auto [_, dev] = *it;
+
   // SetGainInfo clamps out-of-range values (e.g. +infinity) into the device-
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
   if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) && isnan(gain_info.gain_db)) {
@@ -326,15 +327,14 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
   // TODO(johngro): Consider tracking last-plugged times in a fbl::WAVLTree, so
   // this operation becomes O(1). N is pretty low right now, so the benefits do
   // not currently outweigh the complexity of maintaining this index.
-  for (auto& obj : devices_) {
-    auto& device = static_cast<AudioDevice&>(obj);
-    if ((device.type() != type) || device.device_settings()->AutoRoutingDisabled()) {
+  for (auto& [_, device] : devices_) {
+    if ((device->type() != type) || device->device_settings()->AutoRoutingDisabled()) {
       continue;
     }
 
-    if ((best == nullptr) || (!best->plugged() && device.plugged()) ||
-        ((best->plugged() == device.plugged()) && (best->plug_time() < device.plug_time()))) {
-      best = &device;
+    if ((best == nullptr) || (!best->plugged() && device->plugged()) ||
+        ((best->plugged() == device->plugged()) && (best->plug_time() < device->plug_time()))) {
+      best = &(*device);
     }
   }
 

@@ -10,6 +10,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
+#include <unordered_map>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
@@ -31,8 +33,7 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
-  AudioDeviceManager(ThreadingModel* threading_model,
-                     RouteGraph* route_graph,
+  AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
                      const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
@@ -130,9 +131,12 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // Our sets of currently active audio devices, AudioCapturers, and AudioRenderers.
   //
-  // These must only be manipulated on main message loop thread. No synchronization should be needed
-  fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
-  fbl::WAVLTree<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
+  // These must only be manipulated on main message loop thread. No synchronization should be
+  // needed.
+
+  // These maps are keyed on device token.
+  std::unordered_map<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
+  std::unordered_map<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetectorImpl plug_detector_;
