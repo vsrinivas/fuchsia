@@ -469,8 +469,11 @@ TEST(VmoTestCase, Info) {
   EXPECT_OK(status, "vm_info_test: vmo_create");
   vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
 
-  status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  size_t actual, avail;
+  status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), &actual, &avail);
   EXPECT_OK(status, "vm_info_test: info_vmo");
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
 
   vmo.reset();
 

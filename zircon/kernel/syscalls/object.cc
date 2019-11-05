@@ -378,28 +378,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_status_t status = up->GetDispatcher(handle, &vmo);
       if (status != ZX_OK)
         return status;
-      auto vmos = _buffer.reinterpret<zx_info_vmo_t>();
-      zx_info_vmo_t entry;
-
-      entry = vmo->GetVmoInfo();
-      if (vmos.copy_array_to_user(&entry, 1, 0) != ZX_OK) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      if (_actual) {
-        size_t count = 1;
-        zx_status_t status = _actual.copy_to_user(count);
-        if (status != ZX_OK)
-          return status;
-      }
-      // Avail returned is 0, since we were just asked to read
-      // the info for a single vmo, hence nothing more is available (?)
-      if (_avail) {
-        size_t count = 0;
-        zx_status_t status = _avail.copy_to_user(count);
-        if (status != ZX_OK)
-          return status;
-      }
-      return status;
+      zx_info_vmo_t entry = vmo->GetVmoInfo();
+      return single_record_result(_buffer, buffer_size, _actual, _avail, entry);
     }
     case ZX_INFO_VMAR: {
       fbl::RefPtr<VmAddressRegionDispatcher> vmar;
