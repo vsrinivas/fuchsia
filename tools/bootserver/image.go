@@ -20,7 +20,8 @@ type Image struct {
 }
 
 // ConvertFromBuildImages filters and returns Images corresponding to build Images of a given bootMode.
-func ConvertFromBuildImages(buildImages []build.Image, bootMode int) []Image {
+// Filters and returns Images corresponding to build Images of a given bootMode
+func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode) []Image {
 	var imgs []Image
 	for _, buildImg := range buildImages {
 		var args []string
@@ -29,6 +30,8 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode int) []Image {
 			args = buildImg.PaveArgs
 		case ModeNetboot:
 			args = buildImg.NetbootArgs
+		case ModePaveZedboot:
+			args = buildImg.PaveZedbootArgs
 		}
 		imgs = append(imgs, Image{
 			Name: buildImg.Name,

@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
@@ -48,9 +49,12 @@ var (
 	nocolor                        bool
 	allowZedbootVersionMismatch    bool
 	failFastZedbootVersionMismatch bool
+	imageManifest                  string
+	mode                           bootserver.Mode
 )
 
 func init() {
+	// Support classic cmd line interface.
 	flag.StringVar(&nodename, "n", "", "only boot device with this nodename")
 	flag.StringVar(&bootKernel, "boot", "", "use the supplied file as a kernel")
 	flag.StringVar(&fvm, "fvm", "", "use the supplied file as a sparse FVM image (up to 4 times)")
@@ -61,6 +65,10 @@ func init() {
 	flag.StringVar(&vbmetaa, "vbmetaa", "", "use the supplied file as a avb vbmeta_a image")
 	flag.StringVar(&vbmetab, "vbmetab", "", "use the supplied file as a avb vbmeta_b image")
 	flag.StringVar(&vbmetar, "vbmetar", "", "use the supplied file as a avb vbmeta_r image")
+
+	// Support reading in images.json and paving zedboot.
+	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
+	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
 	flag.BoolVar(&bootOnce, "1", false, "only boot once, then exit")
@@ -79,7 +87,16 @@ func init() {
 	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
 }
 
-func getImages() []bootserver.Image {
+func getImages() ([]bootserver.Image, error) {
+	// If an image manifest is provided, we use that.
+	if imageManifest != "" {
+		buildImages, err := build.LoadImages(imageManifest)
+		if err != nil {
+			return nil, err
+		}
+		return bootserver.ConvertFromBuildImages(buildImages, mode), nil
+	}
+	// Otherwise, build an image list from the cmd line args.
 	var imgs []bootserver.Image
 	if bootKernel != "" {
 		imgs = append(imgs, bootserver.Image{
@@ -144,7 +161,7 @@ func getImages() []bootserver.Image {
 			Args: []string{"--vbmetar"},
 		})
 	}
-	return imgs
+	return imgs, nil
 }
 
 func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string) error {
@@ -179,7 +196,16 @@ func resolveNodename() (string, error) {
 }
 
 func execute(ctx context.Context, cmdlineArgs []string) error {
-	imgs := getImages()
+	// Do some secondary cmdline arg validation.
+	if imageManifest != "" && mode == bootserver.ModeNull {
+		return fmt.Errorf("must specify a bootserver mode [--mode] when using an image manifest")
+	} else if imageManifest == "" && mode != bootserver.ModeNull {
+		return fmt.Errorf("cannot specify a bootserver mode without an image manifest [--images]")
+	}
+	imgs, err := getImages()
+	if err != nil {
+		return err
+	}
 	if len(imgs) == 0 {
 		return fmt.Errorf("no images provided!")
 	}

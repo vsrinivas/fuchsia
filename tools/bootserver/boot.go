@@ -22,13 +22,6 @@ import (
 )
 
 const (
-	// ModePave is a directive to pave when booting.
-	ModePave int = iota
-	// ModeNetboot is a directive to netboot when booting.
-	ModeNetboot
-)
-
-const (
 	// Special image names recognized by fuchsia's netsvc.
 	authorizedKeysNetsvcName = "<<image>>authorized_keys"
 	bootloaderNetsvcName     = "<<image>>bootloader.img"

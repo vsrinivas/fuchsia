@@ -175,7 +175,7 @@ func (t *DeviceTarget) Start(ctx context.Context, buildImgs build.Images, args [
 	// Get boot mode and ssh signers.
 	// We cannot have signers in netboot because there is no notion
 	// of a hardware backed key when you are not booting from disk
-	var bootMode int
+	var bootMode bootserver.Mode
 	var signers []ssh.Signer
 	if t.opts.Netboot {
 		bootMode = bootserver.ModeNetboot
