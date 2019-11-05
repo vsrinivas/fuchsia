@@ -538,9 +538,13 @@ macro_rules! assert_read_dirents {
             entries == expected,
             "Read entries do not match the expectation.\n\
              Expected entries: {:?}\n\
-             Actual entries:   {:?}",
+             Actual entries:   {:?}\n\
+             Expected as UTF-8 lossy: {:?}\n\
+             Received as UTF-8 lossy: {:?}",
             expected,
-            entries
+            entries,
+            String::from_utf8_lossy(&expected),
+            String::from_utf8_lossy(&entries),
         );
     }};
 }
@@ -598,9 +602,11 @@ macro_rules! assert_read_dirents_err {
             entries.len() == 0,
             "`read_dirents` returned non-empty list of entries along with an error.\n\
              Got {} entries.\n\
-             Content: {:?}",
+             Content: {:?}\n\
+             Content as UTF-8 lossy: {:?}",
             entries.len(),
-            entries
+            entries,
+            String::from_utf8_lossy(&entries),
         );
     }};
 }
