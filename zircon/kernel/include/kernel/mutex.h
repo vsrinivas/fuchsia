@@ -132,20 +132,22 @@ LOCK_DEP_POLICY(Mutex, MutexPolicy);
 // Example usage:
 //
 // struct MyType {
-//     DECLARE_MUTEX(MyType) lock;
+//     DECLARE_MUTEX(MyType [, LockFlags]) lock;
 // };
 //
-#define DECLARE_MUTEX(containing_type) LOCK_DEP_INSTRUMENT(containing_type, ::Mutex)
+#define DECLARE_MUTEX(containing_type, ...) \
+  LOCK_DEP_INSTRUMENT(containing_type, ::Mutex, ##__VA_ARGS__)
 
 // Declares a |lock_type| member of the struct or class |containing_type|.
 //
 // Example usage:
 //
 // struct MyType {
-//     DECLARE_LOCK(MyType, LockType) lock;
+//     DECLARE_LOCK(MyType, LockType [, LockFlags]) lock;
 // };
 //
-#define DECLARE_LOCK(containing_type, lock_type) LOCK_DEP_INSTRUMENT(containing_type, lock_type)
+#define DECLARE_LOCK(containing_type, lock_type, ...) \
+  LOCK_DEP_INSTRUMENT(containing_type, lock_type, ##__VA_ARGS__)
 
 // By default, singleton mutexes in the kernel use Mutex in order to avoid
 // a useless global dtor

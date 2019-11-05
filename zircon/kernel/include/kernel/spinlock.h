@@ -115,10 +115,11 @@ class TA_CAP("mutex") SpinLock {
 // Example usage:
 //
 // struct MyType {
-//     DECLARE_SPINLOCK(MyType) lock;
+//     DECLARE_SPINLOCK(MyType [, LockFlags]) lock;
 // };
 //
-#define DECLARE_SPINLOCK(containing_type) LOCK_DEP_INSTRUMENT(containing_type, SpinLock)
+#define DECLARE_SPINLOCK(containing_type, ...) \
+  LOCK_DEP_INSTRUMENT(containing_type, SpinLock, ##__VA_ARGS__)
 
 // Declares a singleton SpinLock with the name |name|.
 //
