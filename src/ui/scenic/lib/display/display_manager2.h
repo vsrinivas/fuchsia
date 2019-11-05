@@ -45,6 +45,7 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     // Interface for the DisplayController that this display is connected to.
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller;
 
+    // Also stores the key version of the DisplayRef.
     fuchsia::ui::display::Info info;
   };
 
@@ -85,9 +86,9 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
                          std::vector<uint64_t> displays_removed);
   void OnDisplayOwnershipChanged(DisplayControllerHolder* dc, bool has_ownership);
 
-static DisplayInfoHolder NewDisplayInfoHolder(
-    fuchsia::hardware::display::Info hardware_display_info,
-    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller);
+  static DisplayInfoHolder NewDisplayInfoHolder(
+      fuchsia::hardware::display::Info hardware_display_info,
+      std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller);
   static void InvokeDisplayAddedForListener(
       const fidl::InterfacePtr<fuchsia::ui::display::DisplayListener>& listener,
       const DisplayInfoHolder& display_info_holder);

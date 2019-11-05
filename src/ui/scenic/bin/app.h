@@ -12,11 +12,27 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
+
+class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
+ public:
+  DisplayInfoDelegate(gfx::Display* display);
+
+  // TODO(fxb/23686): Remove this when we externalize Displays.
+  // |Scenic::GetDisplayInfoDelegateDeprecated|
+  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  // |Scenic::GetDisplayInfoDelegateDeprecated|
+  void GetDisplayOwnershipEvent(
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+
+ private:
+  gfx::Display* display_ = nullptr;
+};
 
 class App {
  public:
@@ -29,6 +45,7 @@ class App {
   async::Executor executor_;
   gfx::Sysmem sysmem_;
   gfx::DisplayManager display_manager_;
+  std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
   std::unique_ptr<sys::ComponentContext> app_context_;

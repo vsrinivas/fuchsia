@@ -9,20 +9,27 @@
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
 
 namespace {
-class Delegate : public scenic_impl::TempScenicDelegate {
+
+class DisplayInfoDelegate : public scenic_impl::Scenic::GetDisplayInfoDelegateDeprecated {
+ public:
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override {
-    auto info = ::fuchsia::ui::gfx::DisplayInfo();
+    auto info = fuchsia::ui::gfx::DisplayInfo();
     callback(std::move(info));
   };
-  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override {
-    fuchsia::ui::scenic::ScreenshotData data;
-    callback(std::move(data), true);
-  };
+
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override {
     zx::event event;
     callback(std::move(event));
   };
+};
+
+class TakeScreenshotDelegate : public scenic_impl::Scenic::TakeScreenshotDelegateDeprecated {
+ public:
+  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override {
+    fuchsia::ui::scenic::ScreenshotData data;
+    callback(std::move(data), true);
+  }
 };
 
 }  // namespace
@@ -111,7 +118,8 @@ TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
 }
 
 TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
-  Delegate delegate;
+  DisplayInfoDelegate display_info_delegate;
+  TakeScreenshotDelegate screenshot_delegate;
 
   bool display_info = false;
   auto display_info_callback = [&](fuchsia::ui::gfx::DisplayInfo info) { display_info = true; };
@@ -133,7 +141,8 @@ TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
   EXPECT_FALSE(display_ownership);
 
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
-  scenic()->SetDelegate(&delegate);
+  scenic()->SetDisplayInfoDelegate(&display_info_delegate);
+  scenic()->SetScreenshotDelegate(&screenshot_delegate);
 
   EXPECT_FALSE(display_info);
   EXPECT_FALSE(screenshot);
@@ -147,7 +156,8 @@ TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
 }
 
 TEST_F(ScenicTest, ScenicApiRaceAfterSystemRegistration) {
-  Delegate delegate;
+  DisplayInfoDelegate display_info_delegate;
+  TakeScreenshotDelegate screenshot_delegate;
 
   bool display_info = false;
   auto display_info_callback = [&](fuchsia::ui::gfx::DisplayInfo info) { display_info = true; };
@@ -170,7 +180,8 @@ TEST_F(ScenicTest, ScenicApiRaceAfterSystemRegistration) {
   EXPECT_FALSE(screenshot);
   EXPECT_FALSE(display_ownership);
 
-  scenic()->SetDelegate(&delegate);
+  scenic()->SetDisplayInfoDelegate(&display_info_delegate);
+  scenic()->SetScreenshotDelegate(&screenshot_delegate);
 
   EXPECT_FALSE(display_info);
   EXPECT_FALSE(screenshot);
@@ -184,7 +195,8 @@ TEST_F(ScenicTest, ScenicApiRaceAfterSystemRegistration) {
 }
 
 TEST_F(ScenicTest, ScenicApiAfterDelegate) {
-  Delegate delegate;
+  DisplayInfoDelegate display_info_delegate;
+  TakeScreenshotDelegate screenshot_delegate;
 
   bool display_info = false;
   auto display_info_callback = [&](fuchsia::ui::gfx::DisplayInfo info) { display_info = true; };
@@ -198,7 +210,8 @@ TEST_F(ScenicTest, ScenicApiAfterDelegate) {
   auto display_ownership_callback = [&](zx::event event) { display_ownership = true; };
 
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
-  scenic()->SetDelegate(&delegate);
+  scenic()->SetDisplayInfoDelegate(&display_info_delegate);
+  scenic()->SetScreenshotDelegate(&screenshot_delegate);
 
   scenic()->GetDisplayInfo(display_info_callback);
   scenic()->TakeScreenshot(screenshot_callback);

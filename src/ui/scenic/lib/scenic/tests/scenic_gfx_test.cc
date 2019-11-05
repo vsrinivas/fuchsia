@@ -31,9 +31,9 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
   auto context = sys::ComponentContext::Create();
   engine_ = std::make_unique<gfx::Engine>(context.get(), frame_scheduler_, std::move(signaller),
                                           escher::EscherWeakPtr());
-  auto system = scenic->RegisterSystem<gfx::GfxSystem>(
-      engine_.get(), escher::EscherWeakPtr(), /* sysmem */ nullptr,
-      /* display_manager */ nullptr, display_.get());
+  auto system = scenic->RegisterSystem<gfx::GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
+                                                       /* sysmem */ nullptr,
+                                                       /* display_manager */ nullptr);
   scenic->SetInitialized();
 
   RunLoopUntilIdle();  // Finish initialization
@@ -41,8 +41,9 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
 
 void ScenicGfxTest::TearDown() {
   ScenicTest::TearDown();
-  display_.reset();
   engine_.reset();
+  frame_scheduler_.reset();
+  display_.reset();
   command_buffer_sequencer_.reset();
 }
 

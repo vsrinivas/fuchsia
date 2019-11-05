@@ -32,16 +32,14 @@ static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
 GfxSystem::GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher,
-                     Sysmem* sysmem, DisplayManager* display_manager, Display* display)
+                     Sysmem* sysmem, DisplayManager* display_manager)
     : System(std::move(context)),
-      display_(display),
       display_manager_(display_manager),
       sysmem_(sysmem),
       escher_(std::move(escher)),
       engine_(engine),
       session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
       weak_factory_(this) {
-  FXL_DCHECK(display_);
   FXL_DCHECK(engine_);
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
@@ -203,31 +201,8 @@ void GfxSystem::DumpSessionMapResources(
   }
 }
 
-void GfxSystem::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
-  auto info = ::fuchsia::ui::gfx::DisplayInfo();
-  info.width_in_px = display_->width_in_px();
-  info.height_in_px = display_->height_in_px();
-
-  callback(std::move(info));
-};
-
 void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   Screenshotter::TakeScreenshot(engine_, std::move(callback));
-}
-
-void GfxSystem::GetDisplayOwnershipEvent(
-    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
-  // These constants are defined as raw hex in the FIDL file, so we confirm here that they are the
-  // same values as the expected constants in the ZX headers.
-  static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0, "Bad constant");
-  static_assert(fuchsia::ui::scenic::displayOwnedSignal == ZX_USER_SIGNAL_1, "Bad constant");
-
-  zx::event dup;
-  if (display_->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
-    FXL_LOG(ERROR) << "## Vulkan display event dup error";
-  } else {
-    callback(std::move(dup));
-  }
 }
 
 // Applies scheduled updates to a session. If the update fails, the session is

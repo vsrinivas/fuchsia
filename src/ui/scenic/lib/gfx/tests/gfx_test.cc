@@ -35,7 +35,7 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   auto system = scenic->RegisterSystem<GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
                                                   /* sysmem */ nullptr,
-                                                  /* display_manager */ nullptr, display_.get());
+                                                  /* display_manager */ nullptr);
   gfx_system_ = system->GetWeakPtr();
   frame_scheduler_->AddSessionUpdater(gfx_system_);
   scenic_->SetInitialized();

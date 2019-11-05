@@ -20,22 +20,27 @@
 
 namespace scenic_impl {
 
-class Clock;
-
-// TODO(SCN-452): Remove when we get rid of Scenic.GetDisplayInfo().
-class TempScenicDelegate {
- public:
-  virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
-  virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
-  virtual void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
-};
-
 // A Scenic instance has two main areas of responsibility:
 //   - manage Session lifecycles
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
+  // TODO(fxb/23686): Remove when we get rid of Scenic.GetDisplayInfo().
+  class GetDisplayInfoDelegateDeprecated {
+   public:
+    virtual ~GetDisplayInfoDelegateDeprecated() = default;
+    virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
+    virtual void GetDisplayOwnershipEvent(
+        fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
+  };
+
+  // TODO(fxb/23901): Remove this and move the screenshot API out of Scenic.
+  class TakeScreenshotDelegateDeprecated {
+   public:
+    virtual ~TakeScreenshotDelegateDeprecated() = default;
+    virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
+  };
+
   explicit Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
                   fit::closure quit_callback);
   ~Scenic();
@@ -50,9 +55,14 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.
-  void SetDelegate(TempScenicDelegate* delegate) {
-    FXL_DCHECK(!delegate_);
-    delegate_ = delegate;
+  void SetDisplayInfoDelegate(GetDisplayInfoDelegateDeprecated* delegate) {
+    FXL_DCHECK(!display_delegate_);
+    display_delegate_ = delegate;
+  }
+
+  void SetScreenshotDelegate(TakeScreenshotDelegateDeprecated* delegate) {
+    FXL_DCHECK(!screenshot_delegate_);
+    screenshot_delegate_ = delegate;
   }
 
   // Create and register a new system of the specified type.  At most one System
@@ -109,7 +119,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   size_t next_session_id_ = 1;
 
-  TempScenicDelegate* delegate_ = nullptr;
+  GetDisplayInfoDelegateDeprecated* display_delegate_ = nullptr;
+  TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;
 
  protected:
   std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot_;

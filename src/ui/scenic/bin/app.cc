@@ -51,6 +51,35 @@ class Dependency : public scenic_impl::System {
 
 namespace scenic_impl {
 
+DisplayInfoDelegate::DisplayInfoDelegate(gfx::Display* display_) : display_(display_) {
+  FXL_CHECK(display_);
+}
+
+void DisplayInfoDelegate::GetDisplayInfo(
+    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
+  auto info = ::fuchsia::ui::gfx::DisplayInfo();
+  info.width_in_px = display_->width_in_px();
+  info.height_in_px = display_->height_in_px();
+
+  callback(std::move(info));
+}
+
+void DisplayInfoDelegate::GetDisplayOwnershipEvent(
+    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
+  // These constants are defined as raw hex in the FIDL file, so we confirm here that they are the
+  // same values as the expected constants in the ZX headers.
+  static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0, "Bad constant");
+  static_assert(fuchsia::ui::scenic::displayOwnedSignal == ZX_USER_SIGNAL_1, "Bad constant");
+
+  zx::event dup;
+  if (display_->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
+    FXL_LOG(ERROR) << "Display ownership event duplication error.";
+    callback(zx::event());
+  } else {
+    callback(std::move(dup));
+  }
+}
+
 App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated::Node inspect_node,
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
@@ -116,10 +145,14 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), escher_->GetWeakPtr(),
-                                                    &sysmem_, &display_manager_, display);
-  frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
-  scenic_.SetDelegate(gfx);
+                                                    &sysmem_, &display_manager_);
+
   FXL_DCHECK(gfx);
+
+  frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
+  scenic_.SetScreenshotDelegate(gfx);
+  display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
+  scenic_.SetDisplayInfoDelegate(display_info_delegate_.get());
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM

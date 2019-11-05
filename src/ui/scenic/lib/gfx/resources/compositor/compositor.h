@@ -38,7 +38,7 @@ class Compositor : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   static const CompositorWeakPtr kNullWeakPtr;
 
-  // TODO(SCN-452): there is currently no way to create/attach a display, so
+  // TODO(fxb/23686): there is currently no way to create/attach a display, so
   // this compositor will never render anything.
   static CompositorPtr New(Session* session, SessionId session_id, ResourceId id,
                            SceneGraphWeakPtr scene_graph);

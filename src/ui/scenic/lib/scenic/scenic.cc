@@ -78,38 +78,38 @@ void Scenic::CreateSessionImmediately(
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
+    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(delegate_);
-    delegate_->GetDisplayInfo(std::move(callback));
+    FXL_DCHECK(display_delegate_);
+    display_delegate_->GetDisplayInfo(std::move(callback));
   });
 }
 
 void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
+    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(delegate_);
-    delegate_->TakeScreenshot(std::move(callback));
+    FXL_DCHECK(screenshot_delegate_);
+    screenshot_delegate_->TakeScreenshot(std::move(callback));
   });
 }
 
 void Scenic::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   RunAfterInitialized([this, callback = std::move(callback)]() mutable {
-    // TODO(SCN-452): This code assumes that, once all systems have been initialized, that there
+    // TODO(fxb/23686): This code assumes that, once all systems have been initialized, that there
     // will be a proper delegate for Scenic API functions. Attached to the bug to remove this
     // delegate class completely. If the delegate becomes a permanent fixture of the system,
     // switch to SCN-1506, as we need a more formal mechanism for delayed execution and
     // initialization order logic.
-    FXL_DCHECK(delegate_);
-    delegate_->GetDisplayOwnershipEvent(std::move(callback));
+    FXL_DCHECK(display_delegate_);
+    display_delegate_->GetDisplayOwnershipEvent(std::move(callback));
   });
 }
 

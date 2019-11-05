@@ -27,9 +27,9 @@ void SessionTest::SetUp() {
 }
 
 void SessionTest::TearDown() {
-  display_.reset();
   session_.reset();
   frame_scheduler_.reset();
+  display_.reset();
 
   ErrorReportingTest::TearDown();
 }

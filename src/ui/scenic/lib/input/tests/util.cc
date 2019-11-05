@@ -133,7 +133,7 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
   frame_scheduler->SetFrameRenderer(engine_->GetWeakPtr());
   auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
                                                /* sysmem */ nullptr,
-                                               /* display_manager */ nullptr, display_.get());
+                                               /* display_manager */ nullptr);
   frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());
   input_system_ = scenic->RegisterSystem<InputSystem>(engine_.get());
   scenic->SetInitialized();

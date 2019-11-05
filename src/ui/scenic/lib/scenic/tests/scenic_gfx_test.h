@@ -21,9 +21,9 @@ class ScenicGfxTest : public ScenicTest {
 
  private:
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
-  std::unique_ptr<gfx::Engine> engine_;
-  std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
   std::unique_ptr<gfx::Display> display_;
+  std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
+  std::unique_ptr<gfx::Engine> engine_;
 };
 
 }  // namespace test

@@ -21,24 +21,23 @@ class Compositor;
 class GfxSystem;
 using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
 
-class GfxSystem : public System, public TempScenicDelegate, public SessionUpdater {
+class GfxSystem : public System,
+                  public Scenic::TakeScreenshotDelegateDeprecated,
+                  public SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
   GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher, Sysmem* sysmem,
-            DisplayManager* display_manager, Display* display);
+            DisplayManager* display_manager);
 
   GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
-  // TODO(SCN-452): Remove this when we externalize Displays.
-  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  // TODO(fxb/40795): Remove this.
+  // |Scenic::TakeScreenshotDelegateDeprecated|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
-
-  void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
   // |SessionUpdater|
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
@@ -61,7 +60,6 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
   void DumpSessionMapResources(std::ostream& output,
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
-  Display* const display_;
   DisplayManager* const display_manager_;
 
   Sysmem* const sysmem_;
