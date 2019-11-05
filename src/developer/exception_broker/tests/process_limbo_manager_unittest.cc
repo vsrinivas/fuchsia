@@ -6,6 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
@@ -111,26 +112,50 @@ void ValidateException(const ExceptionContext& context, const T& process_excepti
   ASSERT_EQ(process_exception.info().type, ExceptionType::FATAL_PAGE_FAULT);
 }
 
+std::unique_ptr<ProcessLimboHandler> CreateHandler(ProcessLimboManager* limbo_manager) {
+  auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager->GetWeakPtr());
+  limbo_manager->AddHandler(handler->GetWeakPtr());
+
+  return handler;
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(ProcessLimboManager, ProcessLimboHandler) {
   ProcessLimboManager limbo_manager;
 
   // Use the handler interface.
-  ProcessLimboHandler limbo_handler(limbo_manager.GetWeakPtr());
+  auto handler = CreateHandler(&limbo_manager);
+
+  // A disabled limbo should return an error.
+  {
+    bool called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    handler->WatchProcessesWaitingOnException(
+        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          called = true;
+          result = std::move(res);
+        });
+    ASSERT_TRUE(called);
+    ASSERT_TRUE(result.is_err());
+    EXPECT_EQ(result.err(), ZX_ERR_UNAVAILABLE);
+  }
+
+  limbo_manager.SetActive(true);
 
   {
     // With no exceptions, it should be empty.
     bool called = false;
-    std::vector<ProcessExceptionMetadata> exceptions;
-    limbo_handler.ListProcessesWaitingOnException(
-        [&called, &exceptions](std::vector<ProcessExceptionMetadata> limbo) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    handler->WatchProcessesWaitingOnException(
+        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
           called = true;
-          exceptions = std::move(limbo);
+          result = std::move(res);
         });
 
     ASSERT_TRUE(called);
-    ASSERT_EQ(exceptions.size(), 0u);
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    ASSERT_EQ(result.response().exception_list.size(), 0u);
   }
 
   // We create multiple exceptions.
@@ -152,28 +177,29 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
   {
     // There should be exceptions listed.
     bool called = false;
-    std::vector<ProcessExceptionMetadata> exceptions;
-    limbo_handler.ListProcessesWaitingOnException(
-        [&called, &exceptions](std::vector<ProcessExceptionMetadata> limbo) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    handler->WatchProcessesWaitingOnException(
+        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
           called = true;
-          exceptions = std::move(limbo);
+          result = std::move(res);
         });
 
     ASSERT_TRUE(called);
-    ValidateException(excps[0], exceptions[0]);
-    ValidateException(excps[1], exceptions[1]);
-    ValidateException(excps[2], exceptions[2]);
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    ASSERT_EQ(result.response().exception_list.size(), 3u);
+    ValidateException(excps[0], result.response().exception_list[0]);
+    ValidateException(excps[1], result.response().exception_list[1]);
+    ValidateException(excps[2], result.response().exception_list[2]);
   }
 
   {
     // Getting a exception for a process that doesn't exist should fail.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result;
-    limbo_handler.RetrieveException(-1,
-                                    [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                                      called = true;
-                                      result = std::move(res);
-                                    });
+    handler->RetrieveException(-1, [&called, &result](ProcessLimbo_RetrieveException_Result res) {
+      called = true;
+      result = std::move(res);
+    });
     ASSERT_TRUE(called);
     ASSERT_TRUE(result.is_err());
 
@@ -185,13 +211,13 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
     // Getting an actual exception should work.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result = {};
-    limbo_handler.RetrieveException(infos[0].process_koid,
-                                    [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                                      called = true;
-                                      result = std::move(res);
-                                    });
+    handler->RetrieveException(infos[0].process_koid,
+                               [&called, &result](ProcessLimbo_RetrieveException_Result res) {
+                                 called = true;
+                                 result = std::move(res);
+                               });
     ASSERT_TRUE(called);
-    ASSERT_TRUE(result.is_response());
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     ValidateException(excps[0], result.response().process_exception);
 
     // There should be one less exception.
@@ -202,11 +228,11 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
     // That process should have been removed.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result = {};
-    limbo_handler.RetrieveException(infos[0].process_koid,
-                                    [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                                      called = true;
-                                      result = std::move(res);
-                                    });
+    handler->RetrieveException(infos[0].process_koid,
+                               [&called, &result](ProcessLimbo_RetrieveException_Result res) {
+                                 called = true;
+                                 result = std::move(res);
+                               });
     ASSERT_TRUE(called);
     ASSERT_TRUE(result.is_err());
   }
@@ -215,13 +241,13 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
     // Asking for the other process should work.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result = {};
-    limbo_handler.RetrieveException(infos[2].process_koid,
-                                    [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                                      called = true;
-                                      result = std::move(res);
-                                    });
+    handler->RetrieveException(infos[2].process_koid,
+                               [&called, &result](ProcessLimbo_RetrieveException_Result res) {
+                                 called = true;
+                                 result = std::move(res);
+                               });
     ASSERT_TRUE(called);
-    ASSERT_TRUE(result.is_response());
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     ValidateException(excps[2], result.response().process_exception);
 
     // There should be one less exception.
@@ -232,13 +258,13 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
     // Getting the last one should work.
     bool called = false;
     ProcessLimbo_ReleaseProcess_Result release_result = {};
-    limbo_handler.ReleaseProcess(
-        infos[1].process_koid, [&called, &release_result](ProcessLimbo_ReleaseProcess_Result res) {
-          called = true;
-          release_result = std::move(res);
-        });
+    handler->ReleaseProcess(infos[1].process_koid,
+                            [&called, &release_result](ProcessLimbo_ReleaseProcess_Result res) {
+                              called = true;
+                              release_result = std::move(res);
+                            });
     ASSERT_TRUE(called);
-    ASSERT_TRUE(release_result.is_response());
+    ASSERT_TRUE(release_result.is_response()) << zx_status_get_string(release_result.err());
 
     // There should be one less exception.
     ASSERT_EQ(limbo_manager.limbo().size(), 0u);
@@ -297,13 +323,6 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
 }
 
 // WatchActive -------------------------------------------------------------------------------------
-
-std::unique_ptr<ProcessLimboHandler> CreateHandler(ProcessLimboManager* limbo_manager) {
-  auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager->GetWeakPtr());
-  limbo_manager->AddHandler(handler->GetWeakPtr());
-
-  return handler;
-}
 
 TEST(ProcessLimboManager, WatchActiveCalls) {
   ProcessLimboManager limbo_manager;
@@ -366,6 +385,44 @@ TEST(ProcessLimboManager, WatchActiveCalls) {
   ASSERT_TRUE(called2);
   ASSERT_TRUE(is_active_result.has_value());
   EXPECT_TRUE(is_active_result.value());
+
+  // Having an outstanding watch limbo call should fail when the limbo is disabled.
+
+  {
+    // The first call should return successfully an empty list.
+    bool called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    handler->WatchProcessesWaitingOnException(
+        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          called = true;
+          result = std::move(res);
+        });
+
+    ASSERT_TRUE(called);
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    ASSERT_EQ(result.response().exception_list.size(), 0u);
+  }
+
+  {
+    // The second call should be pending.
+    bool called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    handler->WatchProcessesWaitingOnException(
+        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          called = true;
+          result = std::move(res);
+        });
+
+    ASSERT_FALSE(called);
+    ASSERT_TRUE(result.has_invalid_tag());
+
+    // Disabling the limbo should call the callback.
+    ASSERT_TRUE(limbo_manager.SetActive(false));
+
+    ASSERT_TRUE(called);
+    ASSERT_TRUE(result.is_err());
+    EXPECT_EQ(result.err(), ZX_ERR_CANCELED);
+  }
 }
 
 TEST(ProcessLimboManager, ManyHandlers) {

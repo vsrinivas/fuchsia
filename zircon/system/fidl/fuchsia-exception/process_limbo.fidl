@@ -15,20 +15,27 @@ const uint64 MAX_EXCEPTIONS_PER_CALL = 32;
 /// feature that enables Just In Time (JIT) debugging.
 [Discoverable]
 protocol ProcessLimbo {
-    /// Hanging get for determining whether the limbo is currently active.
-    /// An active limbo could be empty (not have any processes waiting on an
-    /// exception). However, an inactive limbo is guaranteed to not have any
-    /// processes waiting in it.
+    /// Watchs for changes determining whether the limbo is currently active,
+    /// using a Hanging Get pattern. An active limbo could be empty (not have
+    /// any processes waiting on an exception). However, an inactive limbo is
+    /// guaranteed to not have any processes waiting in it.
     WatchActive() -> (bool is_active);
 
+    /// Watch for processes that are waiting on exceptions, using a Hanging Get
+    /// Pattern.
+    ///
     /// Returns information on all the processes currently waiting on an exception.
     /// The information provided is intended to correctly identify an exception
     /// and determine whether the caller wants to actually handle it.
     /// To retrieve an exception, use the |GetException| call.
     ///
+    /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    /// Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    /// becomes inactive.
+    ///
     /// NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     ///       right, so no modification will be able to be done on them.
-    ListProcessesWaitingOnException() -> (vector<ProcessExceptionMetadata>:MAX_EXCEPTIONS_PER_CALL exception_list);
+    WatchProcessesWaitingOnException() -> (vector<ProcessExceptionMetadata>:MAX_EXCEPTIONS_PER_CALL exception_list) error zx.status;
 
     /// Removes the process from limbo and retrieves the exception handle and
     /// associated metadata from an exception.
@@ -37,6 +44,7 @@ protocol ProcessLimbo {
     /// list of available exceptions.
     ///
     /// Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     RetrieveException(zx.koid process_koid) -> (ProcessException process_exception) error zx.status;
 
     /// Removes the process from limbo, releasing the exception. This will make

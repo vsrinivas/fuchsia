@@ -36,10 +36,12 @@ int main() {
   fuchsia::exception::ProcessLimboSyncPtr process_limbo;
   environment_services->Connect(process_limbo.NewRequest());
 
-  std::vector<fuchsia::exception::ProcessExceptionMetadata> exceptions;
-  zx_status_t status = process_limbo->ListProcessesWaitingOnException(&exceptions);
+  fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+  zx_status_t status = process_limbo->WatchProcessesWaitingOnException(&result);
   FXL_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+  FXL_DCHECK(result.is_response()) << zx_status_get_string(result.err());
 
+  auto& exceptions = result.response().exception_list;
   printf("Got %zu exceptions.\n", exceptions.size());
   fflush(stdout);
   for (auto& pe : exceptions) {

@@ -32,6 +32,10 @@ class ProcessLimboManager {
   const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
 
  private:
+  // Returns the list of process metadata for processes waiting on exceptions
+  // Corresponds to the return value of |WatchProcessesWaitingOnException|.
+  std::vector<ProcessExceptionMetadata> ListProcessesInLimbo();
+
   // TODO(donosoc): This is an extremely naive approach.
   //                There are several policies to make this more robust:
   //                - Put a ceiling on the amount of exceptions to be held.
@@ -56,17 +60,19 @@ class ProcessLimboManager {
 class ProcessLimboHandler : public ProcessLimbo {
  public:
   explicit ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager);
-  virtual ~ProcessLimboHandler();
 
   fxl::WeakPtr<ProcessLimboHandler> GetWeakPtr();
 
-  virtual void ActiveStateChanged(bool state);
+  void ActiveStateChanged(bool state);
+
+  // Called when a process goes into limbo (ProcessLimboManager::AddToLimbo).
+  void LimboChanged(std::vector<ProcessExceptionMetadata> processes);
 
   // fuchsia.exception.ProcessLimbo implementation.
 
   void WatchActive(WatchActiveCallback) override;
 
-  void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCallback) override;
+  void WatchProcessesWaitingOnException(WatchProcessesWaitingOnExceptionCallback) override;
 
   void RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback) override;
 
@@ -74,8 +80,11 @@ class ProcessLimboHandler : public ProcessLimbo {
 
  private:
   // WatchActive hanging get.
-  bool is_first_watch_active_call_ = true;
+  bool watch_active_dirty_bit_ = true;
   WatchActiveCallback is_active_callback_;
+
+  bool watch_limbo_dirty_bit_ = true;
+  WatchProcessesWaitingOnExceptionCallback watch_limbo_callback_;
 
   fxl::WeakPtr<ProcessLimboManager> limbo_manager_;
 

@@ -32,75 +32,29 @@ fxl::WeakPtr<ProcessLimboManager> ProcessLimboManager::GetWeakPtr() {
 
 void ProcessLimboManager::AddToLimbo(ProcessException process_exception) {
   limbo_[process_exception.info().process_koid] = std::move(process_exception);
+
+  // Notify the handlers of the new list of processes in limbo.
+  PruneStaleHandlers(&handlers_);
+  for (auto& handler : handlers_) {
+    auto limbo_list = ListProcessesInLimbo();
+    handler->LimboChanged(std::move(limbo_list));
+  }
 }
 
 void ProcessLimboManager::AddHandler(fxl::WeakPtr<ProcessLimboHandler> handler) {
   handlers_.push_back(std::move(handler));
 }
 
-bool ProcessLimboManager::SetActive(bool active) {
-  // Ignore if no change.
-  if (active == active_)
-    return false;
-  active_ = active;
-
-  PruneStaleHandlers(&handlers_);
-
-  for (auto& handler : handlers_) {
-    handler->ActiveStateChanged(active);
-  }
-
-  return true;
-}
-
-// ProcessLimboHandler -----------------------------------------------------------------------------
-
-ProcessLimboHandler::ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager)
-    : limbo_manager_(std::move(limbo_manager)), weak_factory_(this) {}
-ProcessLimboHandler::~ProcessLimboHandler() = default;
-
-fxl::WeakPtr<ProcessLimboHandler> ProcessLimboHandler::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
-
-void ProcessLimboHandler::ActiveStateChanged(bool state) {
-  if (!is_active_callback_)
-    return;
-  is_active_callback_(state);
-  is_active_callback_ = {};
-}
-
-void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
-  if (is_first_watch_active_call_) {
-    is_first_watch_active_call_ = false;
-
-    bool is_active = !!limbo_manager_ ? limbo_manager_->active() : false;
-    cb(is_active);
-    return;
-  }
-
-  // We store the latest callback for when the active status changes.
-  is_active_callback_ = std::move(cb);
-}
-
-void ProcessLimboHandler::ListProcessesWaitingOnException(
-    ListProcessesWaitingOnExceptionCallback cb) {
-  if (!limbo_manager_) {
-    cb({});
-    return;
-  }
-
+std::vector<ProcessExceptionMetadata> ProcessLimboManager::ListProcessesInLimbo() {
   std::vector<ProcessExceptionMetadata> exceptions;
 
-  auto& limbo = limbo_manager_->limbo_;
-
   size_t max_size =
-      limbo.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo.size() : MAX_EXCEPTIONS_PER_CALL;
+      limbo_.size() <= MAX_EXCEPTIONS_PER_CALL ? limbo_.size() : MAX_EXCEPTIONS_PER_CALL;
   exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.
   zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_TRANSFER;
-  for (const auto& [process_koid, limbo_exception] : limbo) {
+  for (const auto& [process_koid, limbo_exception] : limbo_) {
     ProcessExceptionMetadata metadata = {};
 
     zx::process process;
@@ -125,7 +79,102 @@ void ProcessLimboHandler::ListProcessesWaitingOnException(
       break;
   }
 
-  cb(std::move(exceptions));
+  return exceptions;
+}
+
+bool ProcessLimboManager::SetActive(bool active) {
+  // Ignore if no change.
+  if (active == active_)
+    return false;
+  active_ = active;
+
+  // Notify the handlers of the new activa state.
+  PruneStaleHandlers(&handlers_);
+  for (auto& handler : handlers_) {
+    handler->ActiveStateChanged(active);
+  }
+
+  return true;
+}
+
+// ProcessLimboHandler -----------------------------------------------------------------------------
+
+ProcessLimboHandler::ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager)
+    : limbo_manager_(std::move(limbo_manager)), weak_factory_(this) {}
+
+fxl::WeakPtr<ProcessLimboHandler> ProcessLimboHandler::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
+
+void ProcessLimboHandler::ActiveStateChanged(bool active) {
+  if (!is_active_callback_) {
+    // Reset the WatchActive state as the state is different from the last time the get was called.
+    watch_active_dirty_bit_ = true;
+  } else {
+    is_active_callback_(active);
+    is_active_callback_ = {};
+    watch_active_dirty_bit_ = false;
+  }
+
+  // If there is a limbo call waiting, we tell them that it's canceled.
+  if (!active) {
+    if (watch_limbo_callback_) {
+      watch_limbo_callback_(fit::error(ZX_ERR_CANCELED));
+      watch_limbo_callback_ = {};
+      watch_limbo_dirty_bit_ = false;
+    } else {
+      watch_limbo_dirty_bit_ = true;
+    }
+  }
+}
+
+void ProcessLimboHandler::LimboChanged(std::vector<ProcessExceptionMetadata> limbo_list) {
+  if (!watch_limbo_callback_) {
+    // Reset the hanging get state as the state is different from the first time the get was called.
+    watch_limbo_dirty_bit_ = true;
+    return;
+  }
+
+  watch_limbo_callback_(fit::ok(std::move(limbo_list)));
+  watch_limbo_callback_ = {};
+  watch_limbo_dirty_bit_ = false;
+}
+
+void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
+  if (watch_active_dirty_bit_) {
+    watch_active_dirty_bit_ = false;
+
+    bool is_active = !!limbo_manager_ ? limbo_manager_->active() : false;
+    cb(is_active);
+    return;
+  }
+
+  // We store the latest callback for when the active state changes.
+  is_active_callback_ = std::move(cb);
+}
+
+void ProcessLimboHandler::WatchProcessesWaitingOnException(
+    WatchProcessesWaitingOnExceptionCallback cb) {
+  if (!limbo_manager_) {
+    cb(fit::error(ZX_ERR_BAD_STATE));
+    return;
+  }
+
+  if (!limbo_manager_->active()) {
+    cb(fit::error(ZX_ERR_UNAVAILABLE));
+    return;
+  }
+
+  if (watch_limbo_dirty_bit_) {
+    watch_limbo_dirty_bit_ = false;
+
+    auto processes = limbo_manager_->ListProcessesInLimbo();
+    cb(fit::ok(std::move(processes)));
+    return;
+  }
+
+  // Store the latest callback for when the processes enter the limbo.
+  watch_limbo_callback_ = std::move(cb);
 }
 
 void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback cb) {

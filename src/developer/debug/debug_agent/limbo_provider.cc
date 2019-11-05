@@ -14,12 +14,28 @@ LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
 LimboProvider::~LimboProvider() = default;
 
 zx_status_t LimboProvider::ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) {
+  // TODO(donosoc): The hanging get pattern will hang when called synchronously.
+  //                This call should actually be called through an observer-like API.
+  //                Disable this call for now.
+  return ZX_ERR_NOT_SUPPORTED;
+
+#ifdef LIMBO_MIGRATION
   ProcessLimboSyncPtr process_limbo;
   zx_status_t status = services_->Connect(process_limbo.NewRequest());
   if (status != ZX_OK)
     return status;
 
-  return process_limbo->ListProcessesWaitingOnException(out);
+  ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+  status = process_limbo->WatchProcessesWaitingOnException(&result);
+  if (status != ZX_OK)
+    return status;
+
+  if (result.is_err())
+    return result.err();
+
+  *out = std::move(result.response().exception_list);
+  return ZX_OK;
+#endif
 }
 
 zx_status_t LimboProvider::RetrieveException(zx_koid_t process_koid,

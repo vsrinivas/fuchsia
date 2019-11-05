@@ -44,6 +44,8 @@ enum class ExceptionType : uint32_t {
 struct ExceptionInfo;
 class Handler;
 struct ProcessExceptionMetadata;
+struct ProcessLimbo_WatchProcessesWaitingOnException_Response;
+struct ProcessLimbo_WatchProcessesWaitingOnException_Result;
 struct ProcessException;
 struct ProcessLimbo_RetrieveException_Response;
 struct ProcessLimbo_RetrieveException_Result;
@@ -626,6 +628,123 @@ class Handler final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+
+struct ProcessLimbo_WatchProcessesWaitingOnException_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 64;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3328;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 3328;
+
+  ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+
+struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ProcessLimbo_WatchProcessesWaitingOnException_Result();
+  ~ProcessLimbo_WatchProcessesWaitingOnException_Result();
+
+  ProcessLimbo_WatchProcessesWaitingOnException_Result(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ProcessLimbo_WatchProcessesWaitingOnException_Result& operator=(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response&& val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t&& val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 64;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3328;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 3344;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
 
@@ -747,10 +866,10 @@ extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveRequestTab
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchActiveResponseTable;
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
@@ -787,24 +906,24 @@ class ProcessLimbo final {
   };
   using WatchActiveRequest = ::fidl::AnyZeroArgMessage;
 
-  struct ListProcessesWaitingOnExceptionResponse final {
+  struct WatchProcessesWaitingOnExceptionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list;
+    ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
-    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 3328;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 3328;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 3344;
     static constexpr bool HasFlexibleEnvelope = true;
-    static constexpr bool ContainsUnion = false;
+    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using ListProcessesWaitingOnExceptionRequest = ::fidl::AnyZeroArgMessage;
+  using WatchProcessesWaitingOnExceptionRequest = ::fidl::AnyZeroArgMessage;
 
   struct RetrieveExceptionResponse final {
     FIDL_ALIGNDECL
@@ -900,13 +1019,13 @@ class ProcessLimbo final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ListProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class WatchProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ListProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
-      ~ListProcessesWaitingOnException_Impl() = default;
-      ListProcessesWaitingOnException_Impl(ListProcessesWaitingOnException_Impl&& other) = default;
-      ListProcessesWaitingOnException_Impl& operator=(ListProcessesWaitingOnException_Impl&& other) = default;
+      WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
+      ~WatchProcessesWaitingOnException_Impl() = default;
+      WatchProcessesWaitingOnException_Impl(WatchProcessesWaitingOnException_Impl&& other) = default;
+      WatchProcessesWaitingOnException_Impl& operator=(WatchProcessesWaitingOnException_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -950,7 +1069,7 @@ class ProcessLimbo final {
 
    public:
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
-    using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
+    using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
     using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
   };
@@ -977,13 +1096,13 @@ class ProcessLimbo final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class ListProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class WatchProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ListProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~ListProcessesWaitingOnException_Impl() = default;
-      ListProcessesWaitingOnException_Impl(ListProcessesWaitingOnException_Impl&& other) = default;
-      ListProcessesWaitingOnException_Impl& operator=(ListProcessesWaitingOnException_Impl&& other) = default;
+      WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~WatchProcessesWaitingOnException_Impl() = default;
+      WatchProcessesWaitingOnException_Impl(WatchProcessesWaitingOnException_Impl&& other) = default;
+      WatchProcessesWaitingOnException_Impl& operator=(WatchProcessesWaitingOnException_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -1027,7 +1146,7 @@ class ProcessLimbo final {
 
    public:
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
-    using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
+    using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
     using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
   };
@@ -1043,39 +1162,53 @@ class ProcessLimbo final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Hanging get for determining whether the limbo is currently active.
-    // An active limbo could be empty (not have any processes waiting on an
-    // exception). However, an inactive limbo is guaranteed to not have any
-    // processes waiting in it.
+    // Watchs for changes determining whether the limbo is currently active,
+    // using a Hanging Get pattern. An active limbo could be empty (not have
+    // any processes waiting on an exception). However, an inactive limbo is
+    // guaranteed to not have any processes waiting in it.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WatchActive WatchActive();
 
-    // Hanging get for determining whether the limbo is currently active.
-    // An active limbo could be empty (not have any processes waiting on an
-    // exception). However, an inactive limbo is guaranteed to not have any
-    // processes waiting in it.
+    // Watchs for changes determining whether the limbo is currently active,
+    // using a Hanging Get pattern. An active limbo could be empty (not have
+    // any processes waiting on an exception). However, an inactive limbo is
+    // guaranteed to not have any processes waiting in it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::WatchActive WatchActive(::fidl::BytePart _response_buffer);
 
+    // Watch for processes that are waiting on exceptions, using a Hanging Get
+    // Pattern.
+    //
     // Returns information on all the processes currently waiting on an exception.
     // The information provided is intended to correctly identify an exception
     // and determine whether the caller wants to actually handle it.
     // To retrieve an exception, use the |GetException| call.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    // becomes inactive.
     //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException();
+    ResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException();
 
+    // Watch for processes that are waiting on exceptions, using a Hanging Get
+    // Pattern.
+    //
     // Returns information on all the processes currently waiting on an exception.
     // The information provided is intended to correctly identify an exception
     // and determine whether the caller wants to actually handle it.
     // To retrieve an exception, use the |GetException| call.
     //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    // becomes inactive.
+    //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(::fidl::BytePart _response_buffer);
+    UnownedResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(::fidl::BytePart _response_buffer);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -1084,6 +1217,7 @@ class ProcessLimbo final {
     // list of available exceptions.
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::RetrieveException RetrieveException(uint64_t process_koid);
 
@@ -1094,6 +1228,7 @@ class ProcessLimbo final {
     // list of available exceptions.
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::RetrieveException RetrieveException(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
@@ -1118,39 +1253,53 @@ class ProcessLimbo final {
     Call() = delete;
    public:
 
-    // Hanging get for determining whether the limbo is currently active.
-    // An active limbo could be empty (not have any processes waiting on an
-    // exception). However, an inactive limbo is guaranteed to not have any
-    // processes waiting in it.
+    // Watchs for changes determining whether the limbo is currently active,
+    // using a Hanging Get pattern. An active limbo could be empty (not have
+    // any processes waiting on an exception). However, an inactive limbo is
+    // guaranteed to not have any processes waiting in it.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WatchActive WatchActive(zx::unowned_channel _client_end);
 
-    // Hanging get for determining whether the limbo is currently active.
-    // An active limbo could be empty (not have any processes waiting on an
-    // exception). However, an inactive limbo is guaranteed to not have any
-    // processes waiting in it.
+    // Watchs for changes determining whether the limbo is currently active,
+    // using a Hanging Get pattern. An active limbo could be empty (not have
+    // any processes waiting on an exception). However, an inactive limbo is
+    // guaranteed to not have any processes waiting in it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::WatchActive WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Watch for processes that are waiting on exceptions, using a Hanging Get
+    // Pattern.
+    //
     // Returns information on all the processes currently waiting on an exception.
     // The information provided is intended to correctly identify an exception
     // and determine whether the caller wants to actually handle it.
     // To retrieve an exception, use the |GetException| call.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    // becomes inactive.
     //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(zx::unowned_channel _client_end);
+    static ResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(zx::unowned_channel _client_end);
 
+    // Watch for processes that are waiting on exceptions, using a Hanging Get
+    // Pattern.
+    //
     // Returns information on all the processes currently waiting on an exception.
     // The information provided is intended to correctly identify an exception
     // and determine whether the caller wants to actually handle it.
     // To retrieve an exception, use the |GetException| call.
     //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    // becomes inactive.
+    //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ListProcessesWaitingOnException ListProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -1159,6 +1308,7 @@ class ProcessLimbo final {
     // list of available exceptions.
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, uint64_t process_koid);
 
@@ -1169,6 +1319,7 @@ class ProcessLimbo final {
     // list of available exceptions.
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
@@ -1192,20 +1343,27 @@ class ProcessLimbo final {
     InPlace() = delete;
    public:
 
-    // Hanging get for determining whether the limbo is currently active.
-    // An active limbo could be empty (not have any processes waiting on an
-    // exception). However, an inactive limbo is guaranteed to not have any
-    // processes waiting in it.
+    // Watchs for changes determining whether the limbo is currently active,
+    // using a Hanging Get pattern. An active limbo could be empty (not have
+    // any processes waiting on an exception). However, an inactive limbo is
+    // guaranteed to not have any processes waiting in it.
     static ::fidl::DecodeResult<WatchActiveResponse> WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Watch for processes that are waiting on exceptions, using a Hanging Get
+    // Pattern.
+    //
     // Returns information on all the processes currently waiting on an exception.
     // The information provided is intended to correctly identify an exception
     // and determine whether the caller wants to actually handle it.
     // To retrieve an exception, use the |GetException| call.
     //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Returns ZX_ERR_CANCELED if there was an outstanding call and the limbo
+    // becomes inactive.
+    //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
-    static ::fidl::DecodeResult<ListProcessesWaitingOnExceptionResponse> ListProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WatchProcessesWaitingOnExceptionResponse> WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -1214,6 +1372,7 @@ class ProcessLimbo final {
     // list of available exceptions.
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     static ::fidl::DecodeResult<RetrieveExceptionResponse> RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer);
 
     // Removes the process from limbo, releasing the exception. This will make
@@ -1245,19 +1404,22 @@ class ProcessLimbo final {
 
     virtual void WatchActive(WatchActiveCompleter::Sync _completer) = 0;
 
-    class ListProcessesWaitingOnExceptionCompleterBase : public _Base {
+    class WatchProcessesWaitingOnExceptionCompleterBase : public _Base {
      public:
-      void Reply(::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
-      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
-      void Reply(::fidl::DecodedMessage<ListProcessesWaitingOnExceptionResponse> params);
+      void Reply(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result);
+      void ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list);
+      void Reply(::fidl::DecodedMessage<WatchProcessesWaitingOnExceptionResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using ListProcessesWaitingOnExceptionCompleter = ::fidl::Completer<ListProcessesWaitingOnExceptionCompleterBase>;
+    using WatchProcessesWaitingOnExceptionCompleter = ::fidl::Completer<WatchProcessesWaitingOnExceptionCompleterBase>;
 
-    virtual void ListProcessesWaitingOnException(ListProcessesWaitingOnExceptionCompleter::Sync _completer) = 0;
+    virtual void WatchProcessesWaitingOnException(WatchProcessesWaitingOnExceptionCompleter::Sync _completer) = 0;
 
     class RetrieveExceptionCompleterBase : public _Base {
      public:
@@ -1320,8 +1482,8 @@ class ProcessLimbo final {
    public:
     static void WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg);
     static void WatchActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveResponse>& _msg);
-    static void ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg);
-    static void ListProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>& _msg);
+    static void WatchProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionRequest>& _msg);
+    static void WatchProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>& _msg);
     static void RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg);
     static void RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg);
     static void ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg);
@@ -1367,6 +1529,16 @@ struct IsFidlType<::llcpp::fuchsia::exception::ProcessExceptionMetadata> : publi
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessExceptionMetadata>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response, exception_list) == 0);
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response) == ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessException> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessException>);
 
@@ -1389,12 +1561,12 @@ static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::WatchActiveRespo
 static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::WatchActiveResponse, is_active) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::WatchProcessesWaitingOnExceptionResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse)
-    == ::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::ListProcessesWaitingOnExceptionResponse, exception_list) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::WatchProcessesWaitingOnExceptionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::WatchProcessesWaitingOnExceptionResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::WatchProcessesWaitingOnExceptionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::WatchProcessesWaitingOnExceptionResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionRequest> : public std::true_type {};
