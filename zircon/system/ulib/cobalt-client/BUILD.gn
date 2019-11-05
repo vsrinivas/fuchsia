@@ -16,21 +16,18 @@ zx_library("cobalt-client") {
   ]
   host = true
   sources = [
+    "cobalt_logger.cc",
     "collector.cc",
     "counter.cc",
     "histogram.cc",
     "metric_info.cc",
   ]
-  if (is_fuchsia) {
-    sources += [ "cobalt_logger.cc" ]
-  }
-  public_deps = [
-    # <cobalt-client/cpp/timer.h> has #include <lib/fzl/time.h>.
-    "$zx/system/ulib/fzl:headers",
 
-    # <cobalt-client/cpp/types-internal.h> has #include <fuchsia/cobalt/c/fidl.h>.
+  public_deps = [
     "$zx/system/fidl/fuchsia-cobalt:c.headers",
+    "$zx/system/ulib/fzl:headers",
   ]
+
   deps = [
     "$zx/system/fidl/fuchsia-cobalt:c",
     "$zx/system/fidl/fuchsia-mem:c",

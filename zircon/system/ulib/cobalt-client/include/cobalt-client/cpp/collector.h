@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef COBALT_CLIENT_CPP_COLLECTOR_H_
+#define COBALT_CLIENT_CPP_COLLECTOR_H_
 
 #include <stdint.h>
 #include <unistd.h>
@@ -36,7 +37,6 @@ struct CollectorOptions {
   // Returns a |Collector| whose data will be logged for Debug release stage.
   static CollectorOptions Debug();
 
-#ifdef __Fuchsia__
   // Callback used when reading the config to create a cobalt logger.
   // Returns true when the write was successful. The VMO will be transferred
   // to the cobalt service.
@@ -56,7 +56,7 @@ struct CollectorOptions {
   // The name used to register the project with cobalt. This will be used to route the metrics
   // to the right project.
   fbl::String project_name;
-#endif
+
   // This is set internally by factory functions.
   uint32_t release_stage = 0;
 };
@@ -101,3 +101,5 @@ class Collector {
 };
 
 }  // namespace cobalt_client
+
+#endif  // COBALT_CLIENT_CPP_COLLECTOR_H_
