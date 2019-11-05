@@ -70,8 +70,11 @@ func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
 	if spec.Test.Name == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty name")
 	}
+	if spec.Test.Label == "" {
+		return fmt.Errorf("A test spec's test must have a non-empty label")
+	}
 	if len(spec.Command) == 0 && spec.Test.Path == "" {
-		return fmt.Errorf("A test spec's test must a non-empty install path or non-empty command")
+		return fmt.Errorf("A test spec's test must have a non-empty path or non-empty command")
 	}
 	if spec.Test.OS == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty OS")

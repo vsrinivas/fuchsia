@@ -29,7 +29,8 @@ func TestTester(t *testing.T) {
 		{
 			name: "should run a command a local subprocess",
 			test: testsharder.Test{
-				Name: "hello_world_test",
+				Name:  "hello_world_test",
+				Label: "//a/b/c/hello_word:hello_world_test(//toolchain)",
 				// Assumes that we're running on a Unix system.
 				Command: []string{"/bin/echo", "Hello world!"},
 			},

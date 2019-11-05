@@ -50,7 +50,8 @@ var macEnv = Environment{
 
 var specFoo1 = TestSpec{
 	Test: Test{
-		Name:    "//obsidian/bin/foo:foo_unittests",
+		Name:    "foo_unittests",
+		Label:   "//obsidian/bin/foo:foo_unittests(//build/toolchain/fuchsia:x64",
 		Path:    "/system/test/foo_unittests",
 		OS:      Fuchsia,
 		Command: []string{"/system/test/foo_unittests", "bar", "baz"},
@@ -60,27 +61,30 @@ var specFoo1 = TestSpec{
 
 var specFoo2 = TestSpec{
 	Test: Test{
-		Name: "//obsidian/bin/foo:foo_integration_tests",
-		Path: "/system/test/foo_integration_tests",
-		OS:   Fuchsia,
+		Name:  "foo_integration_tests",
+		Label: "//obsidian/bin/foo:foo_integration_tests(//build/toolchain/fuchsia:x64",
+		Path:  "/system/test/foo_integration_tests",
+		OS:    Fuchsia,
 	},
 	Envs: []Environment{qemuEnv, nucEnv},
 }
 
 var specBar = TestSpec{
 	Test: Test{
-		Name: "//obsidian/lib/bar:bar_tests",
-		Path: "/system/test/bar_tests",
-		OS:   Fuchsia,
+		Name:  "bar_tests",
+		Label: "//obsidian/lib/bar:bar_tests(//build/toolchain/fuchsia:x64",
+		Path:  "/system/test/bar_tests",
+		OS:    Fuchsia,
 	},
 	Envs: []Environment{qemuEnv},
 }
 
 var specBaz = TestSpec{
 	Test: Test{
-		Name: "//obsidian/public/lib/baz:baz_host_tests",
-		Path: "/$root_build_dir/baz_host_tests",
-		OS:   Linux,
+		Name:  "baz_host_tests",
+		Label: "//obsidian/public/lib/baz:baz_host_tests(//build/toolchain/fuchsia:x64",
+		Path:  "/$root_build_dir/baz_host_tests",
+		OS:    Linux,
 	},
 	Envs: []Environment{linuxEnv, macEnv},
 }
@@ -148,29 +152,41 @@ func TestLoadTestSpecs(t *testing.T) {
 func TestValidateTestSpecs(t *testing.T) {
 	noTestNameSpec := TestSpec{
 		Test: Test{
-			Path: "/system/test/baz_tests",
+			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
+			Path:  "/system/test/baz_tests",
+			OS:    Linux,
+		},
+		Envs: []Environment{qemuEnv},
+	}
+	noTestLabelSpec := TestSpec{
+		Test: Test{
+			Name: "something_tests",
+			Path: "/system/test/something_tests",
 			OS:   Linux,
 		},
 		Envs: []Environment{qemuEnv},
 	}
 	noTestPathSpec := TestSpec{
 		Test: Test{
-			Name: "//obsidian/public/lib/baz:baz_tests",
-			OS:   Linux,
+			Name:  "baz_tests",
+			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
+			OS:    Linux,
 		},
 		Envs: []Environment{qemuEnv},
 	}
 	noOSSpec := TestSpec{
 		Test: Test{
-			Name: "//obsidian/bin/foo:foo_unittests",
-			Path: "/system/test/foo_unittests",
+			Name:  "foo_unittests",
+			Label: "//obsidian/bin/foo:foo_unittests(//toolchain)",
+			Path:  "/system/test/foo_unittests",
 		},
 	}
 	badEnvSpec := TestSpec{
 		Test: Test{
-			Name: "//obsidian/public/lib/baz:baz_tests",
-			Path: "/system/test/baz_tests",
-			OS:   Linux,
+			Name:  "baz_tests",
+			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
+			Path:  "/system/test/baz_tests",
+			OS:    Linux,
 		},
 		Envs: []Environment{
 			{
@@ -197,9 +213,9 @@ func TestValidateTestSpecs(t *testing.T) {
 
 	t.Run("invalid specs are invalidated", func(t *testing.T) {
 		invalidSpecLists := [][]TestSpec{
-			{noOSSpec}, {noTestNameSpec}, {noTestPathSpec}, {badEnvSpec},
-			{noTestNameSpec, noTestPathSpec}, {noTestNameSpec, badEnvSpec},
-			{noTestPathSpec, badEnvSpec},
+			{noOSSpec}, {noTestNameSpec}, {noTestPathSpec}, {noTestLabelSpec},
+			{badEnvSpec}, {noTestNameSpec, noTestPathSpec},
+			{noTestNameSpec, badEnvSpec}, {noTestPathSpec, badEnvSpec},
 			{noTestNameSpec, noTestPathSpec, badEnvSpec},
 		}
 		for _, list := range invalidSpecLists {

@@ -213,9 +213,10 @@ func TestMultiplyShards(t *testing.T) {
 	}
 	makeTest := func(id int, os OS) Test {
 		return Test{
-			Name: fmt.Sprintf("test%d", id),
-			Path: fmt.Sprintf("/path/to/test/%d", id),
-			OS:   os,
+			Name:  fmt.Sprintf("test%d", id),
+			Label: fmt.Sprintf("//path/to/target:test%d(//toolchain)", id),
+			Path:  fmt.Sprintf("/path/to/test/%d", id),
+			OS:    os,
 		}
 	}
 
