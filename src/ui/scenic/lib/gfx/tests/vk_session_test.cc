@@ -34,55 +34,6 @@ VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues(bool use_protected
   return vulkan_queues;
 }
 
-vk::DeviceMemory VkSessionTest::AllocateExportableMemory(vk::Device device,
-                                                         vk::PhysicalDevice physical_device,
-                                                         vk::MemoryRequirements requirements,
-                                                         vk::MemoryPropertyFlags flags) {
-  uint32_t memory_type_index =
-      impl::GetMemoryTypeIndex(physical_device, requirements.memoryTypeBits, flags);
-  vk::PhysicalDeviceMemoryProperties memory_types = physical_device.getMemoryProperties();
-  if (memory_type_index == memory_types.memoryTypeCount) {
-    return nullptr;
-  }
-
-  vk::ExportMemoryAllocateInfoKHR export_info;
-  export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
-
-  vk::MemoryAllocateInfo info;
-  info.pNext = &export_info;
-  info.allocationSize = requirements.size;
-  info.memoryTypeIndex = memory_type_index;
-
-  vk::DeviceMemory memory = ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
-  return memory;
-}
-
-zx::vmo VkSessionTest::ExportMemoryAsVmo(vk::Device device,
-                                         vk::DispatchLoaderDynamic dispatch_loader,
-                                         vk::DeviceMemory memory) {
-  vk::MemoryGetZirconHandleInfoFUCHSIA export_memory_info(
-      memory, vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
-  auto result = device.getMemoryZirconHandleFUCHSIA(export_memory_info, dispatch_loader);
-  if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "Failed to export vk::DeviceMemory as zx::vmo";
-    return zx::vmo();
-  }
-  return zx::vmo(result.value);
-}
-
-vk::MemoryRequirements VkSessionTest::GetBufferRequirements(vk::Device device, vk::DeviceSize size,
-                                                            vk::BufferUsageFlags usage_flags) {
-  // Create a temp buffer to find out memory requirements.
-  vk::BufferCreateInfo buffer_create_info;
-  buffer_create_info.size = size;
-  buffer_create_info.usage = usage_flags;
-  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer = escher::ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
-  auto retval = device.getBufferMemoryRequirements(vk_buffer);
-  device.destroyBuffer(vk_buffer);
-  return retval;
-}
-
 void VkSessionTest::SetUp() {
   vk_debug_report_callback_registry_.RegisterDebugReportCallbacks();
   SessionTest::SetUp();

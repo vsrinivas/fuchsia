@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 
+#include <zircon/status.h>
+
 #include <trace/event.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -69,21 +71,46 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   return cached_bits;
 }
 
-zx::vmo DuplicateVmo(const zx::vmo* vmo) {
-  zx::vmo the_clone;
-  zx_status_t status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
-  ZX_ASSERT_MSG(status == ZX_OK, "duplicate failed: status=%d", status);
-  return the_clone;
-}
-
-// Fills |alloc_info| and |memory_import_info| with the given parameters.
-bool FillMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resource_context,
-                            const zx::vmo* vmo, bool is_host, uint64_t size,
-                            scenic_impl::ErrorReporter* reporter,
-                            vk::MemoryAllocateInfo* alloc_info,
-                            vk::ImportMemoryZirconHandleInfoFUCHSIA* memory_import_info) {
+// Initialize |alloc_info| and |memory_import_info| with the given parameters.
+//
+// Returns true if it succeeds setting the |alloc_info| and
+// |memory_import_info|, otherwise it returns false and outputs error message
+// to |reporter|.
+bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resource_context,
+                                  const zx::vmo* vmo, bool is_host, uint64_t size,
+                                  scenic_impl::ErrorReporter* reporter,
+                                  vk::MemoryAllocateInfo* alloc_info,
+                                  vk::ImportMemoryZirconHandleInfoFUCHSIA* memory_import_info) {
   FXL_DCHECK(alloc_info);
   FXL_DCHECK(memory_import_info);
+
+  // We first check the rights of vmo to ensure that it has read, write and
+  // duplicate rights.
+  zx_info_handle_basic_t vmo_info;
+  auto get_info_status =
+      vmo->get_info(ZX_INFO_HANDLE_BASIC, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
+  if (get_info_status != ZX_OK) {
+    reporter->ERROR()
+        << "scenic_impl::gfx::Memory::ImportGpuMemory(): Cannot get VMO info, status: "
+        << zx_status_get_string(get_info_status);
+    return false;
+  }
+
+  // Currently Magma doesn't support import of read-only VMOs. In order to make
+  // the behavior of ImportGpuMemory() consistent among different Vulkan ICDs,
+  // we enforce that the imported vmo should have both read and write rights for
+  // all device memory.
+  // Therefore, we require all VMOs to have read and write rights.
+  if (!is_host && !(vmo_info.rights & ZX_RIGHT_READ)) {
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have "
+                         "right ZX_RIGHT_READ";
+    return false;
+  }
+  if (!is_host && !(vmo_info.rights & ZX_RIGHT_WRITE)) {
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have "
+                         "right ZX_RIGHT_WRITE";
+    return false;
+  }
 
   auto vk_device = resource_context.vk_device;
   // TODO(SCN-151): If we're allowed to import the same vmo twice to two
@@ -157,8 +184,16 @@ bool FillMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resource_co
 
   // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
   // the VMO handle it is passed.
+  zx::vmo duplicated_vmo;
+  zx_status_t status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_vmo);
+  if (status != ZX_OK) {
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): cannot duplicate VMO, "
+                         "status: "
+                      << zx_status_get_string(status);
+    return false;
+  }
   *memory_import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, DuplicateVmo(vmo).release());
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, duplicated_vmo.release());
   *alloc_info = vk::MemoryAllocateInfo(size, memory_type_index);
   alloc_info->setPNext(memory_import_info);
   return true;
@@ -242,9 +277,9 @@ escher::GpuMemPtr Memory::ImportGpuMemory(ErrorReporter* reporter,
   vk::MemoryAllocateInfo vmo_alloc_info;
   vk::ImportMemoryZirconHandleInfoFUCHSIA memory_import_info;
   if (!alloc_info) {
-    const bool retval =
-        FillMemoryAllocateInfo(resource_context(), &shared_vmo_->vmo(), is_host(), allocation_size_,
-                               reporter, &vmo_alloc_info, &memory_import_info);
+    const bool retval = InitializeMemoryAllocateInfo(resource_context(), &shared_vmo_->vmo(),
+                                                     is_host(), allocation_size_, reporter,
+                                                     &vmo_alloc_info, &memory_import_info);
     if (!retval) {
       return nullptr;
     }

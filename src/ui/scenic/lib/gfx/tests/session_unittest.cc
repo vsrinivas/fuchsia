@@ -14,6 +14,7 @@
 #include "src/ui/scenic/lib/gfx/resources/shapes/circle_shape.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 
 namespace scenic_impl {
 namespace gfx {

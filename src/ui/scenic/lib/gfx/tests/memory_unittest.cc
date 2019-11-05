@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "lib/ui/scenic/cpp/commands.h"
+#include <lib/ui/scenic/cpp/commands.h>
+
+#include <gtest/gtest.h>
+
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 
 using namespace escher;
 
@@ -17,6 +21,20 @@ namespace {
 
 const uint32_t kVmoSize = 4096;
 const uint32_t kMemoryId = 1;
+
+vk::Image Create1BytePerPixelSingleRowDeviceVkImageOfWidth(vk::Device device, uint32_t width) {
+  escher::ImageInfo info = {
+      .format = vk::Format::eR8Uint,
+      .width = width,
+      .height = 1,
+      .sample_count = 1,
+      .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
+      .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+      .tiling = vk::ImageTiling::eOptimal,
+      .is_external = true};
+  return escher::image_utils::CreateVkImage(device, info);
+}
 
 }  // namespace
 
@@ -71,21 +89,27 @@ VK_TEST_F(VkMemoryTest, ImportDeviceMemory) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  vk::MemoryRequirements requirements;
-  requirements.size = kVmoSize;
-  requirements.memoryTypeBits = 0xFFFFFFFF;
-
-  // Create valid Vulkan device memory and import it into Scenic.
-  auto memory = AllocateExportableMemory(device, physical_device, requirements,
-                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+  // Create an VkImage and allocate exportable memory for that image.
+  //
+  // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
+  // image-dedicated memory only if it is required, otherwise it will allocate
+  // non dedicated memory instead.
+  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
+      device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
+      vulkan_queues->dispatch_loader());
+  vk::DeviceMemory memory = allocation_result.device_memory;
+  // Import valid Vulkan device memory into Scenic.
   zx::vmo device_vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
-  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(device_vmo), kVmoSize,
-                                               fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  ASSERT_TRUE(
+      Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(device_vmo), allocation_result.size,
+                                       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
 
   // Confirm that the resource has a valid Vulkan memory object and cleanup.
   auto memory_resource = FindResource<Memory>(kMemoryId);
   ASSERT_TRUE(memory_resource->GetGpuMem(session()->error_reporter()));
   device.freeMemory(memory);
+  device.destroyImage(image);
 }
 
 VK_TEST_F(VkMemoryTest, ImportReadOnlyHostMemory) {
@@ -120,11 +144,8 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyHostMemoryAsDeviceMemory) {
   // it has only created a read-only host memory VMO.
   ASSERT_FALSE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), kVmoSize,
                                                 fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
-
   ExpectLastReportedError(
-      "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-      "VkGetMemoryFuchsiaHandlePropertiesKHR returned zero valid memory "
-      "types.");
+      "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have right ZX_RIGHT_WRITE");
 }
 
 VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
@@ -132,31 +153,39 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  vk::MemoryRequirements requirements;
-  requirements.size = kVmoSize;
-  requirements.memoryTypeBits = 0xFFFFFFFF;
-
-  auto memory = AllocateExportableMemory(device, physical_device, requirements,
-                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+  // Create an VkImage and allocate exportable memory for that image.
+  //
+  // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
+  // image-dedicated memory only if it is required, otherwise it will allocate
+  // non dedicated memory instead.
+  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
+      device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
+      vulkan_queues->dispatch_loader());
+  vk::DeviceMemory memory = allocation_result.device_memory;
+  // Import valid Vulkan device memory into Scenic.
   zx::vmo device_vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
-
   // This test creates valid device memory (unlike the previous test), but
   // still duplicates it, handing Scenic a read-only handle.
   //
   // TODO(MA-492): Fixing MA-492 would allow importation of read-only VMOs.
   zx::vmo read_only;
-  zx_status_t status = device_vmo.duplicate(ZX_RIGHT_READ | ZX_RIGHTS_BASIC, &read_only);
+  zx_status_t status = device_vmo.duplicate(
+      ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT, &read_only);
   ASSERT_EQ(ZX_OK, status);
 
-  ASSERT_FALSE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), kVmoSize,
-                                                fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
-
+  // Currently vulkan driver of AEMU supports importing read-only device VMOs
+  // while magma lib doesn't support that since it cannot get memory types of a
+  // read-only vmo.
+  // Therefore, we require all VMOs to have read and write rights.
+  ASSERT_FALSE(
+      Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), allocation_result.size,
+                                       fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
   ExpectLastReportedError(
-      "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-      "VkGetMemoryFuchsiaHandlePropertiesKHR returned zero valid memory "
-      "types.");
+      "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have right ZX_RIGHT_WRITE");
 
   device.freeMemory(memory);
+  device.destroyImage(image);
 }
 
 VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
@@ -164,13 +193,17 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
-  vk::MemoryRequirements requirements;
-  requirements.size = kVmoSize;
-  requirements.memoryTypeBits = 0xFFFFFFFF;
-
-  // Create valid Vulkan device memory and import it into Scenic.
-  auto memory = AllocateExportableMemory(device, physical_device, requirements,
-                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
+  // Create an VkImage and allocate exportable memory for that image.
+  //
+  // |AllocateExportableMemoryDedicatedToImageIfRequired()| will allocate an
+  // image-dedicated memory only if it is required, otherwise it will allocate
+  // non dedicated memory instead.
+  vk::Image image = Create1BytePerPixelSingleRowDeviceVkImageOfWidth(device, kVmoSize);
+  MemoryAllocationResult allocation_result = AllocateExportableMemoryDedicatedToImageIfRequired(
+      device, physical_device, kVmoSize, image, vk::MemoryPropertyFlagBits::eDeviceLocal,
+      vulkan_queues->dispatch_loader());
+  vk::DeviceMemory memory = allocation_result.device_memory;
+  // Import valid Vulkan device memory into Scenic.
   zx::vmo device_vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   // Fill vk::MemoryAllocateInfo
@@ -179,9 +212,20 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
   ASSERT_EQ(ZX_OK, status);
   auto import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
       vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, clone_vmo.release());
+
+  // Here we get the memory type we set in function VkSessionTest::
+  // AllocateExportableMemoryDedicatedToImageIfRequired.
+  //
+  // For dedicated allocation, we use memory type required by the image
+  // allocation dedicated to; for non-dedicated allocation, we use 0xFFFFFFFF to
+  // represent *any*  possible memory type supported by device as long as they
+  // support the memory property flags defined above.
+  uint32_t memory_type_bits = allocation_result.is_dedicated
+                                  ? device.getImageMemoryRequirements(image).memoryTypeBits
+                                  : 0xFFFFFFFF;
   auto alloc_info = vk::MemoryAllocateInfo(
-      kVmoSize, escher::impl::GetMemoryTypeIndex(physical_device, requirements.memoryTypeBits,
-                                                 vk::MemoryPropertyFlags()));
+      allocation_result.size, escher::impl::GetMemoryTypeIndex(physical_device, memory_type_bits,
+                                                               vk::MemoryPropertyFlags()));
   alloc_info.setPNext(&import_info);
   auto memory_resource = Memory::New(session(), kMemoryId, std::move(device_vmo), alloc_info,
                                      session()->shared_error_reporter().get());
@@ -189,6 +233,7 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
   // Confirm that the resource has a valid Vulkan memory object and cleanup.
   ASSERT_TRUE(memory_resource->GetGpuMem(session()->error_reporter()));
   device.freeMemory(memory);
+  device.destroyImage(image);
 }
 
 VK_TEST_F(VkMemoryTest, ImportMaliciousClient) {
@@ -208,10 +253,8 @@ VK_TEST_F(VkMemoryTest, ImportMaliciousClient) {
   // it has only created a read-only host memory VMO.
   ASSERT_FALSE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(read_only), kVmoSize,
                                                 fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
-
   ExpectLastReportedError(
-      "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-      "VkGetMemoryFuchsiaHandlePropertiesKHR failed.");
+      "scenic_impl::gfx::Memory::ImportGpuMemory(): VMO doesn't have right ZX_RIGHT_WRITE");
 }
 
 }  // namespace test

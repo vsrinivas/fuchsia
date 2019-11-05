@@ -59,6 +59,8 @@ source_set("testing_deps") {
     "vk_session_handler_test.h",
     "vk_session_test.cc",
     "vk_session_test.h",
+    "vk_util.cc",
+    "vk_util.h",
   ]
   public_deps = [
     ":mocks",

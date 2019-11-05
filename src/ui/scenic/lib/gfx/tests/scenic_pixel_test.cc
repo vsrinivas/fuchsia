@@ -26,6 +26,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 #include "src/ui/testing/views/background_view.h"
 #include "src/ui/testing/views/coordinate_test_view.h"
 #include "src/ui/testing/views/opacity_view.h"
@@ -341,8 +342,8 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
       vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 
   auto memory_requirements =
-      scenic_impl::gfx::test::VkSessionTest::GetBufferRequirements(device, kVmoSize, kUsageFlags);
-  auto memory = scenic_impl::gfx::test::VkSessionTest::AllocateExportableMemory(
+      scenic_impl::gfx::test::GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory = scenic_impl::gfx::test::AllocateExportableMemory(
       device, physical_device, memory_requirements,
       vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible);
 
@@ -353,8 +354,8 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
     return;
   }
 
-  zx::vmo pose_buffer_vmo = scenic_impl::gfx::test::VkSessionTest::ExportMemoryAsVmo(
-      device, vulkan_queues->dispatch_loader(), memory);
+  zx::vmo pose_buffer_vmo =
+      scenic_impl::gfx::test::ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   zx::vmo remote_vmo;
   status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);

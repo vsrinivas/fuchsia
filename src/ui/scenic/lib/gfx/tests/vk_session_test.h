@@ -17,14 +17,6 @@ namespace test {
 class VkSessionTest : public SessionTest {
  public:
   static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory = false);
-  static vk::DeviceMemory AllocateExportableMemory(vk::Device device,
-                                                   vk::PhysicalDevice physical_device,
-                                                   vk::MemoryRequirements requirements,
-                                                   vk::MemoryPropertyFlags flags);
-  static zx::vmo ExportMemoryAsVmo(vk::Device device, vk::DispatchLoaderDynamic dispatch_loader,
-                                   vk::DeviceMemory memory);
-  static vk::MemoryRequirements GetBufferRequirements(vk::Device device, vk::DeviceSize size,
-                                                      vk::BufferUsageFlags usage_flags);
 
   void SetUp() override;
   void TearDown() override;
