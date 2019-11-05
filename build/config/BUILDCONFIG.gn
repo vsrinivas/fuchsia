@@ -539,7 +539,7 @@ declare_args() {
             # TODO(TO-565): The yasm host tools have leaks.
             "//third_party/yasm",
 
-            # TODO(TO-666): replace futiltiy & cgpt with 1p tools
+            # TODO(TO-666): replace futility & cgpt with 1p tools
             "//third_party/vboot_reference",
             "//garnet/tools/vboot_reference",
           ]

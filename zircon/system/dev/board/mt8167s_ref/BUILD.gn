@@ -43,6 +43,7 @@ zx_driver("mt8167s_ref") {
     "$zx/system/ulib/zx",
   ]
   data_deps = [
+    "$zx/kernel/target/arm64/boot-shim:c18",
     "$zx/kernel/target/arm64/boot-shim:cleo",
     "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
   ]

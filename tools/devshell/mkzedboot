@@ -12,11 +12,6 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 
-if [[ "${FUCHSIA_ARCH}" != "x64" ]]; then
-  echo >&2 mkzedboot is not supported for ${FUCHSIA_ARCH}
-  exit 1
-fi
-
 force=false
 if [[ "$1" == "-f" ]]; then
   shift
@@ -116,4 +111,3 @@ case "$(uname)" in
     diskutil eject "${USB_DEVICE}"
     ;;
 esac
-

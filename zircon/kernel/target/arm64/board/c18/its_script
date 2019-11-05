@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/dts-v1/;
+/ {
+  images {
+    kernel@1 {
+      data = /incbin/("COMPRESSED_BOOTIMAGE");
+      type = "kernel_noload";
+      arch = "arm64";
+      os = "linux";
+      compression = "lz4";
+    };
+
+    fdt@1 {
+      data = /incbin/("DUMMY_DEVICE_TREE");
+      type = "flat_dt";
+      arch = "arm64";
+      compression = "none";
+    };
+  };
+
+  configurations {
+    default = "conf@1";
+    conf@1 {
+      kernel = "kernel@1";
+      fdt = "fdt@1";
+      compatible = "google,flapjack";
+    };
+  };
+};
