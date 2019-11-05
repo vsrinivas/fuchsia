@@ -14,6 +14,7 @@
 
 #[macro_use]
 extern crate log;
+pub mod config;
 pub mod error;
 pub mod hal;
 pub mod lifmgr;
@@ -36,6 +37,7 @@ pub struct DeviceState {
     packet_filter: packet_filter::PacketFilter,
     dns_config: DnsConfig,
     hal: hal::NetCfg,
+    config: config::Config,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -115,7 +117,18 @@ impl DeviceState {
                 domain: Default::default(),
                 policy: Default::default(),
             },
+            config: config::Config::new(
+                "/data/user_config.json",
+                "/pkg/data/factory_config.json",
+                "/pkg/data/device_schema.json",
+            ),
         }
+    }
+
+    /// TODO(cgibson): Implement me.
+    pub async fn load_config(&mut self) -> error::Result<()> {
+        self.config.load_config();
+        Ok(())
     }
 
     /// Returns the underlying event streams associated with the open channels to fuchsia.net.stack

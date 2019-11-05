@@ -21,12 +21,18 @@ pub enum NetworkManager {
     /// Errors related to Services.
     #[fail(display = "{}", _0)]
     SERVICE(#[cause] Service),
+    /// Errors related to Config Persistence.
+    #[fail(display = "{}", _0)]
+    Config(#[cause] Config),
     /// Errors related to HAL layer.
     #[fail(display = "{}", _0)]
     HAL(#[cause] Hal),
-    /// Errors with a detail string attached.
+    /// Internal errors with an attached context.
     #[fail(display = "An error occurred.")]
-    INTERNAL(ErrorWithDetail),
+    INTERNAL(ErrorWithContext),
+    /// Config errors.
+    #[fail(display = "{}", _0)]
+    CONFIG(#[cause] Config),
     // Add error types here.
 }
 
@@ -50,19 +56,29 @@ impl From<Service> for NetworkManager {
         NetworkManager::SERVICE(e)
     }
 }
+impl From<std::io::Error> for NetworkManager {
+    fn from(e: std::io::Error) -> Self {
+        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(e.to_string()) })
+    }
+}
+impl From<serde_json::error::Error> for NetworkManager {
+    fn from(e: serde_json::error::Error) -> Self {
+        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(e.to_string()) })
+    }
+}
+// Allows adding more context via a &str
 impl From<Context<&'static str>> for NetworkManager {
     fn from(inner: Context<&'static str>) -> Self {
-        NetworkManager::INTERNAL(ErrorWithDetail { inner: Context::new(inner.to_string()) })
+        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(inner.to_string()) })
     }
 }
 
 #[derive(Fail, Debug)]
-pub struct ErrorWithDetail {
+pub struct ErrorWithContext {
     #[cause]
     inner: Context<String>,
 }
-
-impl Display for ErrorWithDetail {
+impl Display for ErrorWithContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.inner, f)
     }
@@ -124,6 +140,7 @@ pub enum Service {
     #[fail(display = "Service is not supported")]
     NotSupported,
 }
+
 /// Error type for packet HAL.
 #[derive(Fail, Debug, PartialEq)]
 pub enum Hal {
@@ -133,4 +150,21 @@ pub enum Hal {
     BridgeNotFound,
     #[fail(display = "Operation failed")]
     OperationFailed,
+}
+
+/// Error type for config persistence.
+#[derive(Fail, Debug, PartialEq)]
+pub enum Config {
+    #[fail(display = "Device config paths have not been set up yet")]
+    ConfigPathsNotSet,
+    #[fail(display = "The requested config file was not found: {}", path)]
+    ConfigNotFound { path: String },
+    #[fail(display = "Could not load the requested config: {}, because: {}", path, error)]
+    ConfigNotLoaded { path: String, error: String },
+    #[fail(display = "Failed to deserialize config: {}, because: {}", path, error)]
+    FailedToDeserializeConfig { path: String, error: String },
+    #[fail(display = "Failed to load device schema: {}, because {}", path, error)]
+    FailedToLoadDeviceSchema { path: String, error: String },
+    #[fail(display = "Failed to validate device config: {}, because: {}", path, error)]
+    FailedToValidateConfig { path: String, error: String },
 }

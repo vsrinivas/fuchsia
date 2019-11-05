@@ -1,0 +1,80 @@
+{
+    "device": {
+        "interfaces": {
+            "interface": [
+                {
+                    "config": {
+                        "enabled": true,
+                        "name": "lo0",
+                        "type": "IF_LOOPBACK"
+                    },
+                    "oper_state": "UP",
+                    "subinterfaces": {
+                        "subinterface": [
+                            {
+                                "config": {
+                                    "enabled": true,
+                                    "admin_state": "UP",
+                                    "index": 0
+                                },
+                                "ipv4": {
+                                    "addresses": [
+                                        {
+                                            "address_family": "V4",
+                                            "ip": "127.0.0.1",
+                                            "prefix_length": 32
+                                        }
+                                    ]
+                                },
+                                "ipv6": {
+                                    "addresses": [
+                                        {
+                                            "address_family": "V6",
+                                            "ip": "::1",
+                                            "prefix_length": 128
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "config": {
+                        "enabled": true,
+                        "name": "eth0",
+                        "type": "IF_ETHERNET"
+                    },
+                    "oper_state": "UP",
+                    "subinterfaces": {
+                        "subinterface": [
+                            {
+                                "config": {
+                                    "enabled": true,
+                                    "admin_state": "UP",
+                                    "index": 0
+                                },
+                                "ipv4": {
+                                    "addresses": [
+                                        {
+                                            "dhcp_client": true
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            ]
+        },
+        "acls": {}
+    }
+}

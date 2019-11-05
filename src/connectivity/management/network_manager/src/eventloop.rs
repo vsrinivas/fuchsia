@@ -97,6 +97,12 @@ impl EventLoop {
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
+        if let Err(e) = self.device.load_config().await {
+            // TODO(cgibson): Kick off some sort of recovery process here: Prompt the user to
+            // download a recovery app, set a static IP on the first interface and set everything
+            // else down, restructure packet filter rules, etc.
+            error!("Failed to load a device config: {}", e);
+        }
         self.device.populate_state().await?;
 
         loop {

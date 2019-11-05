@@ -51,6 +51,20 @@ package("network_manager") {
       dest = "network_manager.cmx"
     },
   ]
+
+  # TODO(cgibson): Need to figure out an appropriate delivery mechanism
+  # for configuration file data. Since we are only running on Toulouse, we
+  # can do this for now.
+  resources = [
+    {
+      path = rebase_path("data/toulouse.json")
+      dest = "factory_config.json"
+    },
+    {
+      path = rebase_path("data/device_schema.json")
+      dest = "device_schema.json"
+    },
+  ]
 }
 
 test_package("network_manager_tests") {
