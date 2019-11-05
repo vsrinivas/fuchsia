@@ -182,8 +182,11 @@ macro_rules! assert_watcher_one_message_watched_events {
         assert!(bytes == *expected,
                 "Received buffer does not match the expectation.\n\
                  Expected: {:X?}\n\
-                 Received: {:X?}",
-                *expected, bytes);
+                 Received: {:X?}\n\
+                 Expected as UTF-8 lossy: {:?}\n\
+                 Received as UTF-8 lossy: {:?}",
+                *expected, bytes,
+                String::from_utf8_lossy(expected), String::from_utf8_lossy(&bytes));
     }};
 
     (@expand_event_type EXISTING) => { WATCH_EVENT_EXISTING };
