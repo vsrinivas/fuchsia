@@ -28,7 +28,7 @@ constexpr uint8_t sandwich4_case1_v1[] = {
 
     0x04, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
     0x00, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag (padding)
-    0x32, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.env.num_bytes
+    0x20, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.env.num_bytes
     0x00, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.env.num_handle
     0xff, 0xff, 0xff, 0xff,  // UnionSize36Alignment4.env.presence
     0xff, 0xff, 0xff, 0xff,  // UnionSize36Alignment4.env.presence [cont.]

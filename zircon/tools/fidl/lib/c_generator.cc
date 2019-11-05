@@ -1572,6 +1572,28 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     } else {
       file_ << kIndent << "// OPTIMIZED AWAY fidl_encode() of POD-only reply\n";
     }
+    if (method_info.response->typeshape.ContainsUnion()) {
+      file_ << kIndent << "if (fidl_global_get_should_write_union_as_xunion()) {\n";
+      file_ << kIndent << kIndent << "uint8_t* _transformer_dest = alloca("
+            << method_info.response->alt_typeshape.InlineSize() +
+                   method_info.response->alt_typeshape.MaxOutOfLine()
+            << ");\n";
+      file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &"
+            << method_info.response->coded_name
+            << ", _msg.bytes, _msg.num_bytes, _transformer_dest, &_msg.num_bytes, NULL);\n";
+      file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
+      if (hcount > 0) {
+        file_ << kIndent << kIndent << kIndent
+              << "zx_handle_close_many(_msg.handles, _msg.num_handles);\n";
+      }
+      file_ << kIndent << kIndent << kIndent << "return _status;\n";
+      file_ << kIndent << kIndent << "}\n";
+      file_ << kIndent << kIndent << "_msg.bytes = _transformer_dest;\n";
+      file_ << kIndent << kIndent
+            << "((fidl_message_header_t*)_msg.bytes)->flags[0] |= "
+               "FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;\n";
+      file_ << kIndent << "}\n";
+    }
     file_ << kIndent << "return _txn->reply(_txn, &_msg);\n";
     file_ << "}\n\n";
   }
@@ -1824,7 +1846,10 @@ std::ostringstream CGenerator::ProduceClient() {
 std::ostringstream CGenerator::ProduceServer() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/runtime_flag.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/transformer.h>");
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
+  EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");

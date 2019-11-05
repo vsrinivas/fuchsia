@@ -42,7 +42,8 @@ typedef uint32_t fidl_transformation_t;
 // Starting from the root of the encoded objects present in the |src_bytes|
 // buffer, this function traverses all objects and transforms them from one
 // wire format into another, placing the transformed encoded objects into the
-// |dst_bytes| buffer.
+// |dst_bytes| buffer. Both |src_bytes| and |dst_bytes| should be aligned to
+// FIDL_ALIGNMENT.
 //
 // Upon success, this function returns `ZX_OK` and records the total size
 // of bytes written to the |dst_bytes| buffer into |out_dst_num_bytes|.
