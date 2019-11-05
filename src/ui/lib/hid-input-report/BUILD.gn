@@ -14,8 +14,8 @@ source_set("hid-input-report") {
     "touch.cc",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//zircon/public/lib/hid-parser",
-    "//zircon/system/fidl/fuchsia-input-report:llcpp",
   ]
 }
 
@@ -33,10 +33,10 @@ test("lib-hid-input-report-test") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-input-report:llcpp",
   ]
 }
 
