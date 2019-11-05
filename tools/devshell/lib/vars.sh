@@ -53,7 +53,11 @@ function fx-symbolize {
   "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
     "${idstxt[@]}" \
     -build-id-dir "$prebuilt_build_ids_dir" -build-id-dir "$toolchain_dir" \
-    -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
+    -build-id-dir "$out_dir" -build-id-dir "$zircon_dir" \
+    -symbol-cache $HOME/.build-id-cache \
+    -symbol-server fuchsia-infra-debug-symbols \
+    -symbol-server fuchsia-debug-symbols-shortlived \
+    -symbol-server fuchsia-debug-symbols-shortlived-internal
 }
 
 function fx-gn {
