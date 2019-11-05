@@ -103,7 +103,6 @@ impl ClientRejection {
 // TODO(37891): Implement PS-Poll support.
 // TODO(37891): Implement inactivity timeout.
 // TODO(37891): Implement action frame handling.
-// TODO(37891): Implement either handling MLME-SETKEYS.request or just do it in the SME.
 #[allow(dead_code)]
 impl RemoteClient {
     pub fn new(addr: MacAddr) -> Self {
@@ -303,18 +302,6 @@ impl RemoteClient {
 
         ctx.send_eapol_frame(self.addr, src_addr, false, data)
             .map_err(ClientRejection::WlanSendError)
-    }
-
-    /// Handles MLME-SETKEYS.request (IEEE Std 802.11-2016, 6.3.19.1) from the SME.
-    ///
-    /// The MLME should set the keys on the PHY.
-    pub fn handle_mlme_setkeys_request(
-        &mut self,
-        _ctx: &mut Context,
-        _keylist: &[fidl_mlme::SetKeyDescriptor],
-    ) -> Result<(), ClientRejection> {
-        // TODO(37891): This should be removed from the MLME and handled in the SME.
-        unimplemented!();
     }
 
     // WLAN frame handlers.

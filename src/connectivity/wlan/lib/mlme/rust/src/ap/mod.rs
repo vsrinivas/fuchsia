@@ -10,6 +10,7 @@ use {
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         error::Error,
+        key::KeyConfig,
         write_eth_frame,
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -593,6 +594,22 @@ impl Ap {
         Ok(())
     }
 
+    /// Handles MLME-SETKEYS.request (IEEE Std 802.11-2016, 6.3.19.1) from the SME.
+    ///
+    /// The MLME should set the keys on the PHY.
+    pub fn handle_mlme_setkeys_request(
+        &mut self,
+        keylist: &[fidl_mlme::SetKeyDescriptor],
+    ) -> Result<(), Rejection> {
+        for key_desc in keylist {
+            self.ctx
+                .device
+                .set_key(KeyConfig::from(key_desc))
+                .map_err(|e| Rejection::Error(e.into()))?;
+        }
+        Ok(())
+    }
+
     fn on_eth_frame(&mut self, dst_addr: MacAddr, src_addr: MacAddr, ether_type: u16, body: &[u8]) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
@@ -652,7 +669,11 @@ impl Ap {
 mod tests {
     use {
         super::*,
-        crate::{buffer::FakeBufferProvider, device::FakeDevice},
+        crate::{
+            buffer::FakeBufferProvider,
+            device::FakeDevice,
+            key::{KeyType, Protection},
+        },
         wlan_common::assert_variant,
     };
     const CLIENT_ADDR: MacAddr = [1u8; 6];
@@ -1682,5 +1703,42 @@ mod tests {
         let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
         ap.handle_mlme_start_req(b"coolnet".to_vec()).expect("expected OK");
         ap.on_mac_frame(&[0][..], false);
+    }
+
+    #[test]
+    fn ap_handle_mlme_setkeys_request() {
+        let mut fake_device = FakeDevice::new();
+        let mut ap = Ap::new(fake_device.as_device(), FakeBufferProvider::new(), BSSID);
+        ap.handle_mlme_setkeys_request(
+            &[fidl_mlme::SetKeyDescriptor {
+                cipher_suite_oui: [1, 2, 3],
+                cipher_suite_type: 4,
+                key_type: fidl_mlme::KeyType::Pairwise,
+                address: [5; 6],
+                key_id: 6,
+                key: vec![1, 2, 3, 4, 5, 6, 7],
+                rsc: 8,
+            }][..],
+        )
+        .expect("expected Ap::handle_mlme_setkeys_request OK");
+        assert_eq!(fake_device.keys.len(), 1);
+        assert_eq!(
+            fake_device.keys[0],
+            KeyConfig {
+                bssid: 0,
+                protection: Protection::RX_TX,
+                cipher_oui: [1, 2, 3],
+                cipher_type: 4,
+                key_type: KeyType::PAIRWISE,
+                peer_addr: [5; 6],
+                key_idx: 6,
+                key_len: 7,
+                key: [
+                    1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                ],
+                rsc: 8,
+            }
+        );
     }
 }
