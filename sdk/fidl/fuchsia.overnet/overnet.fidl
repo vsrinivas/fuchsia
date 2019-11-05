@@ -16,7 +16,7 @@ protocol ServiceConsumer {
     /// If this list has not been updated since the last call to this method, it waits until
     /// new data is available.
     /// Concurrent calls to ListPeers will result in channel closure.
-    ListPeers() -> (vector<Peer> peers);
+    ListPeers() -> (vector<Peer>:MAX peers);
     /// Connect `chan` to some external service on `node` with name `service_name`.
     ConnectToService(fuchsia.overnet.protocol.NodeId node,
                      string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH service_name,
