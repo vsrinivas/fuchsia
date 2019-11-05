@@ -23,7 +23,7 @@ const fidl_type_t test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::Fid
 
 
 static const ::fidl::FidlUnionField Fields15test_name_Union[] = {
-    ::fidl::FidlUnionField(nullptr, 0u, 1868605377u)
+    ::fidl::FidlUnionField(nullptr, 0u, 1u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* test_name_UnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields15test_name_Union, 1u, 4u, 8u, "test.name/Union", test_name_UnionAltTypePointerTable()));
@@ -56,7 +56,7 @@ const fidl_type_t v1_test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::
 
 
 static const ::fidl::FidlUnionField Fields18v1_test_name_Union[] = {
-    ::fidl::FidlUnionField(nullptr, 4u, 1868605377u)
+    ::fidl::FidlUnionField(nullptr, 4u, 1u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_UnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields18v1_test_name_Union, 1u, 8u, 24u, "test.name/Union", v1_test_name_UnionAltTypePointerTable()));

@@ -83,7 +83,7 @@ const (
 
 type UnionSize8Alignment4 struct {
 	I_unionSize8Alignment4Tag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant uint32  `fidl:"551421578"`
+	Variant uint32  `fidl:"1"`
 }
 
 func (u *UnionSize8Alignment4) Which() I_unionSize8Alignment4Tag {
@@ -109,7 +109,7 @@ const (
 
 type UnionSize12Alignment4 struct {
 	I_unionSize12Alignment4Tag `fidl:"u,12,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant [6]uint8  `fidl:"1305904317"`
+	Variant [6]uint8  `fidl:"1"`
 }
 
 func (u *UnionSize12Alignment4) Which() I_unionSize12Alignment4Tag {
@@ -135,7 +135,7 @@ const (
 
 type UnionSize24Alignment8 struct {
 	I_unionSize24Alignment8Tag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant StructSize16Alignment8  `fidl:"711125680"`
+	Variant StructSize16Alignment8  `fidl:"1"`
 }
 
 func (u *UnionSize24Alignment8) Which() I_unionSize24Alignment8Tag {
@@ -161,7 +161,7 @@ const (
 
 type UnionSize36Alignment4 struct {
 	I_unionSize36Alignment4Tag `fidl:"u,36,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant [32]uint8  `fidl:"1000405696"`
+	Variant [32]uint8  `fidl:"1"`
 }
 
 func (u *UnionSize36Alignment4) Which() I_unionSize36Alignment4Tag {

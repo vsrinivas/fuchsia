@@ -699,7 +699,8 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld), error_reporter)) {
+    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld),
+                  error_reporter)) {
       std::string message("member '");
       message.append(member.name.data());
       message.append("' is not simple");
@@ -1756,6 +1757,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   assert(!union_declaration->members.empty() && "unions must have at least one member");
   bool are_ordinals_explicit = union_declaration->members[0]->maybe_ordinal != nullptr;
   std::vector<Union::Member> members;
+  uint32_t current_xunion_ordinal = 1;
   for (auto& member : union_declaration->members) {
     auto xunion_ordinal = std::move(member->maybe_ordinal);
 
@@ -1766,8 +1768,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
     if (member->maybe_used) {
       if (!xunion_ordinal) {
-        xunion_ordinal = std::make_unique<raw::Ordinal32>(
-            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+        xunion_ordinal =
+            std::make_unique<raw::Ordinal32>(raw::Ordinal32(*member, current_xunion_ordinal++));
       }
       auto location = member->maybe_used->identifier->location();
       std::unique_ptr<TypeConstructor> type_ctor;

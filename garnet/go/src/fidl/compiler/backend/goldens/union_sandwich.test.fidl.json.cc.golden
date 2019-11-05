@@ -98,7 +98,7 @@ void UnionSize8Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Unio
 
 
 switch (ordinal) {
-    case 551421578: {
+    case 1: {
       uint32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_variant(std::move(_member));
@@ -264,7 +264,7 @@ void UnionSize36Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Uni
 
 
 switch (ordinal) {
-    case 1000405696: {
+    case 1: {
       ::std::array<uint8_t, 32> _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_variant(std::move(_member));
@@ -430,7 +430,7 @@ void UnionSize12Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Uni
 
 
 switch (ordinal) {
-    case 1305904317: {
+    case 1: {
       ::std::array<uint8_t, 6> _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_variant(std::move(_member));
@@ -630,7 +630,7 @@ void UnionSize24Alignment8::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Uni
 
 
 switch (ordinal) {
-    case 711125680: {
+    case 1: {
       StructSize16Alignment8 _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_variant(std::move(_member));

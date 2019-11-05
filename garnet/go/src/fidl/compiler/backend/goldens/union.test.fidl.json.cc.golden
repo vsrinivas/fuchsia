@@ -127,19 +127,19 @@ void Union::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size
 
 
 switch (ordinal) {
-    case 910042901: {
+    case 1: {
       int32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_Primitive(std::move(_member));
       break;
     }
-    case 891204917: {
+    case 2: {
       ::std::string _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_StringNeedsConstructor(std::move(_member));
       break;
     }
-    case 1452916587: {
+    case 3: {
       ::std::vector<::std::string> _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_VectorStringAlsoNeedsConstructor(std::move(_member));
@@ -290,7 +290,7 @@ void FieldCollision::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, FieldColli
 
 
 switch (ordinal) {
-    case 1574011787: {
+    case 1: {
       int32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_field_collision_tag(std::move(_member));

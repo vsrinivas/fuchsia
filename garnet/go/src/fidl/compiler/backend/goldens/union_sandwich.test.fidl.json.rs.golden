@@ -31,7 +31,7 @@ fidl_union! {
     Variant {
       ty: u32,
       offset: 4,
-      xunion_ordinal: 551421578,
+      xunion_ordinal: 1,
     },
   ],
   size: 8,
@@ -45,7 +45,7 @@ fidl_union! {
     Variant {
       ty: [u8; 6],
       offset: 4,
-      xunion_ordinal: 1305904317,
+      xunion_ordinal: 1,
     },
   ],
   size: 12,
@@ -59,7 +59,7 @@ fidl_union! {
     Variant {
       ty: StructSize16Alignment8,
       offset: 8,
-      xunion_ordinal: 711125680,
+      xunion_ordinal: 1,
     },
   ],
   size: 24,
@@ -73,7 +73,7 @@ fidl_union! {
     Variant {
       ty: [u8; 32],
       offset: 4,
-      xunion_ordinal: 1000405696,
+      xunion_ordinal: 1,
     },
   ],
   size: 36,

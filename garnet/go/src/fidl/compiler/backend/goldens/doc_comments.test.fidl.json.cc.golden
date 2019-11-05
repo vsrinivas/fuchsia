@@ -97,7 +97,7 @@ void Union::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size
 
 
 switch (ordinal) {
-    case 1868605377: {
+    case 1: {
       int32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_Field(std::move(_member));

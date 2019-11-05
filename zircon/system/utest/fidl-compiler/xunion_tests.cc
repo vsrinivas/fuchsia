@@ -223,14 +223,14 @@ xunion Foo {};
   END_TEST;
 }
 
-bool union_xunion_same_ordinals_hashed() {
+bool union_xunion_same_ordinals_implicit() {
   BEGIN_TEST;
 
   TestLibrary xunion_library(R"FIDL(
 library example;
 
 xunion Foo {
-  int8 bar;
+  1: int8 bar;
 };
 
 )FIDL");
@@ -354,7 +354,7 @@ RUN_TEST(compiling)
 RUN_TEST(no_directly_recursive_xunions)
 RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals_explicit)
-RUN_TEST(union_xunion_same_ordinals_hashed)
+RUN_TEST(union_xunion_same_ordinals_implicit)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_nullable_members_in_unions)
 RUN_TEST(no_nullable_members_in_xunions)

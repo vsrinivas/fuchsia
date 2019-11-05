@@ -49,7 +49,7 @@ class Union final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kField = 1868605377,  // 0x6f60a7c1
+    kField = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }

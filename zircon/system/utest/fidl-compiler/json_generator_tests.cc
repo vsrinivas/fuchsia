@@ -1100,7 +1100,7 @@ union ExplicitPizzaOrPasta {
       },
       "members": [
         {
-          "xunion_ordinal": 1190453503,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
           "type": {
@@ -1119,7 +1119,7 @@ union ExplicitPizzaOrPasta {
           "offset": 8
         },
         {
-          "xunion_ordinal": 1864396309,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "pasta",
           "type": {
@@ -5483,7 +5483,7 @@ xunion ExampleXUnion {
       ],
       "members": [
         {
-          "xunion_ordinal": 1629839502,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {

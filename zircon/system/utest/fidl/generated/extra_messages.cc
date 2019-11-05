@@ -182,9 +182,9 @@ constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_SampleXU
 const fidl_type_t fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_coding_SampleXUnionStruct, 1u, 24u, "fidl.test.coding/SampleXUnionStruct", fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields28fidl_test_coding_SampleUnion[] = {
-    ::fidl::FidlUnionField(&fidl_test_coding_IntStructTable, 8u, 594949450u),
-    ::fidl::FidlUnionField(&fidl_test_coding_SimpleTableTable, 0u, 967174230u),
-    ::fidl::FidlUnionField(nullptr, 12u, 830262754u)
+    ::fidl::FidlUnionField(&fidl_test_coding_IntStructTable, 8u, 1u),
+    ::fidl::FidlUnionField(&fidl_test_coding_SimpleTableTable, 0u, 2u),
+    ::fidl::FidlUnionField(nullptr, 12u, 3u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* fidl_test_coding_SampleUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t fidl_test_coding_SampleUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields28fidl_test_coding_SampleUnion, 3u, 8u, 24u, "fidl.test.coding/SampleUnion", fidl_test_coding_SampleUnionAltTypePointerTable()));
@@ -458,9 +458,9 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Sampl
 const fidl_type_t v1_fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_coding_SampleXUnionStruct, 1u, 24u, "fidl.test.coding/SampleXUnionStruct", v1_fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields31v1_fidl_test_coding_SampleUnion[] = {
-    ::fidl::FidlUnionField(&v1_fidl_test_coding_IntStructTable, 0u, 594949450u),
-    ::fidl::FidlUnionField(&v1_fidl_test_coding_SimpleTableTable, 0u, 967174230u),
-    ::fidl::FidlUnionField(nullptr, 4u, 830262754u)
+    ::fidl::FidlUnionField(&v1_fidl_test_coding_IntStructTable, 0u, 1u),
+    ::fidl::FidlUnionField(&v1_fidl_test_coding_SimpleTableTable, 0u, 2u),
+    ::fidl::FidlUnionField(nullptr, 4u, 3u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_fidl_test_coding_SampleUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_fidl_test_coding_SampleUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields31v1_fidl_test_coding_SampleUnion, 3u, 8u, 24u, "fidl.test.coding/SampleUnion", v1_fidl_test_coding_SampleUnionAltTypePointerTable()));

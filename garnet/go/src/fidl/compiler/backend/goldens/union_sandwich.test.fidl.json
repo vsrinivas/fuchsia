@@ -660,7 +660,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 551421578,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -722,7 +722,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1305904317,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -788,7 +788,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 711125680,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -851,7 +851,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1000405696,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {

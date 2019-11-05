@@ -33,7 +33,7 @@ class UnionSize8Alignment4 final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kVariant = 551421578,  // 0x20de068a
+    kVariant = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<UnionSize8Alignment4> New() { return ::std::make_unique<UnionSize8Alignment4>(); }
@@ -125,7 +125,7 @@ class UnionSize36Alignment4 final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kVariant = 1000405696,  // 0x3ba0fac0
+    kVariant = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<UnionSize36Alignment4> New() { return ::std::make_unique<UnionSize36Alignment4>(); }
@@ -217,7 +217,7 @@ class UnionSize12Alignment4 final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kVariant = 1305904317,  // 0x4dd684bd
+    kVariant = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<UnionSize12Alignment4> New() { return ::std::make_unique<UnionSize12Alignment4>(); }
@@ -332,7 +332,7 @@ class UnionSize24Alignment8 final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kVariant = 711125680,  // 0x2a62eab0
+    kVariant = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<UnionSize24Alignment8> New() { return ::std::make_unique<UnionSize24Alignment8>(); }

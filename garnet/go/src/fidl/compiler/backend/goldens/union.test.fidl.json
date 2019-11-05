@@ -19,7 +19,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 910042901,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
           "type": {
@@ -37,7 +37,7 @@
           "offset": 8
         },
         {
-          "xunion_ordinal": 891204917,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
@@ -55,7 +55,7 @@
           "offset": 8
         },
         {
-          "xunion_ordinal": 1452916587,
+          "xunion_ordinal": 3,
           "reserved": false,
           "name": "VectorStringAlsoNeedsConstructor",
           "type": {
@@ -121,7 +121,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1574011787,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "field_collision_tag",
           "type": {

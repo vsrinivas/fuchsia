@@ -28,9 +28,9 @@ class Union final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kPrimitive = 910042901,  // 0x363e2715
-    kStringNeedsConstructor = 891204917,  // 0x351eb535
-    kVectorStringAlsoNeedsConstructor = 1452916587,  // 0x5699bf6b
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 2,  // 0x2
+    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
@@ -123,7 +123,7 @@ class FieldCollision final {
   };
 
   enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
-    kFieldCollisionTag = 1574011787,  // 0x5dd1838b
+    kFieldCollisionTag = 1,  // 0x1
   };
 
   static inline ::std::unique_ptr<FieldCollision> New() { return ::std::make_unique<FieldCollision>(); }

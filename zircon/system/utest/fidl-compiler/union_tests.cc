@@ -31,9 +31,9 @@ union Foo {
   ASSERT_NONNULL(fidl_union);
 
   ASSERT_EQ(fidl_union->members.size(), 2);
-  // check that the xunion ordinals are some hashed value
-  EXPECT_EQ(fidl_union->members[0].xunion_ordinal->value, 1016940722);
-  EXPECT_EQ(fidl_union->members[1].xunion_ordinal->value, 28469731);
+  // check that the xunion ordinals are implicitly numbered from 1
+  EXPECT_EQ(fidl_union->members[0].xunion_ordinal->value, 1);
+  EXPECT_EQ(fidl_union->members[1].xunion_ordinal->value, 2);
 
   END_TEST;
 }

@@ -36,7 +36,7 @@ fidl_union! {
     Field {
       ty: i32,
       offset: 4,
-      xunion_ordinal: 1868605377,
+      xunion_ordinal: 1,
     },
   ],
   size: 8,
