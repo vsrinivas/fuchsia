@@ -15,10 +15,7 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::{error, info, log},
-    std::{
-        collections::{hash_map, HashMap},
-        fmt,
-    },
+    std::{collections::HashMap, fmt},
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
@@ -217,31 +214,30 @@ impl InfraBss {
 
         let client_addr = mgmt_hdr.addr2;
 
-        let (client, is_new) = match self.clients.entry(client_addr) {
-            hash_map::Entry::Occupied(e) => (e.into_mut(), false),
-
-            // If the client is not yet known, and the client is attempting authentication, we can
-            // register them (and also report that they're a new client).
-            hash_map::Entry::Vacant(e) => {
-                if mgmt_subtype != mac::MgmtSubtype::AUTH {
-                    return Err(Rejection::NoSuchClient(client_addr));
-                }
-                (e.insert(RemoteClient::new(client_addr.clone())), true)
-            }
+        // We might allocate a client into the Option if there is none present in the map. We do not
+        // allocate directly into the map as we do not know yet if the client will even be added
+        // (e.g. if the frame being handled is bogus, or the client did not even authenticate).
+        let mut new_client = None;
+        let client = match self.clients.get_mut(&client_addr) {
+            Some(client) => client,
+            None => new_client.get_or_insert(RemoteClient::new(client_addr)),
         };
 
         if let Err(e) = client.handle_mgmt_frame(ctx, Some(self.ssid.clone()), mgmt_hdr, body) {
-            // If the client is new and we failed to handle a management frame for it, the SME would
-            // never have been informed of it, so we need to forget it here.
-            if is_new {
-                self.clients.remove(&client_addr);
-            }
             return Err(Rejection::Client(client_addr, e));
         }
 
-        // The client may have been deauthenticated if a deauthenticate frame was received.
         if client.deauthenticated() {
-            self.clients.remove(&client_addr);
+            if new_client.is_none() {
+                // The client needs to be removed from the map, as it was not freshly allocated from
+                // handling this frame.
+                self.clients.remove(&client_addr);
+            }
+        } else {
+            // The client was successfully authenticated! Remember it here.
+            if let Some(client) = new_client.take() {
+                self.clients.insert(client_addr, client);
+            }
         }
 
         Ok(())
@@ -271,8 +267,13 @@ impl InfraBss {
 
         let src_addr = mac::data_src_addr(&fixed_fields, addr4).ok_or(Rejection::NoSrcAddr)?;
 
-        let client = self.clients.get_mut(&src_addr).ok_or(Rejection::NoSuchClient(src_addr))?;
-
+        // Handle the frame, pretending that the client is an unauthenticated client if we don't
+        // know about it.
+        let mut maybe_client = None;
+        let client = self
+            .clients
+            .get_mut(&src_addr)
+            .unwrap_or_else(|| maybe_client.get_or_insert(RemoteClient::new(src_addr)));
         client
             .handle_data_frame(ctx, fixed_fields, addr4, qos_ctrl, body)
             .map_err(|e| Rejection::Client(client.addr, e))
@@ -286,8 +287,13 @@ impl InfraBss {
         ether_type: u16,
         body: &[u8],
     ) -> Result<(), Rejection> {
-        let client = self.clients.get_mut(&dst_addr).ok_or(Rejection::NoSuchClient(dst_addr))?;
-
+        // Handle the frame, pretending that the client is an unauthenticated client if we don't
+        // know about it.
+        let mut maybe_client = None;
+        let client = self
+            .clients
+            .get_mut(&dst_addr)
+            .unwrap_or_else(|| maybe_client.get_or_insert(RemoteClient::new(dst_addr)));
         client
             .handle_eth_frame(ctx, dst_addr, src_addr, ether_type, body)
             .map_err(|e| Rejection::Client(client.addr, e))
@@ -1244,7 +1250,7 @@ mod tests {
                 ][..],
             )
             .expect_err("expected error"),
-            Rejection::NoSuchClient(..)
+            Rejection::Client(_, ClientRejection::NotPermitted)
         );
 
         assert_eq!(bss.clients.contains_key(&CLIENT_ADDR), false);
@@ -1408,10 +1414,26 @@ mod tests {
                 ][..],
             )
             .expect_err("expected error"),
-            Rejection::NoSuchClient(..)
+            Rejection::Client(_, ClientRejection::NotPermitted)
         );
 
         assert_eq!(fake_device.eth_queue.len(), 0);
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            fake_device.wlan_queue[0].0,
+            &[
+                // Mgmt header
+                0b11000000, 0b00000000, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                7, 0, // reason code
+            ][..]
+        );
     }
 
     #[test]
@@ -1428,6 +1450,8 @@ mod tests {
         client
             .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
             .expect("expected OK");
+
+        fake_device.wlan_queue.clear();
 
         assert_variant!(
             bss.handle_data_frame(
@@ -1457,6 +1481,22 @@ mod tests {
         );
 
         assert_eq!(fake_device.eth_queue.len(), 0);
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            fake_device.wlan_queue[0].0,
+            &[
+                // Mgmt header
+                0b10100000, 0b00000000, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x20, 0, // Sequence Control
+                // Disassoc header:
+                7, 0, // reason code
+            ][..]
+        );
     }
 
     #[test]
@@ -1503,6 +1543,21 @@ mod tests {
                 1, 2, 3, 4, 5,
             ][..]
         );
+    }
+
+    #[test]
+    fn bss_handle_eth_frame_no_client() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        assert_variant!(
+            bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
+                .expect_err("expected error"),
+            Rejection::Client(_, ClientRejection::NotAssociated)
+        );
+
+        assert_eq!(fake_device.wlan_queue.len(), 0);
     }
 
     #[test]

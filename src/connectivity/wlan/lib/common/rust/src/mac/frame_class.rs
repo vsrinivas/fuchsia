@@ -5,7 +5,7 @@
 use {crate::mac, zerocopy::ByteSlice};
 
 /// IEEE Std 802.11-2016, 11.3.3
-#[derive(PartialOrd, PartialEq, Debug, Ord, Eq)]
+#[derive(Copy, Clone, PartialOrd, PartialEq, Debug, Ord, Eq)]
 pub enum FrameClass {
     Class1 = 1,
     Class2 = 2,

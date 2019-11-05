@@ -15,8 +15,15 @@ use {
 /// SME: we only use these states to determine when packets can be sent and received.
 #[derive(Debug, PartialEq)]
 enum State {
+    /// An unknown client is initially placed in the |Authenticating| state. A client may remain in
+    /// this state until an MLME-AUTHENTICATE.indication is received, at which point it may either
+    /// move to Authenticated or Deauthenticated.
     Authenticating,
+
+    /// The client has successfully authenticated.
     Authenticated,
+
+    /// The client has successfully associated.
     Associated {
         /// The EAPoL controlled port can be in three states:
         /// - Some(Closed): The EAPoL controlled port is closed. Only unprotected EAPoL frames can
@@ -28,7 +35,8 @@ enum State {
         eapol_controlled_port: Option<fidl_mlme::ControlledPortState>,
     },
 
-    // This is a terminal state indicating the client cannot progress any further.
+    /// This is a terminal state indicating the client cannot progress any further, and should be
+    /// forgotten from the MLME state.
     Deauthenticated,
 }
 
@@ -421,6 +429,40 @@ impl RemoteClient {
             .map_err(ClientRejection::EthSendError)
     }
 
+    /// Checks if a given frame class is permitted, and sends an appropriate deauthentication or
+    /// disassociation frame if it is not.
+    ///
+    /// If a frame is sent, the client's state is not in sync with the AP's, e.g. the AP may have
+    /// been restarted and the client needs to reset its state.
+    fn reject_frame_class_if_not_permitted(
+        &self,
+        ctx: &mut Context,
+        frame_class: FrameClass,
+    ) -> Result<(), ClientRejection> {
+        if self.is_frame_class_permitted(frame_class) {
+            return Ok(());
+        }
+
+        let reason_code = match frame_class {
+            FrameClass::Class1 => panic!("class 1 frames should always be permitted"),
+            FrameClass::Class2 => ReasonCode::INVALID_CLASS2FRAME,
+            FrameClass::Class3 => ReasonCode::INVALID_CLASS3FRAME,
+        };
+
+        match self.state {
+            State::Deauthenticated | State::Authenticating => {
+                ctx.send_deauth_frame(self.addr, reason_code)
+            }
+            State::Authenticated => ctx.send_disassoc_frame(self.addr, reason_code),
+            State::Associated { .. } => {
+                panic!("all frames should be permitted for an associated client")
+            }
+        }
+        .map_err(ClientRejection::WlanSendError)?;
+
+        return Err(ClientRejection::NotPermitted);
+    }
+
     // Public handler functions.
 
     /// Handles management frames (IEEE Std 802.11-2016, 9.3.3) from the PHY.
@@ -433,9 +475,7 @@ impl RemoteClient {
     ) -> Result<(), ClientRejection> {
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
 
-        if !self.is_frame_class_permitted(mac::frame_class(&{ mgmt_hdr.frame_ctrl })) {
-            return Err(ClientRejection::NotPermitted);
-        }
+        self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ mgmt_hdr.frame_ctrl }))?;
 
         match mac::MgmtBody::parse(mgmt_subtype, body).ok_or(ClientRejection::ParseFailed)? {
             mac::MgmtBody::Authentication { auth_hdr, .. } => {
@@ -469,9 +509,7 @@ impl RemoteClient {
         qos_ctrl: Option<mac::QosControl>,
         body: B,
     ) -> Result<(), ClientRejection> {
-        if !self.is_frame_class_permitted(mac::frame_class(&{ fixed_data_fields.frame_ctrl })) {
-            return Err(ClientRejection::NotPermitted);
-        }
+        self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ fixed_data_fields.frame_ctrl }))?;
 
         for msdu in
             mac::MsduIterator::from_data_frame_parts(fixed_data_fields, addr4, qos_ctrl, body)
@@ -1140,6 +1178,22 @@ mod tests {
                 .expect_err("expected err"),
             ClientRejection::NotPermitted
         );
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            fake_device.wlan_queue[0].0,
+            &[
+                // Mgmt header
+                0b11000000, 0b00000000, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                6, 0, // reason code
+            ][..]
+        );
     }
 
     #[test]
@@ -1276,6 +1330,22 @@ mod tests {
                 )
                 .expect_err("expected error"),
             ClientRejection::NotPermitted
+        );
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            fake_device.wlan_queue[0].0,
+            &[
+                // Mgmt header
+                0b11000000, 0b00000000, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                6, 0, // reason code
+            ][..]
         );
     }
 
