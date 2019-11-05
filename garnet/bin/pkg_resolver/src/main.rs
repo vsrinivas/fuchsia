@@ -9,7 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect as inspect,
+    fuchsia_inspect::{self as inspect, Property, StringProperty},
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
@@ -55,6 +55,24 @@ const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
 
 const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
+struct ChannelInspectState {
+    channel_name: StringProperty,
+    tuf_config_name: StringProperty,
+    _node: inspect::Node,
+}
+
+impl ChannelInspectState {
+    fn new(node: inspect::Node) -> Self {
+        Self {
+            channel_name: node
+                .create_string("channel_name", format!("{:?}", Option::<String>::None)),
+            tuf_config_name: node
+                .create_string("tuf_config_name", format!("{:?}", Option::<String>::None)),
+            _node: node,
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
     fx_log_info!("starting package resolver");
@@ -73,6 +91,9 @@ fn main() -> Result<(), Error> {
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
     let experiment_inspect_node = inspector.root().create_child("experiments");
 
+    let main_inspect_node = inspector.root().create_child("main");
+    let channel_inspect_state = ChannelInspectState::new(main_inspect_node.create_child("channel"));
+
     let amber_connector = AmberConnector::new();
 
     let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
@@ -85,6 +106,7 @@ fn main() -> Result<(), Error> {
         rewrite_inspect_node,
         &repo_manager.read(),
         &config,
+        &channel_inspect_state,
     )));
 
     let mut futures = FuturesUnordered::new();
@@ -141,7 +163,7 @@ fn main() -> Result<(), Error> {
                 let mut repo_service = RepositoryService::new(repo_manager);
                 repo_service.run(stream).await
             }
-                .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
+            .unwrap_or_else(|e| fx_log_err!("error encountered: {:?}", e)),
         )
     };
 
@@ -224,6 +246,7 @@ fn load_rewrite_manager(
     node: inspect::Node,
     repo_manager: &RepositoryManager<AmberConnector>,
     config: &Config,
+    channel_inspect_state: &ChannelInspectState,
 ) -> RewriteManager {
     let dynamic_rules_path =
         if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_RULES_PATH) };
@@ -268,7 +291,15 @@ fn load_rewrite_manager(
     fx_log_info!("channel repo is {}", repo.repo_url());
 
     match fuchsia_url_rewrite::Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/") {
-        Ok(rule) => builder.replace_dynamic_rules(vec![rule]).build(),
+        Ok(rule) => {
+            channel_inspect_state
+                .channel_name
+                .set(format!("{:?}", Some(channel.channel_name())).as_str());
+            channel_inspect_state
+                .tuf_config_name
+                .set(format!("{:?}", Some(channel.tuf_config_name())).as_str());
+            builder.replace_dynamic_rules(vec![rule]).build()
+        }
         Err(err) => {
             fx_log_err!(
                 "failed to make rewrite rule for {}, using defaults: {}",

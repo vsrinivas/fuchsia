@@ -34,6 +34,7 @@ use {
 
 mod dynamic_repositories_disabled;
 mod dynamic_rewrite_disabled;
+mod inspect;
 mod mock_filesystem;
 mod resolve_propagates_pkgfs_failure;
 mod resolve_recovers_from_http_errors;
@@ -131,6 +132,7 @@ struct TestEnv<P = TestPkgFs> {
     apps: Apps,
     proxies: Proxies,
     _mounts: Mounts,
+    nested_environment_label: String,
 }
 
 impl TestEnv<TestPkgFs> {
@@ -199,8 +201,11 @@ impl<P: PkgFs> TestEnv<P> {
                 pkg_resolver.directory_request().unwrap().clone(),
             );
 
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        let environment_label = format!("pkg-resolver-env_{}", hex::encode(&salt));
         let env = fs
-            .create_salted_nested_environment("pkg-resolver-env")
+            .create_nested_environment(&environment_label)
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
@@ -231,6 +236,7 @@ impl<P: PkgFs> TestEnv<P> {
                 rewrite_engine: rewrite_engine_proxy,
             },
             _mounts: mounts,
+            nested_environment_label: environment_label,
         }
     }
 
