@@ -684,26 +684,28 @@ using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 
 // Reformat the partition using a number of slices and verify that there are as many slices as
 // originally pre-allocated.
-TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
-  mkfs_options_t options = default_mkfs_options;
-  size_t base_slices = 0;
-  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync,
-                 &default_mkfs_options));
-  fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
-  ASSERT_TRUE(partition_fd);
-  fzl::UnownedFdioCaller caller(partition_fd.get());
-  ASSERT_NO_FATAL_FAILURES(
-      GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
-  options.fvm_data_slices += 10;
-
-  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
-  size_t allocated_slices = 0;
-  ASSERT_NO_FATAL_FAILURES(
-      GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &allocated_slices));
-  EXPECT_GE(allocated_slices, base_slices + 10);
-
-  disk_format_t actual_format = detect_disk_format(partition_fd.get());
-  ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
-}
+//
+// FIXME(fxb/39457): re-enable when de-flaked
+// TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
+//   mkfs_options_t options = default_mkfs_options;
+//   size_t base_slices = 0;
+//   ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync,
+//                  &default_mkfs_options));
+//   fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
+//   ASSERT_TRUE(partition_fd);
+//   fzl::UnownedFdioCaller caller(partition_fd.get());
+//   ASSERT_NO_FATAL_FAILURES(
+//       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
+//   options.fvm_data_slices += 10;
+// 
+//   ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
+//   size_t allocated_slices = 0;
+//   ASSERT_NO_FATAL_FAILURES(
+//       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &allocated_slices));
+//   EXPECT_GE(allocated_slices, base_slices + 10);
+// 
+//   disk_format_t actual_format = detect_disk_format(partition_fd.get());
+//   ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
+// }
 
 }  // namespace
