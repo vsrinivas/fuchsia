@@ -184,7 +184,7 @@ class SnapshotTaker {
         auto gltf_translation = Value(kArrayType);
         gltf_translation.PushBack(translation->x(), allocator);
         gltf_translation.PushBack(translation->y(), allocator);
-        gltf_translation.PushBack(translation->z(), allocator);
+        gltf_translation.PushBack(-translation->z(), allocator);
         gltf_node.AddMember("translation", gltf_translation, allocator);
       }
 
