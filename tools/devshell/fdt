@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# In the common case (with no command line arguments) fdt will be run from the
+# Fuchsia prebuilts downloaded by JIRI.
+
+if [[ $# == 0 ]]; then
+  # Use prebuilt version.
+  system_monitor="$FUCHSIA_DIR/prebuilt/gui_tools/system_monitor/linux/system_monitor"
+  if [[ ! -x "$system_monitor" ]]; then
+    cat << end
+To use fdt, JIRI should download it. Please run the following commands:
+ jiri init -fetch-optional=fuchsia_devtools && jiri fetch-packages --local-manifest=true
+end
+    exit 1;
+  fi
+  # Maybe add ` > /dev/null 2>&1 &` in the future.
+  exec "$system_monitor"
+fi
+
+# If a specific version of FDT is requested, it can be downloaded directly.
+# Check that the fuchsia_devtools are downloaded and then run it.
+# If the version is already downloaded, it will not be re-downloaded.
+
+# Using "latest" or a CIPD hash.
+version="$1"
+shift
+
+# The "XXXXXX" will be replaced with a unique value.
+temp_file=$(mktemp /tmp/fuchsia_devtools_cipd_XXXXXX.ensure)
+
+cat << end > "$temp_file"
+\$ServiceURL https://chrome-infra-packages.appspot.com/
+
+fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $version
+end
+
+if [[ -z "$FUCHSIA_DIR" ]]; then
+  echo "Please define a FUCHSIA_DIR."
+  exit 1
+fi
+
+dev_tools="$FUCHSIA_DIR/prebuilt/gui_tools/test_fuchsia_devtools"
+cipd ensure -ensure-file "$temp_file" -root "$dev_tools"
+if ! `cipd ensure -ensure-file "$temp_file" -root "$dev_tools"`; then
+  rm "$temp_file"
+  echo "Failed to download $version."
+  exit 1
+fi
+rm "$temp_file"
+
+"$dev_tools/system_monitor/linux/system_monitor" $@
+# In the future, we should add the following to eliminate the terminal spam:
+#   > /dev/null 2>&1 &
+# For the near term, using this for debug output is important.
