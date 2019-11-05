@@ -79,11 +79,6 @@ typedef struct zx_thread_state_debug_regs {
   // DR4 and D5 are not used.
   uint64_t dr6;  // Status register.
   uint64_t dr7;  // Control register.
-  // TODO(donosoc): These values are deprecated but are still used by zxdb. We debine both values
-  //                in order to do a soft transition. Delete these values once zxdb has made the
-  //                update.
-  uint64_t dr6_status;   // Status register.
-  uint64_t dr7_control;  // Control register.
 } zx_thread_state_debug_regs_t;
 
 #elif defined(__aarch64__)
