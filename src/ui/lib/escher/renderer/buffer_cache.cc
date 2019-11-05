@@ -79,6 +79,10 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   CacheInfo cache_info;
   cache_info.id = buffer->uid();
   cache_info.allocation_time = fxl::TimePoint::Now();
+  // TODO(40736): Now buffer->size() is the size of VkBuffer, so it can only
+  // reclaim buffers of size greater than or equal to the requested size. For
+  // buffers with size less than the requested size, but with memory enough to
+  // hold the requested buffer, it doesn't work.
   cache_info.size = buffer->size();
   // Ensure this buffer is not already tracked.
   FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) == free_buffers_by_id_.end())

@@ -76,10 +76,13 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
 
   // Allocate memory for the buffer.
   GpuMemPtr mem = AllocateMemory(memory_requirements, memory_property_flags);
+  FXL_DCHECK(mem->size() >= size)
+      << "Size of allocated memory should not be less than requested size";
+
   if (out_ptr) {
     *out_ptr = mem;
   }
-  return fxl::AdoptRef(new impl::NaiveBuffer(manager, std::move(mem), vk_buffer));
+  return fxl::AdoptRef(new impl::NaiveBuffer(manager, std::move(mem), size, vk_buffer));
 }
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,

@@ -19,9 +19,13 @@ namespace impl {
 // object.
 class NaiveBuffer : public Buffer {
  public:
+  // This constructor uses |mem->size()| as its |size_| property.
   static BufferPtr New(ResourceManager* manager, GpuMemPtr mem, vk::BufferUsageFlags usage_flags);
 
-  NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer);
+  // This constructor uses |vk_buffer_size| as its |size_| property, which
+  // can be different from the size of |mem|.
+  NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::DeviceSize vk_buffer_size,
+              vk::Buffer buffer);
   ~NaiveBuffer() override;
 
  private:

@@ -48,6 +48,56 @@ VK_TEST(BufferCache, RecycleBuffer) {
   EXPECT_EQ(buffer_id, buffer2->uid());
 }
 
+VK_TEST(BufferCache, SmallerBufferShouldNotRecycle) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+
+  // We create a buffer of size 127 and a buffer of size 128.
+  //
+  // In most cases for the first request we will generate a buffer of
+  // size > 127; however after recycling this buffer, we still cannot use that
+  // for buffers of size 128, as the requested buffer size should be less than
+  // or equal to the Vulkan buffer size.
+  BufferCache buffer_cache(escher);
+  vk::DeviceSize requested_size_1 = 127;
+  vk::DeviceSize requested_size_2 = 128;
+
+  BufferPtr buffer1 = buffer_cache.NewHostBuffer(requested_size_1);
+  uint64_t buffer1_id = buffer1->uid();
+  EXPECT_EQ(buffer1->size(), requested_size_1);
+
+  // Recycle buffer 1.
+  buffer1.reset();
+
+  BufferPtr buffer2 = buffer_cache.NewHostBuffer(requested_size_2);
+  uint64_t buffer2_id = buffer2->uid();
+  EXPECT_EQ(buffer2->size(), requested_size_2);
+
+  EXPECT_TRUE(buffer1_id != buffer2_id);
+}
+
+VK_TEST(BufferCache, SlightlyLargerBufferShouldRecycle) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+
+  // We create a buffer of size 256 and then recycle it. Then when we create a
+  // buffer of size 254 we will reuse the previous buffer.
+  BufferCache buffer_cache(escher);
+  vk::DeviceSize requested_size_1 = 256;
+  vk::DeviceSize requested_size_2 = 254;
+
+  BufferPtr buffer1 = buffer_cache.NewHostBuffer(requested_size_1);
+  uint64_t buffer1_id = buffer1->uid();
+  vk::DeviceSize buffer1_size = buffer1->size();
+
+  // Recycle buffer 1.
+  buffer1.reset();
+
+  BufferPtr buffer2 = buffer_cache.NewHostBuffer(requested_size_2);
+  uint64_t buffer2_id = buffer2->uid();
+
+  EXPECT_EQ(buffer1_size, buffer2->size());
+  EXPECT_TRUE(buffer1_id == buffer2_id);
+}
+
 VK_TEST(BufferCache, DontRecycleLargeBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
   BufferCache buffer_cache(escher);

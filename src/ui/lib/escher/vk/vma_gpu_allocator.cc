@@ -26,8 +26,8 @@ class VmaGpuMem : public escher::GpuMem {
 class VmaBuffer : public escher::Buffer {
  public:
   VmaBuffer(escher::ResourceManager* manager, VmaAllocator allocator, VmaAllocation allocation,
-            VmaAllocationInfo info, vk::Buffer buffer)
-      : Buffer(manager, buffer, info.size, static_cast<uint8_t*>(info.pMappedData)),
+            VmaAllocationInfo info, vk::DeviceSize vk_buffer_size, vk::Buffer buffer)
+      : Buffer(manager, buffer, vk_buffer_size, static_cast<uint8_t*>(info.pMappedData)),
         allocator_(allocator),
         allocation_(allocation) {}
 
@@ -151,8 +151,11 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSi
   if (status != VK_SUCCESS)
     return nullptr;
 
+  FXL_DCHECK(info.size >= size)
+      << "Size of allocated memory should not be less than requested size";
+
   auto retval =
-      fxl::AdoptRef(new VmaBuffer(manager, allocator_, allocation, allocation_info, buffer));
+      fxl::AdoptRef(new VmaBuffer(manager, allocator_, allocation, allocation_info, size, buffer));
 
   if (out_ptr) {
     FXL_DCHECK(allocation_info.offset == 0);

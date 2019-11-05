@@ -25,7 +25,7 @@ class Buffer : public WaitableResource {
   // Return the underlying Vulkan buffer object.
   vk::Buffer vk() { return buffer_; }
 
-  // Return the size of the buffer.
+  // Return the exact size of the Vulkan buffer.
   vk::DeviceSize size() const { return size_; }
 
   // If the buffer is host-accessible, then this returns a direct pointer to
@@ -38,6 +38,8 @@ class Buffer : public WaitableResource {
  private:
   // Underlying Vulkan buffer object.
   const vk::Buffer buffer_;
+
+  // Size of the Vulkan buffer.
   const vk::DeviceSize size_;
   uint8_t* const host_ptr_;
 };

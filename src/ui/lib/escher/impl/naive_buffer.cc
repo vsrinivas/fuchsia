@@ -15,6 +15,7 @@ BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
                            vk::BufferUsageFlags usage_flags) {
   TRACE_DURATION("gfx", "escher::NaiveBuffer::New");
   auto device = manager->vulkan_context().device;
+  auto size = mem->size();
 
   // Create buffer.
   vk::BufferCreateInfo buffer_create_info;
@@ -23,11 +24,12 @@ BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
   buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
   auto vk_buffer = ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
 
-  return fxl::AdoptRef(new NaiveBuffer(manager, std::move(mem), vk_buffer));
+  return fxl::AdoptRef(new NaiveBuffer(manager, std::move(mem), size, vk_buffer));
 }
 
-NaiveBuffer::NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer)
-    : Buffer(manager, buffer, mem->size(), mem->mapped_ptr()), mem_(std::move(mem)) {
+NaiveBuffer::NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::DeviceSize vk_buffer_size,
+                         vk::Buffer buffer)
+    : Buffer(manager, buffer, vk_buffer_size, mem->mapped_ptr()), mem_(std::move(mem)) {
   FXL_CHECK(vk());
   FXL_CHECK(mem_);
   auto status = vulkan_context().device.bindBufferMemory(vk(), mem_->base(), mem_->offset());
