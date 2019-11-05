@@ -36,12 +36,12 @@ source_set("cpp") {
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
-    "//garnet/bin/ui/present_view:present_view",
+    "//src/ui/tools/present_view:present_view",
     "//garnet/bin/ui/root_presenter:accessibility",
     "//garnet/bin/ui/root_presenter:factory_reset_manager",
     "//garnet/bin/ui/root_presenter:lib",
-    "//garnet/bin/ui/screencap:screencap",
-    "//garnet/bin/ui/set_renderer_params_HACK:set_renderer_params",
+    "//src/ui/tools/screencap:screencap",
+    "//src/ui/tools/set_renderer_params:set_renderer_params",
     "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",

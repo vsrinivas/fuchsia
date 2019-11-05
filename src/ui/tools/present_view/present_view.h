@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_PRESENT_VIEW_PRESENT_VIEW_H_
-#define GARNET_BIN_UI_PRESENT_VIEW_PRESENT_VIEW_H_
+#ifndef SRC_UI_TOOLS_PRESENT_VIEW_PRESENT_VIEW_H_
+#define SRC_UI_TOOLS_PRESENT_VIEW_PRESENT_VIEW_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
@@ -44,4 +44,4 @@ class PresentView {
 
 }  // namespace present_view
 
-#endif  // GARNET_BIN_UI_PRESENT_VIEW_PRESENT_VIEW_H_
+#endif  // SRC_UI_TOOLS_PRESENT_VIEW_PRESENT_VIEW_H_

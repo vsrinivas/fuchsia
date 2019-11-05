@@ -30,7 +30,6 @@ source_set("cpp") {
   # fxb/36788 this target is deprecated
   # Please use //sdk/lib/sys or //sdk/lib/svc as appropriate.
   visibility = [
-    "//garnet/bin/ui/present_view:present_view",
     "//src/cobalt/bin/testapp:cobalt_testapp",
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider_bin",
@@ -49,6 +48,7 @@ source_set("cpp") {
     "//src/modular/lib/lifecycle/cpp:lifecycle_impl",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/modular/tests:queue_persistence_test",
+    "//src/ui/tools/present_view:present_view",
     "//src/ui/tools/tiles:tiles_lib",
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_manager:lib",

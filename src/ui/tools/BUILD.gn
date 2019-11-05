@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 group("tools") {
   deps = [
     "paper_shader_compiler",
@@ -19,4 +21,59 @@ group("tests") {
     "print-input-report:print-input-report-test",
     "tiles:tiles_tests",
   ]
+}
+
+# Component shell tools can be run as shell command or as components via a
+# component URI. The following list contains the names of such components that
+# follow the pattern:
+# name/meta/name.cmx contains the component manifest
+# name is the name of a subdirectory that builds the output binary `name`
+component_shell_tools = [
+  "gltf_export",
+  "present_view",
+  "screencap",
+  "set_renderer_params",
+  "snapshot",
+]
+foreach(tool, component_shell_tools) {
+  package(tool) {
+    meta = [
+      {
+        path = rebase_path("$tool/meta/$tool.cmx")
+        dest = "$tool.cmx"
+      },
+    ]
+
+    deps = [
+      tool,
+    ]
+
+    binaries = [
+      {
+        name = tool
+        shell = true
+      },
+    ]
+  }
+}
+
+# Non-component tools contains the names of shell command tools that do not
+# have any CMX.
+non_component_tools = [
+  "input",
+  "print_input",
+]
+
+foreach(tool, non_component_tools) {
+  package(tool) {
+    deps = [
+      tool,
+    ]
+    binaries = [
+      {
+        name = tool
+        shell = true
+      },
+    ]
+  }
 }

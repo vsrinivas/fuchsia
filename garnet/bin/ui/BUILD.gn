@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
@@ -13,26 +12,24 @@ group("ui") {
   deps = [
     ":root_presenter",
     ":scenic_tests",
-    ":set_renderer_params",
     "benchmarks",
-    "gltf_export",
-    "input",
-    "present_view",
-    "print_input",
     "root_presenter",
-    "screencap",
-    "set_renderer_params_HACK",
-    "snapshot",
     "tests",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/ime:ime_test",
     "//src/ui/scenic",
+    "//src/ui/tools:gltf_export",
+    "//src/ui/tools:input",
+    "//src/ui/tools:present_view",
+    "//src/ui/tools:print_input",
+    "//src/ui/tools:screencap",
+    "//src/ui/tools:set_renderer_params",
+    "//src/ui/tools:snapshot",
   ]
 }
 
 test_package("scenic_tests") {
   deps = [
-    "present_view/tests",
     "root_presenter/tests",
     "//src/ui/lib/input_reader/tests",
     "//src/ui/scenic/lib/display/tests",
@@ -41,6 +38,7 @@ test_package("scenic_tests") {
     "//src/ui/scenic/lib/gfx/util/tests",
     "//src/ui/scenic/lib/input/tests",
     "//src/ui/scenic/lib/scenic/tests",
+    "//src/ui/tools/present_view/tests",
   ]
 
   tests = [
@@ -131,79 +129,4 @@ package("root_presenter") {
       dest = "root_presenter.cmx"
     },
   ]
-}
-
-# Component shell tools can be run as shell command or as components via a
-# component URI. The following list contains the names of such components that
-# follow the pattern:
-# name/meta/name.cmx contains the component manifest
-# name is the name of a subdirectory that builds the output binary `name`
-component_shell_tools = [
-  "gltf_export",
-  "present_view",
-  "screencap",
-  "snapshot",
-]
-foreach(tool, component_shell_tools) {
-  package(tool) {
-    meta = [
-      {
-        path = rebase_path("$tool/meta/$tool.cmx")
-        dest = "$tool.cmx"
-      },
-    ]
-
-    deps = [
-      tool,
-    ]
-
-    binaries = [
-      {
-        name = tool
-        shell = true
-      },
-    ]
-  }
-}
-
-package("set_renderer_params") {
-  deps = [
-    "set_renderer_params_HACK:set_renderer_params",
-  ]
-
-  binaries = [
-    {
-      name = "set_renderer_params"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path =
-          rebase_path("set_renderer_params_HACK/meta/set_renderer_params.cmx")
-      dest = "set_renderer_params.cmx"
-    },
-  ]
-}
-
-# Non-component tools contains the names of shell command tools that do not
-# have any CMX.
-non_component_tools = [
-  "input",
-  "print_input",
-]
-
-foreach(tool, non_component_tools) {
-  package(tool) {
-    deps = [
-      tool,
-    ]
-    binaries = [
-      {
-        name = tool
-        shell = true
-      },
-    ]
-  }
 }

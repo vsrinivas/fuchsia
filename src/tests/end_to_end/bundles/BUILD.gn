@@ -15,7 +15,7 @@ group("end_to_end_deps") {
   testonly = true
   public_deps = [
     # Needed to send fake input.
-    "//garnet/bin/ui:input",
+    "//src/ui/tools:input",
 
     # Needed to start sl4f from ssh.
     "//garnet/packages/prod:run",

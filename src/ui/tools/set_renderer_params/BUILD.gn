@@ -2,14 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("set_renderer_params_HACK") {
-  testonly = true
-  deps = [
+group("deprecated") {
+  public_deps = [
     ":set_renderer_params",
   ]
 }
 
 executable("set_renderer_params") {
+  output_name = "set_renderer_params"
+
   sources = [
     "main.cc",
   ]

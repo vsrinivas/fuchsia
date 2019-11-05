@@ -8,13 +8,13 @@
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/bin/ui:gltf_export",
-    "//garnet/bin/ui:input",
-    "//garnet/bin/ui:present_view",
-    "//garnet/bin/ui:print_input",
-    "//garnet/bin/ui:screencap",
-    "//garnet/bin/ui:set_renderer_params",
-    "//garnet/bin/ui:snapshot",
+    "//src/ui/tools:gltf_export",
+    "//src/ui/tools:input",
+    "//src/ui/tools:present_view",
+    "//src/ui/tools:print_input",
+    "//src/ui/tools:screencap",
+    "//src/ui/tools:set_renderer_params",
+    "//src/ui/tools:snapshot",
   ]
 }
 

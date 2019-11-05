@@ -7,10 +7,10 @@
 
 #include <trace-provider/provider.h>
 
-#include "garnet/bin/ui/snapshot/view.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/ui/base_view/view_provider_component.h"
+#include "src/ui/tools/snapshot/view.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

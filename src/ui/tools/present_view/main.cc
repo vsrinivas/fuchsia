@@ -6,10 +6,10 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-provider/provider.h>
 
-#include "garnet/bin/ui/present_view/present_view.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/tools/present_view/present_view.h"
 
 namespace {
 

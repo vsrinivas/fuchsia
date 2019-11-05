@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_SNAPSHOT_VIEW_H_
-#define GARNET_BIN_UI_SNAPSHOT_VIEW_H_
+#ifndef SRC_UI_TOOLS_SNAPSHOT_VIEW_H_
+#define SRC_UI_TOOLS_SNAPSHOT_VIEW_H_
 
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -40,4 +40,4 @@ class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Lo
 
 }  // namespace snapshot
 
-#endif  // GARNET_BIN_UI_SNAPSHOT_VIEW_H_
+#endif  // SRC_UI_TOOLS_SNAPSHOT_VIEW_H_

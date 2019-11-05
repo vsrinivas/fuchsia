@@ -19,7 +19,6 @@ executable("present_view_unittests") {
   ]
 
   deps = [
-    "//garnet/bin/ui/present_view:lib",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
@@ -29,6 +28,7 @@ executable("present_view_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/tools/present_view:lib",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

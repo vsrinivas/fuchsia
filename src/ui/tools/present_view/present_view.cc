@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/present_view/present_view.h"
+#include "src/ui/tools/present_view/present_view.h"
 
 #include <lib/fidl/cpp/vector.h>
 #include <lib/sys/cpp/service_directory.h>
