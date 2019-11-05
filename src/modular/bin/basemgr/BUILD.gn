@@ -25,6 +25,8 @@ executable_package("basemgr") {
   sources = [
     "basemgr_impl.cc",
     "basemgr_impl.h",
+    "basemgr_settings.cc",
+    "basemgr_settings.h",
     "main.cc",
   ]
 

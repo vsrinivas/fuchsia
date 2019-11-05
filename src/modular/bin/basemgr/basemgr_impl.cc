@@ -4,16 +4,21 @@
 
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
+#include "src/modular/bin/basemgr/basemgr_settings.h"
+#include "src/modular/bin/basemgr/noop_clipboard_impl.h"
+#include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace fidl {
 template <>
