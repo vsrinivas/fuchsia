@@ -140,6 +140,8 @@ On MOVE and UP, we merely forward them to existing clients.
 On REMOVE, we forward it to existing clients, and then remove the tracking
 association.
 
+For an overview of pointer coordinate mapping, see [Ray Casting and Hit Testing](view_bounds.md#ray-casting-and-hit-testing).
+
 ### Keyboard Event Handling
 
 Keyboard events are a little more involved, due to the need for mediation by an

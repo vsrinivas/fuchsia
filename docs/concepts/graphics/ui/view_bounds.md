@@ -6,16 +6,16 @@
   - [Setting View Bounds](#setting-view-bounds)
     - [Bound Extent and Insets](#bound-extent-and-insets)
     - [Example](#example-1)
-    - [Example 2](#example-2)
   - [Coordinate System](#coordinate-system)
-    - [Example](#example-3)
+    - [Example](#example-2)
   - [Centering Geometry](#centering-geometry)
   - [Debug Wireframe Rendering](#debug-wireframe-rendering)
   - [Ray Casting and Hit Testing](#ray-casting-and-hit-testing)
+    - [The Hit Ray](#the-hit-ray)
     - [Rules](#rules)
     - [Edge Cases](#edge-cases)
     - [Pixel Offsets](#pixel-offsets)
-      - [Example](#example4)
+      - [Example](#example-3)
 
 # Introduction
 
@@ -35,10 +35,9 @@ There are four values needed to set a view's bounds properly, `bounds_min`, `bou
 { bounds_min + inset_min, bounds_max - inset_max}
 ```
 
-### Example 1 {#example-1}
+### Example {#example-1}
 
 ```cpp
-
 // Create a pair of tokens to register a view and view holder in
 // the scene graph.
 auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -47,69 +46,38 @@ auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 scenic::View view(session, std::move(view_token), "View");
 scenic::ViewHolder view_holder(session, std::move(view_holder_token),
                                “ViewHolder");
-
-// Set the bounding box dimensions and set them on the view holder.
-const float bounds_min[3] = {0.f, 0.f, -200.f};
-const float bounds_max[3] = {500, 500, 0};
-const float inset_min[3] = {20, 30, 0};
-const float inset_max[3] = {20, 30, 0};
-view_holder.SetViewProperties(bounds_min, bounds_max,
-                          inset_min, inset_max);
+// Set the bounding box dimensions on the view holder.
+view_holder.SetViewProperties({.bounding_box{.min{0, 0, -200}, .max{500, 500, 0}},
+                               .inset_from_min{20, 30, 0},
+                               .inset_from_max{20, 30, 0}});
 ```
 
-The above code creates a View and ViewHolder pair whose bounds start at (20,30,-200) and extend out to (480,470,0). The bounds themselves are always axis-aligned.
-
-The above version of `SetViewProperties` requires you to supply each parameter individually, but you can also call another version of the function which takes in a `ViewProperties` struct, instead.
-
-### Example 2 {#example-2}
-
-```cpp
-
-// Create a 'ViewProperties' struct and fill it with the bounding
-// box dimensions.
-fuchsia::ui::gfx::ViewProperties properties;
-properties.bounding_box.min =
-            fuchsia::ui::gfx::vec3{.x = 0, .y = 0, .z = -200};
-properties.bounding_box.max =
-            fuchsia::ui::gfx::vec3{.x = 500, .y = 500, .z = 0);
-
-// Set the view properties on the view holder.
-view_holder.SetViewProperties(std::move(properties));
-```
+The above code creates a View and ViewHolder pair whose bounds start at (20,&nbsp;30,&nbsp;-200) and extend out to (480,&nbsp;470,&nbsp;0). The bounds themselves are always axis-aligned.
 
 ## Coordinate System {#coordinate-system}
 
 View bounds are specified in local coordinates, and their world-space position is determined by the global transform of the view node.
 
-### Example {#example-3}
+Input coordinates originate from input device space, which usually corresponds to pixel coordinates with an origin at the upper left of the screen. The input system works with the compositor and camera to map from input device coordinates to world space by way of [Ray Casting and Hit Testing](#ray-casting-and-hit-testing).
+
+### Example {#example-2}
 
 ```cpp
-// Create an entity node and translate it by (100,100,200).
-scenic::EntityNode transform_node(session);
-transform_node.SetTranslation(100, 100, 200);
-
-// Add the transform node as a child of the root node.
-root_node.AddChild(transform_node);
-
 // Create a view and view-holder token pair.
 auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 scenic::View view(session, std::move(view_token), "View");
 scenic::ViewHolder view_holder(session, std::move(view_holder_token),
                                "ViewHolder");
 
-// Attach the view holder as a child of the transform node.
-transform_node.Attach(view_holder);
+// Add the view holder as a child of the scene.
+scene.AddChild(view_holder);
 
-// Set view bounds.
-const float bounds_min[3] = {0.f, 0.f, 0.f};
-const float bounds_max[3] = {500, 500, 200};
-const float inset_min[3] = {0, 0, 0};
-const float inset_max[3] = {0, 0, 0};
-view_holder.SetViewProperties(bounds_min, bounds_max,
-                           inset_min, inset_max);
+// Translate the view holder and set view bounds.
+view_holder.SetTranslation(100, 100, 200);
+view_holder.SetViewProperties({.bounding_box{.max{500, 500, 200}}});
 ```
 
-In the above code, the view bounds in local space have a min and max value of (0,0,0) and (500,500,200), but since the parent node is translated by (100,100,200) the view bounds in world space will actually have a world space bounds min and max of (100,100,200) and (600,600,400) respectively. However, the view itself doesn’t see these world-space bounds, and only deals with its bounds in its own local space.
+In the above code, the view bounds in local space have a min and max value of (0,&nbsp;0,&nbsp;0) and (500,&nbsp;500,&nbsp;200), but since the parent node is translated by (100,&nbsp;100,&nbsp;200) the view bounds in world space will actually have a world space bounds min and max of (100,&nbsp;100,&nbsp;200) and (600,&nbsp;600,&nbsp;400) respectively. However, the view itself doesn’t see these world-space bounds, and only deals with its bounds in its own local space.
 
 ## Centering Geometry {#centering-geometry}
 
@@ -143,17 +111,33 @@ struct SetViewHolderBoundsColorCmd {
 
 ## Ray Casting and Hit Testing {#ray-casting-and-hit-testing}
 
-When performing hit tests, Scenic runs tests against the bounds of a `ViewNode` before determining whether the ray should continue checking children of that node. If you forget to set the bounds for a view, any geometry that exists as a child of that view cannot be hit. This is because the bounds would be null and therefore infinitely small, which also means that there would be no geometry rendered to the screen.
+Hit testing by ray casting maps input device coordinates to scene geometry and coordinates. Ultimately, inputs are delivered to views with view coordinates. As described in the [Coordinate System](#coordinate-system) section, view coordinates are determined by the global transform of the view node, which maps from world space to view coordinates.
+
+### The Hit Ray {#the-hit-ray}
+
+The conversion from input device space to world space involves the input system, compositor layer, and camera.
+
+![Input Coordinate Spaces](meta/input_coordinate_spaces.png)
+
+The original input coordinate is a two-dimensional coordinate in screen pixels. The input system and compositor agree on a convention, illustrated above as device coordinates in 3 dimensions (blue), where the viewing volume has depth 1, the near plane is at z = 0, and the far plane is at z = -1. With this in mind, the input system constructs a hit ray with its origin at the touch coordinates at a distance of 1 behind the camera, z = 1, and direction (0,&nbsp;0,&nbsp;-1), towards the scene. (As described in [Pixel Offsets](#pixel-offsets) below, the touch coordinates are jittered by (0.5,&nbsp;0.5); not shown above for simplicity.)
+
+The input device space as described here is a left-handed coordinate system, a holdover from when Scenic was left-handed. Future work may adjust the z convention of input device space to match NDC or the viewing volume, as a right-handed coordinate system, and adjust the hit ray to originate at the near plane, z = 0.
+
+The compositor layer transforms this ray into NDC (green) and then applies the inverse camera transforms (clip-space, projection, and camera positioning) to project the ray into the scene (world coordinates, red). The above illustration reflects the orthographic camera coded into Scenic, with scene origin at the upper left of the far plane, viewing volume width and height reflecting device dimensions, and viewing depth 1000, such that the near plane is at z = -1000. (In actuality, the orthographic camera itself is positioned at z = -1010, but this does not affect the math in an orthographic projection.)
+
+In world space then, the hit ray described above originates at (_x_,&nbsp;_y_,&nbsp;-2000) with direction (0,&nbsp;0,&nbsp;1000).
 
 ### Rules {#rules}
 
-These are the rules for ray casting:
+When performing hit tests, Scenic runs tests against the bounds of a `ViewNode` before determining whether the ray should continue checking children of that node.
 
 * If a ray completely misses a view’s bounding box, nothing that is a child of that   view will be hit.
 
-* If a ray does intersect a bounding box, only geometry that exists within the range   of the ray’s entrance and exit from the bounding box will be considered for a hit. For example, clipped geometry cannot be hit.
+* If a ray does intersect a bounding box, only geometry that exists within the range of the ray’s entrance and exit from the bounding box will be considered for a hit. For example, clipped geometry cannot be hit.
 
-In debug mode, a null bounding box will trigger an FXL_DCHECK in the escher::BoundingBox class stating that the bounding box dimensions need to be greater than or equal to 2.
+If you forget to set the bounds for a view, any geometry that exists as a child of that view cannot be hit. This is because the bounds would be null and therefore infinitely small, which also means that there would be no geometry rendered to the screen.
+
+In debug mode, a null bounding box will trigger an `FXL_DCHECK` in the `escher::BoundingBox` class stating that the bounding box dimensions need to be greater than or equal to 2.
 
 ### Edge Cases {#edge-cases}
 
@@ -175,27 +159,23 @@ When a collision is detected, a warning is logged of the colliding nodes by sess
 
 ### Pixel Offsets {#pixel-offsets}
 
-When issuing input commands in screen space, pixel values are jittered by (0.5, 0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
+When issuing input commands in screen space, pixel values are jittered by (0.5,&nbsp;0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
 
-#### Example {#example-4}
+The rationale can be illustrated by imagining a 1x1 display. On such a display, to split the difference it would be reasonable for any touch events to be delivered at (0.5,&nbsp;0.5), the center of the screen, rather than at the upper left corner.
+
+#### Example {#example-3}
 
 ```cpp
-// Create a 'ViewProperties' struct and set the bounding box dimensions,
-// just like in the example up above.
-fuchsia::ui::gfx::ViewProperties properties;
-properties.bounding_box.min =
-    fuchsia::ui::gfx::vec3{.x = 0, .y = 0, .z = 0};
-properties.bounding_box.max =
-    fuchsia::ui::gfx::vec3{.x = 5, .y = 5, .z = 1};
-view_holder.SetViewProperties(std::move(properties));
+// Set the bounding box dimensions, just like in the examples above.
+view_holder.SetViewProperties({.bounding_box{.max{5, 5, 1}}});
 
-PointerCommandGenerator pointer(compositor_id, 1,1,
-                                 PointerEventType::TOUCH);
+PointerCommandGenerator pointer(compositor_id, 1, 1,
+                                PointerEventType::TOUCH);
 // Touch the upper left corner of the display.
 session->Enqueue(pointer.Add(0.f, 0.f));
 ```
 
-This example shows an orthographic camera setup with a view whose min and max bound points are (0,0,0) and (5,5,1) respectively. There is a touch event at the screen space coordinate point (0,0). If there were no corrections to the pixel offset, an orthographic ray generated at the (0,0) point and transformed into world space would wind up grazing against the edge of the bounding box  and would not register as a hit. However, the “Add” command is jittered to (0.5, 0.5) which does actually result in a ray which hits the bounding box. Doing this is the equivalent of running the following command with no jittering:
+This example shows an orthographic camera setup with a view whose min and max bound points are (0,&nbsp;0,&nbsp;0) and (5,&nbsp;5,&nbsp;1) respectively. There is a touch event at the screen space coordinate point (0,&nbsp;0). If there were no corrections to the pixel offset, an orthographic ray generated at the (0,&nbsp;0) point and transformed into world space would wind up grazing against the edge of the bounding box  and would not register as a hit. However, the “Add” command is jittered to (0.5,&nbsp;0.5) which does actually result in a ray which hits the bounding box. Doing this is the equivalent of running the following command with no jittering:
 
 ```cpp
 session->Enqueue(pointer.Add(0.5f, 0.5f));
