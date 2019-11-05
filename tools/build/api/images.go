@@ -29,6 +29,10 @@ type Image struct {
 	// when paving.
 	PaveArgs []string `json:"bootserver_pave"`
 
+	// PaveZedbootArgs is the list of associated arguments to pass to the bootserver
+	// when paving zedboot
+	PaveZedbootArgs []string `json:"bootserver_pave_zedboot"`
+
 	// NetbootArgs is the list of associated arguments to pass to the bootserver
 	// when netbooting.
 	NetbootArgs []string `json:"bootserver_netboot"`
