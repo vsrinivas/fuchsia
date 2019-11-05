@@ -38,7 +38,7 @@ const char kOverrideConfigPath[] = "/config/data/override_config.json";
 // has on its side for each feedback data as we pay the price for making the request (establishing
 // the connection, potentially spawning the serving component for the first time, getting the
 // response, etc.) .
-constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(10) + /*some slack*/ zx::sec(1);
+constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(30) + /*some slack*/ zx::sec(5);
 
 }  // namespace
 

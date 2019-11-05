@@ -586,9 +586,11 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   bool got_data = false;
   bool got_screenshot = false;
 
-  const zx::duration kGetScreenshotOrDataTimeout = zx::sec(10);
+  const zx::duration kGetScreenshotTimeout = zx::sec(10);
+  const zx::duration kGetDataTimeout = zx::sec(30);
 
-  ASSERT_GE(kGetScreenshotOrDataTimeout, kDataProviderIdleTimeout);
+  ASSERT_GE(kGetScreenshotTimeout, kDataProviderIdleTimeout);
+  ASSERT_GE(kGetDataTimeout, kDataProviderIdleTimeout);
 
   SetUpDataProviderOnlyRequestingChannel(kDataProviderIdleTimeout);
 
@@ -606,7 +608,7 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   data_provider_->GetScreenshot(
       ImageEncoding::PNG,
       [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
-  RunLoopFor(kGetScreenshotOrDataTimeout);
+  RunLoopFor(kGetScreenshotTimeout);
 
   // TIME = 10; TIMEOUT @ 15 (10 + 5, current time + kDataProviderIdleTimeout)
   ASSERT_TRUE(got_screenshot);
@@ -623,7 +625,7 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   // TIME = 15; TIMEOUT @ X (reset)
   data_provider_timed_out_ = false;
   data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
-  RunLoopFor(kGetScreenshotOrDataTimeout);
+  RunLoopFor(kGetDataTimeout);
 
   // TIME = 25; TIMEOUT @ 30 (25 + 5, current time + kDataProviderIdleTimeout)
   ASSERT_TRUE(got_data);
@@ -645,14 +647,14 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   data_provider_->GetScreenshot(
       ImageEncoding::PNG,
       [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
-  RunLoopFor(kGetScreenshotOrDataTimeout);
+  RunLoopFor(kGetScreenshotTimeout);
 
   // TIME = 40; TIMEOUT @ 45 (40 + 5, current time + kDataProviderIdleTimeout)
   ASSERT_TRUE(got_screenshot);
   ASSERT_FALSE(data_provider_timed_out_);
 
   data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
-  RunLoopFor(kGetScreenshotOrDataTimeout);
+  RunLoopFor(kGetDataTimeout);
 
   // TIME = 50; TIMEOUT @ 55 (50 + 5, current time + kDataProviderIdleTimeout)
 
@@ -685,15 +687,15 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   ASSERT_TRUE(got_screenshot);
   ASSERT_FALSE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kDataProviderIdleTimeout);
+  RunLoopFor(kGetDataTimeout - kDataProviderIdleTimeout);
 
-  // TIME = 70; TIMEOUT @ 75 (70 + 5, current time + kDataProviderIdleTimeout)
+  // TIME = 90; TIMEOUT @ 95 (90 + 5, current time + kDataProviderIdleTimeout)
 
   ASSERT_TRUE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
   RunLoopFor(kDataProviderIdleTimeout);
 
-  // TIME = 75; TIMEOUT @ 75 (unchanged)
+  // TIME = 95; TIMEOUT @ 95 (unchanged)
   EXPECT_TRUE(data_provider_timed_out_);
 }
 

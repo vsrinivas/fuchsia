@@ -35,7 +35,7 @@ const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
 
 // Timeout for a single asynchronous piece of data, e.g., syslog collection.
-const zx::duration kDataTimeout = zx::sec(10);
+const zx::duration kDataTimeout = zx::sec(30);
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
