@@ -208,8 +208,6 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
 void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void UsbHidbus::DdkRelease() {
-  usb_request_release(req_);
-  usb_desc_iter_release(&desc_iter_);
   if (req_) {
     usb_request_release(req_);
   }
