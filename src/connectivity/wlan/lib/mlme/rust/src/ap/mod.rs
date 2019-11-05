@@ -86,11 +86,99 @@ struct InfraBss {
     pub clients: HashMap<MacAddr, RemoteClient>,
 }
 
+fn get_client(
+    clients: &HashMap<MacAddr, RemoteClient>,
+    addr: MacAddr,
+) -> Result<&RemoteClient, Rejection> {
+    clients.get(&addr).ok_or(Rejection::NoSuchClient(addr))
+}
+
+fn get_mut_client(
+    clients: &mut HashMap<MacAddr, RemoteClient>,
+    addr: MacAddr,
+) -> Result<&mut RemoteClient, Rejection> {
+    clients.get_mut(&addr).ok_or(Rejection::NoSuchClient(addr))
+}
+
 // TODO(37891): Use this code.
 #[allow(dead_code)]
 impl InfraBss {
     fn new(ssid: Vec<u8>, is_rsn: bool) -> Self {
         Self { ssid, is_rsn, clients: HashMap::new() }
+    }
+
+    pub fn handle_mlme_auth_resp(
+        &mut self,
+        ctx: &mut Context,
+        resp: &fidl_mlme::AuthenticateResponse,
+    ) -> Result<(), Rejection> {
+        let client = get_mut_client(&mut self.clients, resp.peer_sta_address)?;
+        client
+            .handle_mlme_auth_resp(ctx, resp.result_code)
+            .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_mlme_deauth_req(
+        &mut self,
+        ctx: &mut Context,
+        req: &fidl_mlme::DeauthenticateRequest,
+    ) -> Result<(), Rejection> {
+        let client = get_mut_client(&mut self.clients, req.peer_sta_address)?;
+        client
+            .handle_mlme_deauth_req(ctx, req.reason_code)
+            .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_mlme_assoc_resp(
+        &mut self,
+        ctx: &mut Context,
+        resp: &fidl_mlme::AssociateResponse,
+    ) -> Result<(), Rejection> {
+        let client = get_mut_client(&mut self.clients, resp.peer_sta_address)?;
+        client
+            .handle_mlme_assoc_resp(
+                ctx,
+                self.is_rsn,
+                // TODO(37891): Actually implement capability negotiation.
+                mac::CapabilityInfo(0),
+                resp.result_code,
+                resp.association_id,
+                // TODO(37891): Actually implement negotiation for various IEs.
+                &[][..],
+            )
+            .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_mlme_disassoc_req(
+        &mut self,
+        ctx: &mut Context,
+        req: &fidl_mlme::DisassociateRequest,
+    ) -> Result<(), Rejection> {
+        let client = get_mut_client(&mut self.clients, req.peer_sta_address)?;
+        client
+            .handle_mlme_disassoc_req(ctx, req.reason_code)
+            .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_mlme_set_controlled_port_req(
+        &mut self,
+        req: &fidl_mlme::SetControlledPortRequest,
+    ) -> Result<(), Rejection> {
+        let client = get_mut_client(&mut self.clients, req.peer_sta_address)?;
+        client
+            .handle_mlme_set_controlled_port_req(req.state)
+            .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_mlme_eapol_req(
+        &self,
+        ctx: &mut Context,
+        req: &fidl_mlme::EapolRequest,
+    ) -> Result<(), Rejection> {
+        let client = get_client(&self.clients, req.dst_addr)?;
+        client
+            .handle_mlme_eapol_req(ctx, req.src_addr, &req.data)
+            .map_err(|e| Rejection::Client(client.addr, e))
     }
 
     fn handle_mgmt_frame<B: ByteSlice>(
@@ -813,6 +901,224 @@ mod tests {
             // Data
             1, 2, 3, 4, 5,
         ][..]);
+    }
+
+    #[test]
+    fn bss_handle_mlme_auth_resp() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_auth_resp(
+            &mut ctx,
+            &fidl_mlme::AuthenticateResponse {
+                peer_sta_address: CLIENT_ADDR,
+                result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_auth_resp ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b10110000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Auth header:
+                0, 0, // auth algorithm
+                2, 0, // auth txn seq num
+                76, 0, // status code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn bss_handle_mlme_auth_resp_no_such_client() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        assert_variant!(
+            bss.handle_mlme_auth_resp(
+                &mut ctx,
+                &fidl_mlme::AuthenticateResponse {
+                    peer_sta_address: CLIENT_ADDR,
+                    result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
+                },
+            )
+            .expect_err("expected InfraBss::handle_mlme_auth_resp error"),
+            Rejection::NoSuchClient(CLIENT_ADDR)
+        );
+    }
+
+    #[test]
+    fn bss_handle_mlme_deauth_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_deauth_req(
+            &mut ctx,
+            &fidl_mlme::DeauthenticateRequest {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_deauth_req ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b11000000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Deauth header:
+                3, 0, // reason code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn bss_handle_mlme_assoc_resp() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_assoc_resp(
+            &mut ctx,
+            &fidl_mlme::AssociateResponse {
+                peer_sta_address: CLIENT_ADDR,
+                result_code: fidl_mlme::AssociateResultCodes::Success,
+                association_id: 1,
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_assoc_resp ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                0, 0, // status code
+                1, 0, // AID
+            ][..]
+        );
+    }
+
+    #[test]
+    fn bss_handle_mlme_disassoc_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_disassoc_req(
+            &mut ctx,
+            &fidl_mlme::DisassociateRequest {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_disassoc_req ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b10100000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                8, 0, // reason code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn bss_handle_mlme_set_controlled_port_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_assoc_resp(
+            &mut ctx,
+            &fidl_mlme::AssociateResponse {
+                peer_sta_address: CLIENT_ADDR,
+                result_code: fidl_mlme::AssociateResultCodes::Success,
+                association_id: 1,
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_assoc_resp ok");
+
+        bss.handle_mlme_set_controlled_port_req(&fidl_mlme::SetControlledPortRequest {
+            peer_sta_address: CLIENT_ADDR,
+            state: fidl_mlme::ControlledPortState::Open,
+        })
+        .expect("expected InfraBss::handle_mlme_set_controlled_port_req ok");
+    }
+
+    #[test]
+    fn bss_handle_mlme_eapol_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut ctx = make_context(fake_device.as_device());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_eapol_req(
+            &mut ctx,
+            &fidl_mlme::EapolRequest {
+                dst_addr: CLIENT_ADDR,
+                src_addr: BSSID.0,
+                data: vec![1, 2, 3],
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_eapol_req ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x88, 0x8E, // EAPOL protocol ID
+                // Data
+                1, 2, 3,
+            ][..]
+        );
     }
 
     #[test]

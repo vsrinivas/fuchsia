@@ -294,13 +294,14 @@ impl RemoteClient {
     pub fn handle_mlme_eapol_req(
         &self,
         ctx: &mut Context,
+        src_addr: MacAddr,
         data: &[u8],
     ) -> Result<(), ClientRejection> {
         // IEEE Std 802.11-2016, 6.3.22.2.3 states that we should send MLME-EAPOL.confirm to the
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
 
-        ctx.send_eapol_frame(self.addr, ctx.bssid.0.clone(), false, data)
+        ctx.send_eapol_frame(self.addr, src_addr, false, data)
             .map_err(ClientRejection::WlanSendError)
     }
 
@@ -836,7 +837,7 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let r_sta = make_remote_client();
         let mut ctx = make_context(fake_device.as_device());
-        r_sta.handle_mlme_eapol_req(&mut ctx, &[1, 2, 3][..]).expect("expected OK");
+        r_sta.handle_mlme_eapol_req(&mut ctx, CLIENT_ADDR2, &[1, 2, 3][..]).expect("expected OK");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -845,7 +846,7 @@ mod tests {
             0, 0, // Duration
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
+            3, 3, 3, 3, 3, 3, // addr3
             0x10, 0, // Sequence Control
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
