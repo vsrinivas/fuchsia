@@ -131,7 +131,7 @@ void FilesystemMounter::TryMountPkgfs() {
   //
   // TODO(fxb/38621): In the future, this mechanism may be replaced with a feed-forward
   // design to the mounted filesystems.
-  if (!pkgfs_mounted_ && blob_mounted_ && data_mounted_) {
+  if (!pkgfs_mounted_ && blob_mounted_ && (data_mounted_ || !WaitForData())) {
     LaunchPkgfs(this);
     pkgfs_mounted_ = true;
   }

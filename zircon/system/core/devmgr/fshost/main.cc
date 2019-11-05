@@ -251,8 +251,11 @@ int main(int argc, char** argv) {
   }
 
   if (!disable_block_watcher) {
-    bool check_filesystems = devmgr::getenv_bool("zircon.system.filesystem-check", false);
-    BlockDeviceWatcher(std::move(fs_manager), netboot, check_filesystems);
+    devmgr::BlockWatcherOptions options = {};
+    options.netboot = netboot;
+    options.check_filesystems = devmgr::getenv_bool("zircon.system.filesystem-check", false);
+    options.wait_for_data = devmgr::getenv_bool("zircon.system.wait-for-data", true);
+    BlockDeviceWatcher(std::move(fs_manager), options);
   } else {
     // Keep the process alive so that the loader service continues to be supplied
     // to the devmgr. Otherwise the devmgr will segfault.

@@ -109,12 +109,11 @@ class BlockDeviceHarness : public zxtest::Test {
 
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
   std::unique_ptr<FsManager> manager = TakeManager();
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(std::move(manager), options);
   fbl::unique_fd fd;
   BlockDevice device(&mounter, GetRamdiskFd());
-  EXPECT_EQ(device.Netbooting(), netboot);
+  EXPECT_EQ(device.Netbooting(), options.netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
@@ -135,15 +134,14 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
 
 TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   std::unique_ptr<FsManager> manager = TakeManager();
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk.
   ASSERT_NO_FAILURES(CreateRamdisk());
 
   BlockDevice device(&mounter, GetRamdiskFd());
-  EXPECT_EQ(device.Netbooting(), netboot);
+  EXPECT_EQ(device.Netbooting(), options.netboot);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_OK(device.GetInfo(&info));
@@ -166,9 +164,8 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 
 TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
   std::unique_ptr<FsManager> manager = TakeManager();
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk with an empty GUID.
   ASSERT_NO_FAILURES(CreateRamdisk());
@@ -188,9 +185,8 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
 TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
   std::unique_ptr<FsManager> manager = TakeManager();
 
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FAILURES(CreateRamdisk(true));
@@ -207,9 +203,9 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
 TEST_F(BlockDeviceHarness, TestMinfsReformat) {
   std::unique_ptr<FsManager> manager = TakeManager();
 
-  bool netboot = false;
-  bool check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  options.check_filesystems = true;
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FAILURES(CreateRamdisk(true));
@@ -232,9 +228,9 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
 TEST_F(BlockDeviceHarness, TestBlobfs) {
   std::unique_ptr<FsManager> manager = TakeManager();
 
-  bool netboot = false;
-  bool check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  options.check_filesystems = true;
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FAILURES(CreateRamdisk(true));
@@ -257,9 +253,9 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
 TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   std::unique_ptr<FsManager> manager = TakeManager();
 
-  bool netboot = false;
-  bool check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  options.check_filesystems = true;
+  FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk with a data GUID.
   ASSERT_NO_FAILURES(CreateRamdisk(true));

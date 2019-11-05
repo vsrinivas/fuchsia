@@ -502,6 +502,13 @@ are pre-verified using a filesystem consistency checker before being mounted.
 
 By default, this option is set to false.
 
+## zircon.system.wait-for-data=\<bool>
+
+This option initializes `pkgfs` and `appmgr` only after a persistent data
+partition appears.
+
+By default, this option is set to true.
+
 ## netsvc.netboot=\<bool>
 
 If true, zircon will attempt to netboot into another instance of zircon upon

@@ -13,6 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 
+#include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
 
@@ -22,8 +23,8 @@ namespace devmgr {
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
  public:
-  FilesystemMounter(std::unique_ptr<FsManager> fshost, bool netboot, bool check_filesystems)
-      : fshost_(std::move(fshost)), netboot_(netboot), check_filesystems_(check_filesystems) {}
+  FilesystemMounter(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options)
+      : fshost_(std::move(fshost)), options_(options) {}
 
   virtual ~FilesystemMounter() = default;
 
@@ -33,8 +34,8 @@ class FilesystemMounter {
     return fshost_->InstallFs(path, std::move(h));
   }
 
-  bool Netbooting() const { return netboot_; }
-  bool ShouldCheckFilesystems() const { return check_filesystems_; }
+  bool Netbooting() const { return options_.netboot; }
+  bool ShouldCheckFilesystems() const { return options_.check_filesystems; }
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
@@ -69,6 +70,8 @@ class FilesystemMounter {
   zx_status_t MountFilesystem(const char* mount_path, const char* binary,
                               const mount_options_t& options, zx::channel block_device_client);
 
+  bool WaitForData() const { return options_.wait_for_data; }
+
   // Actually launches the filesystem process.
   //
   // Virtualized to enable testing.
@@ -76,8 +79,7 @@ class FilesystemMounter {
                                size_t len);
 
   std::unique_ptr<FsManager> fshost_;
-  const bool netboot_ = false;
-  const bool check_filesystems_ = false;
+  const BlockWatcherOptions options_;
   bool data_mounted_ = false;
   bool install_mounted_ = false;
   bool blob_mounted_ = false;

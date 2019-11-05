@@ -42,15 +42,13 @@ using MounterTest = FilesystemMounterHarness;
 TEST_F(MounterTest, CreateFilesystemManager) {}
 
 TEST_F(MounterTest, CreateFilesystemMounter) {
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(TakeManager(), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(TakeManager(), options);
 }
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeBlobAndData) {
-  bool netboot = false;
-  bool check_filesystems = false;
-  FilesystemMounter mounter(TakeManager(), netboot, check_filesystems);
+  BlockWatcherOptions options = {};
+  FilesystemMounter mounter(TakeManager(), options);
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -121,9 +119,9 @@ class TestMounter : public FilesystemMounter {
 };
 
 TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
-  bool netboot = false;
-  bool check_filesystems = false;
-  TestMounter mounter(TakeManager(), netboot, check_filesystems);
+  BlockWatcherOptions block_options = {};
+  block_options.wait_for_data = true;
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
@@ -135,10 +133,25 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   EXPECT_FALSE(mounter.PkgfsMounted());
 }
 
+TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
+  BlockWatcherOptions block_options = {};
+  block_options.wait_for_data = false;
+  TestMounter mounter(TakeManager(), block_options);
+
+  mount_options_t options = default_mount_options;
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
+
+  ASSERT_TRUE(mounter.BlobMounted());
+  ASSERT_FALSE(mounter.DataMounted());
+  mounter.TryMountPkgfs();
+  EXPECT_TRUE(mounter.PkgfsMounted());
+}
+
 TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
-  bool netboot = false;
-  bool check_filesystems = false;
-  TestMounter mounter(TakeManager(), netboot, check_filesystems);
+  BlockWatcherOptions block_options = {};
+  block_options.wait_for_data = true;
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
@@ -151,9 +164,9 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
 }
 
 TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
-  bool netboot = false;
-  bool check_filesystems = false;
-  TestMounter mounter(TakeManager(), netboot, check_filesystems);
+  BlockWatcherOptions block_options = {};
+  block_options.wait_for_data = true;
+  TestMounter mounter(TakeManager(), block_options);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
