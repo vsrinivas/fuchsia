@@ -17,10 +17,11 @@ class Clusters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clustersModel = model.clustersModel;
+    final currentCluster = clustersModel.currentCluster.value;
     final pageController = PageController(
-      initialPage: clustersModel.clusters.indexOf(
-        clustersModel.currentCluster.value,
-      ),
+      initialPage: currentCluster == null
+          ? 0
+          : clustersModel.clusters.indexOf(currentCluster),
     );
     clustersModel.currentCluster.addListener(() {
       if (pageController.hasClients) {
