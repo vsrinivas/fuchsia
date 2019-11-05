@@ -13,6 +13,7 @@ static_library("console") {
   public_deps = [
     "//third_party/quickjs:qjs-lib",
     "//third_party/quickjs:repl",
+    "//tools/shell/lib",
     "//zircon/public/lib/cmdline",
   ]
 }

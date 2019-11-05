@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/quickjs/compiled_js.gni")
+
+static_library("lib") {
+  sources = [
+    "runtime.cc",
+    "runtime.h",
+    "zx.cc",
+    "zx.h",
+  ]
+
+  public_deps = [
+    ":zx",
+    "//src/lib/fxl",
+    "//third_party/quickjs:qjs-lib",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+compiled_js("zx") {
+  source = "zx.js"
+  module = true
+  extra_args = [
+    "-M",
+    "zx_internal",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "zx_test.cc",
+  ]
+  deps = [
+    ":lib",
+    "//third_party/googletest:gtest",
+  ]
+}
+

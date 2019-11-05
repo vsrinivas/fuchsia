@@ -11,6 +11,7 @@ test("shell_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//tools/shell/console:tests",
+    "//tools/shell/lib:tests",
   ]
 }
 
@@ -76,6 +77,7 @@ executable("bin") {
 
   deps = [
     "//tools/shell/console",
+    "//tools/shell/lib",
   ]
 
   libs = [ "zircon" ]
