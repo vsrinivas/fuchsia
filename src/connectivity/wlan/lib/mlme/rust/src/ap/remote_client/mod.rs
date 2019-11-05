@@ -4,7 +4,6 @@
 
 use {
     crate::{ap::Context, error::Error},
-    failure::{bail, format_err},
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::mac::{
         self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode,
@@ -52,6 +51,51 @@ pub struct RemoteClient {
     state: State,
 }
 
+#[derive(Debug)]
+pub enum ClientRejection {
+    /// The frame was not permitted in the client's current state.
+    NotPermitted,
+
+    /// The frame does not have a corresponding handler.
+    Unsupported,
+
+    /// The client is not associated.
+    NotAssociated,
+
+    /// The client is not in an RSN.
+    NotRSN,
+
+    /// The EAPoL controlled port is closed.
+    ControlledPortClosed,
+
+    /// The frame could not be parsed.
+    ParseFailed,
+
+    /// A request could not be sent to the SME.
+    SmeSendError(Error),
+
+    /// A request could not be sent to the PHY.
+    WlanSendError(Error),
+
+    /// A request could not be sent to the netstack.
+    EthSendError(Error),
+}
+
+impl ClientRejection {
+    pub fn log_level(&self) -> log::Level {
+        match self {
+            Self::ParseFailed
+            | Self::SmeSendError(..)
+            | Self::WlanSendError(..)
+            | Self::EthSendError(..) => log::Level::Error,
+            Self::NotAssociated | Self::ControlledPortClosed | Self::Unsupported => {
+                log::Level::Warn
+            }
+            _ => log::Level::Trace,
+        }
+    }
+}
+
 // TODO(37891): Use this code.
 //
 // TODO(37891): Implement capability negotiation in MLME-ASSOCIATE.response.
@@ -87,7 +131,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         result_code: fidl_mlme::AuthenticateResultCodes,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = if result_code == fidl_mlme::AuthenticateResultCodes::Success {
             State::Authenticated
         } else {
@@ -118,7 +162,7 @@ impl RemoteClient {
                 }
             },
         )
-        .map_err(|e| format_err!("failed to send frame: {}", e))
+        .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2) from the SME.
@@ -130,7 +174,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: fidl_mlme::ReasonCode,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = State::Deauthenticated;
 
         // IEEE Std 802.11-2016, 6.3.6.3.3 states that we should send MLME-DEAUTHENTICATE.confirm
@@ -139,7 +183,7 @@ impl RemoteClient {
         // MLME-DEAUTHENTICATE.confirm is redundant.
 
         ctx.send_deauth_frame(self.addr.clone(), ReasonCode(reason_code as u16))
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5) from the SME.
@@ -156,7 +200,7 @@ impl RemoteClient {
         result_code: fidl_mlme::AssociateResultCodes,
         aid: Aid,
         ies: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = if result_code == fidl_mlme::AssociateResultCodes::Success {
             State::Associated {
                 eapol_controlled_port: if is_rsn {
@@ -202,7 +246,7 @@ impl RemoteClient {
             aid,
             ies,
         )
-        .map_err(|e| format_err!("failed to send frame: {}", e))
+        .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1) from the SME.
@@ -215,7 +259,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: u16,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = State::Authenticated;
 
         // IEEE Std 802.11-2016, 6.3.9.2.3 states that we should send MLME-DISASSOCIATE.confirm
@@ -223,7 +267,7 @@ impl RemoteClient {
         // about this client, so sending MLME-DISASSOCIATE.confirm is redundant.
 
         ctx.send_disassoc_frame(self.addr.clone(), ReasonCode(reason_code))
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles SET_CONTROLLED_PORT.request (fuchsia.wlan.mlme.SetControlledPortRequest) from the
@@ -231,19 +275,17 @@ impl RemoteClient {
     pub fn handle_mlme_set_controlled_port_req(
         &mut self,
         state: fidl_mlme::ControlledPortState,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         match &mut self.state {
             State::Associated {
                 eapol_controlled_port: eapol_controlled_port @ Some(_), ..
             } => {
                 eapol_controlled_port.replace(state);
+                Ok(())
             }
-            State::Associated { eapol_controlled_port: None, .. } => {
-                bail!("cannot set controlled port for non-RSN BSS")
-            }
-            _ => bail!("cannot set controlled port when not associated"),
+            State::Associated { eapol_controlled_port: None, .. } => Err(ClientRejection::NotRSN),
+            _ => Err(ClientRejection::NotAssociated),
         }
-        Ok(())
     }
 
     /// Handles MLME-EAPOL.request (IEEE Std 802.11-2016, 6.3.22.1) from the SME.
@@ -253,13 +295,13 @@ impl RemoteClient {
         &self,
         ctx: &mut Context,
         data: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         // IEEE Std 802.11-2016, 6.3.22.2.3 states that we should send MLME-EAPOL.confirm to the
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
 
         ctx.send_eapol_frame(self.addr, ctx.bssid.0.clone(), false, data)
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-SETKEYS.request (IEEE Std 802.11-2016, 6.3.19.1) from the SME.
@@ -269,7 +311,7 @@ impl RemoteClient {
         &mut self,
         _ctx: &mut Context,
         _keylist: &[fidl_mlme::SetKeyDescriptor],
-    ) -> Result<(), Error> {
+    ) -> Result<(), ClientRejection> {
         // TODO(37891): This should be removed from the MLME and handled in the SME.
         unimplemented!();
     }
@@ -283,10 +325,10 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: ReasonCode,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = State::Authenticated;
         ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0)
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::SmeSendError)
     }
 
     /// Handles association request frames (IEEE Std 802.11-2016, 9.3.3.6) from the PHY.
@@ -296,9 +338,9 @@ impl RemoteClient {
         ssid: Option<Vec<u8>>,
         listen_interval: u16,
         rsn: Option<Vec<u8>>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, rsn)
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::SmeSendError)
     }
 
     /// Handles authentication frames (IEEE Std 802.11-2016, 9.3.3.12) from the PHY.
@@ -309,7 +351,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         auth_alg_num: AuthAlgorithmNumber,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         ctx.send_mlme_auth_ind(
             self.addr.clone(),
             match auth_alg_num {
@@ -331,11 +373,11 @@ impl RemoteClient {
                             2,
                             StatusCode::UNSUPPORTED_AUTH_ALGORITHM,
                         )
-                        .map_err(|e| format_err!("failed to send frame: {}", e));
+                        .map_err(ClientRejection::WlanSendError);
                 }
             },
         )
-        .map_err(|e| format_err!("failed to send frame: {}", e))
+        .map_err(ClientRejection::SmeSendError)
     }
 
     /// Handles deauthentication frames (IEEE Std 802.11-2016, 9.3.3.13) from the PHY.
@@ -345,24 +387,24 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: ReasonCode,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         self.state = State::Deauthenticated;
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
             fidl_mlme::ReasonCode::from_primitive(reason_code.0)
                 .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason),
         )
-        .map_err(|e| format_err!("failed to send frame: {}", e))
+        .map_err(ClientRejection::SmeSendError)
     }
 
     /// Handles action frames (IEEE Std 802.11-2016, 9.3.3.14) from the PHY.
-    fn handle_action_frame(&self, _ctx: &mut Context) -> Result<(), failure::Error> {
+    fn handle_action_frame(&self, _ctx: &mut Context) -> Result<(), ClientRejection> {
         // TODO(37891): Implement me!
         Ok(())
     }
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
-    fn handle_ps_poll(&self, _ctx: &mut Context) -> Result<(), failure::Error> {
+    fn handle_ps_poll(&self, _ctx: &mut Context) -> Result<(), ClientRejection> {
         // TODO(37891): Implement me!
         unimplemented!()
     }
@@ -374,9 +416,8 @@ impl RemoteClient {
         dst_addr: MacAddr,
         src_addr: MacAddr,
         body: &[u8],
-    ) -> Result<(), failure::Error> {
-        ctx.send_mlme_eapol_ind(dst_addr, src_addr, &body)
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+    ) -> Result<(), ClientRejection> {
+        ctx.send_mlme_eapol_ind(dst_addr, src_addr, &body).map_err(ClientRejection::SmeSendError)
     }
 
     // Handles LLC frames from PHY data frames.
@@ -387,9 +428,9 @@ impl RemoteClient {
         src_addr: MacAddr,
         ether_type: u16,
         body: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         ctx.deliver_eth_frame(dst_addr, src_addr, ether_type, body)
-            .map_err(|e| format_err!("failed to send frame: {}", e))
+            .map_err(ClientRejection::EthSendError)
     }
 
     // Public handler functions.
@@ -401,16 +442,14 @@ impl RemoteClient {
         ssid: Option<Vec<u8>>,
         mgmt_hdr: mac::MgmtHdr,
         body: B,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
 
         if !self.is_frame_class_permitted(mac::frame_class(&{ mgmt_hdr.frame_ctrl })) {
-            bail!("unpermitted management frame for subtype: {:?}", mgmt_subtype);
+            return Err(ClientRejection::NotPermitted);
         }
 
-        match mac::MgmtBody::parse(mgmt_subtype, body)
-            .ok_or(format_err!("failed to parse management frame"))?
-        {
+        match mac::MgmtBody::parse(mgmt_subtype, body).ok_or(ClientRejection::ParseFailed)? {
             mac::MgmtBody::Authentication { auth_hdr, .. } => {
                 self.handle_auth_frame(ctx, auth_hdr.auth_alg_num)
             }
@@ -425,7 +464,7 @@ impl RemoteClient {
                 self.handle_disassoc_frame(ctx, disassoc_hdr.reason_code)
             }
             mac::MgmtBody::Action { action_hdr: _, .. } => self.handle_action_frame(ctx),
-            _ => bail!("unknown management frame: {:?}", mgmt_subtype),
+            _ => Err(ClientRejection::Unsupported),
         }
     }
 
@@ -441,9 +480,9 @@ impl RemoteClient {
         addr4: Option<mac::Addr4>,
         qos_ctrl: Option<mac::QosControl>,
         body: B,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         if !self.is_frame_class_permitted(mac::frame_class(&{ fixed_data_fields.frame_ctrl })) {
-            bail!("unpermitted data frame");
+            return Err(ClientRejection::NotPermitted);
         }
 
         for msdu in
@@ -487,17 +526,19 @@ impl RemoteClient {
         src_addr: MacAddr,
         ether_type: u16,
         body: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), ClientRejection> {
         let eapol_controlled_port = match self.state {
             State::Associated { eapol_controlled_port, .. } => eapol_controlled_port,
-            _ => bail!("client is not associated"),
+            _ => {
+                return Err(ClientRejection::NotAssociated);
+            }
         };
 
         let protection = match eapol_controlled_port {
             None => false,
             Some(fidl_mlme::ControlledPortState::Open) => true,
             Some(fidl_mlme::ControlledPortState::Closed) => {
-                bail!("EAPoL controlled port is closed");
+                return Err(ClientRejection::ControlledPortClosed);
             }
         };
 
@@ -505,7 +546,7 @@ impl RemoteClient {
             dst_addr, src_addr, protection, false, // TODO(37891): Support QoS.
             ether_type, body,
         )
-        .map_err(|e| format_err!("failed to send frame: {}", e))
+        .map_err(ClientRejection::WlanSendError)
     }
 }
 
@@ -766,9 +807,12 @@ mod tests {
     fn handle_mlme_set_controlled_port_req_no_rsn() {
         let mut r_sta = make_remote_client();
         r_sta.state = State::Associated { eapol_controlled_port: None };
-        r_sta
-            .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
-            .expect_err("expected err");
+        assert_variant!(
+            r_sta
+                .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
+                .expect_err("expected err"),
+            ClientRejection::NotRSN
+        );
         assert_variant!(r_sta.state, State::Associated {
             eapol_controlled_port: None,
             ..
@@ -779,9 +823,12 @@ mod tests {
     fn handle_mlme_set_controlled_port_req_wrong_state() {
         let mut r_sta = make_remote_client();
         r_sta.state = State::Authenticating;
-        r_sta
-            .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
-            .expect_err("expected err");
+        assert_variant!(
+            r_sta
+                .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
+                .expect_err("expected err"),
+            ClientRejection::NotAssociated
+        );
     }
 
     #[test]
@@ -1019,9 +1066,12 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device());
 
         r_sta.state = State::Authenticated;
-        r_sta
-            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
-            .expect_err("expected error");
+        assert_variant!(
+            r_sta
+                .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
+                .expect_err("expected error"),
+            ClientRejection::NotAssociated
+        );
     }
 
     #[test]
@@ -1033,9 +1083,12 @@ mod tests {
         r_sta.state = State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
         };
-        r_sta
-            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
-            .expect_err("expected error");
+        assert_variant!(
+            r_sta
+                .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
+                .expect_err("expected error"),
+            ClientRejection::ControlledPortClosed
+        );
     }
 
     #[test]
@@ -1074,28 +1127,31 @@ mod tests {
         r_sta.state = State::Authenticating;
         let mut ctx = make_context(fake_device.as_device());
 
-        r_sta
-            .handle_data_frame(
-                &mut ctx,
-                mac::FixedDataHdrFields {
-                    frame_ctrl: mac::FrameControl(0),
-                    duration: 0,
-                    addr1: CLIENT_ADDR,
-                    addr2: AP_ADDR.0.clone(),
-                    addr3: CLIENT_ADDR2,
-                    seq_ctrl: mac::SequenceControl(10),
-                },
-                None,
-                None,
-                &[
-                    7, 7, 7, // DSAP, SSAP & control
-                    8, 8, 8, // OUI
-                    9, 10, // eth type
-                    // Trailing bytes
-                    11, 11, 11,
-                ][..],
-            )
-            .expect_err("expected err");
+        assert_variant!(
+            r_sta
+                .handle_data_frame(
+                    &mut ctx,
+                    mac::FixedDataHdrFields {
+                        frame_ctrl: mac::FrameControl(0),
+                        duration: 0,
+                        addr1: CLIENT_ADDR,
+                        addr2: AP_ADDR.0.clone(),
+                        addr3: CLIENT_ADDR2,
+                        seq_ctrl: mac::SequenceControl(10),
+                    },
+                    None,
+                    None,
+                    &[
+                        7, 7, 7, // DSAP, SSAP & control
+                        8, 8, 8, // OUI
+                        9, 10, // eth type
+                        // Trailing bytes
+                        11, 11, 11,
+                    ][..],
+                )
+                .expect_err("expected err"),
+            ClientRejection::NotPermitted
+        );
     }
 
     #[test]
@@ -1212,51 +1268,57 @@ mod tests {
         r_sta.state = State::Authenticating;
         let mut ctx = make_context(fake_device.as_device());
 
-        r_sta
-            .handle_mgmt_frame(
-                &mut ctx,
-                None,
-                mac::MgmtHdr {
-                    frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
-                    duration: 0,
-                    addr1: [1; 6],
-                    addr2: [2; 6],
-                    addr3: [3; 6],
-                    seq_ctrl: mac::SequenceControl(10),
-                },
-                &[
-                    0, 0, // Capability info
-                    10, 0, // Listen interval
-                ][..],
-            )
-            .expect_err("expected error");
+        assert_variant!(
+            r_sta
+                .handle_mgmt_frame(
+                    &mut ctx,
+                    None,
+                    mac::MgmtHdr {
+                        frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
+                        duration: 0,
+                        addr1: [1; 6],
+                        addr2: [2; 6],
+                        addr3: [3; 6],
+                        seq_ctrl: mac::SequenceControl(10),
+                    },
+                    &[
+                        0, 0, // Capability info
+                        10, 0, // Listen interval
+                    ][..],
+                )
+                .expect_err("expected error"),
+            ClientRejection::NotPermitted
+        );
     }
 
     #[test]
     fn handle_mgmt_frame_not_handled() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Authenticating;
+        r_sta.state = State::Associated { eapol_controlled_port: None };
         let mut ctx = make_context(fake_device.as_device());
 
-        r_sta
-            .handle_mgmt_frame(
-                &mut ctx,
-                None,
-                mac::MgmtHdr {
-                    frame_ctrl: mac::FrameControl(0b00000000_00010000), // Assoc resp frame
-                    duration: 0,
-                    addr1: [1; 6],
-                    addr2: [2; 6],
-                    addr3: [3; 6],
-                    seq_ctrl: mac::SequenceControl(10),
-                },
-                &[
-                    0, 0, // Capability info
-                    0, 0, // Status code
-                    1, 0, // AID
-                ][..],
-            )
-            .expect_err("expected error");
+        assert_variant!(
+            r_sta
+                .handle_mgmt_frame(
+                    &mut ctx,
+                    None,
+                    mac::MgmtHdr {
+                        frame_ctrl: mac::FrameControl(0b00000000_00010000), // Assoc resp frame
+                        duration: 0,
+                        addr1: [1; 6],
+                        addr2: [2; 6],
+                        addr3: [3; 6],
+                        seq_ctrl: mac::SequenceControl(10),
+                    },
+                    &[
+                        0, 0, // Capability info
+                        0, 0, // Status code
+                        1, 0, // AID
+                    ][..],
+                )
+                .expect_err("expected error"),
+            ClientRejection::Unsupported
+        );
     }
 }

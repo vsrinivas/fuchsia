@@ -48,7 +48,7 @@ pub enum Rejection {
     NoSuchClient(MacAddr),
 
     /// Some error specific to a client occurred.
-    ClientError(MacAddr, failure::Error),
+    Client(MacAddr, ClientRejection),
 
     /// Some general error occurred.
     Error(failure::Error),
@@ -57,7 +57,8 @@ pub enum Rejection {
 impl Rejection {
     fn log_level(&self) -> log::Level {
         match self {
-            Self::ClientError(..) | Self::Error(..) | Self::NoSrcAddr => log::Level::Error,
+            Self::NoSrcAddr => log::Level::Error,
+            Self::Client(_, e) => e.log_level(),
             _ => log::Level::Trace,
         }
     }
@@ -66,7 +67,7 @@ impl Rejection {
 impl fmt::Display for Rejection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ClientError(addr, e) => write!(f, "client {:02X?}: {}", addr, e),
+            Self::Client(addr, e) => write!(f, "client {:02X?}: {:?}", addr, e),
             _ => self.fmt(f),
         }
     }
@@ -146,7 +147,7 @@ impl InfraBss {
             if is_new {
                 self.clients.remove(&client_addr);
             }
-            return Err(Rejection::ClientError(client_addr, e));
+            return Err(Rejection::Client(client_addr, e));
         }
 
         // The client may have been deauthenticated if a deauthenticate frame was received.
@@ -185,7 +186,7 @@ impl InfraBss {
 
         client
             .handle_data_frame(ctx, fixed_fields, addr4, qos_ctrl, body)
-            .map_err(|e| Rejection::ClientError(client.addr, e))
+            .map_err(|e| Rejection::Client(client.addr, e))
     }
 
     fn handle_eth_frame(
@@ -200,7 +201,7 @@ impl InfraBss {
 
         client
             .handle_eth_frame(ctx, dst_addr, src_addr, ether_type, body)
-            .map_err(|e| Rejection::ClientError(client.addr, e))
+            .map_err(|e| Rejection::Client(client.addr, e))
     }
 }
 
@@ -947,7 +948,7 @@ mod tests {
             ][..],
             )
             .expect_err("expected error"),
-            Rejection::ClientError(_, _)
+            Rejection::Client(_, ClientRejection::ParseFailed)
         );
 
         assert_eq!(bss.clients.contains_key(&CLIENT_ADDR), false);
@@ -1125,7 +1126,7 @@ mod tests {
                 ][..],
             )
             .expect_err("expected error"),
-            Rejection::ClientError(_, _)
+            Rejection::Client(_, ClientRejection::NotPermitted)
         );
 
         assert_eq!(fake_device.eth_queue.len(), 0);
@@ -1203,7 +1204,7 @@ mod tests {
         assert_variant!(
             bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
                 .expect_err("expected error"),
-            Rejection::ClientError(_, _)
+            Rejection::Client(_, ClientRejection::ControlledPortClosed)
         );
     }
 
