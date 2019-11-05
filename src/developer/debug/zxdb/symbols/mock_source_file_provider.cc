@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/source_util_test_support.h"
+#include "src/developer/debug/zxdb/symbols/mock_source_file_provider.h"
 
 namespace zxdb {
 

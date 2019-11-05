@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_SOURCE_UTIL_TEST_SUPPORT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_SOURCE_UTIL_TEST_SUPPORT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SOURCE_FILE_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SOURCE_FILE_PROVIDER_H_
 
 #include <map>
 #include <string>
 
-#include "src/developer/debug/zxdb/console/source_util.h"
+#include "src/developer/debug/zxdb/symbols/source_file_provider.h"
 
 namespace zxdb {
 
@@ -30,4 +30,4 @@ class MockSourceFileProvider : public SourceFileProvider {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_SOURCE_UTIL_TEST_SUPPORT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_SOURCE_FILE_PROVIDER_H_
