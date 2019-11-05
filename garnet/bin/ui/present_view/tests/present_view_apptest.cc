@@ -230,7 +230,7 @@ class PresentViewComponentTest : public sys::testing::TestWithEnvironment {
   int64_t present_view_return_code_;
 };
 
-TEST_F(PresentViewComponentTest, NoParams) {
+TEST_F(PresentViewComponentTest, DISABLED_NoParams) {
   // Passing no parameters is invalid.
   //
   // present_view should fail, and never create a token pair.
@@ -255,7 +255,7 @@ TEST_F(PresentViewComponentTest, NoParams) {
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, present_view_termination_reason_);
 }
 
-TEST_F(PresentViewComponentTest, InvalidComponentURI) {
+TEST_F(PresentViewComponentTest, DISABLED_InvalidComponentURI) {
   // Bad component URIs are invalid and cause present_view to fail.
   //
   // present_view should create a token pair and pass one end to |Presenter|,
@@ -273,7 +273,7 @@ TEST_F(PresentViewComponentTest, InvalidComponentURI) {
   EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, present_view_termination_reason_);
 }
 
-TEST_F(PresentViewComponentTest, LaunchAndKillComponent) {
+TEST_F(PresentViewComponentTest, DISABLED_LaunchAndKillComponent) {
   // present_view should create a token pair and launch the specified component,
   // passing one end to |Presenter| and the other end to a |ViewProvider| from
   // the component.
