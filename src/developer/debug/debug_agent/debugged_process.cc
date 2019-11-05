@@ -18,6 +18,7 @@
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
+#include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -430,8 +431,9 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
     case debug_ipc::BreakpointType::kHardware:
       return RegisterHardwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kWatchpoint:
+      FXL_NOTREACHED() << "Watchpoints are registered through RegisterWatchpoint.";
       // TODO(donosoc): Reactivate once the transition is complete.
-      return ZX_ERR_NOT_SUPPORTED;
+      return ZX_ERR_INVALID_ARGS;
     case debug_ipc::BreakpointType::kLast:
       FXL_NOTREACHED();
       return ZX_ERR_INVALID_ARGS;
@@ -458,6 +460,45 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   }
 
   FXL_NOTREACHED();
+}
+
+zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
+                                                const debug_ipc::AddressRange& range) {
+  FXL_DCHECK(bp->type() == debug_ipc::BreakpointType::kWatchpoint)
+      << "Breakpoint type must be kWatchpoint, got: "
+      << debug_ipc::BreakpointTypeToString(bp->type());
+
+  auto it = watchpoints_.find(range);
+  if (it == watchpoints_.end()) {
+    auto watchpoint = std::make_unique<Watchpoint>(bp, this, arch_provider_, range);
+    if (zx_status_t status = watchpoint->Init(); status != ZX_OK)
+      return status;
+
+    watchpoints_[range] = std::move(watchpoint);
+    return ZX_OK;
+  } else {
+    return it->second->RegisterBreakpoint(bp);
+  }
+}
+
+void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range) {
+  FXL_DCHECK(bp->type() == debug_ipc::BreakpointType::kWatchpoint)
+      << "Breakpoint type must be kWatchpoint, got: "
+      << debug_ipc::BreakpointTypeToString(bp->type());
+
+  auto it = watchpoints_.find(range);
+  if (it == watchpoints_.end())
+    return;
+
+  Watchpoint* watchpoint = it->second.get();
+  bool still_used = watchpoint->UnregisterBreakpoint(bp);
+  if (!still_used) {
+    for (auto& [thread_koid, thread] : threads_) {
+      thread->WillDeleteProcessBreakpoint(watchpoint);
+    }
+  }
+
+  watchpoints_.erase(it);
 }
 
 void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,

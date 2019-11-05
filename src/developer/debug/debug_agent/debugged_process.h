@@ -64,6 +64,9 @@ struct DebuggedProcessCreateInfo {
 
 class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
  public:
+  using WatchpointMap = std::map<debug_ipc::AddressRange, std::unique_ptr<Watchpoint>,
+                                 debug_ipc::AddressRangeBeginCmp>;
+
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
   DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
@@ -132,10 +135,11 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
   virtual HardwareBreakpoint* FindHardwareBreakpoint(uint64_t address) const;
 
-  // Notifications when breakpoints are added or removed that affect this
-  // process.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
+
+  zx_status_t RegisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
+  void UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
 
   // Each time a thread attempts to step over a breakpoint, the breakpoint will enqueue itself and
   // the thread into the step over queue. The step over queue is used so that there is only one
@@ -170,6 +174,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   const std::map<uint64_t, std::unique_ptr<HardwareBreakpoint>>& hardware_breakpoints() const {
     return hardware_breakpoints_;
   }
+
+  const WatchpointMap& watchpoints() const { return watchpoints_; }
 
  protected:
   std::shared_ptr<arch::ArchProvider> arch_provider_;
@@ -231,6 +237,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   // Maps addresses to the ProcessBreakpoint at a location.
   std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>> software_breakpoints_;
   std::map<uint64_t, std::unique_ptr<HardwareBreakpoint>> hardware_breakpoints_;
+  WatchpointMap watchpoints_;
 
   std::deque<StepOverTicket> step_over_queue_;
 

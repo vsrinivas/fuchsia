@@ -24,12 +24,33 @@ class MockArchProvider : public arch::ArchProvider {
     return ZX_OK;
   }
 
+  zx_status_t InstallWatchpoint(zx::thread* thread, const debug_ipc::AddressRange& range) override {
+    wp_installs_.push_back({thread->get(), range});
+    return ZX_OK;
+  }
+
+  zx_status_t UninstallWatchpoint(zx::thread* thread,
+                                  const debug_ipc::AddressRange& range) override {
+    wp_uninstalls_.push_back({thread->get(), range});
+    return ZX_OK;
+  }
+
   const std::vector<std::pair<zx_koid_t, uint64_t>>& installs() const { return installs_; }
   const std::vector<std::pair<zx_koid_t, uint64_t>>& uninstalls() const { return uninstalls_; }
+
+  const std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>>& wp_installs() const {
+    return wp_installs_;
+  }
+  const std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>>& wp_uninstalls() const {
+    return wp_uninstalls_;
+  }
 
  private:
   std::vector<std::pair<zx_koid_t, uint64_t>> installs_;
   std::vector<std::pair<zx_koid_t, uint64_t>> uninstalls_;
+
+  std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>> wp_installs_;
+  std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>> wp_uninstalls_;
 };
 
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
@@ -79,6 +100,16 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
   return location;
 }
 
+debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
+                                                    const debug_ipc::AddressRange& range) {
+  debug_ipc::ProcessBreakpointSettings location = {};
+  location.process_koid = process_koid;
+  location.thread_koid = thread_koid;
+  location.address_range = range;
+
+  return location;
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
 constexpr zx_koid_t kProcessKoid = 0x1;
@@ -87,6 +118,9 @@ constexpr uint64_t kAddress1 = 0x1234;
 constexpr uint64_t kAddress2 = 0x5678;
 constexpr uint64_t kAddress3 = 0x9abc;
 constexpr uint64_t kAddress4 = 0xdef0;
+
+const debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
+const debug_ipc::AddressRange kAddressRange2 = {0x3, 0x4};
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;
@@ -127,7 +161,7 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   // Register a hardware breakpoint.
   Breakpoint hw_breakpoint(&process_delegate);
   debug_ipc::BreakpointSettings hw_settings;
-  settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
+  hw_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
   hw_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, hw_settings);
 
   ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
@@ -148,6 +182,20 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   hw_it = process.hardware_breakpoints().begin();
   EXPECT_EQ(hw_it++->first, kAddress4);
   EXPECT_EQ(hw_it, process.hardware_breakpoints().end());
+
+  // Add a watchpoint.
+  Breakpoint wp_breakpoint(&process_delegate);
+  debug_ipc::BreakpointSettings wp_settings;
+  wp_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddressRange1));
+  wp_breakpoint.SetSettings(debug_ipc::BreakpointType::kWatchpoint, wp_settings);
+
+  ASSERT_ZX_EQ(process.RegisterWatchpoint(&wp_breakpoint, kAddressRange1), ZX_OK);
+  ASSERT_EQ(process.software_breakpoints().size(), 2u);
+  ASSERT_EQ(process.hardware_breakpoints().size(), 1u);
+  ASSERT_EQ(process.watchpoints().size(), 1u);
+  auto wp_it = process.watchpoints().begin();
+  EXPECT_EQ(wp_it++->first, kAddressRange1);
+  EXPECT_EQ(wp_it, process.watchpoints().end());
 }
 
 }  // namespace

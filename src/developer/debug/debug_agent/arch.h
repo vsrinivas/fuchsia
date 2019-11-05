@@ -92,7 +92,7 @@ class ArchProvider {
                                      const std::vector<debug_ipc::Register>& registers,
                                      zx::thread*);
 
-  // Hardware Exceptions -------------------------------------------------------
+  // Hardware Exceptions ---------------------------------------------------------------------------
 
   // Returns the address of the instruction that hit the exception from the
   // address reported by the exception.

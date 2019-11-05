@@ -44,10 +44,16 @@ class Breakpoint {
     // Called to register a new ProcessBreakpoint with the appropriate
     // location. If this fails, the breakpoint has not been set.
     virtual zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                           uint64_t address) = 0;
+                                           uint64_t address);
 
     // Called When the breakpoint no longer applies to this location.
-    virtual void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) = 0;
+    virtual void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address);
+
+    virtual zx_status_t RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                           const debug_ipc::AddressRange& range);
+
+    virtual void UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                      const debug_ipc::AddressRange& range);
   };
 
   explicit Breakpoint(ProcessDelegate* process_delegate);

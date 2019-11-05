@@ -10,6 +10,33 @@
 
 namespace debug_agent {
 
+// Breakpoint::ProcessDelegate ---------------------------------------------------------------------
+
+zx_status_t Breakpoint::ProcessDelegate::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                                            uint64_t address) {
+  FXL_NOTREACHED() << "Should override.";
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+// Called When the breakpoint no longer applies to this location.
+void Breakpoint::ProcessDelegate::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                                       uint64_t address) {
+  FXL_NOTREACHED() << "Should override.";
+}
+
+zx_status_t Breakpoint::ProcessDelegate::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                                            const debug_ipc::AddressRange& range) {
+  FXL_NOTREACHED() << "Should override.";
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void Breakpoint::ProcessDelegate::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                                       const debug_ipc::AddressRange& range) {
+  FXL_NOTREACHED() << "Should override.";
+}
+
+// Breakpoint --------------------------------------------------------------------------------------
+
 namespace {
 
 std::string Preamble(const Breakpoint* bp) {

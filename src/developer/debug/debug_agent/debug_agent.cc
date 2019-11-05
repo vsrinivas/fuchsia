@@ -434,6 +434,25 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
   reply->status = found->second.SetSettings(request.breakpoint_type, request.breakpoint);
 }
 
+zx_status_t DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                           const debug_ipc::AddressRange& range) {
+  DebuggedProcess* proc = GetDebuggedProcess(process_koid);
+  if (proc)
+    return proc->RegisterWatchpoint(bp, range);
+
+  // The process might legitimately be not found if there was a race between
+  // the process terminating and a breakpoint add/change.
+  return ZX_ERR_NOT_FOUND;
+}
+
+void DebugAgent::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                      const debug_ipc::AddressRange& range) {
+  // The process might legitimately be not found if it was terminated.
+  DebuggedProcess* proc = GetDebuggedProcess(process_koid);
+  if (proc)
+    proc->UnregisterWatchpoint(bp, range);
+}
+
 void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                                 debug_ipc::AddressSpaceReply* reply) {
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
