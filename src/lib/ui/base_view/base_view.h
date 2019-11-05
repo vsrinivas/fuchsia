@@ -142,10 +142,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // scene contents before calling this method.
   void PresentScene();
 
-  fuchsia::sys::ServiceProviderPtr& incoming_services() { return incoming_services_; }
-
-  component::ServiceNamespace& outgoing_services() { return outgoing_services_; }
-
  private:
   // |scenic::SessionListener|
   //
@@ -178,9 +174,6 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   void DeactivateIme();
 
   sys::ComponentContext* const component_context_;
-  fuchsia::sys::ServiceProviderPtr incoming_services_;
-  component::ServiceNamespace outgoing_services_;
-
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
   scenic::View view_;

@@ -91,8 +91,6 @@ class RecipeApp : public modular::ViewApp {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = scenic::ToViewToken(std::move(view_token)),
-        .incoming_services = std::move(incoming_services),
-        .outgoing_services = std::move(outgoing_services),
         .component_context = component_context_.get(),
     };
     view_ = std::make_unique<RecipeView>(std::move(view_context));

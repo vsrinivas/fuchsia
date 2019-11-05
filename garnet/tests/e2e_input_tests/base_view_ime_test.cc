@@ -111,8 +111,6 @@ class ImeInputTest : public gtest::RealLoopFixture {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
         .view_token = std::move(view_token),
-        .incoming_services = nullptr,
-        .outgoing_services = nullptr,
         .component_context = g_context,
     };
     view_ = std::make_unique<ImeClientView>(std::move(view_context), dispatcher());

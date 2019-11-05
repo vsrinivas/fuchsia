@@ -41,8 +41,6 @@ void ModuleApp::CreateView(zx::eventpair view_token,
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = fuchsia::ui::views::ViewToken{.value = std::move(view_token)},
-      .incoming_services = std::move(incoming_services),
-      .outgoing_services = std::move(outgoing_services),
       .component_context = component_context_.get(),
   };
 

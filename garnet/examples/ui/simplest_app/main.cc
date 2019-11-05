@@ -63,8 +63,6 @@ int main(int argc, const char** argv) {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),
-      .incoming_services = nullptr,
-      .outgoing_services = nullptr,
       .component_context = component_context.get(),
   };
   auto view = std::make_unique<SimplestAppView>(std::move(view_context), &loop);

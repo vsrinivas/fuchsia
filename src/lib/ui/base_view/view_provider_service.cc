@@ -40,8 +40,6 @@ void ViewProviderService::CreateView(
   ViewContext context = {
       .session_and_listener_request = CreateScenicSessionPtrAndListenerRequest(scenic_),
       .view_token = scenic::ToViewToken(std::move(view_token)),
-      .incoming_services = std::move(incoming_services),
-      .outgoing_services = std::move(outgoing_services),
       .component_context = component_context_,
   };
 

@@ -61,8 +61,6 @@ void ViewProviderComponent::ViewImpl::Present(fuchsia::ui::views::ViewToken view
   ViewContext context = {
       .session_and_listener_request = CreateScenicSessionPtrAndListenerRequest(scenic_),
       .view_token = std::move(view_token),
-      .incoming_services = {},
-      .outgoing_services = {},
       .component_context = component_context_,
   };
   view_ = factory_(std::move(context));

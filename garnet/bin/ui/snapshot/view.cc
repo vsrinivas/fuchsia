@@ -11,7 +11,7 @@
 namespace snapshot {
 
 View::View(scenic::ViewContext view_context) : BaseView(std::move(view_context), "Snapshot View") {
-  outgoing_services().AddService(loader_bindings_.GetHandler(this));
+  component_context()->outgoing()->AddPublicService(loader_bindings_.GetHandler(this));
 }
 
 void View::Load(::fuchsia::mem::Buffer payload) {

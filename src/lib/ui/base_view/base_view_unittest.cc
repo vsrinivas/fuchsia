@@ -84,8 +84,6 @@ class BaseViewTest : public gtest::TestLoopFixture {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(&fake_scenic_),
         .view_token = std::move(view_token),
-        .incoming_services = {},
-        .outgoing_services = {},
         .component_context = component_context.get(),
     };
     view_holder_token_ = std::move(view_holder_token);
