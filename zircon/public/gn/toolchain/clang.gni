@@ -106,6 +106,8 @@ clang_runtime = read_file(_clang_runtime_file, "json")
 #     Type: list(string)
 #
 template("toolchain_runtime_deps") {
+  # TODO(fxb/3367): remove this attribute.
+  not_needed(invoker, [ "zx_publish" ])
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -145,9 +147,13 @@ template("toolchain_runtime_deps") {
              "$_clang_runtime_file has no match for" +
                  " --target=${toolchain.target_tuple} + $invoker")
 
+      toolchain_label = get_label_info(":$target_name", "toolchain")
+      not_needed([ "toolchain_label" ])  # In case the for loop below is empty.
+
       metadata = {
         binaries = []
         manifest_lines = []
+        zx_manifest = []
         foreach(lib, match.runtime) {
           # For build_api_module("binaries") in $zx/BUILD.gn.
           binaries += [
@@ -179,6 +185,29 @@ template("toolchain_runtime_deps") {
           manifest_lines +=
               [ "lib/${toolchain.libprefix}${lib.soname}=" +
                 rebase_path(lib.dist, root_build_dir, _clang_lib_dir) ]
+
+          # Make the manifest describing this library available to the build
+          # API module for unification.
+          # The manifest is not published for fuzzer variants.
+          if (defined(invoker.zx_publish) && invoker.zx_publish &&
+              string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
+            write_file("$target_gen_dir/${lib.soname}.zx_manifest.txt", [ "lib/${toolchain.libprefix}${lib.soname}=" +
+                rebase_path(lib.dist, root_build_dir, _clang_lib_dir) ], "list lines")
+            zx_manifest += [
+              {
+                label = get_label_info(":$target_name", "label_with_toolchain")
+                name = "lib.${lib.soname}"
+                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] != toolchain.tags) {
+                  name += toolchain.variant_suffix
+                }
+                name = string_replace(name, "+", "p")
+                toolchain = toolchain_label
+                path = rebase_path("$target_gen_dir/${lib.soname}.zx_manifest.txt", root_build_dir)
+                cpu = current_cpu
+                os = current_os
+              }
+            ]
+          }
         }
       }
     } else {

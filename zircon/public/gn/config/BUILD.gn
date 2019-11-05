@@ -683,6 +683,7 @@ if (is_fuchsia) {
   toolchain_runtime_deps("shared-libc++-deps") {
     cflags = toolchain.runtime_deps_cflags
     ldflags = []
+    zx_publish = true
   }
 }
 
