@@ -372,6 +372,28 @@ mitigation has negative performance impacts.
 * If true, the mitigation is enabled on CPUs that need it.
 * If false (the default), the mitigation is not enabled.
 
+## kernel.x86.md_clear_on_user_return=\<bool>
+
+MDS (Microarchitectural Data Sampling) is a family of speculative execution
+information leak bugs that allow the contents of recent loads or stores to be
+inferred by hostile code, regardless of privilege level (CVE-2019-11091,
+CVE-2018-12126, CVE-2018-12130, CVE-2018-12127). For example, this could allow
+user code to read recent kernel loads/stores.
+
+To avoid this bug, it is required that all microarchitectural structures
+that could leak data be flushed on trust level transitions. Also, it is
+important that trust levels do not concurrently execute on a single physical
+processor core.
+
+This option controls whether microarchitectual structures are flushed on
+the kernel to user exit path, if possible. It may have a negative performance
+impact.
+
+* If set to true, structures are flushed if the processor is vulnerable.
+* If set to false (the default), no flush is executed on structures.
+
+This option only affects x86 systems.
+
 ## kernel.mexec-pci-shutdown=\<bool>
 
 If false, this option leaves PCI devices running when calling mexec. Defaults
