@@ -154,9 +154,16 @@ protocol AccountHandlerControl {
     /// Moves the AccountHandler from the `Transferred` state to the
     /// `Initialized` state.
     ///
+    /// `context` An `AccountHandlerContext` that can supply account and
+    ///           authentication services and contextual state.
+    /// `id` The account's local identifier.
+    ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Transferred`
     /// state.
-    FinalizeAccountTransfer() -> () error fuchsia.identity.account.Error;
+    FinalizeAccountTransfer(
+        AccountHandlerContext context,
+        fuchsia.identity.account.LocalAccountId id)
+        -> () error fuchsia.identity.account.Error;
 
     // TODO(fxr/37227) - update encrypt/decrypt APIs to handle data given by KMS.
 

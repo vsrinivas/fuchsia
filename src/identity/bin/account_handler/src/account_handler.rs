@@ -94,7 +94,7 @@ impl AccountHandler {
             AccountHandlerControlRequest::PerformAccountTransfer { responder, .. } => {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
-            AccountHandlerControlRequest::FinalizeAccountTransfer { responder } => {
+            AccountHandlerControlRequest::FinalizeAccountTransfer { responder, .. } => {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
             AccountHandlerControlRequest::EncryptAccountData { responder, .. } => {
