@@ -590,7 +590,7 @@ The header has the following form:
     to enable soft transitions of the wire format. See [Header Flags](#flags)
     for a description of the current flag definitions.
 *   `uint8 magic number`, determines if two wire formats are compatible.
-*   `uint32 ordinal`
+*   `uint64 ordinal`
     *   The zero ordinal is invalid.
     *   Ordinals with the most significant bit set are reserved for
         control messages and future expansion.
