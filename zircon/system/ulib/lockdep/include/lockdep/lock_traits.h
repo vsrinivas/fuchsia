@@ -9,10 +9,6 @@
 
 namespace lockdep {
 
-// Forward declaration.
-template <typename Class, typename LockType, size_t Index>
-class LockDep;
-
 // Flags to specify which rules to apply to a lock class during validation.
 enum LockFlags : uint8_t {
   // Apply only common rules that apply to all locks.
@@ -57,6 +53,9 @@ constexpr inline LockFlags operator&(LockFlags a, LockFlags b) {
 
 namespace internal {
 
+// Receives optional lock flags in the marcos below.
+constexpr inline LockFlags DefaultLockFlags(LockFlags flags = LockFlagsNone) { return flags; }
+
 // Receives the optional lock flags in the macros below and injects the
 // singleton lock flag.
 constexpr inline LockFlags SingletonLockFlags(LockFlags flags = LockFlagsNone) {
@@ -64,6 +63,10 @@ constexpr inline LockFlags SingletonLockFlags(LockFlags flags = LockFlagsNone) {
 }
 
 }  // namespace internal
+
+// Forward declaration.
+template <typename Class, typename LockType, size_t Index, LockFlags Flags>
+class LockDep;
 
 //
 // The following macros are used to instrument locks and lock types for runtime
@@ -83,8 +86,9 @@ constexpr inline LockFlags SingletonLockFlags(LockFlags flags = LockFlagsNone) {
 //      LOCK_DEP_INSTRUMENT(MyType, Mutex) mutex;
 //      // ...
 //  };
-#define LOCK_DEP_INSTRUMENT(containing_type, lock_type) \
-  ::lockdep::LockDep<containing_type, lock_type, __LINE__>
+#define LOCK_DEP_INSTRUMENT(containing_type, lock_type, ...) \
+  ::lockdep::LockDep<containing_type, lock_type, __LINE__,   \
+                     ::lockdep::internal::DefaultLockFlags(__VA_ARGS__)>
 
 // Defines a singleton lock with the given name and type. The singleton
 // instance may be retrieved using the static Get() method provided by the base

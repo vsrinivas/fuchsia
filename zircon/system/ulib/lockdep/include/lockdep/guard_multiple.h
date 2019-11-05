@@ -32,8 +32,9 @@ class GuardMultiple {
   // Locks the given set of locks, each belonging to the same lock class,
   // automatically ordering the arguments by address to preserve the
   // intra-class ordering invariant.
-  template <typename Class, size_t Index, template <typename, typename, size_t> class... Locks>
-  GuardMultiple(Locks<Class, LockType, Index>*... locks)
+  template <typename Class, size_t Index, LockFlags Flags,
+            template <typename, typename, size_t, LockFlags> class... Locks>
+  GuardMultiple(Locks<Class, LockType, Index, Flags>*... locks)
       : GuardMultiple{std::make_index_sequence<sizeof...(locks)>{}, locks...} {}
 
   ~GuardMultiple() {
@@ -65,7 +66,7 @@ class GuardMultiple {
     size_t i = 1;
     while (i < Size) {
       T* x = elements[i];
-      ssize_t j = i - 1;
+      std::make_signed_t<size_t> j = i - 1;
       while (j >= 0 && elements[j] > x) {
         elements[j + 1] = elements[j];
         j--;
@@ -78,8 +79,8 @@ class GuardMultiple {
   // Builds an array of Lock<LockType> pointers, sorts the array by ascending
   // address, and then aggregate initializes the union storage. Array elements
   // are constructed in order.
-  template <size_t... Is, template <typename> class... Locks>
-  GuardMultiple(std::index_sequence<Is...>, Locks<LockType>*... locks) {
+  template <size_t... Is, typename... Locks>
+  explicit GuardMultiple(std::index_sequence<Is...>, Locks*... locks) {
     Lock<LockType>* lock_pointers[] = {locks...};
     InsertionSortPointers(lock_pointers);
     new (&guard_storage_) Storage{

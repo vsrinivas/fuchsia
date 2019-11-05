@@ -217,9 +217,9 @@ struct Bar {
   void TestExclude() TA_EXCL(lock) {}
 };
 
-template <typename LockType>
+template <typename LockType, lockdep::LockFlags Flags = lockdep::LockFlagsNone>
 struct Baz {
-  LOCK_DEP_INSTRUMENT(Baz, LockType) lock;
+  LOCK_DEP_INSTRUMENT(Baz, LockType, Flags) lock;
 
   void TestRequire() TA_REQ(lock) {}
   void TestExclude() TA_EXCL(lock) {}
@@ -268,6 +268,7 @@ static bool lock_dep_dynamic_analysis_tests() {
   using lockdep::Guard;
   using lockdep::GuardMultiple;
   using lockdep::LockClassState;
+  using lockdep::LockFlagsNestable;
   using lockdep::LockResult;
   using lockdep::ThreadLockState;
   using test::Bar;
@@ -476,6 +477,43 @@ static bool lock_dep_dynamic_analysis_tests() {
       EXPECT_EQ(LockResult::Success, test::GetLastResult());
 
       Guard<Nestable> auto_baz1{&baz1.lock, 0};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
+    }
+  }
+
+  // Test external order invariant with nestable flag supplied on the lock
+  // member, rather than the lock type.
+  {
+    Baz<Mutex, LockFlagsNestable> baz1;
+    Baz<Mutex, LockFlagsNestable> baz2;
+
+    {
+      Guard<Mutex> auto_baz1{&baz1.lock, 0};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz2{&baz2.lock, 1};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    {
+      Guard<Mutex> auto_baz2{&baz2.lock, 0};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz1{&baz1.lock, 1};
+      EXPECT_TRUE(auto_baz1);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    {
+      Guard<Mutex> auto_baz2{&baz2.lock, 1};
+      EXPECT_TRUE(auto_baz2);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      Guard<Mutex> auto_baz1{&baz1.lock, 0};
       EXPECT_TRUE(auto_baz1);
       EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
     }

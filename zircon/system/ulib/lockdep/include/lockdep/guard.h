@@ -29,22 +29,23 @@ template <typename T>
 using GetLockType = RemoveGlobalReference<decltype(DeduceLockType(static_cast<T*>(nullptr)))>;
 
 // Trait type that determines whether the given LockType is nestable.
+template <typename LockType>
+struct IsLockTypeNestable : std::bool_constant<(LockTraits<RemoveGlobalReference<LockType>>::Flags &
+                                                LockFlagsNestable) != 0> {};
+
+// Trait type that determines whether the given instrumented lock is nestable.
 template <typename T>
-struct IsNestable {
-  using LockType = RemoveGlobalReference<T>;
-  static constexpr bool Value = (LockTraits<LockType>::Flags & LockFlagsNestable) != 0;
-};
+struct IsLockNestable : std::false_type {};
+template <typename Class, typename LockType, size_t Index, LockFlags Flags>
+struct IsLockNestable<LockDep<Class, LockType, Index, Flags>>
+    : std::bool_constant<(Flags & LockFlagsNestable) != 0> {};
 
 // Trait type that determines whether the given policy type has a nested type
 // tag named Shared.
 template <typename LockPolicy, typename Enabled = void>
-struct IsSharedLockPolicy {
-  static constexpr bool Value = false;
-};
+struct IsSharedLockPolicy : std::false_type {};
 template <typename LockPolicy>
-struct IsSharedLockPolicy<LockPolicy, std::void_t<typename LockPolicy::Shared>> {
-  static constexpr bool Value = true;
-};
+struct IsSharedLockPolicy<LockPolicy, std::void_t<typename LockPolicy::Shared>> : std::true_type {};
 
 // Detect whether `LockPolicy<LockType>::AssertHeld(const LockType&)` is a valid expression.
 template <typename LockType, typename = void>
@@ -59,21 +60,22 @@ using EnableIfPolicyHasAssertHeld = std::enable_if_t<PolicyHasAssertHeld<LockTyp
 
 // Enable if the given T is nestable and uses same type as LockType.
 template <typename T, typename LockType>
-using EnableIfNestable = typename std::enable_if<std::is_same<GetLockType<T>, LockType>::value &&
-                                                 IsNestable<GetLockType<T>>::Value>::type;
+using EnableIfNestable =
+    std::enable_if_t<std::is_same_v<GetLockType<T>, LockType> &&
+                     std::disjunction_v<IsLockTypeNestable<LockType>, IsLockNestable<T>>>;
 
 // Enable if the given T is not nestable and uses same type as LockType.
 template <typename T, typename LockType>
-using EnableIfNotNestable = typename std::enable_if<std::is_same<GetLockType<T>, LockType>::value &&
-                                                    !IsNestable<GetLockType<T>>::Value>::type;
+using EnableIfNotNestable =
+    std::enable_if_t<std::is_same_v<GetLockType<T>, LockType> &&
+                     !std::disjunction_v<IsLockTypeNestable<LockType>, IsLockNestable<T>>>;
 
 template <typename LockType, typename Option>
-using EnableIfShared =
-    typename std::enable_if<IsSharedLockPolicy<LockPolicy<LockType, Option>>::Value>::type;
+using EnableIfShared = std::enable_if_t<IsSharedLockPolicy<LockPolicy<LockType, Option>>::value>;
 
 template <typename LockType, typename Option>
 using EnableIfNotShared =
-    typename std::enable_if<!IsSharedLockPolicy<LockPolicy<LockType, Option>>::Value>::type;
+    std::enable_if_t<!IsSharedLockPolicy<LockPolicy<LockType, Option>>::value>;
 
 }  // namespace internal
 

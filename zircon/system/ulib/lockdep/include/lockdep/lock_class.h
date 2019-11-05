@@ -6,16 +6,15 @@
 
 #include <zircon/compiler.h>
 
-#include <fbl/type_info.h>
+#include <type_traits>
+#include <utility>
 
+#include <fbl/type_info.h>
 #include <lockdep/common.h>
 #include <lockdep/global_reference.h>
 #include <lockdep/lock_class_state.h>
 #include <lockdep/lock_traits.h>
 #include <lockdep/thread_lock_state.h>
-
-#include <type_traits>
-#include <utility>
 
 namespace lockdep {
 
@@ -265,11 +264,6 @@ class __TA_CAPABILITY("mutex") Lock<GlobalReference<LockType, Reference>> {
   IdValue id_;
 };
 
-// Utility type that captures a LockFlags bitmask in the type system. This may
-// be used to pass extra LockFlags to the LockDep<> constructor.
-template <LockFlags Flags = LockFlagsNone>
-struct ExtraFlags {};
-
 // Lock wrapper class that implements lock dependency checks. The template
 // argument |Class| should be a type that uniquely defines the class, such as
 // the type of the containing scope. The template argument |LockType| is the
@@ -284,7 +278,7 @@ struct ExtraFlags {};
 //      // ...
 //  };
 //
-template <typename Class, typename LockType, size_t Index = 0>
+template <typename Class, typename LockType, size_t Index = 0, LockFlags Flags = LockFlagsNone>
 class LockDep : public Lock<LockType> {
  public:
   // Alias that may be used by subclasses to simplify constructor
@@ -292,21 +286,13 @@ class LockDep : public Lock<LockType> {
   using Base = LockDep;
 
   // Alias of the lock class that this wrapper represents.
-  template <LockFlags Flags = LockFlagsNone>
   using LockClass = ConditionalLockClass<Class, RemoveGlobalReference<LockType>, Index, Flags>;
 
   // Constructor that initializes the underlying lock with the additional
   // arguments.
   template <typename... Args>
   constexpr LockDep(Args&&... args)
-      : Lock<LockType>{LockClass<>::Id(), std::forward<Args>(args)...} {}
-
-  // Constructor that accepts additional LockFlags to apply to the lock class
-  // for this lock. The additional arguments are passed to the underlying
-  // lock.
-  template <LockFlags Flags, typename... Args>
-  constexpr LockDep(ExtraFlags<Flags>, Args&&... args)
-      : Lock<LockType>{LockClass<Flags>::Id(), std::forward<Args>(args)...} {}
+      : Lock<LockType>{LockClass::Id(), std::forward<Args>(args)...} {}
 };
 
 // Singleton version of the lock wrapper above. This type is appropriate for
@@ -321,6 +307,9 @@ class SingletonLockDep : public Lock<LockType> {
   // Returns a pointer to the singleton object.
   static Class* Get() {
     // The singleton instance of the global lock.
+    // Note: This must be a local static variable to avoid global initialization
+    // sequencing issues in environments that may acquire locks before ctors are
+    // executed (i.e. the kernel).
     static Class global_lock;
 
     return &global_lock;
