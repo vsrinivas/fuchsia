@@ -57,6 +57,17 @@ def parse_packages_file(dot_packages_path):
     return packages
 
 
+def get_deps(package_name, parsed_yaml, dep_type):
+    if dep_type in parsed_yaml and parsed_yaml[dep_type]:
+        deps = parsed_yaml[dep_type]
+        # This is to avoid circular dependencies. See fxb/40784.
+        if package_name == 'built_value' and 'built_value_generator' in deps:
+            del deps['built_value_generator']
+        return deps
+    else:
+        return {}
+
+
 def parse_full_dependencies(yaml_path):
     """ parse the content of a pubspec.yaml """
     with open(yaml_path) as yaml_file:
@@ -64,10 +75,9 @@ def parse_full_dependencies(yaml_path):
         if not parsed:
             raise Exception('Could not parse yaml file: %s' % yaml_file)
         package_name = parsed['name']
-        get_deps = lambda dep_type: parsed[dep_type] if dep_type in parsed and parsed[dep_type] else {}
-        deps = get_deps('dependencies')
-        dev_deps = get_deps('dev_dependencies')
-        dep_overrides = get_deps('dependency_overrides')
+        deps = get_deps(package_name, parsed, 'dependencies')
+        dev_deps = get_deps(package_name, parsed, 'dev_dependencies')
+        dep_overrides = get_deps(package_name, parsed, 'dependency_overrides')
         return (package_name, deps, dev_deps, dep_overrides)
 
 
@@ -227,7 +237,7 @@ def main():
         env['PUB_CACHE'] = pub_cache_dir
         pub_get = [args.pub, 'get']
         if args.debug:
-          pub_get.append('-v')
+            pub_get.append('-v')
         subprocess.check_call(pub_get, cwd=importer_dir, env=env)
 
         # Walk the cache and copy the packages we are interested in.
