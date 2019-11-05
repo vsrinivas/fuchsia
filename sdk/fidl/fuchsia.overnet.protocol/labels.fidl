@@ -16,19 +16,3 @@ struct NodeId {
 
 /// Node-local link label
 using LinkId = uint64;
-
-/// Reliability and ordering constraints for a stream.
-enum ReliabilityAndOrdering {
-    /// Datagrams are delivered reliably in an ordered fashion.
-    ReliableOrdered = 1;
-    /// Datagrams are delivered unreliably, yet order between messages is maintained.
-    UnreliableOrdered = 2;
-    /// Datagrams are delivered reliably, but may be delivered out of order.
-    ReliableUnordered = 3;
-    /// No guarantees on ordering or reliability. Note that messages will be delivered
-    /// at most once.
-    UnreliableUnordered = 4;
-    /// Messages are delivered in order. The most recently sent message is considered
-    /// reliable, while all other messages are considered unreliable.
-    TailReliable = 5;
-};
