@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/clock.h>
+#include <lib/zx/event.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -151,6 +151,11 @@ void App::SwitchToPresentation(const size_t presentation_idx) {
   active_presentation_idx_ = presentation_idx;
   layer_stack_->RemoveAllLayers();
   layer_stack_->AddLayer(presentations_[presentation_idx]->layer());
+
+  if (magnifier_) {
+    presentations_[presentation_idx]->RegisterWithMagnifier(magnifier_.get());
+  }
+
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
@@ -269,14 +274,17 @@ void App::InitializeServices() {
     scenic_->GetDisplayOwnershipEvent(
         [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
 
-    ime_service_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::input::ImeService>();
+    startup_context_->ConnectToEnvironmentService(magnifier_.NewRequest());
+    // No need to set an error handler here unless we want to attempt a reconnect or something;
+    // instead, we add error handlers for cleanup on the a11y presentations when we register them.
+
+    startup_context_->ConnectToEnvironmentService(ime_service_.NewRequest());
     ime_service_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "IME Service died, destroying all presentations.";
       Reset();
     });
 
-    shortcut_manager_ =
-        startup_context_->ConnectToEnvironmentService<fuchsia::ui::shortcut::Manager>();
+    startup_context_->ConnectToEnvironmentService(shortcut_manager_.NewRequest());
     shortcut_manager_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Shortcut manager unavailable: " << zx_status_get_string(error);
       shortcut_manager_ = nullptr;

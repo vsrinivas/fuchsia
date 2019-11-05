@@ -1,0 +1,23 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility;
+
+/// Exposes a privileged magnifier API for camera control, typically on a
+/// |fuchsia.ui.policy.Presentation|.
+protocol MagnificationHandler {
+    /// Sets clip-space x-offset, y-offset, and scale for the presentation.
+    /// x and y are in Vulkan NDC and are applied after scaling, which occurs
+    /// about the center of the presentation. The callback indicates when the
+    /// update has been presented. The identity transform (0, 0, 1) is the
+    /// natural state.
+    SetClipSpaceTransform(float32 x, float32 y, float32 scale) -> ();
+};
+
+[Discoverable]
+protocol Magnifier {
+    /// Registers the camera control to be used for applying magnification. If
+    /// a previous handler had been registered, that handler is dropped.
+    RegisterHandler(MagnificationHandler handler);
+};

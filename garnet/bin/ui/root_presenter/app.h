@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_APP_H_
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
@@ -15,8 +16,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/scenic/cpp/resources.h>
-#include <lib/zx/eventpair.h>
-#include <lib/zx/time.h>
 
 #include <limits>
 #include <memory>
@@ -102,13 +101,16 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<scenic::Session> session_;
 
   fuchsia::ui::shortcut::ManagerPtr shortcut_manager_;
-  // This is a privileged interface between Root Presenter and Scenic. It
-  // forwards the requests incoming from accessibility services to start
-  // listening for pointer events.
-  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
   fuchsia::ui::input::ImeServicePtr ime_service_;
 
   ActivityNotifierImpl activity_notifier_;
+
+  // This is a privileged interface between Root Presenter and Scenic. It forwards the requests
+  // incoming from accessibility services to start listening for pointer events.
+  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+  // This is a privileged interface between Root Presenter and Accessibility. It allows Root
+  // Presenter to register presentations with Accessibility for magnification.
+  fuchsia::accessibility::MagnifierPtr magnifier_;
 
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.

@@ -10,8 +10,9 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.sys.Environment",
+            "fuchsia.accessibility.Magnifier",
             "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.accessibility.SettingsManager",
             "fuchsia.tracing.provider.Registry",

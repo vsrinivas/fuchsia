@@ -136,11 +136,11 @@ TEST_F(ScenicPixelTest, ViewCoordinates) {
 
   scenic::Screenshot screenshot = TakeScreenshot();
 
-  EXPECT_EQ(scenic::Color({0, 0, 0, 255}), screenshot.ColorAt(.25f, .25f));
-  EXPECT_EQ(scenic::Color({0, 0, 255, 255}), screenshot.ColorAt(.25f, .75f));
-  EXPECT_EQ(scenic::Color({255, 0, 0, 255}), screenshot.ColorAt(.75f, .25f));
-  EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.75f, .75f));
-  EXPECT_EQ(scenic::Color({0, 255, 0, 255}), screenshot.ColorAt(.5f, .5f));
+  EXPECT_EQ(scenic::CoordinateTestView::kUpperLeft, screenshot.ColorAt(.25f, .25f));
+  EXPECT_EQ(scenic::CoordinateTestView::kUpperRight, screenshot.ColorAt(.25f, .75f));
+  EXPECT_EQ(scenic::CoordinateTestView::kLowerLeft, screenshot.ColorAt(.75f, .25f));
+  EXPECT_EQ(scenic::CoordinateTestView::kLowerRight, screenshot.ColorAt(.75f, .75f));
+  EXPECT_EQ(scenic::CoordinateTestView::kCenter, screenshot.ColorAt(.5f, .5f));
 }
 
 // Draws and tests the following coordinate test pattern without views:

@@ -10,13 +10,16 @@
 // clang-format on
 #include <glm/ext.hpp>
 
+#include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input2/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -53,7 +56,8 @@ namespace root_presenter {
 //   + child: cursor 1
 //   + child: cursor N
 //
-class Presentation : protected fuchsia::ui::policy::Presentation {
+class Presentation : fuchsia::ui::policy::Presentation,
+                     fuchsia::accessibility::MagnificationHandler {
  public:
   // Callback when the presentation yields to the next/previous one.
   using YieldCallback = fit::function<void(bool yield_to_next)>;
@@ -66,7 +70,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                fuchsia::ui::input::ImeService* ime_service, ActivityNotifier* activity_notifier,
                RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
                YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler);
-  ~Presentation();
+  ~Presentation() override;
+
+  void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
   void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
@@ -86,7 +92,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   friend class PerspectiveDemoMode;
   friend class PresentationSwitcher;
 
-  // |Presentation|
+  // |fuchsia::ui::policy::Presentation|
   void SetRendererParams(std::vector<fuchsia::ui::gfx::RendererParam> params);
   void CaptureKeyboardEventHACK(
       fuchsia::ui::input::KeyboardEvent event_to_capture,
@@ -96,6 +102,18 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
   void InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) override;
+
+  // |fuchsia::accessibility::MagnificationHandler|
+  // Sets the transform for screen magnification, applied after the camera projection.
+  void SetClipSpaceTransform(float x, float y, float scale,
+                             SetClipSpaceTransformCallback callback) override;
+
+  // Nulls out the clip-space transform.
+  void ResetClipSpaceTransform();
+
+  // Transforms a device coordinate to a post-magnification coordinate by applying the inverse
+  // clip-space transform. This is used to render cursors at the correct location.
+  glm::vec2 ApplyInverseClipSpaceTransform(const glm::vec2& coordinate);
 
   // Sets |display_metrics_| and updates Scenic.  Returns false if the updates
   // were skipped (if display initialization hasn't happened yet).
@@ -171,11 +189,17 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // TODO(SCN-857) - Make this less of a hack.
   int32_t display_startup_rotation_adjustment_;
 
+  struct {
+    glm::vec2 translation;
+    float scale = 1;
+  } clip_space_transform_;
+
   YieldCallback yield_callback_;
 
   fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
+  fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
 
   PerspectiveDemoMode perspective_demo_mode_;
 
@@ -206,10 +230,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   std::vector<KeyboardCaptureItem> captured_keybindings_;
 
   // A registry of listeners who want to be notified when pointer event happens.
-  struct PointerCaptureItem {
-    fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
-  };
-  std::vector<PointerCaptureItem> captured_pointerbindings_;
+  fidl::InterfacePtrSet<fuchsia::ui::policy::PointerCaptureListenerHACK> captured_pointerbindings_;
 
   MediaButtonsHandler* media_buttons_handler_ = nullptr;
 

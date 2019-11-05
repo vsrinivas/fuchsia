@@ -163,7 +163,7 @@ TEST_F(A11ySettingsWatcherTest, SetSettingsWithEmptyInput) {
   settings_watcher->OnSettingsChange(std::move(provided_settings));
 
   SettingsPtr settings = settings_watcher->CloneA11ySettings();
-  ;
+
   float kExpectedZoomFactor = 1.0;
   EXPECT_TRUE(settings->has_screen_reader_enabled());
   EXPECT_FALSE(settings->screen_reader_enabled());

@@ -6,6 +6,7 @@
 #define SRC_UI_TESTING_VIEWS_COORDINATE_TEST_VIEW_H_
 
 #include "src/ui/testing/views/background_view.h"
+#include "src/ui/testing/views/color.h"
 
 namespace scenic {
 
@@ -23,7 +24,11 @@ namespace scenic {
 //
 class CoordinateTestView : public BackgroundView {
  public:
-  CoordinateTestView(ViewContext context, const std::string& debug_name = "RotatedSquareView");
+  static constexpr scenic::Color kUpperLeft = {0, 0, 0, 255}, kUpperRight = {0, 0, 255, 255},
+                                 kLowerLeft = {255, 0, 0, 255}, kLowerRight = {255, 0, 255, 255},
+                                 kCenter = {0, 255, 0, 255};
+
+  CoordinateTestView(ViewContext context, const std::string& debug_name = "CoordinateTestView");
 
  private:
   // |BackgroundView|

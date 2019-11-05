@@ -43,6 +43,14 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 constexpr float kAmbient = 0.3f;
 constexpr float kNonAmbient = 1.f - kAmbient;
 
+// Applies the inverse of the given translation in a dimension of Vulkan NDC and scale (about the
+// center of the range) to the given coordinate, for inverting the clip-space transform for pointer
+// input.
+float InverseLinearTransform(float x, uint32_t range, float ndc_translation, float scale) {
+  const float half_range = range / 2.f;
+  return (x - half_range * (1 + ndc_translation)) / scale + half_range;
+}
+
 }  // namespace
 
 Presentation::Presentation(
@@ -75,6 +83,7 @@ Presentation::Presentation(
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       yield_callback_(std::move(yield_callback)),
       presentation_binding_(this),
+      a11y_binding_(this),
       renderer_params_override_(renderer_params),
       media_buttons_handler_(media_buttons_handler),
       weak_factory_(this) {
@@ -134,6 +143,13 @@ Presentation::Presentation(
       });
 }
 
+Presentation::~Presentation() = default;
+
+void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier) {
+  magnifier->RegisterHandler(a11y_binding_.NewBinding());
+  a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
+}
+
 void Presentation::ResetShortcutManager() { shortcut_manager_ = nullptr; }
 
 void Presentation::OverrideRendererParams(RendererParams renderer_params, bool present_changes) {
@@ -163,14 +179,12 @@ void Presentation::OverrideRendererParams(RendererParams renderer_params, bool p
       << display_startup_rotation_adjustment_;
 }
 
-Presentation::~Presentation() {}
-
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
   // Initialize display model.
-  display_configuration::InitializeModelForDisplay(
-      display_info.width_in_px, display_info.height_in_px, &display_model_);
+  display_configuration::InitializeModelForDisplay(display_info.width_in_px,
+                                                   display_info.height_in_px, &display_model_);
 
   display_model_initialized_ = true;
 
@@ -294,10 +308,10 @@ glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
   const int32_t startup_rotation = display_startup_rotation_adjustment_;
 
   glm::vec4 pointer_coords(x, y, 0.f, 1.f);
-  glm::vec4 rotated_coords = glm::translate(glm::vec3(anchor_w, anchor_h, 0)) *
-                             glm::rotate(glm::radians<float>(-startup_rotation), glm::vec3(0, 0, 1)) *
-                             glm::translate(glm::vec3(-anchor_w, -anchor_h, 0)) * pointer_coords;
-
+  glm::vec4 rotated_coords =
+      glm::translate(glm::vec3(anchor_w, anchor_h, 0)) *
+      glm::rotate(glm::radians<float>(-startup_rotation), glm::vec3(0, 0, 1)) *
+      glm::translate(glm::vec3(-anchor_w, -anchor_h, 0)) * pointer_coords;
 
   if (abs(startup_rotation) % 180 == 90) {
     // If the aspect ratio is flipped, the origin needs to be adjusted too.
@@ -307,9 +321,9 @@ glm::vec2 Presentation::RotatePointerCoordinates(float x, float y) {
     rotated_coords = glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) * rotated_coords;
   }
 
-  FXL_VLOG(2) << "Pointer coordinates rotated ["
-              << startup_rotation << "]: (" << pointer_coords.x << ", " << pointer_coords.y
-              << ")->(" << rotated_coords.x << ", " << rotated_coords.y << ").";
+  FXL_VLOG(2) << "Pointer coordinates rotated [" << startup_rotation << "]: (" << pointer_coords.x
+              << ", " << pointer_coords.y << ")->(" << rotated_coords.x << ", " << rotated_coords.y
+              << ").";
 
   return glm::vec2(rotated_coords.x, rotated_coords.y);
 }
@@ -404,19 +418,7 @@ void Presentation::CaptureKeyboardEventHACK(
 
 void Presentation::CapturePointerEventsHACK(
     fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener_handle) {
-  fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
-  listener.Bind(std::move(listener_handle));
-  // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()](zx_status_t status) {
-    captured_pointerbindings_.erase(
-        std::remove_if(captured_pointerbindings_.begin(), captured_pointerbindings_.end(),
-                       [listener](const PointerCaptureItem& item) -> bool {
-                         return item.listener.get() == listener;
-                       }),
-        captured_pointerbindings_.end());
-  });
-
-  captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
+  captured_pointerbindings_.AddInterfacePtr(listener_handle.Bind());
 }
 
 // TODO(fxb/36217) Eventually pull this out from Presentation into something
@@ -430,6 +432,28 @@ void Presentation::InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event
   fuchsia::ui::input::InputEvent input_event;
   input_event.set_pointer(std::move(event));
   OnEvent(std::move(input_event));
+}
+
+void Presentation::SetClipSpaceTransform(float x, float y, float scale,
+                                         SetClipSpaceTransformCallback callback) {
+  camera_.SetClipSpaceTransform(x, y, scale);
+  clip_space_transform_ = {{x, y}, scale};
+  // The callback is used to throttle magnification transition animations and is expected to
+  // approximate the framerate.
+  session_->Present(0, [callback = std::move(callback)](auto) { callback(); });
+}
+
+void Presentation::ResetClipSpaceTransform() {
+  SetClipSpaceTransform(0, 0, 1, [] {});
+}
+
+glm::vec2 Presentation::ApplyInverseClipSpaceTransform(const glm::vec2& coordinate) {
+  return {
+      InverseLinearTransform(coordinate.x, display_model_.display_info().width_in_px,
+                             clip_space_transform_.translation.x, clip_space_transform_.scale),
+      InverseLinearTransform(coordinate.y, display_model_.display_info().height_in_px,
+                             clip_space_transform_.translation.y, clip_space_transform_.scale),
+  };
 }
 
 bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
@@ -457,19 +481,25 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   // Process the event.
   if (dispatch_event) {
     if (event.is_pointer()) {
-      const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
+      // TODO(fxr/323814): const (for now, we transform coordinates at the end)
+      fuchsia::ui::input::PointerEvent& pointer = event.pointer();
 
       // TODO(SCN-1278): Use proper trace_id for tracing flow.
       trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
       TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
+
+      // Ensure the cursor appears at the correct position after magnification position and scaling.
+      // It should appear at the same physical location on the screen as it would without
+      // magnification. (However, the cursor itself will scale.)
+      const glm::vec2 transformed_point = ApplyInverseClipSpaceTransform({pointer.x, pointer.y});
 
       if (pointer.type == fuchsia::ui::input::PointerEventType::MOUSE) {
         if (cursors_.count(pointer.device_id) == 0) {
           cursors_.emplace(pointer.device_id, CursorState{});
         }
 
-        cursors_[pointer.device_id].position.x = pointer.x;
-        cursors_[pointer.device_id].position.y = pointer.y;
+        cursors_[pointer.device_id].position.x = transformed_point.x;
+        cursors_[pointer.device_id].position.y = transformed_point.y;
 
         // TODO(SCN-823) for now don't show cursor when mouse is added until
         // we have a timer to hide it. Acer12 sleeve reports 2 mice but only
@@ -488,28 +518,42 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         }
       }
 
-      glm::vec2 rotated_point =
-          RotatePointerCoordinates(pointer.x, pointer.y);
-      for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
-        fuchsia::ui::input::PointerEvent clone;
-        fidl::Clone(pointer, &clone);
+      // The following steps are different ways of dispatching pointer events, which differ in their
+      // coordinate systems.
 
-        clone.x = rotated_point.x;
-        clone.y = rotated_point.y;
+      if (!captured_pointerbindings_.ptrs().empty()) {
+        // |CapturePointerEventsHACK| clients like SysUI expect rotated, transformed coordinates as
+        // this bypasses normal input dispatch and so needs to be pretty much ready-to-use.
+        glm::vec2 capture_point =
+            RotatePointerCoordinates(transformed_point.x, transformed_point.y);
 
         // Adjust pointer origin with simulated screen offset.
-        clone.x -=
-            (display_model_.display_info().width_in_px - display_metrics_.width_in_px()) / 2;
-        clone.y -=
-            (display_model_.display_info().height_in_px - display_metrics_.height_in_px()) /
-            2;
+        capture_point.x -=
+            (display_model_.display_info().width_in_px - display_metrics_.width_in_px()) / 2.f;
+        capture_point.y -=
+            (display_model_.display_info().height_in_px - display_metrics_.height_in_px()) / 2.f;
 
         // Scale by device pixel density.
-        clone.x *= display_metrics_.x_scale_in_pp_per_px();
-        clone.y *= display_metrics_.y_scale_in_pp_per_px();
+        capture_point.x *= display_metrics_.x_scale_in_pp_per_px();
+        capture_point.y *= display_metrics_.y_scale_in_pp_per_px();
 
-        captured_pointerbindings_[i].listener->OnPointerEvent(std::move(clone));
+        for (auto& listener : captured_pointerbindings_.ptrs()) {
+          fuchsia::ui::input::PointerEvent clone;
+          fidl::Clone(pointer, &clone);
+          clone.x = capture_point.x;
+          clone.y = capture_point.y;
+          (*listener)->OnPointerEvent(std::move(clone));
+        }
       }
+
+      // Scenic's input system accounts for scene rotation (part of scene graph) in both hit testing
+      // and coordinate mapping, but does not account for the camera transform during coordinate
+      // mapping. The following is an attempt to cover the latter, but it is ultimately flawed as
+      // a11y gestures actually require rotated but otherwise untransformed coordinates.
+      //
+      // TODO(fxr/323814): This will be fixed in the input system.
+      pointer.x = transformed_point.x;
+      pointer.y = transformed_point.y;
 
       fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
       pointer_cmd.pointer_event = std::move(pointer);
