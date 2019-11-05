@@ -92,8 +92,6 @@ Renderer::Renderer(escher::EscherWeakPtr weak_escher, vk::Format framebuffer_for
       device_(escher()->vulkan_context().device),
       framebuffer_format_(framebuffer_format),
       render_pass_(CreateRenderPass(device_, framebuffer_format)),
-      full_screen_(NewFullScreenMesh(escher()->mesh_manager())),
-      white_texture_(CreateWhiteTexture()),
       descriptor_set_pool_(escher()->GetWeakPtr(), Compiler::GetDescriptorSetLayoutCreateInfo()) {}
 
 escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
@@ -148,6 +146,17 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
   auto command_buffer = frame->command_buffer();
   auto vk_command_buffer = frame->vk_command_buffer();
 
+  // Lazily initialize resources that need to be uploaded to the GPU; it's easiest to do here since
+  // we have a command buffer to add the wait semaphore to.
+  if (frame_number_ == 1) {
+    escher::BatchGpuUploader gpu_uploader(escher()->GetWeakPtr(), frame_number_);
+    full_screen_ = NewFullScreenMesh(escher()->mesh_manager(), &gpu_uploader);
+    white_texture_ = CreateWhiteTexture(&gpu_uploader);
+    command_buffer->AddWaitSemaphore(
+        gpu_uploader.Submit(),
+        vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader);
+  }
+
   command_buffer->KeepAlive(framebuffer);
   command_buffer->AddWaitSemaphore(std::move(framebuffer_ready),
                                    vk::PipelineStageFlagBits::eColorAttachmentOutput);
@@ -179,16 +188,13 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
   frame->EndFrame(frame_done, nullptr);
 }
 
-escher::TexturePtr Renderer::CreateWhiteTexture() {
+escher::TexturePtr Renderer::CreateWhiteTexture(escher::BatchGpuUploader* gpu_uploader) {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
   escher::ImageFactoryAdapter image_factory(escher()->gpu_allocator(),
                                             escher()->resource_recycler());
-  escher::BatchGpuUploader uploader =
-      escher::BatchGpuUploader(escher()->GetWeakPtr(), /* frame_number= */ 0);
-  auto image = escher::image_utils::NewRgbaImage(&image_factory, &uploader, 1, 1, channels);
-  uploader.Submit();
+  auto image = escher::image_utils::NewRgbaImage(&image_factory, gpu_uploader, 1, 1, channels);
 
   return escher::Texture::New(escher()->resource_recycler(), std::move(image),
                               vk::Filter::eNearest);

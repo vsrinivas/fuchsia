@@ -57,22 +57,12 @@ std::unique_ptr<impl::CommandBufferPool> NewTransferCommandBufferPool(
 }
 
 // Constructor helper.
-std::unique_ptr<impl::GpuUploader> NewGpuUploader(EscherWeakPtr escher,
-                                                  impl::CommandBufferPool* main_pool,
-                                                  impl::CommandBufferPool* transfer_pool,
-                                                  GpuAllocator* allocator) {
-  return std::make_unique<impl::GpuUploader>(std::move(escher),
-                                             transfer_pool ? transfer_pool : main_pool, allocator);
-}
-
-// Constructor helper.
 std::unique_ptr<impl::MeshManager> NewMeshManager(impl::CommandBufferPool* main_pool,
                                                   impl::CommandBufferPool* transfer_pool,
                                                   GpuAllocator* allocator,
-                                                  impl::GpuUploader* uploader,
                                                   ResourceRecycler* resource_recycler) {
   return std::make_unique<impl::MeshManager>(transfer_pool ? transfer_pool : main_pool, allocator,
-                                             uploader, resource_recycler);
+                                             resource_recycler);
 }
 
 }  // anonymous namespace
@@ -104,11 +94,9 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
   // been initialized.
   image_cache_ = std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
   buffer_cache_ = std::make_unique<BufferCache>(GetWeakPtr());
-  gpu_uploader_ = NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
-                                 transfer_command_buffer_pool(), gpu_allocator());
   resource_recycler_ = std::make_unique<ResourceRecycler>(GetWeakPtr());
   mesh_manager_ = NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
-                                 gpu_allocator(), gpu_uploader(), resource_recycler());
+                                 gpu_allocator(), resource_recycler());
   pipeline_layout_cache_ = std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
   render_pass_cache_ = std::make_unique<impl::RenderPassCache>(resource_recycler());
   framebuffer_allocator_ =
@@ -145,7 +133,6 @@ Escher::~Escher() {
   // ResourceRecyclers must be released before the CommandBufferSequencer is,
   // since they register themselves with it.
   resource_recycler_.reset();
-  gpu_uploader_.reset();
   buffer_cache_.reset();
 }
 
@@ -169,9 +156,9 @@ impl::CommandBufferPool* Escher::protected_command_buffer_pool() {
   return protected_command_buffer_pool_.get();
 }
 
-MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
-                                      size_t max_index_count) {
-  return mesh_manager()->NewMeshBuilder(spec, max_vertex_count, max_index_count);
+MeshBuilderPtr Escher::NewMeshBuilder(BatchGpuUploader* gpu_uploader, const MeshSpec& spec,
+                                      size_t max_vertex_count, size_t max_index_count) {
+  return mesh_manager()->NewMeshBuilder(gpu_uploader, spec, max_vertex_count, max_index_count);
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {

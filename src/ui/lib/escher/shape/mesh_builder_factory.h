@@ -14,8 +14,8 @@ class MeshBuilderFactory {
  public:
   virtual ~MeshBuilderFactory() = default;
 
-  virtual MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
-                                        size_t max_index_count) = 0;
+  virtual MeshBuilderPtr NewMeshBuilder(BatchGpuUploader* gpu_uploader, const MeshSpec& spec,
+                                        size_t max_vertex_count, size_t max_index_count) = 0;
 };
 
 }  // namespace escher

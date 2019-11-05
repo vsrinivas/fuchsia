@@ -54,7 +54,7 @@ class Renderer : public escher::Renderer {
   escher::Texture* GetChannelTexture(const escher::FramePtr& frame,
                                      escher::Texture* texture_or_null);
 
-  escher::TexturePtr CreateWhiteTexture();
+  escher::TexturePtr CreateWhiteTexture(escher::BatchGpuUploader* gpu_uploader);
 
   vk::Device device_;
   vk::Format framebuffer_format_;

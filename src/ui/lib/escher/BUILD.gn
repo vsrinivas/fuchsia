@@ -222,8 +222,6 @@ source_set("escher") {
     "impl/gpu_mem_slab.h",
     "impl/gpu_mem_suballocation.cc",
     "impl/gpu_mem_suballocation.h",
-    "impl/gpu_uploader.cc",
-    "impl/gpu_uploader.h",
     "impl/image_cache.cc",
     "impl/image_cache.h",
     "impl/mesh_manager.cc",

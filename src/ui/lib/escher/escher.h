@@ -38,8 +38,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   EscherWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Implement MeshBuilderFactory interface.
-  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
-                                size_t max_index_count) override;
+  MeshBuilderPtr NewMeshBuilder(BatchGpuUploader* gpu_uploader, const MeshSpec& spec,
+                                size_t max_vertex_count, size_t max_index_count) override;
 
   // Return new Image containing the provided pixels.
   ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
@@ -116,9 +116,6 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   ResourceRecycler* resource_recycler() { return resource_recycler_.get(); }
   GpuAllocator* gpu_allocator() { return gpu_allocator_.get(); }
-  // TODO(SCN-838) Remove deprecated impl::GpuUploader. Use BatchGpuUploader
-  // instead.
-  impl::GpuUploader* gpu_uploader() { return gpu_uploader_.get(); }
   impl::CommandBufferSequencer* command_buffer_sequencer() {
     return command_buffer_sequencer_.get();
   }
@@ -176,7 +173,6 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   std::unique_ptr<impl::ImageCache> image_cache_;
   std::unique_ptr<BufferCache> buffer_cache_;
-  std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
   std::unique_ptr<DefaultShaderProgramFactory> shader_program_factory_;

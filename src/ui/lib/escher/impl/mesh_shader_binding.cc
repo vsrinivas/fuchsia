@@ -4,7 +4,6 @@
 
 #include "src/ui/lib/escher/impl/mesh_shader_binding.h"
 
-#include "src/ui/lib/escher/impl/mesh_manager.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 
 namespace escher {

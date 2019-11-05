@@ -7,6 +7,7 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
@@ -64,12 +65,18 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     });
     EXPECT_TRUE(success);
 
-    ring_mesh1_ = NewRingMesh(escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
+    BatchGpuUploader gpu_uploader(escher->GetWeakPtr());
+    ring_mesh1_ = NewRingMesh(escher, &gpu_uploader,
+                              MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
                               vec2(0.f, 0.f), 300.f, 200.f);
-    ring_mesh2_ = NewRingMesh(escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
+    ring_mesh2_ = NewRingMesh(escher, &gpu_uploader,
+                              MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
                               vec2(0.f, 0.f), 400.f, 300.f);
-    sphere_mesh_ = NewSphereMesh(escher, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV},
-                                 8, vec3(0.f, 0.f, 0.f), 300.f);
+    sphere_mesh_ = NewSphereMesh(escher, &gpu_uploader,
+                                 MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV}, 8,
+                                 vec3(0.f, 0.f, 0.f), 300.f);
+    gpu_uploader.Submit();
+    escher->vk_device().waitIdle();
   }
 
   void TearDown() override {

@@ -187,8 +187,9 @@ IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec) {
   return mesh;
 }
 
-MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
-                      vec2 center, float radius, float offset_magnitude) {
+MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
+                      const MeshSpec& spec, int subdivisions, vec2 center, float radius,
+                      float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
@@ -200,7 +201,7 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int sub
   size_t vertex_count = outer_vertex_count + 1;  // Add 1 for center vertex.
   size_t index_count = outer_vertex_count * 3;
 
-  auto builder = factory->NewMeshBuilder(spec, vertex_count, index_count);
+  auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
@@ -257,9 +258,10 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int sub
   return mesh;
 }
 
-MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
-                    vec2 center, float outer_radius, float inner_radius,
-                    float outer_offset_magnitude, float inner_offset_magnitude) {
+MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
+                    const MeshSpec& spec, int subdivisions, vec2 center, float outer_radius,
+                    float inner_radius, float outer_offset_magnitude,
+                    float inner_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
@@ -271,7 +273,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdi
   size_t vertex_count = outer_vertex_count * 2;
   size_t index_count = outer_vertex_count * 6;
 
-  auto builder = factory->NewMeshBuilder(spec, vertex_count, index_count);
+  auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
@@ -339,7 +341,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdi
   return mesh;
 }
 
-MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory) {
+MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader) {
   MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
 
   // In each vertex, the first two floats represent the position and the second
@@ -349,7 +351,7 @@ MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory) {
   vec4 v2(1.f, 1.f, 1.f, 1.f);
   vec4 v3(0.f, 1.f, 0.f, 1.f);
 
-  MeshBuilderPtr builder = factory->NewMeshBuilder(spec, 4, 6);
+  MeshBuilderPtr builder = factory->NewMeshBuilder(gpu_uploader, spec, 4, 6);
   return builder->AddVertex(v0)
       .AddVertex(v1)
       .AddVertex(v2)
@@ -363,9 +365,9 @@ MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
-                         vec2 size, vec2 top_left, float top_offset_magnitude,
-                         float bottom_offset_magnitude) {
+MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
+                         const MeshSpec& spec, int subdivisions, vec2 size, vec2 top_left,
+                         float top_offset_magnitude, float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
   size_t vertices_per_side = 2;
@@ -376,7 +378,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int 
   size_t vertex_count = vertices_per_side * 2;
   size_t index_count = (vertices_per_side - 1) * 6;
 
-  auto builder = factory->NewMeshBuilder(spec, vertex_count, index_count);
+  auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
@@ -422,7 +424,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int 
   return mesh;
 }
 
-MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
+MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader) {
   MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
 
   // Some internet lore has it that it is better to use a single triangle rather
@@ -431,7 +433,7 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
   // that each fragment has the same position and UV coordinates as would a
   // two-triangle quad. In each vertex, the first two coordinates are position,
   // and the second two are UV coords.
-  return factory->NewMeshBuilder(spec, 3, 3)
+  return factory->NewMeshBuilder(gpu_uploader, spec, 3, 3)
       ->AddVertex(vec4(-1.f, -1.f, 0.f, 0.f))
       .AddVertex(vec4(3.f, -1.f, 2.f, 0.f))
       .AddVertex(vec4(-1.f, 3.f, 0.f, 2.f))
@@ -441,8 +443,8 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
-                      vec3 center, float radius) {
+MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
+                      const MeshSpec& spec, int subdivisions, vec3 center, float radius) {
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t vertex_count = 9;
@@ -455,7 +457,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int sub
   }
 
   // Populate initial octahedron.
-  auto builder = factory->NewMeshBuilder(spec, vertex_count, triangle_count * 3);
+  auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, triangle_count * 3);
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);

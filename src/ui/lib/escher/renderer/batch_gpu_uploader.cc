@@ -114,7 +114,11 @@ BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher, uint64_t frame_tra
   FXL_DCHECK(escher_);
 }
 
-BatchGpuUploader::~BatchGpuUploader() { FXL_CHECK(!frame_); }
+BatchGpuUploader::~BatchGpuUploader() {
+  FXL_CHECK(!frame_);
+  FXL_CHECK(writer_count_ == 0);
+  FXL_CHECK(reader_count_ == 0);
+}
 
 /* static */
 void BatchGpuUploader::SemaphoreAssignmentHelper(WaitableResource* resource,
