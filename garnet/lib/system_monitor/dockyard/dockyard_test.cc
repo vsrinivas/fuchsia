@@ -119,6 +119,170 @@ TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
   dockyard_.ProcessRequests();
 }
 
+TEST_F(SystemMonitorDockyardTest, SampleStreamsRequestNormal) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 100;
+  request.end_time_ns = 500;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  dockyard_.GetSampleStreams(
+      std::move(request), [](const SampleStreamsRequest& request,
+                             const SampleStreamsResponse& response) {
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(4UL, response.data_sets[0].size());
+        EXPECT_EQ(100ULL, response.data_sets[0][0].first);
+        EXPECT_EQ(10ULL, response.data_sets[0][0].second);
+        EXPECT_EQ(200ULL, response.data_sets[0][1].first);
+        EXPECT_EQ(100ULL, response.data_sets[0][1].second);
+        EXPECT_EQ(300ULL, response.data_sets[0][2].first);
+        EXPECT_EQ(80ULL, response.data_sets[0][2].second);
+        EXPECT_EQ(400ULL, response.data_sets[0][3].first);
+        EXPECT_EQ(100ULL, response.data_sets[0][3].second);
+      });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsRequestNearValues) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 25;
+  request.end_time_ns = 81;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  dockyard_.GetSampleStreams(std::move(request),
+                             [](const SampleStreamsRequest& request,
+                                const SampleStreamsResponse& response) {
+                               ASSERT_EQ(1UL, response.data_sets.size());
+                               ASSERT_EQ(1UL, response.data_sets[0].size());
+                               EXPECT_EQ(80ULL, response.data_sets[0][0].first);
+                               EXPECT_EQ(5ULL, response.data_sets[0][0].second);
+                             });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsGenerated) {
+  constexpr uint64_t SAMPLE_COUNT = 5;
+  RandomSampleGenerator gen;
+  gen.dockyard_id = dockyard_.GetDockyardId("fake0");
+  gen.seed = 1234;
+  gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
+  gen.start = 100;
+  gen.finish = 500;
+  gen.value_style = RandomSampleGenerator::VALUE_STYLE_MONO_INCREASE;
+  gen.value_min = 10;
+  gen.value_max = 100;
+  gen.sample_count = SAMPLE_COUNT;
+  GenerateRandomSamples(gen, &dockyard_);
+
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 100;
+  // this is the exact time of the fifth sample
+  request.end_time_ns = 420;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
+  dockyard_.GetSampleStreams(
+      std::move(request), [](const SampleStreamsRequest& request,
+                             const SampleStreamsResponse& response) {
+        ASSERT_EQ(1UL, response.data_sets.size());
+        ASSERT_EQ(SAMPLE_COUNT - 1, response.data_sets[0].size());
+        // Check the samples themselves.
+        std::vector<std::pair<SampleTimeNs, SampleValue>> expected = {
+            {100ULL, 10UL}, {180ULL, 28ULL}, {260ULL, 46ULL}, {340ULL, 64ULL}};
+        int data_set_index = 0;
+        for (const auto& [timestamp, value] : expected) {
+          EXPECT_EQ(timestamp, response.data_sets[0][data_set_index].first);
+          EXPECT_EQ(value, response.data_sets[0][data_set_index].second);
+          data_set_index++;
+        }
+      });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsRequestAfterSamples) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 600;
+  request.end_time_ns = 700;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  dockyard_.GetSampleStreams(std::move(request),
+                             [](const SampleStreamsRequest& request,
+                                const SampleStreamsResponse& response) {
+                               ASSERT_EQ(1UL, response.data_sets.size());
+                               ASSERT_EQ(0UL, response.data_sets[0].size());
+                             });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsRequestBeforeSamples) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 0;
+  request.end_time_ns = 10;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  dockyard_.GetSampleStreams(std::move(request),
+                             [](const SampleStreamsRequest& request,
+                                const SampleStreamsResponse& response) {
+                               ASSERT_EQ(1UL, response.data_sets.size());
+                               ASSERT_EQ(0UL, response.data_sets[0].size());
+                             });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsMissing) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 100;
+  request.end_time_ns = 500;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("does-not-exist"));
+  dockyard_.GetSampleStreams(std::move(request),
+                             [](const SampleStreamsRequest& request,
+                                const SampleStreamsResponse& response) {
+                               ASSERT_EQ(1UL, response.data_sets.size());
+                               ASSERT_EQ(0UL, response.data_sets[0].size());
+                             });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
+TEST_F(SystemMonitorDockyardTest, SampleStreamsRequestNormalMultiple) {
+  // Add pending request.
+  SampleStreamsRequest request;
+  request.start_time_ns = 100;
+  request.end_time_ns = 500;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  dockyard_.GetSampleStreams(
+      std::move(request), [](const SampleStreamsRequest& request,
+                             const SampleStreamsResponse& response) {
+        ASSERT_EQ(2UL, response.data_sets.size());
+
+        ASSERT_EQ(2UL, response.data_sets[0].size());
+        EXPECT_EQ(200ULL, response.data_sets[0][0].first);
+        EXPECT_EQ(10ULL, response.data_sets[0][0].second);
+        EXPECT_EQ(300ULL, response.data_sets[0][1].first);
+        EXPECT_EQ(20ULL, response.data_sets[0][1].second);
+
+        ASSERT_EQ(4UL, response.data_sets[1].size());
+        EXPECT_EQ(10ULL, response.data_sets[1][0].second);
+        EXPECT_EQ(100ULL, response.data_sets[1][1].second);
+        EXPECT_EQ(80ULL, response.data_sets[1][2].second);
+        EXPECT_EQ(100ULL, response.data_sets[1][3].second);
+      });
+
+  // Kick a process call.
+  dockyard_.ProcessRequests();
+}
+
 TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
   constexpr uint64_t SAMPLE_COUNT = 20;
   // Add pending request.

@@ -106,6 +106,7 @@ enum class MessageType : int64_t {
   kIgnoreSamplesRequest,
   kUnignoreSamplesRequest,
   kConnectionRequest,
+  kSampleStreamsRequest,
 };
 
 std::ostream& operator<<(std::ostream& os, MessageType message_type);
@@ -345,6 +346,51 @@ struct StreamSetsResponse : MessageResponse {
                                   const StreamSetsResponse& response);
 };
 
+// This request allows for requesting multiple sample streams in a single
+// request. The results will arrive in the form of a |SampleStreamsResponse|.
+//
+// Note: Set an |OnSampleStreamsCallback| with |SampleStreamsHandler()|
+//       before using the request to be sure of getting the message that the
+//       request is complete.
+//
+// See: SampleStreamsResponse.
+struct SampleStreamsRequest : public MessageRequest {
+  SampleStreamsRequest()
+      : MessageRequest(MessageType::kSampleStreamsRequest),
+        start_time_ns(0),
+        end_time_ns(0) {}
+
+  SampleTimeNs start_time_ns;
+  SampleTimeNs end_time_ns;
+
+  // Each stream is identified by a Dockyard ID. Multiple streams can be
+  // requested. Include a DockyardId for each stream of interest.
+  std::vector<DockyardId> dockyard_ids;
+
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const SampleStreamsRequest& request);
+};
+
+// A |SampleStreamsResponse| is a reply for an individual
+// |SampleStreamsRequest|. See: SampleStreamsRequest.
+struct SampleStreamsResponse : MessageResponse {
+  SampleStreamsResponse() = default;
+
+  // The low and high all-time values for all sample streams requested. All-time
+  // means that these low and high points might not appear in the |data_sets|
+  // below. "All sample streams" means that these points may not appear in the
+  // same sample streams.
+  SampleValue lowest_value;
+  SampleValue highest_value;
+
+  // Each data set will correspond to a stream requested in the
+  // SampleStreamsRequest::dockyard_ids.
+  std::vector<std::vector<std::pair<SampleTimeNs, SampleValue>>> data_sets;
+
+  friend std::ostream& operator<<(std::ostream& out,
+                                  const SampleStreamsResponse& response);
+};
+
 // To stop ignoring samples, create a  UnignoreSamplesRequest that will match
 // the |prefix| and |suffix| values from a prior IgnoreSamplesRequest.
 struct UnignoreSamplesRequest : public MessageRequest {
@@ -401,6 +447,12 @@ using OnPathsCallback = std::function<void(
 // Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
 using OnStreamSetsCallback = std::function<void(
     const StreamSetsRequest& request, const StreamSetsResponse& response)>;
+
+// Called after (and in response to) a request is sent to |GetSampleStreams()|.
+// Use SetSampleStreamsHandler() to install a SampleStreamsCallback callback.
+using OnSampleStreamsCallback =
+    std::function<void(const SampleStreamsRequest& request,
+                       const SampleStreamsResponse& response)>;
 
 // Called after (and in response to) a request is sent to |DiscardSamples()|.
 using OnDiscardSamplesCallback =
@@ -486,6 +538,12 @@ class Dockyard {
   void GetStreamSets(StreamSetsRequest&& request,
                      OnStreamSetsCallback callback);
 
+  // Request sample stream data for time range |start_time..end_time|.
+  //
+  // The results will be supplied in a call to the |callback|.
+  void GetSampleStreams(SampleStreamsRequest&& request,
+                        OnSampleStreamsCallback callback);
+
   // Ignore subsequent samples per |request|. Note that existing (prior) samples
   // are not removed/discarded. To remove samples see: DiscardSamples().
   void IgnoreSamples(IgnoreSamplesRequest&& request,
@@ -551,6 +609,8 @@ class Dockyard {
 
   std::vector<std::pair<DiscardSamplesRequest, OnDiscardSamplesCallback>>
       pending_discard_requests_owned_;
+  std::vector<std::pair<SampleStreamsRequest, OnSampleStreamsCallback>>
+      pending_raw_get_requests_owned_;
   std::vector<std::pair<StreamSetsRequest, OnStreamSetsCallback>>
       pending_get_requests_owned_;
   std::vector<std::pair<IgnoreSamplesRequest, IgnoreSamplesCallback>>
@@ -604,6 +664,10 @@ class Dockyard {
   void ComputeLowestHighestForRequest(const StreamSetsRequest& request,
                                       StreamSetsResponse* response) const;
 
+  void ComputeLowestHighestForSampleStreamsRequest(
+      const SampleStreamsRequest& request,
+      SampleStreamsResponse* response) const;
+
   // A private version of GetDockyardId that expects that a |mutex_| lock has
   // already been acquired.
   DockyardId GetDockyardIdLocked(const std::string& dockyard_path);
@@ -643,6 +707,10 @@ class Dockyard {
   // Gather the overall lowest and highest values encountered.
   void ProcessSingleRequest(const StreamSetsRequest& request,
                             StreamSetsResponse* response) const;
+
+  // Process a single request for sample streams.
+  void ProcessSingleSampleStreamsRequest(const SampleStreamsRequest& request,
+                                         SampleStreamsResponse* response) const;
 
   // Listen for Harvester connections from the Fuchsia device.
   void RunGrpcServer();

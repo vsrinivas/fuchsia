@@ -180,6 +180,44 @@ std::ostream& operator<<(std::ostream& out,
   return out;
 }
 
+std::ostream& operator<<(std::ostream& out,
+                         const SampleStreamsRequest& request) {
+  out << "SampleStreamsRequest {" << std::endl;
+  out << "  RequestId: " << request.RequestId() << std::endl;
+  out << "  start_time_ns: " << request.start_time_ns << std::endl;
+  out << "  end_time_ns:   " << request.end_time_ns << std::endl;
+  out << "    delta time in seconds: "
+      << double(request.end_time_ns - request.start_time_ns) /
+             kNanosecondsPerSecond
+      << std::endl;
+  out << "  ids (" << request.dockyard_ids.size() << "): [";
+  for (const auto& dockyard_id : request.dockyard_ids) {
+    out << " " << dockyard_id;
+  }
+  out << " ]" << std::endl;
+  out << "}" << std::endl;
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out,
+                         const SampleStreamsResponse& response) {
+  out << "SampleStreamsResponse {" << std::endl;
+  out << "  RequestId: " << response.RequestId() << std::endl;
+  out << "  lowest_value: " << response.lowest_value << std::endl;
+  out << "  highest_value: " << response.highest_value << std::endl;
+  out << "  data_sets (" << response.data_sets.size() << "): [" << std::endl;
+  for (const auto& list : response.data_sets) {
+    out << "    data_set: {";
+    for (const auto& [key, value] : list) {
+      out << " (" << key << ", " << value << ")";
+    }
+    out << " }, " << std::endl;
+  }
+  out << "  ]" << std::endl;
+  out << "}" << std::endl;
+  return out;
+}
+
 std::ostream& operator<<(std::ostream& out, const Dockyard& dockyard) {
   out << "Dockyard {" << std::endl;
   out << "  sample_stream: {";
@@ -379,6 +417,12 @@ void Dockyard::GetStreamSets(StreamSetsRequest&& request,
   pending_get_requests_owned_.emplace_back(request, std::move(callback));
 }
 
+void Dockyard::GetSampleStreams(SampleStreamsRequest&& request,
+                                OnSampleStreamsCallback callback) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  pending_raw_get_requests_owned_.emplace_back(request, std::move(callback));
+}
+
 void Dockyard::IgnoreSamples(IgnoreSamplesRequest&& request,
                              IgnoreSamplesCallback callback) {
   std::lock_guard<std::mutex> guard(mutex_);
@@ -513,6 +557,47 @@ void Dockyard::ProcessIgnoreSamples(const IgnoreSamplesRequest& request,
   std::lock_guard<std::mutex> guard(mutex_);
   response->SetRequestId(request.RequestId());
   IgnoreSamplesLocked(request.prefix, request.suffix);
+}
+
+void Dockyard::ProcessSingleSampleStreamsRequest(
+    const SampleStreamsRequest& request,
+    SampleStreamsResponse* response) const {
+  std::lock_guard<std::mutex> guard(mutex_);
+  response->SetRequestId(request.RequestId());
+  for (const auto& dockyard_id : request.dockyard_ids) {
+    auto search = sample_streams_.find(dockyard_id);
+    if (search == sample_streams_.end()) {
+      response->data_sets.push_back({});
+    } else {
+      SampleStream& sample_stream = *search->second;
+      response->data_sets.emplace_back(
+          sample_stream.lower_bound(request.start_time_ns),
+          sample_stream.lower_bound(request.end_time_ns));
+    }
+  }
+  ComputeLowestHighestForSampleStreamsRequest(request, response);
+}
+
+void Dockyard::ComputeLowestHighestForSampleStreamsRequest(
+    const SampleStreamsRequest& request,
+    SampleStreamsResponse* response) const {
+  // Gather the overall lowest and highest values encountered.
+  SampleValue lowest = SAMPLE_MAX_VALUE;
+  SampleValue highest = 0ULL;
+  for (const auto& dockyard_id : request.dockyard_ids) {
+    auto low_high = sample_stream_low_high_.find(dockyard_id);
+    if (low_high == sample_stream_low_high_.end()) {
+      continue;
+    }
+    if (lowest > low_high->second.first) {
+      lowest = low_high->second.first;
+    }
+    if (highest < low_high->second.second) {
+      highest = low_high->second.second;
+    }
+  }
+  response->lowest_value = lowest;
+  response->highest_value = highest;
 }
 
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
@@ -908,6 +993,15 @@ void Dockyard::ProcessRequests() {
       callback(request, response);
     }
     pending_get_requests_owned_.clear();
+  }
+
+  {
+    SampleStreamsResponse response;
+    for (const auto& [request, callback] : pending_raw_get_requests_owned_) {
+      ProcessSingleSampleStreamsRequest(request, &response);
+      callback(request, response);
+    }
+    pending_raw_get_requests_owned_.clear();
   }
 
   {
