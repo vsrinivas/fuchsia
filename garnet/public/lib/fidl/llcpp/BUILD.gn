@@ -90,6 +90,7 @@ executable("fidl_llcpp_types_test_bin") {
     "flexible_test.cc",
     "protocol_test.cc",
     "table_test.cc",
+    "test_utils.cc",
     "transformer_integration_test.cc",
     "transitional_test.cc",
     "union_test.cc",

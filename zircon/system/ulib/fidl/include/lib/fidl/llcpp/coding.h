@@ -9,7 +9,9 @@
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/response_storage.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/runtime_flag.h>
 #include <lib/fidl/transformer.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
@@ -236,6 +238,28 @@ DecodeResult<FidlType> DecodeAs(fidl_msg_t* msg) {
 template <typename FidlType>
 zx_status_t Write(const zx::unowned_channel& chan, EncodedMessage<FidlType> encoded_msg) {
   static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+  if constexpr (FidlType::ContainsUnion) {
+    if (fidl_global_get_should_write_union_as_xunion()) {
+      constexpr uint32_t kDestinationSize =
+          fidl::internal::ClampedMessageSize<FidlType, MessageDirection::kSending,
+                                             internal::WireFormatGuide::kAlternate>();
+      fidl::internal::ByteStorage<kDestinationSize> transformer_dest_storage;
+      uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+      uint32_t actual_num_bytes = 0;
+      auto status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, FidlType::Type,
+                                   encoded_msg.bytes().data(), encoded_msg.bytes().actual(),
+                                   transformer_dest, &actual_num_bytes, nullptr);
+      if (status != ZX_OK) {
+        return status;
+      }
+      reinterpret_cast<fidl_message_header_t*>(transformer_dest)->flags[0] |=
+          FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+      status = chan->write(0, transformer_dest, actual_num_bytes, encoded_msg.handles().data(),
+                           encoded_msg.handles().actual());
+      encoded_msg.ReleaseBytesAndHandles();
+      return status;
+    }
+  }
   auto status = chan->write(0, encoded_msg.bytes().data(), encoded_msg.bytes().actual(),
                             encoded_msg.handles().data(), encoded_msg.handles().actual());
   encoded_msg.ReleaseBytesAndHandles();
@@ -288,6 +312,35 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
                 "RequestType and ResponseType are incompatible");
 
   EncodeResult<ResponseType> result;
+
+  constexpr uint32_t kMaybeRequestAltSize =
+      fidl::internal::ClampedMessageSize<RequestType, MessageDirection::kSending,
+                                         internal::WireFormatGuide::kAlternate>();
+  fidl::internal::ByteStorage<kMaybeRequestAltSize> maybe_request_transformer_dest_storage(
+      fidl::internal::DelayAllocation);
+  if constexpr (RequestType::ContainsUnion) {
+    if (fidl_global_get_should_write_union_as_xunion()) {
+      maybe_request_transformer_dest_storage.Allocate();
+      uint8_t* transformer_dest = maybe_request_transformer_dest_storage.buffer().data();
+      uint32_t actual_num_bytes = 0;
+      fidl::Message message = request.ToAnyMessage();
+      auto status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, RequestType::Type,
+                                   message.bytes().data(), message.bytes().actual(),
+                                   transformer_dest, &actual_num_bytes, &result.error);
+      if (status != ZX_OK) {
+        result.status = status;
+        return result;
+      }
+      reinterpret_cast<fidl_message_header_t*>(transformer_dest)->flags[0] |=
+          FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+      request.Initialize([&message, transformer_dest, actual_num_bytes](BytePart* out_bytes,
+                                                                        HandlePart* out_handles) {
+        *out_bytes = fidl::BytePart(transformer_dest, actual_num_bytes, actual_num_bytes);
+        *out_handles = std::move(message.handles());
+      });
+    }
+  }
+
   result.message.Initialize(
       [&response_buffer, &request, &chan, &result](BytePart* out_bytes, HandlePart* handles) {
         *out_bytes = std::move(response_buffer);

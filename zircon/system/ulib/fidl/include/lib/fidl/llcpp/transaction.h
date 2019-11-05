@@ -8,7 +8,11 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
+#include <lib/fidl/llcpp/response_storage.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/runtime_flag.h>
+#include <lib/fidl/transformer.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -125,7 +129,32 @@ class CompleterBase {
       Close(ZX_ERR_INTERNAL);
       return;
     }
-    SendReply(std::move(encode_result.message.ToAnyMessage()));
+    if constexpr (FidlType::ContainsUnion) {
+      if (fidl_global_get_should_write_union_as_xunion()) {
+        fidl::Message message = encode_result.message.ToAnyMessage();
+        // |message| borrows the memory behind |bytes()| and |handles()|, so it is fine to replace
+        // |bytes()| with a stack-allocated transfromer buffer if necessary.
+        constexpr uint32_t kDestinationSize =
+            fidl::internal::ClampedMessageSize<FidlType, MessageDirection::kSending,
+                                               internal::WireFormatGuide::kAlternate>();
+        fidl::internal::ByteStorage<kDestinationSize> transformer_dest_storage;
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        uint32_t actual_num_bytes = 0;
+        zx_status_t status =
+            fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, FidlType::Type, message.bytes().data(),
+                           message.bytes().actual(), transformer_dest, &actual_num_bytes, nullptr);
+        if (status != ZX_OK) {
+          Close(ZX_ERR_INTERNAL);
+          return;
+        }
+        reinterpret_cast<fidl_message_header_t*>(transformer_dest)->flags[0] |=
+            FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+        message.set_bytes(fidl::BytePart(transformer_dest, actual_num_bytes, actual_num_bytes));
+        SendReply(std::move(message));
+        return;
+      }
+    }
+    SendReply(encode_result.message.ToAnyMessage());
   }
 
   // Move the contents of |transaction_| to heap and return it.
