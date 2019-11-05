@@ -97,7 +97,7 @@ impl TreeBuilder {
     }
 
     /// Adds a [`DirectoryEntry`] at the specified path.  It can be either a file or a directory.
-    /// In case it is a directory, this builder can not add new child nodes inside of the added
+    /// In case it is a directory, this builder cannot add new child nodes inside of the added
     /// directory.  Any `entry` is treated as an opaque "leaf" as far as the builder is concerned.
     pub fn add_entry<'components, P: 'components, PathImpl>(
         &mut self,
@@ -113,20 +113,104 @@ impl TreeBuilder {
         let mut rest = path.iter();
         match rest.next() {
             None => Err(Error::EmptyPath),
-            Some(name) => self.add_entry_impl(&path, traversed, name, rest, entry),
+            Some(name) => self.add_path(
+                &path,
+                traversed,
+                name,
+                rest,
+                |entries, name, full_path, _traversed| match entries
+                    .insert(name.to_string(), TreeBuilder::Leaf(entry))
+                {
+                    None => Ok(()),
+                    Some(TreeBuilder::Directory(_)) => {
+                        Err(Error::LeafOverDirectory { path: full_path.to_string() })
+                    }
+                    Some(TreeBuilder::Leaf(_)) => {
+                        Err(Error::LeafOverLeaf { path: full_path.to_string() })
+                    }
+                },
+            ),
         }
     }
 
-    fn add_entry_impl<'path, 'components: 'path, PathImpl>(
+    /// Adds an empty directory into the generated tree at the specified path.  The difference with
+    /// the [`add_entry`] that adds an entry that is a directory is that the builder can can only
+    /// add leaf nodes.  In other words, code like this will fail:
+    ///
+    /// ```should_panic
+    /// use crate::{
+    ///     directory::immutable::simple,
+    ///     file::pcb::asynchronous::read_only_static,
+    /// };
+    ///
+    /// let mut tree = TreeBuilder::empty_dir();
+    /// tree.add_entry(&["dir1"], simple());
+    /// tree.add_entry(&["dir1", "nested"], read_only_static(b"A file"));
+    /// ```
+    ///
+    /// The problem is that the builder does not see "dir1" as a directory, but as a leaf node that
+    /// it cannot descend into.
+    ///
+    /// If you use `add_empty_dir()` instead, it would work:
+    ///
+    /// ```
+    /// use crate::{
+    ///     directory::immutable::simple,
+    ///     file::pcb::asynchronous::read_only_static,
+    /// };
+    ///
+    /// let mut tree = TreeBuilder::empty_dir();
+    /// tree.add_empty_dir(&["dir1"]);
+    /// tree.add_entry(&["dir1", "nested"], read_only_static(b"A file"));
+    /// ```
+    pub fn add_empty_dir<'components, P: 'components, PathImpl>(
+        &mut self,
+        path: P,
+    ) -> Result<(), Error>
+    where
+        P: Into<Path<'components, PathImpl>>,
+        PathImpl: AsRef<[&'components str]>,
+    {
+        let path = path.into();
+        let traversed = vec![];
+        let mut rest = path.iter();
+        match rest.next() {
+            None => Err(Error::EmptyPath),
+            Some(name) => self.add_path(
+                &path,
+                traversed,
+                name,
+                rest,
+                |entries, name, full_path, traversed| match entries
+                    .entry(name.to_string())
+                    .or_insert_with(|| TreeBuilder::Directory(HashMap::new()))
+                {
+                    TreeBuilder::Directory(_) => Ok(()),
+                    TreeBuilder::Leaf(_) => Err(Error::EntryInsideLeaf {
+                        path: full_path.to_string(),
+                        traversed: traversed.iter().join("/"),
+                    }),
+                },
+            ),
+        }
+    }
+
+    fn add_path<'path, 'components: 'path, PathImpl, Inserter>(
         &mut self,
         full_path: &'path Path<'components, PathImpl>,
         mut traversed: Vec<&'components str>,
         name: &'components str,
         mut rest: Iter<'path, &'components str>,
-        entry: Arc<dyn DirectoryEntry>,
+        inserter: Inserter,
     ) -> Result<(), Error>
     where
         PathImpl: AsRef<[&'components str]>,
+        Inserter: FnOnce(
+            &mut HashMap<String, TreeBuilder>,
+            &str,
+            &Path<'components, PathImpl>,
+            Vec<&'components str>,
+        ) -> Result<(), Error>,
     {
         if name.len() as u64 >= MAX_FILENAME {
             return Err(Error::ComponentNameTooLong {
@@ -146,38 +230,20 @@ impl TreeBuilder {
 
         match self {
             TreeBuilder::Directory(entries) => match rest.next() {
-                None => match entries.insert(name.to_string(), TreeBuilder::Leaf(entry)) {
-                    None => Ok(()),
-                    Some(TreeBuilder::Directory(_)) => {
-                        Err(Error::LeafOverDirectory { path: full_path.to_string() })
-                    }
-                    Some(TreeBuilder::Leaf(_)) => {
-                        Err(Error::LeafOverLeaf { path: full_path.to_string() })
-                    }
-                },
+                None => inserter(entries, name, full_path, traversed),
                 Some(next_component) => {
                     traversed.push(name);
                     match entries.get_mut(name) {
                         None => {
                             let mut child = TreeBuilder::Directory(HashMap::new());
-                            child.add_entry_impl(
-                                full_path,
-                                traversed,
-                                next_component,
-                                rest,
-                                entry,
-                            )?;
+                            child.add_path(full_path, traversed, next_component, rest, inserter)?;
                             let existing = entries.insert(name.to_string(), child);
                             assert!(existing.is_none());
                             Ok(())
                         }
-                        Some(children) => children.add_entry_impl(
-                            full_path,
-                            traversed,
-                            next_component,
-                            rest,
-                            entry,
-                        ),
+                        Some(children) => {
+                            children.add_path(full_path, traversed, next_component, rest, inserter)
+                        }
                     }
                 }
             },
@@ -238,7 +304,7 @@ pub enum Error {
     EmptyPath,
 
     #[fail(
-        display = "Path compoent contains a forward slash.\n\
+        display = "Path component contains a forward slash.\n\
                    Path: {}\n\
                    Component: '{}'",
         path, component
@@ -447,6 +513,134 @@ mod tests {
     }
 
     #[test]
+    fn add_empty_dir_populate_later() {
+        let mut tree = TreeBuilder::empty_dir();
+        tree.add_empty_dir(&["one", "two"]).unwrap();
+        tree.add_entry(&["one", "two", "three"], read_only_static(b"B")).unwrap();
+
+        let root = tree.build();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
+            async move {
+                assert_read_dirents_one_listing!(
+                    root, 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"one" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "one", 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"two" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "one/two", 1000,
+                    { DIRECTORY, b"." },
+                    { FILE, b"three" },
+                );
+
+                open_as_file_assert_content!(
+                    &root,
+                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                    "one/two/three",
+                    "B"
+                );
+
+                assert_close!(root);
+            }
+        });
+    }
+
+    #[test]
+    fn add_empty_dir_already_exists() {
+        let mut tree = TreeBuilder::empty_dir();
+        tree.add_entry(&["one", "two", "three"], read_only_static(b"B")).unwrap();
+        tree.add_empty_dir(&["one", "two"]).unwrap();
+
+        let root = tree.build();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
+            async move {
+                assert_read_dirents_one_listing!(
+                    root, 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"one" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "one", 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"two" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "one/two", 1000,
+                    { DIRECTORY, b"." },
+                    { FILE, b"three" },
+                );
+
+                open_as_file_assert_content!(
+                    &root,
+                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                    "one/two/three",
+                    "B"
+                );
+
+                assert_close!(root);
+            }
+        });
+    }
+
+    #[test]
+    fn lone_add_empty_dir() {
+        let mut tree = TreeBuilder::empty_dir();
+        tree.add_empty_dir(&["just-me"]).unwrap();
+
+        let root = tree.build();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
+            async move {
+                assert_read_dirents_one_listing!(
+                    root, 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"just-me" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "just-me", 1000,
+                    { DIRECTORY, b"." },
+                );
+                assert_close!(root);
+            }
+        });
+    }
+
+    #[test]
+    fn add_empty_dir_inside_add_empty_dir() {
+        let mut tree = TreeBuilder::empty_dir();
+        tree.add_empty_dir(&["container"]).unwrap();
+        tree.add_empty_dir(&["container", "nested"]).unwrap();
+
+        let root = tree.build();
+
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
+            async move {
+                assert_read_dirents_one_listing!(
+                    root, 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"container" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "container", 1000,
+                    { DIRECTORY, b"." },
+                    { DIRECTORY, b"nested" },
+                );
+                assert_read_dirents_path_one_listing!(
+                    &root, "container/nested", 1000,
+                    { DIRECTORY, b"." },
+                );
+                assert_close!(root);
+            }
+        });
+    }
+
+    #[test]
     fn error_empty_path_in_add_entry() {
         let mut tree = TreeBuilder::empty_dir();
         let err = tree
@@ -456,11 +650,11 @@ mod tests {
     }
 
     #[test]
-    fn error_slash_in_compoenent() {
+    fn error_slash_in_component() {
         let mut tree = TreeBuilder::empty_dir();
         let err = tree
             .add_entry("a/b", read_only_static(b"Invalid"))
-            .expect_err("Slash in path compoenent name.");
+            .expect_err("Slash in path component name.");
         assert_eq!(
             err,
             Error::SlashInComponent { path: "a/b".to_string(), component: "a/b".to_string() }
@@ -468,11 +662,11 @@ mod tests {
     }
 
     #[test]
-    fn error_slash_in_second_compoenent() {
+    fn error_slash_in_second_component() {
         let mut tree = TreeBuilder::empty_dir();
         let err = tree
             .add_entry(&["a", "b/c"], read_only_static(b"Invalid"))
-            .expect_err("Slash in path compoenent name.");
+            .expect_err("Slash in path component name.");
         assert_eq!(
             err,
             Error::SlashInComponent { path: "a/b/c".to_string(), component: "b/c".to_string() }
@@ -543,7 +737,7 @@ mod tests {
     fn error_entry_inside_leaf_directory() {
         let mut tree = TreeBuilder::empty_dir();
 
-        // Even when a leaf is itself a directory the tree builder can not insert a nested entry.
+        // Even when a leaf is itself a directory the tree builder cannot insert a nested entry.
         tree.add_entry(&["top", "file"], simple()).unwrap();
         let err = tree
             .add_entry(&["top", "file", "nested"], read_only_static(b"Invalid"))
