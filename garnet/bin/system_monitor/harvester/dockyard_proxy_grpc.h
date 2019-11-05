@@ -13,6 +13,19 @@
 
 namespace harvester {
 
+namespace internal {
+
+// Utility functions for munging data.
+
+void ExtractPathsFromSampleList(
+  std::vector<const std::string*>* dockyard_strings, const SampleList& list);
+
+void BuildSampleListById(
+  SampleListById* by_id, const std::vector<dockyard::DockyardId>& id_list,
+  const SampleList& sample_list);
+
+} // namespace internal
+
 class DockyardProxyGrpc : public DockyardProxy {
  public:
   DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel)
@@ -41,6 +54,8 @@ class DockyardProxyGrpc : public DockyardProxy {
 
   // Look up the ID of a Dockyard path.
   std::map<std::string, dockyard::DockyardId> dockyard_path_to_id_ = {};
+
+  // Functions for interacting with Dockyard (via gRPC).
 
   // Actually send data to the Dockyard.
   // |time| is in nanoseconds.

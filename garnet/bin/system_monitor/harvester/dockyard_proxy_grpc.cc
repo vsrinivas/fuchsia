@@ -25,6 +25,27 @@ constexpr DockyardProxyStatus ToDockyardProxyStatus(
 
 }  // namespace
 
+namespace internal {
+
+void ExtractPathsFromSampleList(
+    std::vector<const std::string*>* dockyard_strings, const SampleList& list) {
+  for (size_t i = 0; i < list.size(); ++i) {
+    dockyard_strings->at(i) = &list[i].first;
+  }
+}
+
+void BuildSampleListById(SampleListById* by_id,
+                         const std::vector<dockyard::DockyardId>& id_list,
+                         const SampleList& sample_list) {
+  for (size_t i = 0; i < id_list.size(); ++i) {
+    dockyard::DockyardId id = id_list[i];
+    uint64_t sample = sample_list[i].second;
+    by_id->at(i) = {id, sample};
+  }
+}
+
+} // namespace internal
+
 DockyardProxyStatus DockyardProxyGrpc::Init() {
   dockyard_proto::InitRequest request;
   request.set_device_name("TODO SET DEVICE NAME");
@@ -85,18 +106,15 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
   uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
                              now.time_since_epoch())
                              .count();
+
+  std::vector<const std::string*> dockyard_strings(list.size());
+  internal::ExtractPathsFromSampleList(&dockyard_strings, list);
+
+  std::vector<dockyard::DockyardId> dockyard_ids;
+  GetDockyardIdsForPaths(&dockyard_ids, dockyard_strings);
+
   SampleListById by_id(list.size());
-  auto path_iter = list.begin();
-  auto id_iter = by_id.begin();
-  for (; path_iter != list.end(); ++path_iter, ++id_iter) {
-    dockyard::DockyardId dockyard_id;
-    grpc::Status status = GetDockyardIdForPath(&dockyard_id, path_iter->first);
-    if (!status.ok()) {
-      return ToDockyardProxyStatus(status);
-    }
-    id_iter->first = dockyard_id;
-    id_iter->second = path_iter->second;
-  }
+  internal::BuildSampleListById(&by_id, dockyard_ids, list);
   return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
 }
 
