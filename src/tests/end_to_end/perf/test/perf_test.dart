@@ -36,7 +36,7 @@ void main() {
   test('zircon_benchmarks', () async {
     const resultsFile = '/tmp/perf_results.json';
     final result = await sl4fDriver.ssh
-        .run('/bin/zircon_benchmarks -p --out $resultsFile');
+        .run('/bin/zircon_benchmarks -p --quiet --out $resultsFile');
     expect(result.exitCode, equals(0));
 
     final localResultsFile =
