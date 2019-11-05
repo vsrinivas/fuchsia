@@ -11,6 +11,9 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "src/developer/debug/zxdb/common/address_range.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/lib/containers/cpp/array_view.h"
 
 namespace zxdb {
 
@@ -23,14 +26,25 @@ class LineTable {
  public:
   using Row = llvm::DWARFDebugLine::Row;
 
+  struct FoundRow {
+    FoundRow() = default;
+    FoundRow(containers::array_view<Row> s, size_t i) : sequence(s), index(i) {}
+
+    bool empty() const { return sequence.empty(); }
+
+    // The sequence of rows associated with the address. These will be contiguous addresses. This
+    // will be empty if nothing was matched.
+    containers::array_view<Row> sequence;
+
+    // Index within the sequence of the found row. Valid when !empty().
+    size_t index = 0;
+  };
+
   virtual ~LineTable() = default;
 
   // Returns the number of file names referenced by this line table. The DWARFDebugLine::Row::File
   // entries are 1-based (!) indices into a table of this size.
   virtual size_t GetNumFileNames() const = 0;
-
-  // Returns the line table row information.
-  virtual const std::vector<Row>& GetRows() const = 0;
 
   // Returns the absolute file name for the given file index. This is the value from
   // DWARFDebugLine::Row::File (1-based). It will return an empty optional on failure.
@@ -40,19 +54,69 @@ class LineTable {
   // there is no subroutine for this code (could be compiler-generated).
   virtual llvm::DWARFDie GetSubroutineForRow(const Row& row) const = 0;
 
-  // Computes the index of the row in the line table that covers the given address. There should be
-  // only one entry per address but in case there are duplicates this returns the first one.
+  // Query for sequences. This is used for iterating through the entire line table.
   //
-  // Returns a null optional if there is no entry for the address. This happens if it's before the
-  // beginning of the table. If it's past the end, it will be covered by the last row of the table
-  // which will normally have |end_sequence| set which indicates there's no data tnere.
+  // Sequences consist of a contiguous range of addresses and will be in sorted order.
+  size_t GetNumSequences() const;
+  containers::array_view<Row> GetSequenceAt(size_t index) const;
+
+  // Returns the sequence of rows (contiguous addresses ending in an EndSequence tag) containing the
+  // address. The returned array will be empty if the address was not found. See GetRowForAddress().
   //
-  // Some rows other than the last can have |end_sequence| set to indicate there's no relevant
-  // data starting at that address, and the other values are irrelevant (whatever was in the state
-  // machine at that time). No checking is done for these rows so the caller will need to check.
-  // Such rows would normally not be counted as part of the code.
-  std::optional<size_t> GetFirstRowIndexForAddress(const SymbolContext& address_context,
-                                                   uint64_t absolute_address) const;
+  // Watch out: the addresses in the returned rows will all be module-relative.
+  containers::array_view<Row> GetRowSequenceForAddress(const SymbolContext& address_context,
+                                                       TargetPointer absolute_address) const;
+
+  // Finds the row in the line table that covers the given address. If there is no match, the
+  // returned sequence will be empty.
+  //
+  // Watch out: the addresses in the returned rows will all be module-relative.
+  FoundRow GetRowForAddress(const SymbolContext& address_context,
+                            TargetPointer absolute_address) const;
+
+ protected:
+  // Returns the line table row information.
+  //
+  // This will not necessarily be sorted by address and may contain stripped regions. Queries should
+  // go through the sequence table.
+  //
+  // The implementation should ensure that the returned value never changes. This will be indexed
+  // into sequences and cached.
+  virtual const std::vector<Row>& GetRows() const = 0;
+
+ public:
+  // The DWARF row table will be mostly sorted by address but there will be sequences of addresses
+  // that are out-of-order relative to each other. In pracice, on common reason for this is when
+  // code is stripped, the stripped code will have its start address set back to 0.
+  //
+  // This tracks the blocks of rows with contiguous addresses. To find a row corresponding to an
+  // address, binary search to find the block, then binary search the rows referenced by the block.
+  struct Sequence {
+    Sequence() = default;
+    Sequence(const AddressRange& a, size_t r_begin, size_t r_end)
+        : addresses(a), row_begin(r_begin), row_end(r_end) {}
+
+    AddressRange addresses;
+
+    // Index into GetRows() of the beginning.
+    size_t row_begin = 0;
+
+    // Index into GetRows() of the ending. This will be the index of the EndSequence row.
+    //
+    // If the table doesn't end in an EndSequence row, the last sequence will be ignored so this row
+    // is guaranteed to exist.
+    size_t row_end = 0;
+  };
+
+  // Will return an null pointer if there isn't one found.
+  const Sequence* GetSequenceForRelativeAddress(TargetPointer relative_address) const;
+
+  // Ensures that the sequences_ vector is populated from the rows.
+  void EnsureSequences() const;
+
+  // Sorted by Sequence.addresses.end() so lower_bound() can find the right one. Lazily populated,
+  // see EnsureSequences().
+  mutable std::vector<Sequence> sequences_;
 };
 
 }  // namespace zxdb

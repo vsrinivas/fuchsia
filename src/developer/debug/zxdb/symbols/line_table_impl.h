@@ -16,11 +16,14 @@ class LineTableImpl : public LineTable {
   explicit LineTableImpl(llvm::DWARFContext* context, llvm::DWARFUnit* unit);
   ~LineTableImpl() override;
 
-  // LineTable implementation.
+  // LineTable public implementation.
   size_t GetNumFileNames() const override;
-  const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
   std::optional<std::string> GetFileNameByIndex(uint64_t file_id) const override;
   llvm::DWARFDie GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const override;
+
+ protected:
+  // LineTable protected implementation.
+  const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
 
  private:
   llvm::DWARFUnit* unit_;

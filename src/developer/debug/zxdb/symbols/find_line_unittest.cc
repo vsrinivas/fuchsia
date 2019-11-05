@@ -25,6 +25,7 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   rows.push_back(MockLineTable::MakeStatementRow(0x1006, 1, 95));
   rows.push_back(MockLineTable::MakeStatementRow(0x1007, 1, 100));
   rows.push_back(MockLineTable::MakeStatementRow(0x1008, 1, 98));
+  rows.push_back(MockLineTable::MakeEndSequenceRow(0x1009, 1, 98));
 
   MockLineTable table(files, rows);
 
@@ -56,6 +57,7 @@ TEST(FindLine, GetAllLineTableMatchesInUnit_Reverse) {
   rows.push_back(MockLineTable::MakeStatementRow(0x1001, 1, 101));  // Best match.
   rows.push_back(MockLineTable::MakeStatementRow(0x1002, 1, 91));   //
   rows.push_back(MockLineTable::MakeStatementRow(0x1003, 1, 103));  // Less-good match.
+  rows.push_back(MockLineTable::MakeEndSequenceRow(0x1004, 1, 103));
 
   MockLineTable table(files, rows);
 

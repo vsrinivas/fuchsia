@@ -22,64 +22,66 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
                                                     const std::string& full_path, int line) {
   std::vector<LineMatch> result;
 
-  // The file table usually has a bunch of entries not referenced by the line
-  // table (these are usually for declarations of things).
+  // The file table usually has a bunch of entries not referenced by the line table (these are
+  // usually for declarations of things).
   std::vector<FileChecked> checked;
   checked.resize(line_table.GetNumFileNames(), FileChecked::kUnchecked);
 
-  // Once we find a file match, assume there aren't any others so we don't need
-  // to keep looking up file names.
+  // Once we find a file match, assume there aren't any others so we don't need to keep looking up
+  // file names.
   bool file_match_found = false;
 
-  // The |best_line| is the line number of the smallest line in the file
-  // we've found >= to the search line. The |result| contains all lines
-  // we've encountered in the unit so far that match this.
+  // The |best_line| is the line number of the smallest line in the file we've found >= to the
+  // search line. The |result| contains all lines we've encountered in the unit so far that match
+  // this.
   constexpr int kWorstLine = std::numeric_limits<int>::max();
   int best_line = kWorstLine;
 
   // Rows in the line table.
-  for (const llvm::DWARFDebugLine::Row& row : line_table.GetRows()) {
-    // EndSequence doesn't correspond to a line. Its purpose is to mark invalid
-    // code regions (say, padding between functions). Because of the format
-    // of the table, it will duplicate the line and column numbers from the
-    // previous row so it looks valid, but these are meaningless. Skip these
-    // rows.
-    if (!row.IsStmt || row.EndSequence)
-      continue;
+  size_t num_sequences = line_table.GetNumSequences();
+  for (size_t sequence_i = 0; sequence_i < num_sequences; sequence_i++) {
+    containers::array_view<llvm::DWARFDebugLine::Row> sequence =
+        line_table.GetSequenceAt(sequence_i);
 
-    auto file_id = row.File;  // 1-based!
-    if (file_id < 1 && file_id > checked.size())
-      continue;  // Symbols are corrupt.
+    for (const auto& row : sequence) {
+      FXL_DCHECK(!row.EndSequence);  // The LineTable should not include these in a sequence.
+      if (!row.IsStmt)
+        continue;
 
-    auto file_index = file_id - 1;  // 0-based for indexing into array.
-    if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
-      // Look up effective file name and see if it's a match.
-      if (auto file_name = line_table.GetFileNameByIndex(file_id)) {
-        if (full_path == *file_name) {
-          file_match_found = true;
-          checked[file_index] = FileChecked::kMatch;
+      auto file_id = row.File;  // 1-based!
+      if (file_id < 1 && file_id > checked.size())
+        continue;  // Symbols are corrupt.
+
+      auto file_index = file_id - 1;  // 0-based for indexing into array.
+      if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
+        // Look up effective file name and see if it's a match.
+        if (auto file_name = line_table.GetFileNameByIndex(file_id)) {
+          if (full_path == *file_name) {
+            file_match_found = true;
+            checked[file_index] = FileChecked::kMatch;
+          } else {
+            checked[file_index] = FileChecked::kNoMatch;
+          }
         } else {
           checked[file_index] = FileChecked::kNoMatch;
         }
-      } else {
-        checked[file_index] = FileChecked::kNoMatch;
       }
-    }
 
-    if (checked[file_index] == FileChecked::kMatch) {
-      int row_line = static_cast<int>(row.Line);
-      if (line <= row_line) {
-        // All lines >= to the line in question are possibilities.
-        if (row_line < best_line) {
-          // Found a new best match, clear all existing ones.
-          best_line = row_line;
-          result.clear();
-        }
-        if (row_line == best_line) {
-          // Accumulate all matching results.
-          auto subroutine = line_table.GetSubroutineForRow(row);
-          result.emplace_back(row.Address, row_line,
-                              subroutine.isValid() ? subroutine.getOffset() : 0);
+      if (checked[file_index] == FileChecked::kMatch) {
+        int row_line = static_cast<int>(row.Line);
+        if (line <= row_line) {
+          // All lines >= to the line in question are possibilities.
+          if (row_line < best_line) {
+            // Found a new best match, clear all existing ones.
+            best_line = row_line;
+            result.clear();
+          }
+          if (row_line == best_line) {
+            // Accumulate all matching results.
+            auto subroutine = line_table.GetSubroutineForRow(row);
+            result.emplace_back(row.Address, row_line,
+                                subroutine.isValid() ? subroutine.getOffset() : 0);
+          }
         }
       }
     }
@@ -143,14 +145,10 @@ size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* func
   // The function and line table are all defined in terms of relative addresses.
   SymbolContext rel_context = SymbolContext::ForRelativeAddresses();
 
-  std::optional<size_t> found_first_row =
-      line_table.GetFirstRowIndexForAddress(rel_context, code_range_begin);
-  if (!found_first_row)
+  LineTable::FoundRow found = line_table.GetRowForAddress(rel_context, code_range_begin);
+  if (found.empty())
     return 0;
-  size_t first_row = *found_first_row;
-
-  const auto& rows = line_table.GetRows();
-  FXL_DCHECK(!rows.empty());  // Shound't have an empty table if we found the row above.
+  size_t first_row = found.index;
 
   // Give up after this many line table entries. If prologue_end isn't found by then, assume there's
   // no specifically marked prologue. Normally it will be the 2nd entry.
@@ -159,11 +157,11 @@ size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* func
   // Search for a line in the function with |prologue_end| explicitly marked.
   size_t prologue_end_index = first_row;
   bool found_marked_end = false;
-  for (size_t i = 0; i < kMaxSearchCount && first_row + i < rows.size(); i++) {
-    if (!code_ranges.InRange(rows[first_row + i].Address))
+  for (size_t i = 0; i < kMaxSearchCount && first_row + i < found.sequence.size(); i++) {
+    if (!code_ranges.InRange(found.sequence[first_row + i].Address))
       break;  // Outside the function.
 
-    if (rows[first_row + i].PrologueEnd) {
+    if (found.sequence[first_row + i].PrologueEnd) {
       // Found match.
       prologue_end_index = first_row + i;
       found_marked_end = true;
@@ -174,23 +172,23 @@ size_t GetFunctionPrologueSize(const LineTable& line_table, const Function* func
   if (!found_marked_end) {
     // GCC doesn't seem to generate prologue_end annotations in many cases. There, the first line
     // table entry row is interpreted as the prologue so the end is the following one.
-    if (prologue_end_index < rows.size() - 1)
+    if (prologue_end_index < found.sequence.size() - 1)
       prologue_end_index++;
   }
 
   // There can be compiler-generated code immediately following the prologue annotated by "line 0".
   // Count this as prologue also.
-  while (prologue_end_index < rows.size() && rows[prologue_end_index].Line == 0)
+  while (prologue_end_index < found.sequence.size() && found.sequence[prologue_end_index].Line == 0)
     prologue_end_index++;
 
   // Sanity check: None of those previous operations should have left us outside of the function's
   // code or outside of a known instruction (there's an end_sequence marker). If it did, this line
   // table looks different than we expect and we don't report a prologue.
-  if (!code_ranges.InRange(rows[prologue_end_index].Address) ||
-      rows[prologue_end_index].EndSequence)
+  if (!code_ranges.InRange(found.sequence[prologue_end_index].Address) ||
+      found.sequence[prologue_end_index].EndSequence)
     return 0;
 
-  return rows[prologue_end_index].Address - code_range_begin;
+  return found.sequence[prologue_end_index].Address - code_range_begin;
 }
 
 }  // namespace zxdb
