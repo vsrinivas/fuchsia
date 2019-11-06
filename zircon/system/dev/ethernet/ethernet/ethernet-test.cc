@@ -346,90 +346,95 @@ TEST(EthernetTest, GetStatusTest) {
   EXPECT_TRUE(device_status == 1);
 }
 
-#if 0
-// TODO(CONN-135)
 TEST(EthernetTest, SendTest) {
-    EthernetDeviceTest test;
+  EthernetDeviceTest test;
 
-    //start device
-    test.Start();
+  // start device
+  test.Start();
 
-    //send packet through the fifo
-    zx::fifo& tx = test.TransmitFifo();
-    eth_fifo_entry_t entry = {
-        .offset = 0,
-        .length = 1,
-        .flags = 0,
-        .cookie = 0,
-    };
-    ASSERT_OK(tx.write(sizeof(entry), &entry, 1, nullptr));
-
-    //wait for packet to be returned
-    ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
-
-    //check mock ethmac if packet was received
-    EXPECT_TRUE(test.tester.ethmac().TestQueueTx());
+  // send packet through the fifo
+  zx::fifo& tx = test.TransmitFifo();
+  eth_fifo_entry_t entry = {
+      .offset = 0,
+      .length = 1,
+      .flags = 0,
+      .cookie = 0,
+  };
+  ASSERT_OK(tx.write(sizeof(entry), &entry, 1, nullptr));
+  // wait for packet to be returned
+  ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
+  // TODO(21334): remove debug logs after flake fix is confirmed
+  printf("SendTest: Transmit wait completed\n");
+  ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
+  // check mock ethmac if packet was received
+  EXPECT_TRUE(test.tester.ethmac().TestQueueTx());
 }
 
-
 TEST(EthernetTest, ReceiveTest) {
-    EthernetDeviceTest test;
+  EthernetDeviceTest test;
 
-    //start device
-    test.Start();
+  // start device
+  test.Start();
 
-    // Queue buffer to receive fifo
-    zx::fifo& rx = test.ReceiveFifo();
-    eth_fifo_entry_t entry = {
-        .offset = 0,
-        .length = 1,
-        .flags = 0,
-        .cookie = 0,
-    };
-    ASSERT_OK(rx.write(sizeof(entry), &entry, 1, nullptr));
+  // Queue buffer to receive fifo
+  zx::fifo& rx = test.ReceiveFifo();
+  eth_fifo_entry_t entry = {
+      .offset = 0,
+      .length = 1,
+      .flags = 0,
+      .cookie = 0,
+  };
+  ASSERT_OK(rx.write(sizeof(entry), &entry, 1, nullptr));
 
-    //send packet through mock ethmac
-    EXPECT_TRUE(test.tester.ethmac().TestRecv());
+  // send packet through mock ethmac
+  EXPECT_TRUE(test.tester.ethmac().TestRecv());
 
-    //check if packet is received
-    ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
+  // check if packet is received
+  ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
+  // TODO(21334): remove debug logs after flake fix is confirmed
+  printf("ReceiveTest: Receive wait completed\n");
+  ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
 }
 
 TEST(EthernetTest, ListenStartTest) {
-    EthernetDeviceTest test;
-    zx_status_t out_status = ZX_ERR_INTERNAL;
+  EthernetDeviceTest test;
+  zx_status_t out_status = ZX_ERR_INTERNAL;
 
-    // start device
-    test.Start();
+  // start device
+  test.Start();
 
-    // Set listen start
-    ASSERT_OK(fuchsia_hardware_ethernet_DeviceListenStart(test.FidlChannel(), &out_status));
-    ASSERT_OK(out_status);
+  // Set listen start
+  ASSERT_OK(fuchsia_hardware_ethernet_DeviceListenStart(test.FidlChannel(), &out_status));
+  ASSERT_OK(out_status);
 
-    // send packet
-    eth_fifo_entry_t entry = {
-        .offset = 0,
-        .length = 1,
-        .flags = 0,
-        .cookie = 0,
-    };
-    zx::fifo& tx = test.TransmitFifo();
-    ASSERT_OK(tx.write(sizeof(entry), &entry, 1, nullptr));
+  // send packet
+  eth_fifo_entry_t entry = {
+      .offset = 0,
+      .length = 1,
+      .flags = 0,
+      .cookie = 0,
+  };
 
-    zx::fifo& rx = test.ReceiveFifo();
-    ASSERT_OK(rx.write(sizeof(entry), &entry, 1, nullptr));
+  zx::fifo& rx = test.ReceiveFifo();
+  ASSERT_OK(rx.write(sizeof(entry), &entry, 1, nullptr));
 
-    //wait for the send to complete
-    ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
+  zx::fifo& tx = test.TransmitFifo();
+  ASSERT_OK(tx.write(sizeof(entry), &entry, 1, nullptr));
 
-    // check if it was echoed
-    ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
-    ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
+  // wait for the send to complete
+  ASSERT_OK(tx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
+  // TODO(21334): remove debug logs after flake fix is confirmed
+  printf("ListenStartTest: Transmit wait completed\n");
+  ASSERT_OK(tx.read(sizeof(entry), &entry, 1, nullptr));
+  // check mock ethmac if packet was received
+  EXPECT_TRUE(test.tester.ethmac().TestQueueTx());
+
+  // check if it was echoed
+  ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
+  // TODO(21334): remove debug logs after flake fix is confirmed
+  printf("ListenStartTest: Receive wait completed\n");
+  ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
 }
-#endif
 
 TEST(EthernetTest, ListenStopTest) {
   EthernetDeviceTest test;
