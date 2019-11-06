@@ -107,7 +107,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
         ASSERT_EQ(1UL, response.data_sets.size());
         ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
         // Check the samples themselves.
-        EXPECT_EQ(500000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
         EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][1]);
         EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][2]);
         EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][3]);
@@ -301,7 +301,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
         ASSERT_EQ(1UL, response.data_sets.size());
         ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
         // Check the samples themselves.
-        EXPECT_EQ(20600000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
         EXPECT_EQ(200000ULL, response.data_sets[0][1]);
         EXPECT_EQ(600000ULL, response.data_sets[0][2]);
         EXPECT_EQ(1000000ULL, response.data_sets[0][3]);
@@ -345,7 +345,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Average) {
         ASSERT_EQ(1UL, response.data_sets.size());
         ASSERT_EQ(SAMPLE_COUNT, response.data_sets[0].size());
         // Check the samples themselves.
-        EXPECT_EQ(7428571ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
         EXPECT_EQ(571428ULL, response.data_sets[0][1]);
         EXPECT_EQ(1000000ULL, response.data_sets[0][2]);
         EXPECT_EQ(428571ULL, response.data_sets[0][3]);
@@ -732,7 +732,7 @@ TEST_F(SystemMonitorDockyardTest, NegativeSlope) {
         ASSERT_EQ(1UL, response.data_sets.size());
         ASSERT_EQ(request.sample_count, response.data_sets[0].size());
         // Check the samples themselves.
-        EXPECT_EQ(500000ULL, response.data_sets[0][0]);
+        EXPECT_EQ(dockyard::NO_DATA, response.data_sets[0][0]);
         EXPECT_EQ(500000ULL, response.data_sets[0][1]);
         // The Dockyard will return a level slope rather than a negative slope.
         // The result on the next line would be a negative value if negative

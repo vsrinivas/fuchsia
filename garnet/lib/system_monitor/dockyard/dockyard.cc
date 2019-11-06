@@ -38,7 +38,14 @@ inline bool StringEndsWith(const std::string& haystack,
 // requested start time.
 SampleValue calculate_slope(SampleValue value, SampleValue* prior_value,
                             SampleTimeNs time, SampleTimeNs* prior_time) {
-  if (value < *prior_value) {
+  if (*prior_value == 0) {
+    // The sampling/smoothing functions below will use a prior_value of 0 if
+    // there is no actual prior value. In this case, there's no valid slope
+    // value, so update the prior time/value and return NO_DATA.
+    *prior_value = value;
+    *prior_time = time;
+    return NO_DATA;
+  } else if (value < *prior_value) {
     // A lower value will produce a negative slope, which is not currently
     // supported. As a workaround the value is pulled up to |prior_value| to
     // create a convex surface.
