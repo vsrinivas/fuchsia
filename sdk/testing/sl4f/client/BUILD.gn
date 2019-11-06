@@ -27,7 +27,12 @@ dart_library("client") {
     "src/ssh.dart",
     "src/storage.dart",
     "src/test.dart",
+    "src/trace_processing/time_delta.dart",
+    "src/trace_processing/time_point.dart",
+    "src/trace_processing/trace_importing.dart",
+    "src/trace_processing/trace_model.dart",
     "src/webdriver.dart",
+    "trace_processing.dart",
   ]
 
   deps = [
@@ -55,6 +60,7 @@ dart_test("sl4f_client_tests") {
     "ssh_test.dart",
     "storage_test.dart",
     "test_test.dart",
+    "trace_processing_test.dart",
     "webdriver_test.dart",
   ]
 
