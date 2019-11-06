@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "misc/sysinfo"
+            "misc/sysinfo",
+            "class/thermal"
         ],
         "services": [
             "fuchsia.ui.activity.Provider",

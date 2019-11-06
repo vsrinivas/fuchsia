@@ -7,6 +7,8 @@ use crate::node::Node;
 use crate::types::Celsius;
 use async_trait::async_trait;
 use failure::{format_err, Error};
+use fidl_fuchsia_hardware_thermal as fthermal;
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -14,18 +16,18 @@ use std::rc::Rc;
 
 /// Node: TemperatureHandler
 ///
-/// Summary: responds to temperature requests from other nodes by polling the
-///          specified driver using the thermal FIDL protocol
+/// Summary: Responds to temperature requests from other nodes by polling the specified driver
+///          using the thermal FIDL protocol
 ///
-/// Message Inputs:
+/// Handles Messages:
 ///     - ReadTemperature
 ///
-/// Message Outputs: N/A
+/// Sends Messages: N/A
 ///
 /// FIDL: fidl_fuchsia_hardware_thermal
 
 pub struct TemperatureHandler {
-    drivers: RefCell<HashMap<String, zx::Channel>>,
+    drivers: RefCell<HashMap<String, fthermal::DeviceProxy>>,
 }
 
 impl TemperatureHandler {
@@ -33,25 +35,43 @@ impl TemperatureHandler {
         Rc::new(Self { drivers: RefCell::new(HashMap::new()) })
     }
 
-    fn connect_driver(&self, _path: &str) -> Result<(), Error> {
-        // TODO(pshickel): connect to driver and insert into hashmap
-        Err(format_err!("Failed to connect to driver"))
+    fn connect_driver(&self, path: &str) -> Result<fthermal::DeviceProxy, Error> {
+        let (client, server) =
+            zx::Channel::create().map_err(|s| format_err!("Failed to create channel: {}", s))?;
+
+        fdio::service_connect(path, server)
+            .map_err(|s| format_err!("Failed to connect to service at {}: {}", path, s))?;
+
+        let driver = fthermal::DeviceProxy::new(fasync::Channel::from_channel(client)?);
+        Ok(driver)
     }
 
-    fn handle_read_temperature(&self, driver_path: &str) -> Result<MessageReturn, Error> {
-        let drivers = self.drivers.borrow();
-        if !drivers.contains_key(driver_path) {
-            self.connect_driver(driver_path)?;
+    async fn handle_read_temperature(&self, driver_path: &str) -> Result<MessageReturn, Error> {
+        // TODO(pshickel): What if multiple other nodes want to know about the current
+        // temperature from the same driver? If two requests come back to back, does it mean we
+        // should blindly query the driver twice, or maybe we want to cache the last value with
+        // some staleness tolerance parameter? There isn't a use-case for this yet, but it's
+        // something to think about.
+        let mut drivers = self.drivers.borrow_mut();
+        let mut driver = drivers.get(driver_path);
+        if driver.is_none() {
+            let driver_connection = self.connect_driver(driver_path)?;
+            drivers.insert(String::from(driver_path), driver_connection);
+            driver = drivers.get(driver_path);
         }
 
-        let driver = drivers.get(driver_path).unwrap();
-        let temperature = self.read_temperature(driver)?;
+        let temperature = self.read_temperature(driver.unwrap()).await?;
         Ok(MessageReturn::ReadTemperature(temperature))
     }
 
-    fn read_temperature(&self, _driver: &zx::Channel) -> Result<Celsius, Error> {
-        // TODO(pshickel): implement this function once the temperature driver is ready
-        Ok(Celsius(0.0))
+    async fn read_temperature(&self, driver: &fthermal::DeviceProxy) -> Result<Celsius, Error> {
+        let (status, temperature) = driver
+            .get_temperature_celsius()
+            .await
+            .map_err(|e| format_err!("get_temperature_celsius IPC failed: {}", e))?;
+        zx::Status::ok(status)
+            .map_err(|e| format_err!("get_temperature_celsius driver returned error: {}", e))?;
+        Ok(Celsius(temperature))
     }
 }
 
@@ -63,8 +83,75 @@ impl Node for TemperatureHandler {
 
     async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error> {
         match msg {
-            Message::ReadTemperature(driver) => self.handle_read_temperature(driver),
+            Message::ReadTemperature(driver) => self.handle_read_temperature(driver).await,
             _ => Err(format_err!("Unsupported message: {:?}", msg)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl::endpoints::RequestStream;
+    use fuchsia_async as fasync;
+    use futures::TryStreamExt;
+
+    // Spawns a new task that acts as a fake thermal driver for testing purposes. The driver only
+    // handles requests for GetTemperatureCelsius - trying to send any other requests to it is a
+    // bug. Responds with a specified temperature that is verified in the test.
+    fn setup_fake_driver(mut stream: fthermal::DeviceRequestStream, temperature: f32) {
+        fasync::spawn(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fthermal::DeviceRequest::GetTemperatureCelsius { responder }) => {
+                        let _ = responder.send(zx::Status::OK.into_raw(), temperature);
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_temperature() {
+        let test_temperature = 12.34;
+        let driver_path = "/dev/class/thermal/fake";
+        let node = TemperatureHandler::new();
+
+        // setup fake driver connection
+        let (client, server) = zx::Channel::create().unwrap();
+        let client = fasync::Channel::from_channel(client).unwrap();
+        let server = fasync::Channel::from_channel(server).unwrap();
+        let driver = fthermal::DeviceProxy::new(client);
+        let stream = fthermal::DeviceRequestStream::from_channel(server);
+        setup_fake_driver(stream, test_temperature);
+        node.drivers.borrow_mut().insert(String::from(driver_path), driver);
+
+        // send ReadTemperature message and check for expected value
+        let message = Message::ReadTemperature(driver_path);
+        let result = node.handle_message(&message).await;
+        let temperature = result.unwrap();
+        if let MessageReturn::ReadTemperature(t) = temperature {
+            assert_eq!(t.0, test_temperature);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_temperature_bad_arg() {
+        let thermal_driver = "";
+        let node = TemperatureHandler::new();
+        let message = Message::ReadTemperature(thermal_driver);
+        let result = node.handle_message(&message).await;
+        assert!(result.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_msg() {
+        let node = TemperatureHandler::new();
+        let message = Message::GetCpuIdlePct;
+        let result = node.handle_message(&message).await;
+        assert!(result.is_err());
     }
 }

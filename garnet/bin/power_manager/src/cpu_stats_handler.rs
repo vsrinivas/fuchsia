@@ -12,9 +12,9 @@ use std::rc::Rc;
 ///
 /// Summary: WIP
 ///
-/// Message Inputs: WIP
+/// Handles Messages: WIP
 ///
-/// Message Outputs: WIP
+/// Sends Messages: WIP
 ///
 /// FIDL: WIP
 
