@@ -635,8 +635,9 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
 
     switch (op) {
       case ZX_VMO_OP_DECOMMIT: {
-        // Decommit may zero page contents, so require write permissions.
-        if ((mapping->arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE) == 0) {
+        // Decommit zeroes pages of the VMO, equivalent to writing to it.
+        // the mapping is currently writable, or could be made writable.
+        if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
           return ZX_ERR_ACCESS_DENIED;
         }
         zx_status_t result = vmo->DecommitRange(op_offset, op_size);

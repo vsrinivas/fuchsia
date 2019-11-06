@@ -1787,13 +1787,28 @@ bool range_op_commit_vmo_pages() {
   EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
                              vmar_base + PAGE_SIZE, PAGE_SIZE*3, nullptr, 0u), ZX_ERR_BAD_STATE);
 
-  // Verify decommit of a non-writable page fails.
+  // Decommit of a non-writable mapping succeeds if the mapping can be made
+  // writable by the caller, i.e. it was created with a writable VMO handle.
   EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
                              vmar_base + (PAGE_SIZE*4), PAGE_SIZE, nullptr, 0u),
+            ZX_OK);
+
+  // Decommit of a non-writable mapping fails if the caller cannot make the
+  // mapping writable, i.e. it was created from a read-only VMO handle.
+  zx_handle_t readonly_vmo = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_handle_duplicate(vmo, ZX_RIGHT_MAP | ZX_RIGHT_READ, &readonly_vmo), ZX_OK);
+  zx_vaddr_t readonly_mapping_addr = 0u;
+  ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, readonly_vmo,
+                        0, PAGE_SIZE, &readonly_mapping_addr),
+            ZX_OK);
+  EXPECT_EQ(zx_vmar_op_range(zx_vmar_root_self(), ZX_VMO_OP_DECOMMIT,
+                             readonly_mapping_addr, PAGE_SIZE, nullptr, 0u),
             ZX_ERR_ACCESS_DENIED);
+  EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), readonly_mapping_addr, PAGE_SIZE), ZX_OK);
+  EXPECT_EQ(zx_handle_close(readonly_vmo), ZX_OK);
 
+  // Clean up the test VMAR and VMO.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), vmar_base, kVmoSize), ZX_OK);
-
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
   END_TEST;
