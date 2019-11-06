@@ -39,7 +39,10 @@ class PrettyTypeManager {
   // take ownership of the callback (and maybe issue it immediately if the formatting was
   // synchronous) and return true.
   //
-  // The concrete type is passed in.
+  // The type will not be made concrete for the comparison because some pretty-printers match
+  // typedef names which will get stripped. Therefore, callers may want to call twice, once with a
+  // non-concrete type and once with the concrete one. This function will strip C-V qualifiers
+  // for name comparison since those are always safe to strip.
   //
   // If there is no pretty type registered, does nothing with the callback and returns false.
   bool Format(FormatNode* node, const Type* type, const FormatOptions& options,

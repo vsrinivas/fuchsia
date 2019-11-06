@@ -23,6 +23,7 @@ class ModifiedType final : public Type {
  public:
   // Type/Symbol overrides.
   const ModifiedType* AsModifiedType() const override;
+  const Type* StripCV() const override;
   const Type* StripCVT() const override;
 
   // The underlying modified type. Note that there is no setter for this, it must be supplied in the

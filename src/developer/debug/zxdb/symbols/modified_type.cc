@@ -43,10 +43,20 @@ ModifiedType::~ModifiedType() = default;
 
 const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
 
+const Type* ModifiedType::StripCV() const {
+  if (tag() == DwarfTag::kConstType || tag() == DwarfTag::kVolatileType ||
+      tag() == DwarfTag::kRestrictType) {
+    const Type* mod = modified_.Get()->AsType();
+    if (mod)  // Apply recursively.
+      return mod->StripCV();
+  }
+  return this;
+}
+
 const Type* ModifiedType::StripCVT() const {
   if (IsTransparentTag(tag())) {
     const Type* mod = modified_.Get()->AsType();
-    if (mod)
+    if (mod)  // Apply recursively.
       return mod->StripCVT();
   }
   return this;

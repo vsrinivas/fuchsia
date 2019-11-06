@@ -15,6 +15,8 @@ Type::~Type() = default;
 
 const Type* Type::AsType() const { return this; }
 
+const Type* Type::StripCV() const { return this; }
+
 const Type* Type::StripCVT() const { return this; }
 
 }  // namespace zxdb

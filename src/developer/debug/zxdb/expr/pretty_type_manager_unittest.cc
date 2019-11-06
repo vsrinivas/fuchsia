@@ -233,6 +233,12 @@ TEST_F(PrettyTypeManagerTest, ZxStatusT) {
   opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
             GetDebugTreeForValue(context, status_too_small, opts));
+
+  // Const types.
+  auto const_status_t_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, status_t_type);
+  ExprValue const_status_ok(const_status_t_type, {0, 0, 0, 0});
+  EXPECT_EQ(" = zx_status_t const, 0x0 (ZX_OK)\n",
+            GetDebugTreeForValue(context, const_status_ok, opts));
 }
 
 }  // namespace zxdb

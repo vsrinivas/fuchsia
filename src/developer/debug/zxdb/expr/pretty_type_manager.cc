@@ -53,10 +53,14 @@ void PrettyTypeManager::Add(ExprLanguage lang, TypeGlob glob, std::unique_ptr<Pr
   }
 }
 
-PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
-  if (!type)
+PrettyType* PrettyTypeManager::GetForType(const Type* in_type) const {
+  if (!in_type)
     return nullptr;
 
+  // Strip const-volatile qualifiers for the name comparison, but don't follow typedefs or make
+  // the type concrete. Typedefs will change the name and some pretty-printers are defined for
+  // typedefs of other values. We need to maintain the original name for this comparison.
+  const Type* type = in_type->StripCV();
   ParsedIdentifier type_ident = ToParsedIdentifier(type->GetIdentifier());
 
   // Pick the language-specific lookup.
