@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -16,9 +17,12 @@ import (
 	"syslog"
 
 	inspect "fidl/fuchsia/inspect/deprecated"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/tcpip/transport/udp"
 )
 
 // An infallible version of fuchsia.inspect.Inspect with FIDL details omitted.
@@ -93,6 +97,7 @@ type statCounter interface {
 }
 
 var _ statCounter = (*tcpip.StatCounter)(nil)
+var statCounterType = reflect.TypeOf((*statCounter)(nil)).Elem()
 
 // Recursive reflection-based implementation for structs containing only other
 // structs and stat counters.
@@ -118,16 +123,17 @@ func (impl *statCounterInspectImpl) asMetrics() []inspect.Metric {
 		// PkgPath is empty for exported field names.
 		if field := typ.Field(i); len(field.PkgPath) == 0 {
 			v := impl.value.Field(i)
-			switch t := v.Interface().(type) {
-			case statCounter:
+			counter, ok := v.Interface().(statCounter)
+			if !ok && v.CanAddr() {
+				counter, ok = v.Addr().Interface().(statCounter)
+			}
+			if ok {
 				metrics = append(metrics, inspect.Metric{
 					Key:   field.Name,
-					Value: inspect.MetricValueWithUintValue(t.Value()),
+					Value: inspect.MetricValueWithUintValue(counter.Value()),
 				})
-			default:
-				if field.Anonymous && v.Kind() == reflect.Struct {
-					metrics = append(metrics, (&statCounterInspectImpl{value: v}).asMetrics()...)
-				}
+			} else if field.Anonymous && v.Kind() == reflect.Struct {
+				metrics = append(metrics, (&statCounterInspectImpl{value: v}).asMetrics()...)
 			}
 		}
 	}
@@ -139,10 +145,11 @@ func (impl *statCounterInspectImpl) ListChildren() []string {
 	typ := impl.value.Type()
 	for i := 0; i < impl.value.NumField(); i++ {
 		// PkgPath is empty for exported field names.
-		if field := typ.Field(i); len(field.PkgPath) == 0 && field.Type.Kind() == reflect.Struct {
-			v := impl.value.Field(i)
+		//
+		// Avoid inspecting any field that implements statCounter.
+		if field := typ.Field(i); len(field.PkgPath) == 0 && field.Type.Kind() == reflect.Struct && !field.Type.Implements(statCounterType) && !reflect.PtrTo(field.Type).Implements(statCounterType) {
 			if field.Anonymous {
-				children = append(children, (&statCounterInspectImpl{value: v}).ListChildren()...)
+				children = append(children, (&statCounterInspectImpl{value: impl.value.Field(i)}).ListChildren()...)
 			} else {
 				children = append(children, field.Name)
 			}
@@ -263,4 +270,143 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 	default:
 		return nil
 	}
+}
+
+var _ inspectInner = (*socketInfoMapInspectImpl)(nil)
+
+type socketInfoMapInspectImpl struct {
+	value *sync.Map
+}
+
+func (impl *socketInfoMapInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: "Socket Info",
+	}
+}
+
+func (impl *socketInfoMapInspectImpl) ListChildren() []string {
+	var children []string
+	impl.value.Range(func(key, value interface{}) bool {
+		children = append(children, strconv.FormatUint(key.(uint64), 10))
+		return true
+	})
+	return children
+}
+
+func (impl *socketInfoMapInspectImpl) GetChild(childName string) inspectInner {
+	id, err := strconv.ParseUint(childName, 10, 64)
+	if err != nil {
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
+		return nil
+	}
+	if e, ok := impl.value.Load(id); ok {
+		ep := e.(tcpip.Endpoint)
+		return &socketInfoInspectImpl{
+			name:  childName,
+			info:  ep.Info(),
+			state: ep.State(),
+			stats: ep.Stats(),
+		}
+	}
+	return nil
+}
+
+var _ inspectInner = (*socketInfoInspectImpl)(nil)
+
+type socketInfoInspectImpl struct {
+	name  string
+	info  tcpip.EndpointInfo
+	state uint32
+	stats tcpip.EndpointStats
+}
+
+func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
+	var common stack.TransportEndpointInfo
+	var hardError *tcpip.Error
+	switch t := impl.info.(type) {
+	case *tcp.EndpointInfo:
+		common = t.TransportEndpointInfo
+		hardError = t.HardError
+	case *stack.TransportEndpointInfo:
+		common = *t
+	default:
+		return inspect.Object{
+			Name: impl.name,
+		}
+	}
+
+	var netString string
+	switch common.NetProto {
+	case header.IPv4ProtocolNumber:
+		netString = "IPv4"
+	case header.IPv6ProtocolNumber:
+		netString = "IPv6"
+	default:
+		netString = "UNKNOWN"
+	}
+
+	var transString string
+	var state string
+	switch common.TransProto {
+	case header.TCPProtocolNumber:
+		transString = "TCP"
+		state = tcp.EndpointState(impl.state).String()
+	case header.UDPProtocolNumber:
+		transString = "UDP"
+		state = udp.EndpointState(impl.state).String()
+	case header.ICMPv4ProtocolNumber:
+		transString = "ICMPv4"
+	case header.ICMPv6ProtocolNumber:
+		transString = "ICMPv6"
+	default:
+		transString = "UNKNOWN"
+	}
+
+	localAddr := fmt.Sprintf("%s:%d", common.ID.LocalAddress.String(), common.ID.LocalPort)
+	remoteAddr := fmt.Sprintf("%s:%d", common.ID.RemoteAddress.String(), common.ID.RemotePort)
+	properties := []inspect.Property{
+		{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr(netString)},
+		{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(transString)},
+		{Key: "State", Value: inspect.PropertyValueWithStr(state)},
+		{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(localAddr)},
+		{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(remoteAddr)},
+		{Key: "BindAddress", Value: inspect.PropertyValueWithStr(common.BindAddr.String())},
+		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.BindNICID), 10))},
+		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.RegisterNICID), 10))},
+	}
+
+	if hardError != nil {
+		properties = append(properties, inspect.Property{Key: "HardError", Value: inspect.PropertyValueWithStr(hardError.String())})
+	}
+
+	return inspect.Object{
+		Name:       impl.name,
+		Properties: properties,
+	}
+}
+
+func (impl *socketInfoInspectImpl) ListChildren() []string {
+	return []string{
+		"Stats",
+	}
+}
+
+func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
+	switch childName {
+	case "Stats":
+		var value reflect.Value
+		switch t := impl.stats.(type) {
+		case *tcp.Stats:
+			value = reflect.ValueOf(t).Elem()
+		case *tcpip.TransportEndpointStats:
+			value = reflect.ValueOf(t).Elem()
+		default:
+			return nil
+		}
+		return &statCounterInspectImpl{
+			name:  childName,
+			value: value,
+		}
+	}
+	return nil
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
+	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/icmp"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
@@ -99,7 +100,7 @@ func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.Contr
 		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
 	}
 	{
-		controlInterface, err := newSocket(netProto, transProto, wq, ep, &sp.controlService)
+		controlInterface, err := newSocket(netProto, transProto, wq, ep, &sp.controlService, &sp.ns.endpoints)
 		return 0, controlInterface, err
 	}
 }
@@ -124,6 +125,9 @@ type endpoint struct {
 	local, peer zx.Socket
 
 	incomingAssertedMu sync.Mutex
+
+	// Reference to the netstack global endpoint-map.
+	endpoints *sync.Map
 
 	// Along with (*endpoint).close, these channels are used to coordinate
 	// orderly shutdown of loops, handles, and endpoints. See the comment
@@ -492,7 +496,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 	}
 }
 
-func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService) (socket.ControlInterface, error) {
+func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService, endpoints *sync.Map) (socket.ControlInterface, error) {
 	var flags uint32
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
@@ -515,9 +519,24 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 		ep:            ep,
 		local:         localS,
 		peer:          peerS,
+		endpoints:     endpoints,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
+	}
+
+	// As the ios.local would be unique across all endpoints for the netstack,
+	// we can use that as a key for the endpoints. The ep.ID is not yet initialized
+	// at this point and hence we cannot use that as a key.
+	if e, loaded := endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
+		var info stack.TransportEndpointInfo
+		switch t := e.(tcpip.Endpoint).Info().(type) {
+		case *tcp.EndpointInfo:
+			info = t.TransportEndpointInfo
+		case *stack.TransportEndpointInfo:
+			info = *t
+		}
+		syslog.Errorf("endpoint map load error, key %d exists with endpoint %+v", uint64(ios.local), info)
 	}
 
 	// This must be registered before returning to prevent a race
@@ -581,6 +600,9 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 			}
 
 			ios.ep.Close()
+
+			// Delete this endpoint from the global endpoints.
+			ios.endpoints.Delete(uint64(ios.local))
 
 			// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
 			// care if the socket is closed.
@@ -798,7 +820,7 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 	}
 
 	{
-		controlInterface, err := newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService)
+		controlInterface, err := newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService, s.endpoint.endpoints)
 		return 0, controlInterface, err
 	}
 }

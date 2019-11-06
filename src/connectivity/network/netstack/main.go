@@ -166,6 +166,17 @@ func Main() {
 		},
 	})
 
+	ctx.OutgoingService.AddObjects("sockets", &context.DirectoryWrapper{
+		Directory: &inspectDirectory{
+			asService: (&inspectImpl{
+				inner: &socketInfoMapInspectImpl{
+					value: &ns.endpoints,
+				},
+				service: &inspectService,
+			}).asService,
+		},
+	})
+
 	ctx.OutgoingService.AddService(
 		netstack.NetstackName,
 		&netstack.NetstackStub{Impl: &netstackImpl{

@@ -31,6 +31,7 @@ import (
 	"github.com/google/netstack/tcpip/network/ipv6"
 	tcpipstack "github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
 )
 
@@ -60,6 +61,7 @@ func TestEndpointDoubleClose(t *testing.T) {
 		transProto:    tcp.ProtocolNumber,
 		wq:            wq,
 		ep:            ep,
+		endpoints:     &ns.endpoints,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
@@ -103,6 +105,55 @@ func TestEndpointDoubleClose(t *testing.T) {
 	ios.clones = 1
 	if refcount := ios.close(); refcount != 0 {
 		t.Fatalf("got refcount = %d, want = 0", refcount)
+	}
+}
+
+// Test whether ios.close will delete the reference to the
+// endpoint created here from the netstack`s endpoints.
+func TestCloseEndpointsMap(t *testing.T) {
+	ns := newNetstack(t)
+	wq := &waiter.Queue{}
+	ep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+	if err != nil {
+		t.Fatalf("NewEndpoint = %s", err)
+	}
+
+	ios := &endpoint{
+		netProto:      ipv6.ProtocolNumber,
+		transProto:    tcp.ProtocolNumber,
+		wq:            wq,
+		ep:            ep,
+		endpoints:     &ns.endpoints,
+		loopReadDone:  make(chan struct{}),
+		loopWriteDone: make(chan struct{}),
+		closing:       make(chan struct{}),
+	}
+	{
+		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))
+		if err != nil {
+			t.Fatalf("zx.NewSocket = %s", err)
+		}
+
+		ios.local = localS
+		ios.peer = peerS
+	}
+	if _, loaded := ns.endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
+		t.Fatalf("endpoint map load error, key %d exists", uint64(ios.local))
+	}
+
+	ios.clones = 1
+	if refcount := ios.close(); refcount != 0 {
+		t.Fatalf("got refcount = %d, want = 0", refcount)
+	}
+	select {
+	case <-ios.closing:
+	default:
+		t.Fatal("ios.closing is not closed")
+	}
+
+	// Check if the reference to the endpoint is deleted from endpoints.
+	if _, ok := ios.endpoints.Load(uint64(ios.local)); ok {
+		t.Fatal("endpoint map not updated on ios.close.")
 	}
 }
 
@@ -376,6 +427,7 @@ func newNetstack(t *testing.T) *Netstack {
 		},
 		TransportProtocols: []tcpipstack.TransportProtocol{
 			tcp.NewProtocol(),
+			udp.NewProtocol(),
 		},
 	})
 

@@ -85,6 +85,10 @@ type Netstack struct {
 	filter *filter.Filter
 
 	OnInterfacesChanged func([]netstack.NetInterface2)
+
+	// endpoints is a map of transport endpoints of each socket associated
+	// with the netstack.
+	endpoints sync.Map
 }
 
 // Each ifState tracks the state of a network interface.

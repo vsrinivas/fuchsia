@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"reflect"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -14,7 +15,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/stack"
+	"github.com/google/netstack/tcpip/transport/tcp"
+	"github.com/google/netstack/tcpip/transport/udp"
+	"github.com/google/netstack/waiter"
 )
 
 func TestStatCounterInspectImpl(t *testing.T) {
@@ -58,6 +63,132 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		},
 	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestSocketStatCounterInspectImpl(t *testing.T) {
+	// Create a new netstack and add TCP and UDP endpoints.
+	ns := newNetstack(t)
+	wq := new(waiter.Queue)
+	// Grab locks just in case the callee has any isLock checks.
+	ns.mu.Lock()
+	tcpep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	udpep, err := ns.mu.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns.mu.Unlock()
+	v := socketInfoMapInspectImpl{
+		value: &ns.endpoints,
+	}
+	children := v.ListChildren()
+	if diff := cmp.Diff(children, []string(nil)); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+
+	// Add the 2 endpoints to endpoints with key being the transport protocol
+	// number.
+	ns.endpoints.Store(uint64(tcp.ProtocolNumber), tcpep)
+	ns.endpoints.Store(uint64(udp.ProtocolNumber), udpep)
+
+	children = v.ListChildren()
+	sort.Strings(children)
+	if diff := cmp.Diff(children, []string{"17", "6"}); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+
+	childName := "not a real child"
+	if child := v.GetChild(childName); child != nil {
+		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+	}
+
+	for _, name := range children {
+		child := v.GetChild(name)
+		if child == nil {
+			t.Fatalf("got GetChild(%s) = %v, want non-nil", name, child)
+		}
+
+		var protoName string
+		var expectInspectObj inspect.Object
+		// Update protocol specific expected values.
+		val, err := strconv.ParseUint(name, 10, 64)
+		if err != nil {
+			t.Fatalf("string parsing error %s", err)
+		}
+		if val == uint64(tcp.ProtocolNumber) {
+			protoName = "TCP"
+			expectInspectObj = inspect.Object{
+				Name: "Stats",
+				Metrics: []inspect.Metric{
+					{Key: "SegmentsReceived", Value: inspect.MetricValueWithUintValue(0)},
+					{Key: "SegmentsSent", Value: inspect.MetricValueWithUintValue(0)},
+					{Key: "FailedConnectionAttempts", Value: inspect.MetricValueWithUintValue(0)},
+				},
+			}
+		} else {
+			protoName = "UDP"
+			expectInspectObj = inspect.Object{
+				Name: "Stats",
+				Metrics: []inspect.Metric{
+					{Key: "PacketsReceived", Value: inspect.MetricValueWithUintValue(0)},
+					{Key: "PacketsSent", Value: inspect.MetricValueWithUintValue(0)},
+				},
+			}
+		}
+
+		epChildren := child.ListChildren()
+		if diff := cmp.Diff(epChildren, []string{
+			"Stats",
+		}); diff != "" {
+			t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+		}
+		for _, c := range epChildren {
+			if c == "Stats" {
+				statsChild := child.GetChild(c)
+				if diff := cmp.Diff(statsChild.ListChildren(), []string{
+					"ReceiveErrors",
+					"ReadErrors",
+					"SendErrors",
+					"WriteErrors",
+				}); diff != "" {
+					t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+				}
+
+				// Compare against the expected inspect objects.
+				if diff := cmp.Diff(statsChild.ReadData(), expectInspectObj, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
+					t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+				}
+			}
+		}
+
+		if diff := cmp.Diff(child.ReadData(), inspect.Object{
+			Name: name,
+			Properties: []inspect.Property{
+				{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr("IPv4")},
+				{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(protoName)},
+				{Key: "State", Value: inspect.PropertyValueWithStr("INITIAL")},
+				{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(":0")},
+				{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(":0")},
+				{Key: "BindAddress", Value: inspect.PropertyValueWithStr("")},
+				{Key: "BindNICID", Value: inspect.PropertyValueWithStr("0")},
+				{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr("0")},
+			},
+		}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
+			t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+		}
+	}
+
+	// Empty the endpoints.
+	ns.endpoints.Range(func(key, value interface{}) bool {
+		ns.endpoints.Delete(key.(uint64))
+		return true
+	})
+	children = v.ListChildren()
+	if diff := cmp.Diff(children, []string(nil)); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 }
 
