@@ -18,6 +18,7 @@ group("tests") {
     "//tools/net/dev_finder:dev_finder_tests",
     "//tools/net/digest:digest_tests",
     "//tools/net/mdns:mdns_tests",
+    "//tools/net/netboot:netboot_tests",
     "//tools/net/sshutil:sshutil_tests",
     "//tools/net/tftp:tftp_tests",
   ]
