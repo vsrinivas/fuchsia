@@ -68,9 +68,9 @@ void LedgerSyncImpl::CreatePageSync(
                                                  }
                                                });
     auto page_sync = std::make_unique<PageSyncImpl>(
-        environment_->dispatcher(), page_storage, page_sync_client, encryption_service_,
-        std::move(page_cloud), environment_->MakeBackoff(), environment_->MakeBackoff(),
-        aggregator_.GetNewStateWatcher());
+        environment_->dispatcher(), environment_->coroutine_service(), page_storage,
+        page_sync_client, encryption_service_, std::move(page_cloud), environment_->MakeBackoff(),
+        environment_->MakeBackoff(), aggregator_.GetNewStateWatcher());
     if (upload_enabled_) {
       page_sync->EnableUpload();
     }

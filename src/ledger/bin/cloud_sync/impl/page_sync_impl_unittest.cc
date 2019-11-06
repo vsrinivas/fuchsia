@@ -23,6 +23,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -58,7 +59,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   std::vector<SyncStateContainer> states;
 };
 
-class PageSyncImplTest : public gtest::TestLoopFixture {
+class PageSyncImplTest : public ledger::TestWithEnvironment {
  public:
   PageSyncImplTest()
       : storage_(dispatcher()),
@@ -73,8 +74,9 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
     upload_backoff_ptr_ = upload_backoff.get();
 
     page_sync_ = std::make_unique<PageSyncImpl>(
-        dispatcher(), &storage_, &storage_, &encryption_service_, std::move(page_cloud_ptr_),
-        std::move(download_backoff), std::move(upload_backoff), std::move(watcher));
+        dispatcher(), environment_.coroutine_service(), &storage_, &storage_, &encryption_service_,
+        std::move(page_cloud_ptr_), std::move(download_backoff), std::move(upload_backoff),
+        std::move(watcher));
   }
   ~PageSyncImplTest() override = default;
 

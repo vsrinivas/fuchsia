@@ -10,11 +10,13 @@
 
 namespace cloud_sync {
 
-PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
+PageUpload::PageUpload(coroutine::CoroutineService* coroutine_service,
+                       callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
                        cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                        std::unique_ptr<backoff::Backoff> backoff)
-    : task_runner_(task_runner),
+    : coroutine_service_(coroutine_service),
+      task_runner_(task_runner),
       storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
@@ -146,7 +148,7 @@ void PageUpload::HandleUnsyncedCommits(
   FXL_DCHECK(!batch_upload_);
   SetState(UPLOAD_IN_PROGRESS);
   batch_upload_ = std::make_unique<BatchUpload>(
-      storage_, encryption_service_, page_cloud_, std::move(commits),
+      coroutine_service_, storage_, encryption_service_, page_cloud_, std::move(commits),
       [this] {
         // Upload succeeded, reset the backoff delay.
         backoff_->Reset();

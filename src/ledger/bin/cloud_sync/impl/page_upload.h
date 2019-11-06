@@ -17,6 +17,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -50,7 +51,8 @@ class PageUpload : public storage::CommitWatcher {
     virtual bool IsDownloadIdle() = 0;
   };
 
-  PageUpload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
+  PageUpload(coroutine::CoroutineService* coroutine_service,
+             callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
              std::unique_ptr<backoff::Backoff> backoff);
@@ -97,6 +99,7 @@ class PageUpload : public storage::CommitWatcher {
   void PreviousState();
 
   // Owned by whoever owns this class.
+  coroutine::CoroutineService* const coroutine_service_;
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;

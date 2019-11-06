@@ -20,7 +20,7 @@ namespace sync_coordinator {
 
 // The fixture can't be called PageSyncImplTest because an other fixture
 // is already using that name, and gtest does not like that.
-class PageSyncImplTest2 : public ::gtest::TestLoopFixture {
+class PageSyncImplTest2 : public ledger::TestWithEnvironment {
  public:
   PageSyncImplTest2() {}
   ~PageSyncImplTest2() override {}
@@ -43,8 +43,8 @@ TEST_F(PageSyncImplTest2, PageCloudError) {
 
   EXPECT_TRUE(storage.watcher_ == nullptr);
   auto cloud_sync = std::make_unique<cloud_sync::PageSyncImpl>(
-      dispatcher(), &storage, &storage, &encryption_service, std::move(page_cloud_ptr),
-      std::move(download_backoff), std::move(upload_backoff));
+      dispatcher(), environment_.coroutine_service(), &storage, &storage, &encryption_service,
+      std::move(page_cloud_ptr), std::move(download_backoff), std::move(upload_backoff));
   EXPECT_TRUE(storage.watcher_ != nullptr);
 
   // Start sync

@@ -182,6 +182,9 @@ class PageStorage : public PageSyncClient {
   // Finds all objects in the storage that are not yet synced, and calls
   // |callback| with the operation status and the corresponding
   // |ObjectIdentifier|s vector.
+  //
+  // The objects are not guaranteed to still exist: they might have been just been garbage
+  // collected.
   virtual void GetUnsyncedPieces(
       fit::function<void(Status, std::vector<ObjectIdentifier>)> callback) = 0;
   // Marks the object with the given |object_identifier| as synced.

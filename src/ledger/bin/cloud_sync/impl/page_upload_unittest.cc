@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
@@ -44,7 +45,7 @@ cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
   return token;
 }
 
-class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegate {
+class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::Delegate {
  public:
   PageUploadTest()
       : storage_(dispatcher()),
@@ -53,8 +54,9 @@ class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegat
         task_runner_(dispatcher()) {
     auto test_backoff = std::make_unique<backoff::TestBackoff>(kBackoffInterval);
     backoff_ = test_backoff.get();
-    page_upload_ = std::make_unique<PageUpload>(&task_runner_, &storage_, &encryption_service_,
-                                                &page_cloud_ptr_, this, std::move(test_backoff));
+    page_upload_ = std::make_unique<PageUpload>(environment_.coroutine_service(), &task_runner_,
+                                                &storage_, &encryption_service_, &page_cloud_ptr_,
+                                                this, std::move(test_backoff));
   }
   ~PageUploadTest() override = default;
 

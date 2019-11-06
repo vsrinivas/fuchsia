@@ -18,14 +18,16 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
-                           storage::PageSyncClient* sync_client,
+PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
+                           coroutine::CoroutineService* coroutine_service,
+                           storage::PageStorage* storage, storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,
                            std::unique_ptr<backoff::Backoff> download_backoff,
                            std::unique_ptr<backoff::Backoff> upload_backoff,
                            std::unique_ptr<SyncStateWatcher> ledger_watcher)
-    : storage_(storage),
+    : coroutine_service_(coroutine_service),
+      storage_(storage),
       sync_client_(sync_client),
       encryption_service_(encryption_service),
       page_cloud_(std::move(page_cloud)),
@@ -39,8 +41,9 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage*
   page_download_ =
       std::make_unique<PageDownload>(&task_runner_, storage_, sync_client_, encryption_service_,
                                      &page_cloud_, this, std::move(download_backoff));
-  page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_, encryption_service_,
-                                              &page_cloud_, this, std::move(upload_backoff));
+  page_upload_ =
+      std::make_unique<PageUpload>(coroutine_service_, &task_runner_, storage_, encryption_service_,
+                                   &page_cloud_, this, std::move(upload_backoff));
   page_cloud_.set_error_handler([this](zx_status_t status) { HandleError(); });
 }
 

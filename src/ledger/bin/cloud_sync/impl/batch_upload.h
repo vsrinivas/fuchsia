@@ -16,6 +16,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -51,7 +53,8 @@ class BatchUpload {
     TEMPORARY,
   };
 
-  BatchUpload(storage::PageStorage* storage, encryption::EncryptionService* encryption_service,
+  BatchUpload(coroutine::CoroutineService* coroutine_service, storage::PageStorage* storage,
+              encryption::EncryptionService* encryption_service,
               cloud_provider::PageCloudPtr* page_cloud,
               std::vector<std::unique_ptr<const storage::Commit>> commits, fit::closure on_done,
               fit::function<void(ErrorType)> on_error, unsigned int max_concurrent_uploads = 10);
@@ -61,12 +64,13 @@ class BatchUpload {
   // and |on_error| passed in the constructor. Can be called only once.
   void Start();
 
-  // Retries the attempt to upload the commit batch. Each time after |on_error|
-  // is called, the client can retry by calling this method.
+  // Retries the attempt to upload the commit batch. Each time |on_error| is called with a temporary
+  // error, the client can retry by calling this method.
   void Retry();
 
  private:
   // Status of an upload operation: successful, or the type of the error to return.
+  // This is ordered from best status to worst status.
   enum class UploadStatus {
     OK,
     TEMPORARY_ERROR,
@@ -79,24 +83,24 @@ class BatchUpload {
   // Converts a ledger status to an upload status.
   static UploadStatus LedgerStatusToUploadStatus(ledger::Status status);
 
+  // Converts a cloud provider status to an upload status.
+  static UploadStatus CloudStatusToUploadStatus(cloud_provider::Status status);
+
   // Converts a non-OK upload status to its error type.
   static ErrorType UploadStatusToErrorType(UploadStatus status);
 
+  // Sets the upload status to |status| if it is worse than the current status.
+  void SetUploadStatus(UploadStatus status);
+
+  // Calls |on_error_| with the current error status.
+  void SignalError();
+
   void StartObjectUpload();
 
-  void UploadNextObject();
-
-  // Retrieves the content of the given object and uploads it.
-  void GetObjectContentAndUpload(storage::ObjectIdentifier object_identifier,
-                                 std::string object_name);
-
-  // Uploads the given object.
-  void UploadObject(storage::ObjectIdentifier object_identifier, std::string object_name,
-                    std::unique_ptr<const storage::Piece> piece);
-
-  // Uploads the given object.
-  void UploadEncryptedObject(storage::ObjectIdentifier object_identifier, std::string object_name,
-                             std::string content);
+  // Reads, encrypts and uploads one object. Errors are signaled in |status_|. The caller is
+  // responsible for calling the |on_error_| callback when appropriate.
+  void SynchronousUploadObject(coroutine::CoroutineHandler* handler,
+                               storage::ObjectIdentifier identifier);
 
   // Filters already synced commits.
   void FilterAndUploadCommits();
@@ -104,8 +108,8 @@ class BatchUpload {
   // Uploads the commits.
   void UploadCommits();
 
-  // Notifies an error when trying to upload the given object.
-  void EnqueueForRetryAndSignalError(storage::ObjectIdentifier object_identifier);
+  // Re-enqueue the object for another upload attempt.
+  void EnqueueForRetry(storage::ObjectIdentifier object_identifier);
 
   // Encodes a commit for sending to the cloud.
   void EncodeCommit(const storage::Commit& commit,
@@ -125,23 +129,20 @@ class BatchUpload {
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   fit::closure on_done_;
   fit::function<void(ErrorType)> on_error_;
-  const unsigned int max_concurrent_uploads_;
 
   // All remaining object ids to be uploaded along with this batch of commits.
   std::vector<storage::ObjectIdentifier> remaining_object_identifiers_;
 
-  // Number of object uploads currently in progress.
-  unsigned int current_uploads_ = 0u;
-
-  // Number of object being handled, including those being uploaded and those
-  // whose metadata are being updated in storage.
-  unsigned int current_objects_handled_ = 0u;
-
   bool started_ = false;
-  bool errored_ = false;
-  // If an error has occurred while handling the objects, |error_types_|
-  // stores the type of error.
-  ErrorType error_type_ = ErrorType::TEMPORARY;
+
+  // Stores the status of the upload. If multiple errors have been encountered, stores the worst
+  // error (permanent if any permanent error has been encountered, temporary otherwise).
+  //
+  // Transitions: this always goes from best to worst (OK -> TEMPORARY_ERROR -> PERMANENT_ERROR),
+  // except in |Retry| where the status can transition from |TEMPORARY_ERROR| to |OK|.
+  UploadStatus status_ = UploadStatus::OK;
+
+  coroutine::CoroutineManager coroutine_manager_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<BatchUpload> weak_ptr_factory_;

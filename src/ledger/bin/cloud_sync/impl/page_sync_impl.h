@@ -21,6 +21,7 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
@@ -56,8 +57,8 @@ namespace cloud_sync {
 // callback set via SetOnUnrecoverableError().
 class PageSyncImpl : public PageSync, public PageDownload::Delegate, public PageUpload::Delegate {
  public:
-  PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
-               storage::PageSyncClient* sync_client,
+  PageSyncImpl(async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
+               storage::PageStorage* storage, storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr page_cloud,
                std::unique_ptr<backoff::Backoff> download_backoff,
@@ -104,6 +105,7 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   // This may destruct the object.
   void NotifyStateWatcher();
 
+  coroutine::CoroutineService* const coroutine_service_;
   storage::PageStorage* const storage_;
   storage::PageSyncClient* const sync_client_;
   encryption::EncryptionService* const encryption_service_;

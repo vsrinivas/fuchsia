@@ -23,6 +23,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
@@ -33,11 +34,12 @@ namespace {
 
 using ::storage::fake::FakePiece;
 using ::testing::Each;
+using ::testing::ElementsAre;
 using ::testing::SizeIs;
 using ::testing::Truly;
 
 template <typename E>
-class BaseBatchUploadTest : public gtest::TestLoopFixture {
+class BaseBatchUploadTest : public ledger::TestWithEnvironment {
  public:
   BaseBatchUploadTest()
       : storage_(dispatcher()),
@@ -65,7 +67,8 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
       storage::PageStorage* storage, std::vector<std::unique_ptr<const storage::Commit>> commits,
       unsigned int max_concurrent_uploads = 10) {
     return std::make_unique<BatchUpload>(
-        storage, &encryption_service_, &page_cloud_ptr_, std::move(commits),
+        environment_.coroutine_service(), storage, &encryption_service_, &page_cloud_ptr_,
+        std::move(commits),
         [this] {
           done_calls_++;
           QuitLoop();
@@ -190,6 +193,76 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ(storage_.objects_marked_as_synced.size(), 2u);
   EXPECT_EQ(storage_.objects_marked_as_synced.count(id1), 1u);
   EXPECT_EQ(storage_.objects_marked_as_synced.count(id2), 1u);
+}
+
+class PageStorageBlockingGetUnsyncedPieces : public TestPageStorage {
+ public:
+  explicit PageStorageBlockingGetUnsyncedPieces(async_dispatcher_t* dispatcher)
+      : TestPageStorage(dispatcher) {}
+
+  void GetUnsyncedPieces(fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
+                             callback) override {
+    TestPageStorage::GetUnsyncedPieces(
+        [this, callback = std::move(callback)](
+            ledger::Status status, std::vector<storage::ObjectIdentifier> unsynced_pieces) mutable {
+          get_unsynced_pieces_blocked_calls.push_back(
+              [status, callback = std::move(callback),
+               unsynced_pieces = std::move(unsynced_pieces)]() mutable {
+                callback(status, std::move(unsynced_pieces));
+              });
+        });
+  }
+
+  std::vector<fit::closure> get_unsynced_pieces_blocked_calls;
+};
+
+// Test an upload of a commit with two unsynced objects, one of which gets GCed during the call to
+// |GetUnsyncedPieces|.
+TEST_F(BatchUploadTest, SingleCommitWithObjectsGC) {
+  PageStorageBlockingGetUnsyncedPieces storage(dispatcher());
+
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage.NewCommit("id", "content", true));
+  auto id1 = MakeObjectIdentifier("obj_digest1");
+  auto id2 = MakeObjectIdentifier("obj_digest2");
+
+  storage.unsynced_objects_to_return[id1] = std::make_unique<FakePiece>(id1, "obj_data1");
+  storage.unsynced_objects_to_return[id2] = std::make_unique<FakePiece>(id2, "obj_data2");
+
+  auto batch_upload = MakeBatchUploadWithStorage(&storage, std::move(commits));
+
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 0u);
+  EXPECT_EQ(error_calls_, 0u);
+
+  // At this stage, GetUnsyncedPieces has collected id1 and id2 but the callback returning them is
+  // blocked.
+  ASSERT_THAT(storage.get_unsynced_pieces_blocked_calls, SizeIs(1));
+  // Remove id2 to simulate a garbage-collection, ensuring the upcoming call to GetPiece will return
+  // NOT_FOUND.
+  storage.unsynced_objects_to_return.erase(id2);
+  storage.get_unsynced_pieces_blocked_calls[0]();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
+
+  // Verify the artifacts uploaded to cloud provider. Only the first object has been uploaded.
+  EXPECT_THAT(page_cloud_.received_commits, SizeIs(1));
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(),
+            convert::ToArray(encryption_service_.EncodeCommitId("id")));
+  EXPECT_EQ(
+      encryption_service_.DecryptCommitSynchronous(page_cloud_.received_commits.front().data()),
+      "content");
+  EXPECT_THAT(page_cloud_.received_objects, SizeIs(1));
+  EXPECT_EQ(encryption_service_.DecryptObjectSynchronous(
+                page_cloud_.received_objects[encryption_service_.GetObjectNameSynchronous(id1)]),
+            "obj_data1");
+
+  // Verify the sync status in storage.
+  EXPECT_THAT(storage.commits_marked_as_synced, ElementsAre("id"));
+  EXPECT_THAT(storage.objects_marked_as_synced, ElementsAre(id1));
 }
 
 // Verifies that the number of concurrent object uploads is limited to
