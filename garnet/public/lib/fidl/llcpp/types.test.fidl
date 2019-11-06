@@ -14,9 +14,9 @@ struct MoveOnlyStruct {
 
 /// Verifies that user code can manipulate these union payloads.
 union TestUnion {
-    int32 primitive;
-    CopyableStruct copyable;
-    MoveOnlyStruct move_only;
+    1: int32 primitive;
+    2: CopyableStruct copyable;
+    3: MoveOnlyStruct move_only;
 };
 
 xunion TestXUnion {

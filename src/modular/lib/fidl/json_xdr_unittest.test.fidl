@@ -112,8 +112,8 @@ enum Enum {
 
 // NOTE(mesch): Can't use struct, FIDL-130.
 union Union {
-    int32 int32;
-    string string;
+    1: int32 int32;
+    2: string string;
 };
 
 // Used to test that FieldWithDefault() and ValueWithDefault() fill in default

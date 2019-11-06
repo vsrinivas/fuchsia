@@ -10,10 +10,10 @@ enum ProfileInfoType {
 };
 
 union ProfileScheduler {
-    int32 priority;
-    uint32 boost;
-    uint32 deboost;
-    uint32 quantum;
+    1: int32 priority;
+    2: uint32 boost;
+    3: uint32 deboost;
+    4: uint32 quantum;
 };
 
 const int32 ZX_PRIORITY_LOWEST = 0;
@@ -23,7 +23,7 @@ const int32 ZX_PRIORITY_HIGH = 24;
 const int32 ZX_PRIORITY_HIGHEST = 31;
 
 union ProfileInfoData {
-    ProfileScheduler scheduler;
+    1: ProfileScheduler scheduler;
 };
 
 struct ProfileInfo {

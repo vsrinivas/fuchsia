@@ -215,8 +215,8 @@ struct SensorDescriptor {
 
 // `SensorReport` describes the sensor event delivered from the event stream.
 union SensorReport {
-    array<int16>:3 vector;
-    uint16 scalar;
+    1: array<int16>:3 vector;
+    2: uint16 scalar;
 };
 
 /// `MediaButtonsReport` describes the media buttons event delivered from the event stream.

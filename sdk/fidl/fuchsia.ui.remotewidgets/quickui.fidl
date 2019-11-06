@@ -25,9 +25,9 @@ enum QuickAction {
 
 /// The value to hold these numeric types.
 union Number {
-    int64 int_value;
-    uint64 uint_value;
-    float64 double_value;
+    1: int64 int_value;
+    2: uint64 uint_value;
+    3: float64 double_value;
 };
 
 /// Represents a number type in a ui spec with an associated action.
@@ -95,15 +95,15 @@ struct GraphValue {
 
 /// Represents a Value that is union of all types.
 union Value {
-    NumberValue number;
-    TextValue text;
-    ProgressValue progress;
-    ButtonValue button;
-    InputValue input;
-    IconValue icon;
-    GridValue grid;
-    GraphValue graph;
-    ListValue list;
+    1: NumberValue number;
+    2: TextValue text;
+    3: ProgressValue progress;
+    4: ButtonValue button;
+    5: InputValue input;
+    6: IconValue icon;
+    7: GridValue grid;
+    8: GraphValue graph;
+    9: ListValue list;
 };
 
 /// Represents a group of [Value]s with a title.

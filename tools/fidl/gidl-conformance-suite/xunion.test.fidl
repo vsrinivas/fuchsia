@@ -11,10 +11,10 @@ struct Int64Struct {
 };
 
 union SimpleUnion {
-    int32 i32;
-    int64 i64;
-    Int64Struct s;
-    string str;
+    1: int32 i32;
+    2: int64 i64;
+    3: Int64Struct s;
+    4: string str;
 };
 
 xunion SampleXUnion {

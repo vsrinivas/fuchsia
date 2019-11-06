@@ -8,16 +8,16 @@
 library example;
 
 union UnionSize8Aligned4 {
-    uint8 unused1; // makes `variant` tagged 2
-    uint8 unused2; // since it is the third
-    uint32 variant; // xunion_ordinal = 0x7fc2f0db
+    1: uint8 unused1; // makes `variant` tagged 2
+    2: uint8 unused2; // since it is the third
+    3: uint32 variant; // xunion_ordinal = 0x7fc2f0db
 };
 
 union UnionSize16Aligned4 {
-    uint8 unused1; // avoid tag 0
-    uint8 unused2; // avoid tag 1
-    uint8 unused3; // avoid tag 2
-    array<uint8>:6 variant; // 0x20d1d3bf
+    1: uint8 unused1; // avoid tag 0
+    2: uint8 unused2; // avoid tag 1
+    3: uint8 unused3; // avoid tag 2
+    4: array<uint8>:6 variant; // 0x20d1d3bf
 };
 
 struct StructSize16Alignement8 {
@@ -26,10 +26,10 @@ struct StructSize16Alignement8 {
 };
 
 union UnionSize24Alignement8 {
-    uint8 unused1; // avoid tag 0
-    uint8 unused2; // avoid tag 1
-    uint8 unused3; // avoid tag 2
-    StructSize16Alignement8 variant; // 0x3404559b
+    1: uint8 unused1; // avoid tag 0
+    2: uint8 unused2; // avoid tag 1
+    3: uint8 unused3; // avoid tag 2
+    4: StructSize16Alignement8 variant; // 0x3404559b
 };
 
 struct Sandwich1 {
@@ -57,10 +57,10 @@ struct Sandwich3 {
 };
 
 union UnionSize36Alignment4 {
-    uint8 unused1; // avoid tag 0
-    uint8 unused2; // avoid tag 1
-    uint8 unused3; // avoid tag 2
-    array<uint8>:32 variant; // 0x5e411019
+    1: uint8 unused1; // avoid tag 0
+    2: uint8 unused2; // avoid tag 1
+    3: uint8 unused3; // avoid tag 2
+    4: array<uint8>:32 variant; // 0x5e411019
 };
 
 struct Sandwich4 {
@@ -70,10 +70,10 @@ struct Sandwich4 {
 };
 
 union UnionOfUnion {
-    uint8 unused; // avoid tag 0
-    UnionSize8Aligned4 size8aligned4; // 0x20AADD60
-    UnionSize16Aligned4 size16aligned4; // 0x2D7665CD
-    UnionSize24Alignement8 size24aligned8; // 0x06722D1F
+    1: uint8 unused; // avoid tag 0
+    2: UnionSize8Aligned4 size8aligned4; // 0x20AADD60
+    3: UnionSize16Aligned4 size16aligned4; // 0x2D7665CD
+    4: UnionSize24Alignement8 size24aligned8; // 0x06722D1F
 };
 
 struct Sandwich5 {
@@ -94,15 +94,15 @@ struct StructSize3Alignment2 {
 // We name Sandwich6 cases by the tag number, i.e. Sandwich6 case 2 is
 // testing the `string` variant.
 union UnionWithVector {
-    uint8 unused; // 0: unused
-    vector<uint8> vector_of_uint8; // 1: 0x79C3CCAD
-    string string; // 2: 0x3B314338
-    vector<StructSize3Alignment1> vector_s3_a1; // 3: 0x4BC13CDC
-    vector<StructSize3Alignment2> vector_s3_a2; // 4: 0x1D08AA3C
-    vector<handle> handles; // 5: 0x471EAA76
-    array<StructSize3Alignment1>:2 array_s3_a1; // 6: 0x5EA0A810
-    array<StructSize3Alignment2>:2 array_s3_a2; // 7: 0x5CF8B70D
-    vector<UnionSize8Aligned4> vector_union; // 8: 0x2B768C31
+    1: uint8 unused; // 0: unused
+    2: vector<uint8> vector_of_uint8; // 1: 0x79C3CCAD
+    3: string string; // 2: 0x3B314338
+    4: vector<StructSize3Alignment1> vector_s3_a1; // 3: 0x4BC13CDC
+    5: vector<StructSize3Alignment2> vector_s3_a2; // 4: 0x1D08AA3C
+    6: vector<handle> handles; // 5: 0x471EAA76
+    7: array<StructSize3Alignment1>:2 array_s3_a1; // 6: 0x5EA0A810
+    8: array<StructSize3Alignment2>:2 array_s3_a2; // 7: 0x5CF8B70D
+    9: vector<UnionSize8Aligned4> vector_union; // 8: 0x2B768C31
 };
 
 struct Sandwich6 {
@@ -218,7 +218,7 @@ struct Size5Alignment4Array {
 // compatibility_test turned up a problem with this StringUnion & ArrayStruct
 // definitions.
 union StringUnion {
-    string s; // 0x80BB5F4B
+    1: string s; // 0x80BB5F4B
 };
 
 struct ArrayStruct {

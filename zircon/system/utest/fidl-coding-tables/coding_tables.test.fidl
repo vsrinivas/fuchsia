@@ -57,8 +57,8 @@ struct NumberCollision {
 
 // MyUnion & MyUnionContainer below are designed to test the alt_type pointers in the coding tables.
 union MyUnion {
-    uint8 one;
-    uint16 two;
+    1: uint8 one;
+    2: uint16 two;
 };
 
 struct MyUnionContainer {

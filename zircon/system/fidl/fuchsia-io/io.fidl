@@ -12,14 +12,14 @@ using zx;
 ///
 /// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
 union NodeInfo {
-    Service service;
-    FileObject file;
-    DirectoryObject directory;
-    Pipe pipe;
-    Vmofile vmofile;
-    Device device;
-    Tty tty;
-    Socket socket;
+    1: Service service;
+    2: FileObject file;
+    3: DirectoryObject directory;
+    4: Pipe pipe;
+    5: Vmofile vmofile;
+    6: Device device;
+    7: Tty tty;
+    8: Socket socket;
 };
 
 /// The default protocol, interface information must be acquired some

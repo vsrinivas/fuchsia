@@ -53,8 +53,8 @@ struct ApMlmeStats {
 // LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/stats.h)
 
 union MlmeStats {
-    ClientMlmeStats client_mlme_stats;
-    ApMlmeStats ap_mlme_stats;
+    1: ClientMlmeStats client_mlme_stats;
+    2: ApMlmeStats ap_mlme_stats;
 };
 
 struct IfaceStats {

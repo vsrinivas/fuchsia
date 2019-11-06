@@ -43,8 +43,8 @@ struct InterfaceConfig {
 };
 
 union IpAddressConfig {
-    fuchsia.net.Subnet static_ip;
-    bool dhcp;
+    1: fuchsia.net.Subnet static_ip;
+    2: bool dhcp;
 };
 
 /// https://linux.die.net/man/7/netdevice

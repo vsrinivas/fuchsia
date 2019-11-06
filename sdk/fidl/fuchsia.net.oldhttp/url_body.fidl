@@ -8,7 +8,7 @@ using fuchsia.mem;
 
 union URLBody {
   /// A socket that will contain the streaming request or response body.
-  handle<socket> stream;
+  1: handle<socket> stream;
   /// A shared buffer that will contain the complete request or response body.
-  fuchsia.mem.Buffer buffer;
+  2: fuchsia.mem.Buffer buffer;
 };

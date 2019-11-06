@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.ui.vectorial/commands.fidl": "5dba5d8b1dd23fa01e8ac20150074100",
-  "fidl/fuchsia.ui.vectorial/events.fidl": "5d0fd5d3d28c447c0817cb61b5656982"
+  "fidl/fuchsia.ui.vectorial/commands.fidl": "ab98fde5eafe6270dd7376faeb3280fa",
+  "fidl/fuchsia.ui.vectorial/events.fidl": "a38c4cd156d8ebcb1575cdd75586dba2"
 }

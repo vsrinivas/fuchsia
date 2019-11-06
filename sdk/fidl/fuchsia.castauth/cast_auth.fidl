@@ -7,8 +7,8 @@ library fuchsia.castauth;
 /// Input hash to be signed by Cast key.
 /// It must be ASN1-encoded SHA1 or SHA256 hash, with sizes 35 or 51 bytes.
 union Asn1EncodedHash {
-    array<byte>:35 sha1;
-    array<byte>:51 sha256;
+    1: array<byte>:35 sha1;
+    2: array<byte>:51 sha256;
 };
 
 /// Error codes for CastKeySigner operations.

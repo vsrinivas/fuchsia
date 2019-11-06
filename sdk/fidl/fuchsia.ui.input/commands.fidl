@@ -7,14 +7,14 @@ library fuchsia.ui.input;
 union Command {
     /// Commands for conveying input events to a `Session`.
     /// Structs defined in input_events.fidl.
-    SendKeyboardInputCmd send_keyboard_input;
-    SendPointerInputCmd send_pointer_input;
+    1: SendKeyboardInputCmd send_keyboard_input;
+    2: SendPointerInputCmd send_pointer_input;
 
     /// Command to enable/disable delivery of hard keyboard events.
-    SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
+    3: SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
 
     /// Command to enable/disable parallel delivery of input events.
-    SetParallelDispatchCmd set_parallel_dispatch;
+    4: SetParallelDispatchCmd set_parallel_dispatch;
 };
 
 struct SendKeyboardInputCmd {

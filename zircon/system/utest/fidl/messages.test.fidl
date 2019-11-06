@@ -52,18 +52,18 @@ protocol Vectors {
 };
 
 union SingleHandleUnion {
-    handle h0;
+    1: handle h0;
 };
 
 union MultipleHandlesUnion {
-    handle h;
-    array<handle>:2 hs;
-    array<array<handle>:2>:2 hss;
+    1: handle h;
+    2: array<handle>:2 hs;
+    3: array<array<handle>:2>:2 hss;
 };
 
 union MaybeRecurse {
-    handle h;
-    MaybeRecurseHelper more;
+    1: handle h;
+    2: MaybeRecurseHelper more;
 };
 
 // Unions cannot have nullable fields, so wrap it in a struct.

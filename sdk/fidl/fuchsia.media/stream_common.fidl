@@ -13,12 +13,12 @@ const uint32 MAX_INIT_VECTOR_SIZE = 16;
 ///
 /// Generic "value" for use within generic "Parameter" struct.
 union Value {
-    bool bool_value;
-    uint64 uint64_value;
-    int64 int64_value;
-    string string_value;
+    1: bool bool_value;
+    2: uint64 uint64_value;
+    3: int64 int64_value;
+    4: string string_value;
     // Prefer using oob_bytes instead.
-    bytes bytes_value;
+    5: bytes bytes_value;
 };
 
 /// Parameter
@@ -190,15 +190,15 @@ struct PcmFormat {
 ///
 // Uncompressed audio format details.
 union AudioUncompressedFormat {
-    PcmFormat pcm;
+    1: PcmFormat pcm;
 };
 
 /// AudioFormat
 ///
 // Audio format details.
 union AudioFormat {
-    AudioCompressedFormat compressed;
-    AudioUncompressedFormat uncompressed;
+    1: AudioCompressedFormat compressed;
+    2: AudioUncompressedFormat uncompressed;
 };
 
 /// VideoCompressedFormat
@@ -214,7 +214,7 @@ union VideoCompressedFormat {
 
     // TODO(dustingreen): temp field to make the compiler happy until we have at
     // least one real field.
-    uint32 temp_field_todo_remove;
+    1: uint32 temp_field_todo_remove;
 };
 
 enum VideoColorSpace {
@@ -328,8 +328,8 @@ struct VideoUncompressedFormat {
 /// "uncompressed" can include block-based image compression formats that still
 /// permit fairly fast random access to image data.
 union VideoFormat {
-    VideoCompressedFormat compressed;
-    VideoUncompressedFormat uncompressed;
+    1: VideoCompressedFormat compressed;
+    2: VideoUncompressedFormat uncompressed;
 };
 
 // Encryption schemes as defined by ISO 23001-7: Common encryption in ISO base
@@ -445,9 +445,9 @@ xunion CryptoFormat {
 ///
 // Domain-specific format details (audio or video, compressed or uncompressed).
 union DomainFormat {
-    AudioFormat audio;
-    VideoFormat video;
-    CryptoFormat crypto;
+    1: AudioFormat audio;
+    2: VideoFormat video;
+    3: CryptoFormat crypto;
 };
 
 const uint64 kMaxOobBytesSize = 8192;
@@ -523,8 +523,8 @@ enum AacVariableBitRate {
 };
 
 union AacBitRate {
-    AacConstantBitRate constant;
-    AacVariableBitRate variable;
+    1: AacConstantBitRate constant;
+    2: AacVariableBitRate variable;
 };
 
 enum AacAudioObjectType {

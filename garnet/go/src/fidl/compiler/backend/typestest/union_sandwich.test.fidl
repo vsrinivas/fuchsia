@@ -8,7 +8,7 @@ library test.fidl.unionsandwich;
 // See typeshape_tests.cc for furher details.
 
 union UnionSize8Alignment4 {
-    uint32 variant;
+    1: uint32 variant;
 };
 
 struct SandwichUnionSize8Alignment4 {
@@ -18,7 +18,7 @@ struct SandwichUnionSize8Alignment4 {
 };
 
 union UnionSize12Alignment4 {
-    array<uint8>:6 variant;
+    1: array<uint8>:6 variant;
 };
 
 struct SandwichUnionSize12Alignment4 {
@@ -33,7 +33,7 @@ struct StructSize16Alignment8 {
 };
 
 union UnionSize24Alignment8 {
-    StructSize16Alignment8 variant;
+    1: StructSize16Alignment8 variant;
 };
 
 struct SandwichUnionSize24Alignment8 {
@@ -43,7 +43,7 @@ struct SandwichUnionSize24Alignment8 {
 };
 
 union UnionSize36Alignment4 {
-    array<uint8>:32 variant;
+    1: array<uint8>:32 variant;
 };
 
 struct SandwichUnionSize36Alignment4 {

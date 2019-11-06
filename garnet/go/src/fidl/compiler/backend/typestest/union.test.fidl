@@ -1,13 +1,13 @@
 library test.name;
 
 union Union {
-    int32 Primitive;
-    string StringNeedsConstructor;
-    vector<string> VectorStringAlsoNeedsConstructor;
+    1: int32 Primitive;
+    2: string StringNeedsConstructor;
+    3: vector<string> VectorStringAlsoNeedsConstructor;
 };
 
 union FieldCollision {
-    int32 field_collision_tag;
+    1: int32 field_collision_tag;
 };
 
 union ExplicitUnion {

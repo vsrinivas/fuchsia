@@ -41,9 +41,9 @@ enum AdministrativeStatus {
 };
 
 union InterfaceStatus {
-    PresenceStatus presence;
-    PhysicalStatus physical;
-    AdministrativeStatus administrative;
+    1: PresenceStatus presence;
+    2: PhysicalStatus physical;
+    3: AdministrativeStatus administrative;
 };
 
 struct InterfaceAddress {
@@ -100,10 +100,10 @@ struct InterfaceProperties {
 /// of the next hop in the route.
 union ForwardingDestination {
     /// The opaque identifier of the device to which packets should be forwarded.
-    uint64 device_id;
+    1: uint64 device_id;
 
     /// The IP address of the next hop, used to look up the next forwarding entry.
-    fuchsia.net.IpAddress next_hop;
+    2: fuchsia.net.IpAddress next_hop;
 };
 
 /// An entry in the forwarding table for the network stack.

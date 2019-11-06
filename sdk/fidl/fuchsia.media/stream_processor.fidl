@@ -634,7 +634,7 @@ table StreamBuffer {
 /// the data.  Any multi-domain storage within a gralloc buffer will likely be
 /// only indirectly represented here.
 union StreamBufferData {
-    StreamBufferDataVmo vmo;
+    1: StreamBufferDataVmo vmo;
 
     // TODO(dustingreen): add the gralloc way
 };

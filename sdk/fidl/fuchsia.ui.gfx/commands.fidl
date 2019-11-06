@@ -8,94 +8,94 @@ using fuchsia.mem;
 
 /// Commands that are used to modify the state of a `Session`.
 union Command {
-    CreateResourceCmd create_resource;
-    ReleaseResourceCmd release_resource;
-    ExportResourceCmd export_resource;
-    ImportResourceCmd import_resource;
+     1: CreateResourceCmd create_resource;
+     2: ReleaseResourceCmd release_resource;
+     3: ExportResourceCmd export_resource;
+     4: ImportResourceCmd import_resource;
 
     /// Tagging commands.
-    SetTagCmd set_tag;
+     5: SetTagCmd set_tag;
 
     /// Grouping commands.
-    DetachCmd detach;
+     6: DetachCmd detach;
 
     /// Spatial commands.
-    SetTranslationCmd set_translation;
-    SetScaleCmd set_scale;
-    SetRotationCmd set_rotation;
-    SetAnchorCmd set_anchor;
-    SetSizeCmd set_size;
-    SetOpacityCmd set_opacity;
+     7: SetTranslationCmd set_translation;
+     8: SetScaleCmd set_scale;
+     9: SetRotationCmd set_rotation;
+    10: SetAnchorCmd set_anchor;
+    11: SetSizeCmd set_size;
+    12: SetOpacityCmd set_opacity;
 
-    SendSizeChangeHintCmdHACK send_size_change_hint_hack;
+    13: SendSizeChangeHintCmdHACK send_size_change_hint_hack;
 
     /// Node-specific commands.
-    AddChildCmd add_child; // TODO: Should we require a DetachCmd before
+    14: AddChildCmd add_child; // TODO: Should we require a DetachCmd before
     /// re-parenting?
-    AddPartCmd add_part;
-    DetachChildrenCmd detach_children;
-    SetShapeCmd set_shape;
-    SetMaterialCmd set_material;
-    SetClipCmd set_clip;
-    SetHitTestBehaviorCmd set_hit_test_behavior;
-    SetViewPropertiesCmd set_view_properties;
-    TakeSnapshotCmdDEPRECATED take_snapshot_cmd;
+    15: AddPartCmd add_part;
+    16: DetachChildrenCmd detach_children;
+    17: SetShapeCmd set_shape;
+    18: SetMaterialCmd set_material;
+    19: SetClipCmd set_clip;
+    20: SetHitTestBehaviorCmd set_hit_test_behavior;
+    21: SetViewPropertiesCmd set_view_properties;
+    22: TakeSnapshotCmdDEPRECATED take_snapshot_cmd;
 
     /// Camera and lighting commands.
-    SetCameraCmd set_camera;
-    SetCameraTransformCmd set_camera_transform;
-    SetCameraProjectionCmd set_camera_projection;
-    SetStereoCameraProjectionCmd set_stereo_camera_projection;
-    SetCameraPoseBufferCmd set_camera_pose_buffer;
-    SetLightColorCmd set_light_color;
-    SetLightDirectionCmd set_light_direction;
-    AddLightCmd add_light;
-    DetachLightCmd detach_light;
-    DetachLightsCmd detach_lights;
+    23: SetCameraCmd set_camera;
+    24: SetCameraTransformCmd set_camera_transform;
+    25: SetCameraProjectionCmd set_camera_projection;
+    26: SetStereoCameraProjectionCmd set_stereo_camera_projection;
+    27: SetCameraPoseBufferCmd set_camera_pose_buffer;
+    28: SetLightColorCmd set_light_color;
+    29: SetLightDirectionCmd set_light_direction;
+    30: AddLightCmd add_light;
+    31: DetachLightCmd detach_light;
+    32: DetachLightsCmd detach_lights;
 
-    SetTextureCmd set_texture;
-    SetColorCmd set_color;
+    33: SetTextureCmd set_texture;
+    34: SetColorCmd set_color;
 
     /// Mesh commands.
-    BindMeshBuffersCmd bind_mesh_buffers;
+    35: BindMeshBuffersCmd bind_mesh_buffers;
 
     /// Layer and renderer commands.
-    AddLayerCmd add_layer;
-    RemoveLayerCmd remove_layer;
-    RemoveAllLayersCmd remove_all_layers;
-    SetLayerStackCmd set_layer_stack;
-    SetRendererCmd set_renderer;
-    SetRendererParamCmd set_renderer_param;
+    36: AddLayerCmd add_layer;
+    37: RemoveLayerCmd remove_layer;
+    38: RemoveAllLayersCmd remove_all_layers;
+    39: SetLayerStackCmd set_layer_stack;
+    40: SetRendererCmd set_renderer;
+    41: SetRendererParamCmd set_renderer_param;
 
     /// Events.
-    SetEventMaskCmd set_event_mask;
+    42: SetEventMaskCmd set_event_mask;
 
     /// Diagnostic commands.
-    SetLabelCmd set_label;
+    43: SetLabelCmd set_label;
 
     /// Debugging commands.
-    SetDisableClippingCmd set_disable_clipping;
+    44: SetDisableClippingCmd set_disable_clipping;
 
     // TODO(SCN-1026): Remove this.
-    SetImportFocusCmdDEPRECATED set_import_focus;
+    45: SetImportFocusCmdDEPRECATED set_import_focus;
 
     // TODO(SCN-1225): Move these where they belong.  They're added to the end of
     // the struct temporarily until we transition to xunions.
-    SetClipPlanesCmd set_clip_planes;
-    SetPointLightPositionCmd set_point_light_position;
-    SetPointLightFalloffCmd set_point_light_falloff;
-    SceneAddAmbientLightCmd scene__add_ambient_light;
-    SceneAddDirectionalLightCmd scene__add_directional_light;
-    SceneAddPointLightCmd scene__add_point_light;
+    46: SetClipPlanesCmd set_clip_planes;
+    47: SetPointLightPositionCmd set_point_light_position;
+    48: SetPointLightFalloffCmd set_point_light_falloff;
+    49: SceneAddAmbientLightCmd scene__add_ambient_light;
+    50: SceneAddDirectionalLightCmd scene__add_directional_light;
+    51: SceneAddPointLightCmd scene__add_point_light;
 
-    SetDisplayColorConversionCmdHACK set_display_color_conversion;
+    52: SetDisplayColorConversionCmdHACK set_display_color_conversion;
 
-    SetDisplayRotationCmdHACK set_display_rotation;
+    53: SetDisplayRotationCmdHACK set_display_rotation;
 
-    SetEnableDebugViewBoundsCmd set_enable_view_debug_bounds;
-    SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
+    54: SetEnableDebugViewBoundsCmd set_enable_view_debug_bounds;
+    55: SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
 
-    SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
+    56: SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register

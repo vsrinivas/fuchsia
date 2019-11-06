@@ -30,10 +30,10 @@ struct Header {
 /// The body of either an HTTP request or an HTTP response.
 union Body {
     /// A buffer that will contain the complete request or response body.
-    fuchsia.mem.Buffer buffer;
+    1: fuchsia.mem.Buffer buffer;
 
     /// A socket that will contain the streaming request or response body.
-    handle<socket> stream;
+    2: handle<socket> stream;
 };
 
 /// Specify the cache behavior of the request.

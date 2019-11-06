@@ -30,8 +30,8 @@ struct VectorOfDirections {
 };
 
 union Points {
-    Point one_point;
-    ArraysOfPoints many_points;
+    1: Point one_point;
+    2: ArraysOfPoints many_points;
 };
 
 const uint32 NumberOfDirections = 4;

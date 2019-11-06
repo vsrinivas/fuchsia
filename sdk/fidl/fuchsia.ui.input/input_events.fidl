@@ -160,7 +160,7 @@ table MediaButtonsEvent {
 
 /// This union does not include MediaButtonsEvent because it's processed differently.
 union InputEvent {
-    PointerEvent pointer;
-    KeyboardEvent keyboard;
-    FocusEvent focus;
+    1: PointerEvent pointer;
+    2: KeyboardEvent keyboard;
+    3: FocusEvent focus;
 };

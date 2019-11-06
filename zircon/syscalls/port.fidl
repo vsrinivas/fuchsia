@@ -7,10 +7,10 @@ library zz;
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
 union PacketUser {
-    array<uint64>:4 u64;
-    array<uint32>:8 u32;
-    array<uint16>:16 u16;
-    array<int8>:32 c8;
+    1: array<uint64>:4 u64;
+    2: array<uint32>:8 u32;
+    3: array<uint16>:16 u16;
+    4: array<int8>:32 c8;
 };
 
 // port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE and ZX_PKT_TYPE_SIGNAL_REP.

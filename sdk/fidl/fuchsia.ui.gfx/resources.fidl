@@ -11,57 +11,57 @@ using fuchsia.ui.views;
 /// `Session`. Add new fields only to the bottom of the list.
 union ResourceArgs {
     // Memory resources.
-    MemoryArgs memory;
-    ImageArgs image;
-    ImagePipeArgs image_pipe;
-    BufferArgs buffer;
+     1: MemoryArgs memory;
+     2: ImageArgs image;
+     3: ImagePipeArgs image_pipe;
+     4: BufferArgs buffer;
 
     // Views.
-    ViewArgs view;
-    ViewHolderArgs view_holder;
+     5: ViewArgs view;
+     6: ViewHolderArgs view_holder;
 
     // Shapes (see shapes.fidl).
-    RectangleArgs rectangle;
-    RoundedRectangleArgs rounded_rectangle;
-    CircleArgs circle;
-    MeshArgs mesh;
+     7: RectangleArgs rectangle;
+     8: RoundedRectangleArgs rounded_rectangle;
+     9: CircleArgs circle;
+    10: MeshArgs mesh;
 
     // Nodes (see nodes.fidl).
-    ShapeNodeArgs shape_node;
-    ClipNodeArgs clip_node;
-    EntityNodeArgs entity_node;
-    OpacityNodeArgsHACK opacity_node;
+    11: ShapeNodeArgs shape_node;
+    12: ClipNodeArgs clip_node;
+    13: EntityNodeArgs entity_node;
+    14: OpacityNodeArgsHACK opacity_node;
 
     // Materials.
-    MaterialArgs material;
+    15: MaterialArgs material;
 
     // Layers.
-    CompositorArgs compositor;
-    DisplayCompositorArgs display_compositor;
-    ImagePipeCompositorArgs image_pipe_compositor;
-    LayerStackArgs layer_stack;
-    LayerArgs layer;
+    16: CompositorArgs compositor;
+    17: DisplayCompositorArgs display_compositor;
+    18: ImagePipeCompositorArgs image_pipe_compositor;
+    19: LayerStackArgs layer_stack;
+    20: LayerArgs layer;
 
     // Scene representation and display.
-    SceneArgs scene;
-    CameraArgs camera;
-    StereoCameraArgs stereo_camera;
-    RendererArgs renderer;
+    21: SceneArgs scene;
+    22: CameraArgs camera;
+    23: StereoCameraArgs stereo_camera;
+    24: RendererArgs renderer;
 
     // Lighting.
-    AmbientLightArgs ambient_light;
-    DirectionalLightArgs directional_light;
+    25: AmbientLightArgs ambient_light;
+    26: DirectionalLightArgs directional_light;
 
     // A value that can be used in place of a constant value.
-    VariableArgs variable;
+    27: VariableArgs variable;
 
     // TODO(SCN-1225): Move these where they belong.  They're added to the end
     // of the struct temporarily until we transition to xunions.
-    PointLightArgs point_light;
-    ViewArgs2 view2;
-    ViewHolderArgs2 view_holder2;
-    ViewArgs3 view3;
-    ImagePipe2Args image_pipe2;
+    28: PointLightArgs point_light;
+    29: ViewArgs2 view2;
+    30: ViewHolderArgs2 view_holder2;
+    31: ViewArgs3 view3;
+    32: ImagePipe2Args image_pipe2;
 };
 
 struct ImagePipeArgs {

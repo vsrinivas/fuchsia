@@ -23,8 +23,8 @@ table Events {
 };
 
 union EthernetControllerRequest {
-    request<StandardInterfaceController> standard;
-    request<BridgeInterfaceController> bridge;
+    1: request<StandardInterfaceController> standard;
+    2: request<BridgeInterfaceController> bridge;
 };
 
 [FragileBase]

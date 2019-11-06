@@ -7,9 +7,9 @@ library fuchsia.ui.gfx;
 /// These are all of the types of parameters that can be set to configure a
 /// `Renderer`.
 union RendererParam {
-    ShadowTechnique shadow_technique;
-    RenderFrequency render_frequency;
-    bool enable_debugging;
+    1: ShadowTechnique shadow_technique;
+    2: RenderFrequency render_frequency;
+    3: bool enable_debugging;
 };
 
 /// Represents the shadow algorithm that the `Renderer` should use when lighting

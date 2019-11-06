@@ -390,8 +390,8 @@ enum MergePolicy {
 /// A value that is either small enough to be directly embedded in `bytes` or
 /// that is referenced by `reference`.
 union BytesOrReference {
-    bytes bytes;
-    Reference reference;
+    1: bytes bytes;
+    2: Reference reference;
 };
 
 /// Source of the value used to resolve a conflict.

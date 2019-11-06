@@ -42,11 +42,11 @@ struct EmptyStructSandwich {
 };
 
 union SimpleUnion {
-    int32 i32;
-    int64 i64;
-    Int64Struct s;
-    uint64 reserved_ordinal_3;
-    string str;
+    1: int32 i32;
+    2: int64 i64;
+    3: Int64Struct s;
+    4: uint64 reserved_ordinal_3;
+    5: string str;
 };
 
 table SimpleTable {

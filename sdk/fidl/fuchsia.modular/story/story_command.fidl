@@ -16,24 +16,24 @@ using fuchsia.mem;
 ///       to control a story.
 union StoryCommand {
     /// Sets the focus state of the story to `set_focus_state.focused`.
-    SetFocusState set_focus_state;
+    1: SetFocusState set_focus_state;
 
     /// Adds a Mod.
-    AddMod add_mod;
+    2: AddMod add_mod;
 
     /// Removes an existing Mod.
-    RemoveMod remove_mod;
+    3: RemoveMod remove_mod;
 
     /// Sets the value of a Link.
     /// DEPRECATED. This command is a no-op.
-    SetLinkValue set_link_value;
+    4: SetLinkValue set_link_value;
 
     /// Brings focus to a mod.
-    FocusMod focus_mod;
+    5: FocusMod focus_mod;
 
     /// Updates the kind_of_proto_story option in a story.
     /// DEPRECATED. This command is a no-op.
-    SetKindOfProtoStoryOption set_kind_of_proto_story_option;
+    6: SetKindOfProtoStoryOption set_kind_of_proto_story_option;
 };
 
 struct SetFocusState {

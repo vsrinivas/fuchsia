@@ -49,7 +49,7 @@ enum Enum2:uint32{
            using TheTypeAlias      = vector     : 9;
 
 union MyUnion {  // super annoying!
-      string? s;
+   1:   string? s;
 };
 
 union MyExplicitUnion {

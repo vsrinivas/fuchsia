@@ -18,12 +18,12 @@ enum DataElementType {
 };
 
 union DataElementData {
-    int64 integer;
-    string str;
-    string uuid;
-    bool b;
-    bytes bytes;
-    vector<DataElement?> sequence;
+    1: int64 integer;
+    2: string str;
+    3: string uuid;
+    4: bool b;
+    5: bytes bytes;
+    6: vector<DataElement?> sequence;
 };
 
 struct DataElement {

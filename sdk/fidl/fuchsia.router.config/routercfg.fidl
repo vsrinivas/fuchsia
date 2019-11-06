@@ -59,8 +59,8 @@ enum LifType {
 };
 
 union LifProperties {
-    WanProperties wan;
-    LanProperties lan;
+    1: WanProperties wan;
+    2: LanProperties lan;
     //TODO(dpradilla): LAGProperties lag;
 };
 

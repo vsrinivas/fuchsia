@@ -9,7 +9,7 @@ struct this_is_a_struct {
 };
 
 union this_is_a_union {
-    string s;
+    1: string s;
 };
 
 xunion this_is_a_xunion {

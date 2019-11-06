@@ -12,7 +12,7 @@ xunion BasicXUnion {
 };
 
 union BasicUnion {
-    int32 i32;
+    1: int32 i32;
 };
 
 struct BasicXUnionStruct {

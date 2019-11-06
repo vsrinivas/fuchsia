@@ -63,9 +63,9 @@ table SmallerTableOfStructWithHandle {
 };
 
 union SampleUnion {
-    IntStruct i;
-    SimpleTable st;
-    int32 raw_int;
+    1: IntStruct i;
+    2: SimpleTable st;
+    3: int32 raw_int;
 };
 
 xunion SampleXUnion {

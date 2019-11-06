@@ -10,8 +10,8 @@ using fuchsia.ui.vectorial;
 using fuchsia.ui.views;
 
 union Command {
-    fuchsia.ui.gfx.Command gfx;
-    fuchsia.ui.vectorial.Command vectorial;
-    fuchsia.ui.views.Command views;
-    fuchsia.ui.input.Command input;
+    1: fuchsia.ui.gfx.Command gfx;
+    2: fuchsia.ui.vectorial.Command vectorial;
+    3: fuchsia.ui.views.Command views;
+    4: fuchsia.ui.input.Command input;
 };

@@ -63,13 +63,13 @@ struct TemperatureUnitMutation {
 
 /// Container for setting mutations.
 union Mutation {
-    AccountMutation account_mutation_value;
-    StringMutation string_mutation_value;
-    WirelessMutation wireless_mutation_value;
-    TimeZoneMutation time_zone_mutation_value;
-    LocalesMutation locales_mutation_value;
-    HourCycleMutation hour_cycle_mutation_value;
-    TemperatureUnitMutation temperature_unit_mutation_value;
+    1: AccountMutation account_mutation_value;
+    2: StringMutation string_mutation_value;
+    3: WirelessMutation wireless_mutation_value;
+    4: TimeZoneMutation time_zone_mutation_value;
+    5: LocalesMutation locales_mutation_value;
+    6: HourCycleMutation hour_cycle_mutation_value;
+    7: TemperatureUnitMutation temperature_unit_mutation_value;
 };
 
 struct AccountMutationHandles {
@@ -77,5 +77,5 @@ struct AccountMutationHandles {
 };
 
 union MutationHandles {
-    AccountMutationHandles account_handles;
+    1: AccountMutationHandles account_handles;
 };

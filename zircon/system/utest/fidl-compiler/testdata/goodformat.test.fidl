@@ -44,7 +44,7 @@ bits Bats : uint64 {
 using TheTypeAlias = vector:9;
 
 union MyUnion { // super annoying!
-    string? s;
+    1: string? s;
 };
 
 union MyExplicitUnion {

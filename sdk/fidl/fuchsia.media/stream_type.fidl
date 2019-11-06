@@ -29,10 +29,10 @@ struct StreamType {
 
 /// A union of all medium-specific stream type structs.
 union MediumSpecificStreamType {
-    AudioStreamType audio;
-    VideoStreamType video;
-    TextStreamType text;
-    SubpictureStreamType subpicture;
+    1: AudioStreamType audio;
+    2: VideoStreamType video;
+    3: TextStreamType text;
+    4: SubpictureStreamType subpicture;
 };
 
 /// Audio encodings.

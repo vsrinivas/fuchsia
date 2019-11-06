@@ -14,22 +14,22 @@ enum SettingType {
 };
 
 union SettingData {
-    string string_value;
+    1: string string_value;
 
     /// The data returned by the time zone service for getting or setting
     /// time zones.
-    TimeZoneInfo time_zone_value;
+    2: TimeZoneInfo time_zone_value;
 
     /// The current connected state. (read-only)
-    ConnectedState connectivity;
+    3: ConnectedState connectivity;
 
     /// The wireless state (read-only).
-    WirelessState wireless;
+    4: WirelessState wireless;
 
     /// Internationalization settings.
-    IntlSettings intl;
+    5: IntlSettings intl;
 
-    AccountSettings account;
+    6: AccountSettings account;
 };
 
 enum LoginOverride {

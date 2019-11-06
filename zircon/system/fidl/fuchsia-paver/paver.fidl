@@ -44,11 +44,11 @@ struct ReadInfo {
 
 union ReadResult {
     /// Error encountered while reading data.
-    zx.status err;
+    1: zx.status err;
     /// End of file reached.
-    bool eof;
+    2: bool eof;
     /// Information about location of successfully read data within pre-registered VMO.
-    ReadInfo info;
+    3: ReadInfo info;
 };
 
 /// Protocol for streaming the FVM payload.

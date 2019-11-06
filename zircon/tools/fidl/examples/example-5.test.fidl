@@ -9,9 +9,9 @@ struct Point {
 };
 
 union NotAPoint {
-    uint64 x;
-    uint32 y;
-    uint16 z;
+    1: uint64 x;
+    2: uint32 y;
+    3: uint16 z;
 };
 
 enum Enum {

@@ -455,10 +455,10 @@ struct CustomEventValue {
 
 // A value that may be a string, int, double, or index.
 union Value {
-    string:MAX string_value;
-    int64 int_value;
-    float64 double_value;
-    uint32 index_value;
+    1: string:MAX string_value;
+    2: int64 int_value;
+    3: float64 double_value;
+    4: uint32 index_value;
 };
 
 // One bucket of histogram. This is used by the method LogIntHistogram().
@@ -489,25 +489,25 @@ struct Event {
 // The variadic part of a CobaltEvent.
 union EventPayload {
     // This maps to a call to LogEvent().
-    Event event;
+    1: Event event;
 
     // This maps to a call to LogEventCount().
-    CountEvent event_count;
+    2: CountEvent event_count;
 
     // This maps to a call to LogElapsedTime().
-    int64 elapsed_micros;
+    3: int64 elapsed_micros;
 
     // This maps to a call to LogFrameRate().
-    float32 fps;
+    4: float32 fps;
 
     // This maps to a call to LogMemoryUsage().
-    int64 memory_bytes_used;
+    5: int64 memory_bytes_used;
 
     // This maps to a call to LogString().
-    string:MAX_STRING_EVENT_SIZE string_event;
+    6: string:MAX_STRING_EVENT_SIZE string_event;
 
     // This maps to a call to LogIntHistogram().
-    vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS int_histogram;
+    7: vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS int_histogram;
 };
 
 // A specification of an event that occurred to be passed to LogCobaltEvent().

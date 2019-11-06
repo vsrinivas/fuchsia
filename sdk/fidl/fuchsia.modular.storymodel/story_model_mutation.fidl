@@ -15,8 +15,8 @@ using fuchsia.modular;
 /// `StoryMutator` class.
 union StoryModelMutation {
   /// Sets the value of `StoryModel.visibility_state`.
-  fuchsia.modular.StoryVisibilityState set_visibility_state;
+  1: fuchsia.modular.StoryVisibilityState set_visibility_state;
 
   /// Sets the value of `StoryModel.runtime_state`.
-  fuchsia.modular.StoryState set_runtime_state;
+  2: fuchsia.modular.StoryState set_runtime_state;
 };

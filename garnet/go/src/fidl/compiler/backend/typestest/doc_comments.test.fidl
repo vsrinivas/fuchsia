@@ -25,7 +25,7 @@ union Union {
     /// union member comment #1
     ///
     /// union member comment #3
-    int32 Field;
+    1: int32 Field;
 };
 
 /// table comment #1

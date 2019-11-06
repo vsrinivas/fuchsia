@@ -18,8 +18,8 @@ struct Ipv6Address {
 
 /// Represents an IP address that may be either v4 or v6.
 union IpAddress {
-    Ipv4Address ipv4;
-    Ipv6Address ipv6;
+    1: Ipv4Address ipv4;
+    2: Ipv6Address ipv6;
 };
 
 /// Endpoint describes an IP address and port. The network protocol associated

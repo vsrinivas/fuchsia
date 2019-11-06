@@ -33,11 +33,11 @@ struct KeyValue {
 
 /// Value holds a value for a given key.
 union Value {
-    int64 intval;
-    float64 floatval;
-    bool boolval;
-    string:MAX_STRING_SIZE stringval;
-    fuchsia.mem.Buffer bytesval;
+    1: int64 intval;
+    2: float64 floatval;
+    3: bool boolval;
+    4: string:MAX_STRING_SIZE stringval;
+    5: fuchsia.mem.Buffer bytesval;
 };
 
 // FlushError enumerates the various ways in which flushing the stash

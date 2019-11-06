@@ -20,7 +20,7 @@ struct QmiMessage {
 
 //TODO(jiamingw): change it to xunion after transport driver is converted to LLCPP
 union Message {
-    QmiMessage qmi_message;
+    1: QmiMessage qmi_message;
 };
 
 /// Protocol for forwarding messages to Snooper.

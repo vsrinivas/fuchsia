@@ -8,10 +8,10 @@ library example;
 // there does not appear to be an easy way to include a non-public FIDL library
 // in zircon from fuchsia.
 union UnionSize36Alignment4 {
-    uint8 unused1;           // avoid tag 0
-    uint8 unused2;           // avoid tag 1
-    uint8 unused3;           // avoid tag 2
-    array<uint8>:32 variant; // 0x5e411019
+    1: uint8 unused1;           // avoid tag 0
+    2: uint8 unused2;           // avoid tag 1
+    3: uint8 unused3;           // avoid tag 2
+    4: array<uint8>:32 variant; // 0x5e411019
 };
 
 struct Sandwich4 {

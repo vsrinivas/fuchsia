@@ -8,7 +8,7 @@ using fuchsia.ui.input;
 using fuchsia.ui.gfx;
 
 union Event {
-    fuchsia.ui.gfx.Event gfx;
-    fuchsia.ui.input.InputEvent input;
-    Command unhandled;
+    1: fuchsia.ui.gfx.Event gfx;
+    2: fuchsia.ui.input.InputEvent input;
+    3: Command unhandled;
 };

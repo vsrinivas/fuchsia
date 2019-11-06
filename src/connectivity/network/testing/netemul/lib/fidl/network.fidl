@@ -18,7 +18,7 @@ struct LatencyConfig {
 /// Provides emulated packet loss configuration.
 union LossConfig {
     /// Rate of packet loss expressed as independent drop probability [0-100].
-    uint8 random_rate;
+    1: uint8 random_rate;
 };
 
 /// Provides emulated packet reordering configuration.

@@ -8,5 +8,5 @@ library fuchsia.ui.views;
 ///
 /// DO NOT USE
 union Command {
-    int32 empty;
+    1: int32 empty;
 };

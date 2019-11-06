@@ -24,8 +24,8 @@ struct HasBigArray {
 };
 
 union HasStructWithBigArray {
-  HasBigArray variant;
-  uint8 variant2;
+  1: HasBigArray variant;
+  2: uint8 variant2;
 };
 
 struct Result {

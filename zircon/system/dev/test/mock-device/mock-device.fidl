@@ -51,22 +51,22 @@ struct AddDeviceAction {
 /// What a hook should do.
 union Action {
     /// Return this status.
-    zx.status return_status;
+    1: zx.status return_status;
 
     /// Write these bytes to the buffer associated with the hook.
-    vector<uint8>:MAX_WRITE_BYTES write;
+    2: vector<uint8>:MAX_WRITE_BYTES write;
 
     /// Create a new thread with a processing loop.
-    request<MockDeviceThread> create_thread;
+    3: request<MockDeviceThread> create_thread;
 
     /// Invoke device_async_remove() on our device.
-    bool async_remove_device;
+    4: bool async_remove_device;
 
     /// Signal that the unbind has completed.
-    UnbindReplyAction unbind_reply;
+    5: UnbindReplyAction unbind_reply;
 
     /// Create a new child device
-    AddDeviceAction add_device;
+    6: AddDeviceAction add_device;
 };
 
 const uint32 MAX_ACTIONS = 10;

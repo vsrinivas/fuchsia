@@ -6,12 +6,12 @@ library fuchsia.data;
 
 /// A value is a boolean, integer, float, string, vector, or dictionary.
 union Value {
-    bool bit;
-    int64 inum;
-    float64 fnum;
-    string str;
-    Vector vec;
-    Dictionary dict;
+    1: bool bit;
+    2: int64 inum;
+    3: float64 fnum;
+    4: string str;
+    5: Vector vec;
+    6: Dictionary dict;
     // TODO(CP-154): Consider adding blobs.
 };
 

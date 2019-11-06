@@ -18,8 +18,8 @@ xunion XUnionWithEmptyStruct {
 };
 
 union UnionWithEmptyStruct {
-    EmptyStruct s;
-    uint64 force_alignment_of_8;
+    1: EmptyStruct s;
+    2: uint64 force_alignment_of_8;
 };
 
 struct StructWithOptionals {

@@ -74,8 +74,8 @@ enum Behavior {
 };
 
 union Usage {
-    AudioRenderUsage render_usage;
-    AudioCaptureUsage capture_usage;
+    1: AudioRenderUsage render_usage;
+    2: AudioCaptureUsage capture_usage;
 };
 
 [Discoverable]

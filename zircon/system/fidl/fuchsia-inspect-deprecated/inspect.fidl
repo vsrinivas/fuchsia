@@ -13,8 +13,8 @@ const uint16 MAX_VALUE_COUNT = 256;
 const uint16 MAX_CHILDREN_COUNT = 256;
 
 union PropertyValue {
-    string:MAX_VALUE_LENGTH str;
-    vector<uint8>:MAX_VALUE_LENGTH bytes;
+    1: string:MAX_VALUE_LENGTH str;
+    2: vector<uint8>:MAX_VALUE_LENGTH bytes;
 };
 
 // A string property on an `Object`. Consisting of a key and value.
@@ -25,9 +25,9 @@ struct Property {
 
 // The value of a metric is one of these numeric types.
 union MetricValue {
-    int64 int_value;
-    uint64 uint_value;
-    float64 double_value;
+    1: int64 int_value;
+    2: uint64 uint_value;
+    3: float64 double_value;
 };
 
 // A Metric is a string key and the associated numeric value.

@@ -19,8 +19,8 @@ struct TestXUnionInTable {
 protocol EthernetDevice {};
 
 union IpAddressConfig {
-    array<uint32>:6 padding_size_24_align_4;
-    bool dhcp;
+    1: array<uint32>:6 padding_size_24_align_4;
+    2: bool dhcp;
 };
 
 struct InterfaceConfig {

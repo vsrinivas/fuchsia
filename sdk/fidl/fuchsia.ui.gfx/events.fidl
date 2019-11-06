@@ -13,20 +13,20 @@ const uint32 kSizeChangeHintEventMask = 2;
 /// Use `SetEventMaskCmd` to enable event delivery for a resource.
 union Event {
     /// Events which are controlled by a mask.
-    MetricsEvent metrics;
+     1: MetricsEvent metrics;
 
-    SizeChangeHintEvent size_change_hint;
+     2: SizeChangeHintEvent size_change_hint;
 
     /// Events which are always delivered, regardless of mask.
-    ImportUnboundEvent import_unbound;
-    ViewConnectedEvent view_connected;
-    ViewDisconnectedEvent view_disconnected;
-    ViewHolderDisconnectedEvent view_holder_disconnected;
-    ViewAttachedToSceneEvent view_attached_to_scene;
-    ViewDetachedFromSceneEvent view_detached_from_scene;
-    ViewPropertiesChangedEvent view_properties_changed;
-    ViewStateChangedEvent view_state_changed;
-    ViewHolderConnectedEvent view_holder_connected;
+     3: ImportUnboundEvent import_unbound;
+     4: ViewConnectedEvent view_connected;
+     5: ViewDisconnectedEvent view_disconnected;
+     6: ViewHolderDisconnectedEvent view_holder_disconnected;
+     7: ViewAttachedToSceneEvent view_attached_to_scene;
+     8: ViewDetachedFromSceneEvent view_detached_from_scene;
+     9: ViewPropertiesChangedEvent view_properties_changed;
+    10: ViewStateChangedEvent view_state_changed;
+    11: ViewHolderConnectedEvent view_holder_connected;
 };
 
 /// Provides rendering target metrics information about the specified node.
