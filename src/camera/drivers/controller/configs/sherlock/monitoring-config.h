@@ -51,8 +51,8 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kOutputStreamMlDSColorSpaceType =
     fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
 // OutputStreamMonitoring Parameters
-constexpr uint32_t kOutputStreamDSWidth = 896;
-constexpr uint32_t kOutputStreamDSHeight = 1600;
+constexpr uint32_t kOutputStreamDSWidth = 1152;
+constexpr uint32_t kOutputStreamDSHeight = 1440;
 constexpr uint32_t kOutputStreamMonitoringMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMonitoringWidth = 1152;
 constexpr uint32_t kOutputStreamMonitoringHeight = 864;
@@ -99,29 +99,45 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLFRCo
 }
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLFRImageFormats() {
-  fuchsia::sysmem::ImageFormat_2 format{
-      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-      .coded_width = kOutputStreamMlFRWidth,
-      .coded_height = kOutputStreamMlFRHeight,
-      .bytes_per_row = kOutputStreamMlFRWidth,
+  return {
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamMlFRWidth,
+          .coded_height = kOutputStreamMlFRHeight,
+          .bytes_per_row = kOutputStreamMlFRWidth,
+          .display_width = kOutputStreamMlFRWidth,
+          .display_height = kOutputStreamMlFRHeight,
+          .color_space.type = kOutputStreamMlFRColorSpaceType,
+      },
   };
-  std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
-  ret_vec.push_back(format);
-  return ret_vec;
+}
+
+static std::vector<fuchsia::sysmem::ImageFormat_2> MonitorConfigDownScaledResImageFormats() {
+  return {
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamDSWidth,
+          .coded_height = kOutputStreamDSHeight,
+          .bytes_per_row = kOutputStreamDSWidth,
+          .display_width = kOutputStreamDSWidth,
+          .display_height = kOutputStreamDSHeight,
+          .color_space.type = kOutputStreamMlDSColorSpaceType,
+      },
+  };
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
-  fuchsia::camera2::hal::StreamConfig stream_config;
-  stream_config.frame_rate = {
-      .frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
-      .frames_per_sec_denominator = 1,
+  return {
+      .frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
+      .constraints = OutputStreamMLFRConstraints(),
+      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                                        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING),
+      .image_formats = OutputStreamMLFRImageFormats(),
   };
-  stream_config.constraints = OutputStreamMLFRConstraints();
-  stream_config.properties =
-      GetStreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-  stream_config.image_formats = OutputStreamMLFRImageFormats();
-  return stream_config;
 };
 
 /***********************************
@@ -152,29 +168,31 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLDSCo
 }
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLDSImageFormats() {
-  fuchsia::sysmem::ImageFormat_2 format{
-      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-      .coded_width = kOutputStreamMlDSWidth,
-      .coded_height = kOutputStreamMlDSHeight,
-      .bytes_per_row = kOutputStreamMlDSWidth,
+  return {
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamMlDSWidth,
+          .coded_height = kOutputStreamMlDSHeight,
+          .bytes_per_row = kOutputStreamMlDSWidth,
+          .display_width = kOutputStreamMlDSWidth,
+          .display_height = kOutputStreamMlDSHeight,
+          .color_space.type = kOutputStreamMlDSColorSpaceType,
+      },
   };
-  std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
-  ret_vec.push_back(format);
-  return ret_vec;
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
-  fuchsia::camera2::hal::StreamConfig stream_config;
-  stream_config.frame_rate = {
-      .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
-      .frames_per_sec_denominator = 1,
+  return {
+      .frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
+      .constraints = OutputStreamMLDSConstraints(),
+      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                                        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING),
+      .image_formats = OutputStreamMLDSImageFormats(),
   };
-  stream_config.constraints = OutputStreamMLDSConstraints();
-  stream_config.properties =
-      GetStreamProperties(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-  stream_config.image_formats = OutputStreamMLDSImageFormats();
-  return stream_config;
 };
 
 /******************************************
@@ -206,42 +224,48 @@ OutputStreamDSMonitoringConstraints() {
 }
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMonitoringImageFormats() {
-  std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
-  fuchsia::sysmem::ImageFormat_2 format0{
-      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-      .coded_width = kOutputStreamMonitoringWidth,
-      .coded_height = kOutputStreamMonitoringHeight,
-      .bytes_per_row = kOutputStreamMonitoringWidth,
+  return {
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamMonitoringWidth,
+          .coded_height = kOutputStreamMonitoringHeight,
+          .bytes_per_row = kOutputStreamMonitoringWidth,
+          .display_width = kOutputStreamMonitoringWidth,
+          .display_height = kOutputStreamMonitoringHeight,
+          .color_space.type = kOutputStreamMonitoringColorSpaceType,
+      },
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamMonitoringWidth1,
+          .coded_height = kOutputStreamMonitoringHeight1,
+          .bytes_per_row = kOutputStreamMonitoringWidth1,
+          .display_width = kOutputStreamMonitoringWidth1,
+          .display_height = kOutputStreamMonitoringHeight1,
+          .color_space.type = kOutputStreamMonitoringColorSpaceType,
+      },
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamMonitoringWidth2,
+          .coded_height = kOutputStreamMonitoringHeight2,
+          .bytes_per_row = kOutputStreamMonitoringWidth2,
+          .display_width = kOutputStreamMonitoringWidth2,
+          .display_height = kOutputStreamMonitoringHeight2,
+          .color_space.type = kOutputStreamMonitoringColorSpaceType,
+      },
   };
-  fuchsia::sysmem::ImageFormat_2 format1{
-      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-      .coded_width = kOutputStreamMonitoringWidth1,
-      .coded_height = kOutputStreamMonitoringHeight1,
-      .bytes_per_row = kOutputStreamMonitoringWidth1,
-  };
-  fuchsia::sysmem::ImageFormat_2 format2{
-      .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-      .coded_width = kOutputStreamMonitoringWidth2,
-      .coded_height = kOutputStreamMonitoringHeight2,
-      .bytes_per_row = kOutputStreamMonitoringWidth2,
-  };
-
-  ret_vec.push_back(format0);
-  ret_vec.push_back(format1);
-  ret_vec.push_back(format2);
-  return ret_vec;
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
-  fuchsia::camera2::hal::StreamConfig stream_config;
-  stream_config.frame_rate = {
-      .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
-      .frames_per_sec_denominator = 1,
+  return {
+      .frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
+      .constraints = OutputStreamDSMonitoringConstraints(),
+      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::MONITORING),
+      .image_formats = OutputStreamMonitoringImageFormats(),
   };
-  stream_config.constraints = OutputStreamDSMonitoringConstraints();
-  stream_config.properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::MONITORING);
-  stream_config.image_formats = OutputStreamMonitoringImageFormats();
-  return stream_config;
 };
 
 /*****************************
@@ -262,23 +286,23 @@ fuchsia::camera2::hal::Config MonitoringConfig() {
 // FR --> GDC1 --> OutputStreamMLDS (10fps)
 
 static InternalConfigNode OutputStreamMLFR() {
-  InternalConfigNode node;
-  node.type = kOutputStream;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMlFRFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
-  return node;
+  return {
+      .type = kOutputStream,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+  };
 }
 
 static InternalConfigNode OutputStreamMLDS() {
-  InternalConfigNode node;
-  node.type = kOutputStream;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
-  return node;
+  return {
+      .type = kOutputStream,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+  };
 }
 
 fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
@@ -303,17 +327,21 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
 }
 
 static InternalConfigNode Gdc1() {
-  InternalConfigNode node;
-  node.type = kGdc;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
-  node.child_nodes.push_back(OutputStreamMLDS());
-  node.gdc_info.config_type = GdcConfig::MONITORING_ML;
-  node.constraints = Gdc1Constraints();
-  node.image_formats = OutputStreamMLDSImageFormats();
-  return node;
+  return {
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+      .child_nodes =
+          {
+              {
+                  OutputStreamMLDS(),
+              },
+          },
+      .gdc_info.config_type = GdcConfig::MONITORING_ML,
+      .constraints = Gdc1Constraints(),
+      .image_formats = OutputStreamMLDSImageFormats(),
+  };
 }
 
 fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
@@ -339,30 +367,41 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
 }
 
 InternalConfigNode MonitorConfigFullRes() {
-  InternalConfigNode node;
-  node.type = kInputStream;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
-  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-  node.child_nodes.push_back(OutputStreamMLFR());
-  node.child_nodes.push_back(Gdc1());
-  node.constraints = MonitorConfigFullResConstraints();
-  return node;
+  return {
+      .type = kInputStream,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+          },
+      .child_nodes =
+          {
+              {
+                  OutputStreamMLFR(),
+              },
+              {
+                  Gdc1(),
+              },
+          },
+      .constraints = MonitorConfigFullResConstraints(),
+      .image_formats = OutputStreamMLFRImageFormats(),
+  };
 }
 
 // DS --> GDC2 --> GE2D --> OutputStreamMonitoring
 
 static InternalConfigNode OutputStreamMonitoring() {
-  InternalConfigNode node;
-  node.type = kOutputStream;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
-  return node;
+  return {
+      .type = kOutputStream,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+  };
 }
 
 fuchsia::sysmem::BufferCollectionConstraints Gdc2Constraints() {
@@ -387,16 +426,21 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2Constraints() {
 }
 
 static InternalConfigNode Gdc2() {
-  InternalConfigNode node;
-  node.type = kGdc;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING;
-  node.child_nodes.push_back(OutputStreamMonitoring());
-  node.gdc_info.config_type = GdcConfig::MONITORING_720p;
-  node.constraints = Gdc2Constraints();
-  node.image_formats = OutputStreamMonitoringImageFormats();
-  return node;
+  return {
+      .type = kGdc,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING,
+      .child_nodes =
+          {
+              {
+                  OutputStreamMonitoring(),
+              },
+          },
+      .gdc_info.config_type = GdcConfig::MONITORING_720p,
+      .constraints = Gdc2Constraints(),
+      .image_formats = OutputStreamMonitoringImageFormats(),
+  };
 }
 
 fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstraints() {
@@ -422,15 +466,24 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstrain
 }
 
 InternalConfigNode MonitorConfigDownScaledRes() {
-  InternalConfigNode node;
-  node.type = kInputStream;
-  node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
-  node.output_frame_rate.frames_per_sec_denominator = 1;
-  node.input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
-  node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::MONITORING);
-  node.child_nodes.push_back(Gdc2());
-  node.constraints = MonitorConfigDownScaledResConstraints();
-  return node;
+  return {
+      .type = kInputStream,
+      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::MONITORING,
+          },
+      .child_nodes =
+          {
+              {
+                  Gdc2(),
+              },
+          },
+      .constraints = MonitorConfigDownScaledResConstraints(),
+      .image_formats = MonitorConfigDownScaledResImageFormats(),
+  };
 }
 
 }  // namespace camera
