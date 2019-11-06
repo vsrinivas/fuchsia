@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/modular/lib/common/async_holder.h"
@@ -29,8 +28,8 @@ SessionContextImpl::SessionContextImpl(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fuchsia::modular::auth::AccountPtr account, fuchsia::ui::views::ViewToken view_token,
-    fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
-    GetPresentationCallback get_presentation, OnSessionShutdownCallback on_session_shutdown)
+    fuchsia::sys::ServiceListPtr additional_services, GetPresentationCallback get_presentation,
+    OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
@@ -46,7 +45,7 @@ SessionContextImpl::SessionContextImpl(
   // 1. Create a PseudoDir containing startup.config. This directory will be
   // injected into sessionmgr's namespace and sessionmgr will read its
   // configurations from there.
-  auto flat_namespace = MakeConfigNamespace(std::move(config_handle));
+  auto flat_namespace = MakeConfigNamespace();
 
   // 2. Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
@@ -75,7 +74,7 @@ SessionContextImpl::SessionContextImpl(
   });
 }
 
-fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::channel config_handle) {
+fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace() {
   // Determine where basemgr is reading configs from
   std::string config_dir = modular_config::kOverriddenConfigDir;
   if (!files::IsDirectory(config_dir)) {
@@ -88,7 +87,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::chann
   fbl::unique_fd dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  flat_namespace->directories.push_back(std::move(config_handle));
+  flat_namespace->directories.push_back(fsl::CloneChannelFromFileDescriptor(dir.get()));
   return flat_namespace;
 }
 
