@@ -47,7 +47,7 @@ class ComponentGraphGenerator:
                 # TODO(benwright) - Add cm when V2 is supported.
                 if path.startswith("meta/") and path.endswith(".cmx"):
                     node = ComponentNode(
-                        package_resource_url(package["url"], path), data)
+                        package_resource_url(package["url"], path), data, package["type"])
                     graph.add_node(node)
 
         # Pass 2: Resolve all the fidl service mappings and attach them to their
@@ -69,10 +69,11 @@ class ComponentGraphGenerator:
                     service_url = component_url_strip_arguments(service_mappings[use_route])
                     link = ComponentLink(node.id, service_url, "use", use_route)
                     graph[service_url].consumers += 1
+                    node.component_use_deps.append(service_url)
                     graph.add_link(link)
                 else:
                     self.logger.warning(
-                        "Missing use route from %s to %s adding inferred node",
+                        "Missing use route from %s to %s; adding inferred node",
                         node.id, use_route)
                     inferred_pkg_url = "fuchsia-pkg://inferred#meta/" + use_route + ".cmx"
                     graph.add_node(

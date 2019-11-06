@@ -34,39 +34,7 @@ class QueryHandler:
 
     def services(self, packages):
         """ Returns the list of service to component url mappings """
-        configs = []
-        service_mappings = {}
-
-        config_data_pkg = [p for p in packages if p["url"] == "fuchsia-pkg://fuchsia.com/config-data"]
-        if len(config_data_pkg) != 1:
-          raise ComponentQueryError("Package configuration could not be found.")
-        config_data_pkg = config_data_pkg[0]
-
-        if "meta/contents" in config_data_pkg["files"]:
-          configs += self.package_manager.get_matching_package_contents(config_data_pkg, "data/sysmgr/.*\.config")
-
-        if len(configs) == 0:
-          raise ComponentQueryError("No service mappings found in config-data package.")
-
-        configs.append(
-            ("builtins.config", self.package_manager.get_builtin_data()))
-
-        for name, config_data in configs:
-            try:
-                config = json.loads(config_data)
-                if not "services" in config:
-                    continue
-                for service_name, component_url in config["services"].items():
-                    if service_name in service_mappings:
-                        self.logger.warning(
-                            "Service mapping collision: %s: %s, %s",
-                            service_name, service_mappings[service_name],
-                            component_url)
-                    service_mappings[service_name] = component_url
-            except json.decoder.JSONDecodeError:
-                self.logger.warning(
-                    "Unable to parse .config as json for: %s", name)
-        return service_mappings
+        return self.package_manager.get_services(packages)
 
     def packages(self):
         """ Returns a list of available packages """

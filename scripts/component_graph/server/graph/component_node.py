@@ -16,7 +16,7 @@ from server.util.url import package_resource_url
 class ComponentNode:
     """ Node implementation for the component graph. """
 
-    def __init__(self, resource_path, resource_data):
+    def __init__(self, resource_path, resource_data, ty):
         self.id = resource_path
         self.name = resource_path.split("/")[-1]
         self.manifest = resource_data
@@ -25,15 +25,22 @@ class ComponentNode:
         self.version = 0
         self.consumers = 0
         self.source = "package"
+        self.ty = ty
+        # Filled in when links are generated
+        self.component_use_deps = []
         try:
             self.uses = self.manifest["sandbox"]["services"]
         except KeyError:
             self.uses = []
+        try:
+            self.features = self.manifest["sandbox"]["features"]
+        except KeyError:
+            self.features = []
 
     @classmethod
     def create_inferred(cls, pkg_resource_url):
         """ Named constructor to construct an inferred ComponentNode. """
-        node = cls(pkg_resource_url, {})
+        node = cls(pkg_resource_url, {}, "inferred")
         return node
 
     def append_offer(self, offer):
