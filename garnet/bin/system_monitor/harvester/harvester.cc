@@ -40,7 +40,8 @@ Harvester::Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
 
 void Harvester::GatherDeviceProperties() {
   gather_cpu_.GatherDeviceProperties();
-  gather_inspectable_.GatherDeviceProperties();
+  // TODO(fxb/40872): re-enable once we need this data.
+  // gather_inspectable_.GatherDeviceProperties();
   gather_introspection_.GatherDeviceProperties();
   gather_memory_.GatherDeviceProperties();
   gather_tasks_.GatherDeviceProperties();
