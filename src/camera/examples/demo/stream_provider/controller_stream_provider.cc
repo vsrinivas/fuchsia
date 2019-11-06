@@ -68,6 +68,18 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
     return nullptr;
   }
 
+  // Get the list of valid configs as reported by the controller.
+  zx_status_t status_return = ZX_OK;
+  status = provider->controller_->GetConfigs(&provider->configs_, &status_return);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
+    return nullptr;
+  }
+  if (status_return != ZX_OK) {
+    FX_PLOGS(ERROR, status_return) << "Failed to get configs";
+    return nullptr;
+  }
+
   // Immediately enable streaming.
   status = provider->controller_->EnableStreaming();
   if (status != ZX_OK) {
@@ -92,29 +104,17 @@ ControllerStreamProvider::ConnectToStream(
     return MakeErrorReturn(ZX_ERR_ALREADY_BOUND);
   }
 
-  // Get the list of valid configs as reported by the controller.
-  fidl::VectorPtr<fuchsia::camera2::hal::Config> configs;
-  zx_status_t status_return = ZX_OK;
-  zx_status_t status = controller_->GetConfigs(&configs, &status_return);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
-    return MakeErrorReturn(status);
-  }
-  if (status_return != ZX_OK) {
-    FX_PLOGS(ERROR, status_return) << "Failed to get configs";
-    return MakeErrorReturn(status_return);
-  }
-  if (configs->size() <= kConfigIndex) {
+  if (kConfigIndex >= configs_->size()) {
     FX_LOGS(ERROR) << "Invalid config index " << kConfigIndex;
     return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
-  auto& config = configs->at(kConfigIndex);
-  if (config.stream_configs.size() <= kStreamConfigIndex) {
+  auto& config = configs_->at(kConfigIndex);
+  if (kStreamConfigIndex >= config.stream_configs.size()) {
     FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
     return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
   auto& stream_config = config.stream_configs[kStreamConfigIndex];
-  if (stream_config.image_formats.size() <= kImageFormatIndex) {
+  if (kImageFormatIndex >= stream_config.image_formats.size()) {
     FX_LOGS(ERROR) << "Invalid image format index " << kImageFormatIndex;
     return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
@@ -124,7 +124,7 @@ ControllerStreamProvider::ConnectToStream(
   if (!allocator_) {
     FX_LOGS(ERROR) << "Allocator is dead!";
   }
-  status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
+  zx_status_t status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate new collection";
     return MakeErrorReturn(status);
@@ -134,7 +134,7 @@ ControllerStreamProvider::ConnectToStream(
     FX_PLOGS(ERROR, status) << "Failed to set constraints to those reported by the controller";
     return MakeErrorReturn(status);
   }
-  status_return = ZX_OK;
+  zx_status_t status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {

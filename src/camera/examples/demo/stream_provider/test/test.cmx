@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.camera2.Manager",
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/stream_provider_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/isp-device-test",
+            "camera-controller"
+        ],
+        "services": [
+            "fuchsia.camera2.Manager",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

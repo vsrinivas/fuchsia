@@ -24,6 +24,7 @@ class ControllerStreamProvider : public StreamProvider {
   fuchsia::camera2::hal::ControllerSyncPtr controller_;
   fuchsia::sysmem::AllocatorSyncPtr allocator_;
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_;
+  fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_;
 };
 
 #endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
