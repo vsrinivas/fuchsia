@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+# yxml
+#
+config("yxml_config") {
+  include_dirs = [ "//third_party/yxml/." ]
+}
+
+source_set("yxml") {
+  sources = [
+    "//third_party/yxml/yxml.c",
+    "//third_party/yxml/yxml.h",
+  ]
+
+  public_configs = [ ":yxml_config" ]
+}
+
+#
+# svg
+#
+config("svg_config") {
+  # svg uses "svg/svg.h"
+  include_dirs = [ "${graphics_compute_dir}" ]
+}
+
+source_set("svg") {
+  sources = [
+    "svg.c",
+    "svg.h",
+    "svg_color_names.c",
+    "svg_color_names.h",
+  ]
+
+  deps = [
+    ":yxml",
+    "${graphics_compute_dir}/common",
+  ]
+
+  public_configs = [ ":svg_config" ]
+}
+
+#
+# svg unittests
+#
+graphics_compute_unittests("svg_unittests") {
+  sources = [
+    "svg_unittests.cc",
+  ]
+  deps = [
+    ":svg",
+    ":yxml",
+    "${graphics_compute_dir}/common",
+  ]
+}

@@ -18,6 +18,7 @@ group("compute") {
     "spinel-rs",
     "spinel-rs-sys",
     "spinel/platforms/vk",
+    "svg",
     "tests/vk/vk_subgroup_info",  # TODO: Not a test, move to tools/
   ]
 }
@@ -57,9 +58,7 @@ group("tests") {
   # host bots currently lack a proper Vulkan loader + ICD. Thus only add
   # the device-specific Vulkan-based unit-tests for now.
   if (is_fuchsia) {
-    public_deps += [
-      ":graphics_compute_vk_unittests",
-    ]
+    public_deps += [ ":graphics_compute_vk_unittests" ]
   }
 
   if (_build_host_tests) {
@@ -91,6 +90,7 @@ group("all_tests") {
 graphics_compute_unittests_package("graphics_compute_unittests") {
   deps = [
     "common:common_unittests",
+    "svg:svg_unittests",
     "spinel-mold:mold_c_unittests",
     "tests:common_unittests",
   ]
