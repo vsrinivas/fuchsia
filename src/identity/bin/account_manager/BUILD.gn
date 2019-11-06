@@ -5,6 +5,13 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+declare_args() {
+  # Whether or not prototype account transfer is enabled.
+  # NOTE: This is not secure and should NOT be enabled for any products!  This
+  # is only for use during local development.
+  prototype_account_transfer = false
+}
+
 rustc_binary("bin") {
   name = "account_manager"
   edition = "2018"
@@ -18,8 +25,12 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/identity/fidl:account-prototype-rustc",
     "//src/identity/fidl:account-rustc",
+    "//src/identity/fidl:account-transfer-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/token_manager",
     "//src/lib/inspect/rust/fuchsia-inspect",
@@ -46,7 +57,11 @@ package("account_manager") {
 
   meta = [
     {
-      path = rebase_path("meta/account_manager.cmx")
+      if (prototype_account_transfer) {
+        path = rebase_path("meta/account_manager_prototype.cmx")
+      } else {
+        path = rebase_path("meta/account_manager.cmx")
+      }
       dest = "account_manager.cmx"
     },
   ]

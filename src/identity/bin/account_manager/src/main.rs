@@ -17,6 +17,7 @@ mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
 pub mod inspect;
+mod prototype;
 mod stored_account_list;
 
 use crate::account_manager::AccountManager;
@@ -26,7 +27,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::Inspector;
-use futures::StreamExt;
+use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{error, info};
 use std::path::PathBuf;
@@ -34,6 +35,10 @@ use std::sync::Arc;
 
 /// This flag (prefixed with `--`) results in a set of hermetic auth providers.
 const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
+
+/// This flag (prefixed with `--`) starts account manager with the prototype
+/// account transfer interfaces enabled.
+const PROTOTYPE_TRANSFER_FLAG: &str = "prototype-account-transfer";
 
 /// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
@@ -68,6 +73,8 @@ fn main() -> Result<(), Error> {
         DEV_AUTH_PROVIDERS_FLAG,
         "use dev auth providers instead of the default set, for tests",
     );
+    opts.optflag("", PROTOTYPE_TRANSFER_FLAG, "Publish prototype account transfer interfaces.");
+
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
     let auth_provider_config: &Vec<_> = if options.opt_present(DEV_AUTH_PROVIDERS_FLAG) {
@@ -102,6 +109,13 @@ fn main() -> Result<(), Error> {
                 .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
         });
     });
+
+    if options.opt_present(PROTOTYPE_TRANSFER_FLAG) {
+        prototype::publish_account_transfer_control(&mut fs);
+        prototype::publish_account_manager_peer_to_overnet()
+            .unwrap_or_else(|e| error!("Error publishing AccountManagerPeer {:?}", e));
+    }
+
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());
