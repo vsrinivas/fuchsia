@@ -15,13 +15,27 @@ import (
 )
 
 var barTestModifier = TestModifier{
-	Target:    "//obsidian/lib/bar:bar_tests",
+	Name:      "bar_tests",
 	TotalRuns: 2,
 }
 
 var bazTestModifier = TestModifier{
-	Target: "//obsidian/public/lib/baz:baz_host_tests",
-	OS:     Linux,
+	Name: "baz_host_tests",
+	OS:   Linux,
+}
+
+var deprecatedTestModifier = TestModifier{
+	Target:    "this_field_is_deprecated",
+	OS:        Linux,
+	TotalRuns: 2,
+}
+
+// deprecatedTestModifer should be parsed into this format, with Name set
+// instead of Target.
+var parsedDeprecatedTestModifier = TestModifier{
+	Name:      "this_field_is_deprecated",
+	OS:        Linux,
+	TotalRuns: 2,
 }
 
 func TestLoadTestModifiers(t *testing.T) {
@@ -45,7 +59,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	initial := []TestModifier{barTestModifier, bazTestModifier}
+	initial := []TestModifier{barTestModifier, bazTestModifier, deprecatedTestModifier}
 
 	modifiersPath := filepath.Join(tmpDir, "test_modifiers.json")
 	m, err := os.Create(modifiersPath)
@@ -68,7 +82,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	barOut := barTestModifier
 	// If OS is missing, it gets set to default Fuchsia.
 	barOut.OS = Fuchsia
-	expected := []TestModifier{barOut, bazOut}
+	expected := []TestModifier{barOut, bazOut, parsedDeprecatedTestModifier}
 
 	if !areEqual(expected, actual) {
 		t.Fatalf("test modifiers not properly loaded:\nexpected:\n%+v\nactual:\n%+v", expected, actual)

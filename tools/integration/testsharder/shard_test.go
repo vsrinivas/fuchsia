@@ -234,7 +234,7 @@ func TestMultiplyShards(t *testing.T) {
 
 	makeTestModifier := func(id int, os OS, runs int) TestModifier {
 		return TestModifier{
-			Target:    fmt.Sprintf("test%d", id),
+			Name:      fmt.Sprintf("test%d", id),
 			OS:        os,
 			TotalRuns: runs,
 		}

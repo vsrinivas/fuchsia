@@ -157,7 +157,7 @@ this schema:
 ```json
 [
   {
-    "target": <GN test target name, e.g., "//src/foo:foo_bin_test">,
+    "name": <test basename, e.g., "foo_bin_test">,
     "os": <one of "fuchsia", "linux", "mac"; defaults to "fuchsia">,
     "total_runs": <any positive int; defaults to 1>
   },
@@ -165,11 +165,11 @@ this schema:
 ]
 ```
 
-The GN target name refers to the name of a test executable inside a
-`test_package` GN target which is located in the `out/default/tests.json` file
-located in your Fuchsia directory. This file is created after you run `fx build`
-inside of your Fuchsia directory. The test target and OS must match one of the
-tests in this list for this feature to work.
+The test name refers to the name of a test executable inside a `test_package`
+GN target which is located in the `out/default/tests.json` file located in
+your Fuchsia directory. This file is created after you run `fx build` inside
+of your Fuchsia directory. The test target and OS must match one of the tests
+in this list for this feature to work.
 
 An example CL description should look like:
 
@@ -180,11 +180,11 @@ This change adds a new test.
 
 MULTIPLY: `[
   {
-    "target": "//src/foo/compat:tests",
+    "name": "foo_tests",
     "total_runs": 30
   },
   {
-    "target": "//src/foo/host:tests",
+    "target": "foo_host_tests",
     "os": "linux",
     "total_runs": 30
   }
