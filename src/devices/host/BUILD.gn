@@ -89,6 +89,7 @@ executable("devhost-test-bin") {
   testonly = true
 
   sources = [
+    "core-test.cc",
     "device-api-test.cc",
     "device-controller-connection-test.cc",
     "proxy-iostate-test.cc",
