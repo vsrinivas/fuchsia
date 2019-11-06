@@ -40,9 +40,11 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
   min_lead_time_ns_ = kDefaultMinLeadTime;
   target_lead_time_ns_ = min_lead_time_ns_ + kTargetLeadTimeDeltaNs;
 
-  audio_renderer_.set_error_handler([](zx_status_t status){
-    // TODO(dalesat): Report this to the graph.
-    FXL_LOG(FATAL) << "AudioRenderer connection closed.";
+  audio_renderer_.set_error_handler([](zx_status_t status) {
+    if (status != ZX_ERR_CANCELED) {
+      // TODO(dalesat): Report this to the graph.
+      FXL_PLOG(FATAL, status) << "AudioRenderer connection closed.";
+    }
   });
 
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_ns) {
@@ -81,7 +83,10 @@ FidlAudioRenderer::FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_rend
                       fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)));
 }
 
-FidlAudioRenderer::~FidlAudioRenderer() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); }
+FidlAudioRenderer::~FidlAudioRenderer() {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  audio_renderer_.set_error_handler(nullptr);
+}
 
 const char* FidlAudioRenderer::label() const { return "audio_renderer"; }
 
