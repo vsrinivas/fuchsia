@@ -10,9 +10,11 @@
 #include <pthread.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
+#include <array>
 #include <atomic>
+
+#include <zxtest/zxtest.h>
 #if __has_feature(address_sanitizer)
 #include <sanitizer/asan_interface.h>
 #endif
@@ -20,6 +22,8 @@
 namespace {
 
 #if __has_feature(address_sanitizer)
+
+#define ASAN_SHADOW_SHIFT 3
 
 // Touch every page in the region to make sure it's been COW'd.
 __attribute__((no_sanitize("all"))) static void PrefaultPages(uintptr_t start, uintptr_t end) {
@@ -101,6 +105,73 @@ TEST(SanitzerUtilsTest, FillShadow) {
   ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
 }
 
-#endif
+TEST(SanitzerUtilsTest, FillShadowSmall) {
+  pthread_attr_t attr;
+  ASSERT_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
 
+  void* stackaddr;
+  size_t stacksize;
+  ASSERT_EQ(pthread_attr_getstack(&attr, &stackaddr, &stacksize), 0);
+
+  uintptr_t stackstart = reinterpret_cast<uintptr_t>(stackaddr);
+  uintptr_t stackend = reinterpret_cast<uintptr_t>(stackaddr) + stacksize;
+
+  // Prefault all stack pages to make sure this doesn't happen later while collecting samples.
+  PrefaultPages(stackstart, stackend);
+  // We also need to prefault all stack shadow pages.
+  size_t shadow_scale;
+  size_t shadow_offset;
+  __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
+  PrefaultPages((stackstart >> shadow_scale) + shadow_offset,
+                (stackend >> shadow_scale) + shadow_offset);
+
+  // This tests that unpoisoning less than 1 shadow page of memory works.
+  // This size ends up being three shadow pages, that way we can guarantee to
+  // always have an address that is aligned to a shadow page.
+  constexpr size_t len = (PAGE_SIZE << ASAN_SHADOW_SHIFT) * 3;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(0, 0, &vmo));
+  uintptr_t addr;
+
+  std::array<size_t, 4> sizes = {PAGE_SIZE << ASAN_SHADOW_SHIFT,
+                                 (PAGE_SIZE / 2) << ASAN_SHADOW_SHIFT,
+                                 (PAGE_SIZE + 1) << ASAN_SHADOW_SHIFT, PAGE_SIZE};
+
+  std::array<ssize_t, 3> offsets = {-(1 << ASAN_SHADOW_SHIFT), 0, (1 << ASAN_SHADOW_SHIFT)};
+
+  for (const auto size : sizes) {
+    for (const auto offset : offsets) {
+      ASSERT_OK(
+          zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
+      // Align base to the next shadow page, leaving one shadow page to its left.
+      uintptr_t base =
+          (addr + (PAGE_SIZE << ASAN_SHADOW_SHIFT)) & -(PAGE_SIZE << ASAN_SHADOW_SHIFT);
+
+      zx_info_task_stats_t task_stats;
+      // Snapshot the memory before allocating in the shadow
+      ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                              sizeof(zx_info_task_stats_t), nullptr, nullptr));
+      size_t init_mem_use = task_stats.mem_private_bytes;
+
+      // Poison the shadow.
+      ASAN_POISON_MEMORY_REGION((void*)(base + offset), size);
+
+      // Unpoison it.
+      __sanitizer_fill_shadow(base + offset, size, 0 /* val */, 0 /* threshold */);
+
+      // Measure memory again.
+      ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                                              sizeof(zx_info_task_stats_t), nullptr, nullptr));
+      size_t final_mem_use = task_stats.mem_private_bytes;
+
+      // At most we are leaving 2 ASAN shadow pages committed.
+      EXPECT_LE(init_mem_use, final_mem_use, "");
+      EXPECT_LE(final_mem_use - init_mem_use, PAGE_SIZE * 2, "");
+
+      // Deallocate the memory.
+      ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+    }
+  }
+}
+#endif
 }  // namespace

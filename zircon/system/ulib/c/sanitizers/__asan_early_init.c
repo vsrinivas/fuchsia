@@ -104,7 +104,7 @@ void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t 
     __builtin_trap();
   }
   const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
-  if (!value && shadow_size >= threshold) {
+  if (!value && shadow_size >= threshold && shadow_size >= PAGE_SIZE) {
     uintptr_t page_start = (shadow_base + PAGE_SIZE - 1) & -PAGE_SIZE;
     uintptr_t page_end = (shadow_base + shadow_size) & -PAGE_SIZE;
     // We're directly clearing the partial pages...
