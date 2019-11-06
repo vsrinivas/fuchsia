@@ -19,6 +19,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info, warn};
+use std::fmt;
 use std::sync::Arc;
 
 /// The url used to launch new AccountHandler component instances.
@@ -47,6 +48,12 @@ pub struct AccountHandlerConnection {
 
     /// A `Proxy` connected to the AccountHandlerControl interface on the launched AccountHandler.
     proxy: AccountHandlerControlProxy,
+}
+
+impl fmt::Debug for AccountHandlerConnection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "AccountHandlerConnection {{ lifetime: {:?} }}", self.lifetime)
+    }
 }
 
 impl AccountHandlerConnection {

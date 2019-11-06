@@ -16,6 +16,7 @@ mod account_event_emitter;
 mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
+mod account_map;
 pub mod inspect;
 mod prototype;
 mod stored_account_list;
