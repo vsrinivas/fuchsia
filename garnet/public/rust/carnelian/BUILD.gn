@@ -221,7 +221,7 @@ rustc_binary("clockface") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
   non_rust_deps = [
-    "//src/graphics/lib/vulkan",
+    "//src/lib/vulkan",
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
     "//src/graphics/lib/compute/hotsort/platforms/vk",

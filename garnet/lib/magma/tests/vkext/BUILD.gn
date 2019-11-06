@@ -25,6 +25,6 @@ executable("vkext") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 
-  deps += [ "//src/graphics/lib/vulkan" ]
+  deps += [ "//src/lib/vulkan" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

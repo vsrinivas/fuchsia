@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/layers.gni")
 
 package("magma-tools") {
   deps = [

@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
+
 #include <iostream>
 
 namespace screenshot {

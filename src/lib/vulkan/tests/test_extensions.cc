@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <vulkan/vulkan.h>
+
 #include "gtest/gtest.h"
 
 static const char* kLayerName = "VK_LAYER_FUCHSIA_imagepipe_swapchain";

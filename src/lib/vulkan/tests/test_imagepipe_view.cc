@@ -4,11 +4,12 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <garnet/lib/vulkan/src/imagepipe_view/imagepipe_view.h>
-#include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
+
+#include <gtest/gtest.h>
+#include <src/lib/vulkan/imagepipe_view/imagepipe_view.h>
 
 namespace {
 

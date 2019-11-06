@@ -218,7 +218,7 @@ sdk("core") {
     ":license",
     "devices",
     "docs",
-    "//garnet/lib/vulkan:vulkan_layers",
+    "//src/lib/vulkan:vulkan_layers",
     "//third_party/Vulkan-Loader:libvulkan_sdk",
     "//third_party/Vulkan-Loader:vulkan_license",
     "//zircon/public/sysroot:sysroot_sdk",

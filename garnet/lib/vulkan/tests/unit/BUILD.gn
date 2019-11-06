@@ -2,24 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("test_image_pipe_swapchain") {
-  testonly = true
-  sources = [
-    "test_extensions.cc",
-    "test_imagepipe_view.cc",
-    "test_swapchain.cc",
-  ]
-  deps = [
-    "../../src/imagepipe_view",
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/graphics/lib/vulkan",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
-  ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
-}
-
 executable("test_vk_validation") {
   testonly = true
   sources = [
@@ -27,7 +9,7 @@ executable("test_vk_validation") {
   ]
   deps = [
     "//garnet/lib/magma/src/magma_util",
-    "//src/graphics/lib/vulkan",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
   ]
 }

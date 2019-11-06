@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef RFB_SERVER_H_
-#define RFB_SERVER_H_
+#ifndef SRC_LIB_VULKAN_RFB_SERVER_RFB_SERVER_H_
+#define SRC_LIB_VULKAN_RFB_SERVER_RFB_SERVER_H_
 
 #include <stdint.h>
 
@@ -29,4 +29,4 @@ class RFBServer {
   bool initialization_succeeded_ = false;
 };
 
-#endif  // RFB_SERVER_H_
+#endif  // SRC_LIB_VULKAN_RFB_SERVER_RFB_SERVER_H_

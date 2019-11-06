@@ -233,7 +233,7 @@ romfs_image("extras") {
     "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(${linux_exe_toolchain})",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
-    "//src/graphics/lib/vulkan(${linux_lib_toolchain})",
+    "//src/lib/vulkan(${linux_lib_toolchain})",
   ]
 
   inputs = [

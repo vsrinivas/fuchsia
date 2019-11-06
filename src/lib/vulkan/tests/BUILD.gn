@@ -1,0 +1,46 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+test_package("image-pipe-swapchain-tests") {
+  deps = [
+    ":test_image_pipe_swapchain",
+  ]
+
+  tests = [
+    {
+      name = "test_image_pipe_swapchain"
+      dest = "image-pipe-swapchain-tests"
+      environments = magma_libvulkan_hardware_envs
+    },
+  ]
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain.loadable_modules
+  resources =
+      vulkan_validation_layers.resources + image_pipe_swapchain.resources
+}
+
+executable("test_image_pipe_swapchain") {
+  testonly = true
+  sources = [
+    "test_extensions.cc",
+    "test_imagepipe_view.cc",
+    "test_swapchain.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
+    "//src/lib/vulkan/imagepipe_view",
+    "//zircon/public/lib/zx",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}

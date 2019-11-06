@@ -23,5 +23,5 @@ executable("vkloop") {
     "//third_party/googletest:gtest",
   ]
 
-  public_deps += [ "//src/graphics/lib/vulkan" ]
+  public_deps += [ "//src/lib/vulkan" ]
 }

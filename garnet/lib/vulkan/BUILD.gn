@@ -3,104 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/sdk/sdk_atom.gni")
 import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
-import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
-
-group("image_pipe_swapchain") {
-  public_deps = [
-    "src/swapchain",
-  ]
-}
-
-sdk_atom("vulkan_layers") {
-  id = "sdk://pkg/vulkan_layers"
-
-  category = "partner"
-
-  files = []
-
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain.resources
-
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain.loadable_modules
-  non_sdk_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
-
-  sdk_resources = []
-  foreach(resource, resources) {
-    destination = "pkg/vulkan_layers/data/" + resource.dest
-    files += [
-      {
-        source = resource.path
-        dest = destination
-      },
-    ]
-    sdk_resources += [ destination ]
-  }
-
-  sdk_binaries = []
-  foreach(loadable_module, loadable_modules) {
-    destination = "arch/$target_cpu/dist/" + loadable_module.name
-    files += [
-      {
-        source = "$root_out_dir/" + loadable_module.name
-        dest = destination
-      },
-    ]
-    sdk_binaries += [ destination ]
-  }
-
-  meta = {
-    dest = "pkg/vulkan_layers/meta.json"
-    schema = "loadable_module"
-    value = {
-      type = "loadable_module"
-      name = "vulkan_layers"
-      resources = []
-      resources = sdk_resources
-      binaries = {
-      }
-      if (target_cpu == "arm64") {
-        binaries.arm64 = sdk_binaries
-      } else if (target_cpu == "x64") {
-        binaries.x64 = sdk_binaries
-      } else {
-        assert(false, "Unknown CPU type: %target_cpu")
-      }
-    }
-  }
-}
-
-test_package("image-pipe-swapchain-tests") {
-  deps = [
-    ":image_pipe_swapchain",
-    "tests/unit:test_image_pipe_swapchain",
-    "//src/graphics/lib/vulkan:validation_layers",
-  ]
-
-  tests = [
-    {
-      name = "test_image_pipe_swapchain"
-      dest = "image-pipe-swapchain-tests"
-      environments = magma_libvulkan_hardware_envs
-    },
-  ]
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain.loadable_modules
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain.resources
-}
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
 
 test_package("test-vk-validation") {
   deps = [
     "tests/unit:test_vk_validation",
-    "//src/graphics/lib/vulkan:validation_layers",
+    "//src/lib/vulkan:validation_layers",
   ]
 
   tests = [
@@ -120,7 +31,6 @@ package("vkcube_on_scenic") {
 
   deps = [
     "tests/vkcube:vkcube_on_scenic",
-    "//src/graphics/lib/vulkan:validation_layers",
   ]
   binary = "vkcube_on_scenic"
 
@@ -149,7 +59,6 @@ package("vkcube_on_fb") {
 
   deps = [
     "tests/vkcube:vkcube_on_fb",
-    "//src/graphics/lib/vulkan:validation_layers",
   ]
   binary = "vkcube_on_fb"
 
@@ -178,7 +87,6 @@ package("vkcube_skip_present") {
 
   deps = [
     "tests/vkcube:vkcube_skip_present",
-    "//src/graphics/lib/vulkan:validation_layers",
   ]
   binary = "vkcube_skip_present"
 
@@ -223,7 +131,7 @@ package("vkprimer") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//src/graphics/lib/vulkan:validation_layers" ]
+    deps += [ "//src/lib/vulkan:validation_layers" ]
 
     meta = [
       {
@@ -243,9 +151,7 @@ package("vkprimer") {
 
 package("vulkaninfo") {
   deps = [
-    ":image_pipe_swapchain",
-    "//src/graphics/lib/vulkan:validation_layers",
-    "//src/graphics/lib/vulkan:vulkaninfo",
+    "//src/lib/vulkan:vulkaninfo",
   ]
 
   meta = [

@@ -10,7 +10,7 @@ executable("virtmagma_unit_tests_linux") {
 
   deps = [
     "//garnet/lib/magma/src/libmagma_linux",
-    "//src/graphics/lib/vulkan:headers",
+    "//src/lib/vulkan:headers",
     "//third_party/googletest:gtest_main",
     "//third_party/rapidjson",
   ]
@@ -25,8 +25,8 @@ executable("virtmagma_vulkan_unit_tests") {
 
   deps = [
     ":basic_compute",
-    "//src/graphics/lib/vulkan",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
   ]
 
   sources = [

@@ -670,7 +670,7 @@ group("fuchsia_component_test") {
 group("image_pipe_swapchain") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:image-pipe-swapchain-tests",
+    "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
 }
 
@@ -860,7 +860,7 @@ group("vulkan") {
   public_deps = [
     "//garnet/lib/vulkan:test-vk-validation",
     "//garnet/packages/prod:vulkan",
-    "//src/graphics/lib/vulkan:loader_and_validation_tests",
+    "//src/lib/vulkan:loader_and_validation_tests",
   ]
 }
 

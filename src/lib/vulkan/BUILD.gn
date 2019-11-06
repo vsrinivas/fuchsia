@@ -1,0 +1,116 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+# Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
+# for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.
+
+# Provides the Vulkan headers and entry points via the Vulkan loader.
+group("vulkan") {
+  public_deps = [
+    ":headers",
+    "//third_party/Vulkan-Loader:libvulkan",
+  ]
+}
+
+# Provides only the Vulkan headers without the loader.
+group("headers") {
+  public_deps = [
+    "//third_party/Vulkan-Headers:vulkan_headers",
+  ]
+}
+
+# Vulkan validation layers are a set of loadable modules.
+group("validation_layers") {
+  public_deps = [
+    "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files",
+    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
+  ]
+}
+
+# Support code for building layers without bloat.
+group("micro_layer_common") {
+  public_deps = [
+    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
+  ]
+}
+
+# Tests for the Vulkan loader and validation layers.
+group("loader_and_validation_tests") {
+  testonly = true
+  public_deps = [
+    "//third_party/Vulkan-Loader:tests",
+    "//third_party/Vulkan-ValidationLayers:tests",
+  ]
+}
+
+# The vulkaninfo application.
+group("vulkaninfo") {
+  public_deps = [
+    "//third_party/Vulkan-Tools:vulkaninfo",
+  ]
+}
+
+sdk_atom("vulkan_layers") {
+  id = "sdk://pkg/vulkan_layers"
+
+  category = "partner"
+
+  files = []
+
+  resources =
+      vulkan_validation_layers.resources + image_pipe_swapchain.resources
+
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain.loadable_modules
+  non_sdk_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+
+  sdk_resources = []
+  foreach(resource, resources) {
+    destination = "pkg/vulkan_layers/data/" + resource.dest
+    files += [
+      {
+        source = resource.path
+        dest = destination
+      },
+    ]
+    sdk_resources += [ destination ]
+  }
+
+  sdk_binaries = []
+  foreach(loadable_module, loadable_modules) {
+    destination = "arch/$target_cpu/dist/" + loadable_module.name
+    files += [
+      {
+        source = "$root_out_dir/" + loadable_module.name
+        dest = destination
+      },
+    ]
+    sdk_binaries += [ destination ]
+  }
+
+  meta = {
+    dest = "pkg/vulkan_layers/meta.json"
+    schema = "loadable_module"
+    value = {
+      type = "loadable_module"
+      name = "vulkan_layers"
+      resources = []
+      resources = sdk_resources
+      binaries = {
+      }
+      if (target_cpu == "arm64") {
+        binaries.arm64 = sdk_binaries
+      } else if (target_cpu == "x64") {
+        binaries.x64 = sdk_binaries
+      } else {
+        assert(false, "Unknown CPU type: %target_cpu")
+      }
+    }
+  }
+}

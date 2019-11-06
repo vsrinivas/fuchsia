@@ -34,10 +34,11 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
-#include <garnet/lib/vulkan/src/imagepipe_view/imagepipe_view.h>  // nogncheck
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#endif  // defined(CUBE_USE_IMAGE_PIPE)
+
+#include <src/lib/vulkan/imagepipe_view/imagepipe_view.h>  // nogncheck
+#endif                                                     // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"
 

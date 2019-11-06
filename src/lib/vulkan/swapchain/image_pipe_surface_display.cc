@@ -4,7 +4,6 @@
 
 #include "image_pipe_surface_display.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -16,12 +15,15 @@
 
 #include <cstdio>
 
+#include <fbl/unique_fd.h>
+
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
 
 namespace image_pipe_swapchain {
 
-ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay()
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 bool ImagePipeSurfaceDisplay::Init() {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",

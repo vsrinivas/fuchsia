@@ -5,7 +5,7 @@
 import("../gn/build_rules.gni")
 import("../gn/glsl_shader_rules.gni")
 if (is_fuchsia) {
-  import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+  import("//src/lib/vulkan/image_pipe_swapchain.gni")
 }
 
 # Helper template to define a test program that Vulkan through vk_app_state.h

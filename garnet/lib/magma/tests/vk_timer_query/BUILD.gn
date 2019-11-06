@@ -24,5 +24,5 @@ executable("vk_timer_query") {
     "//zircon/public/lib/zx",
   ]
 
-  deps += [ "//src/graphics/lib/vulkan" ]
+  deps += [ "//src/lib/vulkan" ]
 }

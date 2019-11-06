@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
 
 # NOTE: whenever a new example is added, also add it to
 # //src/ui/lib/escher/test:force_waterfall_to_build_on_host
@@ -17,7 +17,7 @@ group("escher") {
 package("escher_waterfall") {
   deps = [
     "waterfall",
-    "//src/graphics/lib/vulkan:validation_layers",
+    "//src/lib/vulkan:validation_layers",
   ]
 
   binary = "waterfall"

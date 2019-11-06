@@ -3,13 +3,13 @@
 # found in the LICENSE file.
 
 # To use the image pipe swapchain layer in a package, add a dependency on
-# //garnet/lib/vulkan:image_pipe_swapchain
+# //src/lib/vulkan/swapchain
 # in the package, import this .gni file, and append the loadable_module and
 # resources entries from this scope to the package's scope.
 #
 # Example BUILD.gn file:
 #
-# import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+# import("//src/lib/vulkan/image_pipe_swapchain.gni")
 #
 # package("funky_swap_chain_example") {
 #   loadable_modules = [
@@ -32,13 +32,13 @@ image_pipe_swapchain = {
   ]
   resources = [
     {
-      path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
+      path = rebase_path("swapchain/VkLayer_image_pipe_swapchain.json")
       dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
     },
   ]
 
   public_deps = [
-    "//garnet/lib/vulkan:image_pipe_swapchain",
+    "//src/lib/vulkan/swapchain",
   ]
 }
 
@@ -50,13 +50,13 @@ image_pipe_swapchain_fb = {
   ]
   resources = [
     {
-      path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain_fb.json")
+      path = rebase_path("swapchain/VkLayer_image_pipe_swapchain_fb.json")
       dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain_fb.json"
     },
   ]
 
   public_deps = [
-    "//garnet/lib/vulkan/src/swapchain:fb",
+    "//src/lib/vulkan/swapchain:fb",
   ]
 }
 
@@ -69,12 +69,12 @@ image_pipe_swapchain_fb_skip_present = {
   resources = [
     {
       path = rebase_path(
-              "src/swapchain/VkLayer_image_pipe_swapchain_fb_skip_present.json")
+              "swapchain/VkLayer_image_pipe_swapchain_fb_skip_present.json")
       dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain_fb_skip_present.json"
     },
   ]
 
   public_deps = [
-    "//garnet/lib/vulkan/src/swapchain:fb_skip_present",
+    "//src/lib/vulkan/swapchain:fb_skip_present",
   ]
 }

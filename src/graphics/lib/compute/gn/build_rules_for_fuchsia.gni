@@ -7,12 +7,12 @@
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
 import("build_settings.gni")
 
 # A target providing access to Vulkan at compile time when added to deps.
-graphics_compute_vulkan_loader_target = "//src/graphics/lib/vulkan"
+graphics_compute_vulkan_loader_target = "//src/lib/vulkan"
 
 # A target providing the GTest main() function.
 # This version sets up logging appropriately for Fuchsia on startup.

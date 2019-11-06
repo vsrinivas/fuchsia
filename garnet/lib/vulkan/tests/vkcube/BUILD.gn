@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//garnet/lib/magma/gnbuild/magma.gni")
+
 executable("vkcube_on_scenic") {
   sources = [
     "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
@@ -20,8 +21,8 @@ executable("vkcube_on_scenic") {
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
-    "//garnet/lib/vulkan/src/imagepipe_view",
-    "//src/graphics/lib/vulkan",
+    "//src/lib/vulkan",
+    "//src/lib/vulkan/imagepipe_view",
     "//zircon/public/lib/syslog",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
@@ -42,7 +43,7 @@ executable("vkcube_on_fb") {
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
-    "//src/graphics/lib/vulkan",
+    "//src/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
   public_deps = [
@@ -68,7 +69,7 @@ executable("vkcube_skip_present") {
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",
     "$zircon_build_root/public/lib/trace-provider",
-    "//src/graphics/lib/vulkan",
+    "//src/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
   public_deps = [

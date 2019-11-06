@@ -33,6 +33,6 @@ executable("vkcopy") {
   ]
 
   deps = [
-    "//src/graphics/lib/vulkan",
+    "//src/lib/vulkan",
   ]
 }

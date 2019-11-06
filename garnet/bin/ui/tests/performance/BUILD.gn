@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/layers.gni")
 
 group("performance") {
   testonly = true
@@ -75,7 +75,7 @@ go_library("process_trace_lib") {
 }
 
 go_test("process_trace_helpers_test") {
-  gopackages = ["process_gfx_trace"]
+  gopackages = [ "process_gfx_trace" ]
 
   deps = [
     ":process_trace_lib",

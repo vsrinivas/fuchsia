@@ -70,7 +70,7 @@ shared_library("VkLayer_rfb") {
   ]
   deps = [
     "//garnet/lib/vulkan/src/rfb_server",
-    "//src/graphics/lib/vulkan:micro_layer_common",
+    "//src/lib/vulkan:micro_layer_common",
   ]
 }
 
@@ -81,6 +81,6 @@ shared_library("VkLayer_screenshot") {
     "screenshot_parsing.h",
   ]
   deps = [
-    "//src/graphics/lib/vulkan:micro_layer_common",
+    "//src/lib/vulkan:micro_layer_common",
   ]
 }

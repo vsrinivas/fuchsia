@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
-#define GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
+#ifndef SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
+#define SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
 #include <map>
 
-#include <fuchsia/hardware/display/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
 #include "image_pipe_surface.h"
 
 namespace image_pipe_swapchain {
@@ -64,4 +64,4 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
 
 }  // namespace image_pipe_swapchain
 
-#endif  // GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
+#endif  // SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_

@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
-import("//src/graphics/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/layers.gni")
 
 declare_args() {
   # Using Vulkan on host (i.e. Linux) is an involved affair that involves
@@ -115,15 +115,15 @@ source_set("vulkan") {
 
   if (is_fuchsia) {
     public_deps = [
-      "//src/graphics/lib/vulkan",
+      "//src/lib/vulkan",
     ]
   } else if (escher_use_null_vulkan_config_on_host) {
     # Host build using stub Vulkan implementation.
     # Only include the Vulkan headers: since this is used for host builds, we
-    # don't want to depend on the full //src/graphics/lib/vulkan impementation.
+    # don't want to depend on the full //src/lib/vulkan impementation.
     # It which brings in Zircon dependencies which cannot be compiled.
     public_deps = [
-      "//src/graphics/lib/vulkan:headers",
+      "//src/lib/vulkan:headers",
     ]
 
     sources = [
