@@ -23,6 +23,8 @@ using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 
 using PresentationInfo = fuchsia::images::PresentationInfo;
 using OnPresentedCallback = fit::function<void(PresentationInfo)>;
+using OnFramePresentedCallback =
+    fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
 // Interface for performing session updates.
 class SessionUpdater {
@@ -105,8 +107,13 @@ class FrameScheduler {
 
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
-  virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationTimes(
+  virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
       zx::duration requested_prediction_span) = 0;
+
+  // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
+  // called once per session.
+  virtual void SetOnFramePresentedCallbackForSession(scenic_impl::SessionId session,
+                                                     OnFramePresentedCallback callback) = 0;
 
  protected:
   friend class FrameTimings;

@@ -29,6 +29,20 @@ void Session::set_binding_error_handler(fit::function<void(zx_status_t)> error_h
   binding_.set_error_handler(std::move(error_handler));
 }
 
+void Session::InitializeOnFramePresentedCallback() {
+  OnFramePresentedCallback cb = [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+    if (!valid_ || !binding_.is_bound())
+      return;
+    // Update and set num_presents_allowed before ultimately calling into the client provided
+    // callback.
+    num_presents_allowed_ += (info.presentation_infos.size());
+    FXL_DCHECK(num_presents_allowed_ <= kMaxPresentsInFlight);
+    info.num_presents_allowed = num_presents_allowed_;
+    binding_.events().OnFramePresented(std::move(info));
+  };
+  GetTempSessionDelegate()->SetOnFramePresentedCallback(std::move(cb));
+}
+
 void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
@@ -70,8 +84,10 @@ void Session::Present2(zx_time_t requested_presentation_time, std::vector<zx::ev
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
                                        RequestPresentationTimesCallback callback) {
-  GetTempSessionDelegate()->RequestPresentationTimes(requested_prediction_span,
-                                                     std::move(callback));
+  if (callback)
+    callback({GetTempSessionDelegate()->GetFuturePresentationInfos(
+                  zx::duration(requested_prediction_span)),
+              num_presents_allowed_});
 }
 
 void Session::SetCommandDispatchers(

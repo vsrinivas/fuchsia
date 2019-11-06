@@ -135,6 +135,23 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   EXPECT_TRUE(IsFenceSignalled(release_fence));
 }
 
+TEST_F(GfxSystemTest, RequestPresentationTimes) {
+  fuchsia::ui::scenic::SessionPtr session;
+  EXPECT_EQ(0U, scenic()->num_sessions());
+  scenic()->CreateSession(session.NewRequest(), nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1U, scenic()->num_sessions());
+
+  // Call RequestPresentationTimes() and expect the maximum amount of presents in flight since we
+  // never called Present2().
+  session->RequestPresentationTimes(
+      0, [](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
+        EXPECT_EQ(future_times.remaining_presents_in_flight_allowed, Session::kMaxPresentsInFlight);
+      });
+
+  EXPECT_TRUE(RunLoopUntilIdle());
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

@@ -507,7 +507,7 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
   zx::time next_vsync = fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval();
 
   // Ask for a prediction for one frame into the future.
-  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time(), next_vsync.get());
@@ -539,7 +539,7 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   RunLoopUntil(vsync1);
 
   // Ask for a prediction.
-  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(0));
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time(), vsync2.get());
@@ -567,7 +567,7 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
 
   // Ask for a prediction a few frames into the future.
   auto predicted_presents =
-      scheduler->GetFuturePresentationTimes(zx::duration((vsync4 - vsync0).get()));
+      scheduler->GetFuturePresentationInfos(zx::duration((vsync4 - vsync0).get()));
 
   // Expect at least one frame of prediction.
   EXPECT_GE(predicted_presents.size(), 1u);
@@ -594,7 +594,7 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   zx::time next_vsync = fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval();
 
   // Ask for an extremely large prediction duration.
-  auto predicted_presents = scheduler->GetFuturePresentationTimes(zx::duration(INTMAX_MAX));
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX));
 
   constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
 

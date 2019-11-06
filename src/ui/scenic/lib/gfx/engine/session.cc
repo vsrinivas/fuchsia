@@ -106,7 +106,7 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
 
   // TODO(35521) If the client has no Present()s left, kill the session.
   if (++presents_in_flight_ > kMaxPresentsInFlight) {
-    error_reporter_->ERROR() << "Present() called with no more presents left. In the future (Bug "
+    error_reporter_->ERROR() << "Present() called with no more presents left. In the future(Bug "
                                 "35521) this will terminate the session.";
   }
 
@@ -155,6 +155,14 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
   inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
 
   return true;
+}
+
+void Session::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
+  if (auto weak = GetWeakPtr(); weak) {
+    FXL_DCHECK(weak->session_context_.frame_scheduler);
+    weak->session_context_.frame_scheduler->SetOnFramePresentedCallbackForSession(
+        weak->id(), std::move(callback));
+  }
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
@@ -233,11 +241,9 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
 }
 
-fuchsia::scenic::scheduling::FuturePresentationTimes Session::GetFuturePresentationTimes(
+std::vector<fuchsia::scenic::scheduling::PresentationInfo> Session::GetFuturePresentationInfos(
     zx::duration requested_prediction_span) {
-  return {.future_presentations = session_context_.frame_scheduler->GetFuturePresentationTimes(
-              requested_prediction_span),
-          .remaining_presents_in_flight_allowed = kMaxPresentsInFlight - presents_in_flight_};
+  return {session_context_.frame_scheduler->GetFuturePresentationInfos(requested_prediction_span)};
 }
 
 bool Session::SetRootView(fxl::WeakPtr<View> view) {

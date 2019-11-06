@@ -27,12 +27,15 @@
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 using PresentCallback = fuchsia::ui::scenic::Session::PresentCallback;
+using OnFramePresentedCallback =
+    fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
 class CommandContext;
 class Resource;
@@ -109,6 +112,10 @@ class Session {
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
                                           zx::time target_presentation_time, zx::time latched_time);
 
+  // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
+  // called once per session.
+  void SetOnFramePresentedCallback(OnFramePresentedCallback callback);
+
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
@@ -116,14 +123,14 @@ class Session {
   // Returns information about future presentation times, and their respective latch points.
   //
   // See fuchsia::ui::scenic::RequestPresentationTimes for more details.
-  fuchsia::scenic::scheduling::FuturePresentationTimes GetFuturePresentationTimes(
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
       zx::duration requested_prediction_span);
 
   void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
 
   // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
   // uses this to apply backpressure to clients.
-  static constexpr int64_t kMaxPresentsInFlight = 5;
+  static constexpr int64_t kMaxPresentsInFlight = ::scenic_impl::Session::kMaxPresentsInFlight;
   int64_t presents_in_flight() { return presents_in_flight_; }
 
  private:
@@ -218,8 +225,8 @@ class Session {
 
   std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
 
-  // Combined with |kMaxFramesInFlight|, track how many Present()s the client can still call. We use
-  // this for throttling clients.
+  // Combined with |kMaxFramesInFlight|, track how many Present()s the client can still call. We
+  // use this for throttling clients.
   //
   // It is incremented on every Present(), and decremented on every OnPresentedCallback().
   int64_t presents_in_flight_ = 0;

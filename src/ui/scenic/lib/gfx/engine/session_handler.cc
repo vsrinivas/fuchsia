@@ -34,11 +34,13 @@ void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> 
     buffered_commands_.clear();
   }
 }
+void SessionHandler::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
+  session_->SetOnFramePresentedCallback(std::move(callback));
+}
 
-void SessionHandler::RequestPresentationTimes(
-    uint64_t requested_prediction_span,
-    fuchsia::ui::scenic::Session::RequestPresentationTimesCallback callback) {
-  callback(session_->GetFuturePresentationTimes(zx::duration(requested_prediction_span)));
+std::vector<fuchsia::scenic::scheduling::PresentationInfo>
+SessionHandler::GetFuturePresentationInfos(zx::duration requested_prediction_span) {
+  return session_->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
 }
 
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {

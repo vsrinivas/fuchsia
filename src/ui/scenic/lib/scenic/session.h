@@ -27,6 +27,9 @@ class Scenic;
 
 using SessionId = uint64_t;
 
+using OnFramePresentedCallback =
+    fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
+
 class Session final : public fuchsia::ui::scenic::Session {
  public:
   Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
@@ -35,6 +38,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   void SetCommandDispatchers(
       std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers);
+
+  void InitializeOnFramePresentedCallback();
 
   // |fuchsia::ui::scenic::Session|
   void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
@@ -73,6 +78,10 @@ class Session final : public fuchsia::ui::scenic::Session {
   bool is_bound() { return binding_.is_bound(); }
 
   void set_binding_error_handler(fit::function<void(zx_status_t)> error_handler);
+
+  // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
+  // uses this to apply backpressure to clients.
+  static constexpr int64_t kMaxPresentsInFlight = 5;
 
  private:
   // Helper class which manages the reporting of events and errors to Scenic clients.
@@ -150,6 +159,8 @@ class Session final : public fuchsia::ui::scenic::Session {
   // trace id that begins at 0, and is incremented each |Session::Present|
   // call.
   uint64_t next_present_trace_id_ = 0;
+
+  int64_t num_presents_allowed_ = kMaxPresentsInFlight;
 
   TempSessionDelegate* GetTempSessionDelegate();
 

@@ -53,8 +53,13 @@ class DefaultFrameScheduler : public FrameScheduler {
   void ScheduleUpdateForSession(zx::time presentation_time,
                                 scenic_impl::SessionId session) override;
 
+  // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
+  // called once per session.
+  void SetOnFramePresentedCallbackForSession(scenic_impl::SessionId session,
+                                             OnFramePresentedCallback callback) override;
+
   // |FrameScheduler|
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationTimes(
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
       zx::duration requested_prediction_span) override;
 
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
@@ -107,6 +112,11 @@ class DefaultFrameScheduler : public FrameScheduler {
     // called and the most recent call to |RatchetPresentCallbacks()|.
     void SignalPresentCallbacks(fuchsia::images::PresentationInfo info);
 
+    // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
+    // called once per session.
+    void SetOnFramePresentedCallbackForSession(scenic_impl::SessionId session,
+                                               OnFramePresentedCallback callback);
+
    private:
     std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
 
@@ -125,6 +135,8 @@ class DefaultFrameScheduler : public FrameScheduler {
 
     std::queue<OnPresentedCallback> callbacks_this_frame_;
     std::queue<OnPresentedCallback> pending_callbacks_;
+
+    std::map<scenic_impl::SessionId, OnFramePresentedCallback> present2_callback_map_;
   };
 
  protected:
