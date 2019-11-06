@@ -31,27 +31,35 @@ def find_bazel(opt_path):
 
 class BazelTester(object):
 
-    def __init__(self, without_sdk, with_ignored, bazel_bin,
-                 optional_flags=[]):
+    def __init__(self, without_sdk, with_ignored, with_output_user_root,
+                 bazel_bin, optional_flags=[]):
         self.without_sdk = without_sdk
         self.with_ignored = with_ignored
+        self.with_output_user_root = with_output_user_root
         self.bazel_bin = bazel_bin
         self.optional_flags = optional_flags
 
 
-    def _add_bazel_flags(self, command):
+    def _add_bazel_command_flags(self, command):
         # The following flag is needed because some Dart build rules use a
         # `cfg = "data"` construct that's now an error.
         # TODO: remove this flag when we don't build Dart stuff in this SDK.
         command += ['--incompatible_disallow_data_transition=false']
 
 
+    def _add_bazel_startup_options(self, command):
+        if self.with_output_user_root is not None:
+            command += ['--output_user_root=%s' % self.with_output_user_root]
+
+
     def _invoke_bazel(self, command, targets):
-        command = [self.bazel_bin, command, '--keep_going']
-        self._add_bazel_flags(command)
-        command += self.optional_flags
-        command += targets
-        job = Popen(command, cwd=SCRIPT_DIR)
+        invocation = [self.bazel_bin]
+        self._add_bazel_startup_options(invocation)
+        invocation += [command, '--keep_going']
+        self._add_bazel_command_flags(invocation)
+        invocation += self.optional_flags
+        invocation += targets
+        job = Popen(invocation, cwd=SCRIPT_DIR)
         job.communicate()
         return job.returncode
 
@@ -65,9 +73,11 @@ class BazelTester(object):
 
 
     def _query(self, query):
-        command = [self.bazel_bin, 'query', query]
-        self._add_bazel_flags(command)
-        return set(check_output(command, cwd=SCRIPT_DIR).splitlines())
+        invocation = [self.bazel_bin]
+        self._add_bazel_startup_options(invocation)
+        invocation += ['query', query]
+        self._add_bazel_command_flags(invocation)
+        return set(check_output(invocation, cwd=SCRIPT_DIR).splitlines())
 
 
     def run(self):
@@ -125,6 +135,8 @@ def main():
     parser.add_argument('--once',
                         help='Whether to only run tests once',
                         action='store_true')
+    parser.add_argument('--output_user_root',
+                        help='If set, passthrough to Bazel to override user root.')
     args = parser.parse_args()
 
     (bazel, found) = find_bazel(args.bazel)
@@ -142,8 +154,8 @@ def main():
         print_test_start(arch, 'C++14')
         config_flags = ['--config=fuchsia_%s' % arch]
         cpp14_flags = ['--cxxopt=-Wc++14-compat', '--cxxopt=-Wc++17-extensions']
-        if not BazelTester(args.no_sdk, args.ignored, bazel,
-                           optional_flags=config_flags + cpp14_flags).run():
+        if not BazelTester(args.no_sdk, args.ignored, args.output_user_root,
+                           bazel, optional_flags=config_flags + cpp14_flags).run():
             return 1
 
         if args.once:
@@ -152,8 +164,8 @@ def main():
 
         print_test_start(arch, 'C++17')
         cpp17_flags = ['--cxxopt=-std=c++17', '--cxxopt=-Wc++17-compat']
-        if not BazelTester(args.no_sdk, args.ignored, bazel,
-                           optional_flags=config_flags + cpp17_flags).run():
+        if not BazelTester(args.no_sdk, args.ignored, args.output_user_root,
+                           bazel, optional_flags=config_flags + cpp17_flags).run():
             return 1
     return 0
 
