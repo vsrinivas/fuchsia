@@ -6,6 +6,7 @@
 #define FBL_INTRUSIVE_CONTAINER_UTILS_H_
 
 #include <type_traits>
+#include <utility>
 
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
@@ -119,13 +120,12 @@ struct ContainableBaseClasses<Containable<PtrType, TagType>, Rest...>
   static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
                 "All tag types used with fbl::ContainableBaseClasses must be unique.");
 
-  using ContainableTypes =
-    decltype(std::tuple_cat(std::declval<std::tuple<Containable<PtrType, TagType>>>(),
-                            std::declval<
-                              typename ContainableBaseClasses<Rest...>::ContainableTypes>()));
+  using ContainableTypes = decltype(
+      std::tuple_cat(std::declval<std::tuple<Containable<PtrType, TagType>>>(),
+                     std::declval<typename ContainableBaseClasses<Rest...>::ContainableTypes>()));
   using TagTypes =
-    decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
-                            std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
+      decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
+                              std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
 };
 
 namespace internal {
@@ -158,11 +158,21 @@ bool InContainer(const Containable& c) {
   // member typedefs, the compiler will complain. We just want to prevent people from passing a
   // nonsensical TagType parameter.
   static_assert(std::is_same_v<TagType, typename Containable::TagType> ||
-                std::is_same_v<TagType, DefaultObjectTag>,
+                    std::is_same_v<TagType, DefaultObjectTag>,
                 "Containable is not a member of a container with the specified tag type.");
 
   return c.InContainer();
 }
+
+// An enumeration which can be used as a template argument on list types to
+// control the order of operation needed to compute the size of the list.  When
+// set to SizeOrder::N, the list's size will not be maintained and there will be
+// no valid size() method to call.  The only way to fetch the size of a list
+// would be via |size_slow()|.  Alternatively, a user may specify
+// SizeOrder::Constant.  In this case, the storage size of the list itself will
+// grow by a size_t, and the size of the list will be maintained as elements are
+// added and removed.
+enum class SizeOrder { N, Constant };
 
 }  // namespace fbl
 
@@ -299,6 +309,71 @@ constexpr bool valid_sentinel_ptr(const T* ptr) {
 }
 
 DECLARE_HAS_MEMBER_FN(has_node_state, node_state);
+
+// SizeTracker is a partially specialized internal class used to track (or
+// explicitly to not track) the size of Lists in the fbl:: containers.  Its
+// behavior and size depends on the SizeOrder template parameter passed to it.
+//
+// Please note that to use this class, containers must (sadly) derive from it, they
+// cannot simply encapsulate it.  The SizeOrder::N version of the tracker is
+// nominally of 0 size, however 0 sized members of a struct/class are not allowed
+// in C++.  Attempting to put a 0 sized member into a class results in at least
+// 1 byte of size impact, which changes the size of the entire object.
+//
+// 0 sized base classes, however, are totally fine.  So, if we encapsulate a
+// SizeTracker<SizeOrder::N>, then our container gets bigger for no reason, but
+// if we derive from one, then our container stays the size that we expect it
+// to.
+//
+// static_assert tests for this exist in the non-sized doubly and singly linked
+// list tests.
+template <SizeOrder>
+class SizeTracker;
+
+template <>
+class SizeTracker<SizeOrder::N> {
+ protected:
+  constexpr SizeTracker() = default;
+  ~SizeTracker() = default;
+
+  // No copy, no move.
+  SizeTracker(const SizeTracker&) = delete;
+  SizeTracker& operator=(const SizeTracker&) = delete;
+  SizeTracker(SizeTracker&& other) = delete;
+  SizeTracker& operator=(SizeTracker&& other) = delete;
+
+  // Inc, Dec, Reset, and swap operations are no-ops.  There is no count
+  // accessor.  Anyone who attempts to access count has made a mistake.
+  void IncSizeTracker(size_t) {}
+  void DecSizeTracker(size_t) {}
+  void ResetSizeTracker() {}
+  void SwapSizeTracker(SizeTracker&) {}
+};
+
+template <>
+class SizeTracker<SizeOrder::Constant> {
+ protected:
+  constexpr SizeTracker() = default;
+  ~SizeTracker() = default;
+
+  // No copy, no move.
+  SizeTracker(const SizeTracker&) = delete;
+  SizeTracker& operator=(const SizeTracker&) = delete;
+  SizeTracker(SizeTracker&& other) = delete;
+  SizeTracker& operator=(SizeTracker&& other) = delete;
+
+  // Basic operations for manipulating the count storage.
+  void IncSizeTracker(size_t amt) { size_tracker_count_ += amt; }
+  void DecSizeTracker(size_t amt) { size_tracker_count_ -= amt; }
+  void ResetSizeTracker() { size_tracker_count_ = 0; }
+  void SwapSizeTracker(SizeTracker& other) {
+    std::swap(size_tracker_count_, other.size_tracker_count_);
+  }
+  size_t SizeTrackerCount() const { return size_tracker_count_; }
+
+ private:
+  size_t size_tracker_count_ = 0;
+};
 
 }  // namespace fbl::internal
 

@@ -580,6 +580,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
     EXPECT_EQ(0U, Size(container()));
     ContainerType target;
+    auto cleanup_target = MakeContainerAutoCleanup(&target);
     EXPECT_EQ(0U, Size(target));
 
     // Splice empty source into end of empty target list.

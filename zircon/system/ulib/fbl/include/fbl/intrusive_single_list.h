@@ -176,7 +176,7 @@ struct SinglyLinkedListNodeState {
   bool InContainer() const { return (next_ != nullptr); }
 
  private:
-  template <typename, typename, typename>
+  template <typename, typename, typename, SizeOrder>
   friend class SinglyLinkedList;
   template <typename>
   friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
@@ -238,8 +238,8 @@ struct SinglyLinkedListable {
 };
 
 template <typename T, typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,
-          typename TagType_ = DefaultObjectTag>
-class SinglyLinkedList {
+          typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
+class SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>
@@ -252,6 +252,7 @@ class SinglyLinkedList {
 
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
+  static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
   using PtrTraits = internal::ContainerPtrTraits<T>;
   using NodeTraits = AddGenericNodeState<NodeTraits_>;
   using PtrType = typename PtrTraits::PtrType;
@@ -259,7 +260,7 @@ class SinglyLinkedList {
   using ValueType = typename PtrTraits::ValueType;
   using TagType = TagType_;
   using CheckerType = ::fbl::tests::intrusive_containers::SinglyLinkedListChecker;
-  using ContainerType = SinglyLinkedList<T, NodeTraits_, TagType>;
+  using ContainerType = SinglyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
 
   // Declarations of the standard iterator types.
   using iterator = iterator_impl<iterator_traits>;
@@ -268,7 +269,7 @@ class SinglyLinkedList {
   // Singly linked lists do not support constant order erase (erase using an
   // iterator or direct object reference).
   static constexpr bool SupportsConstantOrderErase = false;
-  static constexpr bool SupportsConstantOrderSize = false;
+  static constexpr bool SupportsConstantOrderSize = (ListSizeOrder == SizeOrder::Constant);
   static constexpr bool IsAssociative = false;
   static constexpr bool IsSequenced = true;
 
@@ -278,7 +279,7 @@ class SinglyLinkedList {
   // Rvalue construction is permitted, but will result in the move of the list
   // contents from one instance of the list to the other (even for unmanaged
   // pointers)
-  SinglyLinkedList(SinglyLinkedList<T, NodeTraits_, TagType>&& other_list) { swap(other_list); }
+  SinglyLinkedList(SinglyLinkedList&& other_list) noexcept { swap(other_list); }
 
   // Rvalue assignment is permitted for managed lists, and when the target is
   // an empty list of unmanaged pointers.  Like Rvalue construction, it will
@@ -294,10 +295,16 @@ class SinglyLinkedList {
 
   ~SinglyLinkedList() {
     // It is considered an error to allow a list of unmanaged pointers to
-    // destruct of there are still elements in it.  Managed pointer lists
+    // destruct if there are still elements in it.  Managed pointer lists
     // will automatically release their references to their elements.
-    ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
-    clear();
+    if (PtrTraits::IsManaged == false) {
+      ZX_DEBUG_ASSERT(is_empty());
+      if constexpr (SupportsConstantOrderSize) {
+        ZX_DEBUG_ASSERT(this->SizeTrackerCount() == 0);
+      }
+    } else {
+      clear();
+    }
   }
 
   // Standard begin/end, cbegin/cend iterator accessors.
@@ -347,6 +354,7 @@ class SinglyLinkedList {
 
     ptr_ns.next_ = head_;
     head_ = PtrTraits::Leak(ptr);
+    this->IncSizeTracker(1);
   }
 
   // insert_after
@@ -365,6 +373,7 @@ class SinglyLinkedList {
 
     ptr_ns.next_ = iter_ns.next_;
     iter_ns.next_ = PtrTraits::Leak(ptr);
+    this->IncSizeTracker(1);
   }
 
   // pop_front
@@ -381,6 +390,7 @@ class SinglyLinkedList {
 
     head_ = head_ns.next_;
     head_ns.next_ = nullptr;
+    this->DecSizeTracker(1);
 
     return ret;
   }
@@ -398,6 +408,7 @@ class SinglyLinkedList {
       head_ns.next_ = nullptr;
       PtrTraits::Reclaim(tmp);
     }
+    this->ResetSizeTracker();
   }
 
   // clear_unsafe
@@ -416,6 +427,7 @@ class SinglyLinkedList {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
     head_ = sentinel();
+    this->ResetSizeTracker();
   }
 
   // erase_next
@@ -437,28 +449,44 @@ class SinglyLinkedList {
     PtrType ret = PtrTraits::Reclaim(iter_ns.next_);
     iter_ns.next_ = next_ns.next_;
     next_ns.next_ = nullptr;
+    this->DecSizeTracker(1);
     return ret;
   }
 
   // swap
   //
   // swaps the contest of two lists.
-  void swap(SinglyLinkedList<T, NodeTraits_, TagType>& other) {
+  void swap(SinglyLinkedList& other) {
     auto tmp = head_;
     head_ = other.head_;
     other.head_ = tmp;
+    this->SwapSizeTracker(other);
   }
 
   // size_slow
   //
   // count the elements in the list in O(n) fashion
   size_t size_slow() const {
+    // It is illegal to call this if the user requested constant order size
+    // operations.
+    static_assert(
+        ListSizeOrder == SizeOrder::N,
+        "size_slow is only allowed when using a list which has O(N) size!  Use size() instead.");
+
     size_t size = 0;
 
     for (auto iter = cbegin(); iter != cend(); ++iter)
       size++;
 
     return size;
+  }
+
+  // size : Only allowed when the user has selected an SizeOrder::Constant for this list.
+  size_t size() const {
+    static_assert(
+        ListSizeOrder == SizeOrder::Constant,
+        "size is only allowed when using a list which has O(1) size!  Use size_slow() instead.");
+    return this->SizeTrackerCount();
   }
 
   // erase_if
@@ -646,7 +674,7 @@ class SinglyLinkedList {
     }
 
    private:
-    friend class SinglyLinkedList<T, NodeTraits_, TagType>;
+    friend class SinglyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
 
     explicit iterator_impl(typename IterTraits::RawPtrType node)
         : node_(const_cast<typename PtrTraits::RawPtrType>(node)) {}
@@ -672,7 +700,8 @@ class SinglyLinkedList {
   friend CheckerType;
 
   // move semantics only
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SinglyLinkedList);
+  SinglyLinkedList(const SinglyLinkedList&) = delete;
+  SinglyLinkedList& operator=(const SinglyLinkedList&) = delete;
 
   // Note: the sentinel value we use for singly linked list is a bit different
   // from the sentinel value we use for everything else.  Instead of being the
@@ -694,6 +723,13 @@ class SinglyLinkedList {
   RawPtrType head_ = sentinel();
 };
 
+// SizedSinglyLinkedList<> is an alias for a SinglyLinkedList<> which keeps
+// track of it's size internally so that it may be accessed in O(1) time.
+//
+template <typename T, typename NodeTraits = DefaultSinglyLinkedListTraits<T>,
+          typename TagType = DefaultObjectTag>
+using SizedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+
 // TaggedSinglyLinkedList<> is intended for use with ContainableBaseClasses<>.
 //
 // For an easy way to allow instances of your class to live in multiple
@@ -706,17 +742,13 @@ class SinglyLinkedList {
 // for more details.
 //
 template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
-using TaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType>;
+using TaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
 
-// Explicit declaration of constexpr storage.
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderErase;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderSize;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::IsAssociative;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool SinglyLinkedList<T, NodeTraits, TagType>::IsSequenced;
+// SizedTaggedSinglyLinkedList<> is a variant of TaggedSinglyLinkedList which
+// also specifies O(1) access size().
+//
+template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
+using SizedTaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
 
 }  // namespace fbl
 

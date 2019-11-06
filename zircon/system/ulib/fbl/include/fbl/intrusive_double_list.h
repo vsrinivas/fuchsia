@@ -62,7 +62,7 @@ struct DoublyLinkedListNodeState {
   bool InContainer() const { return (next_ != nullptr); }
 
  private:
-  template <typename, typename, typename>
+  template <typename, typename, typename, SizeOrder>
   friend class DoublyLinkedList;
   template <typename>
   friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
@@ -108,8 +108,8 @@ struct DoublyLinkedListable {
 };
 
 template <typename T, typename NodeTraits_ = DefaultDoublyLinkedListTraits<T>,
-          typename TagType_ = DefaultObjectTag>
-class DoublyLinkedList {
+          typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
+class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>
@@ -122,6 +122,7 @@ class DoublyLinkedList {
 
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
+  static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
   using PtrTraits = internal::ContainerPtrTraits<T>;
   using NodeTraits = AddGenericNodeState<NodeTraits_>;
   using NodeState = DoublyLinkedListNodeState<T>;
@@ -131,7 +132,7 @@ class DoublyLinkedList {
   using ValueType = typename PtrTraits::ValueType;
   using TagType = TagType_;
   using CheckerType = ::fbl::tests::intrusive_containers::DoublyLinkedListChecker;
-  using ContainerType = DoublyLinkedList<T, NodeTraits_, TagType>;
+  using ContainerType = DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
 
   // Declarations of the standard iterator types.
   using iterator = iterator_impl<iterator_traits>;
@@ -140,7 +141,7 @@ class DoublyLinkedList {
   // Doubly linked lists support constant order erase (erase using an iterator
   // or direct object reference).
   static constexpr bool SupportsConstantOrderErase = true;
-  static constexpr bool SupportsConstantOrderSize = false;
+  static constexpr bool SupportsConstantOrderSize = (ListSizeOrder == SizeOrder::Constant);
   static constexpr bool IsAssociative = false;
   static constexpr bool IsSequenced = true;
 
@@ -150,7 +151,7 @@ class DoublyLinkedList {
   // Rvalue construction is permitted, but will result in the move of the list
   // contents from one instance of the list to the other (even for unmanaged
   // pointers)
-  DoublyLinkedList(DoublyLinkedList<T, NodeTraits_, TagType>&& other_list) { swap(other_list); }
+  DoublyLinkedList(DoublyLinkedList&& other_list) noexcept { swap(other_list); }
 
   // Rvalue assignment is permitted for managed lists, and when the target is
   // an empty list of unmanaged pointers.  Like Rvalue construction, it will
@@ -168,8 +169,14 @@ class DoublyLinkedList {
     // It is considered an error to allow a list of unmanaged pointers to
     // destruct if there are still elements in it.  Managed pointer lists
     // will automatically release their references to their elements.
-    ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
-    clear();
+    if (PtrTraits::IsManaged == false) {
+      ZX_DEBUG_ASSERT(is_empty());
+      if constexpr (SupportsConstantOrderSize) {
+        ZX_DEBUG_ASSERT(this->SizeTrackerCount() == 0);
+      }
+    } else {
+      clear();
+    }
   }
 
   // Standard begin/end, cbegin/cend iterator accessors.
@@ -278,6 +285,14 @@ class DoublyLinkedList {
     // Mark the other list as being empty now by replacing its head pointer
     // with its sentinel value.
     other_list.head_ = other_list.sentinel();
+
+    // Update our count bookkeeping.  Note: don't attempt to access
+    // SizeTrackerCount() unless we are a list which supports constant order
+    // size.  The method will not exist when we have O(N) access to our size.
+    if constexpr (ListSizeOrder == SizeOrder::Constant) {
+      this->IncSizeTracker(other_list.SizeTrackerCount());
+      other_list.ResetSizeTracker();
+    }
   }
 
   // insert_after : Insert an element after iter in the list.
@@ -347,6 +362,9 @@ class DoublyLinkedList {
       head_ns.next_ = nullptr;
       head_ns.prev_ = nullptr;
     }
+
+    // Update our count bookkeeping.
+    this->ResetSizeTracker();
   }
 
   // clear_unsafe
@@ -357,10 +375,13 @@ class DoublyLinkedList {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
     head_ = sentinel();
+
+    // Update our count bookkeeping.
+    this->ResetSizeTracker();
   }
 
   // swap : swaps the contest of two lists.
-  void swap(DoublyLinkedList<T, NodeTraits_, TagType>& other) {
+  void swap(DoublyLinkedList& other) {
     internal::Swap(head_, other.head_);
 
     RawPtrType& sentinel_ptr = is_empty() ? head_ : NodeTraits::node_state(*tail()).next_;
@@ -369,10 +390,17 @@ class DoublyLinkedList {
 
     sentinel_ptr = sentinel();
     other_sentinel_ptr = other.sentinel();
+    this->SwapSizeTracker(other);
   }
 
-  // size_slow : count the elements in the list in O(n) fashion
+  // size_slow : count the elements in the list in O(n) fashion.
   size_t size_slow() const {
+    // It is illegal to call this if the user requested constant order size
+    // operations.
+    static_assert(
+        ListSizeOrder == SizeOrder::N,
+        "size_slow is only allowed when using a list which has O(N) size!  Use size() instead.");
+
     size_t size = 0;
 
     for (auto iter = cbegin(); iter != cend(); ++iter) {
@@ -380,6 +408,14 @@ class DoublyLinkedList {
     }
 
     return size;
+  }
+
+  // size : Only allowed when the user has selected an SizeOrder::Constant for this list.
+  size_t size() const {
+    static_assert(
+        ListSizeOrder == SizeOrder::Constant,
+        "size is only allowed when using a list which has O(1) size!  Use size_slow() instead.");
+    return this->SizeTrackerCount();
   }
 
   // erase_if
@@ -546,8 +582,8 @@ class DoublyLinkedList {
     }
 
    private:
-    friend class DoublyLinkedList<T, NodeTraits_, TagType>;
-    using ListPtrType = const DoublyLinkedList<T, NodeTraits_, TagType>*;
+    friend class DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
+    using ListPtrType = const DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>*;
 
     iterator_impl(const typename PtrTraits::RawPtrType node)
         : node_(const_cast<typename PtrTraits::RawPtrType>(node)) {}
@@ -573,7 +609,8 @@ class DoublyLinkedList {
   friend CheckerType;
 
   // move semantics only
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(DoublyLinkedList);
+  DoublyLinkedList(const DoublyLinkedList&) = delete;
+  DoublyLinkedList& operator=(const DoublyLinkedList&) = delete;
 
   constexpr RawPtrType sentinel() const { return internal::make_sentinel<RawPtrType>(this); }
 
@@ -584,6 +621,9 @@ class DoublyLinkedList {
 
     auto& ptr_ns = NodeTraits::node_state(*ptr);
     ZX_DEBUG_ASSERT((ptr_ns.prev_ == nullptr) && (ptr_ns.next_ == nullptr));
+
+    // No matter what happens, we are going to be 1 larger after this operation.
+    this->IncSizeTracker(1);
 
     // Handle the (slightly) special case of an empty list.
     if (is_empty()) {
@@ -624,6 +664,9 @@ class DoublyLinkedList {
   PtrType internal_erase(RawPtrType node) {
     if (!node || internal::is_sentinel_ptr(node))
       return PtrType(nullptr);
+
+    // No matter what happens after this, we are going to be 1 smaller after this operation.
+    this->DecSizeTracker(1);
 
     auto& node_ns = NodeTraits::node_state(*node);
     ZX_DEBUG_ASSERT((node_ns.prev_ != nullptr) && (node_ns.next_ != nullptr));
@@ -705,6 +748,13 @@ class DoublyLinkedList {
   RawPtrType head_ = sentinel();
 };
 
+// SizedDoublyLinkedList<> is an alias for a DoublyLinkedList<> which keeps
+// track of it's size internally so that it may be accessed in O(1) time.
+//
+template <typename T, typename NodeTraits = DefaultDoublyLinkedListTraits<T>,
+          typename TagType = DefaultObjectTag>
+using SizedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+
 // TaggedDoublyLinkedList<> is intended for use with ContainableBaseClasses<>.
 //
 // For an easy way to allow instances of your class to live in multiple
@@ -717,17 +767,13 @@ class DoublyLinkedList {
 // for more details.
 //
 template <typename T, typename TagType, typename NodeTraits = DefaultDoublyLinkedListTraits<T>>
-using TaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType>;
+using TaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
 
-// Explicit declaration of constexpr storage.
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool DoublyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderErase;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool DoublyLinkedList<T, NodeTraits, TagType>::SupportsConstantOrderSize;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool DoublyLinkedList<T, NodeTraits, TagType>::IsAssociative;
-template <typename T, typename NodeTraits, typename TagType>
-constexpr bool DoublyLinkedList<T, NodeTraits, TagType>::IsSequenced;
+// SizedTaggedDoublyLinkedList<> is a variant of TaggedDoublyLinkedList which
+// also specifies O(1) access size().
+//
+template <typename T, typename TagType, typename NodeTraits = DefaultDoublyLinkedListTraits<T>>
+using SizedTaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
 
 }  // namespace fbl
 

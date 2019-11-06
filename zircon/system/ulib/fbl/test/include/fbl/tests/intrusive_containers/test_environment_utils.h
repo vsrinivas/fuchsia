@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_ENVIRONMENT_UTILS_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_ENVIRONMENT_UTILS_H_
 
 #include <type_traits>
 #include <utility>
+
+#include <fbl/auto_call.h>
 
 namespace fbl {
 namespace tests {
@@ -58,6 +61,26 @@ struct SizeUtils<
   static size_t size(const ContainerType& container) { return container.size_slow(); }
 };
 
+// If we make containers other than |container_| during a test, it is
+// important to make sure that the container is properly cleared if it is a
+// container of unmanaged pointers.  Containers of unmanaged pointers will
+// DEBUG_ASSERT if they go out of scope with elements still in them, and the
+// RAII nature of the testing framework means that if the test fails because
+// of a test assert, it will simply return immediately.
+//
+// So, add a utility function which makes it simple to create an auto call
+// which will handle the cleanup task for us.
+template <typename ContainerType>
+auto MakeContainerAutoCleanup([[maybe_unused]] ContainerType* container) {
+  if constexpr (!ContainerType::PtrTraits::IsManaged) {
+    return fbl::MakeAutoCall([container]() { container->clear(); });
+  } else {
+    return fbl::MakeAutoCall([]() {});
+  }
+}
+
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_ENVIRONMENT_UTILS_H_

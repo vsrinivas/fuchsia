@@ -62,6 +62,7 @@ using UMTE   = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
 using UPDDTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
+VERIFY_CONTAINER_SIZES(SLL, sizeof(void*));
 
 //////////////////////////////////////////
 // General container specific tests.

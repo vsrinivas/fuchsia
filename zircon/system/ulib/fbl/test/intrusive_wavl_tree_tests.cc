@@ -101,6 +101,7 @@ using UMTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, Unmanaged);
 using UPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, RefPtr);
+VERIFY_CONTAINER_SIZES(WAVL, sizeof(void*) * 4);
 // clang-format on
 
 // WAVLBalanceTestObserver

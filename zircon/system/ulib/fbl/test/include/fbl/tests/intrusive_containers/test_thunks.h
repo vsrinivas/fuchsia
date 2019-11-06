@@ -106,6 +106,22 @@ struct TestThunks {
 #define DEFINE_TEST_THUNK(_env_type, _container_type, _ptr_type) \
   TestThunks<_env_type##ContainerTestEnvironment<_ptr_type##_container_type##TestTraits>>
 
+// Create containers for the various flavors of pointers, and statically assert
+// that their sizes are what we expect.  Most of the intrusive containers are
+// structured to have a known size, and we don't want to run the risk that
+// adding something like an instance of an empty trait class
+// changes that size unexpectedly.
+#define VERIFY_CONTAINER_SIZE(_container_type, _ptr_type, _expected_size)                          \
+  static_assert(sizeof(_ptr_type##_container_type##TestTraits::ContainerType) == (_expected_size), \
+                "Container \"" #_ptr_type #_container_type                                         \
+                "\" has unexpected size!  It should be exactly \"" #_expected_size "\"")
+
+#define VERIFY_CONTAINER_SIZES(_container_type, _expected_size)                    \
+  VERIFY_CONTAINER_SIZE(_container_type, Unmanaged, _expected_size);               \
+  VERIFY_CONTAINER_SIZE(_container_type, UniquePtrDefaultDeleter, _expected_size); \
+  VERIFY_CONTAINER_SIZE(_container_type, UniquePtrCustomDeleter, _expected_size);  \
+  VERIFY_CONTAINER_SIZE(_container_type, RefPtr, _expected_size)
+
 #define RUN_ZXTEST(_group, _flavor, _test) \
   TEST(_group, _test##_##_flavor) {        \
     auto fn = _flavor ::_test;             \

@@ -7,8 +7,8 @@
 
 #include <utility>
 
+#include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fbl/tests/intrusive_containers/objects.h>
 #include <fbl/tests/intrusive_containers/test_environment_utils.h>
 #include <zxtest/zxtest.h>
@@ -210,7 +210,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
   virtual void Populate(ContainerType& container, RefAction ref_action = RefAction::HoldSome) = 0;
 
   void Reset() {
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ContainerChecker::SanityCheck(container());
     container().clear();
     ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
 
@@ -679,7 +679,9 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
 
   void Swap() {
     {
-      ContainerType other_container;              // Make an empty container.
+      ContainerType other_container;  // Make an empty container.
+      auto cleanup_other = MakeContainerAutoCleanup(&other_container);
+
       ASSERT_NO_FAILURES(Populate(container()));  // Fill the internal container with stuff.
 
       // Sanity check, swap, then check again.
@@ -739,7 +741,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     // Make a new other_container, this time with some stuff in it.
     EXPECT_EQ(0u, ObjType::live_obj_count());
     {
-      ContainerType other_container;              // Make an empty container.
+      ContainerType other_container;  // Make an empty container.
+      auto cleanup_other = MakeContainerAutoCleanup(&other_container);
       ASSERT_NO_FAILURES(Populate(container()));  // Fill the internal container with stuff.
 
       static constexpr size_t OTHER_COUNT = 5;
@@ -858,6 +861,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
 #else
     ContainerType other_container(std::move(container()));
 #endif
+    auto cleanup_other = MakeContainerAutoCleanup(&other_container);
+
     EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
     EXPECT_EQ(OBJ_COUNT, Size(other_container));
     EXPECT_TRUE(container().is_empty());
@@ -878,6 +883,8 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
 #else
     ContainerType another_container = std::move(other_container);
 #endif
+    auto cleanup_another = MakeContainerAutoCleanup(&another_container);
+
     EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
     EXPECT_EQ(OBJ_COUNT, Size(another_container));
     EXPECT_TRUE(other_container.is_empty());
@@ -955,6 +962,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
 
     {  // Begin scope for container
       ContainerType container;
+      auto cleanup_container = MakeContainerAutoCleanup(&container);
 
       // Put some stuff into the container.  Don't hold any internal
       // references to anything we add.
@@ -977,6 +985,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     // Create the other type of container that ObjType can exist on and populate
     // it using the default operation for the container type.
     OtherContainerType other_container;
+    auto cleanup_other = MakeContainerAutoCleanup(&other_container);
     for (auto iter = container().begin(); iter != container().end(); ++iter) {
       ContainerUtils<OtherContainerType>::MoveInto(other_container, std::move(iter.CopyPointer()));
     }
