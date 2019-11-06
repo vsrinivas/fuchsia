@@ -9,10 +9,10 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
-#include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/bin/root_presenter/renderer_params.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

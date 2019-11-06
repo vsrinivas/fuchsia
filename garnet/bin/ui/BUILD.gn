@@ -10,13 +10,12 @@ import("//src/lib/vulkan/layers.gni")
 group("ui") {
   testonly = true
   deps = [
-    ":root_presenter",
     ":scenic_tests",
     "benchmarks",
-    "root_presenter",
     "tests",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/ime:ime_test",
+    "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
     "//src/ui/tools:gltf_export",
     "//src/ui/tools:input",
@@ -30,7 +29,7 @@ group("ui") {
 
 test_package("scenic_tests") {
   deps = [
-    "root_presenter/tests",
+    "//src/ui/bin/root_presenter/tests",
     "//src/ui/lib/input_reader/tests",
     "//src/ui/scenic/lib/display/tests",
     "//src/ui/scenic/lib/flatland/tests",
@@ -103,30 +102,4 @@ test_package("scenic_tests") {
   public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
-}
-
-package("root_presenter") {
-  deps = [
-    "root_presenter",
-  ]
-
-  binaries = [
-    {
-      name = "root_presenter"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("root_presenter/resources/cursor32.png")
-      dest = "cursor32.png"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("root_presenter/meta/root_presenter.cmx")
-      dest = "root_presenter.cmx"
-    },
-  ]
 }

@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":root_presenter_tests",
+  ]
+}
+
+executable("root_presenter_tests") {
+  output_name = "root_presenter_tests"
+
+  testonly = true
+
+  sources = [
+    "a11y_settings_watcher_unittest.cc",
+    "accessibility_pointer_event_registry_test.cc",
+    "activity_notifier_test.cc",
+    "display_configuration_unittest.cc",
+    "factory_reset_manager_test.cc",
+    "input_util_unittest.cc",
+    "media_buttons_handler_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/lib/settings",
+    "//src/ui/bin/root_presenter:accessibility",
+    "//src/ui/bin/root_presenter:displays",
+    "//src/ui/bin/root_presenter:factory_reset_manager",
+    "//src/ui/bin/root_presenter:key_util",
+    "//src/ui/bin/root_presenter:lib",
+    "//src/ui/bin/root_presenter/tests/fakes",
+    "//src/ui/testing:mock_input_device",
+  ]
+}
