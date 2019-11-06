@@ -36,7 +36,7 @@ zx_status_t sys_clock_create(uint64_t options, user_in_ptr<const void> user_args
     // Extract the user args from the v1 structure.  They will be sanity checked
     // during the dispatcher's static Create
     case 1:
-      result = user_args.copy_array_from_user(&args, sizeof(args));
+      result = user_args.reinterpret<const zx_clock_create_args_v1_t>().copy_from_user(&args);
       if (result != ZX_OK) {
         return result;
       }
