@@ -121,7 +121,7 @@ using GuestTypes = ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest>;
 
 TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
 
-TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
+TYPED_TEST(VsockGuestTest, DISABLED_ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
 
   std::string result;
