@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -15,7 +16,12 @@ import 'package:ermine_library/src/widgets/ask/ask.dart';
 void main() {
   testWidgets('Create Ask Widget', (tester) async {
     final suggestionService = MockSuggestionService();
-    final widget = TestApp(child: Ask(suggestionService: suggestionService));
+    final puppetMaster = MockPuppetMaster();
+    final widget = TestApp(
+        child: Ask(
+      suggestionService: suggestionService,
+      puppetMaster: puppetMaster,
+    ));
     await tester.pumpWidget(widget);
 
     final hintFinder = find.text('TYPE TO ASK');
@@ -24,7 +30,12 @@ void main() {
 
   testWidgets('Hide hint text on typing', (tester) async {
     final suggestionService = MockSuggestionService();
-    final widget = TestApp(child: Ask(suggestionService: suggestionService));
+    final puppetMaster = MockPuppetMaster();
+    final widget = TestApp(
+        child: Ask(
+      suggestionService: suggestionService,
+      puppetMaster: puppetMaster,
+    ));
     await tester.pumpWidget(widget);
 
     final textFieldFinder = find.byType(TextField);
@@ -37,9 +48,14 @@ void main() {
 
   testWidgets('Displays suggestions', (tester) async {
     final suggestionService = MockSuggestionService();
+    final puppetMaster = MockPuppetMaster();
     final key = GlobalKey<AskState>();
     final widget = TestApp(
-      child: Ask(key: key, suggestionService: suggestionService),
+      child: Ask(
+        key: key,
+        suggestionService: suggestionService,
+        puppetMaster: puppetMaster,
+      ),
     );
     await tester.pumpWidget(widget);
 
@@ -83,3 +99,5 @@ class MockSuggestionService extends Mock implements SuggestionService {
             ]
           : [];
 }
+
+class MockPuppetMaster extends Mock implements modular.PuppetMaster {}

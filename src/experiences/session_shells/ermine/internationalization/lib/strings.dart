@@ -263,6 +263,12 @@ class Strings {
         examples: const {'numThreads': 42},
       );
 
+  static String openPackage(String packageName) => Intl.message(
+        'open $packageName',
+        name: 'open package',
+        desc: 'Open an application with supplied package name',
+      );
+
   static String get name => Intl.message(
         'Name',
         name: 'name',

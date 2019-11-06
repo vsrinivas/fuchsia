@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
@@ -17,6 +18,7 @@ import 'package:ermine_library/src/utils/suggestions.dart';
 void main() {
   ValueNotifier<bool> visibility;
   MockSuggestionService suggestionService;
+  MockPuppetMaster puppetMaster = MockPuppetMaster();
   AskModel model;
   Completer suggestionsCompleter;
   Completer selectionCompleter;
@@ -32,6 +34,7 @@ void main() {
     model = AskModel(
       onDismiss: onDismiss,
       suggestionService: suggestionService,
+      puppetMaster: puppetMaster,
     );
     model.suggestions.addListener(() => suggestionsCompleter.complete());
     model.selection.addListener(() => selectionCompleter.complete());
@@ -70,7 +73,7 @@ void main() {
     model.query('');
 
     await suggestionsCompleter.future;
-    expect(model.suggestions.value.length, 0);
+    expect(model.suggestions.value.length, AskModel.builtInSuggestions.length);
   });
 
   test('Navigate Suggestions', () async {
@@ -110,3 +113,5 @@ void main() {
 
 // Mock classes.
 class MockSuggestionService extends Mock implements SuggestionService {}
+
+class MockPuppetMaster extends Mock implements modular.PuppetMaster {}

@@ -33,6 +33,7 @@ class AskContainer extends StatelessWidget {
         child: Ask(
           key: model.askKey,
           suggestionService: model.suggestions,
+          puppetMaster: model.puppetMaster,
           onDismiss: () => model.askVisibility.value = false,
         ),
       ),

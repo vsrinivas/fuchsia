@@ -66,6 +66,7 @@ class Overview extends StatelessWidget {
                     ),
                     child: Ask(
                       suggestionService: model.suggestions,
+                      puppetMaster: model.puppetMaster,
                       onDismiss: () => model.overviewVisibility.value = false,
                       unbounded: true,
                     ),

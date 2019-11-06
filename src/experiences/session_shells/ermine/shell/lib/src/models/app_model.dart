@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
     show SuggestionsProxy;
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
@@ -31,6 +32,7 @@ import 'topbar_model.dart';
 class AppModel {
   final _pointerEventsListener = PointerEventsListener();
   final _suggestionsService = SuggestionsProxy();
+  final _puppetMaster = modular.PuppetMasterProxy();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
 
   SessionShell sessionShell;
@@ -61,6 +63,8 @@ class AppModel {
         .incoming
         .connectToService(_suggestionsService);
 
+    StartupContext.fromStartupInfo().incoming.connectToService(_puppetMaster);
+
     StartupContext.fromStartupInfo()
         .incoming
         .connectToService(_shortcutRegistry);
@@ -86,6 +90,8 @@ class AppModel {
   }
 
   SuggestionService get suggestions => SuggestionService(_suggestionsService);
+
+  modular.PuppetMaster get puppetMaster => _puppetMaster;
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
 
@@ -236,6 +242,7 @@ class AppModel {
     _pointerEventsListener.stop();
 
     _suggestionsService.ctrl.close();
+    _puppetMaster.ctrl.close();
     status.dispose();
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();

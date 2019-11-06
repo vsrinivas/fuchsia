@@ -4,9 +4,11 @@
 
 import 'dart:async';
 
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
+import 'package:internationalization/strings.dart';
 
 import '../utils/styles.dart';
 import '../utils/suggestions.dart';
@@ -41,14 +43,42 @@ class AskModel extends ChangeNotifier {
   static const int kPageUp = 75;
 
   final SuggestionService _suggestionService;
+  final modular.PuppetMaster _puppetMaster;
   String _currentQuery;
   StreamSubscription<Iterable<Suggestion>> _suggestionStream;
+
+  // List of built-in suggestions show when ask box is empty.
+  static final List<Suggestion> builtInSuggestions = <Suggestion>[
+    Suggestion(
+      id: 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
+      displayInfo: DisplayInfo(
+        title: Strings.openPackage('simple_browser'),
+        subtitle: 'simple_browser',
+      ),
+    ),
+    Suggestion(
+      id: 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
+      displayInfo: DisplayInfo(
+        title: Strings.openPackage('terminal'),
+        subtitle: 'terminal',
+      ),
+    ),
+    Suggestion(
+      id: 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
+      displayInfo: DisplayInfo(
+        title: Strings.openPackage('settings'),
+        subtitle: 'settings',
+      ),
+    ),
+  ];
 
   /// Constructor.
   AskModel({
     @required SuggestionService suggestionService,
+    @required modular.PuppetMaster puppetMaster,
     this.onDismiss,
-  }) : _suggestionService = suggestionService;
+  })  : _suggestionService = suggestionService,
+        _puppetMaster = puppetMaster;
 
   @override
   void dispose() {
@@ -76,10 +106,11 @@ class AskModel extends ChangeNotifier {
         _removeItem(index);
       }
 
-      suggestions.value = result.toList();
+      suggestions.value =
+          result.isNotEmpty ? result.toList() : builtInSuggestions;
 
       // Insert the suggestion in [AnimatedListState].
-      for (int index = 0; index < result.length; index++) {
+      for (int index = 0; index < suggestions.value.length; index++) {
         _insertItem(index);
       }
 
@@ -153,7 +184,28 @@ class AskModel extends ChangeNotifier {
 
   /// Called when a suggestion was tapped/clicked by the user.
   void handleSuggestion(Suggestion suggestion) {
-    _suggestionService.invokeSuggestion(suggestion);
+    if (suggestion.id.startsWith('fuchsia-pkg')) {
+      _launchBuiltInSuggestion(suggestion);
+    } else {
+      _suggestionService.invokeSuggestion(suggestion);
+    }
+  }
+
+  void _launchBuiltInSuggestion(Suggestion suggestion) {
+    final storyMaster = modular.StoryPuppetMasterProxy();
+    _puppetMaster.controlStory(
+      suggestion.displayInfo.subtitle,
+      storyMaster.ctrl.request(),
+    );
+    final addMod = modular.AddMod(
+      intent: modular.Intent(action: '', handler: suggestion.id),
+      surfaceParentModName: [],
+      modName: ['root'],
+      surfaceRelation: modular.SurfaceRelation(),
+    );
+    storyMaster
+      ..enqueue([modular.StoryCommand.withAddMod(addMod)])
+      ..execute();
   }
 
   void _insertItem(int index) {
