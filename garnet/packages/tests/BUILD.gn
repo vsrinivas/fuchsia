@@ -92,8 +92,6 @@ group("scenic") {
     "//garnet/bin/ui/tests/performance:benchmark_tests",
     "//garnet/bin/ui/tests/performance:scenic_benchmarks",
     "//garnet/bin/ui/tests/performance:vulkan_is_supported",
-    "//garnet/bin/ui/text/test_suite:text_test_suite",
-    "//garnet/bin/ui/text/test_suite:text_test_suite_tests",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/prod:scenic",
     "//src/ui/bin/default_hardware_ime:default_hardware_ime",
@@ -102,6 +100,8 @@ group("scenic") {
     "//src/ui/bin/shortcut:tests",
     "//src/ui/scenic/lib/gfx/tests:mock_pose_buffer_provider",
     "//src/ui/scenic/lib/gfx/tests/rotated_square_test",
+    "//src/ui/testing/text:text_test_suite",
+    "//src/ui/testing/text:text_test_suite_tests",
   ]
 }
 

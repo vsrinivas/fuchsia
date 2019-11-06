@@ -24,7 +24,6 @@ group("ui") {
     "set_renderer_params_HACK",
     "snapshot",
     "tests",
-    "text",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/ime:ime_test",
     "//src/ui/scenic",

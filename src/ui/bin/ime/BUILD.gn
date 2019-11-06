@@ -83,7 +83,7 @@ package("ime_service") {
 test_package("ime_test") {
   deps = [
     ":bin_test",
-    "//garnet/bin/ui/text/test_suite:test_suite",
+    "//src/ui/testing/text:test_suite",
   ]
 
   tests = [

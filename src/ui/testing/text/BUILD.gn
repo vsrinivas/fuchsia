@@ -8,6 +8,7 @@ import("//build/test/test_package.gni")
 
 rustc_binary("test_suite") {
   name = "text_test_suite"
+  testonly = true
   with_unit_tests = true
   edition = "2018"
 
@@ -32,6 +33,8 @@ rustc_binary("test_suite") {
 }
 
 package("text_test_suite") {
+  testonly = true
+
   deps = [
     ":test_suite",
   ]

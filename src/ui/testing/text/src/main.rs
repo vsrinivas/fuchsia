@@ -59,8 +59,9 @@ fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
                 txt_testing::TextFieldTestSuiteRequest::RunTest { field, test_id, responder } => {
                     let res = run_test(
                         field.into_proxy().expect("failed to convert ClientEnd to proxy"),
-                        test_id
-                    ).await;
+                        test_id,
+                    )
+                    .await;
                     let (ok, message) = match res {
                         Ok(()) => (true, format!("passed")),
                         Err(e) => (false, e),

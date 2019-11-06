@@ -19,6 +19,7 @@ group("tests") {
     "a11y:tests",
     "bin:tests",
     "scenic:tests",
+    "testing:tests",
     "tests",
     "tools:tests",
   ]
