@@ -45,6 +45,7 @@ group("tests") {
   deps = [
     ":zircon_host_tests",
     "camera:tests",
+    "chromium:tests",
     "cobalt:tests",
     "connectivity:tests",
     "developer:tests",

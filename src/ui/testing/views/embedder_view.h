@@ -23,7 +23,8 @@ class EmbedderView : public fuchsia::ui::scenic::SessionListener {
   // Sets the EmbeddedViewInfo and attaches the embedded View to the scene. Any
   // callbacks for the embedded View's ViewState are delivered to the supplied
   // callback.
-  void EmbedView(EmbeddedViewInfo info, std::function<void(fuchsia::ui::gfx::ViewState)> callback);
+  void EmbedView(EmbeddedViewInfo info,
+                 std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback);
 
  private:
   // |fuchsia::ui::scenic::SessionListener|

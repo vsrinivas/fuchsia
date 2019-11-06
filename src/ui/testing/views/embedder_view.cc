@@ -27,11 +27,13 @@ EmbedderView::EmbedderView(ViewContext context, const std::string& debug_name)
 // Sets the EmbeddedViewInfo and attaches the embedded View to the scene. Any
 // callbacks for the embedded View's ViewState are delivered to the supplied
 // callback.
-void EmbedderView::EmbedView(EmbeddedViewInfo info,
-                             std::function<void(fuchsia::ui::gfx::ViewState)> callback) {
+void EmbedderView::EmbedView(
+    EmbeddedViewInfo info,
+    std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback) {
   // Only one EmbeddedView is currently supported.
   FXL_CHECK(!embedded_view_);
-  embedded_view_ = std::make_unique<EmbeddedView>(std::move(info), &session_, std::move(callback));
+  embedded_view_ = std::make_unique<EmbeddedView>(std::move(info), &session_,
+                                                  std::move(view_state_changed_callback));
 
   // Attach the embedded view to the scene.
   top_node_.Attach(embedded_view_->view_holder);

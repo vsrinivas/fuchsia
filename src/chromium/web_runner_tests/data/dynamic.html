@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dynamic test page</title>
+    <style>
+      body { background-color: #ff00ff }
+      input { width: 100%; font-size: 25vh }
+    </style>
+    <script type="text/javascript">
+      function handleInput(e) {
+        document.body.style.backgroundColor = e.target.value;
+      }
+    </script>
+  </head>
+  <body>
+    <input type="text" oninput="handleInput(event)">
+  </body>
+</html>

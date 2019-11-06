@@ -1,0 +1,135 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("web_context") {
+  testonly = true
+
+  sources = [
+    "web_context.cc",
+    "web_context.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/sys/cpp",
+  ]
+}
+
+source_set("test_server") {
+  testonly = true
+
+  sources = [
+    "test_server.cc",
+    "test_server.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+# TODO(fxb/40163): Remove the "2" suffix once we remove this test from topaz.
+executable("web_runner_integration_tests2") {
+  testonly = true
+
+  sources = [
+    "web_runner_integration_tests.cc",
+  ]
+
+  deps = [
+    ":test_server",
+    ":web_context",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+executable("web_runner_pixel_tests2") {
+  testonly = true
+
+  sources = [
+    "web_runner_pixel_tests.cc",
+  ]
+
+  deps = [
+    ":test_server",
+    ":web_context",
+    "//garnet/public/lib/gtest",
+    "//src/ui/testing/views",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+    "//src/lib/ui/base_view",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+# TODO(fxb/40163): Remove the "2" suffix once we remove this test from topaz.
+test_package("web_runner_tests2") {
+  deps = [
+    ":web_runner_integration_tests2",
+    ":web_runner_pixel_tests2",
+  ]
+
+  tests = [
+    {
+      name = "web_runner_integration_tests2"
+      manifest = rebase_path("meta/web_runner_integration_tests.cmx")
+
+      # FLK-148
+      # environments = basic_envs
+      # This does not seem to flake on NUCs.
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+    {
+      name = "web_runner_pixel_tests2"
+      manifest = rebase_path("meta/web_runner_pixel_tests.cmx")
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("data/dynamic.html")
+      dest = "dynamic.html"
+    },
+    {
+      path = rebase_path("data/static.html")
+      dest = "static.html"
+    },
+  ]
+}

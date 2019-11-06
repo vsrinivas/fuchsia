@@ -29,6 +29,7 @@ source_set("base_view") {
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
   ]
 
   deps = [
