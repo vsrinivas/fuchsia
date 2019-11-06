@@ -45,14 +45,14 @@ func (e *BridgeableEndpoint) Dispatcher() stack.NetworkDispatcher {
 	return e.dispatcher
 }
 
-func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, dst tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, dst tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
 	e.mu.RLock()
 	b := e.mu.bridge
 	e.mu.RUnlock()
 
 	if b != nil {
-		b.DeliverNetworkPacket(ep, src, dst, p, vv)
+		b.DeliverNetworkPacket(ep, src, dst, p, vv, linkHeader)
 	} else {
-		e.dispatcher.DeliverNetworkPacket(ep, src, dst, p, vv)
+		e.dispatcher.DeliverNetworkPacket(ep, src, dst, p, vv, linkHeader)
 	}
 }

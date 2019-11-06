@@ -76,6 +76,43 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 	return nil
 }
 
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	var n int
+	for _, hdr := range hdrs {
+		if err := e.WritePacket(r, gso, hdr.Hdr, payload, protocol); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
+func (e *endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {
+	var buf Buffer
+	for {
+		if buf = e.client.AllocForSend(); buf != nil {
+			break
+		}
+		if err := e.client.WaitSend(); err != nil {
+			syslog.VLogTf(syslog.DebugVerbosity, "eth", "wait error: %s", err)
+			return tcpip.ErrWouldBlock
+		}
+	}
+
+	used := 0
+	for _, v := range packet.Views() {
+		used += copy(buf[used:], v)
+	}
+	if err := e.client.Send(buf[:used]); err != nil {
+		syslog.VLogTf(syslog.DebugVerbosity, "eth", "send error: %s", err)
+		return tcpip.ErrWouldBlock
+	}
+
+	syslog.VLogTf(syslog.TraceVerbosity, "eth", "write=%d", used)
+
+	return nil
+}
+
 func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.wg.Add(1)
 	go func() {
@@ -95,9 +132,16 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 				v := append(buffer.View(nil), b...)
 				e.client.Free(b)
-				eth := header.Ethernet(v)
+
+				// Make sure we can get an ethernet header.
+				if len(v) < header.EthernetMinimumSize {
+					continue
+				}
+				linkHeader := v[:header.EthernetMinimumSize]
 				v.TrimFront(header.EthernetMinimumSize)
-				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
+
+				eth := header.Ethernet(linkHeader)
+				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView(), linkHeader)
 			}
 		}(); err != nil {
 			syslog.WarnTf("eth", "dispatch error: %s", err)

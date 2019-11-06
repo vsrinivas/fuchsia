@@ -197,6 +197,32 @@ func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prepe
 	return nil
 }
 
+// WritePackets returns the number of packets in hdrs that were successfully
+// written to all links.
+func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	n := len(hdrs)
+	for _, l := range ep.links {
+		i, err := l.WritePackets(r, gso, hdrs, payload, protocol)
+		if err != nil {
+			return 0, err
+		}
+
+		if i < n {
+			n = i
+		}
+	}
+	return n, nil
+}
+
+func (ep *Endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {
+	for _, l := range ep.links {
+		if err := l.WriteRawPacket(packet); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 	ep.dispatcher = d
 }
@@ -205,18 +231,18 @@ func (ep *Endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
 	broadcast := false
 
 	switch dstLinkAddr {
 	case tcpip.LinkAddress([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}):
 		broadcast = true
 	case ep.linkAddress:
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv)
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
 		return
 	default:
 		if l, ok := ep.links[dstLinkAddr]; ok {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
 			return
 		}
 	}
@@ -225,7 +251,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if broadcast, also deliver to ep.links."
 	if broadcast {
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv)
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
 	}
 
 	payload := vv
@@ -245,7 +271,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	rxaddr := rxEP.LinkAddress()
 	for linkaddr, l := range ep.links {
 		if broadcast {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv)
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
 		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.

@@ -46,9 +46,8 @@ func (e *Endpoint) IsEnabled() bool {
 	return atomic.LoadUint32(&e.enabled) == 1
 }
 
-// DeliverNetworkPacket is called when a packet arrives at the lower endpoint.
-// It calls Run before dispatching the packet to the upper endpoint.
-func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+// DeliverNetworkPacket implements stack.NetworkDispatcher.
+func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView, linkHeader buffer.View) {
 	if atomic.LoadUint32(&e.enabled) == 1 {
 		hdr := buffer.NewPrependableFromView(vv.First())
 		payload := vv
@@ -58,22 +57,35 @@ func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, 
 			return
 		}
 	}
-	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, vv)
+	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, vv, linkHeader)
 }
 
-// Attach sets a dispatcher and call Attach on the lower endpoint.
+// Attach implements stack.LinkEndpoint.
 func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.dispatcher = dispatcher
 	e.LinkEndpoint.Attach(e)
 }
 
-// WritePacket is called when a packet arrives is written to the lower
-// endpoint. It calls Run to what to do with the packet.
+// WritePacket implements stack.LinkEndpoint.
 func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	if atomic.LoadUint32(&e.enabled) == 1 {
-		if e.filter.Run(Outgoing, protocol, hdr, payload) != Pass {
-			return nil
-		}
+	if atomic.LoadUint32(&e.enabled) == 1 && e.filter.Run(Outgoing, protocol, hdr, payload) != Pass {
+		return nil
 	}
 	return e.LinkEndpoint.WritePacket(r, gso, hdr, payload, protocol)
+}
+
+// WritePackets implements stack.LinkEndpoint.
+func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	if atomic.LoadUint32(&e.enabled) == 0 {
+		return e.LinkEndpoint.WritePackets(r, gso, hdrs, payload, protocol)
+	}
+	h := make([]stack.PacketDescriptor, 0, len(hdrs))
+	for _, hdr := range hdrs {
+		if e.filter.Run(Outgoing, protocol, hdr.Hdr, payload) != Pass {
+			continue
+		}
+		h = append(h, hdr)
+	}
+
+	return e.LinkEndpoint.WritePackets(r, gso, h, payload, protocol)
 }

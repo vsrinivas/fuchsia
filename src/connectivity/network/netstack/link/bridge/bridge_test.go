@@ -185,7 +185,7 @@ func TestBridge(t *testing.T) {
 		"s1": s1, "s2": s2, "sb": sb,
 	}
 
-	ep2.onWritePacket = func(vv buffer.VectorisedView) {
+	ep2.onWritePacket = func(vv buffer.VectorisedView, linkHeader buffer.View) {
 		if bytes.Contains(vv.ToView(), []byte(payload)) {
 			t.Errorf("did not expect payload %q to be sent back to ep1 in vv: %v", payload, vv)
 		}
@@ -336,7 +336,7 @@ type endpoint struct {
 	linkAddr      tcpip.LinkAddress
 	dispatcher    stack.NetworkDispatcher
 	linked        *endpoint
-	onWritePacket func(buffer.VectorisedView)
+	onWritePacket func(buffer.VectorisedView, buffer.View)
 }
 
 func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
@@ -349,11 +349,30 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 
 	vv := buffer.NewVectorisedView(hdr.UsedLength()+payload.Size(), append([]buffer.View{hdr.View()}, payload.Views()...))
 	// the "remote" address for `other` is our local address and vice versa
-	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, vv)
+	//
+	// We use nil as the link header parameter for DeliverNetworkPacket and
+	// onWritePacket as we pass a packet straight from e to the linked
+	// endpoint, e.linked, without creating an l2 header.
+	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, vv, nil)
 	if e.onWritePacket != nil {
-		e.onWritePacket(vv)
+		e.onWritePacket(vv, nil)
 	}
 	return nil
+}
+
+func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, hdrs []stack.PacketDescriptor, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	var n int
+	for _, hdr := range hdrs {
+		if err := e.WritePacket(r, gso, hdr.Hdr, payload, protocol); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
+func (e *endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {
+	panic("not implemented")
 }
 
 func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
