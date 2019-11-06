@@ -159,8 +159,8 @@ uint8_t sandwich3_case1_v1[] = {
     0xff, 0xff, 0xff, 0xff,  // UnionSize24Alignement8.env.presence
     0xff, 0xff, 0xff, 0xff,  // UnionSize24Alignement8.env.presence [cont.]
 
-    0x05, 0x06, 0x07, 0x08,  // Sandwich2.after
-    0x00, 0x00, 0x00, 0x00,  // Sandwich2.after (padding)
+    0x05, 0x06, 0x07, 0x08,  // Sandwich3.after
+    0x00, 0x00, 0x00, 0x00,  // Sandwich3.after (padding)
 
     0xa0, 0xa1, 0xa2, 0xa3,  // UnionSize24Alignement8.data, i.e Sandwich2.the_union.data
     0xa4, 0xa5, 0xa6, 0xa7,  // UnionSize24Alignement8.data [cont.]
@@ -438,9 +438,6 @@ uint8_t sandwich6_case2_old[] = {
     0x21, 0x00, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-// TODO(mkember): Verify this example with GIDL. Unsure whether this one needs
-// to look like case 6, i.e. due to the alignment of 1 of the struct, there is
-// no paddding in between vector elements.
 uint8_t sandwich6_case3_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
@@ -460,7 +457,6 @@ uint8_t sandwich6_case3_v1[] = {
     0xff, 0xff, 0xff, 0xff,  // vector<struct>.presence
     0xff, 0xff, 0xff, 0xff,  // vector<struct>.presence [cont.]
 
-    // TODO(mkember): This section is the one which needs to be verified.
     0x73, 0x6f, 0x66, 0x20,  // StructSize3Alignment1 (element #1 & start of element #2)
     0x6d, 0x69, 0x72, 0x61,  // StructSize3Alignment1 (element #2 [cont.] & start of element #3)
     0x74, 0x00, 0x00, 0x00,  // StructSize3Alignment1 (element #3 [cont.d])
@@ -1033,7 +1029,7 @@ uint8_t xunionwithunknownordinal_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // random data
     0x05, 0x06, 0x07, 0x08,  // random data [cont.]
     0x09, 0x0A, 0x0B, 0x0C,  // random data  0x20
-    0x0D, 0x0E, 0x0E, 0x0F,  // random data [cont.]
+    0x0D, 0x0E, 0x0F, 0x10,  // random data [cont.]
 };
 
 uint8_t arraystruct_v1[] = {

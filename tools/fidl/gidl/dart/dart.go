@@ -304,7 +304,7 @@ func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 		}
 		fieldDecl, _ := decl.ForKey(field.Key)
 		val := visit(field.Value, fieldDecl)
-		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Key.Name), val)
+		return fmt.Sprintf("%s.with%s(%s)", value.Name, fidlcommon.ToUpperCamelCase(field.Key.Name), val)
 	}
 	// Not currently possible to construct a union/xunion in dart with an invalid value.
 	panic("unions must have a value set")

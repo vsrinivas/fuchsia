@@ -20,6 +20,7 @@ fidl("conformance_fidl") {
     "//tools/fidl/gidl-conformance-suite/strings.test.fidl",
     "//tools/fidl/gidl-conformance-suite/structs.test.fidl",
     "//tools/fidl/gidl-conformance-suite/tables.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/transformer.test.fidl",
     "//tools/fidl/gidl-conformance-suite/union.test.fidl",
     "//tools/fidl/gidl-conformance-suite/xunion.test.fidl",
   ]

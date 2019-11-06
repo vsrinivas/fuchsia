@@ -574,6 +574,7 @@ func (p *Parser) parseByteList() ([]byte, error) {
 			// First token was the label. Now get the byte size.
 			tok, _ = p.consumeToken(tText)
 		}
+
 		byteSize, err := strconv.ParseUint(tok.value, 10, 64)
 		if err != nil {
 			return p.newParseError(tok, "error parsing byte block size: %v", err)

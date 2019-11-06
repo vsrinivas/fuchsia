@@ -1,0 +1,240 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+union UnionSize8Align4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint32 variant;
+};
+
+union UnionSize12Align4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: array<uint8>:6 variant;
+};
+
+struct StructSize16Align8 {
+    uint64 f1;
+    uint64 f2;
+};
+
+union UnionSize24Align8 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: StructSize16Align8 variant;
+};
+
+struct Sandwich1 {
+   uint32 before;
+   UnionSize8Align4 the_union;
+   uint32 after;
+};
+
+struct Sandwich2 {
+   uint32 before;
+   UnionSize12Align4 the_union;
+   uint32 after;
+};
+
+struct Sandwich3 {
+   uint32 before;
+   UnionSize24Align8 the_union;
+   uint32 after;
+};
+
+union UnionSize36Align4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: array<uint8>:32 variant;
+};
+
+struct Sandwich4 {
+    uint32 before;
+    UnionSize36Align4 the_union;
+    uint32 after;
+};
+
+union UnionOfUnion {
+    1: uint8 unused;
+    2: UnionSize8Align4 size8align4; // used in Sandwich5Case1
+    3: UnionSize12Align4 size12align4;
+    4: UnionSize24Align8 size24align8; // used in Sandwich5Case2
+};
+
+struct Sandwich5 {
+    uint32 before;
+    UnionOfUnion union_of_union;
+    uint32 after;
+};
+
+struct StructSize3Align1 {
+    array<uint8>:3 three_bytes;
+};
+
+struct StructSize3Align2 {
+    uint16 f1;
+    uint8 f2;
+};
+
+union UnionWithVector {
+    1: uint8 unused;
+    2: vector<uint8> vector_of_uint8;
+    3: string string;
+    4: vector<StructSize3Align1> vector_s3_a1;
+    5: vector<StructSize3Align2> vector_s3_a2;
+    // 6: vector<handle> handles;  // TODO(mkember): Support handles in GIDL.
+    6: vector<uint32> handles;
+    7: array<StructSize3Align1>:2 array_s3_a1;
+    8: array<StructSize3Align2>:2 array_s3_a2;
+    9: vector<UnionSize8Align4> vector_union;
+};
+
+struct Sandwich6 {
+    uint32 before;
+    UnionWithVector the_union;
+    uint32 after;
+};
+
+struct Sandwich7 {
+    uint32 before;
+    Sandwich1? opt_sandwich1;
+    uint32 after;
+};
+
+// Same as Sandwich5 except `before` is uint64 (so no padding before the union).
+struct Sandwich8 {
+    uint64 before;
+    UnionOfUnion union_of_union;
+    uint32 after;
+};
+
+struct Regression1 {
+    uint8 f1;
+    uint32 f2;
+    uint8 f3;
+    uint16 f4;
+    uint64 f5;
+    uint8 f6;
+};
+
+struct Regression2 {
+    Regression1 head;
+    uint8 f7;
+};
+
+struct Regression3 {
+    Regression2? opt_value;
+};
+
+// TODO(fxb/40782): Add these back once it compiles in LLCPP.
+// table Table_NoFields {
+// };
+// table Table_TwoReservedFields {
+//     1: reserved;
+//     2: reserved;
+// };
+
+table Table_StructWithReservedSandwich {
+    1: reserved;
+    2: StructSize3Align1 s1;
+    3: StructSize3Align1 s2;
+    4: reserved;
+};
+
+struct Table_StructWithReservedSandwichStruct {
+    Table_StructWithReservedSandwich table;
+};
+
+table Table_StructWithUint32Sandwich {
+    1: uint32 i;
+    2: StructSize3Align1 s1;
+    3: StructSize3Align1 s2;
+    4: uint32 i2;
+};
+
+struct Table_StructWithUint32SandwichStruct {
+    Table_StructWithUint32Sandwich table;
+};
+
+table Table_UnionWithVector_ReservedSandwich {
+    1: reserved;
+    2: UnionWithVector uv;
+    3: reserved;
+};
+
+struct Table_UnionWithVector_ReservedSandwichStruct {
+    Table_UnionWithVector_ReservedSandwich table;
+};
+
+table Table_UnionWithVector_StructSandwich {
+    1: StructSize3Align1 s1;
+    2: UnionWithVector uv;
+    3: StructSize3Align1 s2;
+};
+
+struct Table_UnionWithVector_StructSandwichStruct {
+    Table_UnionWithVector_StructSandwich table;
+};
+
+xunion XUnionWithStruct {
+    1: StructSize3Align1 s;
+};
+
+struct XUnionWithStructStruct {
+    XUnionWithStruct xu;
+};
+
+xunion XUnionWithXUnion {
+    1: XUnionWithStruct xu;
+};
+
+struct XUnionWithXUnionStruct {
+    XUnionWithXUnion xu;
+};
+
+xunion XUnionWithUnions {
+    1: UnionSize8Align4 u1;
+    2: UnionSize12Align4 u2;
+};
+
+struct StructSize5Align1 {
+    array<uint8>:5 data;
+};
+
+struct StructSize5Align4 {
+    uint32 four;
+    uint8 one;
+};
+
+struct StructSize5Align1Vector {
+    vector<StructSize5Align1> v;
+};
+
+struct StructSize5Align4Vector {
+    vector<StructSize5Align4> v;
+};
+
+struct StructSize5Align1Array {
+    array<StructSize5Align1>:3 a;
+};
+
+struct StructSize5Align4Array {
+    array<StructSize5Align4>:3 a;
+};
+
+// compatibility_test turned up a problem with these StringUnion & ArrayStruct
+// definitions.
+union StringUnion {
+    string s; // 0x80BB5F4B
+};
+
+struct ArrayStruct {
+    array<StringUnion>:3 unions;
+    array<StringUnion?>:3 optional_unions;
+};
