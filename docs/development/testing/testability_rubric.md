@@ -145,7 +145,7 @@ As a testability reviewer, if a change is tested with automated tests, you
 should make sure the author has added the MULTIPLY feature as described below
 and has run a successful tryjob that uses this feature (if supported). You can
 check to see if it worked by clicking on the tryjob and looking for a step that
-says `shard multiplied:<shard name>-<test target>` for each target. This feature
+says `shard multiplied:<shard name>-<test name>` for each test. This feature
 is only supported for builders that test in shards. If there are no such
 builders that run their tests, they will not be able to use this feature.
 
@@ -168,7 +168,7 @@ this schema:
 The test name refers to the name of a test executable inside a `test_package`
 GN target which is located in the `out/default/tests.json` file located in
 your Fuchsia directory. This file is created after you run `fx build` inside
-of your Fuchsia directory. The test target and OS must match one of the tests
+of your Fuchsia directory. The test name and OS must match one of the tests
 in this list for this feature to work.
 
 An example CL description should look like:
@@ -184,7 +184,7 @@ MULTIPLY: `[
     "total_runs": 30
   },
   {
-    "target": "foo_host_tests",
+    "name": "foo_host_tests",
     "os": "linux",
     "total_runs": 30
   }
