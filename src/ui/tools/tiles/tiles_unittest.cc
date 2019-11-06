@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/developer/tiles/tiles.h"
+#include "src/ui/tools/tiles/tiles.h"
 
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>

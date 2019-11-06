@@ -610,7 +610,7 @@ group("telephony") {
 group("tiles") {
   testonly = true
   public_deps = [
-    "//garnet/bin/developer/tiles",
+    "//src/ui/tools/tiles",
   ]
 }
 

@@ -9,10 +9,10 @@
 #include <lib/trace-provider/provider.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include "garnet/bin/developer/tiles/tiles.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/ui/base_view/base_view.h"
+#include "src/ui/tools/tiles/tiles.h"
 
 void Usage() {
   printf(

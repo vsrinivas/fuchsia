@@ -7,6 +7,8 @@ group("tools") {
     "paper_shader_compiler",
     "print-input-report",
     "simple-touch",
+    "tiles",
+    "tiles_ctl",
   ]
 }
 
@@ -15,5 +17,6 @@ group("tests") {
 
   deps = [
     "print-input-report:print-input-report-test",
+    "tiles:tiles_tests",
   ]
 }

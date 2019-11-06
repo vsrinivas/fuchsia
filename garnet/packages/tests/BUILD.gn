@@ -821,7 +821,7 @@ group("thermd") {
 group("tiles") {
   testonly = true
   public_deps = [
-    "//garnet/bin/developer/tiles:tiles_tests",
+    "//src/ui/tools/tiles:tiles_tests",
   ]
 }
 

@@ -63,6 +63,7 @@ group("all") {
     ":netstack",
     ":runmany",
     ":scenic",
+
     # TODO(fxb/36227): sl4f is explicitly excluded here, we can consider adding it back once it
     # migrates off 'deprecated-shell'
     ":system_monitor",
@@ -113,7 +114,7 @@ group("curl") {
 group("tiles") {
   testonly = true
   public_deps = [
-    "//garnet/bin/developer/tiles_ctl",
+    "//src/ui/tools/tiles_ctl",
   ]
 }
 

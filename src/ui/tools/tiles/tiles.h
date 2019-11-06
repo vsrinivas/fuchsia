@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEVELOPER_TILES_TILES_H_
-#define GARNET_BIN_DEVELOPER_TILES_TILES_H_
+#ifndef SRC_UI_TOOLS_TILES_TILES_H_
+#define SRC_UI_TOOLS_TILES_TILES_H_
 
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -73,4 +73,4 @@ class Tiles : public fuchsia::developer::tiles::Controller, public scenic::BaseV
 
 }  // namespace tiles
 
-#endif  // GARNET_BIN_DEVELOPER_TILES_TILES_H_
+#endif  // SRC_UI_TOOLS_TILES_TILES_H_

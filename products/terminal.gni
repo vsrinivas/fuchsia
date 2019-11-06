@@ -18,7 +18,7 @@ base_package_labels += [
 ]
 
 cache_package_labels += [
-  "//garnet/bin/developer/tiles",
+  "//src/ui/tools/tiles",
   "//garnet/bin/terminal",
   "//src/fonts",
 ]
