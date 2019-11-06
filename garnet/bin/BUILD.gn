@@ -12,7 +12,6 @@ group("bin") {
     "cpuperf",
     "cpuperf_provider",
     "cs",
-    "debugserver",
     "developer",
     "device_settings",
     "display_capture_test",

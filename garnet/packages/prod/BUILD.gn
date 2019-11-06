@@ -150,13 +150,6 @@ group("drivers") {
   }
 }
 
-group("debugserver") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/debugserver",
-  ]
-}
-
 group("openthread") {
   testonly = true
   public_deps = [
@@ -191,7 +184,6 @@ group("all") {
     "//garnet/packages/prod:cobalt_client",
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:debugserver",
     "//garnet/packages/prod:device_settings",
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:drivers",

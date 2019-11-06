@@ -153,24 +153,6 @@ class Server : public Delegate {
   FXL_DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
-// Same as Server, but provides I/O support.
-// An example use-case is debugserver for gdb.
-class ServerWithIO : public Server, public IOLoop::Delegate {
- protected:
-  ServerWithIO(zx::job job_for_search, zx::job job_for_launch,
-               std::shared_ptr<sys::ServiceDirectory> services);
-  virtual ~ServerWithIO();
-
-  // The IOLoop used for blocking I/O operations over |client_sock_|.
-  // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
-  // care to clean it up in the destructor.
-  std::unique_ptr<IOLoop> io_loop_;
-
-  // File descriptor for the socket (or terminal) used for communication.
-  // TODO(dje): Rename from *sock* after things are working.
-  fbl::unique_fd client_sock_;
-};
-
 }  // namespace inferior_control
 
 #endif  // GARNET_LIB_INFERIOR_CONTROL_SERVER_H_

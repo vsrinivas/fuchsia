@@ -197,17 +197,4 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
   }
 }
 
-ServerWithIO::ServerWithIO(zx::job job_for_search, zx::job job_for_launch,
-                           std::shared_ptr<sys::ServiceDirectory> services)
-    : Server(std::move(job_for_search), std::move(job_for_launch), std::move(services)),
-      client_sock_(-1) {}
-
-ServerWithIO::~ServerWithIO() {
-  // This will invoke the IOLoop destructor which will clean up and join the
-  // I/O threads. This is done now because |message_loop_| and |client_sock_|
-  // must outlive |io_loop_|. The former is handled by virtue of being in the
-  // baseclass. The latter is handled here.
-  io_loop_.reset();
-}
-
 }  // namespace inferior_control

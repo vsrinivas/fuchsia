@@ -136,7 +136,7 @@ Example session:
 
 ```
 zircon$ insntrace --num-buffers=256 --config="'cyc;cyc-thresh=2'" \
-  /system/test/debugserver/syscall-test 1000
+  /bin/trace --help
 zircon$ ls -l /tmp/ptout.*
 -rw-------    1 0        0            621984 Jul 11 13:08 ptout.cpu0.pt
 -rw-------    1 0        0             10080 Jul 11 13:08 ptout.cpu1.pt
