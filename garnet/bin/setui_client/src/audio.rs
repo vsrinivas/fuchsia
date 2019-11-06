@@ -105,7 +105,6 @@ fn describe_audio_stream(stream: AudioRenderUsage) -> String {
 
 fn describe_audio_source(source: AudioStreamSettingSource) -> String {
     match source {
-        AudioStreamSettingSource::Default => "Default",
         AudioStreamSettingSource::User => "User",
         AudioStreamSettingSource::System => "System",
     }
