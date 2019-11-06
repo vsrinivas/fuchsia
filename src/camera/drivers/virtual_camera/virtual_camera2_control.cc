@@ -72,7 +72,7 @@ fuchsia::camera2::StreamProperties GetStreamProperties(fuchsia::camera2::CameraS
 VirtualCamera2ControllerImpl::VirtualCamera2ControllerImpl(
     fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
     async_dispatcher_t* dispatcher, fit::closure on_connection_closed)
-    : binding_(this, std::move(control), dispatcher) {
+    : binding_(this) {
   // Make up some configs:
   fuchsia::camera2::hal::Config config1;
   fuchsia::camera2::hal::StreamConfig sconfig = {
@@ -89,7 +89,13 @@ VirtualCamera2ControllerImpl::VirtualCamera2ControllerImpl(
   configs_.push_back(std::move(config1));
 
   binding_.set_error_handler(
-      [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
+      [on_connection_closed = std::move(on_connection_closed)](zx_status_t status) {
+        if (status != ZX_ERR_PEER_CLOSED) {
+          FX_PLOGS(ERROR, status) << "VirtualCamera disconnected";
+        }
+        on_connection_closed();
+      });
+  binding_.Bind(std::move(control), dispatcher);
 }
 
 void VirtualCamera2ControllerImpl::PostNextCaptureTask() {

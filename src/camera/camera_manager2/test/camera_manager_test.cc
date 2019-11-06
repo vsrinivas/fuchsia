@@ -23,15 +23,15 @@
 
 namespace {
 
-static constexpr uint32_t kBufferCountForCamping = 5;
-static constexpr uint32_t kFakeImageMinWidth = 640;
-static constexpr uint32_t kFakeImageMaxWidth = 2048;
-static constexpr uint32_t kFakeImageMinHeight = 480;
-static constexpr uint32_t kFakeImageMaxHeight = 1280;
-static constexpr uint32_t kFakeImageMinBytesPerRow = 480;
-static constexpr uint32_t kFakeImageMaxBytesPerRow = 0xfffffff;
-static constexpr uint32_t kFakeImageBytesPerRowDivisor = 128;
-static constexpr uint32_t kNumberOfLayers = 1;
+constexpr uint32_t kBufferCountForCamping = 2;
+constexpr uint32_t kFakeImageMinWidth = 10;
+constexpr uint32_t kFakeImageMaxWidth = 0;  // Treated as max
+constexpr uint32_t kFakeImageMinHeight = 10;
+constexpr uint32_t kFakeImageMaxHeight = 0;  // Treated as max.
+constexpr uint32_t kFakeImageMinBytesPerRow = 10;
+constexpr uint32_t kFakeImageMaxBytesPerRow = 0;  // Treated as max.
+constexpr uint32_t kFakeImageBytesPerRowDivisor = 128;
+constexpr uint32_t kNumberOfLayers = 1;
 
 fuchsia::sysmem::BufferCollectionConstraints GetFakeConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
@@ -63,7 +63,11 @@ class CameraManagerTest : public gtest::RealLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(camera_manager_.NewRequest()));
   }
-  void TearDown() override {}
+  void TearDown() override {
+    if (buffer_collection_.is_bound()) {
+      buffer_collection_->Close();
+    }
+  }
 
   void GetToken(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>* out_token) {
     // Create client_token which we'll hold on to to get our buffer_collection.
@@ -89,9 +93,6 @@ class CameraManagerTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(CameraManagerTest, CanConnectToStream) {
-  // TODO(37729) Disabling flaky test while it is debugged.
-  GTEST_SKIP();
-
   EXPECT_EQ(ZX_OK, camera_manager_->AcknowledgeDeviceEvent());
 
   fuchsia::camera2::StreamConstraints constraints;
@@ -99,29 +100,26 @@ TEST_F(CameraManagerTest, CanConnectToStream) {
   fuchsia::camera2::StreamPtr stream;
   fuchsia::sysmem::ImageFormat_2 format;
   GetToken(&token);
-  EXPECT_EQ(ZX_OK, camera_manager_->ConnectToStream(0, std::move(constraints), std::move(token),
+  ASSERT_EQ(ZX_OK, camera_manager_->ConnectToStream(0, std::move(constraints), std::move(token),
                                                     stream.NewRequest(), &format));
+  // Check that the other side of the stream channel has not been closed.  This is the
+  // signal that the interface gives that ConnectToStream failed.
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            stream.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr))
+      << "CameraManagerTest::CanConnectToStream: Failed to connect to stream";
 
-  int frame_counter = 0;
   bool passed = false;
-  stream.events().OnFrameAvailable = [&stream, &passed,
-                                      &frame_counter](fuchsia::camera2::FrameAvailableInfo frame) {
-    printf("Received FrameNotify Event %d at index: %u\n", frame_counter, frame.buffer_id);
-
-    if (frame.frame_status == fuchsia::camera2::FrameStatus::OK) {
-      stream->ReleaseFrame(frame.buffer_id);
-      if (frame_counter++ > 10) {
-        FX_LOGS(INFO) << "Counted 10 frames, stopping stream and quitting loop";
-        stream->Stop();
-        passed = true;
-      }
-    } else {
-      FX_LOGS(ERROR) << "Error set on incoming frame. Error: "
-                     << static_cast<int>(frame.frame_status);
-    }
+  bool stream_failure = false;
+  // Set an error handler so that if the stream fails, the test can be stopped:
+  stream.set_error_handler([&stream_failure](zx_status_t status) {
+    stream_failure = true;
+    FX_LOGS(ERROR) << "Stream failed with error " << status;
+  });
+  stream.events().OnFrameAvailable = [&passed](fuchsia::camera2::FrameAvailableInfo frame) {
+    passed = true;
   };
   stream->Start();
-  RunLoopUntil([&passed]() { return passed; });
+  RunLoopUntil([&passed, &stream_failure]() { return passed || stream_failure; });
   EXPECT_TRUE(passed);
 }
 
