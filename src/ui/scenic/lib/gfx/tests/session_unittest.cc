@@ -62,15 +62,19 @@ TEST_F(SessionTest, ScheduleUpdateInOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
+  const zx::time presentation_time = zx::time(100);
+  const zx::time latched_time = zx::time(100);
+
   EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-      zx::time(100), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
   auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                         /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
-  auto update_result = session()->ApplyScheduledUpdates(&command_context, zx::time(100));
+  auto update_result =
+      session()->ApplyScheduledUpdates(&command_context, presentation_time, latched_time);
   EXPECT_TRUE(update_result.success);
   EXPECT_TRUE(update_result.needs_render);
 }
@@ -153,6 +157,7 @@ TEST_F(SessionTest, DISABLED_TooManyPresentsInFlight_ShouldNotWork) {
 // TODO(35521) Re-enable.
 TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
   const zx::time presentation_time = zx::time(1);
+  const zx::time latched_time = zx::time(1);
 
   // Max out the maximum allotted presents in flight.
   for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
@@ -165,7 +170,8 @@ TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
   SceneGraph scene_graph(app_context.context());
   auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                         /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
-  auto update_result = session()->ApplyScheduledUpdates(&command_context, presentation_time);
+  auto update_result =
+      session()->ApplyScheduledUpdates(&command_context, presentation_time, latched_time);
 
   EXPECT_TRUE(update_result.success);
   EXPECT_TRUE(update_result.needs_render);

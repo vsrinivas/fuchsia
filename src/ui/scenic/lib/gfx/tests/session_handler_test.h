@@ -55,9 +55,10 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
 
   // |SessionUpdater|
   UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                               zx::time presentation_time, uint64_t trace_id) override;
+                               zx::time target_presentation_time, zx::time latched_time,
+                               uint64_t trace_id) override;
   // |SessionUpdater|
-  void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
+  void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;

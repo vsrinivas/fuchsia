@@ -158,7 +158,8 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
-                                                          zx::time target_presentation_time) {
+                                                          zx::time target_presentation_time,
+                                                          zx::time latched_time) {
   ApplyUpdateResult update_results{
       .success = false, .all_fences_ready = true, .needs_render = false};
 

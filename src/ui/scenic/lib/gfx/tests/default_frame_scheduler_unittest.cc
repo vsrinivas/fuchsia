@@ -624,9 +624,11 @@ TEST(UpdateManagerTest, NoRatchetingMeansNoCallbacks) {
   info.presentation_interval = 1;
   info.presentation_time = 1;
   uint64_t frame_number = 1;
+  zx::time latched_time = zx::time(1);
 
-  auto [render, reschedule] = sum->ApplyUpdates(
-      zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+  auto [render, reschedule] =
+      sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                        zx::duration(info.presentation_interval), frame_number);
   EXPECT_TRUE(render);
   EXPECT_FALSE(reschedule);
   EXPECT_TRUE(status->callback_passed);
@@ -680,9 +682,11 @@ TEST(UpdateManagerTest, ReallySlowFence) {
   // Frame 1: Blocked on first update's fences.
   info.presentation_time = 1;
   uint64_t frame_number = 1;
+  zx::time latched_time = zx::time(1);
   {
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -693,9 +697,11 @@ TEST(UpdateManagerTest, ReallySlowFence) {
   // Frame 2: Still blocked on first update's fences.
   info.presentation_time = 2;
   frame_number = 2;
+  latched_time = zx::time(2);
   {
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -706,9 +712,11 @@ TEST(UpdateManagerTest, ReallySlowFence) {
   // Frame 3: First two updates are unblocked, but third is blocked on fences.
   info.presentation_time = 3;
   frame_number = 3;
+  latched_time = zx::time(3);
   {
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -723,9 +731,11 @@ TEST(UpdateManagerTest, ReallySlowFence) {
   // Frame 4: The third update is unblocked, so no reschedule is required.
   info.presentation_time = 4;
   frame_number = 4;
+  latched_time = zx::time(4);
   {
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_FALSE(reschedule);
   }
@@ -760,8 +770,10 @@ TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
   auto status1_1 = ScheduleUpdateAndCallback(sum, &updater1, kSession1, zx::time(2), zx::time(3));
   {
     uint64_t frame_number = info.presentation_time = 1;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(1);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -769,8 +781,10 @@ TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
   // Frame 2: Blocked on first update's fences.
   {
     uint64_t frame_number = info.presentation_time = 2;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(2);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -781,8 +795,10 @@ TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
   auto status4_1 = ScheduleUpdateAndCallback(sum, &updater2, kSession4, zx::time(3), zx::time(4));
   {
     uint64_t frame_number = info.presentation_time = 3;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(3);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_TRUE(reschedule);
   }
@@ -791,8 +807,10 @@ TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
   auto status4_2 = ScheduleUpdateAndCallback(sum, &updater2, kSession4, zx::time(4), zx::time(4));
   {
     uint64_t frame_number = info.presentation_time = 4;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(4);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_FALSE(reschedule);
   }
@@ -802,8 +820,10 @@ TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
   updater2.KillSession(kSession4);
   {
     uint64_t frame_number = info.presentation_time = 5;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(5);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_FALSE(reschedule);
   }
@@ -837,8 +857,10 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
     updater1.reset();
 
     uint64_t frame_number = info.presentation_time = 1;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(1);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_TRUE(reschedule);
 
@@ -858,8 +880,10 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
     updater2.reset();
 
     uint64_t frame_number = info.presentation_time = 2;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(2);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_FALSE(render);
     EXPECT_FALSE(reschedule);
 
@@ -879,8 +903,10 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
         ScheduleUpdateAndCallback(sum, updater3.get(), kSession3, zx::time(3), zx::time(3));
 
     uint64_t frame_number = info.presentation_time = 3;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(3);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_FALSE(reschedule);
 
@@ -909,8 +935,10 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
   // and rescheduled.
   {
     uint64_t frame_number = info.presentation_time = 4;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(4);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_TRUE(reschedule);
 
@@ -932,8 +960,10 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
   // render and no reschedule.  Destroy |updater6| before the callbacks are signaled.
   {
     uint64_t frame_number = info.presentation_time = 5;
-    auto [render, reschedule] = sum->ApplyUpdates(
-        zx::time(info.presentation_time), zx::duration(info.presentation_interval), frame_number);
+    zx::time latched_time = zx::time(5);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
     EXPECT_TRUE(render);
     EXPECT_FALSE(reschedule);
 

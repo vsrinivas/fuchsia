@@ -41,10 +41,11 @@ class GfxSystem : public System,
 
   // |SessionUpdater|
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                       zx::time presentation_time, uint64_t trace_id) override;
+                                       zx::time target_presentation_time, zx::time latched_time,
+                                       uint64_t trace_id) override;
 
   // |SessionUpdater|
-  virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
+  virtual void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
 
   // For tests.
   SessionManager* session_manager() { return &session_manager_; }

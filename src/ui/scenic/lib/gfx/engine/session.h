@@ -96,18 +96,18 @@ class Session {
                                 std::vector<zx::event> acquire_fences,
                                 std::vector<zx::event> release_fences, PresentCallback callback);
 
-  // Called by Engine() when it is notified by the FrameScheduler that
-  // a frame should be rendered for the specified |actual_presentation_time|.
-  // Returns ApplyUpdateResult.success as true if updates were successfully
-  // applied, false if updates failed to be applied.
-  // Returns ApplyUpdateResult.needs_render as true if any changes were
-  // applied, false if none were.
-  // |requested_presentation_time| is the time the session specified it would
-  // like to be scheduled for, and is used for tracing.
-  // |presentation_interval| is the estimated time until next frame and is
-  // returned to the client.
+  // Called by Engine() when it is notified by the FrameScheduler that a frame should be rendered
+  // for the specified |actual_presentation_time|. Returns ApplyUpdateResult.success as true if
+  // updates were successfully applied, false if updates failed to be applied. Returns
+  // ApplyUpdateResult.needs_render as true if any changes were applied, false if none were.
+  //
+  // |target_presentation_time| is the time the session specified it would like to be scheduled
+  // for, and is used for tracing.
+  // |presentation_interval| is the estimated time until next frame and is returned to the client.
+  // |latched_time| is the deadline such that all updates submitted prior to it were grouped
+  // together.
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
-                                          zx::time target_presentation_time);
+                                          zx::time target_presentation_time, zx::time latched_time);
 
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);

@@ -12,7 +12,7 @@ namespace test {
 
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
-    uint64_t trace_id) {
+    zx::time wakeup_time, uint64_t trace_id) {
   ++update_sessions_call_count_;
 
   UpdateResults results;
@@ -93,8 +93,7 @@ RenderFrameResult MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_ti
 
   ++render_frame_call_count_;
   frame_timings->RegisterSwapchains(1);
-  frames_[frame_number] = {.frame_timings = std::move(frame_timings),
-                           .swapchain_index = 0};
+  frames_[frame_number] = {.frame_timings = std::move(frame_timings), .swapchain_index = 0};
 
   return render_frame_return_value_;
 }

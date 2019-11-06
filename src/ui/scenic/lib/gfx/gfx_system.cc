@@ -208,8 +208,8 @@ void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallba
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
 SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
-    uint64_t trace_id) {
+    std::unordered_set<SessionId> sessions_to_update, zx::time target_presentation_time,
+    zx::time latched_time, uint64_t trace_id) {
   SessionUpdater::UpdateResults update_results;
 
   if (!command_context_) {
@@ -220,7 +220,7 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
   for (auto session_id : sessions_to_update) {
     TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id,
-                   "target_presentation_time", presentation_time.get());
+                   "target_presentation_time", target_presentation_time.get());
     auto session_handler = session_manager_.FindSessionHandler(session_id);
     if (!session_handler) {
       // This means the session that requested the update died after the
@@ -233,8 +233,8 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
     auto session = session_handler->session();
 
-    auto apply_results =
-        session->ApplyScheduledUpdates(&(command_context_.value()), presentation_time);
+    auto apply_results = session->ApplyScheduledUpdates(&(command_context_.value()),
+                                                        target_presentation_time, latched_time);
 
     // If update fails, kill the entire client session.
     if (!apply_results.success) {
@@ -299,7 +299,7 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   return update_results;
 }
 
-void GfxSystem::PrepareFrame(zx::time presentation_time, uint64_t trace_id) {
+void GfxSystem::PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) {
   while (processed_needs_render_count_ < needs_render_count_) {
     TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
     ++processed_needs_render_count_;

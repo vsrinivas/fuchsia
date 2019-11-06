@@ -86,8 +86,8 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
 SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
-    uint64_t trace_id) {
+    std::unordered_set<SessionId> sessions_to_update, zx::time target_presentation_time,
+    zx::time latched_time, uint64_t trace_id) {
   UpdateResults update_results;
   CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                  /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
@@ -105,7 +105,8 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
 
     auto session = session_handler->session();
 
-    auto apply_results = session->ApplyScheduledUpdates(&command_context, presentation_time);
+    auto apply_results =
+        session->ApplyScheduledUpdates(&command_context, target_presentation_time, latched_time);
   }
 
   // Flush work to the GPU.
@@ -114,7 +115,7 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
   return update_results;
 }
 
-void SessionHandlerTest::PrepareFrame(zx::time presentation_time, uint64_t trace_id) {}
+void SessionHandlerTest::PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) {}
 
 }  // namespace test
 }  // namespace gfx

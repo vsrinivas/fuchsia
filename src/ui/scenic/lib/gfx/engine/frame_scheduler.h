@@ -46,7 +46,8 @@ class SessionUpdater {
   // update is one that is scheduled at or before |presentation_time|, and for which all other
   // preconditions have been met (for example, all acquire fences have been signaled).
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                       zx::time presentation_time, uint64_t trace_id) = 0;
+                                       zx::time presentation_time, zx::time latched_time,
+                                       uint64_t trace_id) = 0;
 
   // Notify updater that no more sessions will be updated before rendering the next frame; now is
   // the time to do any necessary work before the frame is rendered.  For example, animations might

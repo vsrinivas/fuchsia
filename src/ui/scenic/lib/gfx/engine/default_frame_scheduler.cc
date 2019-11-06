@@ -136,7 +136,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   // Apply all updates
   const zx::time update_start_time = zx::time(async_now(dispatcher_));
 
-  const UpdateManager::ApplyUpdatesResult update_result = ApplyUpdates(presentation_time);
+  const UpdateManager::ApplyUpdatesResult update_result =
+      ApplyUpdates(presentation_time, wakeup_time_);
 
   if (update_result.needs_render) {
     inspect_last_successful_update_start_time_.Set(update_start_time.get());
@@ -285,15 +286,16 @@ DefaultFrameScheduler::GetFuturePresentationTimes(zx::duration requested_predict
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::ApplyUpdates(
-    zx::time presentation_time) {
+    zx::time target_presentation_time, zx::time latched_time) {
+  FXL_DCHECK(latched_time <= target_presentation_time);
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_VLOG(1) << "ApplyScheduledSessionUpdates presentation_time=" << presentation_time
+    FXL_VLOG(1) << "ApplyScheduledSessionUpdates presentation_time=" << target_presentation_time
                 << " frame_number=" << frame_number_;
   }
 
-  return update_manager_.ApplyUpdates(presentation_time, display_->GetVsyncInterval(),
-                                      frame_number_);
+  return update_manager_.ApplyUpdates(target_presentation_time, latched_time,
+                                      display_->GetVsyncInterval(), frame_number_);
 }
 
 void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
@@ -358,25 +360,26 @@ void DefaultFrameScheduler::UpdateManager::AddSessionUpdater(
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult
-DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time presentation_time,
+DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_time,
+                                                   zx::time latched_time,
                                                    zx::duration vsync_interval,
                                                    uint64_t frame_number) {
   // NOTE: this name is used by scenic_processing_helpers.go
-  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", presentation_time.get());
+  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", target_presentation_time.get());
 
   std::unordered_set<SessionId> sessions_to_update;
   while (!updatable_sessions_.empty() &&
-         updatable_sessions_.top().requested_presentation_time <= presentation_time) {
+         updatable_sessions_.top().requested_presentation_time <= target_presentation_time) {
     sessions_to_update.insert(updatable_sessions_.top().session_id);
     updatable_sessions_.pop();
   }
 
   SessionUpdater::UpdateResults update_results;
   ApplyToCompactedVector(
-      &session_updaters_, [this, &sessions_to_update, &update_results, presentation_time,
-                           frame_number](SessionUpdater* updater) {
-        auto session_results =
-            updater->UpdateSessions(sessions_to_update, presentation_time, frame_number);
+      &session_updaters_, [this, &sessions_to_update, &update_results, target_presentation_time,
+                           latched_time, frame_number](SessionUpdater* updater) {
+        auto session_results = updater->UpdateSessions(sessions_to_update, target_presentation_time,
+                                                       latched_time, frame_number);
 
         // Aggregate results from each updater.
         update_results.needs_render = update_results.needs_render || session_results.needs_render;
@@ -388,8 +391,9 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time presentation_time,
 
   // Push updates that (e.g.) had unreached fences back onto the queue to be retried next frame.
   for (auto session_id : update_results.sessions_to_reschedule) {
-    updatable_sessions_.push({.session_id = session_id,
-                              .requested_presentation_time = presentation_time + vsync_interval});
+    updatable_sessions_.push(
+        {.session_id = session_id,
+         .requested_presentation_time = target_presentation_time + vsync_interval});
   }
 
   return ApplyUpdatesResult{.needs_render = update_results.needs_render,

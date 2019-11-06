@@ -62,7 +62,8 @@ class MockSessionUpdater : public SessionUpdater {
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                               zx::time presentation_time,
+                                               zx::time target_presentation_time,
+                                               zx::time latched_time,
                                                uint64_t trace_id = 0) override;
 
   // |SessionUpdater|

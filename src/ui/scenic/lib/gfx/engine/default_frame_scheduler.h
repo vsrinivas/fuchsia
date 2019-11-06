@@ -87,8 +87,8 @@ class DefaultFrameScheduler : public FrameScheduler {
     };
     // Calls |SessionUpdater::UpdateSessions()| on all updaters, and uses the returned
     // |SessionUpdater::UpdateResults| to generate the returned |ApplyUpdatesResult|.
-    ApplyUpdatesResult ApplyUpdates(zx::time presentation_time, zx::duration vsync_interval,
-                                    uint64_t frame_number);
+    ApplyUpdatesResult ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
+                                    zx::duration vsync_interval, uint64_t frame_number);
 
     // Return true if there are any scheduled session updates that have not yet been applied.
     bool HasUpdatableSessions() const { return !updatable_sessions_.empty(); }
@@ -152,7 +152,8 @@ class DefaultFrameScheduler : public FrameScheduler {
       zx::time requested_presentation_time) const;
 
   // Executes updates that are scheduled up to and including a given presentation time.
-  UpdateManager::ApplyUpdatesResult ApplyUpdates(zx::time presentation_time);
+  UpdateManager::ApplyUpdatesResult ApplyUpdates(zx::time target_presentation_time,
+                                                 zx::time latched_time);
 
   // References.
   async_dispatcher_t* const dispatcher_;
