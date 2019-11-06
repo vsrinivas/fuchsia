@@ -36,11 +36,9 @@ class Cmdline {
   //
   // will result in [key=value\0red=\0foo=bar.\0\0]
   //
-  // Append may be called repeatedly. If |kCmdlineMax| is exceeded, the last key-value pair may be
-  // truncated.  If |str| is too big or not \0-terminated, it will be truncated so that the command
-  // line does not exceed |kCmdlineMax|.
+  // Append may be called repeatedly. If |kCmdlineMax| is exceeded, will panic.
   //
-  // The command line will always be propertly terminated.
+  // The command line will always be properly terminated.
   void Append(const char* str);
 
   // Return the first value for |key| or nullptr if not found.
@@ -69,6 +67,10 @@ class Cmdline {
   size_t size() const;
 
  private:
+  // Adds the given character to data_ and updates length_. If the character would cause the buffer
+  // to exceed kCmdlineMax, panic.
+  void AddOrAbort(char c);
+
   // Zero-initialize to ensure the |gCmdline| instance of this class lives in the BSS rather than
   // DATA segment so we don't bloat the kernel.
   char data_[kCmdlineMax]{};

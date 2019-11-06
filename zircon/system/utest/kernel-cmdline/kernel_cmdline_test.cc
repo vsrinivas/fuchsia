@@ -132,17 +132,42 @@ TEST(KernelCmdLineTest, AppendBasic) {
   EXPECT_TRUE(Equals(c.get(), "k1=foo", "k2=red..blue"));
 }
 
-// Verify that we don't overflow the buffer and that it remains '\0' terminated.
-TEST(KernelCmdLineTest, Overflow) {
-  constexpr char kPattern[] = "abcdefg";
+TEST(KernelCmdLineTest, OverflowByALot) {
+  ASSERT_DEATH(([]() {
+    constexpr char kPattern[] = "abcdefg";
+    auto c = std::make_unique<Cmdline>();
+    for (size_t j = 0; j < Cmdline::kCmdlineMax; ++j) {
+      c->Append(kPattern);
+    }
+  }));
+}
+
+TEST(KernelCmdLineTest, OverflowExact) {
+  // Maximum is 'aaaaa...aaaaa' followed by '=\0\0'. So the longest string that
+  // can be added is 3 less than the max. Allocate a buffer 2 less than the max,
+  // so that we can \0 terminate this string, that has a strlen() of 3 less than
+  // the max.
   auto c = std::make_unique<Cmdline>();
-  for (size_t j = 0; j < Cmdline::kCmdlineMax; ++j) {
-    c->Append(kPattern);
-  }
-  ASSERT_EQ(c->size(), Cmdline::kCmdlineMax);
-  EXPECT_EQ('\0', c->data()[c->size() - 1]);
-  EXPECT_EQ('\0', c->data()[c->size() - 2]);
-  EXPECT_NE('\0', c->data()[c->size() - 3]);
+  char data[Cmdline::kCmdlineMax - 2];
+  memset(data, 'a', Cmdline::kCmdlineMax - 3);
+  data[Cmdline::kCmdlineMax - 3] = 0;
+  EXPECT_EQ(strlen(data), Cmdline::kCmdlineMax - 3);
+  c->Append(data);
+  EXPECT_EQ(c->size(), Cmdline::kCmdlineMax);
+
+  // Adding anything now should abort.
+  ASSERT_DEATH(([&c]() { c->Append("b"); }));
+
+  // However, adding "b" actually adds "b=\0" to the total length, so test 2
+  // fewer than above as well for the "full" starting amount.
+  auto c2 = std::make_unique<Cmdline>();
+  memset(data, 'a', Cmdline::kCmdlineMax - 5);
+  data[Cmdline::kCmdlineMax - 5] = 0;
+  EXPECT_EQ(strlen(data), Cmdline::kCmdlineMax - 5);
+  c2->Append(data);
+  EXPECT_EQ(c2->size(), Cmdline::kCmdlineMax - 2);
+
+  ASSERT_DEATH(([&c2]() { c2->Append("b"); }));
 }
 
 TEST(KernelCmdLineTest, GetString) {

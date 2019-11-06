@@ -14,24 +14,21 @@
 Cmdline gCmdline;
 
 void Cmdline::Append(const char* str) {
-  if (str == nullptr || *str == 0 || length_ >= kCmdlineMax - 1) {
+  if (str == nullptr || *str == 0) {
     return;
   }
 
-  // Save room for the last string's terminator and an extra terminator.
-  const size_t limit = kCmdlineMax - 2;
-  size_t i = length_;
   bool found_equal = false;
-  while (i < limit) {
+  for (;;) {
     unsigned c = *str++;
     if (c == 0) {
       // Finish an in-progress argument.
-      if (i > 0 && data_[i - 1] != 0) {
+      if (length_ > 0 && data_[length_ - 1] != 0) {
         if (!found_equal) {
-          data_[i++] = '=';
+          AddOrAbort('=');
         }
         // Terminate the string.
-        data_[i++] = 0;
+        AddOrAbort(0);
       }
       break;
     }
@@ -49,31 +46,23 @@ void Cmdline::Append(const char* str) {
 
     if (c == ' ') {
       // Spaces become \0's, but do not double up.
-      if ((i == 0) || (data_[i - 1] == 0)) {
+      if (length_ == 0 || (data_[length_ - 1] == 0)) {
         // No need to add another terminator, so loop back to the start.
         continue;
       }
 
       if (!found_equal) {
-        data_[i++] = '=';
+        AddOrAbort('=');
       } else {
         found_equal = false;
       }
       // Add the terminator.
-      data_[i++] = 0;
+      AddOrAbort(0);
       continue;
     }
 
-    data_[i++] = static_cast<char>(c);
+    AddOrAbort(static_cast<char>(c));
   }
-
-  // If we finished the loop because we hit the limit, add a terminator if it's missing.
-  if (i > 0 && data_[i - 1] != 0) {
-    data_[i++] = 0;
-  }
-
-  length_ = i;
-  ZX_DEBUG_ASSERT(length_ < kCmdlineMax);
 }
 
 const char* Cmdline::GetString(const char* key) const {
@@ -148,6 +137,14 @@ uint64_t Cmdline::GetUInt64(const char* key, uint64_t default_value) const {
 }
 
 size_t Cmdline::size() const {
-  // + 1 to count the terminating \0.
   return length_ + 1;
+}
+
+
+void Cmdline::AddOrAbort(char c) {
+  if (length_ < kCmdlineMax - 1) {
+    data_[length_++] = c;
+  } else {
+    ZX_PANIC("cmdline overflow");
+  }
 }
