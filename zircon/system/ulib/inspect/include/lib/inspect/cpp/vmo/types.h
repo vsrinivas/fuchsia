@@ -9,6 +9,7 @@
 #include <lib/fit/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -370,7 +371,7 @@ class Node final {
   // Create a new |Node| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created node will
   // also not be stored in a buffer.
-  Node CreateChild(const std::string& name);
+  Node CreateChild(const std::string& name) __WARN_UNUSED_RESULT;
 
   // Same as CreateChild, but emplaces the value in the given container.
   //
@@ -384,7 +385,7 @@ class Node final {
   // Create a new |IntProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  IntProperty CreateInt(const std::string& name, int64_t value);
+  IntProperty CreateInt(const std::string& name, int64_t value) __WARN_UNUSED_RESULT;
 
   // Same as CreateInt, but emplaces the value in the given container.
   //
@@ -398,7 +399,7 @@ class Node final {
   // Create a new |UintProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  UintProperty CreateUint(const std::string& name, uint64_t value);
+  UintProperty CreateUint(const std::string& name, uint64_t value) __WARN_UNUSED_RESULT;
 
   // Same as CreateUint, but emplaces the value in the given container.
   //
@@ -412,7 +413,7 @@ class Node final {
   // Create a new |DoubleProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
-  DoubleProperty CreateDouble(const std::string& name, double value);
+  DoubleProperty CreateDouble(const std::string& name, double value) __WARN_UNUSED_RESULT;
 
   // Same as CreateDouble, but emplaces the value in the given container.
   //
@@ -426,7 +427,8 @@ class Node final {
   // Create a new |StringProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
-  StringProperty CreateString(const std::string& name, const std::string& value);
+  StringProperty CreateString(const std::string& name,
+                              const std::string& value) __WARN_UNUSED_RESULT;
 
   // Same as CreateString, but emplaces the value in the given container.
   //
@@ -440,7 +442,8 @@ class Node final {
   // Create a new |ByteVectorProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
-  ByteVectorProperty CreateByteVector(const std::string& name, const std::vector<uint8_t>& value);
+  ByteVectorProperty CreateByteVector(const std::string& name,
+                                      const std::vector<uint8_t>& value) __WARN_UNUSED_RESULT;
 
   // Same as CreateByteVector, but emplaces the value in the given container.
   //
@@ -454,49 +457,54 @@ class Node final {
   // Create a new |IntArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  IntArray CreateIntArray(const std::string& name, size_t slots);
+  IntArray CreateIntArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |UintArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  UintArray CreateUintArray(const std::string& name, size_t slots);
+  UintArray CreateUintArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |DoubleArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
-  DoubleArray CreateDoubleArray(const std::string& name, size_t slots);
+  DoubleArray CreateDoubleArray(const std::string& name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearIntHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
   LinearIntHistogram CreateLinearIntHistogram(const std::string& name, int64_t floor,
-                                              int64_t step_size, size_t buckets);
+                                              int64_t step_size,
+                                              size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearUintHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
   LinearUintHistogram CreateLinearUintHistogram(const std::string& name, uint64_t floor,
-                                                uint64_t step_size, size_t buckets);
+                                                uint64_t step_size,
+                                                size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearDoubleHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
   LinearDoubleHistogram CreateLinearDoubleHistogram(const std::string& name, double floor,
-                                                    double step_size, size_t buckets);
+                                                    double step_size,
+                                                    size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |ExponentialIntHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
   ExponentialIntHistogram CreateExponentialIntHistogram(const std::string& name, int64_t floor,
                                                         int64_t initial_step,
-                                                        int64_t step_multiplier, size_t buckets);
+                                                        int64_t step_multiplier,
+                                                        size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |ExponentialUintHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
   // a buffer.
   ExponentialUintHistogram CreateExponentialUintHistogram(const std::string& name, uint64_t floor,
                                                           uint64_t initial_step,
-                                                          uint64_t step_multiplier, size_t buckets);
+                                                          uint64_t step_multiplier,
+                                                          size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |ExponentialDoubleHistogram| with the given name and format that is a child of
   // this node. If this node is not stored in a buffer, the created value will also not be
@@ -504,7 +512,7 @@ class Node final {
   ExponentialDoubleHistogram CreateExponentialDoubleHistogram(const std::string& name, double floor,
                                                               double initial_step,
                                                               double step_multiplier,
-                                                              size_t buckets);
+                                                              size_t buckets) __WARN_UNUSED_RESULT;
 
   // Create a new |LazyNode| with the given name that is populated by the given callback on demand.
   //
@@ -525,7 +533,8 @@ class Node final {
   //    a:
   //      b:
   //        val = 2
-  LazyNode CreateLazyNode(const std::string& name, LazyNodeCallbackFn callback);
+  LazyNode CreateLazyNode(const std::string& name,
+                          LazyNodeCallbackFn callback) __WARN_UNUSED_RESULT;
 
   // Same as CreateLazyNode, but emplaces the value in the given container.
   //
@@ -570,7 +579,8 @@ class Node final {
   //  root:
   //    a:
   //      b [Failed to open link]
-  LazyNode CreateLazyValues(const std::string& name, LazyNodeCallbackFn callback);
+  LazyNode CreateLazyValues(const std::string& name,
+                            LazyNodeCallbackFn callback) __WARN_UNUSED_RESULT;
 
   // Same as CreateLazyValues, but emplaces the value in the given container.
   //
