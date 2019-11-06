@@ -6,12 +6,14 @@
 
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>
+#include <zircon/fidl.h>
 
 #include <fidl/test/misc/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
+#include "lib/fidl/txn_header.h"
 
 namespace fidl {
 namespace internal {
@@ -84,6 +86,30 @@ class EchoServer : public fidl::test::misc::Echo {
   fidl::Binding<fidl::test::misc::Echo> binding_;
 };
 
+template <size_t N>
+struct StringMessage {
+  FIDL_ALIGNDECL
+  fidl_message_header_t hdr;
+  std::array<char, N> data;
+};
+
+constexpr size_t kMessageDataStart = 16;
+
+template <size_t N>
+StringMessage<N> CreateFidlMessage(const char (&data)[N]) {
+  StringMessage<N> msg;
+  fidl_init_txn_header(&msg.hdr, 0, 0);
+  memcpy(&msg.data, data, N);
+  return msg;
+}
+
+const auto test_msg0 = CreateFidlMessage("hello");
+const uint32_t test_msg0_size = 21;
+const auto test_msg1 = CreateFidlMessage(", world");
+const uint32_t test_msg1_size = 23;
+const auto test_msg2 = CreateFidlMessage("!");
+const uint32_t test_msg2_size = 17;
+
 TEST(MessageReader, Trivial) { MessageReader reader; }
 
 TEST(MessageReader, Bind) {
@@ -114,25 +140,21 @@ TEST(MessageReader, Control) {
   EXPECT_EQ(1, handler.channel_gone_count_);
   reader.Bind(std::move(h3));
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
   EXPECT_EQ(0, handler.message_count_);
 
   EXPECT_EQ(ZX_OK, reader.WaitAndDispatchOneMessageUntil(zx::time::infinite()));
   EXPECT_EQ(1, handler.message_count_);
-  EXPECT_EQ(29u, handler.bytes_.size());
-  EXPECT_EQ('X', handler.bytes_[0]);
+  EXPECT_EQ(test_msg0_size, handler.bytes_.size());
+  EXPECT_EQ('h', handler.bytes_[kMessageDataStart]);
   EXPECT_EQ(0u, handler.handles_.size());
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
 
   EXPECT_EQ(2, handler.message_count_);
-  EXPECT_EQ(31u, handler.bytes_.size());
-  EXPECT_EQ('X', handler.bytes_[0]);
+  EXPECT_EQ(test_msg1_size, handler.bytes_.size());
+  EXPECT_EQ(',', handler.bytes_[kMessageDataStart]);
   EXPECT_EQ(0u, handler.handles_.size());
 
   int error_count = 0;
@@ -172,9 +194,7 @@ TEST(MessageReader, HandlerError) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader.Bind(std::move(h1));
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
 
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
@@ -198,9 +218,7 @@ TEST(MessageReader, HandlerErrorWithoutErrorHandler) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader.Bind(std::move(h1));
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
 
   EXPECT_TRUE(reader.is_bound());
 
@@ -289,9 +307,7 @@ TEST(MessageReader, UnbindDuringHandler) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader.Bind(std::move(h1));
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
 
   EXPECT_EQ(0, error_count);
   EXPECT_TRUE(reader.is_bound());
@@ -309,9 +325,7 @@ TEST(MessageReader, UnbindDuringHandler) {
   CopyingMessageHandler logger;
   reader.set_message_handler(&logger);
 
-  // The Xs represent the message header bytes.
-  // Messages must be at least the length of the message header.
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
 
   EXPECT_EQ(0, error_count);
@@ -347,8 +361,8 @@ TEST(MessageReader, ShouldWaitFromRead) {
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(0, message_count);
 
@@ -363,13 +377,14 @@ TEST(MessageReader, ShouldWaitFromRead) {
   CopyingMessageHandler logger;
   reader.set_message_handler(&logger);
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXagain!", 30, nullptr, 0));
+  auto msg = CreateFidlMessage("again!");
+  EXPECT_EQ(ZX_OK, h2.write(0, &msg, 22, nullptr, 0));
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
 
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(1, logger.message_count_);
-  EXPECT_EQ(30u, logger.bytes_.size());
-  EXPECT_EQ('X', logger.bytes_[0]);
+  EXPECT_EQ(22u, logger.bytes_.size());
+  EXPECT_EQ('a', logger.bytes_[kMessageDataStart]);
 
   reader.set_message_handler(nullptr);
 }
@@ -401,8 +416,8 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(0, message_count);
 
@@ -415,7 +430,7 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   // The handler unbound the channel, so the reader should not be listening to
   // the channel anymore.
 
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
 
   reader.set_message_handler(nullptr);
 }
@@ -435,7 +450,7 @@ TEST(MessageReader, NoHandler) {
   fidl::test::AsyncLoopForTest loop;
   reader.Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
   EXPECT_EQ(0, error_count);
 
   EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
@@ -494,7 +509,7 @@ TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
   EXPECT_FALSE(reader1.is_bound());
   EXPECT_TRUE(reader2.is_bound());
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
 
   EXPECT_EQ(0, error_count);
   EXPECT_FALSE(reader1.is_bound());
@@ -527,8 +542,8 @@ TEST(MessageReader, ReentrantDestruction) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader->Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
 
   EXPECT_TRUE(reader->is_bound());
 
@@ -567,9 +582,9 @@ TEST(MessageReader, DoubleReentrantDestruction) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader->Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX!", 25, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg2, test_msg2_size, nullptr, 0));
 
   EXPECT_TRUE(reader->is_bound());
 
@@ -609,9 +624,9 @@ TEST(MessageReader, DoubleReentrantUnbind) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   reader.Bind(std::move(h1));
 
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXXhello", 29, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX, world", 31, nullptr, 0));
-  EXPECT_EQ(ZX_OK, h2.write(0, "XXXXXXXXXXXXXXXXXXXXXXXX!", 25, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg0, test_msg0_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg1, test_msg1_size, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, &test_msg2, test_msg2_size, nullptr, 0));;
 
   EXPECT_TRUE(reader.is_bound());
 
@@ -668,6 +683,27 @@ TEST(MessageReader, Close) {
   loop.RunUntilIdle();
   EXPECT_EQ(kSysError, error);
   EXPECT_FALSE(client.is_bound());
+}
+
+TEST(MessageReader, MagicNumberCheck) {
+  fidl::test::AsyncLoopForTest loop;
+
+  zx::channel h1, writer;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &writer));
+
+  MessageReader reader;
+  reader.Bind(std::move(h1));
+  EXPECT_TRUE(reader.is_bound());
+
+  zx_status_t error = 0;
+  reader.set_error_handler([&error](zx_status_t remote_error) { error = remote_error; });
+
+  fidl_message_header_t header;
+  header.magic_number = 0xFF;
+  EXPECT_EQ(ZX_OK, writer.write(0, &header, sizeof(header), nullptr, 0));
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(error, ZX_ERR_PROTOCOL_NOT_SUPPORTED);
 }
 
 }  // namespace

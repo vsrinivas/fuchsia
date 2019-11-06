@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -205,6 +206,11 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
   if (status != ZX_OK) {
     NotifyError(status);
     return status;
+  }
+
+  if (!message.is_supported_version()) {
+    NotifyError(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+    return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
   }
 
   if (message.ordinal() == kFidlOrdinalEpitaph) {
