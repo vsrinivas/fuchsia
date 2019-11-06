@@ -197,8 +197,10 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
 
   // For debugger usage.
-  zx_status_t ReadState(zx_thread_state_topic_t state_kind, void* buffer, size_t buffer_len);
-  zx_status_t WriteState(zx_thread_state_topic_t state_kind, const void* buffer, size_t buffer_len);
+  zx_status_t ReadState(zx_thread_state_topic_t state_kind, user_out_ptr<void> buffer,
+                        size_t buffer_size);
+  zx_status_t WriteState(zx_thread_state_topic_t state_kind, user_in_ptr<const void> buffer,
+                         size_t buffer_size);
 
   // Profile support
   zx_status_t SetPriority(int32_t priority) TA_EXCL(get_lock());
@@ -263,6 +265,13 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
   bool IsDyingOrDeadLocked() const TA_REQ(get_lock());
+
+  template <typename T, typename F>
+  zx_status_t ReadStateGeneric(F get_state_func, thread_t* thread, user_out_ptr<void> buffer,
+                               size_t buffer_size);
+  template <typename T, typename F>
+  zx_status_t WriteStateGeneric(F set_state_func, thread_t* thread, user_in_ptr<const void> buffer,
+                                size_t buffer_size);
 
   // The containing process holds a list of all its threads.
   fbl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;

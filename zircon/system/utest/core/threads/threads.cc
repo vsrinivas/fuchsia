@@ -1301,6 +1301,49 @@ static bool TestWritingGeneralRegisterState() {
   END_TEST;
 }
 
+// This tests writing single step state using zx_thread_write_state().
+static bool TestWritingSingleStepState() {
+  BEGIN_TEST;
+
+  RegisterWriteSetup<zx_thread_state_single_step_t> setup;
+  ASSERT_TRUE(setup.Init());
+
+  // 0 is valid.
+  zx_thread_state_single_step_t single_step = 0;
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step)),
+            ZX_OK);
+
+  // 1 is valid.
+  single_step = 1;
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step)),
+            ZX_OK);
+
+  // All other values are invalid.
+  single_step = 2;
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step)),
+            ZX_ERR_INVALID_ARGS);
+  single_step = UINT32_MAX;
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step)),
+            ZX_ERR_INVALID_ARGS);
+
+  // Buffer can be larger than necessary.
+  single_step = 0;
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step) + 1),
+            ZX_OK);
+  // But not smaller.
+  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
+                                  sizeof(single_step) - 1),
+            ZX_ERR_BUFFER_TOO_SMALL);
+
+  END_TEST;
+}
+
+
 static bool TestWritingFpRegisterState() {
   BEGIN_TEST;
 
@@ -1797,6 +1840,7 @@ RUN_TEST(TestReadingGeneralRegisterState)
 // RUN_TEST(TestReadingVectorRegisterState)
 
 RUN_TEST(TestWritingGeneralRegisterState)
+RUN_TEST(TestWritingSingleStepState)
 
 // Test disabled, see ZX-2508.
 // RUN_TEST(TestWritingFpRegisterState)

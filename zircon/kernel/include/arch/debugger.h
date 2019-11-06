@@ -31,8 +31,8 @@ zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_
 zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out);
 zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in);
 
-zx_status_t arch_get_single_step(thread_t* thread, bool* single_step);
-zx_status_t arch_set_single_step(thread_t* thread, bool single_step);
+zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out);
+zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in);
 
 // Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
 zx_status_t arch_get_x86_register_fs(thread_t* thread, uint64_t* out);

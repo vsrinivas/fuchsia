@@ -67,53 +67,6 @@ zx_status_t copy_user_string(const user_in_ptr<const char>& src, size_t src_len,
   return ZX_OK;
 }
 
-// This represents the local storage for thread_read/write_state. It should be large enough to
-// handle all structures passed over these APIs.
-union thread_state_local_buffer_t {
-  zx_thread_state_general_regs_t general_regs;  // ZX_THREAD_STATE_GENERAL_REGS
-  zx_thread_state_fp_regs_t fp_regs;            // ZX_THREAD_STATE_FP_REGS
-  zx_thread_state_vector_regs_t vector_regs;    // ZX_THREAD_STATE_VECTOR_REGS
-  zx_thread_state_debug_regs_t debug_regs;      // ZX_THREAD_STATE_DEBUG_REGS
-  uint32_t single_step;                         // ZX_THREAD_STATE_SINGLE_STEP
-  uint64_t x86_register_fs;                     // ZX_THREAD_X86_REGISTER_FS;
-  uint64_t x86_register_gs;                     // ZX_THREAD_X86_REGISTER_GS;
-};
-
-// Validates the input topic to thread_read_state and thread_write_state is a valid value, and
-// checks that the input buffer size is at least as large as necessary for the topic. On ZX_OK, the
-// actual size necessary for the buffer will be placed in the output parameter.
-zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t* out_len) {
-  switch (in_topic) {
-    case ZX_THREAD_STATE_GENERAL_REGS:
-      *out_len = sizeof(zx_thread_state_general_regs_t);
-      break;
-    case ZX_THREAD_STATE_FP_REGS:
-      *out_len = sizeof(zx_thread_state_fp_regs_t);
-      break;
-    case ZX_THREAD_STATE_VECTOR_REGS:
-      *out_len = sizeof(zx_thread_state_vector_regs_t);
-      break;
-    case ZX_THREAD_STATE_DEBUG_REGS:
-      *out_len = sizeof(zx_thread_state_debug_regs_t);
-      break;
-    case ZX_THREAD_STATE_SINGLE_STEP:
-      *out_len = sizeof(zx_thread_state_single_step_t);
-      break;
-    case ZX_THREAD_X86_REGISTER_FS:
-      *out_len = sizeof(zx_thread_x86_register_fs_t);
-      break;
-    case ZX_THREAD_X86_REGISTER_GS:
-      *out_len = sizeof(zx_thread_x86_register_gs_t);
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (in_len < *out_len)
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  return ZX_OK;
-}
-
 }  // namespace
 
 // zx_status_t zx_thread_create
@@ -199,20 +152,7 @@ zx_status_t sys_thread_read_state(zx_handle_t handle, uint32_t kind, user_out_pt
   if (status != ZX_OK)
     return status;
 
-  thread_state_local_buffer_t local_buffer;
-  size_t local_buffer_len = 0;
-  status = validate_thread_state_input(kind, buffer_size, &local_buffer_len);
-  if (status != ZX_OK)
-    return status;
-
-  status = thread->ReadState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
-                             local_buffer_len);
-  if (status != ZX_OK)
-    return status;
-
-  if (buffer.copy_array_to_user(&local_buffer, local_buffer_len) != ZX_OK)
-    return ZX_ERR_INVALID_ARGS;
-  return ZX_OK;
+  return thread->ReadState(static_cast<zx_thread_state_topic_t>(kind), buffer, buffer_size);
 }
 
 // zx_status_t zx_thread_write_state
@@ -228,23 +168,7 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
   if (status != ZX_OK)
     return status;
 
-  thread_state_local_buffer_t local_buffer;
-  size_t local_buffer_len = 0;
-  status = validate_thread_state_input(kind, buffer_size, &local_buffer_len);
-  if (status != ZX_OK)
-    return status;
-
-  // Additionally check that the buffer is the exact size expected (validate only checks it's
-  // larger, which is sufficient for reading).
-  if (local_buffer_len != buffer_size)
-    return ZX_ERR_INVALID_ARGS;
-
-  status = buffer.copy_array_from_user(&local_buffer, local_buffer_len);
-  if (status != ZX_OK)
-    return ZX_ERR_INVALID_ARGS;
-
-  return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
-                            local_buffer_len);
+  return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), buffer, buffer_size);
 }
 
 // zx_status_t zx_task_suspend

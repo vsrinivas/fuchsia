@@ -1065,108 +1065,108 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
   return sent;
 }
 
-// Note: buffer must be sufficiently aligned
+// T is the state type to read.
+// F is a function that gets state T and has signature |zx_status_t (F)(thread_t*, T*)|.
+template <typename T, typename F>
+zx_status_t ThreadDispatcher::ReadStateGeneric(F get_state_func, thread_t* thread,
+                                               user_out_ptr<void> buffer, size_t buffer_size) {
+  if (buffer_size < sizeof(T)) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
-zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind, void* buffer,
-                                        size_t buffer_len) {
+  T state{};
+
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+    // We can't be reading regs while the thread transitions from SUSPENDED to RUNNING.
+    if (!SuspendedOrInExceptionLocked()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t status = get_state_func(thread, &state);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Since copy may fault, copy only after releasing the lock.
+  return buffer.reinterpret<T>().copy_to_user(state);
+}
+
+zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
+                                        user_out_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
 
-  // We can't be reading regs while the thread transitions from
-  // SUSPENDED to RUNNING.
-  Guard<fbl::Mutex> guard{get_lock()};
-
-  if (!SuspendedOrInExceptionLocked()) {
-    return ZX_ERR_BAD_STATE;
-  }
-
   switch (state_kind) {
-    case ZX_THREAD_STATE_GENERAL_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_general_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_get_general_regs(&thread_, static_cast<zx_thread_state_general_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_FP_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_fp_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_get_fp_regs(&thread_, static_cast<zx_thread_state_fp_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_VECTOR_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_vector_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_get_vector_regs(&thread_, static_cast<zx_thread_state_vector_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_DEBUG_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_debug_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_get_debug_regs(&thread_, static_cast<zx_thread_state_debug_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_SINGLE_STEP: {
-      if (buffer_len != sizeof(zx_thread_state_single_step_t))
-        return ZX_ERR_INVALID_ARGS;
-      bool single_step;
-      zx_status_t status = arch_get_single_step(&thread_, &single_step);
-      if (status != ZX_OK)
-        return status;
-      *static_cast<zx_thread_state_single_step_t*>(buffer) =
-          static_cast<zx_thread_state_single_step_t>(single_step);
-      return ZX_OK;
-    }
+    case ZX_THREAD_STATE_GENERAL_REGS:
+      return ReadStateGeneric<zx_thread_state_general_regs_t>(arch_get_general_regs, &thread_,
+                                                              buffer, buffer_size);
+    case ZX_THREAD_STATE_FP_REGS:
+      return ReadStateGeneric<zx_thread_state_fp_regs_t>(arch_get_fp_regs, &thread_, buffer,
+                                                         buffer_size);
+    case ZX_THREAD_STATE_VECTOR_REGS:
+      return ReadStateGeneric<zx_thread_state_vector_regs_t>(arch_get_vector_regs, &thread_, buffer,
+                                                             buffer_size);
+    case ZX_THREAD_STATE_DEBUG_REGS:
+      return ReadStateGeneric<zx_thread_state_debug_regs_t>(arch_get_debug_regs, &thread_, buffer,
+                                                            buffer_size);
+    case ZX_THREAD_STATE_SINGLE_STEP:
+      return ReadStateGeneric<zx_thread_state_single_step_t>(arch_get_single_step, &thread_, buffer,
+                                                             buffer_size);
     default:
       return ZX_ERR_INVALID_ARGS;
   }
 }
 
-// Note: buffer must be sufficiently aligned
+// T is the state type to write.
+// F is a function that sets state T and has signature |zx_status_t (F)(thread_t*, const T*)|.
+template <typename T, typename F>
+zx_status_t ThreadDispatcher::WriteStateGeneric(F set_state_func, thread_t* thread,
+                                                user_in_ptr<const void> buffer,
+                                                size_t buffer_size) {
+  if (buffer_size < sizeof(T)) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
-zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind, const void* buffer,
-                                         size_t buffer_len) {
-  canary_.Assert();
+  T state{};
+  zx_status_t status = buffer.reinterpret<const T>().copy_from_user(&state);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  LTRACE_ENTRY_OBJ;
-
-  // We can't be reading regs while the thread transitions from
-  // SUSPENDED to RUNNING.
   Guard<fbl::Mutex> guard{get_lock()};
 
+  // We can't be reading regs while the thread transitions from SUSPENDED to RUNNING.
   if (!SuspendedOrInExceptionLocked()) {
     return ZX_ERR_BAD_STATE;
   }
 
+  return set_state_func(thread, &state);
+}
+
+zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
+                                         user_in_ptr<const void> buffer, size_t buffer_size) {
+  canary_.Assert();
+
+  LTRACE_ENTRY_OBJ;
+
   switch (state_kind) {
-    case ZX_THREAD_STATE_GENERAL_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_general_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_set_general_regs(&thread_,
-                                   static_cast<const zx_thread_state_general_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_FP_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_fp_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_set_fp_regs(&thread_, static_cast<const zx_thread_state_fp_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_VECTOR_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_vector_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_set_vector_regs(&thread_,
-                                  static_cast<const zx_thread_state_vector_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_DEBUG_REGS: {
-      if (buffer_len != sizeof(zx_thread_state_debug_regs_t))
-        return ZX_ERR_INVALID_ARGS;
-      return arch_set_debug_regs(&thread_,
-                                 static_cast<const zx_thread_state_debug_regs_t*>(buffer));
-    }
-    case ZX_THREAD_STATE_SINGLE_STEP: {
-      if (buffer_len != sizeof(zx_thread_state_single_step_t))
-        return ZX_ERR_INVALID_ARGS;
-      const zx_thread_state_single_step_t* single_step =
-          static_cast<const zx_thread_state_single_step_t*>(buffer);
-      if (*single_step != 0 && *single_step != 1)
-        return ZX_ERR_INVALID_ARGS;
-      return arch_set_single_step(&thread_, !!*single_step);
-    }
+    case ZX_THREAD_STATE_GENERAL_REGS:
+      return WriteStateGeneric<zx_thread_state_general_regs_t>(arch_set_general_regs, &thread_,
+                                                               buffer, buffer_size);
+    case ZX_THREAD_STATE_FP_REGS:
+      return WriteStateGeneric<zx_thread_state_fp_regs_t>(arch_set_fp_regs, &thread_, buffer,
+                                                          buffer_size);
+    case ZX_THREAD_STATE_VECTOR_REGS:
+      return WriteStateGeneric<zx_thread_state_vector_regs_t>(arch_set_vector_regs, &thread_,
+                                                              buffer, buffer_size);
+    case ZX_THREAD_STATE_DEBUG_REGS:
+      return WriteStateGeneric<zx_thread_state_debug_regs_t>(arch_set_debug_regs, &thread_, buffer,
+                                                             buffer_size);
+    case ZX_THREAD_STATE_SINGLE_STEP:
+      return WriteStateGeneric<zx_thread_state_single_step_t>(arch_set_single_step, &thread_,
+                                                              buffer, buffer_size);
     default:
       return ZX_ERR_INVALID_ARGS;
   }

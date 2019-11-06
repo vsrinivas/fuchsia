@@ -250,7 +250,7 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
+zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -271,11 +271,15 @@ zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
       return ZX_ERR_BAD_STATE;
   }
 
-  *single_step = !!(*flags & X86_FLAGS_TF);
+  *out = !!(*flags & X86_FLAGS_TF);
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
+zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in) {
+  if (*in != 0 && *in != 1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -296,7 +300,7 @@ zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
       return ZX_ERR_BAD_STATE;
   }
 
-  if (single_step) {
+  if (*in) {
     *flags |= X86_FLAGS_TF;
   } else {
     *flags &= ~X86_FLAGS_TF;

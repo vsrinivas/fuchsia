@@ -76,7 +76,7 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
+zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -89,11 +89,15 @@ zx_status_t arch_get_single_step(thread_t* thread, bool* single_step) {
   const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
   const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
 
-  *single_step = mdscr_ss_enable && spsr_ss_enable;
+  *out = mdscr_ss_enable && spsr_ss_enable;
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
+zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in) {
+  if (*in != 0 && *in != 1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // Punt if registers aren't available. E.g.,
@@ -102,7 +106,7 @@ zx_status_t arch_set_single_step(thread_t* thread, bool single_step) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   arm64_iframe_t* regs = thread->arch.suspended_general_regs;
-  if (single_step) {
+  if (*in) {
     regs->mdscr |= kMdscrSSMask;
     regs->spsr |= kSSMaskSPSR;
   } else {
