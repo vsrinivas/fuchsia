@@ -16,6 +16,9 @@ type TestResult struct {
 	// Name is the name of the test that was executed.
 	Name string
 
+	// GNLabel is the label (with toolchain) for the test target.
+	GNLabel string
+
 	// Result describes whether the test passed or failed.
 	Result runtests.TestResult
 

@@ -25,6 +25,7 @@ func (o *SummaryOutput) Record(result testrunner.TestResult) {
 	pathInArchive = strings.TrimLeft(pathInArchive, "//")
 	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
+		GNLabel:        result.GNLabel,
 		OutputFile:     pathInArchive,
 		Result:         result.Result,
 		DurationMillis: result.EndTime.Sub(result.StartTime).Nanoseconds() / 1000 / 1000,

@@ -48,6 +48,9 @@ type TestDetails struct {
 	// Name is the name of the test.
 	Name string `json:"name"`
 
+	// GNLabel is label of the test target (with toolchain).
+	GNLabel string `json:"gn_label"`
+
 	// OutputFile is a file containing the test's output (stdout/stderr).
 	OutputFile string `json:"output_file"`
 

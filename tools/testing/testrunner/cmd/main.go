@@ -203,9 +203,17 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testru
 
 	endTime := time.Now()
 
+	// test.Name is available but is not necessarily a unique identifier for
+	// each test, so we use either path or package URL instead.
+	name := test.Path
+	if test.OS == testsharder.Fuchsia {
+		name = test.PackageURL
+	}
+
 	// Record the test details in the summary.
 	return &testrunner.TestResult{
-		Name:      test.Name,
+		Name:      name,
+		GNLabel:   test.Label,
 		Stdout:    stdout.Bytes(),
 		Stderr:    stderr.Bytes(),
 		Result:    result,
