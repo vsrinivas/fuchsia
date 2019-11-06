@@ -8,12 +8,13 @@
 #include <fuchsia/ui/activity/cpp/fidl_test_base.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/time.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/component/cpp/startup_context.h"
-#include "src/lib/component/cpp/testing/test_with_context.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace root_presenter {
 namespace {
@@ -43,21 +44,17 @@ class FakeActivityTracker : public fuchsia::ui::activity::testing::Tracker_TestB
   fidl::Binding<fuchsia::ui::activity::Tracker> binding_{this};
 };
 
-class ActivityNotifierImplTest : public component::testing::TestWithContext {
+class ActivityNotifierImplTest : public gtest::TestLoopFixture {
  public:
   ActivityNotifierImplTest()
-      : startup_context_(TakeContext()),
-        activity_notifier_(dispatcher(), ActivityNotifierImpl::kDefaultInterval,
-                           startup_context_.get()) {
-    controller().AddService(fake_tracker_.GetHandler(dispatcher()));
+      : activity_notifier_(dispatcher(), ActivityNotifierImpl::kDefaultInterval,
+                           *context_provider_.context()) {
+    context_provider_.service_directory_provider()->AddService(
+        fake_tracker_.GetHandler(dispatcher()));
   }
 
-  // private intentionally comes before protected because |startup_context_| must be constructed
-  // before |activity_notifier_|, and |activity_notifier_| must be protected for use in tests
- private:
-  std::unique_ptr<component::StartupContext> startup_context_;
-
  protected:
+  sys::testing::ComponentContextProvider context_provider_;
   ActivityNotifierImpl activity_notifier_;
   FakeActivityTracker fake_tracker_;
 };

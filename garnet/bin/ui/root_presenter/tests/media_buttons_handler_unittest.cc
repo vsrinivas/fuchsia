@@ -6,12 +6,13 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <stdlib.h>
+#include <lib/async/dispatcher.h>
+
+#include <cstdlib>
 
 #include "gtest/gtest.h"
-#include "lib/async/dispatcher.h"
-#include "src/lib/component/cpp/testing/test_with_context.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/testing/mock_input_device.h"
 
@@ -62,7 +63,7 @@ class MockActivityNotifier : public ActivityNotifier {
   std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
 };
 
-class MediaButtonsHandlerTest : public component::testing::TestWithContext,
+class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
                                 public ui_input::InputDeviceImpl::Listener {
  public:
   void SetUp() final {

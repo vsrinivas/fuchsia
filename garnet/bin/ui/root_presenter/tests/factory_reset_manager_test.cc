@@ -7,11 +7,12 @@
 #include <fuchsia/recovery/cpp/fidl_test_base.h>
 #include <lib/async/time.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/component/cpp/startup_context.h"
-#include "src/lib/component/cpp/testing/test_with_context.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace root_presenter {
 namespace testing {
@@ -40,37 +41,32 @@ class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBas
   fidl::BindingSet<fuchsia::recovery::FactoryReset> bindings_;
 };
 
-class FactoryResetManagerTest : public component::testing::TestWithContext {
+class FactoryResetManagerTest : public gtest::TestLoopFixture {
  public:
-  void SetUp() final {
-    controller().AddService(factory_reset_.GetHandler());
-
-    startup_context_ = TakeContext();
-    factory_reset_manager_ = std::make_unique<FactoryResetManager>(startup_context_.get());
+  FactoryResetManagerTest() : factory_reset_manager_(*context_provider_.context()) {
+    context_provider_.service_directory_provider()->AddService(factory_reset_.GetHandler());
   }
 
   bool triggered() const { return factory_reset_.triggered(); }
 
  protected:
-  std::unique_ptr<FactoryResetManager> factory_reset_manager_;
-
- private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  sys::testing::ComponentContextProvider context_provider_;
+  FactoryResetManager factory_reset_manager_;
   FakeFactoryReset factory_reset_;
 };
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleased) {
-  EXPECT_FALSE(factory_reset_manager_->countdown_started());
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
-  factory_reset_manager_->OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_->countdown_started());
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
 
   // Factory reset should cancel if the button is released.
   report.reset = false;
-  factory_reset_manager_->OnMediaButtonReport(report);
-  EXPECT_FALSE(factory_reset_manager_->countdown_started());
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
 
   RunLoopFor(kCountdownDuration);
   RunLoopUntilIdle();
@@ -78,13 +74,13 @@ TEST_F(FactoryResetManagerTest, FactoryResetButtonPressedAndReleased) {
 }
 
 TEST_F(FactoryResetManagerTest, FactoryResetButtonHeldAndTrigger) {
-  EXPECT_FALSE(factory_reset_manager_->countdown_started());
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
 
   fuchsia::ui::input::MediaButtonsReport report;
   report.reset = true;
 
-  factory_reset_manager_->OnMediaButtonReport(report);
-  EXPECT_TRUE(factory_reset_manager_->countdown_started());
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
 
   RunLoopFor(kCountdownDuration);
   RunLoopUntilIdle();

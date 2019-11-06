@@ -11,7 +11,7 @@ executable("screencap") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

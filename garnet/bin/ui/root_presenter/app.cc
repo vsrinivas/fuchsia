@@ -18,30 +18,27 @@
 
 #include <trace/event.h>
 
-#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line, async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       input_reader_(this),
-      fdr_manager_(std::make_unique<FactoryResetManager>(startup_context_.get())),
+      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get())),
       activity_notifier_(loop->dispatcher(), ActivityNotifierImpl::kDefaultInterval,
-                         startup_context_.get()),
+                         *component_context_.get()),
       media_buttons_handler_(&activity_notifier_) {
-  FXL_DCHECK(startup_context_);
+  FXL_DCHECK(component_context_);
 
   input_reader_.Start();
 
-  startup_context_->outgoing().AddPublicService(presenter_bindings_.GetHandler(this));
-  startup_context_->outgoing().AddPublicService(device_listener_bindings_.GetHandler(this));
-  startup_context_->outgoing().AddPublicService(input_receiver_bindings_.GetHandler(this));
-  startup_context_->outgoing().AddPublicService(a11y_pointer_event_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(presenter_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(a11y_pointer_event_bindings_.GetHandler(this));
 }
-
-App::~App() {}
 
 void App::RegisterMediaButtonsListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {
@@ -240,7 +237,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
 
 void App::InitializeServices() {
   if (!scenic_) {
-    startup_context_->ConnectToEnvironmentService(scenic_.NewRequest());
+    component_context_->svc()->Connect(scenic_.NewRequest());
     scenic_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Scenic died, destroying all presentations.";
       Reset();
@@ -274,17 +271,17 @@ void App::InitializeServices() {
     scenic_->GetDisplayOwnershipEvent(
         [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
 
-    startup_context_->ConnectToEnvironmentService(magnifier_.NewRequest());
+    component_context_->svc()->Connect(magnifier_.NewRequest());
     // No need to set an error handler here unless we want to attempt a reconnect or something;
     // instead, we add error handlers for cleanup on the a11y presentations when we register them.
 
-    startup_context_->ConnectToEnvironmentService(ime_service_.NewRequest());
+    component_context_->svc()->Connect(ime_service_.NewRequest());
     ime_service_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "IME Service died, destroying all presentations.";
       Reset();
     });
 
-    startup_context_->ConnectToEnvironmentService(shortcut_manager_.NewRequest());
+    component_context_->svc()->Connect(shortcut_manager_.NewRequest());
     shortcut_manager_.set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Shortcut manager unavailable: " << zx_status_get_string(error);
       shortcut_manager_ = nullptr;
@@ -297,7 +294,7 @@ void App::InitializeServices() {
     // When multiple compositors are supported in future, following code need
     // to be updated to support that change.
     a11y_settings_watchers_ = std::make_unique<A11ySettingsWatcher>(
-        startup_context_.get(), compositor_->id(), session_.get());
+        *component_context_.get(), compositor_->id(), session_.get());
   }
 }
 
@@ -344,7 +341,7 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
 void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
                        pointer_event_listener) {
   if (!pointer_event_registry_) {
-    startup_context_->ConnectToEnvironmentService(pointer_event_registry_.NewRequest());
+    component_context_->svc()->Connect(pointer_event_registry_.NewRequest());
   }
   FXL_LOG(INFO) << "Connecting to pointer event registry.";
   // Forward the listener to the registry we're connected to.

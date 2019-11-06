@@ -10,8 +10,6 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include "src/lib/component/cpp/startup_context.h"
-
 namespace root_presenter {
 
 FactoryResetManager::WatchHandler::WatchHandler(
@@ -41,16 +39,14 @@ void FactoryResetManager::WatchHandler::SendIfChanged() {
   }
 }
 
-FactoryResetManager::FactoryResetManager(component::StartupContext* context) {
-  FXL_DCHECK(context);
-  context->outgoing().AddPublicService<fuchsia::recovery::ui::FactoryResetCountdown>(
+FactoryResetManager::FactoryResetManager(sys::ComponentContext& context) {
+  context.outgoing()->AddPublicService<fuchsia::recovery::ui::FactoryResetCountdown>(
       [this](fidl::InterfaceRequest<fuchsia::recovery::ui::FactoryResetCountdown> request) {
         auto handler = std::make_unique<WatchHandler>(State());
         countdown_bindings_.AddBinding(std::move(handler), std::move(request));
       });
 
-  context->ConnectToEnvironmentService<fuchsia::recovery::FactoryReset>(
-      factory_reset_.NewRequest());
+  context.svc()->Connect(factory_reset_.NewRequest());
   FXL_DCHECK(factory_reset_);
 }
 

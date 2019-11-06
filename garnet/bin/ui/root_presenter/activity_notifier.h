@@ -9,11 +9,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 
 #include <optional>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
@@ -41,7 +41,7 @@ class ActivityNotifierImpl : public ActivityNotifier {
  public:
   constexpr static zx::duration kDefaultInterval = zx::sec(5);
   ActivityNotifierImpl(async_dispatcher_t* dispatcher, zx::duration interval,
-                       component::StartupContext* context);
+                       sys::ComponentContext& context);
 
   // ActivityNotifierImpl::Receive*() receive input events and prepares a |pending_activity_| to
   // send to the activity service (if the input event corresponds to user activity).

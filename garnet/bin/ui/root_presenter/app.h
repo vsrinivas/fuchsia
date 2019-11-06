@@ -15,6 +15,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <limits>
@@ -26,7 +27,6 @@
 #include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
@@ -47,7 +47,7 @@ class App : public fuchsia::ui::policy::Presenter,
             public ui_input::InputDeviceImpl::Listener {
  public:
   App(const fxl::CommandLine& command_line, async::Loop* loop);
-  ~App();
+  ~App() = default;
 
   // |InputDeviceImpl::Listener|
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
@@ -88,7 +88,7 @@ class App : public fuchsia::ui::policy::Presenter,
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;

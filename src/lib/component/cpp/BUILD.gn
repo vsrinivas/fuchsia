@@ -45,7 +45,6 @@ source_set("cpp") {
     "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",
-    "//src/lib/ui/base_view",
     "//src/camera/camera_manager:lib",
     "//src/camera/simple_camera/simple_camera_lib:simple_camera_lib",
     "//src/camera/simple_camera/simple_camera_server:lib",

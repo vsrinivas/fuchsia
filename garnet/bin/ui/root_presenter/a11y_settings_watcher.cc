@@ -14,11 +14,10 @@ const std::array<float, 3> kColorAdjustmentPostoffsets = {0, 0, 0};
 const std::array<float, 3> kColorAdjustmentPreoffsets = {0, 0, 0};
 const float kDefaultMagnificationZoomFactor = 1.0;
 
-A11ySettingsWatcher::A11ySettingsWatcher(component::StartupContext* startup_context,
+A11ySettingsWatcher::A11ySettingsWatcher(sys::ComponentContext& component_context,
                                          scenic::ResourceId compositor_id, scenic::Session* session)
     : session_(session), compositor_id_(compositor_id), settings_watcher_bindings_(this) {
-  FXL_DCHECK(startup_context);
-  startup_context->ConnectToEnvironmentService(a11y_settings_manager_.NewRequest());
+  component_context.svc()->Connect(a11y_settings_manager_.NewRequest());
   a11y_settings_manager_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Unable to connect to A11y Settings Manager." << zx_status_get_string(status);
   });

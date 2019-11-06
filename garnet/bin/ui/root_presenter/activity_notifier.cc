@@ -14,7 +14,6 @@
 
 #include <optional>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
@@ -25,10 +24,9 @@ using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::MediaButtonsEvent;
 
 ActivityNotifierImpl::ActivityNotifierImpl(async_dispatcher_t* dispatcher, zx::duration interval,
-                                           component::StartupContext* context)
+                                           sys::ComponentContext& context)
     : dispatcher_(dispatcher), interval_(interval) {
-  activity_tracker_service_ =
-      context->ConnectToEnvironmentService<fuchsia::ui::activity::Tracker>();
+  activity_tracker_service_ = context.svc()->Connect<fuchsia::ui::activity::Tracker>();
   activity_tracker_service_.set_error_handler([this](zx_status_t error) {
     FXL_LOG(ERROR) << "Activity service died (" << zx_status_get_string(error) << "), no longer "
                    << "sending activity events.";

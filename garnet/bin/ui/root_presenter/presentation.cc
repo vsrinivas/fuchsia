@@ -13,7 +13,6 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 #include "garnet/bin/ui/root_presenter/key_util.h"
-#include "src/lib/component/cpp/connect.h"
 #include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;

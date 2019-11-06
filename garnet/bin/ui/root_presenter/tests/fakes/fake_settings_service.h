@@ -8,9 +8,9 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <math.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
@@ -21,7 +21,7 @@ namespace testing {
 // Presenter.
 class FakeSettingsService {
  public:
-  explicit FakeSettingsService(component::StartupContext* context);
+  explicit FakeSettingsService(sys::ComponentContext& context);
   ~FakeSettingsService() = default;
 
   void SetMagnificationEnabled(
@@ -45,7 +45,6 @@ class FakeSettingsService {
       fuchsia::accessibility::SettingsProvider::SetColorCorrectionCallback callback);
 
  private:
-  component::StartupContext* context_;
   fuchsia::accessibility::SettingsManagerPtr manager_;
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
   fuchsia::accessibility::Settings settings_;

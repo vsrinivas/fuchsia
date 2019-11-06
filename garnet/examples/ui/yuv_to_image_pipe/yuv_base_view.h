@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"

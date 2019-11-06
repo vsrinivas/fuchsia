@@ -11,8 +11,8 @@
 namespace root_presenter {
 namespace testing {
 
-FakeSettingsService::FakeSettingsService(component::StartupContext* context) : context_(context) {
-  context_->ConnectToEnvironmentService(manager_.NewRequest());
+FakeSettingsService::FakeSettingsService(sys::ComponentContext& context) {
+  context.svc()->Connect(manager_.NewRequest());
   manager_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Cannot connect to SettingsManager with status:"
                    << zx_status_get_string(status);

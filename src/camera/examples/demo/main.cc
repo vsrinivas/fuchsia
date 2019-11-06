@@ -23,7 +23,6 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 #include <fbl/unique_fd.h>
 
 #include "src/camera/stream_utils/image_io_util.h"
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/lib/ui/base_view/view_provider_component.h"

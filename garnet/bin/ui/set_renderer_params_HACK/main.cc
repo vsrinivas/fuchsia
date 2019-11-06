@@ -5,11 +5,11 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
-#include "lib/svc/cpp/services.h"
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -43,10 +43,10 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   // Ask the presenter to change renderer params.
-  auto presenter = startup_context_->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+  auto presenter = component_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
   presenter.set_error_handler([&loop](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Presenter service.";
     loop.Quit();

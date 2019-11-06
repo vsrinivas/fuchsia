@@ -7,15 +7,15 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/session.h>
-
-#include <gtest/gtest.h>
 
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_scenic.h"
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_settings_service.h"
-#include "src/lib/component/cpp/startup_context.h"
-#include "src/lib/component/cpp/testing/test_with_context.h"
+#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/settings/settings_manager.h"
 #include "src/ui/a11y/lib/settings/settings_provider.h"
 
@@ -33,18 +33,15 @@ const std::array<float, 9> kIdentityMatrix = {
     0, 0, 1};
 // clang-format on
 
-class A11ySettingsWatcherTest : public component::testing::TestWithContext {
+class A11ySettingsWatcherTest : public gtest::TestLoopFixture {
  public:
-  void SetUp() override {
-    // Register the fake Scenic service with the environment.  This must
-    // happen before calling |TakeContext|.
-    //    controller().AddService(fake_scenic_.GetHandler());
-    RunLoopUntilIdle();
-    controller().AddService(settings_manager_bindings_.GetHandler(&settings_manager_impl_));
-    RunLoopUntilIdle();
-    startup_context_ = TakeContext();
+  A11ySettingsWatcherTest() {
+    context_provider_.service_directory_provider()->AddService(fake_scenic_.GetHandler());
+    context_provider_.service_directory_provider()->AddService(
+        settings_manager_bindings_.GetHandler(&settings_manager_impl_));
   }
 
+ protected:
   static const fuchsia::accessibility::Settings InitSettings() {
     fuchsia::accessibility::Settings settings;
     settings.set_magnification_enabled(false);
@@ -57,10 +54,11 @@ class A11ySettingsWatcherTest : public component::testing::TestWithContext {
     return settings;
   }
 
-  FakeScenic fake_scenic_;
-  std::unique_ptr<scenic::Session> session_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  sys::testing::ComponentContextProvider context_provider_;
+
   a11y::SettingsManager settings_manager_impl_;
+  std::unique_ptr<scenic::Session> session_;
+  FakeScenic fake_scenic_;
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
 };
 
@@ -78,11 +76,11 @@ TEST_F(A11ySettingsWatcherTest, VerifyA11ySettingsWatcher) {
 
   // Create Settings Watcher and connect to A11y Settings Service.
   std::unique_ptr<A11ySettingsWatcher> settings_watcher =
-      std::make_unique<A11ySettingsWatcher>(startup_context_.get(), id, session_.get());
+      std::make_unique<A11ySettingsWatcher>(*context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   // Create Settings Service which will change settings.
-  FakeSettingsService settings_provider(startup_context_.get());
+  FakeSettingsService settings_provider(*context_provider_.context());
   RunLoopUntilIdle();
 
   // Check if Settings Watcher recieves default settings on connection.
@@ -156,7 +154,7 @@ TEST_F(A11ySettingsWatcherTest, SetSettingsWithEmptyInput) {
 
   // Create Settings Watcher and connect to A11y Settings Service.
   std::unique_ptr<A11ySettingsWatcher> settings_watcher =
-      std::make_unique<A11ySettingsWatcher>(startup_context_.get(), id, session_.get());
+      std::make_unique<A11ySettingsWatcher>(*context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   Settings provided_settings;
@@ -190,7 +188,7 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_NoChange) {
 
   // Create Settings Watcher and connect to A11y Settings Service.
   std::unique_ptr<A11ySettingsWatcher> settings_watcher =
-      std::make_unique<A11ySettingsWatcher>(startup_context_.get(), id, session_.get());
+      std::make_unique<A11ySettingsWatcher>(*context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   Settings provided_settings;
@@ -213,7 +211,7 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_ColorCorrectionChanged
 
   // Create Settings Watcher and connect to A11y Settings Service.
   std::unique_ptr<A11ySettingsWatcher> settings_watcher =
-      std::make_unique<A11ySettingsWatcher>(startup_context_.get(), id, session_.get());
+      std::make_unique<A11ySettingsWatcher>(*context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   Settings provided_settings;
@@ -245,7 +243,7 @@ TEST_F(A11ySettingsWatcherTest, HasColorConversionChanged_ColorInversionChanged)
 
   // Create Settings Watcher and connect to A11y Settings Service.
   std::unique_ptr<A11ySettingsWatcher> settings_watcher =
-      std::make_unique<A11ySettingsWatcher>(startup_context_.get(), id, session_.get());
+      std::make_unique<A11ySettingsWatcher>(*context_provider_.context(), id, session_.get());
   RunLoopUntilIdle();
 
   Settings provided_settings;

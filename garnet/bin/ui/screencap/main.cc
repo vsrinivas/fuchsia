@@ -5,6 +5,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -12,7 +13,6 @@
 
 #include <trace-provider/provider.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -20,10 +20,10 @@
 
 class ScreenshotTaker {
  public:
-  explicit ScreenshotTaker(async::Loop* loop)
-      : loop_(loop), context_(component::StartupContext::CreateFromStartupInfo()) {
+  explicit ScreenshotTaker(async::Loop* loop) : loop_(loop) {
     // Connect to the Scenic service.
-    scenic_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    auto context = sys::ComponentContext::Create();
+    scenic_ = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
@@ -71,7 +71,6 @@ class ScreenshotTaker {
     });
   }
   async::Loop* loop_;
-  std::unique_ptr<component::StartupContext> context_;
   bool encountered_error_ = false;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };

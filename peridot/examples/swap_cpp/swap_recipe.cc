@@ -16,7 +16,6 @@
 #include <array>
 #include <memory>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"

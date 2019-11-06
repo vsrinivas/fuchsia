@@ -17,7 +17,6 @@ executable("gesture_recognizers_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

@@ -10,12 +10,9 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
-
-namespace component {
-class StartupContext;
-}
 
 namespace root_presenter {
 
@@ -50,7 +47,7 @@ class FactoryResetManager {
     FXL_DISALLOW_COPY_AND_ASSIGN(WatchHandler);
   };
 
-  explicit FactoryResetManager(component::StartupContext* startup_context);
+  explicit FactoryResetManager(sys::ComponentContext& component_context);
 
   // Returns true if the event is handled.
   bool OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
@@ -64,7 +61,7 @@ class FactoryResetManager {
   void TriggerFactoryReset();
 
   void NotifyStateChange();
- 
+
   fuchsia::recovery::ui::FactoryResetCountdownState State() const;
 
   bool countdown_started_ = false;
