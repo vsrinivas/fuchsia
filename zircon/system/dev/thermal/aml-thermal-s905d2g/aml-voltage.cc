@@ -28,7 +28,7 @@ constexpr int kSteps = 3;
 // Invalid index in the voltage-table
 constexpr int kInvalidIndex = -1;
 // Init period
-constexpr int kPeriod = 1250;
+constexpr int kPwmPeriodNs = 1250;
 
 }  // namespace
 
@@ -149,7 +149,7 @@ zx_status_t AmlVoltageRegulator::Init(aml_voltage_table_info_t* voltage_table_in
   ZX_DEBUG_ASSERT(voltage_table_info);
 
   // Initialize the PWM.
-  zx_status_t status = pwm_AO_D_->Init(kPeriod, 1);
+  zx_status_t status = pwm_AO_D_->Init(kPwmPeriodNs, 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-voltage: Could not initialize PWM PWM_AO_CD: %d\n", status);
     return status;
@@ -157,7 +157,7 @@ zx_status_t AmlVoltageRegulator::Init(aml_voltage_table_info_t* voltage_table_in
 
   if (pid_ == PDEV_PID_AMLOGIC_T931) {
     // Initialize the PWM.
-    zx_status_t status = pwm_A_->Init(kPeriod, 0);
+    zx_status_t status = pwm_A_->Init(kPwmPeriodNs, 0);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-voltage: Could not initialize pwm_A_ PWM: %d\n", status);
       return status;

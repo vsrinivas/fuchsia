@@ -423,6 +423,20 @@ class AmlPwmTest : public zxtest::Test {
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> pwm_regs_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_mmio_;
+
+  void TestPwmAConfigure(uint32_t duty_cycle, uint32_t expected, uint32_t expected_misc) {
+    (*mock_pwm_mmio_)[(0x0 * 4)].ExpectWrite(expected);
+    (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(expected_misc);
+    EXPECT_OK(pwm_->Configure(duty_cycle));
+    ASSERT_NO_FATAL_FAILURES(mock_pwm_mmio_->VerifyAll());
+  }
+
+  void TestPwmBConfigure(uint32_t duty_cycle, uint32_t expected, uint32_t expected_misc) {
+    (*mock_pwm_mmio_)[(0x1 * 4)].ExpectWrite(expected);
+    (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(expected_misc);
+    EXPECT_OK(pwm_->Configure(duty_cycle));
+    ASSERT_NO_FATAL_FAILURES(mock_pwm_mmio_->VerifyAll());
+  }
 };
 
 TEST_F(AmlPwmTest, ConfigureFail) {
@@ -430,28 +444,80 @@ TEST_F(AmlPwmTest, ConfigureFail) {
   EXPECT_NOT_OK(pwm_->Configure(101));
 }
 
-TEST_F(AmlPwmTest, Configure0) {
-  Create(10, 0);
+TEST_F(AmlPwmTest, SherlockDvfsSpecPwmA) {
+  Create(1250, 0);
 
-  (*mock_pwm_mmio_)[(0x0 * 4)].ExpectWrite(0x00000000);
-  (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
-  EXPECT_OK(pwm_->Configure(3));
+  // clang-format off
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(0,   0x0000'001e, 0x1000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(3,   0x0000'001c, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(6,   0x0001'001b, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(10,  0x0002'001a, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(13,  0x0003'0019, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(16,  0x0004'0018, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(20,  0x0005'0017, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(23,  0x0006'0016, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(26,  0x0007'0015, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(30,  0x0008'0014, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(33,  0x0009'0013, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(36,  0x000a'0012, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(40,  0x000b'0011, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(43,  0x000c'0010, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(46,  0x000d'000f, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(50,  0x000e'000e, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(53,  0x000f'000d, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(56,  0x0010'000c, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(60,  0x0011'000b, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(63,  0x0012'000a, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(67,  0x0013'0009, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(70,  0x0014'0008, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(73,  0x0015'0007, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(76,  0x0016'0006, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(80,  0x0017'0005, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(83,  0x0018'0004, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(86,  0x0019'0003, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(90,  0x001a'0002, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(93,  0x001b'0001, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(96,  0x001c'0000, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(100, 0x001e'0000, 0x1000'8001));
+  // clang-format on
 }
 
-TEST_F(AmlPwmTest, Configure0of1) {
-  Create(10, 1);
+TEST_F(AmlPwmTest, SherlockDvfsSpecPwmB) {
+  Create(1250, 1);
 
-  (*mock_pwm_mmio_)[(0x1 * 4)].ExpectWrite(0x00000000);
-  (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
-  EXPECT_OK(pwm_->Configure(20));
-}
-
-TEST_F(AmlPwmTest, Configure1of1) {
-  Create(90, 1);
-
-  (*mock_pwm_mmio_)[(0x1 * 4)].ExpectWrite(0x00010001);
-  (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
-  EXPECT_OK(pwm_->Configure(50));
+  // clang-format off
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(0,   0x0000'001e, 0x2080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(3,   0x0000'001c, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(6,   0x0001'001b, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(10,  0x0002'001a, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(13,  0x0003'0019, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(16,  0x0004'0018, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(20,  0x0005'0017, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(23,  0x0006'0016, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(26,  0x0007'0015, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(30,  0x0008'0014, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(33,  0x0009'0013, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(36,  0x000a'0012, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(40,  0x000b'0011, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(43,  0x000c'0010, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(46,  0x000d'000f, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(50,  0x000e'000e, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(53,  0x000f'000d, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(56,  0x0010'000c, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(60,  0x0011'000b, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(63,  0x0012'000a, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(67,  0x0013'0009, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(70,  0x0014'0008, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(73,  0x0015'0007, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(76,  0x0016'0006, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(80,  0x0017'0005, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(83,  0x0018'0004, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(86,  0x0019'0003, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(90,  0x001a'0002, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(93,  0x001b'0001, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(96,  0x001c'0000, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(100, 0x001e'0000, 0x2080'0002));
+  // clang-format on
 }
 
 // Voltage Regulator
@@ -514,16 +580,16 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
     switch (pid) {
       case 4: {  // Sherlock
         // SetBigClusterVoltage(891000)
-        (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x000D0011);
+        (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x000C0010);
         (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
         // SetLittleClusterVoltage(1011000);
-        (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0000001E);
+        (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0000001C);
         (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
         break;
       }
       case 3: {  // Astro
         // SetBigClusterVoltage(981000);
-        (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0003001B);
+        (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00030019);
         (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
         break;
       }
@@ -566,35 +632,35 @@ TEST_F(AmlVoltageRegulatorTest, AstroGetVoltageTest) {
 TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
   Create(4);
   // SetBigClusterVoltage(761000)
-  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x0010000E);
+  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x000F000D);
   (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
 
-  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x0013000B);
+  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x0012000A);
   (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
 
-  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x00160008);
+  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x00150007);
   (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
 
-  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x00190005);
+  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x00180004);
   (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
 
-  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x001A0004);
+  (*mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x00190003);
   (*mock_pwm_A_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00008001);
   EXPECT_OK(voltage_regulator_->SetVoltage(0, 761000));
   uint32_t val = voltage_regulator_->GetVoltage(0);
   EXPECT_EQ(val, 761000);
 
   // SetLittleClusterVoltage(911000)
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0003001B);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00030019);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00070017);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00060016);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000A0014);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00090013);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000A0014);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000A0012);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
   EXPECT_OK(voltage_regulator_->SetVoltage(1, 911000));
   val = voltage_regulator_->GetVoltage(1);
@@ -604,16 +670,16 @@ TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
 TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
   Create(3);
   // SetBigClusterVoltage(861000)
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00070017);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00060016);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000A0014);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00090013);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000D0011);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000C0010);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
 
-  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0010000E);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000F000D);
   (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
   EXPECT_OK(voltage_regulator_->SetVoltage(0, 861000));
   uint32_t val = voltage_regulator_->GetVoltage(0);
@@ -1049,12 +1115,12 @@ class AmlThermalTest : public zxtest::Test {
       case 4: {  // Sherlock
         // Voltage Regulator
         // SetBigClusterVoltage(891000)
-        (*voltage_regulator_mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x000D0011);
+        (*voltage_regulator_mock_pwm_A_mmio_)[(0x0 * 4)].ExpectWrite(0x000c0010);
         (*voltage_regulator_mock_pwm_A_mmio_)[(0x2 * 4)]
             .ExpectRead(0x00000000)
             .ExpectWrite(0x00008001);
         // SetLittleClusterVoltage(1011000);
-        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0000001E);
+        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0000001c);
         (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x2 * 4)]
             .ExpectRead(0x00000000)
             .ExpectWrite(0x00800002);
@@ -1086,7 +1152,7 @@ class AmlThermalTest : public zxtest::Test {
       case 3: {  // Astro
         // Voltage Regulator
         // SetBigClusterVoltage(981000);
-        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x0003001B);
+        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00030019);
         (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x2 * 4)]
             .ExpectRead(0x00000000)
             .ExpectWrite(0x00800002);

@@ -21,5 +21,7 @@
 #define CLK_B_ENABLE BIT(23)
 #define A_ENABLE BIT(0)
 #define B_ENABLE BIT(1)
+#define A_CONSTANT_ENABLE BIT(28)
+#define B_CONSTANT_ENABLE BIT(29)
 
 #define PWM_HIGH_SHIFT 16

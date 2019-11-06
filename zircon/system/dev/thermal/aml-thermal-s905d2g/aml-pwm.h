@@ -54,15 +54,16 @@ class AmlPwm {
   // period in units of nanoseconds
   // hwpwm selects between PWM (A & B)/(C & D), 0 chooses A/C
   //                                            1 chooses B/D
-  zx_status_t Init(uint32_t period, uint32_t hwpwm);
+  zx_status_t Init(uint32_t period_ns, uint32_t hwpwm);
   zx_status_t Configure(uint32_t duty_cycle);
 
  private:
-  uint32_t period_;
-  uint32_t duty_cycle_;
+  uint32_t period_ns_;
+  uint32_t duty_cycle_ = 101;
   uint32_t pwm_duty_cycle_offset_;
   uint32_t enable_bit_;
   uint32_t clk_enable_bit_;
+  uint32_t constant_enable_bit_;
   std::optional<ddk::MmioBuffer> pwm_mmio_;
   fbl::Mutex pwm_lock_;
 };
