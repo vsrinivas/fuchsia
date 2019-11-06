@@ -46,19 +46,19 @@ TEST(LineTable, GetRowForAddress) {
 
   result = table.GetRowForAddress(context, 0x1001);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(4u, result.sequence.size());
+  EXPECT_EQ(5u, result.sequence.size());
   EXPECT_EQ(0u, result.index);
 
   // Should be covered by the previous entry since there isn't a specific one for this address.
   result = table.GetRowForAddress(context, 0x1002);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(4u, result.sequence.size());
+  EXPECT_EQ(5u, result.sequence.size());
   EXPECT_EQ(0u, result.index);
 
   // Should find the first of the two dupes.
   result = table.GetRowForAddress(context, 0x1005);
   ASSERT_FALSE(result.empty());
-  EXPECT_EQ(4u, result.sequence.size());
+  EXPECT_EQ(5u, result.sequence.size());
   EXPECT_EQ(2u, result.index);
 
   // End of table.

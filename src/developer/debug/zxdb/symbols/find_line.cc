@@ -44,8 +44,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
         line_table.GetSequenceAt(sequence_i);
 
     for (const auto& row : sequence) {
-      FXL_DCHECK(!row.EndSequence);  // The LineTable should not include these in a sequence.
-      if (!row.IsStmt)
+      if (!row.IsStmt || row.EndSequence)
         continue;
 
       auto file_id = row.File;  // 1-based!

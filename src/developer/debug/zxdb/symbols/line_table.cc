@@ -36,7 +36,8 @@ containers::array_view<LineTable::Row> LineTable::GetRowSequenceForAddress(
     return containers::array_view<Row>();
 
   containers::array_view<Row> rows = GetRows();
-  return rows.subview(sequence->row_begin, sequence->row_end - sequence->row_begin);
+  // Include the last row (marked with EndSequence) in the result.
+  return rows.subview(sequence->row_begin, sequence->row_end - sequence->row_begin + 1);
 }
 
 LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_context,

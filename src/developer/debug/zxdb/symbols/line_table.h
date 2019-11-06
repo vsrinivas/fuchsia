@@ -33,7 +33,8 @@ class LineTable {
     bool empty() const { return sequence.empty(); }
 
     // The sequence of rows associated with the address. These will be contiguous addresses. This
-    // will be empty if nothing was matched.
+    // will be empty if nothing was matched. If nonempty, the last row will always be marked with an
+    // EndSequence bit.
     containers::array_view<Row> sequence;
 
     // Index within the sequence of the found row. Valid when !empty().
