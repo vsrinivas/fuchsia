@@ -16,7 +16,7 @@ static inline bool jent_have_clock(void) {
 }
 
 static inline void jent_get_nstime(uint64_t* out) {
-    *out = current_time();
+    *out = current_ticks();
 }
 
 static inline void* jent_zalloc(size_t len) {

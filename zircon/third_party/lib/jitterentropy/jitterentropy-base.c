@@ -190,15 +190,16 @@ static uint64_t jent_lfsr_time(struct rand_data *ec, uint64_t time,
 	uint64_t new = 0;
 #define MAX_FOLD_LOOP_BIT 4
 #define MIN_FOLD_LOOP_BIT 0
-	uint64_t fold_loop_cnt =
-		jent_loop_shuffle(ec, MAX_FOLD_LOOP_BIT, MIN_FOLD_LOOP_BIT);
 
-	/*
-	 * testing purposes -- allow test app to set the counter, not
-	 * needed during runtime
-	 */
-	if (loop_cnt)
-		fold_loop_cnt = loop_cnt;
+	// loop_cnt is normally passed as 0, where a loop_cnt is decided by a function
+	// based on current time. This may trick the entropy estimate program to
+	// overestimate entropy. So it is not used in Fuchsia. Instead loop_cnt
+	// is set by caller.
+	uint64_t fold_loop_cnt = loop_cnt;
+	if (fold_loop_cnt == 0) {
+		fold_loop_cnt = jent_loop_shuffle(ec, MAX_FOLD_LOOP_BIT, MIN_FOLD_LOOP_BIT);
+	}
+
 	for (j = 0; j < fold_loop_cnt; j++) {
 		new = ec->data;
 		for (i = 1; (DATA_SIZE_BITS) >= i; i++) {
@@ -264,19 +265,19 @@ static unsigned int jent_memaccess(struct rand_data *ec, uint64_t loop_cnt)
 	uint64_t i = 0;
 #define MAX_ACC_LOOP_BIT 7
 #define MIN_ACC_LOOP_BIT 0
-	uint64_t acc_loop_cnt =
-		jent_loop_shuffle(ec, MAX_ACC_LOOP_BIT, MIN_ACC_LOOP_BIT);
+
+	// loop_cnt is normally passed as 0, where a loop_cnt is decided by a function
+	// based on current time. This may trick the entropy estimate program to
+	// overestimate entropy. So it is not used in Fuchsia. Instead loop_cnt
+	// is set by caller.
+	uint64_t acc_loop_cnt = loop_cnt;
+	if (acc_loop_cnt == 0) {
+		acc_loop_cnt = jent_loop_shuffle(ec, MAX_ACC_LOOP_BIT, MIN_ACC_LOOP_BIT);
+	}
 
 	if (NULL == ec || NULL == ec->mem)
 		return 0;
 	wrap = ec->memblocksize * ec->memblocks;
-
-	/*
-	 * testing purposes -- allow test app to set the counter, not
-	 * needed during runtime
-	 */
-	if (loop_cnt)
-		acc_loop_cnt = loop_cnt;
 
 	for (i = 0; i < (ec->memaccessloops + acc_loop_cnt); i++) {
 		unsigned char *tmpval = ec->mem + ec->memlocation;

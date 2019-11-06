@@ -64,13 +64,13 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 // different platforms/architectures, and in multi-threaded mode). Ensure
 // entropy estimate is safe enough.
 
-// Testing shows that, with the default parameters below (bs=64, bc=512,
-// ml=32, ll=1, raw=true), each byte of data contributes approximately
-// 0.58 bits of min-entropy on the rpi3 and 0.5 bits on qemu-arm64. A safety
-// factor of 0.9 gives us 0.50 * 0.9 * 1000 == 450 bits of entropy per 1000
+// Testing with NIST SP800-90B non-iid and restart tests show that, with the
+// default parameters below (bs=64, bc=512, ml=32, ll=1, raw=true), each byte
+// of data contributes approximately 0.5 bit of entropy on astro. A safety
+// factor of 0.1 gives us 0.5 * 0.1 * 1000 = 50 bits of entropy for 1000
 // bytes of random data.
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
-    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 450) {
+    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 50) {
   // TODO(ZX-1022): optimize default jitterentropy parameters, then update
   // values here and in docs/kernel_cmdline.md.
   uint32_t bs = gCmdline.GetUInt32("kernel.jitterentropy.bs", 64);
