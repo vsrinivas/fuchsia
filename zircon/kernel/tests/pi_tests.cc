@@ -253,6 +253,11 @@ class TestThread {
     SHUTDOWN,
   };
 
+  enum class Condition : uint32_t {
+    BLOCKED,
+    WAITING_FOR_SHUTDOWN,
+  };
+
   TestThread() = default;
   ~TestThread() { Reset(); }
 
@@ -286,7 +291,7 @@ class TestThread {
   bool SetBasePriority(int base_prio) {
     BEGIN_TEST;
     ASSERT_NONNULL(thread_);
-    ASSERT_EQ(state_, State::STARTED);
+    ASSERT_EQ(state(), State::STARTED);
     ASSERT_GE(base_prio, TEST_LOWEST_PRIORITY);
     ASSERT_LT(base_prio, TEST_HIGHEST_PRIORITY);
 
@@ -327,7 +332,10 @@ class TestThread {
     return thread_->base_priority;
   }
 
-  State state() const { return state_; }
+  State state() const { return state_.load(); }
+
+  template <Condition condition>
+  bool WaitFor();
 
  private:
   // Test threads in the various tests use lambdas in order to store their
@@ -347,12 +355,11 @@ class TestThread {
   friend class LockedOwnedWaitQueue;
 
   int ThreadEntry();
-  bool WaitForBlocked();
 
   static Barrier allow_shutdown_;
 
   thread_t* thread_ = nullptr;
-  State state_ = State::INITIAL;
+  ktl::atomic<State> state_{State::INITIAL};
   fbl::InlineFunction<void(void), kMaxOpLambdaCaptureStorageBytes> op_;
 };
 
@@ -362,7 +369,7 @@ bool TestThread::Create(int initial_base_priority) {
   BEGIN_TEST;
 
   ASSERT_NULL(thread_);
-  ASSERT_EQ(state_, State::INITIAL);
+  ASSERT_EQ(state(), State::INITIAL);
   ASSERT_GE(initial_base_priority, TEST_LOWEST_PRIORITY);
   ASSERT_LT(initial_base_priority, TEST_HIGHEST_PRIORITY);
 
@@ -382,29 +389,29 @@ bool TestThread::Create(int initial_base_priority) {
   // which should have an API, or be used by anything but very specific test
   // code.
   thread_->flags |= THREAD_FLAG_NO_BOOST;
-  state_ = State::CREATED;
+  state_.store(State::CREATED);
 
   END_TEST;
 }
 
 bool TestThread::DoStall() {
   BEGIN_TEST;
-  ASSERT_EQ(state_, State::CREATED);
+  ASSERT_EQ(state(), State::CREATED);
   ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = []() {};
 
-  state_ = State::WAITING_TO_START;
+  state_.store(State::WAITING_TO_START);
   thread_resume(thread_);
 
-  ASSERT_TRUE(WaitForBlocked());
+  ASSERT_TRUE(WaitFor<Condition::BLOCKED>());
 
   END_TEST;
 }
 
 bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, Deadline timeout) {
   BEGIN_TEST;
-  ASSERT_EQ(state_, State::CREATED);
+  ASSERT_EQ(state(), State::CREATED);
   ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = [this, owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
@@ -414,10 +421,10 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
     thread_->interruptable = false;
   };
 
-  state_ = State::WAITING_TO_START;
+  state_.store(State::WAITING_TO_START);
   thread_resume(thread_);
 
-  ASSERT_TRUE(WaitForBlocked());
+  ASSERT_TRUE(WaitFor<Condition::BLOCKED>());
 
   END_TEST;
 }
@@ -433,7 +440,7 @@ bool TestThread::Reset(bool explicit_kill) {
 
   constexpr zx_duration_t join_timeout = ZX_MSEC(500);
 
-  switch (state_) {
+  switch (state()) {
     case State::INITIAL:
       break;
     case State::CREATED:
@@ -475,7 +482,7 @@ bool TestThread::Reset(bool explicit_kill) {
       thread_ = nullptr;
   }
 
-  state_ = State::INITIAL;
+  state_.store(State::INITIAL);
   op_ = nullptr;
   ASSERT_NULL(thread_);
 
@@ -483,38 +490,49 @@ bool TestThread::Reset(bool explicit_kill) {
 }
 
 int TestThread::ThreadEntry() {
-  if (!static_cast<bool>(op_) || (state_ != State::WAITING_TO_START)) {
+  if (!static_cast<bool>(op_) || (state() != State::WAITING_TO_START)) {
     return -1;
   }
 
-  state_ = State::STARTED;
+  state_.store(State::STARTED);
   op_();
-  state_ = State::WAITING_FOR_SHUTDOWN;
+  state_.store(State::WAITING_FOR_SHUTDOWN);
   allow_shutdown_.Wait();
 
-  state_ = State::SHUTDOWN;
+  state_.store(State::SHUTDOWN);
   op_ = nullptr;
 
   return 0;
 }
 
-bool TestThread::WaitForBlocked() {
+template <TestThread::Condition condition>
+bool TestThread::WaitFor() {
   BEGIN_TEST;
 
-  constexpr zx_duration_t timeout = ZX_MSEC(1000);
+  constexpr zx_duration_t timeout = ZX_SEC(10);
   constexpr zx_duration_t poll_interval = ZX_USEC(100);
   zx_time_t deadline = current_time() + timeout;
 
   while (true) {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    thread_state state = thread_->state;
-    guard.Release();
+    if constexpr (condition == Condition::BLOCKED) {
+      thread_state cur_state;
+      {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        cur_state = thread_->state;
+      }
 
-    if (state == THREAD_BLOCKED) {
-      break;
-    }
-    if (state != THREAD_RUNNING) {
-      ASSERT_EQ(THREAD_READY, state);
+      if (cur_state == THREAD_BLOCKED) {
+        break;
+      }
+
+      if (cur_state != THREAD_RUNNING) {
+        ASSERT_EQ(THREAD_READY, cur_state);
+      }
+    } else {
+      static_assert(condition == Condition::WAITING_FOR_SHUTDOWN);
+      if (state() == State::WAITING_FOR_SHUTDOWN) {
+        break;
+      }
     }
 
     zx_time_t now = current_time();
@@ -600,7 +618,8 @@ bool pi_test_basic() {
           break;
 
         case ReleaseMethod::TIMEOUT:
-          thread_sleep(timeout.when() + ZX_MSEC(10));
+          // Wait until the pressure thread times out and has exited.
+          ASSERT_TRUE(pressure_thread.WaitFor<TestThread::Condition::WAITING_FOR_SHUTDOWN>());
           break;
 
         case ReleaseMethod::KILL:
@@ -748,13 +767,14 @@ bool pi_test_chain() {
           // shutdown.  If they are merely created, they have no effective
           // priority to evaluate at the moment, so just skip them.
           const auto& t = threads[tndx];
-          if (t.state() == TestThread::State::CREATED) {
+          const TestThread::State cur_state = t.state();
+          if (cur_state == TestThread::State::CREATED) {
             print_tndx.cancel();
             continue;
           }
 
-          if (t.state() != TestThread::State::WAITING_FOR_SHUTDOWN) {
-            ASSERT_EQ(TestThread::State::STARTED, t.state());
+          if (cur_state != TestThread::State::WAITING_FOR_SHUTDOWN) {
+            ASSERT_EQ(TestThread::State::STARTED, cur_state);
           }
 
           // If the link behind us in the chain does not exist, or exists
@@ -901,7 +921,7 @@ bool pi_test_multi_waiter() {
         BEGIN_TEST;
 
         // All threads in the test who are not the current owner should have
-        // their effective priorty be equal to their base priority
+        // their effective priority be equal to their base priority
         if (&blocking_thread != current_owner) {
           ASSERT_EQ(bt_prio, blocking_thread.effective_priority());
         }
@@ -960,7 +980,7 @@ bool pi_test_multi_waiter() {
         blocking_queue.ReleaseOneThread();
 
         TestThread* new_owner = nullptr;
-        zx_time_t deadline = current_time() + ZX_MSEC(500);
+        zx_time_t deadline = current_time() + ZX_SEC(10);
         while (current_time() < deadline) {
           for (auto& w : waiters) {
             // If the waiter's is_waiting flag is set, but the thread has
