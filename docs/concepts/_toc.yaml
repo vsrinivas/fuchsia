@@ -28,6 +28,9 @@ toc:
 - title: "Kernel"
   section:
   - include: /docs/concepts/kernel/_toc.yaml
+- title: "Media"
+  section:
+  - include: /docs/concepts/media/_toc.yaml
 - title: "Modular"
   section:
   - include: /docs/concepts/modular/_toc.yaml
