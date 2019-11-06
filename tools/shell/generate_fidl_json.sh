@@ -20,8 +20,8 @@
 
 while (( $# > 0 )); do
   case "$1" in
-    --qjc=*)
-      QJC="${1#--qjc=}"
+    --qjs=*)
+      QJS="${1#--qjs=}"
       ;;
     --out-file=*)
       OUT_FILE="${1#--out-file=}"
@@ -36,9 +36,9 @@ while (( $# > 0 )); do
   shift
 done
 
-if [[ -z "${QJC}" || -z "${OUT_FILE}" ]]; then
+if [[ -z "${QJS}" || -z "${OUT_FILE}" ]]; then
   echo "Parameters to generate_fidl_json are incorrect."
-  echo "--qjc=$QJC --out-file=$OUT_FILE --fidl-json-file=$FIDL_JSON_FILE"
+  echo "--qjs=$QJS --out-file=$OUT_FILE --fidl-json-file=$FIDL_JSON_FILE"
   exit 1
 fi
 
@@ -47,7 +47,7 @@ rm -rf "${OUT_FILE}"
 # Parses the JSON to get the library name.
 function get_name() {
   local file=$1
-  "${QJC}" -e "const f = std.open(\"${file}\", 'r'); \
+  "${QJS}" --std -e "const f = std.open(\"${file}\", 'r'); \
           var str = f.readAsString(); \
           f.close(); \
 	  var regex = /(\"ordinal\"\\s*:\\s*)([0-9]+)\\s*,/gi; \

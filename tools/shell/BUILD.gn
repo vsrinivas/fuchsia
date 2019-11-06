@@ -34,7 +34,7 @@ action("generate_fidl_json") {
     "//zircon/system/fidl/fuchsia-kernel",
   ]
   args = [
-    "--qjc=" + rebase_path("$root_build_dir/host_$host_cpu/qjsh"),
+    "--qjs=" + rebase_path("$root_build_dir/host_$host_cpu/qjs"),
     "--fidl-json-file=" +
         rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
     "--out-file=" + rebase_path("$generated_output", root_build_dir),
