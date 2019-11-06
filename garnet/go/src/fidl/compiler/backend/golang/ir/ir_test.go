@@ -671,6 +671,9 @@ func TestCompileInterface(t *testing.T) {
 						FieldShapeOld: types.FieldShape{
 							Offset: 16,
 						},
+						FieldShapeV1NoEE: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				RequestTypeShapeOld: types.TypeShape{
@@ -692,6 +695,9 @@ func TestCompileInterface(t *testing.T) {
 						FieldShapeOld: types.FieldShape{
 							Offset: 16,
 						},
+						FieldShapeV1NoEE: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				RequestTypeShapeOld: types.TypeShape{
@@ -706,6 +712,9 @@ func TestCompileInterface(t *testing.T) {
 						Type: PrimitiveType(types.Uint32),
 						Name: types.Identifier("Value"),
 						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
+						FieldShapeV1NoEE: types.FieldShape{
 							Offset: 16,
 						},
 					},
@@ -821,6 +830,9 @@ func TestCompileInterface(t *testing.T) {
 						Type: StringType(nil),
 						Name: types.Identifier("value"),
 						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
+						FieldShapeV1NoEE: types.FieldShape{
 							Offset: 16,
 						},
 					},

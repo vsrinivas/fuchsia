@@ -507,14 +507,14 @@ var handleTypes = map[types.HandleSubtype]string{
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
 	// supported in the Go runtime.
-	types.Handle:  "_zx.Handle",
-	types.Vmo:     "_zx.VMO",
-	types.Channel: "_zx.Channel",
-	types.Event:   "_zx.Event",
-	types.Port:    "_zx.Port",
-	types.DebugLog:"_zx.Log",
-	types.Socket:  "_zx.Socket",
-	types.Vmar:    "_zx.VMAR",
+	types.Handle:   "_zx.Handle",
+	types.Vmo:      "_zx.VMO",
+	types.Channel:  "_zx.Channel",
+	types.Event:    "_zx.Event",
+	types.Port:     "_zx.Port",
+	types.DebugLog: "_zx.Log",
+	types.Socket:   "_zx.Socket",
+	types.Vmar:     "_zx.VMAR",
 }
 
 func isReservedWord(str string) bool {
@@ -885,13 +885,15 @@ func (c *compiler) compileTable(val types.Table) Table {
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag := c.compileType(p.Type)
 	// TODO(fxb/7704): Remove special handling of requests/responses.
-	tag.reverseOfBounds = append(tag.reverseOfBounds, p.FieldShapeOld.Offset-MessageHeaderSize)
+	offsetOld := p.FieldShapeOld.Offset - MessageHeaderSize
+	offsetV1 := p.FieldShapeV1NoEE.Offset - MessageHeaderSize
+	tag.reverseOfBounds = append(tag.reverseOfBounds, offsetOld)
 	return StructMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(p.Name, true, ""),
 		PrivateName: c.compileIdentifier(p.Name, false, ""),
 		FidlTag:     tag.String(),
-		OffsetV1:    p.FieldShapeV1NoEE.Offset,
+		OffsetV1:    offsetV1,
 	}
 }
 
