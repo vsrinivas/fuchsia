@@ -75,6 +75,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       } else {
         memcpy(virt_buffer, Read(address, transfer_size, function).data(), transfer_size);
       }
+      __FALLTHROUGH;
     }
     default:
       break;

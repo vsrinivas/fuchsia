@@ -2267,6 +2267,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
             status = ZX_ERR_CONNECTION_RESET;
             break;
           }
+          __FALLTHROUGH;
         default:
           continue;
       }

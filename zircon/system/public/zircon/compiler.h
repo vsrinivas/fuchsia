@@ -90,7 +90,9 @@
 #define __FALLTHROUGH [[fallthrough]]
 #elif defined(__cplusplus) && defined(__clang__)
 #define __FALLTHROUGH [[clang::fallthrough]]
-#elif __GNUC__ >= 7
+// The GNU style attribute is supported by Clang for C code, but __GNUC__ for
+// clang right now is 4.
+#elif __GNUC__ >= 7 || (!defined(__cplusplus) && defined(__clang__))
 #define __FALLTHROUGH __attribute__((__fallthrough__))
 #else
 #define __FALLTHROUGH \

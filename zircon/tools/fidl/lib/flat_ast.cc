@@ -1996,6 +1996,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
         break;
       }
+      __FALLTHROUGH;
     }
     case Decl::Kind::kBits: {
       // If there is no member name, fallthrough to default.
@@ -2009,6 +2010,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         }
         break;
       }
+      __FALLTHROUGH;
     }
     default: {
       std::ostringstream msg_stream;
