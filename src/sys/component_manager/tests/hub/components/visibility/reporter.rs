@@ -2,48 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::{Error, ResultExt},
-    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-};
-
-macro_rules! get_names_from_listing {
-    ($dir_listing:ident) => {
-        &mut $dir_listing.iter().map(|entry| &entry.name as &str)
-    };
-}
-
-async fn report_directory_contents(
-    hub_report: &fhub::HubReportProxy,
-    dir_path: &str,
-) -> Result<(), Error> {
-    let dir_proxy = io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)
-        .expect("Unable to open directory in namespace");
-    let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
-    hub_report
-        .list_directory(dir_path, get_names_from_listing!(dir_listing))
-        .await
-        .context("list directory failed")?;
-    Ok(())
-}
+use {component_side_testing::*, failure::Error, fuchsia_async as fasync};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let hub_report =
-        connect_to_service::<fhub::HubReportMarker>().context("error connecting to HubReport")?;
+    let testing = ComponentSideTesting::new()?;
 
     // Read the children of this component and pass the results to the integration test
     // via HubReport.
-    report_directory_contents(&hub_report, "/hub/children").await?;
+    testing.report_directory_contents("/hub/children").await?;
 
     // Read the hub of the child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/child").await?;
+    testing.report_directory_contents("/hub/children/child").await?;
 
     // Read the grandchildren and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/child/children").await?;
+    testing.report_directory_contents("/hub/children/child/children").await?;
 
     Ok(())
 }

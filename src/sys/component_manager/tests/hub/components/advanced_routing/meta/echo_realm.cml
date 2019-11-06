@@ -7,17 +7,17 @@
         {
             "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
-            "to": [ "#hub_client" ]
+            "to": [ "#reporter" ]
         },
         {
             "directory": "/hub",
             "from": "framework",
-            "to": [ "#hub_client" ]
+            "to": [ "#reporter" ]
         },
         {
             "directory": "/hub",
             "from": "#echo_server",
-            "to": [ "#hub_client" ],
+            "to": [ "#reporter" ],
             "as": "/sibling_hub"
         },
     ],
@@ -30,7 +30,7 @@
             "startup": "eager",
         },
         {
-            "name": "hub_client",
+            "name": "reporter",
             "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_reporter.cm",
             "startup": "eager",
         },

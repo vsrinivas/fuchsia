@@ -3,83 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    component_side_testing::*,
     failure::{Error, ResultExt},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_breakpoints as fbreak,
-    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
-
-macro_rules! get_names_from_listing {
-    ($dir_listing:ident) => {
-        &mut $dir_listing.iter().map(|entry| &entry.name as &str)
-    };
-}
-
-struct Testing {
-    hub_report: fhub::HubReportProxy,
-    breakpoints: fbreak::BreakpointsProxy,
-}
-
-impl Testing {
-    fn new() -> Result<Self, Error> {
-        let hub_report = connect_to_service::<fhub::HubReportMarker>()
-            .context("error connecting to HubReport")?;
-        let breakpoints = connect_to_service::<fbreak::BreakpointsMarker>()
-            .context("error connecting to Breakpoints")?;
-        Ok(Self { hub_report, breakpoints })
-    }
-
-    async fn report_directory_contents(&self, dir_path: &str) -> Result<(), Error> {
-        let dir_proxy =
-            io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)
-                .expect("Unable to open directory in namespace");
-        let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
-        self.hub_report
-            .list_directory(dir_path, get_names_from_listing!(dir_listing))
-            .await
-            .context("list directory failed")?;
-        Ok(())
-    }
-
-    async fn register_breakpoints(&self, event_types: Vec<fbreak::EventType>) -> Result<(), Error> {
-        self.breakpoints
-            .register(&mut event_types.into_iter())
-            .await
-            .context("register breakpoints failed")?;
-        Ok(())
-    }
-
-    async fn report_file_content(&self, path: &str) -> Result<(), Error> {
-        let resolved_url_proxy =
-            io_util::open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
-                .expect("Unable to open the file.");
-        let resolved_url_file_content = io_util::read_file(&resolved_url_proxy).await?;
-        self.hub_report
-            .report_file_content(path, &resolved_url_file_content)
-            .await
-            .context("report file content failed")?;
-        Ok(())
-    }
-
-    async fn expect_breakpoint(
-        &self,
-        event_type: fbreak::EventType,
-        components: Vec<&str>,
-    ) -> Result<(), Error> {
-        self.breakpoints
-            .expect(event_type, &mut components.into_iter())
-            .await
-            .context("expect breakpoint failed")?;
-        Ok(())
-    }
-
-    async fn resume_breakpoint(&self) -> Result<(), Error> {
-        self.breakpoints.resume().await.context("resume breakpoint failed")?;
-        Ok(())
-    }
-}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -97,7 +27,7 @@ async fn main() -> Result<(), Error> {
         .context("create_child failed")?
         .expect("failed to create child");
 
-    let testing = Testing::new()?;
+    let testing = ComponentSideTesting::new()?;
 
     // Register breakpoints for relevant events
     testing
@@ -157,23 +87,23 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the dynamic child to begin deletion
     testing
-        .expect_breakpoint(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
+        .expect_invocation(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/children").await?;
     testing.report_directory_contents("/hub/deleting").await?;
     testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    testing.resume_breakpoint().await?;
+    testing.resume_invocation().await?;
 
     // Wait for the dynamic child to stop
     testing
-        .expect_breakpoint(fbreak::EventType::StopInstance, vec!["coll:simple_instance:1"])
+        .expect_invocation(fbreak::EventType::StopInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    testing.resume_breakpoint().await?;
+    testing.resume_invocation().await?;
 
     // Wait for the dynamic child's static child to begin deletion
     testing
-        .expect_breakpoint(
+        .expect_invocation(
             fbreak::EventType::PreDestroyInstance,
             vec!["coll:simple_instance:1", "child:0"],
         )
@@ -183,24 +113,24 @@ async fn main() -> Result<(), Error> {
     testing
         .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting/child:0")
         .await?;
-    testing.resume_breakpoint().await?;
+    testing.resume_invocation().await?;
 
     // Wait for the dynamic child's static child to be destroyed
     testing
-        .expect_breakpoint(
+        .expect_invocation(
             fbreak::EventType::PostDestroyInstance,
             vec!["coll:simple_instance:1", "child:0"],
         )
         .await?;
     testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
-    testing.resume_breakpoint().await?;
+    testing.resume_invocation().await?;
 
     // Wait for the dynamic child to be destroyed
     testing
-        .expect_breakpoint(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
+        .expect_invocation(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/deleting").await?;
-    testing.resume_breakpoint().await?;
+    testing.resume_invocation().await?;
 
     Ok(())
 }

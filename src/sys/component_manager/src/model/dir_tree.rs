@@ -2,14 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::model::addable_directory::AddableDirectoryWithResult;
 use {
     crate::model::addable_directory::AddableDirectory,
+    crate::model::routing_facade::RoutingFacade,
     crate::model::*,
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl, UseStorageDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     fuchsia_vfs_pseudo_fs::directory,
+    log::*,
     std::collections::HashMap,
 };
+
+pub struct CapabilityUsageTree<'entries> {
+    directory_nodes: HashMap<String, CapabilityUsageTree<'entries>>,
+    dir: Box<directory::controlled::Controller<'entries>>,
+    routing_facade: RoutingFacade,
+}
+
+impl<'entries> CapabilityUsageTree<'entries> {
+    pub fn new(
+        dir: directory::controlled::Controller<'entries>,
+        routing_facade: RoutingFacade,
+    ) -> Self {
+        Self { directory_nodes: HashMap::new(), dir: Box::new(dir), routing_facade }
+    }
+
+    pub async fn mark_capability_used(
+        &mut self,
+        abs_moniker: &AbsoluteMoniker,
+        use_: UseDecl,
+    ) -> Result<(), ModelError> {
+        // TODO(xbhatnag): Currently only service uses are sent as events
+        // Hence, the UseDecl must always have a CapabilityPath.
+        let path = use_.path().expect("mark_capability_used: UseDecl must have path");
+        let basename = path.basename.to_string();
+        let tree = self.to_directory_node(path, abs_moniker).await?;
+        let routing_factory = tree.routing_facade.route_use_fn_factory();
+        let routing_fn = routing_factory(abs_moniker.clone(), use_);
+
+        let node = DirectoryBroker::new(routing_fn);
+
+        // Adding a node to the Hub can fail
+        tree.dir.add_node(&basename, node, abs_moniker).await.or_else(|error| {
+            // TODO(xbhatnag): The error received is not granular enough to know if the node
+            // already exists, so just log all errors. Ideally, pseudo_vfs should have an exists()
+            // operation.
+            log!(Level::Warn, "Could not add {} to the used dir of the hub -> {}", basename, error);
+
+            // Treat this as a success for now.
+            Ok(())
+        })
+    }
+
+    async fn to_directory_node(
+        &mut self,
+        path: &CapabilityPath,
+        abs_moniker: &AbsoluteMoniker,
+    ) -> Result<&mut CapabilityUsageTree<'entries>, ModelError> {
+        let components = path.dirname.split("/");
+        let mut tree = self;
+        for component in components {
+            if !component.is_empty() {
+                // If the next component does not exist in the tree, create it.
+                if !tree.directory_nodes.contains_key(component) {
+                    let (controller, controlled) =
+                        directory::controlled::controlled(directory::simple::empty());
+                    let routing_facade = tree.routing_facade.clone();
+                    let child_tree = CapabilityUsageTree::new(controller, routing_facade);
+                    tree.dir.add_node(component, controlled, abs_moniker).await?;
+                    tree.directory_nodes.insert(component.to_string(), child_tree);
+                }
+
+                tree = tree
+                    .directory_nodes
+                    .get_mut(component)
+                    .expect("to_directory_node: it is impossible for this tree to not exist.");
+            }
+        }
+        Ok(tree)
+    }
+}
 
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
@@ -26,12 +99,12 @@ impl DirTree {
         routing_factory: impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
-    ) -> Result<Self, ModelError> {
+    ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for use_ in decl.uses {
-            tree.add_use_capability(&routing_factory, abs_moniker, &use_)?;
+            tree.add_use_capability(&routing_factory, abs_moniker, &use_);
         }
-        Ok(tree)
+        tree
     }
 
     /// Builds a directory hierarchy from a component's `exposes` declarations.
@@ -72,22 +145,14 @@ impl DirTree {
         routing_factory: &impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         use_: &UseDecl,
-    ) -> Result<(), ModelError> {
-        let path = match use_ {
-            cm_rust::UseDecl::Service(d) => &d.target_path,
-            cm_rust::UseDecl::LegacyService(d) => &d.target_path,
-            cm_rust::UseDecl::Directory(d) => &d.target_path,
-            cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
-            cm_rust::UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
-            cm_rust::UseDecl::Storage(UseStorageDecl::Meta) | cm_rust::UseDecl::Runner(_) => {
-                // Meta storage and runners don't show up in the namespace; nothing to do.
-                return Ok(());
-            }
+    ) {
+        let path = match use_.path() {
+            Some(path) => path,
+            None => return,
         };
         let tree = self.to_directory_node(path);
         let routing_fn = routing_factory(abs_moniker.clone(), use_.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
-        Ok(())
     }
 
     fn add_expose_capability(
@@ -172,8 +237,7 @@ mod tests {
             ..default_component_decl()
         };
         let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_uses(routing_factory, &abs_moniker, decl.clone())
-            .expect("Unable to build 'uses' directory");
+        let tree = DirTree::build_from_uses(routing_factory, &abs_moniker, decl.clone());
 
         // Convert the tree to a directory.
         let mut in_dir = directory::simple::empty();

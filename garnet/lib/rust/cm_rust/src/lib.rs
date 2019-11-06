@@ -546,6 +546,23 @@ impl TryFrom<&str> for CapabilityPath {
     }
 }
 
+impl UseDecl {
+    pub fn path(&self) -> Option<&CapabilityPath> {
+        let path = match self {
+            UseDecl::Service(d) => &d.target_path,
+            UseDecl::LegacyService(d) => &d.target_path,
+            UseDecl::Directory(d) => &d.target_path,
+            UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
+            UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
+            UseDecl::Storage(UseStorageDecl::Meta) | UseDecl::Runner(_) => {
+                // Meta storage and runners don't show up in the namespace; no capability path.
+                return None;
+            }
+        };
+        Some(path)
+    }
+}
+
 /// A named capability.
 ///
 /// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form

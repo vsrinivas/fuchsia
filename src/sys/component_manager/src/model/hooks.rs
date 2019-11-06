@@ -5,7 +5,7 @@
 use {
     crate::{capability::*, model::*},
     by_addr::ByAddr,
-    cm_rust::ComponentDecl,
+    cm_rust::{ComponentDecl, UseDecl},
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
@@ -15,13 +15,36 @@ use {
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum EventType {
-    // Keep the event types listed below in alphabetical order!
+    /// Keep the event types listed below in alphabetical order!
+
+    /// A dynamic child was added to the parent instance.
+    /// Depending on its eagerness, this child may/may not be started yet.
     AddDynamicChild,
+
+    /// An instance was bound to. If the instance is executable, it is also started.
     BindInstance,
+
+    /// A capability was used by an instance. An instance uses a capability when
+    /// it creates a channel and provides the server end to ComponentManager for routing.
+    CapabilityUse,
+
+    /// An instance was destroyed successfully. The instance is stopped and no longer
+    /// exists in the parent's realm.
     PostDestroyInstance,
+
+    /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
+    /// The instance still exists in the parent's realm but will soon be removed.
     PreDestroyInstance,
+
+    /// A builtin capability is being requested by a component and requires routing.
+    /// The event propagation system is used to supply the capability being requested.
     RouteBuiltinCapability,
+
+    /// A framework capability is being requested by a component and requires routing.
+    /// The event propagation system is used to supply the capability being requested.
     RouteFrameworkCapability,
+
+    /// An instance was stopped successfully.
     StopInstance,
 }
 
@@ -52,6 +75,10 @@ pub enum Event {
         component_decl: ComponentDecl,
         live_child_realms: Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
+    },
+    CapabilityUse {
+        realm: Arc<Realm>,
+        use_: UseDecl,
     },
     PostDestroyInstance {
         realm: Arc<Realm>,
@@ -86,6 +113,7 @@ impl Event {
         match self {
             Event::AddDynamicChild { realm } => realm.clone(),
             Event::BindInstance { realm, .. } => realm.clone(),
+            Event::CapabilityUse { realm, .. } => realm.clone(),
             Event::PostDestroyInstance { realm } => realm.clone(),
             Event::PreDestroyInstance { realm } => realm.clone(),
             Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
@@ -98,6 +126,7 @@ impl Event {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
             Event::BindInstance { .. } => EventType::BindInstance,
+            Event::CapabilityUse { .. } => EventType::CapabilityUse,
             Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
             Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,

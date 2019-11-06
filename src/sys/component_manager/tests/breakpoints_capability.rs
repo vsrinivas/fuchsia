@@ -126,17 +126,55 @@ impl BreakpointCapability {
     ) -> Option<BreakpointInvocation> {
         if let Some(Ok(request)) = stream.next().await {
             match request {
-                fbreak::BreakpointsRequest::Expect { event_type, components, responder } => {
+                fbreak::BreakpointsRequest::Expect { event_type, component, responder } => {
                     // Wait for the next breakpoint to occur
                     let invocation = receiver.receive().await;
 
                     // Ensure that the breakpoint is as expected
-                    verify_invocation(&invocation, event_type, components);
+                    verify_invocation(&invocation, event_type, component);
 
                     // Unblock the component
                     responder.send().unwrap();
 
                     Some(invocation)
+                }
+                fbreak::BreakpointsRequest::WaitUntilCapabilityUse {
+                    component,
+                    requested_capability_path,
+                    responder,
+                } => {
+                    // Vec<String> to AbsoluteMoniker
+                    let component: Vec<&str> = component.iter().map(|x| x.as_ref()).collect();
+                    let component: AbsoluteMoniker = component.into();
+                    loop {
+                        // Keep looping until we get an CapabilityUse event with the correct
+                        // capability path and component.
+
+                        // Wait for the next invocation
+                        let invocation = receiver.receive().await;
+
+                        // Correct EventType?
+                        if let Event::CapabilityUse { realm, use_ } = &invocation.event {
+                            // Correct component?
+                            if realm.abs_moniker == component {
+                                // TODO(xbhatnag): Currently only service uses are sent as events
+                                // Hence, the UseDecl must always have a CapabilityPath.
+                                let actual_capability_path = use_
+                                    .path()
+                                    .expect("WaitUntilCapabilityUse: UseDecl must have path")
+                                    .to_string();
+                                // Correct capability path?
+                                if requested_capability_path == actual_capability_path {
+                                    // Unblock the component
+                                    responder.send().unwrap();
+                                    return Some(invocation);
+                                }
+                            }
+                        }
+
+                        // Wrong invocation. Resume this invocation.
+                        invocation.resume();
+                    }
                 }
                 _ => panic!("Did not receive FIDL call to Expect"),
             }
@@ -203,18 +241,19 @@ fn convert_event_type(event_type: fbreak::EventType) -> EventType {
         fbreak::EventType::StopInstance => EventType::StopInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
+        fbreak::EventType::CapabilityUse => EventType::CapabilityUse,
     }
 }
 
 fn verify_invocation(
     invocation: &BreakpointInvocation,
     expected_event_type: fbreak::EventType,
-    expected_components: Vec<String>,
+    expected_component: Vec<String>,
 ) {
     let expected_event_type = convert_event_type(expected_event_type);
-    let expected_components: Vec<&str> =
-        expected_components.iter().map(|component| component.as_ref()).collect();
-    let expected_moniker = AbsoluteMoniker::from(expected_components);
+    let expected_component: Vec<&str> =
+        expected_component.iter().map(|component| component.as_ref()).collect();
+    let expected_moniker = AbsoluteMoniker::from(expected_component);
     let actual_moniker = invocation.event.target_realm().abs_moniker.clone();
     let actual_event_type = invocation.event.type_();
     assert_eq!(actual_moniker, expected_moniker);

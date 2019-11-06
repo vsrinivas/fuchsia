@@ -120,12 +120,7 @@ impl TestRunner {
         let breakpoint = self.breakpoint_receiver.receive().await;
         let expected_moniker = AbsoluteMoniker::from(components);
         assert_eq!(breakpoint.event.type_(), expected_event);
-        let moniker = match &breakpoint.event {
-            Event::PreDestroyInstance { realm } => realm.abs_moniker.clone(),
-            Event::StopInstance { realm } => realm.abs_moniker.clone(),
-            Event::PostDestroyInstance { realm } => realm.abs_moniker.clone(),
-            _ => AbsoluteMoniker::root(),
-        };
+        let moniker = breakpoint.event.target_realm().abs_moniker.clone();
         assert_eq!(moniker, expected_moniker);
         breakpoint
     }
@@ -211,41 +206,42 @@ impl TestRunner {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn advanced_routing_test() -> Result<(), Error> {
     let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm";
-    let test_runner = TestRunner::new(root_component_url).await?;
+    let test_runner =
+        TestRunner::new_with_breakpoints(root_component_url, vec![EventType::CapabilityUse])
+            .await?;
+
+    // Wait for Breakpoints and HubReport capabilities to be used by reporter.
+    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
 
     // Verify that echo_realm has two children.
-    test_runner
-        .verify_global_directory_listing("children", vec!["echo_server", "hub_client"])
-        .await;
+    test_runner.verify_global_directory_listing("children", vec!["echo_server", "reporter"]).await;
 
-    // Verify hub_client's instance id.
-    test_runner.verify_global_file_content("children/hub_client/id", "0").await;
+    // Verify reporter's instance id.
+    test_runner.verify_global_file_content("children/reporter/id", "0").await;
 
     // Verify echo_server's instance id.
     test_runner.verify_global_file_content("children/echo_server/id", "0").await;
 
-    // Verify the args from hub_client.cml.
-    test_runner
-        .verify_global_file_content("children/hub_client/exec/runtime/args/0", "Hippos")
-        .await;
-    test_runner
-        .verify_global_file_content("children/hub_client/exec/runtime/args/1", "rule!")
-        .await;
+    // Verify the args from reporter.cml.
+    test_runner.verify_global_file_content("children/reporter/exec/runtime/args/0", "Hippos").await;
+    test_runner.verify_global_file_content("children/reporter/exec/runtime/args/1", "rule!").await;
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
+    let breakpoints_service_name = "fuchsia.test.breakpoints.Breakpoints";
     let expose_svc_dir = "children/echo_server/exec/expose/svc";
 
     // Verify that the Echo service is exposed by echo_server
     test_runner.verify_global_directory_listing(expose_svc_dir, vec![echo_service_name]).await;
 
-    // Verify that hub_client is using HubReport and Echo services
-    let in_dir = "children/hub_client/exec/in";
+    // Verify that reporter is using Breakpoint, HubReport and Echo services
+    let in_dir = "children/reporter/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     test_runner
         .verify_global_directory_listing(
             svc_dir.as_str(),
-            vec![echo_service_name, hub_report_service_name],
+            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
         )
         .await;
 
@@ -263,37 +259,70 @@ async fn advanced_routing_test() -> Result<(), Error> {
     let expose_echo_service_path = format!("{}/{}", expose_svc_dir, echo_service_name);
     test_runner.connect_to_echo_service(expose_echo_service_path).await?;
 
-    // Verify that the 'hub' directory is available. The 'hub' mapped to 'hub_client''s
-    // namespace is actually mapped to the 'exec' directory of 'hub_client'.
+    // Verify that the 'hub' directory is available. The 'hub' mapped to 'reporter''s
+    // namespace is actually mapped to the 'exec' directory of 'reporter'.
     let scoped_hub_dir = format!("{}/{}", in_dir, "hub");
     test_runner
         .verify_global_directory_listing(
             scoped_hub_dir.as_str(),
-            vec!["expose", "in", "out", "resolved_url", "runtime"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
         )
         .await;
     let responder = test_runner
         .verify_local_directory_listing(
             "/hub",
-            vec!["expose", "in", "out", "resolved_url", "runtime"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
         )
         .await;
     responder.send().expect("Could not respond");
 
-    // Verify that hub_client's view is able to correctly read the names of the
+    // Verify that reporter's view is able to correctly read the names of the
     // children of the parent echo_realm.
     let responder = test_runner
-        .verify_local_directory_listing("/parent_hub/children", vec!["echo_server", "hub_client"])
+        .verify_local_directory_listing("/parent_hub/children", vec!["echo_server", "reporter"])
         .await;
     responder.send().expect("Could not respond");
 
-    // Verify that hub_client is able to see its sibling's hub correctly.
+    // Verify that reporter is able to see its sibling's hub correctly.
     test_runner
         .verify_local_file_content(
             "/sibling_hub/exec/resolved_url",
             "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
         )
         .await;
+
+    // Verify that reporter has only connected to the HubReport and Breakpoint capabilities
+    let responder = test_runner
+        .verify_local_directory_listing(
+            "/hub/used/svc",
+            vec![breakpoints_service_name, hub_report_service_name],
+        )
+        .await;
+    responder.send().expect("Could not respond");
+
+    // Wait for the reporter to connect to the Echo capability
+    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+
+    // Verify that the hub now shows the Echo capability as in use
+    let responder = test_runner
+        .verify_local_directory_listing(
+            "/hub/used/svc",
+            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
+        )
+        .await;
+    responder.send().expect("Could not respond");
+
+    // Wait for the reporter to connect to the Echo capability again
+    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+
+    // Verify that the hub does not change
+    let responder = test_runner
+        .verify_local_directory_listing(
+            "/hub/used/svc",
+            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
+        )
+        .await;
+    responder.send().expect("Could not respond");
 
     Ok(())
 }

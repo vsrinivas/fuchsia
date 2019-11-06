@@ -19,5 +19,9 @@
         {
             "legacy_service": "/svc/fuchsia.test.hub.HubReport", "from": "framework"
         },
+        {
+            "legacy_service": "/svc/fuchsia.test.breakpoints.Breakpoints",
+            "from": "framework"
+        },
     ],
 }

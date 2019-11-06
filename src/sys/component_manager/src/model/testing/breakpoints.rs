@@ -120,20 +120,31 @@ impl BreakpointRegistry {
 
     /// Sends the event to all registered breakpoints and waits to be unblocked by all
     async fn send(&self, event: &Event) -> Result<(), ModelError> {
-        let sender_map = self.sender_map.lock().await;
-
-        // If this EventType has senders installed against it, then
-        // send this event via those senders.
-        if let Some(senders) = sender_map.get(&event.type_()) {
-            let mut responder_channels = vec![];
-            for sender in senders {
-                let responder_channel = sender.send(event.clone()).await?;
-                responder_channels.push(responder_channel);
+        // Copy the senders so we don't hold onto the sender map lock
+        // If we didn't do this, it is possible to deadlock while holding onto this lock.
+        // For example,
+        // Task A : call send(event1) -> lock on sender map -> send -> wait for responders
+        // Task B : call send(event2) -> lock on sender map
+        // If task B was required to respond to event1, then this is a deadlock.
+        // Neither task can make progress.
+        let senders = {
+            let sender_map = self.sender_map.lock().await;
+            if let Some(senders) = sender_map.get(&event.type_()) {
+                senders.clone()
+            } else {
+                // There were no senders for this event. Do nothing.
+                return Ok(());
             }
+        };
 
-            // Wait until all tasks have used the responder to unblock.
-            futures::future::join_all(responder_channels).await;
+        let mut responder_channels = vec![];
+        for sender in senders {
+            let responder_channel = sender.send(event.clone()).await?;
+            responder_channels.push(responder_channel);
         }
+
+        // Wait until all tasks have used the responder to unblock.
+        futures::future::join_all(responder_channels).await;
         Ok(())
     }
 }
@@ -160,6 +171,10 @@ impl BreakpointHook {
             },
             HookRegistration {
                 event_type: EventType::BindInstance,
+                callback: self.breakpoint_hook_inner.clone(),
+            },
+            HookRegistration {
+                event_type: EventType::CapabilityUse,
                 callback: self.breakpoint_hook_inner.clone(),
             },
             HookRegistration {

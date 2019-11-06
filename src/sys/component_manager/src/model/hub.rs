@@ -10,9 +10,10 @@ use {
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
             error::ModelError,
             hooks::*,
+            CapabilityUsageTree,
         },
     },
-    cm_rust::ComponentDecl,
+    cm_rust::{ComponentDecl, UseDecl},
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -85,6 +86,7 @@ struct Instance {
 struct Execution {
     pub resolved_url: String,
     pub directory: directory::controlled::Controller<'static>,
+    pub capability_usage_tree: CapabilityUsageTree<'static>,
 }
 
 /// The Hub is a directory tree representing the component topology. Through the Hub,
@@ -132,6 +134,7 @@ impl Hub {
                 event_type: EventType::PostDestroyInstance,
                 callback: self.inner.clone(),
             },
+            HookRegistration { event_type: EventType::CapabilityUse, callback: self.inner.clone() },
         ]
     }
 }
@@ -297,7 +300,7 @@ impl HubInner {
             routing_facade.route_use_fn_factory(),
             &abs_moniker,
             component_decl,
-        )?;
+        );
         let mut in_dir = directory::simple::empty();
         tree.install(&abs_moniker, &mut in_dir)?;
         let pkg_dir = runtime.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
@@ -384,9 +387,15 @@ impl HubInner {
                 let (execution_controller, mut execution_controlled) =
                     directory::controlled::controlled(directory::simple::empty());
 
+                let (used_controller, used_controlled) =
+                    directory::controlled::controlled(directory::simple::empty());
+
+                let capability_usage_tree =
+                    CapabilityUsageTree::new(used_controller, routing_facade.clone());
                 let exec = Execution {
                     resolved_url: runtime.resolved_url.clone(),
                     directory: execution_controller,
+                    capability_usage_tree,
                 };
                 instance.execution = Some(exec);
 
@@ -410,6 +419,8 @@ impl HubInner {
                     &routing_facade,
                     &abs_moniker,
                 )?;
+
+                execution_controlled.add_node("used", used_controlled, &abs_moniker)?;
 
                 Self::add_out_directory(&mut execution_controlled, runtime, &abs_moniker)?;
 
@@ -522,6 +533,24 @@ impl HubInner {
         ))))
     }
 
+    async fn on_capability_use_async(
+        &self,
+        realm: Arc<model::Realm>,
+        use_: UseDecl,
+    ) -> Result<(), ModelError> {
+        let mut instance_map = self.instances.lock().await;
+        let execution = instance_map
+            .get_mut(&realm.abs_moniker)
+            .expect("A component that is using a service must exist in the instance map")
+            .execution
+            .as_mut()
+            .expect("A component that is using a service must have an execution.");
+
+        execution.capability_usage_tree.mark_capability_used(&realm.abs_moniker, use_).await?;
+
+        Ok(())
+    }
+
     // TODO(fsamuel): We should probably preserve the original error messages
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
@@ -568,6 +597,9 @@ impl model::Hook for HubInner {
                             capability_provider.take(),
                         )
                         .await?;
+                }
+                Event::CapabilityUse { realm, use_ } => {
+                    self.on_capability_use_async(realm.clone(), use_.clone()).await?;
                 }
                 _ => {}
             };
@@ -879,7 +911,10 @@ mod tests {
         )
         .expect("Failed to open directory");
         // There are no out or runtime directories because there is no program running.
-        assert_eq!(vec!["expose", "in", "resolved_url"], list_directory(&old_hub_dir_proxy).await);
+        assert_eq!(
+            vec!["expose", "in", "resolved_url", "used"],
+            list_directory(&old_hub_dir_proxy).await
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -936,7 +971,7 @@ mod tests {
         .expect("Failed to open directory");
         // There are no out or runtime directories because there is no program running.
         assert_eq!(
-            vec!["expose", "in", "resolved_url"],
+            vec!["expose", "in", "resolved_url", "used"],
             list_directory(&scoped_hub_dir_proxy).await
         );
     }

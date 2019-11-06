@@ -8,14 +8,25 @@ library fuchsia.test.breakpoints;
 /// This capacity should match the actual number of event types.
 const uint64 MAX_NUM_EVENT_TYPES = 3;
 
-/// The maximum depth of the component that we can expect a breakpoint on.
-/// This capacity is currently set somewhat arbitrarily.
+/// When a caller expects an Event or waits until a capability is used
+/// by a specific component, this constant determines the maximum depth
+/// (in terms of components) of that capability. This value is currently
+/// set arbitrarily.
 const uint64 MAX_COMPONENT_DEPTH = 10;
 
-/// The maximum string length of a component moniker that we can expect
-/// a breakpoint on. This capacity is currently set somewhat arbitrarily.
-const uint64 MAX_COMPONENT_MONIKER_LENGTH = 50;
+/// When a caller expects an Event or waits until a capability is used
+/// by a specific component, this constant determines the maximum string
+/// length of the moniker of each comprising instance.
+///
+/// For example, if a caller expects an event on a component whose path is
+/// "/<A>/<B>/<C>", then this constant determines the maximum length of
+/// <A>, <B> and <C>. This value is currently set arbitrarily.
+const uint64 MAX_MONIKER_LENGTH = 50;
 
+/// When a caller waits until a specific capability is used by a specific
+/// component, this constant determines the maximum string length of the path
+/// of that capability. This value is currently set arbitrarily.
+const uint64 MAX_CAPABILITY_PATH_LENGTH = 50;
 
 /// These EventTypes are used for the Breakpoints protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
@@ -34,23 +45,36 @@ enum EventType {
     /// The component subtree rooted at this instance has been destroyed.
     /// All instances under this subtree have been stopped by this point.
     POST_DESTROY_INSTANCE = 2;
+
+    /// A capability has been requested for use by the component.
+    /// A component uses a capability by creating a channel and providing
+    /// the server end of the channel to the component manager for routing
+    /// to a particular capability.
+    CAPABILITY_USE = 3;
 };
 
 /// A protocol used in testing by a component instance to block the
 /// component manager until specific events occur.
 [Discoverable]
 protocol Breakpoints {
-  /// Register breakpoints for the given EventTypes.
-  /// Must be called exactly once before Expect or Resume.
-  Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types) -> ();
+    /// Register breakpoints for the given EventTypes.
+    /// Must be called exactly once before Expect or Resume.
+    Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types) -> ();
 
-  /// Blocks until the next invocation of a breakpoint occurs and verifies
-  /// that the EventType and component list are as expected.
-  ///
-  /// Note: The component manager is blocked after this call and will not be
-  /// allowed to proceed until resumed explicitly.
-  Expect(EventType event_type, vector<string:MAX_COMPONENT_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH components) -> ();
+    /// Blocks until the next invocation of a breakpoint occurs and verifies
+    /// that the EventType and component list are as expected.
+    ///
+    /// Note: The component manager is blocked after this call and will not be
+    /// allowed to proceed until resumed explicitly by calling Resume().
+    Expect(EventType event_type, vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component) -> ();
 
-  /// Resume the component manager from the last expected invocation.
-  Resume() -> ();
+    /// Blocks until a CapabilityUse invocation matching the specified component
+    /// and capability path. All other invocations are ignored.
+    ///
+    /// Note: The component manager is blocked after this call and will not be
+    /// allowed to proceed until resumed explicitly by calling Resume().
+    WaitUntilCapabilityUse(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path) -> ();
+
+    /// Resume the component manager from the last expected invocation.
+    Resume() -> ();
 };

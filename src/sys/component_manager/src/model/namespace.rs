@@ -274,6 +274,16 @@ impl IncomingNamespace {
                     if let Err(e) = res {
                         error!("failed to route service for component {}: {:?}", abs_moniker, e);
                     }
+                    let realm = model
+                        .look_up_realm(&abs_moniker)
+                        .await
+                        .expect("A service that is using a capability must exist in the model.");
+                    let event = Event::CapabilityUse { realm: realm.clone(), use_ };
+                    realm
+                        .hooks
+                        .dispatch(&event)
+                        .await
+                        .expect("add_service_use: hook dispatch failed");
                 });
             },
         );
