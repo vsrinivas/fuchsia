@@ -28,10 +28,11 @@ use {
     fuchsia_vfs_pseudo_fs::{
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
+        tree_builder::TreeBuilder,
     },
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*, TryStreamExt},
-    std::{collections::HashMap, iter, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, iter, sync::Arc},
 };
 
 const CONCURRENT_LIMIT: usize = 10_000;
@@ -42,108 +43,6 @@ enum IncomingServices {
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
-}
-
-// TODO(mbrunson): Use implementation from fuchsia_vfs_pseudo_fs when it becomes available:
-// https://fuchsia-review.googlesource.com/c/fuchsia/+/305595
-/// A "node" within a potential directory tree.
-///
-/// Unlike the pseudo directory types in the fuchsia-vfs library which only allow adding of direct
-/// child directory entries, `DirectoryTreeBuilder::Directory` allows adding files using the full
-/// file path, creating extra `DirectoryTreeBuilder` instances as necessary to allow successful
-/// conversion of the entire directory tree to a `DirectoryEntry` implementation.
-///
-/// The `DirectoryTreeBuilder::File` type represents a pseudo file. It can only be a leaf in the
-/// directory tree and store file contents unlike `DirectoryTreeBuilder::Directory`.
-enum DirectoryTreeBuilder {
-    Directory(HashMap<String, DirectoryTreeBuilder>),
-    File(Vec<u8>),
-}
-impl DirectoryTreeBuilder {
-    pub fn empty_dir() -> Self {
-        DirectoryTreeBuilder::Directory(HashMap::new())
-    }
-
-    /// Adds a file to the directory tree.
-    ///
-    /// An error is returned if either of the following occur:
-    /// * This function is called on a `DirectoryTreeBuilder::File` enum.
-    /// * A file already exists at the given `path`.
-    pub fn add_file(&mut self, path: &[&str], content: Vec<u8>) -> Result<(), Error> {
-        self.add_file_impl(path, content, &mut PathBuf::from(""))
-    }
-
-    fn add_file_impl(
-        &mut self,
-        path: &[&str],
-        content: Vec<u8>,
-        mut full_path: &mut PathBuf,
-    ) -> Result<(), Error> {
-        match self {
-            DirectoryTreeBuilder::File(_) => Err(format_err!(
-                "Cannot add a file within a File: path={}, name={}, content={:X?}",
-                full_path.to_string_lossy(),
-                path[0],
-                content
-            )),
-            DirectoryTreeBuilder::Directory(children) => {
-                let name = path[0].to_string();
-                let nested = &path[1..];
-                full_path.push(&name);
-
-                if nested.is_empty() {
-                    if children.insert(name, DirectoryTreeBuilder::File(content)).is_some() {
-                        Err(format_err!("Duplicate entry at {}", full_path.to_string_lossy()))
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    match children.get_mut(&name) {
-                        Some(entry) => entry.add_file_impl(nested, content, &mut full_path),
-                        None => {
-                            let mut entry = DirectoryTreeBuilder::empty_dir();
-                            entry.add_file_impl(nested, content, &mut full_path)?;
-                            children.insert(name, entry);
-                            Ok(())
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// Converts this `DirectoryTreeBuilder` into a `DirectoryEntry`.
-    ///
-    /// On successful creation of the `DirectoryEntry`, any payloads owned by this node or its
-    /// children are moved into closures called by an associated pseudo file implementation.
-    ///
-    /// Errors are propogated from `Controllable::add_boxed_entry()` but are converted to
-    /// `zx::Status` before being wrapped in an `Error`.
-    pub fn build<'a>(self) -> Result<Box<dyn DirectoryEntry>, Error> {
-        self.build_impl(&mut PathBuf::from(""))
-    }
-
-    fn build_impl<'a>(self, mut full_path: &mut PathBuf) -> Result<Box<dyn DirectoryEntry>, Error> {
-        match self {
-            DirectoryTreeBuilder::File(content) => {
-                syslog::fx_log_info!("Adding content at {}", full_path.to_string_lossy());
-                Ok(Box::new(read_only(move || Ok(content.to_vec()))))
-            }
-            DirectoryTreeBuilder::Directory(children) => {
-                let mut dir = directory::simple::empty();
-
-                for (name, child) in children.into_iter() {
-                    full_path.push(&name);
-                    let entry = child.build_impl(&mut full_path)?;
-                    full_path.pop();
-
-                    dir.add_boxed_entry(&name, entry).map_err(|err| Error::from(err.0))?;
-                }
-
-                Ok(Box::new(dir))
-            }
-        }
-    }
 }
 
 fn parse_bootfs<'a>(vmo: zx::Vmo) -> HashMap<String, Vec<u8>> {
@@ -169,11 +68,11 @@ async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
     vmo_opt.ok_or(format_err!("Failed to get a valid VMO from service"))
 }
 
-async fn create_dir_from_context<'a>(
+fn create_dir_from_context<'a>(
     context: &'a ConfigContext,
     items: &'a HashMap<String, Vec<u8>>,
-) -> Result<Box<dyn DirectoryEntry>, Error> {
-    let mut dir_builder = DirectoryTreeBuilder::empty_dir();
+) -> directory::simple::Simple<'static> {
+    let mut tree_builder = TreeBuilder::empty_dir();
 
     for (path, dest) in &context.file_path_map {
         let contents = match items.get(path) {
@@ -206,7 +105,9 @@ async fn create_dir_from_context<'a>(
         // Do not allow files that failed validation or have not been validated at all.
         if !failed_validation && validated {
             let path_parts: Vec<&str> = dest.split("/").collect();
-            dir_builder.add_file(&path_parts, contents.to_vec()).unwrap_or_else(|err| {
+            let content = contents.to_vec();
+            let file = read_only(move || Ok(content.clone()));
+            tree_builder.add_entry(&path_parts, file).unwrap_or_else(|err| {
                 syslog::fx_log_err!("Failed to add file {} to directory: {}", dest, err);
             });
         } else if !validated {
@@ -214,7 +115,7 @@ async fn create_dir_from_context<'a>(
         }
     }
 
-    dir_builder.build()
+    tree_builder.build()
 }
 
 fn apply_config(config: Config, items: Arc<Mutex<HashMap<String, Vec<u8>>>>) -> DirectoryProxy {
@@ -227,14 +128,7 @@ fn apply_config(config: Config, items: Arc<Mutex<HashMap<String, Vec<u8>>>>) -> 
         let mut dir = {
             let items_ref = items_mtx.lock().await;
             let context = config.into_context().expect("Failed to convert config into context");
-            create_dir_from_context(&context, &*items_ref).await.unwrap_or_else(|err| {
-                syslog::fx_log_err!(
-                    "Failed to create directory from config: {}, {:?}",
-                    err,
-                    context
-                );
-                Box::new(directory::simple::empty())
-            })
+            create_dir_from_context(&context, &*items_ref)
         };
 
         dir.open(
@@ -366,7 +260,7 @@ async fn main() -> Result<(), Error> {
                 }
             }
         }
-            .unwrap_or_else(|err| syslog::fx_log_err!("Failed to handle incoming service: {}", err))
+        .unwrap_or_else(|err| syslog::fx_log_err!("Failed to handle incoming service: {}", err))
     })
     .await;
     Ok(())
