@@ -37,7 +37,7 @@ class ComputeShader {
   // |push_constants| must point to data of the size passed to the ComputeShader
   // constructor, or nullptr if that size was 0.
   void Dispatch(const std::vector<TexturePtr>& textures, const std::vector<BufferPtr>& buffers,
-                CommandBufferPtr command_buffer, uint32_t x, uint32_t y, uint32_t z,
+                impl::CommandBuffer* command_buffer, uint32_t x, uint32_t y, uint32_t z,
                 const void* push_constants);
 
   // TODO(ES-45): Implement a ComputeShaderDispatcher that follows builder
@@ -45,7 +45,7 @@ class ComputeShader {
   void DispatchWithRanges(const std::vector<TexturePtr>& textures,
                           const std::vector<BufferPtr>& buffers,
                           const std::vector<BufferRange>& buffer_ranges,
-                          CommandBufferPtr command_buffer, uint32_t x, uint32_t y, uint32_t z,
+                          impl::CommandBuffer* command_buffer, uint32_t x, uint32_t y, uint32_t z,
                           const void* push_constants);
 
  private:

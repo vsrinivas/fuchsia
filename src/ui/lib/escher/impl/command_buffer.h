@@ -74,10 +74,6 @@ class CommandBuffer {
     KeepAlive(ptr.get());
   }
 
-  // Bind index/vertex buffers and write draw command.
-  // Retain mesh in used_resources.
-  void DrawMesh(const MeshPtr& mesh);
-
   // Copy pixels from one image to another.  No image barriers or other
   // synchronization is used.  Retain both images in used_resources.
   void CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image, vk::ImageLayout src_layout,

@@ -27,7 +27,7 @@ class Gaussian3x3f16 {
   // texture. Mipmap is not supported. Assumes the image layout is
   // vk::ImageLayout::eGeneral.ss
 
-  void Apply(CommandBufferPtr command_buffer, const TexturePtr& input, const TexturePtr& output);
+  void Apply(impl::CommandBuffer* command_buffer, const TexturePtr& input, const TexturePtr& output);
 
  private:
   EscherWeakPtr escher_;

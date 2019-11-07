@@ -158,8 +158,9 @@ ComputeShader::ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLa
 ComputeShader::~ComputeShader() {}
 
 void ComputeShader::Dispatch(const std::vector<TexturePtr>& textures,
-                             const std::vector<BufferPtr>& buffers, CommandBufferPtr command_buffer,
-                             uint32_t x, uint32_t y, uint32_t z, const void* push_constants) {
+                             const std::vector<BufferPtr>& buffers,
+                             impl::CommandBuffer* command_buffer, uint32_t x, uint32_t y,
+                             uint32_t z, const void* push_constants) {
   std::vector<BufferRange> buffer_ranges;
   buffer_ranges.reserve(buffers.size());
   for (const auto& buffer : buffers) {
@@ -171,7 +172,7 @@ void ComputeShader::Dispatch(const std::vector<TexturePtr>& textures,
 void ComputeShader::DispatchWithRanges(const std::vector<TexturePtr>& textures,
                                        const std::vector<BufferPtr>& buffers,
                                        const std::vector<BufferRange>& buffer_ranges,
-                                       CommandBufferPtr command_buffer, uint32_t x, uint32_t y,
+                                       impl::CommandBuffer* command_buffer, uint32_t x, uint32_t y,
                                        uint32_t z, const void* push_constants) {
   // Push constants must be provided if and only if the pipeline is configured
   // to use them.

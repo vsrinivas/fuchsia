@@ -199,8 +199,8 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
                                                 const escher::Model& overlay_model) {
   TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
 
-  frame->command_buffer()->TransitionImageLayout(output_image, vk::ImageLayout::eUndefined,
-                                                 vk::ImageLayout::eColorAttachmentOptimal);
+  frame->cmds()->impl()->TransitionImageLayout(output_image, vk::ImageLayout::eUndefined,
+                                               vk::ImageLayout::eColorAttachmentOptimal);
 
   auto& renderer = layer->renderer();
   auto camera = renderer->camera();

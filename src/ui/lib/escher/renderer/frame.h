@@ -58,7 +58,6 @@ class Frame : public Resource {
   uint64_t frame_number() const { return frame_number_; }
 
   CommandBuffer* cmds() const { return command_buffer_.get(); }
-  CommandBufferPtr command_buffer() const;
   vk::CommandBuffer vk_command_buffer() const;
   uint64_t command_buffer_sequence_number() const { return command_buffer_sequence_number_; }
   GpuAllocator* gpu_allocator();

@@ -9,6 +9,7 @@
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/mesh_manager.h"
+#include "src/ui/lib/escher/impl/mesh_shader_binding.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -99,7 +100,7 @@ escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
   if (!texture_or_null) {
     return white_texture_.get();
   }
-  frame->command_buffer()->KeepAlive(texture_or_null);
+  frame->cmds()->KeepAlive(texture_or_null);
   return texture_or_null;
 }
 
@@ -114,7 +115,7 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(const escher::FramePtr& fram
   vk::DescriptorImageInfo channel_image_info[kChannelCount];
   vk::WriteDescriptorSet writes[kChannelCount];
   escher::Texture* textures[kChannelCount] = {channel0, channel1, channel2, channel3};
-  auto descriptor_set = descriptor_set_pool_.Allocate(1, frame->command_buffer())->get(0);
+  auto descriptor_set = descriptor_set_pool_.Allocate(1, frame->cmds()->impl())->get(0);
 
   for (uint32_t i = 0; i < kChannelCount; ++i) {
     auto channel_texture = GetChannelTexture(frame, textures[i]);
@@ -143,7 +144,7 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
   TRACE_DURATION("gfx", "fuchsia::examples::shadertoy::Renderer::DrawFrame");
 
   auto frame = escher()->NewFrame("Shadertoy Renderer", ++frame_number_);
-  auto command_buffer = frame->command_buffer();
+  auto command_buffer = frame->cmds()->impl();
   auto vk_command_buffer = frame->vk_command_buffer();
 
   // Lazily initialize resources that need to be uploaded to the GPU; it's easiest to do here since
@@ -177,7 +178,21 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
                                        nullptr);
   vk_command_buffer.pushConstants(pipeline->vk_pipeline_layout(),
                                   vk::ShaderStageFlagBits::eFragment, 0, sizeof(Params), &params);
-  command_buffer->DrawMesh(full_screen_);
+
+  // Draw full-screen mesh.
+  {
+    frame->cmds()->KeepAlive(full_screen_);
+    full_screen_->TransferWaitSemaphores(frame->cmds(), vk::PipelineStageFlagBits::eVertexInput);
+
+    const uint32_t vbo_binding = escher::impl::MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
+    auto& attribute_buffer = full_screen_->attribute_buffer(vbo_binding);
+    vk::Buffer vbo = attribute_buffer.vk_buffer;
+    vk::DeviceSize vbo_offset = attribute_buffer.offset;
+    vk_command_buffer.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
+    vk_command_buffer.bindIndexBuffer(full_screen_->vk_index_buffer(),
+                                       full_screen_->index_buffer_offset(), vk::IndexType::eUint32);
+    vk_command_buffer.drawIndexed(full_screen_->num_indices(), 1, 0, 0, 0);
+  }
 
   command_buffer->EndRenderPass();
 

@@ -201,7 +201,7 @@ VK_TEST_F(PaperShapeCacheTest, WaitSemaphores) {
 
   {
     auto frame = escher->NewFrame("PaperRenderer unit test", kFrameNumber);
-    auto cmd_buf = frame->command_buffer();
+    auto cmd_buf = frame->cmds();
 
     auto uploader = BatchGpuUploader::New(escher);
 

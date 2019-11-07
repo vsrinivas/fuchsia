@@ -8,7 +8,6 @@
 
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 
 namespace escher {
 namespace impl {
@@ -56,7 +55,7 @@ DescriptorSetPool::~DescriptorSetPool() {
 }
 
 DescriptorSetAllocationPtr DescriptorSetPool::Allocate(uint32_t count,
-                                                       CommandBufferPtr command_buffer) {
+                                                       impl::CommandBuffer* command_buffer) {
   // Ensure that enough free sets are available.
   if (free_sets_.size() < count) {
     constexpr uint32_t kGrowthFactor = 2;

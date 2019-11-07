@@ -80,7 +80,7 @@ namespace impl {
 
 Gaussian3x3f::Gaussian3x3f(EscherWeakPtr escher) : escher_(std::move(escher)) {}
 
-void Gaussian3x3f::Apply(CommandBuffer* command_buffer, const TexturePtr& input,
+void Gaussian3x3f::Apply(impl::CommandBuffer* command_buffer, const TexturePtr& input,
                          const TexturePtr& output) {
   if (!kernel_) {
     kernel_ = std::make_unique<ComputeShader>(

@@ -25,7 +25,7 @@ class Gaussian3x3f {
   // Apply two-pass gaussian on the input texture, and render into the output
   // texture. Mipmap is not supported. Assumes the image layout is
   // vk::ImageLayout::eGeneral.
-  void Apply(CommandBuffer* command_buffer, const TexturePtr& input, const TexturePtr& output);
+  void Apply(impl::CommandBuffer* command_buffer, const TexturePtr& input, const TexturePtr& output);
 
  private:
   EscherWeakPtr escher_;

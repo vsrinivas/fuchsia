@@ -58,7 +58,7 @@ class DescriptorSetPool : public ResourceRecycler {
   // form of a DescriptorSetAllocation.  All such allocations must be destroyed
   // before this DescriptorSetPool is destroyed.  If command_buffer is not null,
   // it will retain the new allocation until it is retired.
-  DescriptorSetAllocationPtr Allocate(uint32_t count, CommandBufferPtr command_buffer);
+  DescriptorSetAllocationPtr Allocate(uint32_t count, impl::CommandBuffer* command_buffer);
 
   vk::DescriptorSetLayout layout() const { return layout_; }
 

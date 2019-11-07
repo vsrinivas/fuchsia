@@ -147,15 +147,14 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   auto& mesh_spec = mesh->spec();
 
   // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
-  frame->command_buffer()->KeepAlive(mesh);
-  frame->command_buffer()->KeepAlive(texture.get());
+  frame->cmds()->KeepAlive(mesh);
+  frame->cmds()->KeepAlive(texture.get());
 
   // TODO(ES-206): avoid checking every buffer of every mesh by obtaining a
   // single wait semaphore from PaperRenderer's per-frame BatchGpuUploader.
   // Once this is done, should probably DCHECK here that none of the buffers
   // have wait semaphores.
-  mesh->TransferWaitSemaphores(frame->command_buffer().get(),
-                               vk::PipelineStageFlagBits::eVertexInput);
+  mesh->TransferWaitSemaphores(frame->cmds(), vk::PipelineStageFlagBits::eVertexInput);
 
   auto* obj = frame->Allocate<MeshData>();
 
@@ -175,7 +174,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
       if (auto& attribute_buffer = mesh->attribute_buffer(i)) {
         // TODO(ES-103): avoid reaching in to impl::CommandBuffer for
         // keep-alive.
-        frame->command_buffer()->KeepAlive(attribute_buffer.buffer);
+        frame->cmds()->KeepAlive(attribute_buffer.buffer);
 
         obj->vertex_bindings[binding_count++] =
             VertexBinding{.binding_index = i,

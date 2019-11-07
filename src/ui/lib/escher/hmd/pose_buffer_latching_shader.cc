@@ -136,7 +136,7 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(const FramePtr& frame,
       frame->gpu_allocator()->AllocateBuffer(escher_->resource_recycler(), 4 * k4x4MatrixSize,
                                              kVpBufferUsageFlags, kVpMemoryPropertyFlags);
 
-  auto command_buffer = frame->command_buffer();
+  auto command_buffer = frame->cmds()->impl();
 
   // This should be guaranteed by checks at a higher layer.  For example,
   // Scenic checks this in Session::ApplySetCameraPoseBufferCmd().

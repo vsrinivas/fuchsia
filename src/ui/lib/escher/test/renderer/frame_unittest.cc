@@ -57,7 +57,7 @@ VK_TEST_F(FrameTest, SubmitPartialFrameCreatesCleanCommandBuffer) {
 
   EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());
   EXPECT_NE(command_buffer_sequence_number, frame->command_buffer_sequence_number());
-  EXPECT_EQ(frame->command_buffer_sequence_number(), frame->command_buffer()->sequence_number());
+  EXPECT_EQ(frame->command_buffer_sequence_number(), frame->cmds()->sequence_number());
   frame->EndFrame(SemaphorePtr(), [] {});
 }
 

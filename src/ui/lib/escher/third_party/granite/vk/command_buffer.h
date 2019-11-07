@@ -83,6 +83,8 @@ class CommandBuffer : public Reffable {
   vk::CommandBuffer vk() const { return vk_; }
   vk::Device vk_device() const { return vk_device_; }
   // TODO(ES-83): deprecated from the get-go.
+  impl::CommandBuffer* impl() const { return impl_; }
+
   bool use_protected_memory() const { return impl_->use_protected_memory(); }
 
   size_t NumWaitSemaphores() const { return impl_->NumWaitSemaphores(); }
@@ -131,27 +133,19 @@ class CommandBuffer : public Reffable {
     impl_->TransitionImageLayout(image, old_layout, new_layout);
   }
 
-  bool Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
-    return impl_->Submit(queue, std::move(callback));
-  }
-
   // Submits the command buffer on the appropriate queue: the main queue for
   // graphics and compute tasks, and the transfer queue for dedicated transfer
   // operations.
   //
   // TODO(ES-83): this is a placeholder; the submission API will be refined.
   bool Submit(CommandBufferFinishedCallback callback);
+  bool Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
+    return impl_->Submit(queue, std::move(callback));
+  }
 
   // Wraps vkCmdBeginRenderPass(). Uses |info| to obtain a cached VkRenderPass
   // and VkFramebuffer.
   void BeginRenderPass(const RenderPassInfo& info);
-
-  // Convenient way to begin a render-pass that renders to the whole framebuffer
-  // (i.e. width/height of viewport and scissors are obtained from framebuffer).
-  void BeginRenderPass(vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
-                       const std::vector<vk::ClearValue>& clear_values, const vk::Rect2D viewport) {
-    impl_->BeginRenderPass(render_pass, framebuffer, clear_values, viewport);
-  }
 
   // Wraps vkCmdEndRenderPass().
   void EndRenderPass();
@@ -219,14 +213,6 @@ class CommandBuffer : public Reffable {
     FXL_DCHECK(IsInRenderPass());
     pipeline_state_.SetVertexAttributes(binding, attrib, format, offset);
     SetDirty(kDirtyStaticVertexBit);
-  }
-
-  // Bind index/vertex buffers and write draw command.
-  // Retain mesh in used_resources.
-  void DrawMesh(const MeshPtr& mesh) {
-    KeepAlive(mesh);
-    mesh->TransferWaitSemaphores(this, vk::PipelineStageFlagBits::eVertexInput);
-    impl_->DrawMesh(mesh);
   }
 
   // Wraps vkCmdDrawIndexed(), first flushing any dirty render state; this may

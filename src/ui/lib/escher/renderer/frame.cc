@@ -65,11 +65,6 @@ Frame::~Frame() {
       << "EndFrame() was not called - state_: " << static_cast<int>(state_);
 }
 
-CommandBufferPtr Frame::command_buffer() const {
-  FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
-  return command_buffer_;
-}
-
 vk::CommandBuffer Frame::vk_command_buffer() const {
   FXL_DCHECK(command_buffer_) << "Cannot access command buffer.";
   return command_buffer_->vk();

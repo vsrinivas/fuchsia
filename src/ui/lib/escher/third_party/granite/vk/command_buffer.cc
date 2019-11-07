@@ -105,7 +105,7 @@ bool CommandBuffer::Submit(CommandBufferFinishedCallback callback) {
       FXL_DCHECK(false);
       return false;
   }
-  return impl_->Submit(queue, std::move(callback));
+  return Submit(queue, std::move(callback));
 }
 
 void CommandBuffer::BeginCompute() {

@@ -78,7 +78,7 @@ PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
       // The camera has a latched pose-buffer, so we use it to obtain a
       // view-projection matrix in the shader.  We pass the eye_index as a
       // push-constant to obtain the correct matrix.
-      frame->command_buffer()->KeepAlive(buffer);
+      frame->cmds()->KeepAlive(buffer);
       binding.descriptor_set_index = PaperShaderLatchedPoseBuffer::kDescriptorSet;
       binding.binding_index = PaperShaderLatchedPoseBuffer::kDescriptorBinding;
       binding.buffer = buffer.get();
@@ -178,7 +178,7 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
       std::make_unique<FrameData>(frame, std::move(uploader), scene, output_image,
                                   ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
 
-  frame->command_buffer()->TakeWaitSemaphore(
+  frame->cmds()->TakeWaitSemaphore(
       output_image,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer);
 

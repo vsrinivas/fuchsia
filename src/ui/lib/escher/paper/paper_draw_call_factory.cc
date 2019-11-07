@@ -185,8 +185,7 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   PaperRenderFuncs::MeshDrawData* draw_data =
       PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material.color(), drawable_flags);
 
-  // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
-  frame_->command_buffer()->KeepAlive(texture.get());
+  frame_->cmds()->KeepAlive(texture.get());
 
   // Compute a depth metric for sorting objects.
 #if 1

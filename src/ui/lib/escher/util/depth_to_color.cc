@@ -40,7 +40,7 @@ DepthToColor::DepthToColor(EscherWeakPtr escher, ImageFactory* image_factory)
 
 TexturePtr DepthToColor::Convert(const FramePtr& frame, const TexturePtr& depth_texture,
                                  vk::ImageUsageFlags image_flags) {
-  auto command_buffer = frame->command_buffer();
+  auto command_buffer = frame->cmds()->impl();
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();
 

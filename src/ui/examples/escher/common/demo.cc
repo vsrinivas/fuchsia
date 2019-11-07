@@ -175,7 +175,7 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width, uint32_t framebuffe
     auto frame =
         escher()->NewFrame(kTraceLiteral, ++frame_number, current_frame == frame_count - 1);
     OnFrameCreated();
-    frame->command_buffer()->AddWaitSemaphore(semaphores[image_index],
+    frame->cmds()->AddWaitSemaphore(semaphores[image_index],
                                               vk::PipelineStageFlagBits::eBottomOfPipe);
     this->DrawFrame(frame, images[image_index]);
     frame->EndFrame(semaphores[image_index], [this]() { OnFrameDestroyed(); });
