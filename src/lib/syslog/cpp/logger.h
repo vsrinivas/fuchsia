@@ -174,6 +174,10 @@ zx_status_t InitLogger();
 #define FX_DCHECKT(condition, tag) _FX_EAT_STREAM_PARAMETERS(condition, tag)
 #endif
 
+#define FX_NOTREACHED() FX_DCHECK(false)
+
+#define FX_NOTIMPLEMENTED() FX_LOGS(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+
 // VLOG macros log with negative verbosities.
 #define FX_VLOG_STREAM(verbose_level, tag, status)                                               \
   ::syslog::internal::LogMessage(-(verbose_level), __FILE__, __LINE__, (tag), (status), nullptr) \
