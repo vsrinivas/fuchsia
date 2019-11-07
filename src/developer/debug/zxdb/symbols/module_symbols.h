@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <ctime>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -17,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -41,6 +44,8 @@ class SymbolContext;
 // via the CompileUnit.
 class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
  public:
+  fxl::WeakPtr<ModuleSymbols> GetWeakPtr();
+
   // Returns information about this module. This is relatively slow because it needs to count the
   // index size.
   //
@@ -49,6 +54,10 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // class doesn't know what the
   // base address is.
   virtual ModuleSymbolStatus GetStatus() const = 0;
+
+  // Returns the last modification time of the symbols for this module. Will be 0 if it is not
+  // known.
+  virtual std::time_t GetModificationTime() const = 0;
 
   // Converts the given InputLocation into one or more locations. Called by LoadedModuleSymbols. See
   // there for more info.
@@ -101,6 +110,15 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // This allows the SystemSymbols to keep track of all live ModuleSymbols for caching purposes.
   void set_deletion_cb(fit::callback<void(ModuleSymbols*)> cb) { deletion_cb_ = std::move(cb); }
 
+  // The set of files that the frontend has warned the user about being newer than the symbol
+  // file. This prevents duplicate warnings for each file.
+  //
+  // This set is stored here but not interpreted, it is here for the frontend's use only. If we
+  // find more data like this, we should have a more generic way to associate frontend data with
+  // client objects.
+  const std::set<std::string>& newer_files_warned() const { return newer_files_warned_; }
+  std::set<std::string>& newer_files_warned() { return newer_files_warned_; }
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(ModuleSymbols);
   FRIEND_MAKE_REF_COUNTED(ModuleSymbols);
@@ -110,6 +128,10 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
 
  private:
   fit::callback<void(ModuleSymbols*)> deletion_cb_;  // Possibly null.
+
+  std::set<std::string> newer_files_warned_;  // See getter above.
+
+  fxl::WeakPtrFactory<ModuleSymbols> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);
 };

@@ -20,7 +20,7 @@ SourceFileProviderImpl::SourceFileProviderImpl(std::vector<std::string> build_di
 SourceFileProviderImpl::SourceFileProviderImpl(const SettingStore& settings)
     : build_dir_prefs_(settings.GetList(ClientSettings::Target::kBuildDirs)) {}
 
-ErrOr<std::string> SourceFileProviderImpl::GetFileContents(
+ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
     const std::string& file_name, const std::string& file_build_dir) const {
   std::string contents;
 
@@ -29,14 +29,15 @@ ErrOr<std::string> SourceFileProviderImpl::GetFileContents(
   if (IsPathAbsolute(file_name)) {
     // Absolute path, expect it to be readable or fail.
     if (files::ReadFileToString(file_name, &contents))
-      return contents;
+      return FileData(std::move(contents), GetFileModificationTime(file_name));
     return Err("Source file not found: " + file_name);
   }
 
   // Search the build directory preferences in order.
   for (const auto& cur : build_dir_prefs_) {
-    if (files::ReadFileToString(CatPathComponents(cur, file_name), &contents))
-      return contents;
+    std::string cur_path = CatPathComponents(cur, file_name);
+    if (files::ReadFileToString(cur_path, &contents))
+      return FileData(std::move(contents), GetFileModificationTime(cur_path));
   }
 
   // Try to find relative to the build directory given in the symbols.
@@ -50,21 +51,22 @@ ErrOr<std::string> SourceFileProviderImpl::GetFileContents(
       // Zircon build). Even when we fix the multiple build mess in Fuchsia, this relative directory
       // feature can be useful for projects building in different parts.
       for (const auto& cur : build_dir_prefs_) {
-        if (files::ReadFileToString(
-                CatPathComponents(cur, CatPathComponents(file_build_dir, file_name)), &contents))
-          return contents;
+        std::string cur_path = CatPathComponents(cur, CatPathComponents(file_build_dir, file_name));
+        if (files::ReadFileToString(cur_path, &contents))
+          return FileData(std::move(contents), GetFileModificationTime(cur_path));
       }
     }
 
     // Try to find relative to the file build dir. Even do this if the file build dir is relative to
     // search relative to the current working directory.
-    if (files::ReadFileToString(CatPathComponents(file_build_dir, file_name), &contents))
-      return contents;
+    std::string cur_path = CatPathComponents(file_build_dir, file_name);
+    if (files::ReadFileToString(cur_path, &contents))
+      return FileData(std::move(contents), GetFileModificationTime(cur_path));
   }
 
   // Fall back on reading relative to the working directory.
   if (files::ReadFileToString(file_name, &contents))
-    return contents;
+    return FileData(std::move(contents), GetFileModificationTime(file_name));
 
   return Err("Source file not found: " + file_name);
 }

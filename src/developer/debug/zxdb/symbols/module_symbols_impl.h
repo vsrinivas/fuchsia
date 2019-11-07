@@ -50,6 +50,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
+  std::time_t GetModificationTime() const override;
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const override;
@@ -112,6 +113,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   const std::string name_;
   const std::string binary_name_;
   const std::string build_id_;
+
+  std::time_t modification_time_ = 0;  // Set when the file is loaded.
 
   std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
   std::unique_ptr<llvm::object::Binary> binary_;

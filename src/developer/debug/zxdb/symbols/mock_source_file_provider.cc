@@ -6,11 +6,12 @@
 
 namespace zxdb {
 
-void MockSourceFileProvider::SetFileContents(const std::string& file_name, std::string contents) {
-  contents_[file_name] = contents;
+void MockSourceFileProvider::SetFileData(const std::string& file_name, std::time_t mtime,
+                                         std::string contents) {
+  contents_[file_name] = FileData(std::move(contents), mtime);
 }
 
-ErrOr<std::string> MockSourceFileProvider::GetFileContents(
+ErrOr<SourceFileProvider::FileData> MockSourceFileProvider::GetFileData(
     const std::string& file_name, const std::string& file_build_dir) const {
   auto found = contents_.find(file_name);
   if (found == contents_.end())

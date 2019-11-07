@@ -17,6 +17,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
@@ -114,6 +115,8 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
   return status;
 }
 
+std::time_t ModuleSymbolsImpl::GetModificationTime() const { return modification_time_; }
+
 Err ModuleSymbolsImpl::Load(bool create_index) {
   DEBUG_LOG(Session) << "Loading " << binary_name_ << " (" << name_ << ").";
 
@@ -133,6 +136,8 @@ Err ModuleSymbolsImpl::Load(bool create_index) {
     auto err_str = llvm::toString(bin_or_err.takeError());
     return Err("Error loading symbols for \"" + name_ + "\": " + err_str);
   }
+
+  modification_time_ = GetFileModificationTime(name_);
 
   auto binary_pair = bin_or_err->takeBinary();
   binary_buffer_ = std::move(binary_pair.second);

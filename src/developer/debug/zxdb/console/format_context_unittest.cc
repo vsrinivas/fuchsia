@@ -36,7 +36,8 @@ TEST(FormatContext, FormatSourceContext) {
   OutputBuffer out;
   ASSERT_FALSE(FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
   EXPECT_EQ(
-      "   2 \n   3 int main(int argc, char** argv) {\n"
+      "   2 \n"
+      "   3 int main(int argc, char** argv) {\n"
       " ▶ 4   printf(\"Hello, world\");\n"
       "   5   return 1;\n"
       "   6 }\n",
@@ -52,8 +53,8 @@ TEST(FormatContext, FormatSourceContext_OffBeginning) {
   opts.highlight_column = 11;
 
   OutputBuffer out;
-  // This column is off the end of line two, and the context has one less line
-  // at the beginning because it hit the top of the file.
+  // This column is off the end of line two, and the context has one less line at the beginning
+  // because it hit the top of the file.
   ASSERT_FALSE(FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
   EXPECT_EQ(
       "   1 #include \"foo.h\"\n"
@@ -72,8 +73,8 @@ TEST(FormatContext, FormatSourceContext_OffEnd) {
   opts.highlight_column = 6;
 
   OutputBuffer out;
-  // This column is off the end of line two, and the context has one less line
-  // at the beginning because it hit the top of the file.
+  // This column is off the end of line two, and the context has one less line at the beginning
+  // because it hit the top of the file.
   ASSERT_FALSE(FormatSourceContext("file", kSimpleProgram, opts, &out).has_error());
   EXPECT_EQ(
       "   4   printf(\"Hello, world\");\n"
@@ -156,13 +157,13 @@ TEST(FormatContext, FormatAsmContext) {
   // Source code.
   MockSourceFileProvider file_provider;
   const char kFileName[] = "file.cc";
-  file_provider.SetFileContents(kFileName,
-                                "// Copyright\n"                  // Line 1.
-                                "\n"                              // Line 2.
-                                "int main() {\n"                  // Line 3.
-                                "  printf(\"Hello, world.\");\n"  // Line 4.
-                                "  return 0;\n"                   // Line 5.
-                                "}\n"                             // Line 6.
+  file_provider.SetFileData(kFileName, 0,
+                            "// Copyright\n"                  // Line 1.
+                            "\n"                              // Line 2.
+                            "int main() {\n"                  // Line 3.
+                            "  printf(\"Hello, world.\");\n"  // Line 4.
+                            "  return 0;\n"                   // Line 5.
+                            "}\n"                             // Line 6.
   );
 
   // Process setup for mocking the symbol requests.
@@ -196,6 +197,53 @@ TEST(FormatContext, FormatAsmContext) {
       "     5   return 0;\n"
       "   0x123456788  lea  rdi, [rsp + 0xc] \n",
       out.AsString());
+}
+
+TEST(FormatContext, FormatSourceFileContext_Stale) {
+  constexpr std::size_t kFileTime = 10000000;
+  const char kFileName[] = "file.cc";
+  MockSourceFileProvider file_provider;
+  file_provider.SetFileData(kFileName, kFileTime, kSimpleProgram);
+
+  auto mod_sym = fxl::MakeRefCounted<MockModuleSymbols>("file.so");
+  // Report build good (module is newer than source file.
+  mod_sym->set_modification_time(kFileTime + 10);
+
+  FormatSourceOpts opts;
+  opts.first_line = 2;
+  opts.last_line = 6;
+  opts.active_line = 4;
+  opts.highlight_line = 4;
+  opts.highlight_column = 11;
+  opts.module_for_time_warning = mod_sym->GetWeakPtr();
+
+  std::string expected_code =
+      "   2 \n"
+      "   3 int main(int argc, char** argv) {\n"
+      " ▶ 4   printf(\"Hello, world\");\n"
+      "   5   return 1;\n"
+      "   6 }\n";
+
+  // Should not give a warning.
+  OutputBuffer out;
+  ASSERT_FALSE(
+      FormatSourceFileContext(FileLine(kFileName, 4), file_provider, opts, &out).has_error());
+  EXPECT_EQ(expected_code, out.AsString());
+
+  // Say the module is older. This should give a warning.
+  mod_sym->set_modification_time(kFileTime - 10);
+  out = OutputBuffer();
+  ASSERT_FALSE(
+      FormatSourceFileContext(FileLine(kFileName, 4), file_provider, opts, &out).has_error());
+  EXPECT_EQ("⚠️  Warning: Source file is newer than the binary. The build may be out-of-date.\n" +
+                expected_code,
+            out.AsString());
+
+  // Doing the same file again should not give a warning. Each file should be warned about once.
+  out = OutputBuffer();
+  ASSERT_FALSE(
+      FormatSourceFileContext(FileLine(kFileName, 4), file_provider, opts, &out).has_error());
+  EXPECT_EQ(expected_code, out.AsString());
 }
 
 }  // namespace zxdb

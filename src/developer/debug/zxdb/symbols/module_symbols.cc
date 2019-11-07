@@ -6,11 +6,13 @@
 
 namespace zxdb {
 
-ModuleSymbols::ModuleSymbols() = default;
+ModuleSymbols::ModuleSymbols() : weak_factory_(this) {}
 
 ModuleSymbols::~ModuleSymbols() {
   if (deletion_cb_)
     deletion_cb_(this);
 }
+
+fxl::WeakPtr<ModuleSymbols> ModuleSymbols::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 }  // namespace zxdb

@@ -18,14 +18,14 @@ namespace zxdb {
 class MockSourceFileProvider : public SourceFileProvider {
  public:
   // Sets the expected contents for the given file.
-  void SetFileContents(const std::string& file_name, std::string contents);
+  void SetFileData(const std::string& file_name, std::time_t mtime, std::string contents);
 
-  ErrOr<std::string> GetFileContents(const std::string& file_name,
-                                     const std::string& file_build_dir) const override;
+  ErrOr<FileData> GetFileData(const std::string& file_name,
+                              const std::string& file_build_dir) const override;
 
  private:
   // Maps file names to their hardcoded contents.
-  std::map<std::string, std::string> contents_;
+  std::map<std::string, FileData> contents_;
 };
 
 }  // namespace zxdb

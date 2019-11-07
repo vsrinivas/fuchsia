@@ -22,8 +22,8 @@ class SourceFileProviderImpl : public SourceFileProvider {
   explicit SourceFileProviderImpl(std::vector<std::string> build_dirs);
   explicit SourceFileProviderImpl(const SettingStore& settings);
 
-  ErrOr<std::string> GetFileContents(const std::string& file_name,
-                                     const std::string& file_build_dir) const override;
+  ErrOr<FileData> GetFileData(const std::string& file_name,
+                              const std::string& file_build_dir) const override;
 
  private:
   const std::vector<std::string> build_dir_prefs_;

@@ -41,8 +41,11 @@ class MockModuleSymbols : public ModuleSymbols {
   // the index and call AddDieRef() with the same DieRef and the symbol you want it to resolve to.
   Index& index() { return index_; }
 
+  void set_modification_time(std::size_t mtime) { modification_time_ = mtime; }
+
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
+  std::time_t GetModificationTime() const override { return modification_time_; }
   std::vector<Location> ResolveInputLocation(const SymbolContext& symbol_context,
                                              const InputLocation& input_location,
                                              const ResolveOptions& options) const override;
@@ -66,6 +69,7 @@ class MockModuleSymbols : public ModuleSymbols {
   Index index_;
 
   std::string local_file_name_;
+  std::size_t modification_time_ = 0;
 
   // Maps manually-added symbols to their locations.
   std::map<std::string, std::vector<Location>> named_symbols_;

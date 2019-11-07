@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -18,6 +19,7 @@ class ArchInfo;
 class FileLine;
 class Location;
 class MemoryDump;
+class ModuleSymbols;
 class OutputBuffer;
 class Process;
 class SourceFileProvider;
@@ -71,6 +73,15 @@ struct FormatSourceOpts {
   // Contains the lines with breakpoints (1-based key) mapped to whether that breakpoint is enabled
   // or not.
   std::map<int, bool> bp_lines;
+
+  // If set, this will be used to compare modification times for source file symbols when loading a
+  // source file (FormatSourceFileContext()). A warning will be prepended to source listings if the
+  // source file is newer than the module's symbols. This should be the module corresponding to the
+  // file being printed.
+  //
+  // This is a WeakPtr because sometimes this options struct is saved asynchronously when something
+  // needs to be fetched.
+  fxl::WeakPtr<ModuleSymbols> module_for_time_warning;
 };
 
 // Formats the contents of the given local file name to the output. See FormatSourceFileContext for

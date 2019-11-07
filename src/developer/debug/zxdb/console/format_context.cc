@@ -20,7 +20,9 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/source_file_provider.h"
 #include "src/developer/debug/zxdb/symbols/source_util.h"
@@ -53,12 +55,26 @@ OutputBuffer HighlightLine(std::string str, int column) {
   return result;
 }
 
+// Retrieves the proper MOduleSymbols (or null) for the given location as a weak pointer. This is
+// used to compute the right module to ask for out-of-date file warnings.
+fxl::WeakPtr<ModuleSymbols> GetWeakModuleForLocation(Process* process, const Location& location) {
+  if (LoadedModuleSymbols* loaded_sym =
+          process->GetSymbols()->GetModuleForAddress(location.address()))
+    return loaded_sym->module_symbols()->GetWeakPtr();
+  return fxl::WeakPtr<ModuleSymbols>();
+}
+
 // Generates the source listing for source intersperced with assembly code for the source between
 // the given two lines. The prev_line is the last one outputted.
 //
 // This re-opens and line splits the file for each block of source shown. This is very inefficient
 // but normally disassembly is not performance sensitive. If needed this could be cached.
-OutputBuffer FormatAsmSourceForRange(Process* process, const SourceFileProvider& file_provider,
+//
+// The module_for_time_warning is an optional pointer to the module corresponding to this source
+// file so we can show warnings if the build is out-of-date.
+OutputBuffer FormatAsmSourceForRange(Process* process,
+                                     fxl::WeakPtr<ModuleSymbols> module_for_time_warning,
+                                     const SourceFileProvider& file_provider,
                                      const FileLine& prev_line, const FileLine& line) {
   // Maximum number of lines of source we'll include.
   constexpr int kMaxContext = 4;
@@ -73,6 +89,7 @@ OutputBuffer FormatAsmSourceForRange(Process* process, const SourceFileProvider&
   opts.last_line = line.line();
   opts.left_indent = 2;
   opts.dim_others = true;  // Dim everything (we didn't specify an active line).
+  opts.module_for_time_warning = std::move(module_for_time_warning);
 
   FileLine start_line(line.file(), first_num);
   OutputBuffer out;
@@ -101,6 +118,7 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
     source_opts.first_line = source_opts.active_line - 2;
     source_opts.last_line = source_opts.active_line + 2;
     source_opts.dim_others = true;
+    source_opts.module_for_time_warning = GetWeakModuleForLocation(process, location);
 
     OutputBuffer out;
     Err err = FormatSourceFileContext(location.file_line(), *file_provider, source_opts, &out);
@@ -164,11 +182,25 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
 // careful to always pick the latest version since it can get updated.
 Err FormatSourceFileContext(const FileLine& file_line, const SourceFileProvider& file_provider,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
-  std::string contents;
-  auto contents_or = file_provider.GetFileContents(file_line.file(), file_line.comp_dir());
-  if (contents_or.has_error())
-    return contents_or.err();
-  return FormatSourceContext(file_line.file(), contents_or.value(), opts, out);
+  auto data_or = file_provider.GetFileData(file_line.file(), file_line.comp_dir());
+  if (data_or.has_error())
+    return data_or.err();
+
+  // Check modification times for warning about out-of-date builds.
+  if (opts.module_for_time_warning) {
+    // Either of the times can be 0 if there was an error. Ignore the check in that case.
+    std::time_t module_time = opts.module_for_time_warning->GetModificationTime();
+    std::time_t file_time = data_or.value().modification_time;
+    if (module_time && file_time && file_time > module_time) {
+      // File is known out-of-date. Only show warning once for each file per module.
+      if (opts.module_for_time_warning->newer_files_warned().insert(file_line.file()).second) {
+        out->Append(Syntax::kWarning, GetExclamation() + " Warning:");
+        out->Append(" Source file is newer than the binary. The build may be out-of-date.\n");
+      }
+    }
+  }
+
+  return FormatSourceContext(file_line.file(), data_or.value().contents, opts, out);
 }
 
 Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
@@ -278,7 +310,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
       if (!loc.empty() && loc[0].file_line().is_valid() && prev_file_line != loc[0].file_line()) {
         std::vector<OutputBuffer>& out_row = table.emplace_back();
         out_row.push_back(
-            FormatAsmSourceForRange(process, file_provider, prev_file_line, loc[0].file_line()));
+            FormatAsmSourceForRange(process, GetWeakModuleForLocation(process, loc[0]),
+                                    file_provider, prev_file_line, loc[0].file_line()));
 
         prev_file_line = loc[0].file_line();
       }

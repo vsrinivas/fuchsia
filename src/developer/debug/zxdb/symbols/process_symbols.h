@@ -78,6 +78,11 @@ class ProcessSymbols {
   // Returns the information for all the modules that were loaded with symbol information.
   std::vector<const LoadedModuleSymbols*> GetLoadedModuleSymbols() const;
 
+  // Finds the module for the given address. Returns null if the address does not correspond to
+  // loaded code in any module.
+  const LoadedModuleSymbols* GetModuleForAddress(uint64_t address) const;
+  LoadedModuleSymbols* GetModuleForAddress(uint64_t address);
+
   // Converts the given InputLocation into one or more locations. The input can match zero, one, or
   // many locations.
   //

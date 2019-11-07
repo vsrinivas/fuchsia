@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/common/file_util.h"
 
+#include <filesystem>
+
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -30,6 +32,15 @@ std::string CatPathComponents(const std::string& first, const std::string& secon
   result.append(second);
 
   return result;
+}
+
+std::time_t GetFileModificationTime(const std::string& path) {
+  std::error_code ec;
+  std::filesystem::file_time_type last_write = std::filesystem::last_write_time(path, ec);
+  if (ec)
+    return 0;
+
+  return std::filesystem::file_time_type::clock::to_time_t(last_write);
 }
 
 }  // namespace zxdb

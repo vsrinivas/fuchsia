@@ -134,6 +134,18 @@ std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols()
   return result;
 }
 
+const LoadedModuleSymbols* ProcessSymbols::GetModuleForAddress(uint64_t address) const {
+  const ModuleInfo* info = InfoForAddress(address);
+  if (!info)
+    return nullptr;
+  return info->symbols.get();
+}
+
+LoadedModuleSymbols* ProcessSymbols::GetModuleForAddress(uint64_t address) {
+  return const_cast<LoadedModuleSymbols*>(
+      const_cast<const ProcessSymbols*>(this)->GetModuleForAddress(address));
+}
+
 std::vector<Location> ProcessSymbols::ResolveInputLocation(const InputLocation& input_location,
                                                            const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
