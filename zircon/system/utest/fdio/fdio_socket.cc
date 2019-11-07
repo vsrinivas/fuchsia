@@ -281,8 +281,9 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 
-auto timeout = [](int optname, int client_fd, zx::socket server_socket) {
-  ASSERT_TRUE(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
+template <int optname>
+auto timeout = [](int client_fd, zx::socket server_socket) {
+  static_assert(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
 
   // We want this to be a small number so the test is fast, but at least 1
   // second so that we exercise `tv_sec`.
@@ -339,34 +340,39 @@ auto timeout = [](int optname, int client_fd, zx::socket server_socket) {
   // Wrap the read/write in a future to enable a timeout. We expect the future
   // to time out.
   {
-    const auto fut = std::async(std::launch::async, [&]() {
+    auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
       switch (optname) {
         case SO_RCVTIMEO:
-          EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0, "%s", strerror(errno));
-          break;
+          return std::make_pair(read(client_fd, buf, sizeof(buf)), errno);
         case SO_SNDTIMEO:
-          EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
-          ASSERT_EQ(errno, EPIPE, "%s", strerror(errno));
-          break;
+          return std::make_pair(write(client_fd, buf, sizeof(buf)), errno);
       }
     });
     EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
-
     // Resetting the remote end socket should cause the read/write to complete.
     server_socket.reset();
-    EXPECT_EQ(fut.wait_for(margin), std::future_status::ready);
+    auto return_code_and_errno = fut.get();
+    switch (optname) {
+      case SO_RCVTIMEO:
+        EXPECT_EQ(return_code_and_errno.first, 0, "%s", strerror(errno));
+        break;
+      case SO_SNDTIMEO:
+        EXPECT_EQ(return_code_and_errno.first, -1);
+        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(errno));
+        break;
+    }
   }
 
   ASSERT_EQ(close(client_fd), 0, "%s", strerror(errno));
 };
 
 TEST_F(TcpSocketTest, RcvTimeout) {
-  timeout(SO_RCVTIMEO, client_fd.release(), std::move(server_socket));
+  timeout<SO_RCVTIMEO>(client_fd.release(), std::move(server_socket));
 }
 
 TEST_F(TcpSocketTest, SndTimeout) {
   server.FillPeerSocket();
-  timeout(SO_SNDTIMEO, client_fd.release(), std::move(server_socket));
+  timeout<SO_SNDTIMEO>(client_fd.release(), std::move(server_socket));
 }
 
 }  // namespace
