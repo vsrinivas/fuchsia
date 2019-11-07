@@ -1,6 +1,6 @@
-# Garnet UI services
+# Fuchsia UI services
 
-Fuchsia's Garnet layer does not provide a full-fledged end-user UI.  Instead, it provides services that provide a foundation upon which to build secure, performant, multi-process UIs.
+The Fuchsia tree does not provide a full-fledged end-user UI.  Instead, it provides services that provide a foundation upon which to build secure, performant, multi-process UIs.
 
 These services include:
 

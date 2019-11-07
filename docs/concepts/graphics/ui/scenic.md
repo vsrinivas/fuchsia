@@ -26,7 +26,7 @@
 
 # Introduction
 
-Scenic is a Garnet service that composes graphical objects from multiple
+Scenic is a system service that composes graphical objects from multiple
 processes into a shared scene graph.  These objects are rendered within a
 unified lighting environment (to a display or other render target); this
 means that the objects can cast shadows or reflect light onto each other,

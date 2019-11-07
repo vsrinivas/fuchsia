@@ -2,12 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 group("tests") {
   testonly = true
 
   public_deps = [
+    ":present_view_tests",
+  ]
+}
+
+test_package("present_view_tests") {
+  deps = [
     ":present_view_apptests",
     ":present_view_unittests",
+  ]
+
+  tests = [
+    {
+      name = "present_view_apptests"
+      environments = basic_envs
+    },
+    {
+      name = "present_view_unittests"
+      environments = basic_envs
+    },
   ]
 }
 

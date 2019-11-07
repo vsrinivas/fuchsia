@@ -86,7 +86,6 @@ group("acts_tests") {
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/bin/ui:scenic_tests",
     "//garnet/bin/ui/benchmarks/image_grid_cpp",
     "//garnet/bin/ui/benchmarks/transparency_benchmark",
     "//garnet/bin/ui/tests/performance:benchmark_tests",
@@ -94,14 +93,7 @@ group("scenic") {
     "//garnet/bin/ui/tests/performance:vulkan_is_supported",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/prod:scenic",
-    "//src/ui/bin/default_hardware_ime:default_hardware_ime",
-    "//src/ui/bin/default_hardware_ime:default_hardware_ime_tests",
-    "//src/ui/bin/ime:tests",
-    "//src/ui/bin/shortcut:tests",
-    "//src/ui/scenic/lib/gfx/tests:mock_pose_buffer_provider",
-    "//src/ui/scenic/lib/gfx/tests/rotated_square_test",
-    "//src/ui/testing/text:text_test_suite",
-    "//src/ui/testing/text:text_test_suite_tests",
+    "//src/ui/scenic:tests",
   ]
 }
 
@@ -209,7 +201,15 @@ group("escher") {
 group("ui") {
   testonly = true
   public_deps = [
+    ":escher",
+    ":scenic",
     "//src/lib/ui/base_view:base_view_unittests",
+    "//src/ui/bin/default_hardware_ime:default_hardware_ime",
+    "//src/ui/bin/default_hardware_ime:default_hardware_ime_tests",
+    "//src/ui/bin/ime:tests",
+    "//src/ui/bin/shortcut:tests",
+    "//src/ui/testing/text:text_test_suite",
+    "//src/ui/testing/text:text_test_suite_tests",
   ]
 }
 

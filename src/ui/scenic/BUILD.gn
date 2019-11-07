@@ -3,10 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
 group("scenic") {
-  deps = [
+  public_deps = [
     ":scenic_pkg",
   ]
 }
@@ -14,7 +17,65 @@ group("scenic") {
 group("tests") {
   testonly = true
 
-  deps = []
+  public_deps = [
+    ":scenic_tests",
+    "lib/gfx/tests:mock_pose_buffer_provider",
+    "lib/gfx/tests/rotated_square_test",
+  ]
+}
+
+test_package("scenic_tests") {
+  deps = [
+    "lib/display/tests",
+    "lib/flatland/tests",
+    "lib/gfx/tests",
+    "lib/gfx/util/tests",
+    "lib/input/tests",
+    "lib/scenic/tests",
+  ]
+
+  tests = [
+    {
+      name = "display_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "flatland_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "gfx_apptests"
+      environments = basic_envs
+    },
+    {
+      name = "gfx_pixeltests"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "gfx_unittests"
+      environments = basic_envs + magma_libvulkan_hardware_envs
+    },
+    {
+      name = "gfx_util_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "gfx_viewstate_apptests"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "input_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "scenic_unittests"
+      environments = basic_envs
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 declare_args() {

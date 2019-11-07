@@ -6,6 +6,13 @@ import("//build/package.gni")
 
 group("tools") {
   deps = [
+    ":gltf_export",
+    ":input",
+    ":present_view",
+    ":print_input",
+    ":screencap",
+    ":set_renderer_params",
+    ":snapshot",
     "paper_shader_compiler",
     "print-input-report",
     "simple-touch",
@@ -18,6 +25,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "present_view:tests",
     "print-input-report:print-input-report-test",
     "tiles:tiles_tests",
   ]

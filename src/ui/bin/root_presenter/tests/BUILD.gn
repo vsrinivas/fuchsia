@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 group("tests") {
   testonly = true
 
@@ -10,14 +13,29 @@ group("tests") {
   ]
 }
 
-executable("root_presenter_tests") {
-  output_name = "root_presenter_tests"
+test_package("root_presenter_tests") {
+  deps = [
+    ":root_presenter_apptests",
+    ":root_presenter_unittests",
+  ]
 
+  tests = [
+    {
+      name = "root_presenter_apptests"
+      environments = basic_envs
+    },
+    {
+      name = "root_presenter_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("root_presenter_unittests") {
   testonly = true
 
   sources = [
     "a11y_settings_watcher_unittest.cc",
-    "accessibility_pointer_event_registry_test.cc",
     "activity_notifier_test.cc",
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
@@ -35,7 +53,6 @@ executable("root_presenter_tests") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
@@ -49,5 +66,24 @@ executable("root_presenter_tests") {
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter/tests/fakes",
     "//src/ui/testing:mock_input_device",
+  ]
+}
+
+executable("root_presenter_apptests") {
+  testonly = true
+
+  sources = [
+    "accessibility_pointer_event_registry_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.policy.accessibility",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/bin/root_presenter:lib",
   ]
 }

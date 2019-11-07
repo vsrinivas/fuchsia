@@ -2,6 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+executable("present_view") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "tests",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "present_view.cc",
@@ -21,17 +41,5 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
-  ]
-}
-
-executable("present_view") {
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//src/lib/fxl",
-    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }

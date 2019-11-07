@@ -4,6 +4,40 @@
 
 import("//build/package.gni")
 
+package("root_presenter") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "root_presenter"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("resources/cursor32.png")
+      dest = "cursor32.png"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/root_presenter.cmx")
+      dest = "root_presenter.cmx"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "tests",
+  ]
+}
+
 executable("bin") {
   output_name = "root_presenter"
 
@@ -160,31 +194,5 @@ source_set("accessibility") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
-  ]
-}
-
-package("root_presenter") {
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "root_presenter"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("resources/cursor32.png")
-      dest = "cursor32.png"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/root_presenter.cmx")
-      dest = "root_presenter.cmx"
-    },
   ]
 }

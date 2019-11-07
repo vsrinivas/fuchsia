@@ -31,11 +31,11 @@ flag), typically going through the `all` target of
 
 For example:
 
-`//garnet/lib/ui/scenic/tests:unittests`
+`//src/ui/scenic:scenic_unittests`
 
 is an executable, listed under the "tests" stanza of
 
-`//garnet/bin/ui:scenic_tests`
+`//src/ui/scenic:scenic_tests`
 
 which is a package, which is listed in a package group
 

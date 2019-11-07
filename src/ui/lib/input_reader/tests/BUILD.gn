@@ -2,18 +2,36 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 group("tests") {
   testonly = true
 
   public_deps = [
+    ":input_reader_tests",
+  ]
+}
+
+test_package("input_reader_tests") {
+  deps = [
     ":input_apptests",
     ":input_reader_unittests",
+  ]
+
+  tests = [
+    {
+      name = "input_apptests"
+      environments = basic_envs
+    },
+    {
+      name = "input_reader_unittests"
+      environments = basic_envs
+    },
   ]
 }
 
 executable("input_apptests") {
-  output_name = "input_apptests"
-
   testonly = true
 
   deps = [
@@ -95,8 +113,6 @@ source_set("mock_hid_decoder") {
 }
 
 executable("input_reader_unittests") {
-  output_name = "input_reader_unittests"
-
   testonly = true
 
   sources = [
