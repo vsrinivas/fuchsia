@@ -10,9 +10,15 @@
 
 #include <unittest/unittest.h>
 
-extern void fx_log_reset_global_for_testing(void);
+__BEGIN_CDECLS
 
-bool ends_with(const char* str, const char* suffix) {
+// This does not come from header file as this function should only be used in
+// tests and is not for general use.
+void fx_log_reset_global_for_testing(void);
+
+__END_CDECLS
+
+static bool ends_with(const char* str, const char* suffix) {
   if (strlen(str) < strlen(suffix)) {
     return false;
   }
@@ -45,7 +51,7 @@ bool test_log_enabled_macro(void) {
   END_TEST;
 }
 
-static inline zx_status_t init_helper(int fd, const char** tags, int ntags) {
+static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = fd,
                                .log_service_channel = ZX_HANDLE_INVALID,
@@ -145,7 +151,8 @@ bool test_log_write_with_global_tag(void) {
   int pipefd[2];
   fx_log_reset_global_for_testing();
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], (const char*[]){"gtag"}, 1), "");
+  const char* tags[] = {"gtag"};
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 1), "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));
@@ -162,7 +169,8 @@ bool test_log_write_with_multi_global_tag(void) {
   int pipefd[2];
   fx_log_reset_global_for_testing();
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], (const char*[]){"gtag", "gtag2"}, 2), "");
+  const char* tags[] = {"gtag", "gtag2"};
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 2), "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
   size_t n = read(pipefd[1], buf, sizeof(buf));

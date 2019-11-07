@@ -12,7 +12,7 @@ group("test") {
 zx_test("syslog") {
   sources = [
     "syslog_socket_tests.cc",
-    "syslog_tests.c",
+    "syslog_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
