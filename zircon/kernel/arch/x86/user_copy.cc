@@ -102,6 +102,11 @@ static X64CopyToFromUserRet _arch_copy_from_user(void* dst, const void* src, siz
   if (!can_access(src, len))
     return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
 
+  // Spectre V1 - force resolution of can_access() before attempting to copy from user memory.
+  // A poisoned conditional branch predictor can be used to force the kernel to read any kernel
+  // address (speculatively); dependent operations can leak the values read-in.
+  __asm__ __volatile__("lfence" ::: "memory");
+
   thread_t* thr = get_current_thread();
   X64CopyToFromUserRet ret =
       _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume, fault_return_mask);
