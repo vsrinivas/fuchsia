@@ -57,6 +57,14 @@ fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
                                              &owner->audio_admin(), &owner->volume_manager()));
 }
 
+fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
+    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
+    StreamVolumeManager* volume_manager) {
+  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
+                                             threading_model, route_graph, admin, volume_manager));
+}
+
 AudioCapturerImpl::AudioCapturerImpl(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
@@ -102,7 +110,6 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   volume_manager_.RemoveStream(this);
   FXL_DCHECK(!payload_buf_vmo_.is_valid());
   FXL_DCHECK(payload_buf_virt_ == nullptr);
-  FXL_DCHECK(payload_buf_size_ == 0);
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }

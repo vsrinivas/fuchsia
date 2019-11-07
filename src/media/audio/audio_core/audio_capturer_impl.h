@@ -43,6 +43,10 @@ class AudioCapturerImpl : public AudioObject,
   static fbl::RefPtr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       AudioCoreImpl* owner);
+  static fbl::RefPtr<AudioCapturerImpl> Create(
+      bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+      ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
+      StreamVolumeManager* volume_manager);
 
   ~AudioCapturerImpl() override;
 
