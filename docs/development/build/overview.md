@@ -5,10 +5,16 @@
 The Fuchsia build system aims at building both boot images and updatable
 packages for various devices. To do so, it uses [GN][gn-main], a meta-build
 system that generates build files consumed by [Ninja][ninja-main], which
-executes the actual build. [Using GN build][gn-preso] is a good intro to GN.
+executes the actual build.
 
 Note that Zircon uses a different build system, though still using GN and
 Ninja.
+
+## Getting started with the build system
+
+If you are just starting to learn about Fuchsia's build system and GN, then
+[Using GN build][gn-preso] is for you.  It introduces GN from first principles,
+and helps the rest of this page make much more sense.
 
 ## Boards and Products
 
