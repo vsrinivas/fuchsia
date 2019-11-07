@@ -426,8 +426,19 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	}
 }
 
+// TODO(fxb/39407): Such utilities (and their accompanying tests) would be
+// useful as part of fidlcommon or fidlir to do FIDL-to-<target_lang>
+// conversion.
 func identifierName(eci fidlir.EncodedCompoundIdentifier) string {
 	parts := strings.Split(string(eci), "/")
+	lastPartsIndex := len(parts) - 1
+	for i, part := range parts {
+		if i == lastPartsIndex {
+			parts[i] = fidlcommon.ToUpperCamelCase(part)
+		} else {
+			parts[i] = fidlcommon.ToSnakeCase(part)
+		}
+	}
 	return strings.Join(parts, ".")
 }
 

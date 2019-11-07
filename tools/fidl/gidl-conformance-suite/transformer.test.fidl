@@ -61,10 +61,11 @@ struct Sandwich4 {
 };
 
 union UnionOfUnion {
-    1: uint8 unused;
+    1: uint8 unused1;
     2: UnionSize8Align4 size8align4; // used in Sandwich5Case1
     3: UnionSize12Align4 size12align4;
-    4: UnionSize24Align8 size24align8; // used in Sandwich5Case2
+    4: uint8 unused2;
+    5: UnionSize24Align8 size24align8; // used in Sandwich5Case2
 };
 
 struct Sandwich5 {
@@ -183,7 +184,7 @@ struct Table_UnionWithVector_StructSandwichStruct {
 };
 
 xunion XUnionWithStruct {
-    1: StructSize3Align1 s;
+    StructSize3Align1 s;
 };
 
 struct XUnionWithStructStruct {
@@ -191,7 +192,7 @@ struct XUnionWithStructStruct {
 };
 
 xunion XUnionWithXUnion {
-    1: XUnionWithStruct xu;
+    XUnionWithStruct xu;
 };
 
 struct XUnionWithXUnionStruct {
@@ -199,8 +200,8 @@ struct XUnionWithXUnionStruct {
 };
 
 xunion XUnionWithUnions {
-    1: UnionSize8Align4 u1;
-    2: UnionSize12Align4 u2;
+    UnionSize8Align4 u1;
+    UnionSize12Align4 u2;
 };
 
 struct StructSize5Align1 {
@@ -228,10 +229,9 @@ struct StructSize5Align4Array {
     array<StructSize5Align4>:3 a;
 };
 
-// compatibility_test turned up a problem with these StringUnion & ArrayStruct
-// definitions.
 union StringUnion {
-    string s; // 0x80BB5F4B
+    1: uint8 unused;
+    2: string s;
 };
 
 struct ArrayStruct {

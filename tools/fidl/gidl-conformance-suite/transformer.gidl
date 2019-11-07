@@ -214,7 +214,7 @@ success("Sandwich5Case1") {
         before: 0x04030201,
         union_of_union: UnionOfUnion {
             size8align4: UnionSize8Align4 {
-                variant: 0xdeadbeef,
+                variant: 0x0c0b0a09,
             },
         },
         after: 0x08070605,
@@ -227,7 +227,6 @@ success("Sandwich5Case1") {
 
                 0x01, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.tag
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.tag (padding)
-
                 0x02, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e Sandwich5.UnionOfUnion.data
                 0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data
                 0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
@@ -287,7 +286,7 @@ success("Sandwich5Case2") {
                 0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
-                0x03, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.tag
+                0x04, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.tag
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.tag (padding)
 
                 0x03, 0x00, 0x00, 0x00,  // UnionSize24Align8.tag, i.e Sandwich5.UnionOfUnion.data
@@ -306,7 +305,7 @@ success("Sandwich5Case2") {
                 0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
-                0x04, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.ordinal
+                0x05, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.ordinal
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.padding
                 0x28, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.env.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.UnionOfUnion.env.num_handle
@@ -316,7 +315,7 @@ success("Sandwich5Case2") {
                 0x05, 0x06, 0x07, 0x08,  // Sandwich5.after
                 0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 
-                0x9b, 0x55, 0x04, 0x34,  // UnionOfUnion.UnionSize24Align8.ordinal
+                0x04, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize24Align8.ordinal
                 0x00, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize24Align8.padding
                 0x10, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize24Align8.env.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize24Align8.env.num_handle
@@ -393,7 +392,7 @@ success("Sandwich6Case1AbsentVector") {
     value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
-            vector_of_uint8: []  // TODO(mkember/apang): This vector is meant to be absent, not present with zero elements
+            vector_of_uint8: []
         },
         after: 0x08070605,
     },
@@ -407,8 +406,8 @@ success("Sandwich6Case1AbsentVector") {
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.tag (padding)
                 0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of UnionWithVector.data)
                 0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
-                0x00, 0x00, 0x00, 0x00,  // vector<uint8>.absence
-                0x00, 0x00, 0x00, 0x00,  // vector<uint8>.absence [cont.]
+                0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
+                0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence [cont.]
 
                 0x05, 0x06, 0x07, 0x08,  // Sandwich6.after
                 0x00, 0x00, 0x00, 0x00,  // Sandwich6.after (padding)
@@ -431,8 +430,8 @@ success("Sandwich6Case1AbsentVector") {
 
                 0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size, i.e. Sandwich6.the_union.data
                 0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
-                0x00, 0x00, 0x00, 0x00,  // vector<uint8>.absence
-                0x00, 0x00, 0x00, 0x00,  // vector<uint8>.absence [cont.]
+                0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
+                0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence [cont.]
             )
         ],
     },
@@ -647,9 +646,9 @@ success("Sandwich6Case5") {
         before: 0x04030201,
         the_union: UnionWithVector {
             handles: [
-                0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xff,
+                0xffffffff,
+                0xffffffff,
+                0xffffffff,
             ],
         },
         after: 0x08070605,
@@ -681,10 +680,10 @@ success("Sandwich6Case5") {
                 0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
                 0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
-                 0x06, 0x00, 0x00, 0x00,  // UnionWithVector.ordinal (start of Sandwich6.the_union)
+                0x06, 0x00, 0x00, 0x00,  // UnionWithVector.ordinal (start of Sandwich6.the_union)
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.ordinal (padding)
                 0x20, 0x00, 0x00, 0x00,  // UnionWithVector.env.num_bytes
-                0x03, 0x00, 0x00, 0x00,  // UnionWithVector.env.num_handle
+                0x00, 0x00, 0x00, 0x00,  // UnionWithVector.env.num_handle
                 0xff, 0xff, 0xff, 0xff,  // UnionWithVector.env.presence
                 0xff, 0xff, 0xff, 0xff,  // UnionWithVector.env.presence [cont.]
 
@@ -1040,13 +1039,13 @@ success("Table_UnionWithVector_ReservedSandwich") {
         },
     },
     bytes = {
-        // old & v1 bytes are the same.
         old = [
             80: raw(
                 0x02, 0x00, 0x00, 0x00,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.size
                 0x00, 0x00, 0x00, 0x00,  // [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
+
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_bytes  0x10
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_handles
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].presence
@@ -1055,36 +1054,46 @@ success("Table_UnionWithVector_ReservedSandwich") {
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[1].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[1].presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[1].presence [cont.]
+
                 0x02, 0x00, 0x00, 0x00,  // UnionWithVector.tag (string)  0x30
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.tag padding
                 0x05, 0x00, 0x00, 0x00,  // string.size
                 0x00, 0x00, 0x00, 0x00,  // string.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence  0x40
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence [cont.]
+
                 0x68, 0x65, 0x6c, 0x6c,  // "hello"  0x50
                 0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
             )
         ],
         v1 = [
-            80: raw(
+            96: raw(
                 0x02, 0x00, 0x00, 0x00,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.size
                 0x00, 0x00, 0x00, 0x00,  // [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
+
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_bytes  0x10
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_handles
-                0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].presence
-                0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].presence [cont.]
-                0x20, 0x00, 0x00, 0x00,  // vector<envelope>[1].num_bytes  0x20
+                0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].presence (absent)
+                0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].presence (absent) [cont.]
+                0x30, 0x00, 0x00, 0x00,  // vector<envelope>[1].num_bytes  0x20
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[1].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[1].presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[1].presence [cont.]
-                0x02, 0x00, 0x00, 0x00,  // UnionWithVector.tag (string)  0x30
+
+                0x03, 0x00, 0x00, 0x00,  // UnionWithVector.tag (string)  0x30
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.tag padding
+                0x18, 0x00, 0x00, 0x00,  // UnionWithVector.num_bytes
+                0x00, 0x00, 0x00, 0x00,  // UnionWithVector.num_handles
+                0xFF, 0xFF, 0xFF, 0xFF,  // UnionWithVector.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // UnionWithVector.presence [cont.]
+
                 0x05, 0x00, 0x00, 0x00,  // string.size
                 0x00, 0x00, 0x00, 0x00,  // string.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence  0x40
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence [cont.]
+
                 0x68, 0x65, 0x6c, 0x6c,  // "hello"  0x50
                 0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
             )
@@ -1113,6 +1122,7 @@ success("Table_UnionWithVector_StructSandwich") {
                 0x00, 0x00, 0x00, 0x00,  // [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_StructSandwich.vector<envelope>.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
+
                 0x08, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_bytes  0x10
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[0].presence
@@ -1125,16 +1135,20 @@ success("Table_UnionWithVector_StructSandwich") {
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[2].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[2].presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[2].presence [cont.]
+
                 0x01, 0x02, 0x03, 0x00,  // s1.three_bytes and padding  0x40
                 0x00, 0x00, 0x00, 0x00,  // s1 padding
+
                 0x02, 0x00, 0x00, 0x00,  // UnionWithVector.tag (string)
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.tag padding
                 0x05, 0x00, 0x00, 0x00,  // string.size  0x50
                 0x00, 0x00, 0x00, 0x00,  // string.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence [cont.]
+
                 0x68, 0x65, 0x6c, 0x6c,  // "hello"  0x60
                 0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
+
                 0x04, 0x05, 0x06, 0x00,  // s2.three_bytes and padding  0x70
                 0x00, 0x00, 0x00, 0x00,  // s2 padding
             )
@@ -1145,6 +1159,7 @@ success("Table_UnionWithVector_StructSandwich") {
                 0x00, 0x00, 0x00, 0x00,  // [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_StructSandwich.vector<envelope>.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
+
                 0x08, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_bytes  0x10
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[0].presence
@@ -1157,20 +1172,25 @@ success("Table_UnionWithVector_StructSandwich") {
                 0x00, 0x00, 0x00, 0x00,  // vector<envelope>[2].num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[2].presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // vector<envelope>[2].presence [cont.]
+
                 0x01, 0x02, 0x03, 0x00,  // s1.three_bytes and padding  0x40
                 0x00, 0x00, 0x00, 0x00,  // s1 padding
-                0x38, 0x43, 0x31, 0x3B,  // UnionWithVector.xunion.ordinal (string)
+
+                0x03, 0x00, 0x00, 0x00,  // UnionWithVector.xunion.ordinal (string)
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.xunion.padding
                 0x18, 0x00, 0x00, 0x00,  // UnionWithVector.xunion.envelope.size  0x50
                 0x00, 0x00, 0x00, 0x00,  // UnionWithVector.xunion.envelope.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // UnionWithVector.xunion.envelope.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // UnionWithVector.xunion.envelope.presence [cont.]
+
                 0x05, 0x00, 0x00, 0x00,  // string.size  0x60
                 0x00, 0x00, 0x00, 0x00,  // string.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // string.presence [cont.]
+
                 0x68, 0x65, 0x6c, 0x6c,  // "hello"  0x70
                 0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
+
                 0x04, 0x05, 0x06, 0x00,  // s2.three_bytes and padding  0x80
                 0x00, 0x00, 0x00, 0x00,  // s2 padding
             )
@@ -1190,7 +1210,7 @@ success("XUnionWithStruct") {
         // old & v1 bytes are the same.
         old = [
             32: raw(
-                0x0B, 0xC4, 0xB0, 0x04,  // XUnionWithStruct.xunion.ordinal
+                0x14, 0x5c, 0x3e, 0x19,  // XUnionWithStruct.xunion.ordinal
                 0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.ordinal padding
                 0x08, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_handles
@@ -1202,7 +1222,7 @@ success("XUnionWithStruct") {
         ],
         v1 = [
             32: raw(
-                0x0B, 0xC4, 0xB0, 0x04,  // XUnionWithStruct.xunion.ordinal
+                0x14, 0x5c, 0x3e, 0x19,  // XUnionWithStruct.xunion.ordinal
                 0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.ordinal padding
                 0x08, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_handles
@@ -1285,24 +1305,23 @@ success("ArrayStruct") {
         ],
     },
     bytes = {
-        // old & v1 bytes are the same.
         old = [
             216: raw(
-                0x00, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
+                0x01, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
                 0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
                 0x03, 0x00, 0x00, 0x00,  // unions[0].s.length
                 0x00, 0x00, 0x00, 0x00,  // unions[0].s.length [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].s.presence  0x10
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].s.presence [cont.]
 
-                0x00, 0x00, 0x00, 0x00,  // unions[1].tag
+                0x01, 0x00, 0x00, 0x00,  // unions[1].tag
                 0x00, 0x00, 0x00, 0x00,  // unions[1].tag (padding)
                 0x03, 0x00, 0x00, 0x00,  // unions[1].s.length  0x20
                 0x00, 0x00, 0x00, 0x00,  // unions[1].s.length [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].s.presence [cont.]
 
-                0x00, 0x00, 0x00, 0x00,  // unions[2].tag  0x30
+                0x01, 0x00, 0x00, 0x00,  // unions[2].tag  0x30
                 0x00, 0x00, 0x00, 0x00,  // unions[2].tag (padding)
                 0x05, 0x00, 0x00, 0x00,  // unions[2].s.length
                 0x00, 0x00, 0x00, 0x00,  // unions[2].s.length [cont.]
@@ -1325,112 +1344,121 @@ success("ArrayStruct") {
                 0x74, 0x68, 0x72, 0x65,  // unions[2].s data ("three")  0x70
                 0x65, 0x00, 0x00, 0x00,  // padding
 
-                0x00, 0x00, 0x00, 0x00,  // optional_unions[0].tag
+                0x01, 0x00, 0x00, 0x00,  // optional_unions[0].tag
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[0].tag (padding)
                 0x04, 0x00, 0x00, 0x00,  // optional_unions[0].s.length  0x80
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s.length [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].s.presence [cont.]
+
                 0x66, 0x6F, 0x75, 0x72,  // optional_unions[0].s data ("four")  0x90
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s data padding
 
-                0x00, 0x00, 0x00, 0x00,  // optional_unions[1].tag
+                0x01, 0x00, 0x00, 0x00,  // optional_unions[1].tag
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[1].tag (padding)
                 0x04, 0x00, 0x00, 0x00,  // optional_unions[1].s.length
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s.length [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].s.presence [cont.]
+
                 0x66, 0x69, 0x76, 0x65,  // optional_unions[1].s data ("five")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s data padding
 
-                0x00, 0x00, 0x00, 0x00,  // optional_unions[2].tag
+                0x01, 0x00, 0x00, 0x00,  // optional_unions[2].tag
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[2].tag (padding)
                 0x03, 0x00, 0x00, 0x00,  // optional_unions[2].s.length
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s.length [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].s.presence [cont.]
+
                 0x73, 0x69, 0x78, 0x00,  // optional_unions[2].s data ("six")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
             )
         ],
         v1 = [
             288: raw(
-                0x01, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
+                0x02, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
                 0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
                 0x18, 0x00, 0x00, 0x00,  // unions[0].envelope.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // unions[0].envelope.num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].presence  0x10
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0].presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // unions[1].tag
+                0x02, 0x00, 0x00, 0x00,  // unions[1].tag
                 0x00, 0x00, 0x00, 0x00,  // unions[1].tag (padding)
                 0x18, 0x00, 0x00, 0x00,  // unions[1].envelope.num_bytes  0x20
                 0x00, 0x00, 0x00, 0x00,  // unions[1].envelope.num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1].presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // unions[2].tag  0x30
+                0x02, 0x00, 0x00, 0x00,  // unions[2].tag  0x30
                 0x00, 0x00, 0x00, 0x00,  // unions[2].tag (padding)
                 0x18, 0x00, 0x00, 0x00,  // unions[2].envelope.num_bytes
                 0x00, 0x00, 0x00, 0x00,  // unions[2].envelope.num_handles
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].presence  0x40
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[2].presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // unions[3].tag
-                0x00, 0x00, 0x00, 0x00,  // unions[3].tag (padding)
-                0x18, 0x00, 0x00, 0x00,  // unions[3].envelope.num_bytes  0x50
-                0x00, 0x00, 0x00, 0x00,  // unions[3].envelope.num_handles
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[3].presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[3].presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // unions[4].tag  0x60
-                0x00, 0x00, 0x00, 0x00,  // unions[4].tag (padding)
-                0x18, 0x00, 0x00, 0x00,  // unions[4].envelope.num_bytes
-                0x00, 0x00, 0x00, 0x00,  // unions[4].envelope.num_handles
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[4].presence  0x70
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[4].presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // unions[5].tag
-                0x00, 0x00, 0x00, 0x00,  // unions[5].tag (padding)
-                0x18, 0x00, 0x00, 0x00,  // unions[5].envelope.num_bytes  0x80
-                0x00, 0x00, 0x00, 0x00,  // unions[5].envelope.num_handles
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[5].presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[5].presence [cont.]
+                0x02, 0x00, 0x00, 0x00,  // optional_unions[0].tag
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[0].tag (padding)
+                0x18, 0x00, 0x00, 0x00,  // optional_unions[0].envelope.num_bytes  0x50
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[0].envelope.num_handles
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0].presence [cont.]
+                0x02, 0x00, 0x00, 0x00,  // optional_unions[1].tag  0x60
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[1].tag (padding)
+                0x18, 0x00, 0x00, 0x00,  // optional_unions[1].envelope.num_bytes
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[1].envelope.num_handles
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].presence  0x70
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1].presence [cont.]
+                0x02, 0x00, 0x00, 0x00,  // optional_unions[2].tag
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[2].tag (padding)
+                0x18, 0x00, 0x00, 0x00,  // optional_unions[2].envelope.num_bytes  0x80
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[2].envelope.num_handles
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2].presence [cont.]
 
                 0x03, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s.size  0x90
                 0x00, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0] data: StringUnion.s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[0] data: StringUnion.s.presence [cont.]
-                0x6F, 0x6E, 0x65, 0x00,  // unions[0] data: StringUnion.s data ("one")  0xa0
-                0x00, 0x00, 0x00, 0x00,  // unions[0] data: StringUnion.s data padding
+
+                0x6F, 0x6E, 0x65, 0x00,  // unions[0].s data ("one")
+                0x00, 0x00, 0x00, 0x00,  // unions[0].s data: StringUnion.s data padding
 
                 0x03, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s.size
                 0x00, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1] data: StringUnion.s.presence 0xb0
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[1] data: StringUnion.s.presence [cont.]
+
                 0x74, 0x77, 0x6F, 0x00,  // unions[1].s data ("two")
-                0x00, 0x00, 0x00, 0x00,  // unions[1] data: StringUnion.s data padding
+                0x00, 0x00, 0x00, 0x00,  // unions[1].s data padding
 
                 0x05, 0x00, 0x00, 0x00,  // unions[2] data: StringUnion.s.size  0xc0
                 0x00, 0x00, 0x00, 0x00,  // unions[2] data: StringUnion.s.size [cont.]
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[2] data: StringUnion.s.presence
                 0xFF, 0xFF, 0xFF, 0xFF,  // unions[2] data: StringUnion.s.presence [cont.]
-                0x74, 0x68, 0x72, 0x65,  // unions[2].s data ("three")  0xd0
-                0x65, 0x00, 0x00, 0x00,  // padding
 
-                0x04, 0x00, 0x00, 0x00,  // unions[3] data: StringUnion.s.size
-                0x00, 0x00, 0x00, 0x00,  // unions[3] data: StringUnion.s.size [cont.]
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[3] data: StringUnion.s.presence  0xe0
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[3] data: StringUnion.s.presence [cont.]
+                0x74, 0x68, 0x72, 0x65,  // unions[2].s data ("three")  0xd0
+                0x65, 0x00, 0x00, 0x00,  // unions[2].s data padding
+
+                0x04, 0x00, 0x00, 0x00,  // optional_unions[0] data: StringUnion.s.size
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[0] data: StringUnion.s.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0] data: StringUnion.s.presence  0xe0
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[0] data: StringUnion.s.presence [cont.]
+
                 0x66, 0x6F, 0x75, 0x72,  // optional_unions[0].s data ("four")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[0].s data padding
 
-                0x04, 0x00, 0x00, 0x00,  // unions[4] data: StringUnion.s.size  0xf0
-                0x00, 0x00, 0x00, 0x00,  // unions[4] data: StringUnion.s.size [cont.]
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[4] data: StringUnion.s.presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[4] data: StringUnion.s.presence [cont.]
+                0x04, 0x00, 0x00, 0x00,  // optional_unions[1] data: StringUnion.s.size  0xf0
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[1] data: StringUnion.s.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1] data: StringUnion.s.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[1] data: StringUnion.s.presence [cont.]
+
                 0x66, 0x69, 0x76, 0x65,  // optional_unions[1].s data ("five")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[1].s data padding
 
-                0x03, 0x00, 0x00, 0x00,  // unions[5] data: StringUnion.s.size
-                0x00, 0x00, 0x00, 0x00,  // unions[5] data: StringUnion.s.size [cont.]
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[5] data: StringUnion.s.presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // unions[5] data: StringUnion.s.presence [cont.]
+                0x03, 0x00, 0x00, 0x00,  // optional_unions[2] data: StringUnion.s.size
+                0x00, 0x00, 0x00, 0x00,  // optional_unions[2] data: StringUnion.s.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2] data: StringUnion.s.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // optional_unions[2] data: StringUnion.s.presence [cont.]
+
                 0x73, 0x69, 0x78, 0x00,  // optional_unions[2].s data ("six")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
             )
