@@ -294,7 +294,7 @@ func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 		val := visit(field.Value, fieldDecl)
 		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Key.Name), val))
 	}
-	return fmt.Sprintf("%s(%s)", value.Name, strings.Join(args, ", "))
+	return fmt.Sprintf("%s(%s)", fidlcommon.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }
 
 func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {

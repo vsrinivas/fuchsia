@@ -86,7 +86,7 @@ struct StructSize3Align2 {
 union UnionWithVector {
     1: uint8 unused;
     2: vector<uint8> vector_of_uint8;
-    3: string string;
+    3: string s;
     4: vector<StructSize3Align1> vector_s3_a1;
     5: vector<StructSize3Align2> vector_s3_a2;
     // 6: vector<handle> handles;  // TODO(mkember): Support handles in GIDL.
