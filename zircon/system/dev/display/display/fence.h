@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_FENCE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_FENCE_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <threads.h>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 #include "id-map.h"
 
@@ -44,6 +45,9 @@ class Fence : public fbl::RefCounted<Fence>, public IdMappable<fbl::RefPtr<Fence
   // Gets the fence reference for the current import. An individual fence reference cannot
   // be used for multiple things simultaneously.
   fbl::RefPtr<FenceReference> GetReference();
+
+  // The raw event underlying this fence. Only used for validation.
+  zx_handle_t event() const { return event_.get(); }
 
  private:
   void Signal();

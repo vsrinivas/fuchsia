@@ -9,16 +9,23 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/bti.h>
 
+#include <map>
+#include <vector>
+
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
+#include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
-#include "../../fake/fake-display.h"
+namespace fake_display {
+// Forward declared because the Banjo and FIDL headers conflict for fuchsia.hardware.display
+class FakeDisplay;
+}  // namespace fake_display
 
 namespace display {
 
@@ -28,30 +35,86 @@ class Binder : public fake_ddk::Bind {
  public:
   ~Binder() {}
 
-  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
-                                void* protocol) override {
-    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
-    if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
-      const auto& p = display_->dcimpl_proto();
-      out->ops = p->ops;
-      out->ctx = p->ctx;
-      return ZX_OK;
-    }
-    for (const auto& proto : protocols_) {
-      if (proto_id == proto.id) {
-        out->ops = proto.proto.ops;
-        out->ctx = proto.proto.ctx;
-        return ZX_OK;
+  class DeviceState {
+   public:
+    device_add_args_t args = {};
+    std::vector<zx_device_t*> children;
+  };
+
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    zx_status_t status;
+    if (args && args->ops && args->ops->message) {
+      if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+        return status;
       }
     }
-    return ZX_ERR_NOT_SUPPORTED;
+    if (parent == fake_ddk::kFakeParent) {
+      *out = fake_ddk::kFakeDevice;
+    } else {
+      *out = reinterpret_cast<zx_device_t*>(reinterpret_cast<char*>(kFakeChild) + total_children_);
+      children_++;
+      total_children_++;
+      devices_[parent].children.push_back(*out);
+    }
+    printf("added device %p\n", *out);
+
+    DeviceState state;
+    constexpr device_add_args_t null_args = {};
+    state.args = args ? *args : null_args;
+    devices_.insert({*out, state});
+    return ZX_OK;
   }
+
+  void RemoveHelper(DeviceState* state) {
+    if (state->args.ops->unbind) {
+      state->args.ops->unbind(state->args.ctx);
+    }
+    // unbind all children
+    for (zx_device_t* dev : state->children) {
+      printf("removing device %p\n", dev);
+      auto child = devices_.find(dev);
+      if (child != devices_.end()) {
+        RemoveHelper(&child->second);
+        children_--;
+        devices_.erase(child);
+      }
+    }
+    if (state->args.ops->release) {
+      state->args.ops->release(state->args.ctx);
+    }
+  }
+
+  void DeviceAsyncRemove(zx_device_t* device) override {
+    printf("removing device %p\n", device);
+
+    auto state = devices_.find(device);
+    if (state == devices_.end()) {
+      printf("Unrecognized device\n");
+      return;
+    }
+    RemoveHelper(&state->second);
+    devices_.erase(state);
+  }
+
+  zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
+                                void* protocol) override;
 
   void SetDisplay(fake_display::FakeDisplay* display) { display_ = display; }
 
-  zx_device_t* display() { return display_->zxdev(); }
+  zx_device_t* display();
+
+  bool Ok() {
+    EXPECT_TRUE(devices_.empty());
+    EXPECT_EQ(children_, 0);
+    return true;
+  }
 
  private:
+  std::map<zx_device_t*, DeviceState> devices_;
+  zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0xcccc);
+  int total_children_ = 0;
+  int children_ = 0;
   fake_display::FakeDisplay* display_;
 };
 
@@ -143,14 +206,12 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
 class TestBase : public zxtest::Test {
  public:
-  TestBase() : composite_(parent()) {}
+  TestBase() : composite_(fake_ddk::kFakeParent) {}
 
   void SetUp() override;
   void TearDown() override;
 
   Binder& ddk() { return ddk_; }
-  zx_device_t* parent() { return fake_ddk::kFakeParent; }
-  zx_device_t* dc_parent() { return fake_ddk::kFakeParent; }
   Controller* controller() { return controller_; }
   fake_display::FakeDisplay* display() { return display_; }
 

@@ -41,6 +41,7 @@
     auto req = reinterpret_cast<const fuchsia_hardware_display_Controller##NAME##Request*>( \
         msg.bytes().data());                                                                \
     Handle##NAME(req, &builder, &out_type);
+#define END_TABLE_CASE }
 
 namespace {
 
@@ -81,17 +82,18 @@ zx_status_t decode_message(fidl::Message* msg) {
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImageForCapture);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerStartCapture);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseCapture);
+  END_TABLE_CASE
+
+  if (!table) {
+    zxlogf(INFO, "Unknown fidl ordinal %lu\n", ordinal);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  const char* err;
+  if ((res = msg->Decode(table, &err)) != ZX_OK) {
+    zxlogf(INFO, "Error decoding message %lu: %s\n", ordinal, err);
+  }
+  return res;
 }
-if (!table) {
-  zxlogf(INFO, "Unknown fidl ordinal %lu\n", ordinal);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-const char* err;
-if ((res = msg->Decode(table, &err)) != ZX_OK) {
-  zxlogf(INFO, "Error decoding message %lu: %s\n", ordinal, err);
-}
-return res;
-}  // namespace
 
 bool frame_contains(const frame_t& a, const frame_t& b) {
   return b.x_pos < a.width && b.y_pos < a.height && b.x_pos + b.width <= a.width &&
@@ -150,7 +152,10 @@ namespace display {
 
 void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase* self,
                                  zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
+  if (status == ZX_ERR_CANCELED) {
+    zxlogf(INFO, "Wait canceled, client is shutting down\n");
+    return;
+  } else if (status != ZX_OK) {
     zxlogf(INFO, "Unexpected status async status %d\n", status);
     ZX_DEBUG_ASSERT(false);
     return;
@@ -214,40 +219,40 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
   HANDLE_REQUEST_CASE(ImportImageForCapture);
   HANDLE_REQUEST_CASE(StartCapture);
   HANDLE_REQUEST_CASE(ReleaseCapture);
-}
-else if (ordinal == fuchsia_hardware_display_ControllerAllocateVmoOrdinal ||
-         ordinal == fuchsia_hardware_display_ControllerAllocateVmoGenOrdinal) {
-  auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
-      msg.bytes().data());
-  HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
-}
-else if (ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal ||
-         ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferGenOrdinal) {
-  auto r =
-      reinterpret_cast<const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest*>(
-          msg.bytes().data());
-  HandleGetSingleBufferFramebuffer(r, &builder, &out_handle, &has_out_handle, &out_type);
-}
-else {
-  zxlogf(INFO, "Unknown ordinal %lu\n", msg.ordinal());
-}
+  END_TABLE_CASE
+  else if (ordinal == fuchsia_hardware_display_ControllerAllocateVmoOrdinal ||
+           ordinal == fuchsia_hardware_display_ControllerAllocateVmoGenOrdinal) {
+    auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
+        msg.bytes().data());
+    HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
+  }
+  else if (ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal ||
+           ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferGenOrdinal) {
+    auto r = reinterpret_cast<
+        const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest*>(
+        msg.bytes().data());
+    HandleGetSingleBufferFramebuffer(r, &builder, &out_handle, &has_out_handle, &out_type);
+  }
+  else {
+    zxlogf(INFO, "Unknown ordinal %lu\n", msg.ordinal());
+  }
 
-fidl::BytePart resp_bytes = builder.Finalize();
-if (resp_bytes.actual() != 0) {
-  ZX_DEBUG_ASSERT(out_type != nullptr);
+  fidl::BytePart resp_bytes = builder.Finalize();
+  if (resp_bytes.actual() != 0) {
+    ZX_DEBUG_ASSERT(out_type != nullptr);
 
-  fidl::Message resp(std::move(resp_bytes),
-                     fidl::HandlePart(&out_handle, 1, has_out_handle ? 1 : 0));
-  resp.header() = msg.header();
+    fidl::Message resp(std::move(resp_bytes),
+                       fidl::HandlePart(&out_handle, 1, has_out_handle ? 1 : 0));
+    resp.header() = msg.header();
 
-  const char* err_msg;
-  ZX_DEBUG_ASSERT_MSG(resp.Validate(out_type, &err_msg) == ZX_OK,
-                      "Error validating fidl response \"%s\"\n", err_msg);
-  if ((status = resp.Write(server_handle_, 0)) != ZX_OK) {
-    zxlogf(ERROR, "Error writing response message %d\n", status);
+    const char* err_msg;
+    ZX_DEBUG_ASSERT_MSG(resp.Validate(out_type, &err_msg) == ZX_OK,
+                        "Error validating fidl response \"%s\"\n", err_msg);
+    if ((status = resp.Write(server_handle_, 0)) != ZX_OK) {
+      zxlogf(ERROR, "Error writing response message %d\n", status);
+    }
   }
 }
-}  // namespace display
 
 void Client::HandleImportVmoImage(
     const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
@@ -381,32 +386,41 @@ void Client::HandleReleaseImage(const fuchsia_hardware_display_ControllerRelease
   }
 }
 
-void Client::HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
-                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-  zx::event event(req->event);
-  zx_status_t status = ZX_ERR_INVALID_ARGS;
-  bool success = false;
-
+bool Client::ImportEvent(zx::event event, uint64_t id) {
   fbl::AutoLock lock(&fence_mtx_);
-
-  // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
-  if (req->id != INVALID_ID) {
-    auto fence = fences_.find(req->id);
-    if (!fence.IsValid()) {
-      fbl::AllocChecker ac;
-      auto new_fence = fbl::AdoptRef(
-          new (&ac) Fence(this, controller_->loop().dispatcher(), req->id, std::move(event)));
-      if (ac.check() && new_fence->CreateRef()) {
-        fences_.insert_or_find(std::move(new_fence));
-        success = true;
-      }
+  auto fence = fences_.find(id);
+  // Create and ref a new fence.
+  if (!fence.IsValid()) {
+    // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
+    fbl::AllocChecker ac;
+    auto new_fence = fbl::AdoptRef(
+        new (&ac) Fence(this, controller_->loop().dispatcher(), id, std::move(event)));
+    if (ac.check() && new_fence->CreateRef()) {
+      fences_.insert_or_find(std::move(new_fence));
     } else {
-      success = fence->CreateRef();
+      zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+      return false;
     }
+    return true;
   }
 
-  if (!success) {
-    zxlogf(ERROR, "Failed to import event#%ld (%d)\n", req->id, status);
+  // Ref an existing fence
+  if (fence->event() != event.get()) {
+    zxlogf(ERROR, "Cannot reuse event#%ld for zx::event %u\n", id, event.get());
+    return false;
+  } else if (!fence->CreateRef()) {
+    zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+    return false;
+  }
+  return true;
+}
+
+void Client::HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+  if (req->id == INVALID_ID) {
+    zxlogf(ERROR, "Cannot import events with an invalid ID #%i\n", INVALID_ID);
+    TearDown();
+  } else if (!ImportEvent(zx::event(req->event), req->id)) {
     TearDown();
   }
 }
@@ -1123,7 +1137,6 @@ void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyCon
 
 void Client::HandleEnableVsync(const fuchsia_hardware_display_ControllerEnableVsyncRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-  fbl::AutoLock lock(controller_->mtx());
   proxy_->EnableVsync(req->enable);
 }
 
@@ -1516,7 +1529,8 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 }
 
 void Client::ApplyConfig() {
-  ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+  ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN ||
+                  controller_->current_thread_is_loop());
   TRACE_DURATION("gfx", "Display::Client::ApplyConfig");
 
   bool config_missing_image = false;
@@ -1861,11 +1875,11 @@ void Client::TearDown() {
     return;
   }
 
+  server_handle_ = ZX_HANDLE_INVALID;
   if (api_wait_.object() != ZX_HANDLE_INVALID) {
     api_wait_.Cancel();
     api_wait_.set_object(ZX_HANDLE_INVALID);
   }
-  server_handle_ = ZX_HANDLE_INVALID;
 
   CleanUpImage(nullptr);
   CleanUpCaptureImage();
@@ -2107,51 +2121,52 @@ void ClientProxy::OnClientDead() {
   server_channel_.reset();
 }
 
-void ClientProxy::Close() {
-  if (controller_->current_thread_is_loop()) {
-    handler_.TearDown();
-  } else {
-    mtx_t mtx;
-    mtx_init(&mtx, mtx_plain);
-    cnd_t cnd;
-    cnd_init(&cnd);
-    bool done = false;
-
-    mtx_lock(&mtx);
-    auto task = new async::Task();
-    task->set_handler(
-        [client_handler = &handler_, cnd_ptr = &cnd, mtx_ptr = &mtx, done_ptr = &done](
-            async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-          mtx_lock(mtx_ptr);
-
-          client_handler->TearDown();
-
-          *done_ptr = true;
-          cnd_signal(cnd_ptr);
-          mtx_unlock(mtx_ptr);
-
-          delete task;
-        });
-    if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
-      // Tasks only fail to post if the looper is dead. That shouldn't actually
-      // happen, but if it does then it's safe to call Reset on this thread anyway.
-      delete task;
-      handler_.TearDown();
-    } else {
-      while (!done) {
-        cnd_wait(&cnd, &mtx);
-      }
-    }
-    mtx_unlock(&mtx);
-  }
-}
-
 void ClientProxy::CloseTest() { handler_.TearDownTest(); }
 
+void ClientProxy::CloseOnControllerLoop() {
+  mtx_t mtx;
+  mtx_init(&mtx, mtx_plain);
+  cnd_t cnd;
+  cnd_init(&cnd);
+  bool done = false;
+  mtx_lock(&mtx);
+  auto task = new async::Task();
+  task->set_handler([client_handler = &handler_, cnd_ptr = &cnd, mtx_ptr = &mtx, done_ptr = &done](
+                        async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+    mtx_lock(mtx_ptr);
+
+    client_handler->TearDown();
+
+    *done_ptr = true;
+    cnd_signal(cnd_ptr);
+    mtx_unlock(mtx_ptr);
+
+    delete task;
+  });
+  if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
+    // Tasks only fail to post if the looper is dead. That can happen if the controller is unbinding
+    // and shutting down active clients, but if it does then it's safe to call Reset on this thread
+    // anyway.
+    delete task;
+    handler_.TearDown();
+  } else {
+    while (!done) {
+      cnd_wait(&cnd, &mtx);
+    }
+  }
+  mtx_unlock(&mtx);
+}
+
 zx_status_t ClientProxy::DdkClose(uint32_t flags) {
-  printf("DdkClose\n");
-  Close();
+  zxlogf(INFO, "DdkClose\n");
+  CloseOnControllerLoop();
   return ZX_OK;
+}
+
+void ClientProxy::DdkUnbindNew(ddk::UnbindTxn txn) {
+  zxlogf(INFO, "ClientProxy::DdkUnbind\n");
+  CloseOnControllerLoop();
+  txn.Reply();
 }
 
 void ClientProxy::DdkRelease() { delete this; }

@@ -17,8 +17,8 @@ TEST(DispTest, ClientVSyncOk) {
   EXPECT_OK(status);
   Controller controller(nullptr);
   ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
-  fbl::AutoLock lock(controller.mtx());
   clientproxy.EnableVsync(true);
+  fbl::AutoLock lock(controller.mtx());
   status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
   EXPECT_OK(status);
   uint32_t num_bytes = 0u;
@@ -36,8 +36,8 @@ TEST(DispTest, ClientVSynPeerClosed) {
   EXPECT_OK(status);
   Controller controller(nullptr);
   ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
-  fbl::AutoLock lock(controller.mtx());
   clientproxy.EnableVsync(true);
+  fbl::AutoLock lock(controller.mtx());
   client_chl.reset();
   status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
   EXPECT_TRUE(status == ZX_ERR_PEER_CLOSED);

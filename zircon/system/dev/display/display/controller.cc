@@ -738,6 +738,9 @@ bool Controller::GetPanelConfig(uint64_t display_id,
                                 const fbl::Vector<edid::timing_params_t>** timings,
                                 const display_params_t** params) {
   ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
+  if (unbinding_) {
+    return false;
+  }
   for (auto& display : displays_) {
     if (display.id == display_id) {
       if (display.has_edid) {
@@ -807,6 +810,10 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   }
 
   fbl::AutoLock lock(&mtx_);
+  if (unbinding_) {
+    zxlogf(TRACE, "Client connected during unbind\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
 
   if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
     zxlogf(TRACE, "Already bound\n");
@@ -850,6 +857,9 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
       [this, client_ptr](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
         if (status == ZX_OK) {
           fbl::AutoLock lock(&mtx_);
+          if (unbinding_) {
+            return;
+          }
           if (client_ptr == vc_client_ || client_ptr == primary_client_) {
             // Add all existing displays to the client
             if (displays_.size() > 0) {
@@ -934,15 +944,13 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
 }
 
 void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
+  zxlogf(INFO, "Controller::DdkUnbind\n");
   {
     fbl::AutoLock lock(&mtx_);
-    if (vc_client_) {
-      vc_client_->Close();
-    }
-    if (primary_client_) {
-      primary_client_->Close();
-    }
+    unbinding_ = true;
   }
+  // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
+  loop_.Shutdown();
   txn.Reply();
 }
 

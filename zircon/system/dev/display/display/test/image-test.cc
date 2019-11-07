@@ -19,6 +19,7 @@ namespace display {
 class ImageTest : public TestBase {};
 
 TEST_F(ImageTest, MultipleAcquiresAllowed) {
+  async::TestLoop loop;
   zx::vmo vmo, dup_vmo;
   ASSERT_OK(zx::vmo::create(1024 * 600 * 4, 0u, &vmo));
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo));
@@ -33,6 +34,7 @@ TEST_F(ImageTest, MultipleAcquiresAllowed) {
   image.DiscardAcquire();
   EXPECT_TRUE(image.Acquire());
   image.EarlyRetire();
+  loop.RunUntilIdle();
 }
 
 }  // namespace display

@@ -313,7 +313,7 @@ zx_status_t FakeDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_handl
 
 void FakeDisplay::DdkRelease() {
   vsync_shutdown_flag_.store(true);
-  if (vsync_thread_ != 0) {
+  if (vsync_thread_running_) {
     // Ignore return value here in case the vsync_thread_ isn't running.
     thrd_join(vsync_thread_, nullptr);
   }
@@ -415,6 +415,7 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
       return status;
     }
   }
+  vsync_thread_running_ = start_vsync;
 
   status = DdkAdd("fake-display");
   if (status != ZX_OK) {

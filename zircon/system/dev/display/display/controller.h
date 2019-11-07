@@ -156,6 +156,7 @@ class Controller : public ControllerParent,
 
   // mtx_ is a global lock on state shared among clients.
   mtx_t mtx_;
+  bool unbinding_ __TA_GUARDED(mtx_) = false;
 
   DisplayInfo::Map displays_ __TA_GUARDED(mtx_);
   bool vc_applied_;

@@ -112,6 +112,7 @@ class FakeDisplay : public DeviceType,
   std::atomic_bool vsync_shutdown_flag_ = false;
 
   // Thread handles
+  bool vsync_thread_running_ = false;
   thrd_t vsync_thread_;
 
   // Locks used by the display driver

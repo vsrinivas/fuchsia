@@ -15,6 +15,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -23,6 +24,7 @@
 #include <memory>
 
 #include <ddktl/device.h>
+#include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/vector.h>
@@ -145,7 +147,7 @@ class Client : private FenceCallback {
   void OnFenceFired(FenceReference* fence) override;
   void OnRefForFenceDead(Fence* fence) override;
 
-  void TearDown();
+  void TearDown() __TA_EXCLUDES(fence_mtx_);
 
   // This is used for testing
   void TearDownTest();
@@ -161,6 +163,7 @@ class Client : private FenceCallback {
                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
   void HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+  bool ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
   void HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
   void HandleReleaseEvent(const fuchsia_hardware_display_ControllerReleaseEventRequest* req,
@@ -298,7 +301,7 @@ class Client : private FenceCallback {
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
 // controller. Methods on this class are thread safe.
-using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
+using ClientParent = ddk::Device<ClientProxy, ddk::UnbindableNew, ddk::Closable>;
 class ClientProxy : public ClientParent {
  public:
   // "client_id" is assigned by the Controller to distinguish clients.
@@ -311,6 +314,7 @@ class ClientProxy : public ClientParent {
   zx_status_t Init(zx::channel server_channel);
 
   zx_status_t DdkClose(uint32_t flags);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Requires holding controller_->mtx() lock
@@ -322,10 +326,8 @@ class ClientProxy : public ClientParent {
   void ReapplyConfig();
   zx_status_t OnCaptureComplete();
 
-  // Requires holding controller_->mtx() lock
   void EnableVsync(bool enable) {
-    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
-
+    fbl::AutoLock lock(controller_->mtx());
     enable_vsync_ = enable;
   }
 
@@ -334,7 +336,6 @@ class ClientProxy : public ClientParent {
     enable_capture_ = enable;
   }
   void OnClientDead();
-  void Close();
 
   uint32_t id() const { return handler_.id(); }
 
@@ -342,6 +343,8 @@ class ClientProxy : public ClientParent {
   void CloseTest();
 
  private:
+  void CloseOnControllerLoop();
+
   Controller* controller_;
   bool is_vc_;
   zx::channel server_channel_;
