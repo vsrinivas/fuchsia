@@ -292,7 +292,6 @@ group("all") {
     ":cpuperf_provider",
     ":debug_agent",
     ":device_settings",
-    ":display_capture_test",
     ":e2e_input_tests",
     ":escher",
     ":examples",
@@ -888,13 +887,6 @@ group("json") {
   testonly = true
   public_deps = [
     "//build/tools/json_merge:json_merge_test($host_toolchain)",
-  ]
-}
-
-group("display_capture_test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/display_capture_test",
   ]
 }
 
