@@ -17,6 +17,7 @@ dart_library("front_end") {
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/source_span",
+    "//third_party/dart/pkg/_fe_analyzer_shared",
     "//third_party/dart/pkg/kernel",
   ]
 }
