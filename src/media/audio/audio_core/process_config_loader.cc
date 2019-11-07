@@ -30,6 +30,10 @@ static constexpr char kJsonKeyEffects[] = "effects";
 static constexpr char kJsonKeyOutputStreams[] = "output_streams";
 static constexpr char kJsonKeyMix[] = "mix";
 static constexpr char kJsonKeyLinearize[] = "linearize";
+static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
+static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
+static constexpr char kJsonKeyDeviceId[] = "device_id";
+static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 
 rapidjson::SchemaDocument LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
@@ -121,6 +125,8 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
 
 void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
                                        ProcessConfig::Builder* config_builder) {
+  FXL_CHECK(value.IsObject());
+
   auto it = value.FindMember(kJsonKeyOutputStreams);
   if (it != value.MemberEnd()) {
     FXL_CHECK(it->value.IsArray());
@@ -138,6 +144,67 @@ void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
   if (it != value.MemberEnd()) {
     config_builder->SetLinearizeEffects(ParseMixGroupFromJsonObject(it->value));
   }
+}
+
+std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::UsageSupportSet>
+ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
+                                        std::unordered_set<uint32_t>* all_supported_usages) {
+  FXL_CHECK(value.IsObject());
+
+  auto device_id_it = value.FindMember(kJsonKeyDeviceId);
+  FXL_CHECK(device_id_it != value.MemberEnd());
+  auto& device_id_value = device_id_it->value;
+  FXL_CHECK(device_id_value.IsString());
+  const auto* device_id_string = device_id_value.GetString();
+
+  std::optional<audio_stream_unique_id_t> device_id;
+  if (strcmp(device_id_string, "*") != 0) {
+    device_id = {{}};
+    const auto captures = std::sscanf(
+        device_id_string,
+        "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8
+        "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8
+        "%02" SCNx8 "%02" SCNx8,
+        &device_id->data[0], &device_id->data[1], &device_id->data[2], &device_id->data[3],
+        &device_id->data[4], &device_id->data[5], &device_id->data[6], &device_id->data[7],
+        &device_id->data[8], &device_id->data[9], &device_id->data[10], &device_id->data[11],
+        &device_id->data[12], &device_id->data[13], &device_id->data[14], &device_id->data[15]);
+    FXL_CHECK(captures == 16);
+  }
+
+  auto supported_output_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
+  FXL_CHECK(supported_output_stream_types_it != value.MemberEnd());
+  auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
+  FXL_CHECK(supported_output_stream_types_value.IsArray());
+
+  RoutingConfig::UsageSupportSet supported_output_stream_types;
+  for (const auto& stream_type : supported_output_stream_types_value.GetArray()) {
+    FXL_CHECK(stream_type.IsString());
+    const auto supported_usage = fidl::ToUnderlying(UsageFromString(stream_type.GetString()));
+    all_supported_usages->insert(supported_usage);
+    supported_output_stream_types.insert(supported_usage);
+  }
+
+  return {device_id, std::move(supported_output_stream_types)};
+}
+
+void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& value,
+                                      ProcessConfigBuilder* config_builder) {
+  FXL_CHECK(value.IsObject());
+
+  auto device_profiles_it = value.FindMember(kJsonKeyDeviceProfiles);
+  FXL_CHECK(device_profiles_it != value.MemberEnd());
+  auto& device_profiles = device_profiles_it->value;
+  FXL_CHECK(device_profiles.IsArray());
+
+  std::unordered_set<uint32_t> all_supported_usages;
+  for (const auto& device_profile : device_profiles.GetArray()) {
+    config_builder->AddDeviceRoutingProfile(
+        ParseDeviceRoutingProfileFromJsonObject(device_profile, &all_supported_usages));
+  }
+
+  FXL_CHECK(all_supported_usages.size() == fuchsia::media::RENDER_USAGE_COUNT)
+      << "Not all output usages are supported in the config";
 }
 
 }  // namespace
@@ -178,6 +245,11 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
   auto it = doc.FindMember(kJsonKeyPipeline);
   if (it != doc.MemberEnd()) {
     ParsePipelineConfigFromJsonObject(it->value, &config_builder);
+  }
+
+  auto routing_policy_it = doc.FindMember(kJsonKeyRoutingPolicy);
+  if (routing_policy_it != doc.MemberEnd()) {
+    ParseRoutingPolicyFromJsonObject(routing_policy_it->value, &config_builder);
   }
 
   return {config_builder.Build()};

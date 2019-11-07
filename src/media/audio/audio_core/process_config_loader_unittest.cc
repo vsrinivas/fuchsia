@@ -36,6 +36,139 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOnlyVolumeCurve) {
   EXPECT_FLOAT_EQ(config->default_volume_curve().VolumeToDb(1.0), 0.0);
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "routing_policy": {
+      "device_profiles": [
+        {
+          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+          "supported_output_stream_types": [
+            "media",
+            "interruption",
+            "background",
+            "communications"
+          ]
+        },
+        {
+          "device_id": "*",
+          "supported_output_stream_types": ["media", "system_agent"]
+        }
+      ]
+    }
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+  const audio_stream_unique_id_t unknown_id = {.data = {0x32, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                        0x81, 0x42, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                        0x22, 0x3a}};
+
+  const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(process_config);
+
+  using fuchsia::media::AudioRenderUsage;
+  auto& config = process_config->routing_config();
+
+  EXPECT_TRUE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::INTERRUPTION));
+  EXPECT_FALSE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::SYSTEM_AGENT));
+
+  EXPECT_FALSE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::MEDIA));
+}
+
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "routing_policy": {
+      "device_profiles": [
+        {
+          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+          "supported_output_stream_types": [
+            "media",
+            "interruption",
+            "background",
+            "communications",
+            "system_agent"
+          ]
+        }
+      ]
+    }
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t unknown_id = {.data = {0x32, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                        0x81, 0x42, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                        0x22, 0x3a}};
+
+  const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(process_config);
+
+  using fuchsia::media::AudioRenderUsage;
+  auto& config = process_config->routing_config();
+
+  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::MEDIA));
+}
+
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCoverage) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "routing_policy": {
+      "device_profiles": [
+        {
+          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+          "supported_output_stream_types": [
+            "media",
+            "interruption",
+            "system_agent"
+          ]
+        }
+      ]
+    }
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename),
+               "Not all output usages are supported in the config");
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   static const std::string kConfigWithEffects =
       R"JSON({

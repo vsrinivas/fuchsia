@@ -9,6 +9,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -21,11 +22,14 @@ class ProcessConfigBuilder {
   ProcessConfigBuilder& AddOutputStreamEffects(PipelineConfig::MixGroup effects);
   ProcessConfigBuilder& SetMixEffects(PipelineConfig::MixGroup effects);
   ProcessConfigBuilder& SetLinearizeEffects(PipelineConfig::MixGroup effects);
+  ProcessConfigBuilder& AddDeviceRoutingProfile(
+      std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::UsageSupportSet> profile);
   ProcessConfig Build();
 
  private:
   PipelineConfig pipeline_;
   std::optional<VolumeCurve> default_volume_curve_;
+  RoutingConfig routing_config_;
 };
 
 class ProcessConfig {
@@ -63,17 +67,21 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve, PipelineConfig effects)
-      : default_volume_curve_(std::move(curve)), pipeline_(std::move(effects)) {}
+  ProcessConfig(VolumeCurve curve, PipelineConfig effects, RoutingConfig routing_config)
+      : default_volume_curve_(std::move(curve)),
+        pipeline_(std::move(effects)),
+        routing_config_(std::move(routing_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
   const PipelineConfig& pipeline() const { return pipeline_; }
+  const RoutingConfig& routing_config() const { return routing_config_; }
 
  private:
   static std::optional<ProcessConfig> instance_;
 
   VolumeCurve default_volume_curve_;
   PipelineConfig pipeline_;
+  RoutingConfig routing_config_;
 };
 
 }  // namespace media::audio

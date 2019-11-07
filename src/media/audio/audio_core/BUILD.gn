@@ -120,6 +120,8 @@ source_set("audio_core_lib") {
     "ring_buffer.h",
     "route_graph.cc",
     "route_graph.h",
+    "routing_config.cc",
+    "routing_config.h",
     "stream_volume_manager.cc",
     "stream_volume_manager.h",
     "threading_model.cc",

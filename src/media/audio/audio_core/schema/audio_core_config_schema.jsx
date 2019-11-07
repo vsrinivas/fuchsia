@@ -40,6 +40,20 @@
         }
       },
       "additionalProperties": false
+    },
+    "device_routing_profile" : {
+      "type": "object",
+      "properties" : {
+        "device_id": {
+          "type" : "string"
+        },
+        "supported_output_stream_types": {
+          "type": "array",
+          "items" : { "$ref" : "#definitions/output_stream_type" }
+        }
+      },
+      "required": [ "device_id", "supported_output_stream_types" ],
+      "additionalProperties": false
     }
    },
   "type": "object",
@@ -65,6 +79,15 @@
         }
       },
       "additionalProperties": false
+    },
+    "routing_policy": {
+      "type" : "object",
+      "properties" : {
+        "device_profiles" : {
+          "type": "array",
+          "items" : { "$ref" : "#/definitions/device_routing_profile" }
+        }
+      }
     }
   },
   "required": ["volume_curve"],
