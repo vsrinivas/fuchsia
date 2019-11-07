@@ -9,11 +9,12 @@ use {
         blobfs::TestBlobFs, pkgfs::TestPkgFs, Package, PackageBuilder, VerificationError,
     },
     matches::assert_matches,
+    std::fmt::Debug,
     std::future::Future,
-    std::io::{Read, Write},
+    std::io::{self, Read, Write},
 };
 
-fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, std::io::Error> {
+fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, io::Error> {
     Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
         .collect::<Result<Vec<_>, _>>()?)
 }
@@ -28,7 +29,7 @@ impl AsRootDir for TestPkgFs {
     }
 }
 
-fn ls(root: &dyn AsRootDir, path: impl openat::AsPath) -> Result<Vec<String>, std::io::Error> {
+fn ls(root: &dyn AsRootDir, path: impl openat::AsPath) -> Result<Vec<String>, io::Error> {
     let d = root.as_root_dir();
     ls_simple(d.list_dir(path)?)
 }
@@ -54,6 +55,45 @@ fn subdir_proxy(d: &openat::Dir, path: &str) -> fidl_fuchsia_io::DirectoryProxy 
     fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(handle.into()).unwrap(),
     )
+}
+
+/// Helper function implementing the logic for the asser_error_kind! macro
+///
+/// Returns Ok(io:Error) if the kind matches, otherwise returns Err(String) with the panic message.
+fn assert_error_kind_helper<T: Debug>(
+    result: Result<T, io::Error>,
+    result_expr: &'static str,
+    expected: io::ErrorKind,
+) -> Result<io::Error, String> {
+    match result {
+        Ok(val) => Err(format!(
+            r"assertion failed: `{}.is_err()`
+   result: `Ok({:?})`,
+ expected: `Err({{ kind: {:?}, .. }})`",
+            result_expr, val, expected
+        )),
+        Err(err) if err.kind() == expected => Ok(err),
+        Err(err) => Err(format!(
+            r"assertion failed: `{expr}.unwrap_err().kind() == {expected:?}`
+ err.kind(): `{kind:?}`,
+   expected: `{expected:?}`
+   full err: `{full:?}`",
+            expr = result_expr,
+            expected = expected,
+            kind = err.kind(),
+            full = err,
+        )),
+    }
+}
+
+macro_rules! assert_error_kind {
+    ($result:expr, $expected:expr) => {{
+        assert_error_kind_helper($result, stringify!($result), $expected)
+            .unwrap_or_else(|err_string| panic!(err_string))
+    }};
+    ($result:expr, $expected:expr,) => {{
+        assert_error_kind!($result, $expected)
+    }};
 }
 
 async fn example_package() -> Package {
@@ -114,7 +154,7 @@ async fn test_pkgfs_short_write() {
             )
             .expect("create install file");
         to_write.set_len(meta_far.metadata().unwrap().len()).expect("truncate meta.far");
-        std::io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
+        io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
     }
     assert_eq!(
         ls_simple(
@@ -166,13 +206,11 @@ async fn test_pkgfs_short_write() {
     }
 
     // Blob needs no more packages
-    assert_eq!(
+    assert_error_kind!(
         d.list_dir(
-            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
-        )
-        .expect_err("check empty needs dir")
-        .kind(),
-        std::io::ErrorKind::NotFound
+            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+        ),
+        io::ErrorKind::NotFound,
     );
 
     verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
@@ -214,19 +252,17 @@ async fn test_pkgfs_restart_install() {
 
     // Start package install
     // first, some checks to see if it's already installed
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound,
     );
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound,
     );
     // Install the meta.far
     {
@@ -238,7 +274,7 @@ async fn test_pkgfs_restart_install() {
             )
             .expect("create install file");
         to_write.set_len(meta_far.metadata().unwrap().len()).expect("truncate meta.far");
-        std::io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
+        io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
     }
     assert_eq!(
         ls_simple(
@@ -282,37 +318,33 @@ async fn test_pkgfs_restart_install() {
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     // Restart package install
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
 
     // Retry installing meta.far (fails with EEXIST)
-    assert_eq!(
+    assert_error_kind!(
         d.new_file(
             "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
             0600,
         )
-        .map(|_| ())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::AlreadyExists)
+        .map(|_| ()),
+        io::ErrorKind::AlreadyExists
     );
 
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
     // Check needs again.
     assert_eq!(
@@ -320,7 +352,7 @@ async fn test_pkgfs_restart_install() {
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
         .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
+        .map_err(|e| format!("{:?}", e)),
         Ok(true)
     );
 
@@ -351,13 +383,11 @@ async fn test_pkgfs_restart_install() {
     }
 
     // Blob Needs no more packages
-    assert_eq!(
+    assert_error_kind!(
         d.list_dir(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
-        )
-        .expect_err("check empty needs dir")
-        .kind(),
-        std::io::ErrorKind::NotFound
+        ),
+        io::ErrorKind::NotFound
     );
 
     verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
@@ -399,19 +429,17 @@ async fn test_pkgfs_restart_install_already_done() {
 
     // Start package install
     // first, some checks to see if it's already installed
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
     // Install the meta.far
     {
@@ -423,7 +451,7 @@ async fn test_pkgfs_restart_install_already_done() {
             )
             .expect("create install file");
         to_write.set_len(meta_far.metadata().unwrap().len()).expect("truncate meta.far");
-        std::io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
+        io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
     }
     assert_eq!(
         ls_simple(
@@ -464,19 +492,17 @@ async fn test_pkgfs_restart_install_already_done() {
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     // Restart package install
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
 
     // Retry installing meta.far (fails with Invalid argument)
@@ -490,18 +516,17 @@ async fn test_pkgfs_restart_install_already_done() {
     assert_eq!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
             .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
+            .map_err(|e| format!("{:?}", e)),
         Ok(true)
     );
 
     // Check needs again.
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
 
     verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
@@ -543,19 +568,17 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
 
     // Start package install
     // first, some checks to see if it's already installed
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
-    assert_eq!(
+    assert_error_kind!(
         d.metadata(
             "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
         )
-        .map(|m| m.is_dir())
-        .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+        .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
 
     // Create (but don't write) the meta.far
@@ -565,11 +588,10 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
     )
     .expect("create install file");
 
-    assert_eq!(
+    assert_error_kind!(
         d.metadata("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93")
-            .map(|m| m.is_dir())
-            .map_err(|e| e.kind()),
-        Err(std::io::ErrorKind::NotFound)
+            .map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
     );
 
     assert_eq!(
@@ -640,15 +662,10 @@ async fn test_pkgfs_with_system_image_meta_far_missing() {
         TestPkgFs::start_with_blobfs(blobfs, Some(system_image_merkle)).expect("starting pkgfs");
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
-    assert_eq!(
-        d.open_file("packages/system_image/0/meta")
-            .expect_err("system_image should be missing")
-            .kind(),
-        std::io::ErrorKind::NotFound
-    );
-    assert_eq!(
-        ls_simple(d.list_dir("system").unwrap()).expect_err("system should be unreadable").kind(),
-        std::io::ErrorKind::Other // Not supported
+    assert_error_kind!(d.open_file("packages/system_image/0/meta"), io::ErrorKind::NotFound);
+    assert_error_kind!(
+        ls_simple(d.list_dir("system").unwrap()),
+        io::ErrorKind::Other, // Not supported
     );
 
     drop(d);
@@ -679,12 +696,7 @@ async fn test_pkgfs_with_system_image_base_package_missing() {
 
     assert_eq!(sorted(ls(&pkgfs, "packages").unwrap()), ["example", "system_image"]);
 
-    assert_eq!(
-        d.list_dir("packages/example/0")
-            .expect_err("example package should not be readable")
-            .kind(),
-        std::io::ErrorKind::NotFound
-    );
+    assert_error_kind!(d.list_dir("packages/example/0"), io::ErrorKind::NotFound);
 
     drop(d);
 
@@ -876,16 +888,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
 
     assert_eq!(ls(&pkgfs, "packages").unwrap(), ["system_image"]);
 
-    assert_eq!(
-        d.open_file("packages/example/0/meta").expect_err("example should be missing").kind(),
-        std::io::ErrorKind::NotFound
-    );
+    assert_error_kind!(d.open_file("packages/example/0/meta"), io::ErrorKind::NotFound);
 
-    assert_eq!(
-        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root()))
-            .expect_err("example should be missing")
-            .kind(),
-        std::io::ErrorKind::NotFound
+    assert_error_kind!(
+        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root())),
+        io::ErrorKind::NotFound
     );
 
     drop(d);
@@ -917,16 +924,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
 
     assert_eq!(ls(&pkgfs, "packages").unwrap(), ["system_image"]);
 
-    assert_eq!(
-        d.open_file("packages/example/0/meta").expect_err("example should be missing").kind(),
-        std::io::ErrorKind::NotFound
-    );
+    assert_error_kind!(d.open_file("packages/example/0/meta"), io::ErrorKind::NotFound);
 
-    assert_eq!(
-        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root()))
-            .expect_err("example should be missing")
-            .kind(),
-        std::io::ErrorKind::NotFound
+    assert_error_kind!(
+        d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root())),
+        io::ErrorKind::NotFound,
     );
 
     assert_eq!(ls_simple(d.list_dir("needs/packages").unwrap()).unwrap(), Vec::<&str>::new());
