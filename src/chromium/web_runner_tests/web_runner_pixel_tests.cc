@@ -107,6 +107,17 @@ class PixelTest : public gtest::RealLoopFixture {
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
+
+    // TODO(40933)
+    //
+    // These tests can flake when a screenshot captures a frame from the previous test, which can
+    // advance the test logic early. This is a temporary solution that waits for a blank on setup.
+    // Better solutions include hermetic Scenic (using src/ui/scenic/lib/gfx/tests/pixel_test.h) or
+    // refactoring to use view state events (probably the best solution; greatly improves
+    // determinism at the expense of added harness complexity).
+    //
+    // WebRunnerPixelTest.Static below is factored to use view state events, but the others are not.
+    FXL_CHECK(WaitForBlank());
   }
 
   sys::ComponentContext* context() { return context_.get(); }
@@ -147,6 +158,7 @@ class PixelTest : public gtest::RealLoopFixture {
   }
 
   // Blank can manifest as invalid screenshots or blackness.
+  // TODO(40933): remove
   bool WaitForBlank() {
     return ScreenshotUntil([](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
       return !status || Histogram(screenshot)[kBlankColor] > 0u;
