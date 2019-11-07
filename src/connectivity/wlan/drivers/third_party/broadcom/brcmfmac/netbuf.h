@@ -14,17 +14,16 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_NETBUF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_NETBUF_H_
 
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include <stdlib.h>
-#include <string.h>
 #define _ALL_SOURCE
 #include <threads.h>
 
@@ -231,9 +230,7 @@ static inline zx_status_t brcmf_netbuf_grow_realloc(struct brcmf_netbuf* netbuf,
     netbuf->allocated_buffer = new_buffer;
   }
   if (head != 0) {
-    // TODO(WLAN-1071): (for efficiency):
-    // 1) Do we have to copy the whole buffer, or just allocated_buffer..data+len?
-    // 2) Is it quicker to realloc and do a second copy, or malloc/free and trash extra cache?
+    // Safer to copy the whole allocated_buffer.
     memmove(netbuf->allocated_buffer + head, netbuf->allocated_buffer, netbuf->allocated_size);
   }
   netbuf->allocated_size += head + tail;
@@ -369,4 +366,4 @@ static inline struct brcmf_netbuf* brcmf_netbuf_list_peek_tail(struct brcmf_netb
 #define brcmf_netbuf_list_for_every_safe(buf_list, entry, temp) \
   list_for_every_entry_safe (&((buf_list)->listnode), entry, temp, struct brcmf_netbuf, listnode)
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_INCLUDE_NETBUF_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_NETBUF_H_
