@@ -30,32 +30,53 @@ impl Port {
 pub struct PortManager {
     /// `ports` keeps track of ports in the system and if they are available or not.
     ports: std::collections::HashMap<PortId, (Port, bool)>,
+    /// maps a path to a port id.
+    path_to_pid: std::collections::HashMap<String, PortId>,
 }
 
 impl PortManager {
     /// Creates a new PortManager.
     pub fn new() -> Self {
-        PortManager { ports: HashMap::new() }
+        PortManager { ports: HashMap::new(), path_to_pid: HashMap::new() }
     }
 
     /// Adds a physical port to be managed by network manager.
     pub fn add_port(&mut self, p: Port) {
-        // When adding a new port, is is considered available as no one has yet used it.
+        // When adding a new port, it is considered available as no one has yet used it.
         // If the port already exists, update the port, but keep availability unchanged.
+
+        let pid = p.port_id;
+        let path = p.path.clone();
         let available =
             if let Some((_, available)) = self.ports.get(&p.port_id) { *available } else { true };
         self.ports.insert(p.port_id, (p, available));
+        self.path_to_pid.insert(path, pid);
     }
 
     /// Removes a port from port manager.
     pub fn remove_port(&mut self, id: PortId) -> Option<Port> {
-        self.ports.remove(&id).map(|(p, _)| p)
+        let portopt = self.ports.remove(&id).map(|(p, _)| p);
+        if let Some(port) = portopt.clone() {
+            if self.path_to_pid.remove(&port.path).is_none() {
+                // There is no action that the caller can do in this case,
+                // therefore just logging it as a warning.
+                // Removing the entry as we were asked will succeed,
+                // and also remove the inconsistency.
+                warn!("PortManager in inconsistent state {:?}", port);
+            }
+        }
+        portopt
     }
 
     /// Returns information about a port in port manager.
     pub fn port(&self, id: PortId) -> Option<&Port> {
         let (p, _) = self.ports.get(&id)?;
         Some(&p)
+    }
+
+    /// Returns port id from a topo path.
+    pub fn port_id(&self, path: &str) -> Option<&PortId> {
+        self.path_to_pid.get(path)
     }
 
     /// Returns all ports known by port manager.
@@ -242,5 +263,40 @@ mod tests {
         pm.add_port(Port::new(PortId::from(3), &generate_path(3), 1));
         let got = pm.use_port(PortId::from(15));
         assert_eq!(got, false)
+    }
+
+    #[test]
+    fn test_port_id() {
+        let mut pm = PortManager::new();
+        pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
+        pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
+        let got = pm.port_id(&generate_path(1));
+        assert_eq!(got, Some(&PortId::from(1)));
+        let got = pm.port_id(&generate_path(5));
+        assert_eq!(got, Some(&PortId::from(5)));
+        let got = pm.port_id(&generate_path(6));
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn test_port_id_after_port_removed() {
+        let mut pm = PortManager::new();
+
+        let p = Port::new(PortId::from(1), &generate_path(1), 1);
+        pm.add_port(p.clone());
+        pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
+
+        let got = pm.port_id(&generate_path(1));
+        assert_eq!(got, Some(&PortId::from(1)));
+        let got = pm.port_id(&generate_path(5));
+        assert_eq!(got, Some(&PortId::from(5)));
+
+        let got = pm.remove_port(PortId::from(1));
+        assert_eq!(got, Some(p));
+
+        let got = pm.port_id(&generate_path(5));
+        assert_eq!(got, Some(&PortId::from(5)));
+        let got = pm.port_id(&generate_path(1));
+        assert_eq!(got, None);
     }
 }
