@@ -30,7 +30,7 @@ to the dependencies in the appropriate `BUILD.gn` rule of your package.
 To import the new dependency, add the import:
 
 ```dart
-import 'packages:internationalization/strings.dart' as strings;
+import 'packages:internationalization/strings.dart';
 ```
 
 to the import section of any Dart file that needs strings.
@@ -38,7 +38,7 @@ to the import section of any Dart file that needs strings.
 # Referring to localized strings
 
 You can now refer to the messages defined in [strings.dart][lib/strings.dart].
-For example, you can refer to the string `Ask` by calling `strings.ask()`.
+For example, you can refer to the string `Ask` by calling `Strings.ask()`.
 This is done so that the localization system can substitute the word `Ask` for
 the appropriate word in the language defined by the current locale.  The approach
 extends in similar ways for most strings; with slight variations depending on 
@@ -46,11 +46,8 @@ whether number or date, or plural or gender formatting is needed.
 
 # Generating localizable libraries
 
-Two scripts are provided in the `./scripts` directory.  One is
-`./scripts/run_extract_to_arb.sh`, which produces a "translation interchange
-form" in the form of [ARB][arb] files. The ARB files can be translated
-independently of the source code, and should be checked into the code base for
-now.
+To generate the ARB files, please refer to the instructions in
+`fuchsia_internationalization`.
 
 ## Translating
 
@@ -63,9 +60,10 @@ translation environment is left to the developer and translator.
 
 ## Generating Dart runtime format for the translations
 
-Once translated you can use the file `./scripts/run_generate_from_arb.sh` to
-generate the Dart code that wires up the translation.  You will need to rebuild
-the entire project to take the new translations in.
+Once translated you can use the file `./scripts/run_generate_from_arb.sh` from
+`fuchsia_internationalization` library to generate the Dart code that wires up
+the translation.  You will need to rebuild the entire project to take the new
+translations in.
 
 # Further reading
 

@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
-import 'package:internationalization/profile_provider.dart';
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
@@ -27,7 +27,7 @@ Future<void> main() async {
   final locales = LocaleSource(_intl);
   final model = AppModel();
 
-  runApp(_Localized(model, await locales.initial(), locales.stream()));
+  runApp(_Localized(model, locales.stream()));
   await model.onStarted();
   _intl.ctrl.close();
 }
@@ -41,18 +41,15 @@ class _Localized extends StatelessWidget {
   // The stream of locale updates.
   final Stream<Locale> _localeStream;
 
-  // The initial value of the locale
-  final Locale _initial;
-
-  const _Localized(this._model, this._initial, this._localeStream);
+  const _Localized(this._model, this._localeStream);
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Locale>(
         stream: _localeStream,
-        initialData: _initial,
         builder: (BuildContext context, AsyncSnapshot<Locale> snapshot) {
-          final Locale locale = snapshot.data ?? _initial;
+          // There will always be a locale here.
+          final Locale locale = snapshot.data;
           // This is required so app parts which don't depend on the flutter
           // locale have access to it.
           Intl.defaultLocale = locale.toString();
