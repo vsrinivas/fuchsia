@@ -1,0 +1,33 @@
+{
+  "@@last_modified": "2019-11-06T17:31:05.454814",
+  "back": "Trg",
+  "@back": {
+    "description": "A very short label meaning \"Go back (to previous web page)\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "forward": "Vor",
+  "@forward": {
+    "description": "A very short label meaning \"Go forward (to the next web page)\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "refresh": "Vrvrs",
+  "@refresh": {
+    "description": "A very short label meaning \"Refresh the web page\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "search": "Zoek",
+  "@search": {
+    "description": "A regular length string label appearing in the browser search bar",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Browser",
+  "@browser": {
+    "description": "As in: web browser",
+    "type": "text",
+    "placeholders": {}
+  }
+}

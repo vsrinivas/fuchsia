@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:internationalization/strings.dart';
+
 import '../blocs/webpage_bloc.dart';
 import '../models/webpage_action.dart';
 
@@ -16,31 +18,33 @@ class HistoryButtons extends StatelessWidget {
   final WebPageBloc bloc;
 
   @override
-  Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          AnimatedBuilder(
-              animation: bloc.backStateNotifier,
-              builder: (_, __) => _HistoryButton(
-                  title: 'BCK',
-                  onTap: () => bloc.request.add(GoBackAction()),
-                  isEnabled: bloc.backState)),
-          SizedBox(width: 8.0),
-          AnimatedBuilder(
-              animation: bloc.forwardStateNotifier,
-              builder: (_, __) => _HistoryButton(
-                  title: 'FWD',
-                  onTap: () => bloc.request.add(GoForwardAction()),
-                  isEnabled: bloc.forwardState)),
-          SizedBox(width: 8.0),
-          AnimatedBuilder(
-              animation: bloc.urlNotifier,
-              builder: (_, __) => _HistoryButton(
-                  title: 'RFRSH',
-                  onTap: () => bloc.request.add(RefreshAction()),
-                  isEnabled: bloc.pageType == PageType.normal)),
-        ],
-      );
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        AnimatedBuilder(
+            animation: bloc.backStateNotifier,
+            builder: (_, __) => _HistoryButton(
+                title: Strings.back.toUpperCase(),
+                onTap: () => bloc.request.add(GoBackAction()),
+                isEnabled: bloc.backState)),
+        SizedBox(width: 8.0),
+        AnimatedBuilder(
+            animation: bloc.forwardStateNotifier,
+            builder: (_, __) => _HistoryButton(
+                title: Strings.forward.toUpperCase(),
+                onTap: () => bloc.request.add(GoForwardAction()),
+                isEnabled: bloc.forwardState)),
+        SizedBox(width: 8.0),
+        AnimatedBuilder(
+            animation: bloc.urlNotifier,
+            builder: (_, __) => _HistoryButton(
+                title: Strings.refresh.toUpperCase(),
+                onTap: () => bloc.request.add(RefreshAction()),
+                isEnabled: bloc.pageType == PageType.normal)),
+      ],
+    );
+  }
 }
 
 class _HistoryButton extends StatelessWidget {

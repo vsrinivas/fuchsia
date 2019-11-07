@@ -4,13 +4,19 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:test/test.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_logger/logger.dart';
 
 // ignore_for_file: implementation_imports
+import 'package:simple_browser/main.dart' show Localized;
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
+import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'package:simple_browser/src/models/tabs_action.dart';
 
 void main() {
+  setupLogger(name: 'simple_browser_test');
+
   // Add a tab, and see that there is 1 tab
   test('add 1 tab', () async {
     final tb = TabsBloc(
@@ -57,6 +63,28 @@ void main() {
       reason: 'not focused on first tab',
     );
     expect(tb.currentTab, 'tab 0', reason: 'unexpected tab content');
+  });
+
+  testWidgets('localized text is displayed in the widgets',
+      (WidgetTester tester) async {
+    var locales = Stream.fromIterable(
+        [Locale.fromSubtags(languageCode: 'sr', countryCode: 'RS')]);
+    TabsBloc<WebPageBloc> tabsBloc;
+    tabsBloc = TabsBloc(
+      tabFactory: () => WebPageBloc(
+          popupHandler: (tab) =>
+              tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab))),
+      disposeTab: (tab) {
+        tab.dispose();
+      },
+    );
+    await tester.pumpWidget(Localized(tabsBloc, locales));
+    await tester.pump();
+    expect(
+        find.byWidgetPredicate(
+            (Widget widget) => widget is Title && widget.title == 'Прегледач',
+            description: 'A widget with a localized title was displayed'),
+        findsOneWidget);
   });
 }
 

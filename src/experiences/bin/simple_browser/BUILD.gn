@@ -21,18 +21,23 @@ flutter_app("simple_browser") {
   manifest = "pubspec.yaml"
 
   sources = [
+    "main.dart",
     "src/blocs/tabs_bloc.dart",
     "src/models/tabs_action.dart",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.web",
+    "//src/experiences/bin/simple_browser_internationalization:internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
+    "//third_party/dart/third_party/pkg/intl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_modular",
     "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
     "//topaz/public/lib/webview",
   ]

@@ -1,0 +1,33 @@
+{
+  "@@last_modified": "2019-11-11T17:42:01.328995",
+  "back": "Bck",
+  "@back": {
+    "description": "A very short label meaning \"Go back (to previous web page)\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "forward": "Fwd",
+  "@forward": {
+    "description": "A very short label meaning \"Go forward (to the next web page)\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "refresh": "Rfrsh",
+  "@refresh": {
+    "description": "A very short label meaning \"Refresh the web page\"",
+    "type": "text",
+    "placeholders": {}
+  },
+  "search": "Search",
+  "@search": {
+    "description": "A regular length string label appearing in the browser search bar",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Browser",
+  "@browser": {
+    "description": "As in: web browser",
+    "type": "text",
+    "placeholders": {}
+  }
+}

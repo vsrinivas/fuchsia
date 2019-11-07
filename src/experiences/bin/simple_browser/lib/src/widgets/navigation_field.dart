@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:internationalization/strings.dart';
+
 import '../blocs/webpage_bloc.dart';
 import '../models/webpage_action.dart';
 
@@ -82,10 +84,9 @@ class _NavigationFieldState extends State<NavigationField> {
         keyboardType: TextInputType.url,
         decoration: InputDecoration(
           contentPadding: EdgeInsets.zero,
-          // Extra spaces before SEARCH are meant to visually center the S,
-          // so the cursor's position will sit in the beginning of the hint,
-          // rather than halfway between the A and the R.
-          hintText: '     SEARCH',
+          // In general, do not use space characters to move graphical elements
+          // around, or you are going to have a bad time. :)
+          hintText: '     ${Strings.search.toUpperCase()}',
           border: InputBorder.none,
           isDense: true,
         ),

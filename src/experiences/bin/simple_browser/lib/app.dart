@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:internationalization/strings.dart';
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'src/blocs/tabs_bloc.dart';
 import 'src/models/tabs_action.dart';
@@ -19,39 +20,56 @@ const _kTextStyle = TextStyle(color: _kForegroundColor, fontSize: 14.0);
 class App extends StatelessWidget {
   final TabsBloc<WebPageBloc> tabsBloc;
 
-  const App({@required this.tabsBloc});
+  final Locale locale;
+
+  final Iterable<LocalizationsDelegate<dynamic>> localizationsDelegates;
+
+  final Iterable<Locale> supportedLocales;
+
+  /// The [locale], [localizationsDelegates] and [supportedLocales] parameters
+  /// are the same as in [MaterialApp].
+  const App(
+      {@required this.tabsBloc,
+      this.locale,
+      this.localizationsDelegates,
+      this.supportedLocales});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Browser',
-        theme: ThemeData(
-          fontFamily: 'RobotoMono',
-          textSelectionColor: _kSelectionColor,
-          textSelectionHandleColor: _kForegroundColor,
-          hintColor: _kForegroundColor,
-          cursorColor: _kForegroundColor,
-          primaryColor: _kBackgroundColor,
-          canvasColor: _kBackgroundColor,
-          accentColor: _kForegroundColor,
-          textTheme: TextTheme(
-            body1: _kTextStyle,
-            subhead: _kTextStyle,
-          ),
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: Strings.browser,
+      theme: ThemeData(
+        fontFamily: 'RobotoMono',
+        textSelectionColor: _kSelectionColor,
+        textSelectionHandleColor: _kForegroundColor,
+        hintColor: _kForegroundColor,
+        cursorColor: _kForegroundColor,
+        primaryColor: _kBackgroundColor,
+        canvasColor: _kBackgroundColor,
+        accentColor: _kForegroundColor,
+        textTheme: TextTheme(
+          body1: _kTextStyle,
+          subhead: _kTextStyle,
         ),
-        home: Scaffold(
-          body: Column(
-            children: <Widget>[
-              AnimatedBuilder(
-                animation: tabsBloc.currentTabNotifier,
-                builder: (_, __) =>
-                    NavigationBar(bloc: tabsBloc.currentTab, newTab: newTab),
-              ),
-              TabsWidget(bloc: tabsBloc),
-              Expanded(child: _buildContent()),
-            ],
-          ),
+      ),
+      locale: locale,
+      localizationsDelegates: localizationsDelegates,
+      supportedLocales: supportedLocales,
+      home: Scaffold(
+        body: Column(
+          children: <Widget>[
+            AnimatedBuilder(
+              animation: tabsBloc.currentTabNotifier,
+              builder: (_, __) =>
+                  NavigationBar(bloc: tabsBloc.currentTab, newTab: newTab),
+            ),
+            TabsWidget(bloc: tabsBloc),
+            Expanded(child: _buildContent()),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildContent() => AnimatedBuilder(
         animation: tabsBloc.currentTabNotifier,
