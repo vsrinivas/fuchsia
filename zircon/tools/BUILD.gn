@@ -33,7 +33,7 @@ foreach(host, standard_build_hosts) {
 
     # This covers all the host tools intended to be used directly by
     # developers.  Not listed here are tools whose only use is via GN rules
-    # in this build, such as abigen.
+    # in this build.
     deps = [
       "$zx/third_party/uapp/mkfs-msdosfs",
       "blobfs",

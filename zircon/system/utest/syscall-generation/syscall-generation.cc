@@ -9,7 +9,7 @@
 
 namespace {
 
-TEST(AbigenTest, Wrapper) {
+TEST(SyscallGenerationTest, Wrapper) {
   ASSERT_EQ(zx_syscall_test_wrapper(1, 2, 3), 6, "syscall_test_wrapper doesn't add up");
   ASSERT_EQ(zx_syscall_test_wrapper(-1, 2, 3), ZX_ERR_INVALID_ARGS,
             "vdso should have checked args");
@@ -17,7 +17,7 @@ TEST(AbigenTest, Wrapper) {
             "vdso should have checked the return");
 }
 
-TEST(AbigenTest, Syscall) {
+TEST(SyscallGenerationTest, Syscall) {
   ASSERT_EQ(zx_syscall_test_8(1, 2, 3, 4, 5, 6, 7, 8), 36, "syscall8_test doesn't add up");
   ASSERT_EQ(zx_syscall_test_7(1, 2, 3, 4, 5, 6, 7), 28, "syscall7_test doesn't add up");
   ASSERT_EQ(zx_syscall_test_6(1, 2, 3, 4, 5, 6), 21, "syscall6_test doesn't add up");
@@ -29,7 +29,7 @@ TEST(AbigenTest, Syscall) {
   ASSERT_EQ(zx_syscall_test_0(), 0, "syscall0_test doesn't add up");
 }
 
-TEST(AbigenTest, HandleCreateSuccess) {
+TEST(SyscallGenerationTest, HandleCreateSuccess) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   ASSERT_OK(zx_syscall_test_handle_create(ZX_OK, &handle));
 
@@ -37,7 +37,7 @@ TEST(AbigenTest, HandleCreateSuccess) {
   EXPECT_OK(zx_handle_close(handle));
 }
 
-TEST(AbigenTest, HandleCreateFailure) {
+TEST(SyscallGenerationTest, HandleCreateFailure) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, zx_syscall_test_handle_create(ZX_ERR_UNAVAILABLE, &handle));
 

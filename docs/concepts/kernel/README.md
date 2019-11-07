@@ -26,7 +26,6 @@ This page is a non-comprehensive index of the zircon documentation.
 
 + [Getting Started](/docs/development/kernel/getting_started.md)
 + [Contributing Patches](/docs/contribute/contributing.md)
-+ [`abigen` grammar](/docs/reference/kernel/grammar.md)
 + [GN in Zircon](/docs/development/build/zircon_gn.md)
 
 + [Concepts Overview](/docs/concepts/kernel/concepts.md)

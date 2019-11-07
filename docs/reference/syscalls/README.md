@@ -221,13 +221,12 @@
 
 ## Syscall generation
 
-Syscall support is generated from
-system/public/zircon/syscalls.abigen.  A host tool called
-[abigen](/zircon/tools/abigen) consumes that file and produces output
-for both the kernel and userspace in a variety of languages. This
-output includes C or C++ headers for both the kernel and userspace,
-syscall entry points, other language bindings, and so on.
+Syscall support is generated from `//zircon/syscalls`. The FIDL files in that
+directory are first run through `fidlc` which produces an intermediate format.
+That intermediate format is consumed by [kazoo](/zircon/tools/kazoo) which
+produces output for both the kernel and userspace in a variety of languages.
+This output includes C or C++ headers for both the kernel and userspace, syscall
+entry points, other language bindings, and so on.
 
-This tool is invoked as a part of the build, rather than checking in
-its output.
+This tool is invoked as a part of the build, rather than checking in its output.
 
