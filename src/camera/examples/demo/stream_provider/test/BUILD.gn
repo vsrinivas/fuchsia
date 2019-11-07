@@ -9,14 +9,14 @@ executable("test") {
   output_name = "stream_provider_test"
 
   sources = [
-    "test.cc"
+    "test.cc",
   ]
 
   deps = [
     "..",
     "//src/camera/drivers/test_utils",
-    "//src/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
   ]

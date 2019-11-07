@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_MANAGER_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_MANAGER_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_MANAGER_STREAM_PROVIDER_H_
+#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_MANAGER_STREAM_PROVIDER_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -36,4 +36,4 @@ class ManagerStreamProvider : public StreamProvider {
   zx::event async_events_;
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_MANAGER_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_MANAGER_STREAM_PROVIDER_H_

@@ -10,6 +10,8 @@ executable("demo_bin") {
   output_name = demo_name
 
   sources = [
+    "demo_view.cc",
+    "demo_view.h",
     "main.cc",
   ]
 
