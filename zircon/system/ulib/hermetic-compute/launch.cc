@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <lib/hermetic-compute/hermetic-compute.h>
-
-#include <climits>
-#include <cstdarg>
 #include <lib/zx/thread.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/debug.h>
 
+#include <climits>
+#include <cstdarg>
+
 namespace {
 
-void SetShadowCallStack(zx_thread_state_general_regs_t* regs, uintptr_t tos);
+void SetShadowCallStack(zx_thread_state_general_regs_t* regs, uintptr_t base, uintptr_t tos);
 
 #ifdef __aarch64__
 
@@ -22,7 +22,10 @@ constexpr intptr_t kSpBias = 0;
 constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::tpidr;
 
 constexpr bool kShadowCallStack = true;
-void SetShadowCallStack(zx_thread_state_general_regs_t* regs, uintptr_t tos) { regs->r[18] = tos; }
+void SetShadowCallStack(zx_thread_state_general_regs_t* regs, uintptr_t base, uintptr_t tos) {
+  // ShadowCallStack grows up and x18 points to the current horizon.
+  regs->r[18] = base;
+}
 
 template <size_t... I>
 auto RegisterAccessors(std::index_sequence<I...>) {
@@ -141,12 +144,12 @@ void HermeticComputeProcess::Launcher::Launch(size_t nargs, ...) {
 
   // The shadow call stack pointer goes directly into a register.
   if constexpr (kShadowCallStack) {
-    uintptr_t sc_sp = 0;
-    // TODO(mcgrathr): configurability for ssc size?
+    uintptr_t scs_base = 0;
+    uintptr_t scs_tos = 0;
     if (stack_size_ > 0) {
-      allocate(PAGE_SIZE, nullptr, &sc_sp, nullptr);
+      allocate(stack_size_, &scs_base, &scs_tos, nullptr);
     }
-    SetShadowCallStack(&regs, sc_sp);
+    SetShadowCallStack(&regs, scs_base, scs_tos);
   }
 
   // The first several arguments go directly into registers.
