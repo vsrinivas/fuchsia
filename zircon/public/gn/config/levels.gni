@@ -3,9 +3,13 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # * 0 means no assertions, not even standard C `assert()`.
-  # * 1 means `ZX_ASSERT` but not `ZX_DEBUG_ASSERT`.
-  # * 2 means both `ZX_ASSERT` and  `ZX_DEBUG_ASSERT`.
+  # Controls which asserts are enabled.
+  #
+  # `ZX_ASSERT` is always enabled.
+  #
+  # * 0 disables standard C `assert()` and `ZX_DEBUG_ASSERT`.
+  # * 1 disables `ZX_DEBUG_ASSERT`. Standard C `assert()` remains enabled.
+  # * 2 enables all asserts.
   assert_level = 2
 
   # * -1 means really unoptimized (-O0), usually only build-tested and not run.
