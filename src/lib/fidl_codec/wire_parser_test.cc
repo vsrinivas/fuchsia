@@ -130,7 +130,9 @@ TEST_F(WireParserTest, ParseSingleString) {
 // |_pretty_print| is the expected pretty print of the message.
 // The remaining parameters are the parameters to |_iface| to generate the
 // message.
-#define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...)                             \
+// If num_bytes is not -1, instead of decoding the full buffer, we only decode num_bytes of buffer.
+// This is helpful when we want to test display of incorect data.
+#define TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, num_bytes, ...)           \
   do {                                                                                             \
     fidl::MessageBuffer buffer;                                                                    \
     fidl::Message message = buffer.CreateEmptyMessage();                                           \
@@ -160,10 +162,13 @@ TEST_F(WireParserTest, ParseSingleString) {
       }                                                                                            \
     }                                                                                              \
                                                                                                    \
-    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_infos,           \
+    MessageDecoder decoder(message.bytes().data(),                                                 \
+                           (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
                            message.handles().size(), /*output_errors=*/true);                      \
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
-    ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                                \
+    if (num_bytes == -1) {                                                                         \
+      ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
+    }                                                                                              \
     rapidjson::Document actual;                                                                    \
     if (object != nullptr) {                                                                       \
       object->ExtractJson(actual.GetAllocator(), actual);                                          \
@@ -208,14 +213,22 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                    \
     auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,         \
                                                 header.magic_number, *object.get());               \
-    ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));                \
-    ASSERT_EQ(message.handles().size(), encode_result.handles.size());                             \
+    if (num_bytes == -1) {                                                                         \
+      ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));              \
+      ASSERT_EQ(message.handles().size(), encode_result.handles.size());                           \
                                                                                                    \
-    for (uint32_t i = 0; i < message.handles().size(); ++i) {                                      \
-      EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                     \
+      for (uint32_t i = 0; i < message.handles().size(); ++i) {                                    \
+        EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                   \
+      }                                                                                            \
     }                                                                                              \
     delete[] handle_infos;                                                                         \
   } while (0)
+
+#define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...) \
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, -1, __VA_ARGS__)
+
+#define TEST_DECODE_WIRE_BODY_BAD(_iface, _json_value, _pretty_print, num_bytes, ...) \
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, num_bytes, __VA_ARGS__)
 
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
@@ -552,6 +565,14 @@ TEST_F(WireParserTest, ParseStruct) {
   TEST_DECODE_WIRE_BODY(Struct, sd.GetJson(), sd.GetPretty(), sd.pt);
 }
 
+TEST_F(WireParserTest, BadBoolStruct) {
+  test::fidlcodec::examples::BoolStructType s;
+  TEST_DECODE_WIRE_BODY_BAD(BoolStruct, "{\"s\":{\"b\":\"invalid\"}}",
+                            "{ s: #gre#test.fidlcodec.examples/BoolStructType#rst# = "
+                            "{ b: #gre#bool#rst# = #red#invalid#rst# } }",
+                            16, s);
+}
+
 TEST_DECODE_WIRE(NullableStruct, NullableStruct, R"({"p":null})",
                  "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = #blu#null#rst# }",
                  nullptr);
@@ -637,6 +658,7 @@ namespace {
 
 using isu = test::fidlcodec::examples::IntStructUnion;
 using xisu = test::fidlcodec::examples::IntStructXunion;
+using u8u16struct = test::fidlcodec::examples::U8U16UnionStructType;
 
 template <class T>
 T GetIntUnion(int32_t i) {
@@ -666,6 +688,12 @@ std::unique_ptr<T> GetStructUnionPtr(const std::string& v1, const std::string& v
   test::fidlcodec::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
   ptr->set_variant_tss(tss);
   return ptr;
+}
+
+u8u16struct GetU8U16UnionStruct(int8_t i) {
+  u8u16struct s;
+  s.u.set_variant_u8(i);
+  return s;
 }
 
 std::string IntUnionIntPretty(const std::string& name, int u, int v) {
@@ -767,6 +795,17 @@ TEST_DECODE_WIRE(NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
                  R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
                  IntStructUnionPretty("IntStructXunion", 1, "harpo", "chico"), 1,
                  GetStructUnionPtr<xisu>("harpo", "chico"));
+
+TEST_F(WireParserTest, BadU8U16UnionStruct) {
+  TEST_DECODE_WIRE_BODY_BAD(U8U16UnionStruct, "{\"s\":{\"u\":{\"variant_u8\":\"invalid\"}}}",
+                            "{\n"
+                            "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
+                            "    u: #gre#test.fidlcodec.examples/U8U16Union#rst# = "
+                            "v0!{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
+                            "  }\n"
+                            "}",
+                            16, GetU8U16UnionStruct(12));
+}
 
 namespace {
 

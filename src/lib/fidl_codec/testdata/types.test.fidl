@@ -37,6 +37,7 @@ protocol FidlCodecTestInterface {
     VectorUint32(vector<uint32>:100 v);
 
     Struct(PrimitiveTypes p);
+    BoolStruct(BoolStructType s);
     NullableStruct(PrimitiveTypes? p);
     NullableStructAndInt(PrimitiveTypes? p, int32 i);
 
@@ -56,6 +57,8 @@ protocol FidlCodecTestInterface {
     ShortUnion(U8U16Union u, int32 i);
     ShortXUnion(U8U16Xunion u, int32 i);
 
+    U8U16UnionStruct(U8U16UnionStructType s);
+
     DefaultEnumMessage(DefaultEnum ev);
     I8EnumMessage(I8Enum ev);
     I16EnumMessage(I16Enum ev);
@@ -68,6 +71,10 @@ protocol FidlCodecTestInterface {
     TraversalOrderMessage(TraversalOrder t);
 
     Protocol(ParamProtocol ch);
+};
+
+struct BoolStructType {
+    bool b;
 };
 
 struct PrimitiveTypes {
@@ -114,6 +121,10 @@ union U8U16Union {
 xunion U8U16Xunion {
     uint8 variant_u8;
     uint16 variant_u16;
+};
+
+struct U8U16UnionStructType {
+    U8U16Union u;
 };
 
 enum DefaultEnum {

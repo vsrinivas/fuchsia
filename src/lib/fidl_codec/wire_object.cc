@@ -270,7 +270,8 @@ void StringValue::Visit(Visitor* visitor) const { visitor->VisitStringValue(this
 int BoolValue::DisplaySize(int /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
-  return *data() ? kTrueSize : kFalseSize;
+  constexpr int kInvalidSize = 7;
+  return (data() == nullptr) ? kInvalidSize : (*data() ? kTrueSize : kFalseSize);
 }
 
 void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -514,11 +515,13 @@ int UnionValue::DisplaySize(int remaining_size) const {
   // (" = ") and two characters for the closing brace (" }").
   constexpr int kExtraSize = 7;
   int size = static_cast<int>(field_.name().size()) + kExtraSize;
-  if (field_.value()->type() != nullptr) {
-    // Two characters for ": ".
-    size += static_cast<int>(field_.value()->type()->Name().size()) + 2;
+  if (field_.value() != nullptr) {
+    if (field_.value()->type() != nullptr) {
+      // Two characters for ": ".
+      size += static_cast<int>(field_.value()->type()->Name().size()) + 2;
+    }
+    size += field_.value()->DisplaySize(remaining_size - size);
   }
-  size += field_.value()->DisplaySize(remaining_size - size);
   return size;
 }
 
@@ -553,30 +556,34 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
     constexpr int kExtraSize = 7;
     int size = static_cast<int>(field_.name().size()) + kExtraSize;
     os << "{ " << field_.name();
-    if (field_.value()->type() != nullptr) {
-      std::string type_name = field_.value()->type()->Name();
-      // Two characters for ": ".
-      size += static_cast<int>(type_name.size()) + 2;
-      os << ": " << colors.green << type_name << colors.reset;
+    if (field_.value() != nullptr) {
+      if (field_.value()->type() != nullptr) {
+        std::string type_name = field_.value()->type()->Name();
+        // Two characters for ": ".
+        size += static_cast<int>(type_name.size()) + 2;
+        os << ": " << colors.green << type_name << colors.reset;
+      }
+      os << " = ";
+      field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                                  max_line_size);
     }
-    os << " = ";
-    field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                max_line_size);
     os << " }";
   } else {
     os << "{\n";
     // Three characters for " = ".
     int size = (tabs + 1) * kTabSize + static_cast<int>(field_.name().size()) + 3;
     os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field_.name();
-    if (field_.value()->type() != nullptr) {
-      std::string type_name = field_.value()->type()->Name();
-      // Two characters for ": ".
-      size += static_cast<int>(type_name.size()) + 2;
-      os << ": " << colors.green << type_name << colors.reset;
+    if (field_.value() != nullptr) {
+      if (field_.value()->type() != nullptr) {
+        std::string type_name = field_.value()->type()->Name();
+        // Two characters for ": ".
+        size += static_cast<int>(type_name.size()) + 2;
+        os << ": " << colors.green << type_name << colors.reset;
+      }
+      os << " = ";
+      field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                                  max_line_size);
     }
-    os << " = ";
-    field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                max_line_size);
     os << '\n';
     os << line_header << std::string(tabs * kTabSize, ' ') << "}";
   }

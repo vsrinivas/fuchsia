@@ -47,7 +47,11 @@ void Encoder::Write(T t) {
 
 template <typename T>
 void Encoder::WriteNodeData(const T& node, size_t size) {
-  std::copy(node.data(), node.data() + size, std::back_inserter(bytes_));
+  if (node.data() == nullptr) {
+    bytes_.resize(bytes_.size() + size);
+  } else {
+    std::copy(node.data(), node.data() + size, std::back_inserter(bytes_));
+  }
 }
 
 void Encoder::Pump() {
@@ -80,7 +84,9 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
       auto target_offset = bytes_.size() + member->offset();
       Write<uint32_t>(tag);
       bytes_.resize(target_offset);
-      node->field().value()->Visit(this);
+      if (node->field().value() != nullptr) {
+        node->field().value()->Visit(this);
+      }
       bytes_.resize(target_size);
       return;
     }
@@ -145,7 +151,13 @@ void Encoder::VisitStringValue(const StringValue* node) {
   }
 }
 
-void Encoder::VisitBoolValue(const BoolValue* node) { bytes_.push_back(node->data()[0]); }
+void Encoder::VisitBoolValue(const BoolValue* node) {
+  if (node->data() == nullptr) {
+    bytes_.push_back(false);
+  } else {
+    bytes_.push_back(node->data()[0]);
+  }
+}
 
 void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
   Write<uint32_t>(node->num_bytes());
@@ -230,7 +242,13 @@ void Encoder::VisitObject(const Object* node) {
   }
 }
 
-void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) { bytes_.push_back(node->data()[0]); }
+void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) {
+  if (node->data() == nullptr) {
+    bytes_.push_back(0);
+  } else {
+    bytes_.push_back(node->data()[0]);
+  }
+}
 
 void Encoder::VisitU16Value(const NumericValue<uint16_t>* node) {
   WriteNodeData(*node, sizeof(uint16_t));
@@ -244,7 +262,13 @@ void Encoder::VisitU64Value(const NumericValue<uint64_t>* node) {
   WriteNodeData(*node, sizeof(uint64_t));
 }
 
-void Encoder::VisitI8Value(const NumericValue<int8_t>* node) { bytes_.push_back(node->data()[0]); }
+void Encoder::VisitI8Value(const NumericValue<int8_t>* node) {
+  if (node->data() == nullptr) {
+    bytes_.push_back(0);
+  } else {
+    bytes_.push_back(node->data()[0]);
+  }
+}
 
 void Encoder::VisitI16Value(const NumericValue<int16_t>* node) {
   WriteNodeData(*node, sizeof(int16_t));
