@@ -71,6 +71,7 @@ impl RequestExt for fonts::Request {
                 fallback_family: self.fallback_group.to_generic_font_family(),
             }),
             flags: Some(flags),
+            cache_miss_policy: None,
         }
     }
 }

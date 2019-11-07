@@ -96,6 +96,7 @@ pub async fn get_typeface_info(
                 fallback_family: None,
             }),
             flags: Some(fonts::TypefaceRequestFlags::empty()),
+            cache_miss_policy: None,
         })
         .await?;
 

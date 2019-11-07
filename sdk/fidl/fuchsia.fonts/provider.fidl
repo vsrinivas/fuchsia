@@ -10,6 +10,9 @@ using fuchsia.mem;
 /// The maximum length of a font family name.
 const uint32 MAX_FAMILY_NAME_LENGTH = 128;
 
+/// The maximum number of code points allowed in a typeface query.
+const uint32 MAX_FACE_QUERY_CODE_POINTS = 128;
+
 /// The maximum number of preferred languages allowed in a typeface query.
 const uint32 MAX_FACE_QUERY_LANGUAGES = 8;
 
@@ -25,7 +28,7 @@ struct FamilyName {
 };
 
 /// Boolean flags for `TypefaceRequest`.
-bits TypefaceRequestFlags:uint32 {
+bits TypefaceRequestFlags : uint32 {
     /// Disables font family fallback. The service won't try to search the fallback font set if the
     /// requested font family doesn't exist or if it doesn't contain the requested code point.
     EXACT_FAMILY = 0x00000001;
@@ -36,12 +39,49 @@ bits TypefaceRequestFlags:uint32 {
     EXACT_STYLE = 0x00000002;
 };
 
+/// Options for what the font server should do if the client requests a typeface that is not yet
+/// cached.
+enum CacheMissPolicy {
+    /// The server will attempt to load the uncached typeface before providing a response. This is
+    /// the *default* behavior.
+    ///
+    /// This option is not recommended for synchronous clients that block rendering while waiting
+    /// for a font.
+    BLOCK_UNTIL_DOWNLOADED = 1;
+
+    /// The server will tell the client that the uncached typeface is unavailable, by returning an
+    /// empty [`fuchsia.fonts/TypefaceResponse`]. The uncached typeface may be downloaded
+    /// asynchronously to be available for future requests.
+    ///
+    /// This is similar to `font-display: block` in CSS.
+    RETURN_EMPTY_RESPONSE = 2;
+
+    /// The server will attempt to provide a cached fallback typeface (if allowed by the fallback
+    /// restrictions in [`fuchsia.fonts/TypefaceRequestFlags`]). The uncached typeface may be
+    /// downloaded asynchronously to be available for future requests.
+    ///
+    /// This is similar to `font-display: swap` in CSS.
+    RETURN_FALLBACK = 3;
+};
+
 /// Parameters for requesting a typeface.
 table TypefaceRequest {
     /// Parameters for looking up a typeface.
     1: TypefaceQuery query;
+
     /// Flags for how to process the request, such as which kinds of substitutions are permitted.
     2: TypefaceRequestFlags flags;
+
+    /// Setting for what to do if the requested typeface exists but is not cached, and therefore
+    /// cannot be served immediately.
+    ///
+    /// If this field is empty, the default policy is
+    /// [`fuchsia.fonts/CacheMissPolicy.BLOCK_UNTIL_DOWNLOADED`].
+    ///
+    /// If the client needs an immediate response, it can choose one of the non-blocking policies.
+    /// In this case, clients can also register to be notified when new fonts have been added to the
+    /// cache by calling [`fuchsia.fonts/Provider.RegisterFontSetEventListener`].
+    3: CacheMissPolicy cache_miss_policy;
 };
 
 /// Parameters for looking up a typeface.
@@ -66,7 +106,7 @@ table TypefaceQuery {
     ///
     /// Callers that specify this field are expected to extract the character set from the result
     /// and cache it in order to avoid calling the API more than necessary.
-    4: vector<uint32> code_points;
+    4: vector<uint32>:MAX_FACE_QUERY_CODE_POINTS code_points;
 
     /// A generic font family to fall back to if an exact match is unavailable or does not contain
     /// the requested code point.

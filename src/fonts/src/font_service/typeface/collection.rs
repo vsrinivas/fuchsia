@@ -195,6 +195,7 @@ mod tests {
                 fallback_family,
             }),
             flags: Some(flags),
+            cache_miss_policy: None,
         };
 
         collection.match_request(&request)
