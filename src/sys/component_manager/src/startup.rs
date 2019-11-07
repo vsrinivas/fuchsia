@@ -145,8 +145,8 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
     return Ok(Some(loader));
 }
 
-pub async fn create_hub_if_possible(root_component_url: String) -> Result<Arc<Hub>, ModelError> {
-    let hub = Arc::new(Hub::new(root_component_url)?);
+pub async fn create_hub_if_possible(root_component_url: String) -> Result<Hub, ModelError> {
+    let hub = Hub::new(root_component_url)?;
     if let Some(out_dir_handle) =
         fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
     {
@@ -226,6 +226,12 @@ pub async fn model_setup(
     model.root_realm.hooks.install(realm_capability_host.hooks()).await;
     model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
     model.root_realm.hooks.install(additional_capabilities).await;
+    let notifier_hooks = {
+        let notifier = model.notifier.lock().await;
+        let notifier = notifier.as_ref();
+        notifier.expect("Notifier must exist. Model is not created!").hooks()
+    };
+    model.root_realm.hooks.install(notifier_hooks).await;
     // TODO(geb, fsamuel): model refers to a RealmCapabilityHost and RealmCapabilityHost
     // refers to model. We need to break this cycle.
     model.realm_capability_host = Some(realm_capability_host);

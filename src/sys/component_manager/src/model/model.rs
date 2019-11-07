@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{framework::*, model::*, startup::BuiltinRootCapabilities},
+    crate::{framework::*, model::*, startup::BuiltinRootCapabilities, root_realm_post_destroy_notifier::*},
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::join_all,
+    futures::lock::Mutex,
     std::sync::Arc,
 };
 
@@ -39,6 +40,8 @@ pub struct ModelParams {
 /// `Runner` and `Resolver`.
 #[derive(Clone)]
 pub struct Model {
+    // TODO(xbhatnag): Move this out of Model.
+    pub notifier: Arc<Mutex<Option<RootRealmPostDestroyNotifier>>>,
     pub root_realm: Arc<Realm>,
     pub config: ModelConfig,
     /// Builtin services that are available in the root realm.
@@ -73,6 +76,7 @@ impl Model {
     pub fn new(params: ModelParams) -> Model {
         params.config.validate();
         Model {
+            notifier: Arc::new(Mutex::new(Some(RootRealmPostDestroyNotifier::new()))),
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
                 params.root_component_url,
@@ -82,6 +86,11 @@ impl Model {
             realm_capability_host: None,
             elf_runner: params.elf_runner,
         }
+    }
+
+    pub async fn wait_for_root_realm_destroy(&self) {
+        let mut notifier = self.notifier.lock().await;
+        notifier.take().expect("A root realm can only be destroyed once").wait_for_root_realm_destroy().await;
     }
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is

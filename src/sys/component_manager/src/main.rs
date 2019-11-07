@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::{klog, model::AbsoluteMoniker, startup},
+    component_manager_lib::{klog, model::{AbsoluteMoniker, Model, Hub}, startup},
     failure::{Error, ResultExt},
     fuchsia_async as fasync,
-    futures::prelude::*,
     log::*,
     std::process,
 };
@@ -29,11 +28,8 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match run_root(args).await {
-            Ok(()) => {
-                // TODO: Exit the component manager when the root component's binding is lost
-                // (when it terminates) or perhaps attempt to rebind automatically.
-                // For now, the component manager just runs forever.
-                future::pending::<()>().await
+            Ok((model, _hub)) => {
+                model.wait_for_root_realm_destroy().await;
             }
             Err(err) => {
                 error!("Component manager setup failed: {:?}", err);
@@ -46,7 +42,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_root(args: startup::Arguments) -> Result<(), Error> {
+async fn run_root(args: startup::Arguments) -> Result<(Model, Hub), Error> {
     let hub = startup::create_hub_if_possible(args.root_component_url.clone())
         .await
         .context("failed to create hub")?;
@@ -56,5 +52,5 @@ async fn run_root(args: startup::Arguments) -> Result<(), Error> {
         .await
         .map_err(|e| Error::from(e))
         .context(format!("failed to bind to root component {}", args.root_component_url))?;
-    Ok(())
+    Ok((model, hub))
 }

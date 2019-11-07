@@ -30,12 +30,16 @@ use {
 struct HubCapabilityProvider {
     abs_moniker: model::AbsoluteMoniker,
     relative_path: Vec<String>,
-    hub: Hub,
+    hub_inner: Arc<HubInner>,
 }
 
 impl HubCapabilityProvider {
-    pub fn new(abs_moniker: model::AbsoluteMoniker, relative_path: Vec<String>, hub: Hub) -> Self {
-        HubCapabilityProvider { abs_moniker, relative_path, hub }
+    pub fn new(
+        abs_moniker: model::AbsoluteMoniker,
+        relative_path: Vec<String>,
+        hub_inner: Arc<HubInner>
+    ) -> Self {
+        HubCapabilityProvider { abs_moniker, relative_path, hub_inner }
     }
 
     pub async fn open_async(
@@ -54,7 +58,7 @@ impl HubCapabilityProvider {
                 .collect::<Vec<String>>(),
         );
 
-        self.hub.inner.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
+        self.hub_inner.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
 
         Ok(())
     }
@@ -96,7 +100,6 @@ struct Execution {
 /// Hub itself does not store any state locally other than a reference to `HubInner`
 /// where all the state and business logic resides. This enables Hub to be cloneable
 /// to be passed across tasks.
-#[derive(Clone)]
 pub struct Hub {
     inner: Arc<HubInner>,
 }
@@ -529,7 +532,7 @@ impl HubInner {
         Ok(Some(Box::new(HubCapabilityProvider::new(
             realm.abs_moniker.clone(),
             relative_path,
-            Hub { inner: self.clone() },
+            self.clone(),
         ))))
     }
 
