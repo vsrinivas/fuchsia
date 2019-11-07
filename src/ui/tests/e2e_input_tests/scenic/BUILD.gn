@@ -5,6 +5,14 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":e2e_input_tests",
+  ]
+}
+
 test_package("e2e_input_tests") {
   deps = [
     ":base_view_ime_test",

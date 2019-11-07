@@ -1112,7 +1112,6 @@ group("virtual_audio") {
 group("e2e_input_tests") {
   testonly = true
   public_deps = [
-    "//garnet/tests/e2e_input_tests:e2e_input_tests",
     "//src/ui/tests/e2e_input_tests",
   ]
 }

@@ -7,6 +7,7 @@ group("e2e_input_tests") {
 
   deps = [
     "keyboard:tests",
+    "scenic:tests",
     "shortcut:tests",
   ]
 }
