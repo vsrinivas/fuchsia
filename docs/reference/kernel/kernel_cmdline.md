@@ -13,6 +13,9 @@ The kernel commandline is passed from the kernel to the userboot process
 and the device manager, so some of the options described below apply to
 those userspace processes, not the kernel itself.
 
+If keys are repeated, the last value takes precedence, that is, later settings
+override earlier ones.
+
 The devmgr reads the file /boot/config/devmgr (if it exists) at startup
 and imports name=value lines into its environment, augmenting or overriding
 the values from the kernel commandline.  Leading whitespace is ignored and

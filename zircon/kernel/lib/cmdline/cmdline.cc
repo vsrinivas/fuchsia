@@ -79,20 +79,41 @@ const char* Cmdline::GetString(const char* key) const {
     return nullptr;
   }
 
-  const char* ptr = data_;
+  // Start at the end and work backwards so that repeated values appended later
+  // to the command line override earlier settings.
+  const char* ptr = data_ + length_;
   for (;;) {
-    if (!strncmp(ptr, key, sz) && (ptr[sz] == '=' || ptr[sz] == '\0')) {
-      break;
-    }
-    ptr = strchr(ptr, 0) + 1;
-    if (*ptr == 0) {
+    // At the top of the loop, we're always at the first character of the item
+    // *after* the one we're going to search next. This is, pointing at the
+    // character one beyond the \0 of the string to be considered next. On the
+    // first time through the loop, we'll be pointing at the extra \0 that
+    // terminates the whole buffer.
+
+    --ptr;  // Step back to the \0 of the previous item.
+    --ptr;  // Step back to the last character of the previous item.
+
+    if (ptr < data_) {
+      // If beyond the beginning of the data, the key was not found.
       return nullptr;
+    }
+
+    // Walk backwards either to the terminator of the item preceding the one
+    // we're on, or to the beginning of the buffer.
+    while (ptr > data_ && *ptr != 0) {
+      --ptr;
+    }
+
+    // If not at the first character of the buffer, then increment back past the
+    // terminator of the previous item to the first character of the string.
+    if (ptr != data_) {
+      ++ptr;
+    }
+    if (!strncmp(ptr, key, sz) && ptr[sz] == '=') {
+      break;
     }
   }
   ptr += sz;
-  if (*ptr == '=') {
-    ptr++;
-  }
+  ptr++;  // Increment past the '='.
   return ptr;
 }
 

@@ -168,6 +168,18 @@ TEST(KernelCmdLineTest, OverflowExact) {
   EXPECT_EQ(c2->size(), Cmdline::kCmdlineMax - 2);
 
   ASSERT_DEATH(([&c2]() { c2->Append("b"); }));
+
+  // Finally, confirm that one fewer doesn't fail.
+  auto c3 = std::make_unique<Cmdline>();
+  memset(data, 'a', Cmdline::kCmdlineMax - 6);
+  data[Cmdline::kCmdlineMax - 6] = 0;
+  EXPECT_EQ(strlen(data), Cmdline::kCmdlineMax - 6);
+  c3->Append(data);
+  EXPECT_EQ(c3->size(), Cmdline::kCmdlineMax - 3);
+
+  // Shouldn't crash, cmdline is now full.
+  c3->Append("b");
+  EXPECT_EQ(c3->size(), Cmdline::kCmdlineMax);
 }
 
 TEST(KernelCmdLineTest, GetString) {
@@ -177,7 +189,7 @@ TEST(KernelCmdLineTest, GetString) {
   EXPECT_EQ(c->data(), c->GetString(nullptr));
 
   c->Append("k1=red k2=blue k1=green");
-  EXPECT_TRUE(!strcmp(c->GetString("k1"), "red"));
+  EXPECT_TRUE(!strcmp(c->GetString("k1"), "green"));
   EXPECT_TRUE(!strcmp(c->GetString("k2"), "blue"));
   EXPECT_EQ(nullptr, c->GetString(""));
   EXPECT_EQ(c->data(), c->GetString(nullptr));
@@ -235,6 +247,28 @@ TEST(KernelCmdLineTest, GetUInt64) {
   // |GetUInt64| is limited to parsing up to INT64_MAX.  Anything higher is saturated to INT64_MAX.
   EXPECT_EQ(static_cast<uint64_t>(INT64_MAX), c->GetUInt64("k5", 99u));
   EXPECT_EQ(static_cast<uint64_t>(INT64_MAX), c->GetUInt64("k6", 99u));
+}
+
+TEST(KernelCmdLineTest, LaterOverride) {
+  auto c = std::make_unique<Cmdline>();
+  c->Append("k1 k2= k1=42");
+  EXPECT_TRUE(strcmp(c->GetString("k1"), "42") == 0);
+  EXPECT_TRUE(strcmp(c->GetString("k2"), "") == 0);
+
+  c->Append("k1=stuff");
+  EXPECT_TRUE(strcmp(c->GetString("k1"), "stuff") == 0);
+
+  c->Append("k1=zip k1=zap");
+  EXPECT_TRUE(strcmp(c->GetString("k1"), "zap") == 0);
+
+  c->Append("k1");
+  EXPECT_TRUE(strcmp(c->GetString("k1"), "") == 0);
+}
+
+TEST(KernelCmdLineTest, Short) {
+  auto c = std::make_unique<Cmdline>();
+  c->Append("a=1");
+  EXPECT_EQ(c->GetUInt32("a", 0), 1);
 }
 
 }  // namespace

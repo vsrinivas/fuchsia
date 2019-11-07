@@ -20,6 +20,8 @@
 //
 // It can be accessed using the Get* methods or via data() and size().
 //
+// The Get* methods treat later values as overrides for earlier ones.
+//
 // For example, an empty command line is [\0], and a command line containing "a=b" is [a=b\0\0].
 class Cmdline {
  public:
@@ -41,20 +43,20 @@ class Cmdline {
   // The command line will always be properly terminated.
   void Append(const char* str);
 
-  // Return the first value for |key| or nullptr if not found.
+  // Return the last value for |key| or nullptr if not found.
   //
   // When |key| is nullptr, the entire command line is returned.
   const char* GetString(const char* key) const;
 
-  // Return the first value for |key| or |default_value| if not found.
+  // Return the last value for |key| or |default_value| if not found.
   //
   // "0", "false", and "off" are considered false.  All other values are considered true.
   bool GetBool(const char* key, bool default_value) const;
 
-  // Return the first value for |key| or |default_value| if not found.
+  // Return the last value for |key| or |default_value| if not found.
   uint32_t GetUInt32(const char* key, uint32_t default_value) const;
 
-  // Return the first value for |key| or |default_value| if not found.
+  // Return the last value for |key| or |default_value| if not found.
   uint64_t GetUInt64(const char* key, uint64_t default_value) const;
 
   // Returns a pointer to the command line.  This is a sequence of zero or more \0-terminated
