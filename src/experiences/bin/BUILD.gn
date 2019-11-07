@@ -5,6 +5,7 @@
 group("bin") {
   deps = [
     "simple_browser",
+    "terminal_settings",
   ]
 }
 
@@ -21,5 +22,6 @@ group("dart_unittests") {
 
   deps = [
     "simple_browser:simple_browser_unittests($host_toolchain)",
+    "terminal_settings:terminal_settings_unittests($host_toolchain)",
   ]
 }
