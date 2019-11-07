@@ -161,6 +161,17 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar, zx_handle_t vmo, s
 // express the different kinds of stack consumption required to tune the three
 // sizes separately (or proportionally to each other or whatever).
 
+// In the function below, the compiler may generate calls to memcpy
+// intrinsics for copying structs. With ASan enabled, calls to these memcpy
+// intrinsics are converted to calls to __asan_memcpy. Calls to the ASan runtime
+// in these cases may not be safe because of ABI requirements like
+// ShadowCallStack that aren't ready yet. So redirect this symbol to libc's own
+// memcpy implementation, which is always a leaf function that doesn't require
+// the ShadowCallStack ABI.
+#if __has_feature(address_sanitizer)
+__asm__(".weakref __asan_memcpy, __unsanitized_memcpy");
+#endif
+
 __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requested_stack_size,
                                         const char* thread_name, char vmo_name[ZX_MAX_NAME_LEN]) {
   // In the initial thread, we're allocating the stacks and TCB for the running
