@@ -106,8 +106,9 @@ class AskModel extends ChangeNotifier {
         _removeItem(index);
       }
 
-      suggestions.value =
-          result.isNotEmpty ? result.toList() : builtInSuggestions;
+      suggestions.value = result.isNotEmpty || _currentQuery.isNotEmpty
+          ? result.toList()
+          : builtInSuggestions;
 
       // Insert the suggestion in [AnimatedListState].
       for (int index = 0; index < suggestions.value.length; index++) {
