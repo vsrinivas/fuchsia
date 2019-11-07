@@ -49,6 +49,7 @@ source_set("fdio") {
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_c",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input_c",
   ]
 

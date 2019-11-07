@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
@@ -67,10 +68,20 @@ typedef struct blkinfo {
 } blkinfo_t;
 
 static void populate_topo_path(const zx::unowned_channel& channel, blkinfo_t* info) {
-  zx_status_t call_status;
+  zx_status_t call_status = ZX_OK;
   size_t path_len;
-  zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-      channel->get(), &call_status, info->topo, sizeof(info->topo) - 1, &path_len);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      zx::unowned_channel(channel->get()));
+  zx_status_t status = resp.status();
+
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    path_len = resp->result.response().path.size();
+    auto r = resp->result.response();
+    memcpy(info->topo, r.path.data(), r.path.size());
+  }
+
   if (status != ZX_OK || call_status != ZX_OK) {
     strcpy(info->topo, "UNKNOWN");
     return;

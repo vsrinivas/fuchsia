@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/zxcrypt/c/fidl.h>
@@ -626,11 +627,14 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
   if (!fd) {
     // No manager device in the /dev tree yet.  Try binding the zxcrypt
     // driver and waiting for it to appear.
-    zx_status_t call_status;
-    rc = fuchsia_device_ControllerBind(caller.borrow_channel(), kDriverLib, strlen(kDriverLib),
-                                       &call_status);
+    auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+        zx::unowned_channel(caller.borrow_channel()),
+        ::fidl::StringView(kDriverLib, strlen(kDriverLib)));
+    rc = resp.status();
     if (rc == ZX_OK) {
-      rc = call_status;
+      if (resp->result.is_err()) {
+        rc = resp->result.err();
+      }
     }
     if (rc != ZX_OK) {
       xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
@@ -665,13 +669,20 @@ zx_status_t FdioVolume::RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, 
   // Get the full device path
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
-  zx_status_t call_status;
   size_t path_len;
-  rc = fuchsia_device_ControllerGetTopologicalPath(caller.borrow_channel(), &call_status,
-                                                   path.data(), path.capacity(), &path_len);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      zx::unowned_channel(caller.borrow_channel()));
+  rc = resp.status();
   if (rc == ZX_OK) {
-    rc = call_status;
+    if (resp->result.is_err()) {
+      rc = resp->result.err();
+    } else {
+      auto r = resp->result.response();
+      path_len = r.path.size();
+      memcpy(path.data(), r.path.data(), r.path.size());
+    }
   }
+
   if (rc != ZX_OK) {
     xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
     return rc;

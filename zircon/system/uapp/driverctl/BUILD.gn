@@ -4,12 +4,13 @@
 
 zx_executable("driverctl") {
   sources = [
-    "driverctl.c",
+    "driverctl.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/ulib/ddk:headers",
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }

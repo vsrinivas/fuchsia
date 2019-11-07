@@ -17,7 +17,7 @@ zx_executable("netsvc") {
   deps = [
     ":args",
     ":netsvc_common",
-    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

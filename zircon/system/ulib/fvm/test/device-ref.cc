@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -274,9 +275,15 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
     return nullptr;
   }
 
-  zx_status_t status;
-  zx_status_t fidl_status = fuchsia_device_ControllerBind(
-      device->channel()->get(), kFvmDriverLib, fbl::constexpr_strlen(kFvmDriverLib), &status);
+  zx_status_t status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(device->channel()->get()),
+      ::fidl::StringView(kFvmDriverLib, fbl::constexpr_strlen(kFvmDriverLib)));
+  zx_status_t fidl_status = resp.status();
+  if (resp->result.is_err()) {
+    status = resp->result.err();
+  }
+
   if (fidl_status != ZX_OK || status != ZX_OK) {
     ADD_FAILURE("Binding FVM driver failed. Reason: %s",
                 zx_status_get_string((fidl_status != ZX_OK) ? fidl_status : status));
@@ -345,9 +352,15 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
     return status;
   }
 
-  zx_status_t fidl_status =
-      fuchsia_device_ControllerBind(block_device_->channel()->get(), kFvmDriverLib,
-                                    fbl::constexpr_strlen(kFvmDriverLib), &status);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(block_device_->channel()->get()),
+      ::fidl::StringView(kFvmDriverLib, fbl::constexpr_strlen(kFvmDriverLib)));
+  zx_status_t fidl_status = resp.status();
+  status = ZX_OK;
+  if (resp->result.is_err()) {
+    status = resp->result.err();
+  }
+
   // Bind the FVM to the block device.
   if (fidl_status != ZX_OK || status != ZX_OK) {
     ADD_FAILURE("Rebinding FVM driver failed.");
@@ -398,4 +411,4 @@ bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after) 
          before.pslice_allocated_count == after.pslice_allocated_count;
 }
 
-}  // namespace fs_test_utils
+}  // namespace fvm

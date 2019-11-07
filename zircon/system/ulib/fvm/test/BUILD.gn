@@ -11,8 +11,8 @@ group("test") {
 
 zx_test("fvm-unit") {
   sources = [
-    "integrity-validation-test.cc",
     "format-info-test.cc",
+    "integrity-validation-test.cc",
     "partition-entry-test.cc",
     "slice-entry-test.cc",
   ]
@@ -44,7 +44,7 @@ zx_library("devices") {
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:llcpp",

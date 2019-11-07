@@ -27,32 +27,30 @@ namespace fuchsia = ::llcpp::fuchsia;
 
 // Handles outstanding calls to fuchsia.device.manager.DeviceController/BindDriver
 // and fuchsia.device.Controller/Bind.
-zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev,
-                      DeviceControllerConnection::BindDriverCompleter::Sync completer,
-                      zx_status_t status, zx::channel test_output = zx::channel()) {
-  zx_status_t bind_status = ZX_OK;
+void BindReply(const fbl::RefPtr<zx_device_t>& dev,
+               DeviceControllerConnection::BindDriverCompleter::Sync completer, zx_status_t status,
+               zx::channel test_output = zx::channel()) {
   completer.Reply(status, std::move(test_output));
 
-  fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-  if (dev->get_bind_conn_and_clear(&conn)) {
-    bind_status = fuchsia_device_ControllerBind_reply(conn.Txn(), status);
+  auto bind_conn = dev->take_bind_conn();
+  if (bind_conn) {
+    bind_conn(status);
   }
 
-  if (dev->take_rebind_conn_and_clear(&conn)) {
-    bind_status = fuchsia_device_ControllerRebind_reply(conn.Txn(), status);
+  auto rebind_conn = dev->take_rebind_conn();
+  if (rebind_conn) {
+    rebind_conn(status);
   }
-  return bind_status;
 }
 
 }  // namespace
 
 void DeviceControllerConnection::CompleteCompatibilityTests(
     llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
-    CompleteCompatibilityTestsCompleter::Sync completer) {
-  const auto& dev = this->dev();
-  fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-  if (dev->PopTestCompatibilityConn(&conn)) {
-    fuchsia_device_ControllerRunCompatibilityTests_reply(conn.Txn(), static_cast<uint32_t>(status));
+    CompleteCompatibilityTestsCompleter::Sync _completer) {
+  auto compat_conn = dev()->PopTestCompatibilityConn();
+  if (compat_conn) {
+    compat_conn(static_cast<zx_status_t>(status));
   }
 }
 

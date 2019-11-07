@@ -33,6 +33,7 @@ source_set("common") {
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-nand:c",
     "$zx/system/ulib/fbl",

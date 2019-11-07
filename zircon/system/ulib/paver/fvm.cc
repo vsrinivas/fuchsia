@@ -56,14 +56,15 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
   fzl::UnownedFdioCaller caller(fd.get());
-  auto result = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(caller.channel());
-  if (!result.ok()) {
-    return result.status();
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(caller.channel());
+  if (!resp.ok()) {
+    return resp.status();
   }
-  const auto& response = result.value();
-  if (response.status != ZX_OK) {
-    return response.status;
+  if (resp->result.is_err()) {
+    return resp->result.err();
   }
+
+  auto response = resp->result.response();
   strncpy(buf, response.path.data(), std::min(buf_len, response.path.size()));
   buf[response.path.size()] = '\0';
   return ZX_OK;
@@ -246,9 +247,14 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 
   fzl::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
-  auto result = ::llcpp::fuchsia::device::Controller::Call::Bind(caller.channel(),
-                                                                 fidl::StringView(kFvmDriverLib));
-  status = result.ok() ? result.value().status : result.status();
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(caller.channel(),
+                                                               fidl::StringView(kFvmDriverLib));
+  status = resp.status();
+  if (status == ZX_OK) {
+    if (resp->result.is_err()) {
+      status = resp->result.err();
+    }
+  }
   if (status != ZX_OK) {
     ERROR("Could not bind fvm driver\n");
     return fbl::unique_fd();

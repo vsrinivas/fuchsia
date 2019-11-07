@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <block-client/cpp/remote-block-device.h>
-
-#include <fs/trace.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <zircon/device/vfs.h>
+
+#include <block-client/cpp/remote-block-device.h>
+#include <fs/trace.h>
 
 namespace block_client {
 namespace {
@@ -61,11 +62,24 @@ zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   zx_status_t status, io_status;
-  io_status = fuchsia_device_ControllerGetTopologicalPath(device_.get(), &status, out_name,
-                                                          buffer_len - 1, out_len);
+
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      zx::unowned_channel(device_.get()));
+
+  io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;
   }
+
+  if (resp->result.is_err()) {
+    status = resp->result.err();
+  } else {
+    auto r = resp->result.response();
+    *out_len = r.path.size();
+    memcpy(out_name, r.path.data(), r.path.size());
+    status = ZX_OK;
+  }
+
   if (status != ZX_OK) {
     return status;
   }

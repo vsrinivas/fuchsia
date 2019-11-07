@@ -5,7 +5,10 @@
 #ifndef SRC_DEVICES_HOST_ZX_DEVICE_H_
 #define SRC_DEVICES_HOST_ZX_DEVICE_H_
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -88,15 +91,18 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
     return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }
-  void set_bind_conn(const fs::FidlConnection& conn);
-  bool get_bind_conn_and_clear(fs::FidlConnection* conn);
 
-  void set_rebind_conn(const fs::FidlConnection& conn);
-  bool take_rebind_conn_and_clear(fs::FidlConnection* conn);
+  void set_bind_conn(fit::callback<void(zx_status_t)>);
+  fit::callback<void(zx_status_t)> take_bind_conn();
+
+  void set_rebind_conn(fit::callback<void(zx_status_t)>);
+  fit::callback<void(zx_status_t)> take_rebind_conn();
   void set_rebind_drv_name(const char* drv_name);
   std::optional<std::string> get_rebind_drv_name() { return rebind_drv_name_; }
-  void PushTestCompatibilityConn(const fs::FidlConnection& conn);
-  bool PopTestCompatibilityConn(fs::FidlConnection* conn);
+
+  void PushTestCompatibilityConn(fit::callback<void(zx_status_t)>);
+  fit::callback<void(zx_status_t)> PopTestCompatibilityConn();
+
   // Check if this devhost has a device with the given ID, and if so returns a
   // reference to it.
   static fbl::RefPtr<zx_device> GetDeviceFromLocalId(uint64_t local_id);
@@ -170,24 +176,33 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     static bool EqualTo(const uint64_t& key1, const uint64_t& key2) { return key1 == key2; }
   };
 
+  using DevicePowerStates = std::array<::llcpp::fuchsia::device::DevicePowerStateInfo,
+                                       ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES>;
+  using SystemPowerStateMapping =
+      std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
+                 ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>;
+  using PerformanceStates = std::array<::llcpp::fuchsia::device::DevicePerformanceStateInfo,
+                                       ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>;
+
   bool has_composite();
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
-  const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
-  GetPowerStates() const;
-  const std::array<fuchsia_device_DevicePerformanceStateInfo,
-                   fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES>&
-  GetPerformanceStates() const;
+
+  const DevicePowerStates& GetPowerStates() const;
+  const PerformanceStates& GetPerformanceStates() const;
+
   zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
-  zx_status_t SetPerformanceStates(
-      const device_performance_state_info_t* performance_states, uint8_t count);
-  zx_status_t SetSystemPowerStateMapping(
-      const std::array<fuchsia_device_SystemPowerStateInfo,
-                       fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
-  const std::array<fuchsia_device_SystemPowerStateInfo,
-                   fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>&
-  GetSystemPowerStateMapping() const;
-  fuchsia_device_DevicePowerState GetCurrentDevicePowerState() { return current_power_state_; }
+
+  zx_status_t SetSystemPowerStateMapping(const SystemPowerStateMapping& mapping);
+
+  zx_status_t SetPerformanceStates(const device_performance_state_info_t* performance_states,
+                                   uint8_t count);
+
+  const SystemPowerStateMapping& GetSystemPowerStateMapping() const;
+
+  ::llcpp::fuchsia::device::DevicePowerState GetCurrentDevicePowerState() {
+    return current_power_state_;
+  }
 
  private:
   zx_device() = default;
@@ -221,25 +236,24 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   uint64_t local_id_ = 0;
 
   fbl::Mutex bind_conn_lock_;
-  std::optional<fs::FidlConnection> bind_conn_ TA_GUARDED(bind_conn_lock_);
+
+  fit::callback<void(zx_status_t)> bind_conn_ TA_GUARDED(bind_conn_lock_);
 
   fbl::Mutex rebind_conn_lock_;
-  std::optional<fs::FidlConnection> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
+
+  fit::callback<void(zx_status_t)> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
   std::optional<std::string> rebind_drv_name_ = std::nullopt;
 
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
   fbl::Mutex test_compatibility_conn_lock_;
-  fbl::Vector<fs::FidlConnection> test_compatibility_conn_
+
+  fbl::Vector<fit::callback<void(zx_status_t)>> test_compatibility_conn_
       TA_GUARDED(test_compatibility_conn_lock_);
 
-  std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>
-      power_states_;
-  std::array<fuchsia_device_DevicePerformanceStateInfo,
-             fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES>
-      performance_states_;
-  std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
-      system_power_states_mapping_;
-  fuchsia_device_DevicePowerState current_power_state_;
+  PerformanceStates performance_states_;
+  DevicePowerStates power_states_;
+  SystemPowerStateMapping system_power_states_mapping_;
+  ::llcpp::fuchsia::device::DevicePowerState current_power_state_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDKTL_FIDL_H_
-#define DDKTL_FIDL_H_
+#ifndef SRC_DEVICES_HOST_DEVHOST_FIDL_H_
+#define SRC_DEVICES_HOST_DEVHOST_FIDL_H_
 
 #include <lib/fidl/llcpp/transaction.h>
 
-class DdkTransaction : public fidl::Transaction {
+class DevhostTransaction : public fidl::Transaction {
  public:
-  DdkTransaction(fidl_txn_t* txn) : txn_(txn) {}
+  explicit DevhostTransaction(fidl_txn_t* txn) : txn_(fs::FidlConnection::CopyTxn(txn)) {}
 
-  ~DdkTransaction() {
+  ~DevhostTransaction() {
     ZX_ASSERT_MSG(status_called_,
-                  "DdkTransaction must have it's Status() method used. \
-            This provides ::DdkMessage with the correct status value.\n");
+                  "DevhostTransaction must have it's Status() method used. \
+            This provides ::DevhostMessage with the correct status value.\n");
   }
 
   /// Status() return the internal state of the DDK transaction. This MUST be called
@@ -26,8 +26,6 @@ class DdkTransaction : public fidl::Transaction {
 
  protected:
   void Reply(fidl::Message msg) final {
-    ZX_ASSERT(txn_);
-
     const fidl_msg_t fidl_msg{
         .bytes = msg.bytes().data(),
         .handles = msg.handles().data(),
@@ -35,20 +33,24 @@ class DdkTransaction : public fidl::Transaction {
         .num_handles = static_cast<uint32_t>(msg.handles().size()),
     };
 
-    status_ = txn_->reply(txn_, &fidl_msg);
+    status_ = txn_.Txn()->reply(txn_.Txn(), &fidl_msg);
     msg.ClearHandlesUnsafe();
   }
 
   void Close(zx_status_t close_status) final { status_ = close_status; }
 
   std::unique_ptr<Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "DdkTransaction cannot take ownership of the transaction.\n");
+    // Can't check this for Async transactions
+    // This function is only valid for devhost. We know that we aren't closing the handle of the
+    // channel so that it doesn't get a BAD_HANDLE until after this transaction is destroyed
+    status_called_ = true;
+    return std::make_unique<DevhostTransaction>(*this);
   }
 
  private:
-  fidl_txn_t* txn_;
+  fs::FidlConnection txn_;
   zx_status_t status_ = ZX_OK;
   bool status_called_ = false;
 };
 
-#endif  // DDKTL_FIDL_H_
+#endif  // SRC_DEVICES_HOST_DEVHOST_FIDL_H_

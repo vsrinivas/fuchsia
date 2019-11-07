@@ -231,9 +231,9 @@ void devhost_finalize() {
         std::string drv = dev->parent->get_rebind_drv_name().value_or("");
         zx_status_t status = devhost_device_bind(dev->parent, drv.c_str());
         if (status != ZX_OK) {
-          fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-          if (dev->take_rebind_conn_and_clear(&conn)) {
-            fuchsia_device_ControllerRebind_reply(conn.Txn(), status);
+          auto rebind = dev->take_rebind_conn();
+          if (rebind) {
+            rebind(status);
           }
         }
       }
@@ -577,7 +577,8 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
 }
 
 zx_status_t devhost_device_get_dev_power_state_from_mapping(
-    const fbl::RefPtr<zx_device>& dev, uint32_t flags, fuchsia_device_SystemPowerStateInfo* info) {
+    const fbl::RefPtr<zx_device>& dev, uint32_t flags,
+    ::llcpp::fuchsia::device::SystemPowerStateInfo* info) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
   // system power states, this function will not need the switch case.
   // Some suspend flags might be translated to system power states with
@@ -603,9 +604,7 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  const std::array<fuchsia_device_SystemPowerStateInfo,
-                   fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
-      dev->GetSystemPowerStateMapping();
+  auto& sys_power_states = dev->GetSystemPowerStateMapping();
   *info = sys_power_states[sys_state];
   return ZX_OK;
 }
@@ -617,12 +616,12 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
   if (dev->ops->suspend_new) {
-    fuchsia_device_SystemPowerStateInfo new_state_info;
-    fuchsia_device_DevicePowerState out_state;
+    ::llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
+    uint8_t out_state;
     ApiAutoRelock relock;
     status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info);
     if (status == ZX_OK) {
-      status = dev->ops->suspend_new(dev->ctx, new_state_info.dev_state,
+      status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
                                      new_state_info.wakeup_enable, &out_state);
     }
   } else if (dev->ops->suspend) {
@@ -649,11 +648,10 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
   if (dev->ops->resume_new) {
     fuchsia_device_DevicePowerState out_state;
     ApiAutoRelock relock;
-    const std::array<fuchsia_device_SystemPowerStateInfo,
-                     fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
-        dev->GetSystemPowerStateMapping();
-    status =
-        dev->ops->resume_new(dev->ctx, sys_power_states[target_system_state].dev_state, &out_state);
+    auto& sys_power_states = dev->GetSystemPowerStateMapping();
+    status = dev->ops->resume_new(
+        dev->ctx, static_cast<uint8_t>(sys_power_states[target_system_state].dev_state),
+        &out_state);
   } else if (dev->ops->resume) {
     // Invoke resume hook otherwise.
     ApiAutoRelock relock;
@@ -670,22 +668,26 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
 }
 
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
-                                       fuchsia_device_DevicePowerState requested_state,
-                                       fuchsia_device_DevicePowerState* out_state) {
+                                       ::llcpp::fuchsia::device::DevicePowerState requested_state,
+                                       ::llcpp::fuchsia::device::DevicePowerState* out_state) {
   zx_status_t status = ZX_OK;
   if (dev->ops->suspend_new) {
-    status =
-        dev->ops->suspend_new(dev->ctx, requested_state, false /* wake_configured */, out_state);
+    uint8_t raw_out;
+    status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
+                                   false /* wake_configured */, &raw_out);
+    *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
   }
   return status;
 }
 
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev,
-                                      fuchsia_device_DevicePowerState requested_state,
-                                      fuchsia_device_DevicePowerState* out_state) {
+                                      ::llcpp::fuchsia::device::DevicePowerState requested_state,
+                                      ::llcpp::fuchsia::device::DevicePowerState* out_state) {
   zx_status_t status = ZX_OK;
   if (dev->ops->resume_new) {
-    status = dev->ops->resume_new(dev->ctx, requested_state, out_state);
+    uint8_t raw_out;
+    status = dev->ops->resume_new(dev->ctx, static_cast<uint8_t>(requested_state), &raw_out);
+    *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
   }
   return status;
 }

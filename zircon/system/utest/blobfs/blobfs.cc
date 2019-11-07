@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -262,10 +263,15 @@ bool BlobfsTest::Init(FsTestState state) {
     ASSERT_EQ(fvm_init(fd.get(), kTestFvmSliceSize), ZX_OK,
               "[FAILED]: Could not format disk with FVM");
     fzl::FdioCaller caller(std::move(fd));
-    zx_status_t status;
-    zx_status_t io_status = fuchsia_device_ControllerBind(caller.borrow_channel(), FVM_DRIVER_LIB,
-                                                          STRLEN(FVM_DRIVER_LIB), &status);
+    zx_status_t status = ZX_OK;
+    auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+        zx::unowned_channel(caller.borrow_channel()),
+        ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
+    zx_status_t io_status = resp.status();
     ASSERT_EQ(io_status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
+    if (resp->result.is_err()) {
+      status = resp->result.err();
+    }
     // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
     if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
       ASSERT_TRUE(false, "[FAILED] Driver wasn't already bound or failed to bind");
@@ -758,13 +764,23 @@ int main(int argc, char** argv) {
         return -1;
       }
       fzl::FdioCaller caller(std::move(fd));
-      zx_status_t status;
       size_t path_len;
-      zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
-          caller.borrow_channel(), &status, gRealDiskInfo.disk_path, PATH_MAX - 1, &path_len);
-      if (io_status != ZX_OK) {
-        status = io_status;
+      auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+          zx::unowned_channel(caller.borrow_channel()));
+      zx_status_t status = resp.status();
+      if (status == ZX_OK) {
+        if (resp->result.is_err()) {
+          status = resp->result.err();
+        } else {
+          auto r = resp->result.response();
+          path_len = r.path.size();
+          if (path_len > PATH_MAX) {
+            return ZX_ERR_INTERNAL;
+          }
+          memcpy(gRealDiskInfo.disk_path, r.path.data(), r.path.size());
+        }
       }
+
       if (status != ZX_OK) {
         fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
         return -1;
@@ -777,7 +793,7 @@ int main(int argc, char** argv) {
       fvm_destroy(gRealDiskInfo.disk_path);
 
       fuchsia_hardware_block_BlockInfo block_info;
-      io_status =
+      zx_status_t io_status =
           fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &block_info);
       if (io_status != ZX_OK) {
         status = io_status;

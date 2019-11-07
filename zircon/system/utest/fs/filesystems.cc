@@ -2,28 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "filesystems.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/device/block.h>
 
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/namespace.h>
-#include <lib/zx/channel.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zircon/device/block.h>
-
-#include "filesystems.h"
 
 const char* kTmpfsPath = "/fs-test-tmp";
 const char* kMountPath = "/fs-test-tmp/mount";
@@ -77,8 +78,8 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
     args.disable_block_watcher = true;
     args.disable_netsvc = true;
     args.driver_search_paths.push_back("/boot/driver");
-    zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args),
-                                                                         &isolated_devmgr);
+    zx_status_t status =
+        devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &isolated_devmgr);
     if (status != ZX_OK) {
       fprintf(stderr, "[FAILED]: Could not created isolated devmgr\n");
       exit(-1);
@@ -135,11 +136,14 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
       fprintf(stderr, "[FAILED]: Could not convert fd to channel\n");
       exit(-1);
     }
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
-                                                       STRLEN(FVM_DRIVER_LIB), &call_status);
+    auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+        zx::unowned_channel(fvm_channel.get()),
+        ::fidl::StringView(FVM_DRIVER_LIB, (strlen(FVM_DRIVER_LIB))));
+    zx_status_t status = resp.status();
     if (status == ZX_OK) {
-      status = call_status;
+      if (resp->result.is_err()) {
+        status = resp->result.err();
+      }
     }
     if (status != ZX_OK) {
       fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");

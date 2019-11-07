@@ -80,10 +80,9 @@ pub async fn validate_removal_of_fake_device(
 pub fn unbind_fake_device(device: &File, time_in_nanos: i64) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let status =
-        interface.schedule_unbind(zx::Time::after(zx::Duration::from_nanos(time_in_nanos)))?;
-    zx::Status::ok(status)?;
-    Ok(())
+    interface
+        .schedule_unbind(zx::Time::after(zx::Duration::from_nanos(time_in_nanos)))?
+        .map_err(|e| zx::Status::from_raw(e).into())
 }
 
 /// Read next message from `channel` with wait time `time`

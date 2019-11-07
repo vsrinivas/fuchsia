@@ -421,11 +421,12 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
       continue;
     }
     const auto& response2 = result2.value();
-    if (response2.status != ZX_OK) {
+    if (response2.result.is_err()) {
       continue;
     }
 
-    std::string path_str(response2.path.data(), static_cast<size_t>(response2.path.size()));
+    std::string path_str(response2.result.response().path.data(),
+                         static_cast<size_t>(response2.result.response().path.size()));
 
     // The GPT which will be a non-removable block device that isn't a partition itself.
     if (path_str.find("part-") == std::string::npos) {
@@ -1275,13 +1276,15 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
     return result.status();
   }
   const auto& response = result.value();
-  if (response.status != ZX_OK) {
-    ERROR("Warning: Could not get name for partition: %s\n", zx_status_get_string(response.status));
-    return response.status;
+  if (response.result.is_err()) {
+    ERROR("Warning: Could not get name for partition: %s\n",
+          zx_status_get_string(response.result.err()));
+    return response.result.err();
   }
 
   fbl::StringBuffer<PATH_MAX> name_buffer;
-  name_buffer.Append(response.path.data(), static_cast<size_t>(response.path.size()));
+  name_buffer.Append(response.result.response().path.data(),
+                     static_cast<size_t>(response.result.response().path.size()));
 
   const char* parent = dirname(name_buffer.data());
   constexpr char kDevRoot[] = "/dev/";

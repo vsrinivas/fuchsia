@@ -4,27 +4,27 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include <fbl/string_buffer.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
-#include <fs-test-utils/fixture.h>
-#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
-#include <ramdevice-client/ramdisk.h>
+#include <limits.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/errors.h>
+
+#include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fs-management/fvm.h>
+#include <fs-test-utils/fixture.h>
+#include <ramdevice-client/ramdisk.h>
 
 namespace fs_test_utils {
 
@@ -126,9 +126,14 @@ zx_status_t MakeFvm(int devfs_root, const char* root_path, const fbl::String& bl
   if (io == NULL) {
     return ZX_ERR_INTERNAL;
   }
-  zx_status_t call_status;
-  result = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kFvmDriverLibPath,
-                                         strlen(kFvmDriverLibPath), &call_status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+      ::fidl::StringView(kFvmDriverLibPath, strlen(kFvmDriverLibPath)));
+  result = resp.status();
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   fdio_unsafe_release(io);
   if (result == ZX_OK) {
     result = call_status;
