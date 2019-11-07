@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
+#include <set>
 #include <vector>
 
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
@@ -20,76 +21,84 @@ class PointerEventRouter;
 //
 // Recognizers add themselves to the arena via GestureArena::Add(), and receive a ArenaMember in
 // return. Recognizers are then expected to:
-// 1. Call ClaimWin(), when they want to win the arena.
-// 2. DeclareDefeat() when they want to leave the arena.
+// 1. Call Accept(), when they want to win the arena.
+// 2. Reject() when they want to leave the arena.
+// 3. Call Hold(), when they want to see a subsequent interaction. They are also
+// expected to call Release(), before the end of the last interaction to
+// indicate they are done.
 //
 // For a group of recognizers in an arena, it is also true:
 // 1. Multiple recognizers are kContending -> One becomes kWinner, remainder
 // kDefeated.
 // 2. Multiple recognizers are kContending -> All but the last declare
 // kDefeated, the last is assigned kWinner.
+// 3. The winner can also declare defeat by calling Reject(), which causes the
+// arena to be empty.
 class ArenaMember {
  public:
-  enum Status {
+  enum class Status {
     kContending,  // Competing to handle the gesture
     kWinner,      // Won the arena for the gesture
     kDefeated,    // Lost the arena for this gesture.
   };
-  ArenaMember(GestureArena* arena, PointerEventRouter* router, GestureRecognizer* recognizer);
+  ArenaMember(GestureArena* arena, GestureRecognizer* recognizer);
   virtual ~ArenaMember() = default;
 
-  // Returns the status of this member in the Arena. Once the gesture has been
-  // handled, the arena is responsible for calling Reset() on this object to
-  // start a new contending.
-  Status status() { return status_; }
+  // Returns the status of this member in the Arena. Once the gesture has been handled, the arena is
+  // responsible for resetting this.
+  Status status() const { return status_; }
 
-  // Returns true if this member should receive pointer events, either because it is still
-  // contending or it has won the arena.
-  bool IsActive() const { return status_ == kContending || status_ == kWinner; }
+  // Returns true if this member should receive pointer events.
+  bool is_active() const { return is_active_; }
 
-  // Prepares the arena member to a new contending.
-  void Reset();
+  // Claims a win in this arena. If this results in this member winning, the recognizer receives a
+  // call to |OnWin()|. Returns true if this member has won, whether due to this claim or if it has
+  // already won, and false if it has already lost.
+  virtual bool Accept();
 
-  // Claims a win in this arena. If successful, the recognizer then receive a
-  // call to OnWin(), to indicate that it has won the arena. If not successful,
-  // returns false, indicating that this member is already defeated.
-  bool ClaimWin();
+  // Declares defeat in this arena. If this results in this member being
+  // defeated, the recognizer receives a call to |OnDefeat()|. This also
+  // releases the arena, in case it has been held.
+  virtual void Reject();
 
-  // Leave this arena. The recognizer then receive a call to
-  // OnDefeat(), to indicate that it has lost the arena. Returns false if a
-  // winner member tries to call DeclareDefeat(), after winning.
-  virtual bool DeclareDefeat();
+  // Holds the arena indicating that this member wants to see another
+  // interaction before the resolution of the contest.
+  void Hold();
 
-  // Only a member that has won the arena can stop routing pointer events.
-  // When it has won the arena and finished processing pointer events, it
-  // calls this method to indicate what should be done with pointer events
-  // (consume / reject - please see
-  // |fuchsia::ui::input::accessibility::EventHandling| for more info). This
-  // causes the arena to be restarted and all members will participate again.
-  // Normally, the winner recognizer waits to see if its gesture is
-  // recognized, and, if it is, calls this method when it has done processing.
-  // If, for some reason the winner decides not to consume the pointer events,
-  // it calls at any time rejecting the rest of pointer events.
-  virtual bool StopRoutingPointerEvents(fuchsia::ui::input::accessibility::EventHandling handled);
+  // If the arena was held by this member, releases it.
+  void Release();
+
+  // Returns true if this member is holding the arena.
+  bool is_holding() const;
 
   GestureRecognizer* recognizer() { return recognizer_; }
 
  private:
+  friend class GestureArena;
+
+  // Sets this member as the winner for the arena.
+  void SetWin();
+
+  // Sets this member as defeated.
+  void SetDefeat();
+
+  // Prepares the arena member to a new contest.
+  void Reset();
+
   GestureArena* const arena_ = nullptr;
-  PointerEventRouter* const router_ = nullptr;
   GestureRecognizer* const recognizer_ = nullptr;
-  Status status_ = kContending;
-  bool stopped_receiving_pointer_events_ = false;
+  Status status_ = Status::kContending;
+  bool is_active_ = true;
+  bool is_holding_ = false;
 };
 
-// Routes accessibility pointer events to recognizers.
+// Routes accessibility pointer events to recognizers and input system.
 //
 // The PointerEventRouter manages the life cycle of accessibility pointer
 // events arriving from the OS input system. They are dispatched to
 // recognizers that are still contending for the gesture in the arena or to
-// the recgonizer that has won the arena. Once the winner recognizer is done
-// processing this stream of pointer events, it asks the router to either
-// consume or reject the pointer events. Please see
+// the recgonizer that has won the arena. It also can dispatch events to the
+// input system, either consuming or rejecting the pointer events. Please see:
 // |fuchsia.ui.input.accessibility.EventHandling| for more info on consuming /
 // rejecting pointer events.
 class PointerEventRouter {
@@ -103,26 +112,30 @@ class PointerEventRouter {
   PointerEventRouter() = default;
   ~PointerEventRouter() = default;
 
-  // Rejects all pointer event streams received by the router and resets the router to receive new
-  // ones.
+  // Rejects all pointer event streams received by the router, causing it to become inactive.
   void RejectPointerEvents();
 
-  // Consumes all pointer event streams received by the router and resets the router to receive new
-  // ones.
+  // Consumes all pointer event streams received by the router. This does not
+  // cause the router to become inactive, as it will continue to receive the
+  // pointer events for each consumed stream until it finishes.
   void ConsumePointerEvents();
 
-  // Dispatches the pointer event to all active arena members. In this
-  // process, also caches the callback from the input system to notify it
-  // later whether the pointer events were consumed / rejected.
-  void RouteEventToArenaMembers(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-                                OnEventCallback callback,
-                                const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
+  // Dispatches the pointer event to all active arena members. For new contest (ADD pointer
+  // events), also caches the callback from the input system to notify it later whether the pointer
+  // events were consumed / rejected.
+  void RouteEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
+                  OnEventCallback callback,
+                  const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
 
-  // Returns true if it has any pending pointer event streams waiting a response whether they were
-  // consumed / rejected.
-  bool IsActive() { return !pointer_event_callbacks_.empty(); }
+  // Returns true if it has any ongoing pointer event streams which are not
+  // finished yet. A stream is considered finished when it sees and event with
+  // phase == REMOVE.
+  bool is_active() const { return !active_streams_.empty(); }
 
  private:
+  // Used to uniquely identify a pointer event stream. A pair is used rather
+  // than a structure for a comparable key for std::set.
+  using StreamID = std::pair</*device_id=*/uint32_t, /*pointer_id=*/uint32_t>;
   void InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling handled);
 
   // Holds callbacks associated with pointer event streams in order to notify the input system
@@ -132,8 +145,11 @@ class PointerEventRouter {
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
   // https://chromium.googlesource.com/chromium/src/+/master/base/containers/README.md#map-and-set-selection
-  std::map<std::pair</*pointer_id=*/uint32_t, /*device_id=*/uint32_t>, std::vector<OnEventCallback>>
-      pointer_event_callbacks_;
+  std::map<StreamID, std::vector<OnEventCallback>> pointer_event_callbacks_;
+
+  // Holds the streams in progress tracked by the router. A stream of pointer events is considered
+  // to be active when an event with phase ADD was seen, but not an event with phase REMOVE yet.
+  std::set<StreamID> active_streams_;
 };
 
 // The Gesture Arena for accessibility services.
@@ -142,10 +158,14 @@ class PointerEventRouter {
 // gesture that is being performed. It respects the following rules:
 // 1. The first recognizer to claim a win, wins.
 // 2. The last recognizer to be in the arena wins.
+// 3. If the arena is not held and no recognizer won by the end of an
+// interaction, sweeps the arena and turn the first recognizer the winner.
 //
 // Any recognizer can declare win or defeat at any time. Once a recognizer has
-// won the arena for that gesture, it receives incoming pointer events until it
-// tells the arena that it has finished processing pointer events.
+// won the arena for that gesture, it receives incoming pointer events until the
+// end of the interaction. The recognizer can continue receiving pointer events
+// of a subsequent interaction by holding the arena and releasing it when it is
+// done.
 //
 // The order in which recognizers are added to the arena is important. When
 // routing pointer events to recognizers, they see the event in order they were
@@ -178,15 +198,22 @@ class PointerEventRouter {
 // arena: https://flutter.dev/docs/development/ui/advanced/gestures
 // For those familiar how Flutter version works, here are the important main
 // differences:
-// 1. It does not implement a sweep logic, which means that all recognizers must
-// not be passive -- in another words, they always must at some point call
-// ClaimWin() or DeclareDefeat(), as the arena will never force a resolution
-// when all pointer IDs have stopped contacting the screen.
-// 2. The arena here is not per finger (AKA per pointer ID), which means that
+// - The arena here is not per finger (AKA per pointer ID), which means that
 // recognizers receive the whole interaction with the screen.
 class GestureArena {
  public:
-  GestureArena();
+  enum class State {
+    kContendingInProgress,  // One or more recognizers are still contending.
+    kAssigned,              // A winner has been assigned and processes events.
+    kEmpty,                 // All recognizers have left the arena.
+  };
+
+  enum class EventHandlingPolicy {
+    kConsumeEvents,  // All events will be consumed by this arena even when it becomes empty.
+    kRejectEvents,   // All events will be rejected by this arena when it becomes empty.
+  };
+
+  GestureArena(EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kConsumeEvents);
   ~GestureArena() = default;
 
   // Adds a new recognizer to participate in the arena. The arena returns a
@@ -206,18 +233,34 @@ class GestureArena {
   // It follows two rules:
   // 1. If a recgonizer declared a win, it wins.
   // 2. If a recgonizer is the last one active, it wins.
-  // A resolved arena will continue to be so until the winner recognizer for
-  // that arena calls ArenaMember::StopRoutingPointerEvents(), which restarts
-  // the arena for a new contending.
+  // A resolved arena will continue to be so until the interaction is over and
+  // the arena is not held, which restarts the arena for a new contest.
   void TryToResolve();
 
-  // Resets the arena for a new contending.
+  // Resets the arena for a new contest.
   void Reset();
 
+  // Returns true if there is any non-defeated arena member holding the arena.
+  bool IsHeld() const;
+
  private:
+  // Returns true if the arena is not held and the interaction is finished.
+  bool IsIdle() const;
+
+  // Resets the arena and notify members that a new contest has started.
+  void StartNewContest();
+
+  // Sweeps the arena granting the win to the first recognizer that is contending.
+  void Sweep();
+
+  // handles how accessibility pointer events will be used by this arena. This depends on the policy
+  // in which it was configured during its construction.
+  void HandleEvents(bool consumed_by_member);
+
   PointerEventRouter router_;
   std::vector<std::unique_ptr<ArenaMember>> arena_members_;
-  bool resolved_ = false;
+  State state_ = State::kContendingInProgress;
+  EventHandlingPolicy event_handling_policy_ = EventHandlingPolicy::kConsumeEvents;
 };
 
 }  // namespace a11y

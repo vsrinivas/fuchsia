@@ -30,28 +30,28 @@ namespace a11y {
 class OneFingerTapRecognizer : public GestureRecognizer {
  public:
   // Various states of Gesture Recognizer state machine.
-  enum TapGestureState {
-    kNotStarted,
-    kInProgress,
-    kDownFingerDetected,
-    kGestureDetectedAndWaiting
+  enum class TapGestureState {
+    kNotStarted,          // No pointer ID detected yet
+    kDownFingerDetected,  // One pointer ID made contact with the screen.
+    kGestureDetected,     // The gesture was detected.
+    kDone,                // End state, the recnogizer is finished for this contending.
   };
 
   // Max value by which pointer events can move(relative to first point of contact), and still are
   // valid for tap gestures.
   static constexpr uint32_t kGestureMoveThreshold = 8;
 
-  // Time(in milli seconds) under which one finger tap gesture should be performed.
-  static constexpr uint32_t kOneFingerTapTimeout = 300;
+  // Maximum time the tap can be performed.
+  static constexpr zx::duration kOneFingerTapTimeout = zx::msec(300);
 
   // Callback which will be invoked when one finger tap gesture has been recognized.
   using OnOneFingerTap = fit::function<void(GestureContext)>;
 
-  // Tap timeout(in milli second) is the maximum time a finger can be in contact with the screen to
-  // be considered a tap.
+  // Tap timeout is the maximum time a finger can be in
+  // contact with the screen to be considered a tap.
   // Callback will be invoked, when gesture is detected and the recognizer is the winner in gesture
   // arena.
-  OneFingerTapRecognizer(OnOneFingerTap callback, uint64_t tap_timeout = kOneFingerTapTimeout);
+  OneFingerTapRecognizer(OnOneFingerTap callback, zx::duration tap_timeout = kOneFingerTapTimeout);
 
   // Initializes pointer to Arena Member.
   void AddArenaMember(ArenaMember* new_arena_member);
@@ -69,8 +69,10 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // It resets the state of the recognizer.
   void OnDefeat() override;
 
+  void OnContestStarted() override;
+
   // A human-readable string name for the recognizer to be used in logs only.
-  std::string DebugName() override;
+  std::string DebugName() const override;
 
   // Returns current state of the gesture recognizer.
   TapGestureState GetGestureState() { return gesture_state_; }
@@ -94,7 +96,7 @@ class OneFingerTapRecognizer : public GestureRecognizer {
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Stores the current state of the Gesture State Machine.
-  TapGestureState gesture_state_ = kNotStarted;
+  TapGestureState gesture_state_ = TapGestureState::kNotStarted;
 
   // Stores the pointer to Arena Member.
   ArenaMember* arena_member_ = nullptr;
@@ -105,12 +107,12 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // Callback which will be executed when gesture is executed.
   OnOneFingerTap one_finger_tap_callback_;
 
-  // One finger tap timeout(in mili seconds), if the gesture is performed over a time longer than
-  // this timeout then it won't be recognized.
-  uint64_t one_finger_tap_timeout_;
+  // Async task used to scheduled gesture timeout.
+  async::TaskClosureMethod<OneFingerTapRecognizer, &OneFingerTapRecognizer::AbandonGesture>
+      abandon_task_;
 
-  // Used for performing delayed task.
-  async::Task gesture_task_;
+  // Maximum time a tap can be performed.
+  const zx::duration tap_timeout_;
 
   // Flag to declare if GestureArena has declared this recognizer a winner.
   bool is_winner_ = false;

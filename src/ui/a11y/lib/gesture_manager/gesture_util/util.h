@@ -30,19 +30,6 @@ struct GestureInfo {
   bool is_winner_ = false;
 };
 
-// Callback which will be used while scheduling a task. When the scheduled task will run, it will
-// invoke this callback.
-using ScheduleTaskCallback =
-    fit::function<void(async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status)>;
-
-// Helper function to schedule a task with a timeout. After the timeout is complete provided
-// callback function will be called.
-void ScheduleCallbackTask(async::Task* gesture_task, ScheduleTaskCallback callback,
-                          const uint32_t one_finger_tap_timeout);
-
-// Helper function to cancel the task scheduled by ScheduleCallbackTask.
-void CancelCallbackTask(async::Task* gesture_task);
-
 // Helper function to initialize GestureInfo and GestureContext using the provided pointer_event.
 // This function returns falls when pointer_event is missing required fields like pointer id,
 // global_point, device_id and event_time.

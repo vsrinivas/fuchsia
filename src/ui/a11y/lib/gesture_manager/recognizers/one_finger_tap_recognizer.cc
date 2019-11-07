@@ -14,10 +14,10 @@
 
 namespace a11y {
 
-OneFingerTapRecognizer::OneFingerTapRecognizer(OnOneFingerTap callback, uint64_t tap_timeout)
-    : one_finger_tap_callback_(std::move(callback)), one_finger_tap_timeout_(tap_timeout) {
-  ResetState();
-}
+OneFingerTapRecognizer::OneFingerTapRecognizer(OnOneFingerTap callback, zx::duration tap_timeout)
+    : one_finger_tap_callback_(std::move(callback)),
+      abandon_task_(this),
+      tap_timeout_(tap_timeout) {}
 
 void OneFingerTapRecognizer::AddArenaMember(ArenaMember* new_arena_member) {
   FXL_CHECK(new_arena_member);
@@ -32,65 +32,46 @@ void OneFingerTapRecognizer::HandleEvent(
   }
   switch (pointer_event.phase()) {
     case fuchsia::ui::input::PointerEventPhase::ADD:
-      ResetState();
-      gesture_state_ = kInProgress;
       break;
-
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
         FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
         AbandonGesture();
-        ResetState();
         break;
       }
-
-      if ((gesture_state_ != kInProgress) ||
+      if ((gesture_state_ != TapGestureState::kNotStarted) ||
           !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
           !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
-        ResetState();
         break;
       }
-
-      // Schedule a task to declare defeat with a timeout equal to one_finger_tap_timeout.
-      ScheduleCallbackTask(
-          &gesture_task_,
-          [this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-            if (status == ZX_OK) {
-              AbandonGesture();
-            }
-          },
-          one_finger_tap_timeout_);
-      gesture_state_ = kDownFingerDetected;
-
+      // Posts a tasks. If the gesture is performed before it executes, the task is canceled.
+      abandon_task_.PostDelayed(async_get_default_dispatcher(), tap_timeout_);
+      gesture_state_ = TapGestureState::kDownFingerDetected;
       break;
-
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      if ((gesture_state_ != kDownFingerDetected) ||
+      if ((gesture_state_ != TapGestureState::kDownFingerDetected) ||
           !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
           !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
-        ResetState();
         break;
       }
-
       break;
-
     case fuchsia::ui::input::PointerEventPhase::UP:
-      if ((gesture_state_ != kDownFingerDetected) ||
+      if ((gesture_state_ != TapGestureState::kDownFingerDetected) ||
           !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
           !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
-        ResetState();
         break;
       }
-      CancelCallbackTask(&gesture_task_);
-      if (is_winner_) {
-        // One Tap Gesture detected.
-        ExecuteOnWin();
-      } else {
-        gesture_state_ = kGestureDetectedAndWaiting;
-      }
+      // The gesture was detected, cancels the task.
+      abandon_task_.Cancel();
+
+      // The gesture was detected. Please note as this is a passive gesture, it
+      // never forces the win on the arena. It waits to win by the last standing
+      // rule.
+      gesture_state_ = TapGestureState::kGestureDetected;
+      ExecuteOnWin();
       break;
     default:
       break;
@@ -99,41 +80,33 @@ void OneFingerTapRecognizer::HandleEvent(
 
 void OneFingerTapRecognizer::OnWin() {
   is_winner_ = true;
-  if (gesture_state_ == kGestureDetectedAndWaiting) {
+  if (gesture_state_ == TapGestureState::kGestureDetected) {
     ExecuteOnWin();
   }
 }
 
 void OneFingerTapRecognizer::ExecuteOnWin() {
-  GestureContext new_gesture_context = gesture_context_;
-  one_finger_tap_callback_(new_gesture_context);
-  if (!arena_member_) {
-    FX_LOGS(ERROR) << "Arena member is not initialized.";
-    return;
+  if (is_winner_) {
+    one_finger_tap_callback_(gesture_context_);
+    gesture_state_ = TapGestureState::kDone;
   }
-  arena_member_->StopRoutingPointerEvents(
-      fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
-  ResetState();
 }
-void OneFingerTapRecognizer::OnDefeat() { ResetState(); }
+
+void OneFingerTapRecognizer::OnDefeat() { gesture_state_ = TapGestureState::kDone; }
 
 void OneFingerTapRecognizer::AbandonGesture() {
   if (!arena_member_) {
     FX_LOGS(ERROR) << "Arena member is not initialized.";
     return;
   }
-  if (is_winner_) {
-    arena_member_->StopRoutingPointerEvents(
-        fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
-  } else {
-    arena_member_->DeclareDefeat();
-  }
+  arena_member_->Reject();
+  abandon_task_.Cancel();
+  gesture_state_ = TapGestureState::kDone;
 }
 
 void OneFingerTapRecognizer::ResetState() {
-  // Cancel any pending callback.
-  CancelCallbackTask(&gesture_task_);
-
+  // Cancels any pending task.
+  abandon_task_.Cancel();
   // Reset GestureInfo.
   gesture_start_info_.gesture_start_time = 0;
   gesture_start_info_.starting_global_position.x = 0;
@@ -147,14 +120,13 @@ void OneFingerTapRecognizer::ResetState() {
   gesture_start_info_.view_ref_koid = ZX_KOID_INVALID;
 
   // Reset GestureState.
-  gesture_state_ = kNotStarted;
+  gesture_state_ = TapGestureState::kNotStarted;
 
   // Reset Gesture Context.
   gesture_context_.view_ref_koid = 0;
   gesture_context_.local_point->x = 0;
   gesture_context_.local_point->y = 0;
 
-  // Reset is_winner_ flag.
   is_winner_ = false;
 }
 
@@ -169,12 +141,11 @@ bool OneFingerTapRecognizer::ValidatePointerEventForTap(
     return false;
   }
 
-  // Check if the new pointer event time(nano second) is within one finger tap timeout(milli
-  // second).
-  return (pointer_event.event_time() - gesture_start_info_.gesture_start_time) <=
-         (one_finger_tap_timeout_ * 1000);
+  return true;
 }
 
-std::string OneFingerTapRecognizer::DebugName() { return "one_finger_tap_recognizer"; }
+void OneFingerTapRecognizer::OnContestStarted() { ResetState(); }
+
+std::string OneFingerTapRecognizer::DebugName() const { return "one_finger_tap_recognizer"; }
 
 }  // namespace a11y

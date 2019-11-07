@@ -13,14 +13,9 @@ class MockArenaMember : public a11y::ArenaMember {
   explicit MockArenaMember(a11y::GestureRecognizer* recognizer);
 
   // Recognizer will call this function to declare defeat.
-  bool DeclareDefeat();
+  void Reject() override;
 
-  bool IsDeclareDefeatCalled() { return declare_defeat_called_; }
-
-  // Recognizer will call this function when gesture is executed.
-  bool StopRoutingPointerEvents(fuchsia::ui::input::accessibility::EventHandling handled);
-
-  bool IsStopRoutingPointerEventsCalled() { return stop_routing_pointer_events_called_; }
+  bool IsRejectCalled() const { return reject_called_; }
 
   // Helper function to call OnWin() on recognizer.
   bool CallOnWin();
@@ -29,8 +24,7 @@ class MockArenaMember : public a11y::ArenaMember {
   bool IsOnWinCalled() { return on_win_called_; }
 
  private:
-  bool declare_defeat_called_ = false;
-  bool stop_routing_pointer_events_called_ = false;
+  bool reject_called_ = false;
   bool on_win_called_ = false;
   a11y::GestureArena arena_;
   a11y::PointerEventRouter router_;

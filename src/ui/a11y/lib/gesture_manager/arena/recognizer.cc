@@ -8,4 +8,8 @@ namespace a11y {
 
 GestureRecognizer::~GestureRecognizer() = default;
 
+void GestureRecognizer::OnWin() {}
+void GestureRecognizer::OnDefeat() {}
+void GestureRecognizer::OnContestStarted() {}
+
 }  // namespace a11y

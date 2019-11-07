@@ -19,7 +19,6 @@ executable("gesture_arena_tests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
-    "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
+    "//src/ui/a11y/lib/gesture_manager/arena",
   ]
 }

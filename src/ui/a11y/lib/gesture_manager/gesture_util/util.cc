@@ -11,15 +11,6 @@
 
 namespace a11y {
 
-void ScheduleCallbackTask(async::Task* gesture_task, ScheduleTaskCallback callback,
-                          const uint32_t one_finger_tap_timeout) {
-  gesture_task->set_handler(std::move(callback));
-
-  gesture_task->PostDelayed(async_get_default_dispatcher(), zx::msec(one_finger_tap_timeout));
-}
-
-void CancelCallbackTask(async::Task* gesture_task) { gesture_task->Cancel(); }
-
 bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
                      GestureInfo* gesture_start_info, GestureContext* gesture_context) {
   if (!pointer_event.has_event_time()) {

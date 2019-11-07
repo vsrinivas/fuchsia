@@ -10,27 +10,18 @@
 namespace accessibility_test {
 
 MockArenaMember::MockArenaMember(a11y::GestureRecognizer* recognizer)
-    : a11y::ArenaMember(&arena_, &router_, recognizer) {
+    : a11y::ArenaMember(&arena_, recognizer) {
   recognizer_ = recognizer;
 }
 
-bool MockArenaMember::DeclareDefeat() {
-  declare_defeat_called_ = true;
-  EXPECT_FALSE(IsOnWinCalled());
+void MockArenaMember::Reject() {
+  reject_called_ = true;
   recognizer_->OnDefeat();
-  return true;
-}
-
-bool MockArenaMember::StopRoutingPointerEvents(
-    fuchsia::ui::input::accessibility::EventHandling handled) {
-  stop_routing_pointer_events_called_ = true;
-  return true;
 }
 
 bool MockArenaMember::CallOnWin() {
   recognizer_->OnWin();
   on_win_called_ = true;
-
   return true;
 }
 

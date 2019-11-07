@@ -10,7 +10,7 @@ source_set("gesture_recognizers") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
+    "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/gesture_util",
   ]
 

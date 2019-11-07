@@ -6,42 +6,19 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/gesture_manager/interaction.h"
+#include "src/ui/a11y/lib/gesture_manager/util.h"
 
 namespace a11y {
-
-namespace {
-
-using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
-using fuchsia::ui::input::PointerEvent;
-using Phase = fuchsia::ui::input::PointerEventPhase;
-
-// Converts an Accessibility Pointer Event to a regular pointer event.
-PointerEvent AccessibilityPointerEventToPointerEvent(const AccessibilityPointerEvent& a11y_event) {
-  PointerEvent ptr;
-  ptr.event_time = a11y_event.event_time();
-  ptr.device_id = a11y_event.device_id();
-  ptr.pointer_id = a11y_event.pointer_id();
-  ptr.type = fuchsia::ui::input::PointerEventType::TOUCH;  // Accessibility Pointer Events are only
-                                                           // touch for now.
-  ptr.phase = a11y_event.phase();
-  // Please note that for detecting a gesture, global coordinates are used. Later,
-  // if necessary, local coordinates are sent.
-  ptr.x = a11y_event.global_point().x;
-  ptr.y = a11y_event.global_point().y;
-  return ptr;
-}
-}  // namespace
 
 GestureManager::GestureManager()
     : binding_(this), gesture_detector_(this), context_(&gesture_handler_) {}
 
-void GestureManager::OnEvent(AccessibilityPointerEvent pointer_event) {
-  auto ptr = AccessibilityPointerEventToPointerEvent(pointer_event);
+void GestureManager::OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event) {
+  auto ptr = ToPointerEvent(pointer_event);
   context_.AddPointerEvent(std::move(pointer_event));
   gesture_detector_.OnPointerEvent(ptr);
-  if (ptr.phase == Phase::ADD) {
+  if (ptr.phase == fuchsia::ui::input::PointerEventPhase::ADD) {
     // For now, all pointer events dispatched to accessibility services are consumed.
     // TODO(): Implement consume / reject functionality of pointer events in Gesture Manager.
     binding_.events().OnStreamHandled(ptr.device_id, ptr.pointer_id,

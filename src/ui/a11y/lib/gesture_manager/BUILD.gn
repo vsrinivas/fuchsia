@@ -19,14 +19,30 @@ source_set("gesture_manager") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//src/lib/ui/input:gesture",
-    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
+    "//src/ui/a11y/lib/gesture_manager/arena",
   ]
 
   deps = [
+    ":util",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+  ]
+}
+
+source_set("util") {
+  public = [
+    "util.h",
+  ]
+
+  sources = [
+    "util.cc",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
   ]
 }

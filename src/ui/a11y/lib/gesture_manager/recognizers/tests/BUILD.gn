@@ -20,7 +20,7 @@ executable("gesture_recognizers_tests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
+    "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
     "//src/ui/a11y/lib/gesture_manager/recognizers:gesture_recognizers",
   ]

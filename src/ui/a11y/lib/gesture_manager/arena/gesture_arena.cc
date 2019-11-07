@@ -13,10 +13,43 @@ namespace {
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using Phase = fuchsia::ui::input::PointerEventPhase;
 
+// Holds pointers to arena members in different states.
+// If winner is not nullptr, contending is empty. If contending is not empty, winner is nullptr.
+struct ClassifiedArenaMembers {
+  ArenaMember* winner = nullptr;
+  std::vector<ArenaMember*> contending;
+};
+
+// Classifies the arena members into winner and contending.
+// Example:
+// auto [winner, contending] = ClassifyArenaMembers(arena_members);
+ClassifiedArenaMembers ClassifyArenaMembers(
+    const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
+  ClassifiedArenaMembers c;
+  for (const auto& member : arena_members) {
+    switch (member->status()) {
+      case ArenaMember::Status::kWinner:
+        FX_CHECK(!c.winner) << "A gesture arena can have up to one winner only.";
+        c.winner = member.get();
+        break;
+      case ArenaMember::Status::kDefeated:
+        // No work to do.
+        break;
+      case ArenaMember::Status::kContending:
+        c.contending.push_back(member.get());
+        break;
+    };
+  }
+  return c;
+}
+
 }  // namespace
 
 void PointerEventRouter::RejectPointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::REJECTED);
+  // it is also necessary to clear the active streams, because as they were rejected, the input
+  // system will not send the rest of the stream to us.
+  active_streams_.clear();
 }
 
 void PointerEventRouter::ConsumePointerEvents() {
@@ -26,16 +59,15 @@ void PointerEventRouter::ConsumePointerEvents() {
 void PointerEventRouter::InvokePointerEventCallbacks(
     fuchsia::ui::input::accessibility::EventHandling handled) {
   for (const auto& kv : pointer_event_callbacks_) {
-    uint32_t pointer_id = kv.first.first;
-    uint32_t device_id = kv.first.second;
+    const auto [device_id, pointer_id] = kv.first;
     for (const auto& callback : kv.second) {
-      callback(pointer_id, device_id, handled);
+      callback(device_id, pointer_id, handled);
     }
   }
   pointer_event_callbacks_.clear();
 }
 
-void PointerEventRouter::RouteEventToArenaMembers(
+void PointerEventRouter::RouteEvent(
     AccessibilityPointerEvent pointer_event, OnEventCallback callback,
     const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
   // Note that at some point we must answer whether the pointer event stream was
@@ -47,139 +79,191 @@ void PointerEventRouter::RouteEventToArenaMembers(
   // reject all pointer events that were sent to the arena, and not per a
   // pointer event ID basis. Although this can be implemented, there is no use
   // case for this right now.
-  if (pointer_event.phase() == Phase::ADD) {
-    uint32_t pointer_id = pointer_event.pointer_id();
-    uint32_t device_id = pointer_event.device_id();
-    pointer_event_callbacks_[{pointer_id, device_id}].push_back(std::move(callback));
-  }
+  const StreamID stream_id(pointer_event.device_id(), pointer_event.pointer_id());
+  switch (pointer_event.phase()) {
+    case Phase::ADD:
+      pointer_event_callbacks_[stream_id].push_back(std::move(callback));
+      active_streams_.insert(stream_id);
+      break;
+    case Phase::REMOVE:
+      active_streams_.erase(stream_id);
+      break;
+    default:
+      break;
+  };
   for (const auto& member : arena_members) {
-    if (member->IsActive()) {
+    if (member->is_active()) {
       member->recognizer()->HandleEvent(pointer_event);
     }
   }
 }
 
-ArenaMember::ArenaMember(GestureArena* arena, PointerEventRouter* router,
-                         GestureRecognizer* recognizer)
-    : arena_(arena), router_(router), recognizer_(recognizer) {
+ArenaMember::ArenaMember(GestureArena* arena, GestureRecognizer* recognizer)
+    : arena_(arena), recognizer_(recognizer) {
   FX_CHECK(arena_ != nullptr);
-  FX_CHECK(router_ != nullptr);
   FX_CHECK(recognizer_ != nullptr);
 }
 
-bool ArenaMember::ClaimWin() {
-  if (status_ == kDefeated) {
-    return false;
+bool ArenaMember::Accept() {
+  if (status_ == Status::kContending) {
+    SetWin();
+    arena_->TryToResolve();
   }
-  FX_CHECK(status_ != kWinner) << "Declaring the recognizer " << recognizer_->DebugName()
-                               << " as winner when it has already won";
-  FX_LOGS(INFO) << "winning gesture: " << recognizer_->DebugName();
-  status_ = kWinner;
-  recognizer_->OnWin();
-  arena_->TryToResolve();
-  return true;
+  return status_ == Status::kWinner;
 }
 
-bool ArenaMember::DeclareDefeat() {
-  if (status_ == kWinner) {
-    return false;
+void ArenaMember::Reject() {
+  if (status_ == Status::kContending || status_ == Status::kWinner) {
+    SetDefeat();
+    arena_->TryToResolve();
   }
-  FX_CHECK(status_ != kDefeated) << "Declaring the recognizer " << recognizer_->DebugName()
-                                 << " as defeated when it has already lost";
-  FX_LOGS(INFO) << "defeating recognizer " << recognizer_->DebugName();
-  status_ = kDefeated;
-  stopped_receiving_pointer_events_ = true;
+  is_active_ = false;
+}
+
+void ArenaMember::Hold() { is_holding_ = true; }
+
+void ArenaMember::Release() { is_holding_ = false; }
+
+bool ArenaMember::is_holding() const { return is_holding_; }
+
+void ArenaMember::SetWin() {
+  FX_DCHECK(status_ == Status::kContending);
+  FX_LOGS(INFO) << "winning recognizer: " << recognizer_->DebugName();
+  status_ = Status::kWinner;
+  recognizer_->OnWin();
+}
+
+void ArenaMember::SetDefeat() {
+  FX_LOGS(INFO) << "defeated recognizer: " << recognizer_->DebugName();
+  status_ = Status::kDefeated;
   recognizer_->OnDefeat();
-  arena_->TryToResolve();
-  return true;
+  Release();  // Does nothing if not holding.
 }
 
 void ArenaMember::Reset() {
-  FX_CHECK(stopped_receiving_pointer_events_)
-      << "The recognizer " << recognizer_->DebugName()
-      << " was reset without stopping tracking of pointer events.";
-  status_ = kContending;
-  stopped_receiving_pointer_events_ = false;
+  status_ = Status::kContending;
+  is_active_ = true;
+  is_holding_ = false;
 }
 
-bool ArenaMember::StopRoutingPointerEvents(
-    fuchsia::ui::input::accessibility::EventHandling handled) {
-  if (status_ != kWinner) {
-    // Only the winner of the arena can decide where to dispatch the pointer events.
-    return false;
-  }
-  stopped_receiving_pointer_events_ = true;
-  switch (handled) {
-    case fuchsia::ui::input::accessibility::EventHandling::CONSUMED:
-      router_->ConsumePointerEvents();
-      break;
-    case fuchsia::ui::input::accessibility::EventHandling::REJECTED:
-      router_->RejectPointerEvents();
-      break;
-  };
-  arena_->Reset();
-  return true;
-}
-
-GestureArena::GestureArena() = default;
+GestureArena::GestureArena(EventHandlingPolicy event_handling_policy)
+    : event_handling_policy_(event_handling_policy) {}
 
 ArenaMember* GestureArena::Add(GestureRecognizer* recognizer) {
-  FX_CHECK(!router_.IsActive())
+  FX_CHECK(!router_.is_active())
       << "Trying to add a new gesture recognizer to an arena which is already active.";
-  arena_members_.push_back(std::make_unique<ArenaMember>(this, &router_, recognizer));
-  const auto& last = arena_members_.back();
-  return last.get();
+  arena_members_.push_back(std::make_unique<ArenaMember>(this, recognizer));
+  return arena_members_.back().get();
 }
 
 void GestureArena::OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
                            PointerEventRouter::OnEventCallback callback) {
   FX_CHECK(!arena_members_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                        "but has no added gesture recognizer.";
+  if (IsIdle()) {
+    // An idle arena received a new event. Starts a new contest.
+    StartNewContest();
+  }
 
-  router_.RouteEventToArenaMembers(std::move(pointer_event), std::move(callback), arena_members_);
+  router_.RouteEvent(std::move(pointer_event), std::move(callback), arena_members_);
   TryToResolve();
+  switch (state_) {
+    case State::kContendingInProgress:
+      if (IsIdle()) {
+        // The arena has reached the end of an interaction with no winners. Sweep all members and
+        // declares the first one to win.
+        Sweep();
+      }
+      return;
+    case State::kAssigned:
+      if (IsIdle()) {
+        // The arena has reached the end of an interaction with a winner.
+        HandleEvents(/*consumed_by_member=*/true);
+      }
+      return;
+    case State::kEmpty:
+      // The arena has no members left, but still needs to handle incoming events. That depends on
+      // the policy in which it was configured. Although an empty arena is handled when it becomes
+      // empty, it is also necessary to continue handling events until the interaction is over.
+      HandleEvents(/*consumed_by_member=*/false);
+      return;
+    default:
+      return;
+  };
 }
 
 void GestureArena::TryToResolve() {
-  if (resolved_) {
+  if (state_ == State::kEmpty) {
     return;
   }
-  ArenaMember* winner = nullptr;
-  std::vector<ArenaMember*> contending;
-  for (auto& member : arena_members_) {
-    switch (member->status()) {
-      case ArenaMember::kWinner:
-        FX_CHECK(!winner) << "A gesture arena can have up to one winner only.";
-        winner = member.get();
-        break;
-      case ArenaMember::kDefeated:
-        // No work to do.
-        break;
-      case ArenaMember::kContending:
-        contending.push_back(member.get());
-        break;
-    };
+  auto [winner, contending] = ClassifyArenaMembers(arena_members_);
+
+  if (state_ == State::kAssigned && !winner) {
+    // All members have left the arena, including the winner.
+    state_ = State::kEmpty;
+    HandleEvents(/*consumed_by_member=*/false);
+    return;
   }
 
-  if (winner) {
-    resolved_ = true;
-    // Someone claimed a win, inform everyone else about their defeat.
-    for (auto& member : contending) {
-      member->DeclareDefeat();
+  if (state_ == State::kContendingInProgress) {
+    if (winner) {
+      state_ = State::kAssigned;
+      // Someone claimed a win, inform everyone else about their defeat.
+      for (auto& member : contending) {
+        member->SetDefeat();
+      }
+    } else if (contending.size() == 1) {
+      // When there is no winner and only the last contending is left, it wins.
+      state_ = State::kAssigned;
+      contending.front()->SetWin();
     }
-  } else if (contending.size() == 1) {
-    // When there is no winner and only the last contending is left, it wins.
-    resolved_ = true;
-    FX_CHECK(contending.front()->ClaimWin());
   }
 }
 
 void GestureArena::Reset() {
-  FX_CHECK(!router_.IsActive()) << "Trying to reset an arena which has cached pointer events";
-  resolved_ = false;
+  FX_CHECK(!router_.is_active()) << "Trying to reset an arena which has cached pointer events";
+  state_ = State::kContendingInProgress;
   for (auto& member : arena_members_) {
     member->Reset();
   }
 }
+
+bool GestureArena::IsHeld() const {
+  for (const auto& member : arena_members_) {
+    if (member->status() != ArenaMember::Status::kDefeated && member->is_holding()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void GestureArena::StartNewContest() {
+  Reset();
+  for (auto& member : arena_members_) {
+    member->recognizer()->OnContestStarted();
+  }
+}
+
+void GestureArena::HandleEvents(bool consumed_by_member) {
+  if (consumed_by_member || event_handling_policy_ == EventHandlingPolicy::kConsumeEvents) {
+    return router_.ConsumePointerEvents();
+  }
+  FX_DCHECK(event_handling_policy_ == EventHandlingPolicy::kRejectEvents);
+  router_.RejectPointerEvents();
+}
+
+void GestureArena::Sweep() {
+  auto [winner, contending] = ClassifyArenaMembers(arena_members_);
+  FX_CHECK(!winner) << "Trying to sweep an arena which has a winner.";
+  FX_CHECK(!contending.empty()) << "Trying to sweep an arena with no contending members left.";
+  auto it = contending.begin();
+  (*it)->SetWin();
+  ++it;  // All but the first contender are defeated.
+  for (; it != contending.end(); ++it) {
+    (*it)->SetDefeat();
+  }
+}
+
+bool GestureArena::IsIdle() const { return !IsHeld() && !router_.is_active(); }
 
 }  // namespace a11y
