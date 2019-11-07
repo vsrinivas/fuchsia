@@ -30,14 +30,11 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
   throttle_release_fence_ = {std::move(bridge.completer)};
   throttle_output_ = throttle_output;
+  AddOutput(throttle_output_.get());
 }
 
 void RouteGraph::AddOutput(AudioDevice* output) {
   AUD_VLOG(TRACE) << "Added output device to route graph: " << output;
-  // TODO(13339): Remove throttle_output_.
-  if (output == throttle_output_.get()) {
-    return;
-  }
 
   if (!outputs_.empty()) {
     outputs_.front()->Unlink();
@@ -49,10 +46,6 @@ void RouteGraph::AddOutput(AudioDevice* output) {
 
 void RouteGraph::RemoveOutput(AudioDevice* output) {
   AUD_VLOG(TRACE) << "Removing output device from graph: " << output;
-  // TODO(13339): Remove throttle_output_.
-  if (output == throttle_output_.get()) {
-    return;
-  }
 
   auto it = std::find(outputs_.begin(), outputs_.end(), output);
   if (it == outputs_.end()) {
@@ -121,9 +114,6 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
   if (!it->second.profile.routable) {
     it->second.ref->Unlink();
   } else if (was_unrouted) {
-    // TODO(13339): Remove throttle_output_.
-    AudioObject::LinkObjects(it->second.ref, throttle_output_);
-
     if (outputs_.empty()) {
       FXL_LOG(WARNING) << "Tried to route AudioRenderer, but no outputs exist.";
       return;
@@ -205,7 +195,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
   if (!it->second.profile.routable) {
     it->second.ref->Unlink();
   } else if (was_unrouted) {
-    if (outputs_.empty()) {
+    if (outputs_.empty() || outputs_.front() == throttle_output_.get()) {
       FXL_LOG(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
       return;
     }
@@ -226,7 +216,7 @@ void RouteGraph::RemoveLoopbackCapturer(AudioObject* loopback_capturer) {
 void RouteGraph::LinkRenderersTo(AudioDevice* output) {
   std::for_each(renderers_.begin(), renderers_.end(), [output](auto& renderer_pair) {
     auto& [_, renderer] = renderer_pair;
-    if (!renderer.profile.routable || renderer.ref->dest_link_count() > 1) {
+    if (!renderer.profile.routable || renderer.ref->dest_link_count() > 0) {
       return;
     }
 
@@ -246,6 +236,11 @@ void RouteGraph::LinkCapturersTo(AudioDevice* input) {
 }
 
 void RouteGraph::LinkLoopbackCapturersTo(AudioDevice* output) {
+  // TODO(13339): Remove throttle_output_.
+  if (output == throttle_output_.get()) {
+    return;
+  }
+
   std::for_each(
       loopback_capturers_.begin(), loopback_capturers_.end(),
       [output](auto& loopback_capturer_pair) {

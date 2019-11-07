@@ -96,13 +96,12 @@ TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
   under_test_.AddOutput(first_output.get());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         first_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({first_output.get()}));
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
   under_test_.AddOutput(later_output.get());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         later_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{later_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
@@ -117,8 +116,8 @@ TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
   under_test_.AddOutput(later_output.get());
 
   under_test_.RemoveOutput(later_output.get());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         first_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{first_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
   EXPECT_THAT(renderer->DestLinks(),
@@ -139,12 +138,10 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteRenderers) {
   under_test_.AddOutput(last_output.get());
 
   under_test_.RemoveOutput(second_output.get());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         last_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({last_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         last_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({last_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
@@ -156,8 +153,7 @@ TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
   EXPECT_THAT(renderer->DestLinks(), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(renderer.get(), {.routable = true});
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         first_output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({first_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersAreRemoved) {
@@ -169,8 +165,7 @@ TEST_F(RouteGraphTest, RenderersAreRemoved) {
   //   1. Ours in this test.
   //   2. The RouteGraph's.
   //   3. The ThrottleOutput's (because they are linked).
-  EXPECT_THAT(renderer->DestLinks(),
-              UnorderedElementsAreArray(std::vector<AudioObject*>{throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({throttle_output_.get()}));
   EXPECT_EQ(renderer->ref_count_debug(), 3);
 
   under_test_.RemoveRenderer(renderer.get());
@@ -335,6 +330,7 @@ TEST_F(RouteGraphTest, LoopbackCapturersPickUpLastPluggedOutputWhenRoutable) {
 TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
   auto capturer = FakeAudioObject::FakeCapturer();
   under_test_.AddLoopbackCapturer(capturer);
+  EXPECT_EQ(capturer->ref_count_debug(), 2);
   under_test_.SetLoopbackCapturerRoutingProfile(capturer.get(), {.routable = true});
   EXPECT_EQ(capturer->ref_count_debug(), 2);
   under_test_.RemoveLoopbackCapturer(capturer.get());
@@ -353,13 +349,13 @@ TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(renderer.get(), {.routable = true});
   EXPECT_THAT(capturer->SourceLinks(), IsEmpty());
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 
   under_test_.SetLoopbackCapturerRoutingProfile(capturer.get(), {.routable = true});
   EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({output.get()}));
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 }
 
 TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
@@ -377,8 +373,8 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   auto renderer = FakeAudioObject::FakeRenderer();
   under_test_.AddRenderer(renderer);
   under_test_.SetRendererRoutingProfile(renderer.get(), {.routable = true});
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray(std::vector<AudioObject*>{
-                                         output.get(), throttle_output_.get()}));
+  EXPECT_THAT(renderer->DestLinks(),
+              UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
   EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
 }
 

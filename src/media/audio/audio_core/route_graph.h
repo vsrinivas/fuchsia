@@ -22,7 +22,7 @@ namespace media::audio {
 // |RoutingProfile| informs the |RouteGraph| on how or whether it should establish links for a
 // particular input or output to the mixer.
 struct RoutingProfile {
-  bool routable;
+  bool routable = false;
 };
 
 // |RouteGraph| is responsible for managing connections between inputs and outputs of the mixer.
