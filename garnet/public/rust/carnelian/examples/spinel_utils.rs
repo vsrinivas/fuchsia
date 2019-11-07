@@ -280,10 +280,15 @@ struct SpinelStyling {
 }
 
 impl SpinelStyling {
-    fn new(context: Rc<RefCell<SpnContext>>) -> Self {
+    fn new(context: Rc<RefCell<SpnContext>>, layers_count: u32, cmds_count: u32) -> Self {
         let styling = unsafe {
             let mut output = mem::MaybeUninit::uninit();
-            let status = spn_styling_create(*context.borrow(), output.as_mut_ptr(), 4096, 16384);
+            let status = spn_styling_create(
+                *context.borrow(),
+                output.as_mut_ptr(),
+                layers_count,
+                cmds_count,
+            );
             assert_eq!(status, SpnSuccess);
             output.assume_init()
         };
@@ -810,6 +815,10 @@ impl SpinelContext {
         token: ClientEnd<BufferCollectionTokenMarker>,
         config: &fuchsia_framebuffer::Config,
         app_name: *const u8,
+        block_pool_size: u64,
+        handle_count: u32,
+        layers_count: u32,
+        cmds_count: u32,
     ) -> Self {
         let entry_points = {
             vk::EntryPoints::load(|name| unsafe {
@@ -1068,8 +1077,8 @@ impl SpinelContext {
         });
 
         let create_info = SpnVkContextCreateInfo {
-            block_pool_size: 1 << 26, // 64 MB
-            handle_count: 1 << 17,    // 128K handles
+            block_pool_size,
+            handle_count,
             spinel: spn_target,
             hotsort: hs_target,
         };
@@ -1083,7 +1092,7 @@ impl SpinelContext {
         };
 
         let context = Rc::new(RefCell::new(context));
-        let styling = SpinelStyling::new(Rc::clone(&context));
+        let styling = SpinelStyling::new(Rc::clone(&context), layers_count, cmds_count);
         let path_builder = SpinelPathBuilder::new(Rc::clone(&context));
         let raster_builder = SpinelRasterBuilder::new(Rc::clone(&context));
 

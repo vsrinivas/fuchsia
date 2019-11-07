@@ -51,10 +51,19 @@ impl AppAssistant for ClockfaceAppAssistant {
         if env::args().any(|v| v == "--mold") {
             Ok(Box::new(ClockfaceViewAssistant::new(MoldContext::new(token, config))))
         } else {
+            const BLOCK_POOL_SIZE: u64 = 1 << 22; // 4 MB
+            const HANDLE_COUNT: u32 = 1 << 10; // 1K handles
+            const LAYERS_COUNT: u32 = 32;
+            const CMDS_COUNT: u32 = 256;
+
             Ok(Box::new(ClockfaceViewAssistant::new(SpinelContext::new(
                 token,
                 config,
                 APP_NAME.as_ptr(),
+                BLOCK_POOL_SIZE,
+                HANDLE_COUNT,
+                LAYERS_COUNT,
+                CMDS_COUNT,
             ))))
         }
     }
