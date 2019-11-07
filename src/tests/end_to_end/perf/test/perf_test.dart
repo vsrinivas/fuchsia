@@ -33,12 +33,7 @@ void main() {
     sl4fDriver.close();
   });
 
-  test('zircon_benchmarks', () async {
-    const resultsFile = '/tmp/perf_results.json';
-    final result = await sl4fDriver.ssh
-        .run('/bin/zircon_benchmarks -p --quiet --out $resultsFile');
-    expect(result.exitCode, equals(0));
-
+  Future<void> processResults(String resultsFile) async {
     final localResultsFile =
         await storage.dumpFile(resultsFile, 'results', 'fuchsiaperf.json');
 
@@ -49,5 +44,22 @@ void main() {
     await performance.convertResults('runtime_deps/catapult_converter',
         localResultsFile, Platform.environment,
         uploadToCatapultDashboard: false);
+  }
+
+  test('zircon_benchmarks', () async {
+    const resultsFile = '/tmp/perf_results.json';
+    final result = await sl4fDriver.ssh
+        .run('/bin/zircon_benchmarks -p --quiet --out $resultsFile');
+    expect(result.exitCode, equals(0));
+    await processResults(resultsFile);
+  }, timeout: Timeout.none);
+
+  test('benchmark_example.tspec', () async {
+    const spec = '/pkgfs/packages/benchmark/0/data/benchmark_example.tspec';
+    const resultsFile = '/tmp/perf_results.json';
+    final result = await sl4fDriver.ssh.run(
+        'trace record --spec-file=$spec --benchmark-results-file=$resultsFile');
+    expect(result.exitCode, equals(0));
+    await processResults(resultsFile);
   }, timeout: Timeout.none);
 }

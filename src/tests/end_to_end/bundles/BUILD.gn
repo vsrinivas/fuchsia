@@ -41,7 +41,8 @@ group("end_to_end_deps") {
     # Needed for VP9 decode conformance testing.
     "//garnet/examples/media:vp9_decoder_conformance_http",
 
-    # Used for running zircon_benchmarks.
+    # Used by perf_test.dart for running performance tests.
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
+    "//garnet/examples/benchmark",
   ]
 }
