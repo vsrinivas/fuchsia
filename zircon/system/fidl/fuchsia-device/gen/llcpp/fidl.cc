@@ -486,242 +486,6 @@ int32_t& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mu
 }
 
 
-::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::Controller_ScheduleUnbind_Result() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::~Controller_ScheduleUnbind_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
-    response_.~Controller_ScheduleUnbind_Response();
-    break;
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::MoveImpl_(Controller_ScheduleUnbind_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Tag::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result) == ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response;
-  }
-  tag_ = Tag::kResponse;
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::mutable_err() {
-  if (which() != Tag::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-  }
-  tag_ = Tag::kErr;
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::Controller_Rebind_Result::Controller_Rebind_Result() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fuchsia::device::Controller_Rebind_Result::~Controller_Rebind_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_Rebind_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
-    response_.~Controller_Rebind_Response();
-    break;
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fuchsia::device::Controller_Rebind_Result::MoveImpl_(Controller_Rebind_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Tag::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_Rebind_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_Rebind_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_Rebind_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::Controller_Rebind_Result) == ::llcpp::fuchsia::device::Controller_Rebind_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::Controller_Rebind_Response& ::llcpp::fuchsia::device::Controller_Rebind_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::Controller_Rebind_Response;
-  }
-  tag_ = Tag::kResponse;
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::Controller_Rebind_Result::mutable_err() {
-  if (which() != Tag::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-  }
-  tag_ = Tag::kErr;
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::Controller_GetTopologicalPath_Result() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::~Controller_GetTopologicalPath_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
-    response_.~Controller_GetTopologicalPath_Response();
-    break;
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::MoveImpl_(Controller_GetTopologicalPath_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Tag::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result) == ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response;
-  }
-  tag_ = Tag::kResponse;
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::mutable_err() {
-  if (which() != Tag::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-  }
-  tag_ = Tag::kErr;
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::Controller_Bind_Result::Controller_Bind_Result() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fuchsia::device::Controller_Bind_Result::~Controller_Bind_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_Bind_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
-    response_.~Controller_Bind_Response();
-    break;
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fuchsia::device::Controller_Bind_Result::MoveImpl_(Controller_Bind_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Tag::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::device::Controller_Bind_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_Bind_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::Controller_Bind_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::Controller_Bind_Result) == ::llcpp::fuchsia::device::Controller_Bind_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::Controller_Bind_Response& ::llcpp::fuchsia::device::Controller_Bind_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::Controller_Bind_Response;
-  }
-  tag_ = Tag::kResponse;
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::Controller_Bind_Result::mutable_err() {
-  if (which() != Tag::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-  }
-  tag_ = Tag::kErr;
-  return err_;
-}
-
-
 namespace {
 
 [[maybe_unused]]
@@ -2222,7 +1986,7 @@ bool Controller::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 }
 
 
-void Controller::Interface::BindCompleterBase::Reply(::llcpp::fuchsia::device::Controller_Bind_Result result) {
+void Controller::Interface::BindCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<BindResponse*>(_write_bytes);
@@ -2231,20 +1995,12 @@ void Controller::Interface::BindCompleterBase::Reply(::llcpp::fuchsia::device::C
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               BindResponse::PrimarySize,
               BindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::BindCompleterBase::ReplySuccess() {
-  Controller_Bind_Response response;
 
-  Reply(Controller_Bind_Result::WithResponse(std::move(response)));
-}
-void Controller::Interface::BindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Bind_Result::WithErr(std::move(error)));
-}
-
-void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Bind_Result result) {
+void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < BindResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2255,14 +2011,9 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, :
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               BindResponse::PrimarySize,
               BindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(BindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<BindResponse>(std::move(_buffer)));
-}
-void Controller::Interface::BindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
-  Controller_Bind_Response response;
-
-  Reply(std::move(_buffer), Controller_Bind_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<BindResponse> params) {
@@ -2271,7 +2022,7 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<Bind
 }
 
 
-void Controller::Interface::RebindCompleterBase::Reply(::llcpp::fuchsia::device::Controller_Rebind_Result result) {
+void Controller::Interface::RebindCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<RebindResponse*>(_write_bytes);
@@ -2280,20 +2031,12 @@ void Controller::Interface::RebindCompleterBase::Reply(::llcpp::fuchsia::device:
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RebindResponse::PrimarySize,
               RebindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RebindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RebindResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::RebindCompleterBase::ReplySuccess() {
-  Controller_Rebind_Response response;
 
-  Reply(Controller_Rebind_Result::WithResponse(std::move(response)));
-}
-void Controller::Interface::RebindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Rebind_Result::WithErr(std::move(error)));
-}
-
-void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Rebind_Result result) {
+void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < RebindResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2304,14 +2047,9 @@ void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer,
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RebindResponse::PrimarySize,
               RebindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(RebindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<RebindResponse>(std::move(_buffer)));
-}
-void Controller::Interface::RebindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
-  Controller_Rebind_Response response;
-
-  Reply(std::move(_buffer), Controller_Rebind_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::RebindCompleterBase::Reply(::fidl::DecodedMessage<RebindResponse> params) {
@@ -2320,7 +2058,7 @@ void Controller::Interface::RebindCompleterBase::Reply(::fidl::DecodedMessage<Re
 }
 
 
-void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result) {
+void Controller::Interface::ScheduleUnbindCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ScheduleUnbindResponse*>(_write_bytes);
@@ -2329,20 +2067,12 @@ void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::llcpp::fuchsia:
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleUnbindResponse::PrimarySize,
               ScheduleUnbindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleUnbindResponse>(std::move(_response_bytes)));
 }
-void Controller::Interface::ScheduleUnbindCompleterBase::ReplySuccess() {
-  Controller_ScheduleUnbind_Response response;
 
-  Reply(Controller_ScheduleUnbind_Result::WithResponse(std::move(response)));
-}
-void Controller::Interface::ScheduleUnbindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_ScheduleUnbind_Result::WithErr(std::move(error)));
-}
-
-void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result) {
+void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < ScheduleUnbindResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2353,14 +2083,9 @@ void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart 
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleUnbindResponse::PrimarySize,
               ScheduleUnbindResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
   _buffer.set_actual(sizeof(ScheduleUnbindResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleUnbindResponse>(std::move(_buffer)));
-}
-void Controller::Interface::ScheduleUnbindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
-  Controller_ScheduleUnbind_Response response;
-
-  Reply(std::move(_buffer), Controller_ScheduleUnbind_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::DecodedMessage<ScheduleUnbindResponse> params) {
@@ -2461,7 +2186,7 @@ void Controller::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
-void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result) {
+void Controller::Interface::GetTopologicalPathCompleterBase::Reply(int32_t status, ::fidl::StringView path) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -2471,7 +2196,8 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuch
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetTopologicalPathResponse::PrimarySize,
               GetTopologicalPathResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
+  _response.path = std::move(path);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
   if (_linearize_result.status != ZX_OK) {
@@ -2480,17 +2206,8 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuch
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
-void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::StringView path) {
-  Controller_GetTopologicalPath_Response response;
-  response.path = std::move(path);
 
-  Reply(Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
-}
-void Controller::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_GetTopologicalPath_Result::WithErr(std::move(error)));
-}
-
-void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result) {
+void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::StringView path) {
   if (_buffer.capacity() < GetTopologicalPathResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2501,19 +2218,14 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::ByteP
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetTopologicalPathResponse::PrimarySize,
               GetTopologicalPathResponse::PrimarySize)));
-  _response.result = std::move(result);
+  _response.status = std::move(status);
+  _response.path = std::move(path);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path) {
-  Controller_GetTopologicalPath_Response response;
-  response.path = std::move(path);
-
-  Reply(std::move(_buffer), Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {

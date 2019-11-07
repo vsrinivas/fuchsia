@@ -15,7 +15,7 @@ zx_test("zxcrypt") {
   include_dirs = [ "$zx/system/ulib" ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/crypto",

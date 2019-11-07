@@ -15,56 +15,56 @@ fidl_library("fuchsia.device.power.test") {
 }
 
 if (current_toolchain != default_toolchain) {
-  zx_driver("ddk-power-test") {
-    sources = [
-      "test-driver.cc",
-    ]
-    deps = [
-      ":fuchsia.device.power.test.llcpp",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-    ]
+    zx_driver("ddk-power-test") {
+      sources = [
+        "test-driver.cc",
+      ]
+      deps = [
+        "$zx/system/ulib/ddk",
+        "$zx/system/ulib/ddktl",
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+        ":fuchsia.device.power.test.llcpp",
+      ]
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    # Tests fail when using #"$zx/system/ulib/fdio:static",
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+      # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+      # Tests fail when using #"$zx/system/ulib/fdio:static",
+      deprecated_inhibit_driver_shlib_allowlist = true
+    }
 
-  zx_driver("ddk-power-test-child") {
-    sources = [
-      "test-driver-child.cc",
-    ]
-    deps = [
-      ":fuchsia.device.power.test.llcpp",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-    ]
+    zx_driver("ddk-power-test-child") {
+      sources = [
+        "test-driver-child.cc",
+      ]
+      deps = [
+        "$zx/system/ulib/ddk",
+        "$zx/system/ulib/ddktl",
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+        ":fuchsia.device.power.test.llcpp",
+      ]
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+      # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+      deprecated_inhibit_driver_shlib_allowlist = true
+    }
 
-  zx_test("ddk-power") {
-    sources = [
-      "test.cc",
-    ]
-    deps = [
-      ":fuchsia.device.power.test.llcpp",
-      "$zx/system/fidl/fuchsia-device:llcpp",
-      "$zx/system/fidl/fuchsia-device-manager:c",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/devmgr-integration-test",
-      "$zx/system/ulib/devmgr-launcher",
-      "$zx/system/ulib/driver-integration-test",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxtest",
-    ]
-  }
+    zx_test("ddk-power") {
+      sources = [
+        "test.cc",
+      ]
+      deps = [
+        "$zx/system/fidl/fuchsia-device:c",
+        "$zx/system/fidl/fuchsia-device-manager:c",
+        ":fuchsia.device.power.test.llcpp",
+        "$zx/system/ulib/ddk",
+        "$zx/system/ulib/devmgr-integration-test",
+        "$zx/system/ulib/devmgr-launcher",
+        "$zx/system/ulib/driver-integration-test",
+        "$zx/system/ulib/fbl",
+        "$zx/system/ulib/fdio",
+        "$zx/system/ulib/zircon",
+        "$zx/system/ulib/zx",
+        "$zx/system/ulib/zxtest",
+      ]
+    }
 }

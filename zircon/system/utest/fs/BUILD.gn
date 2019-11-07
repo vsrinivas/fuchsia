@@ -63,7 +63,7 @@ zx_test("fs") {
 
   deps = [
     "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-mem:c",

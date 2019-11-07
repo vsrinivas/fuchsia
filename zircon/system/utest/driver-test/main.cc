@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
@@ -84,13 +83,9 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
 
   char libpath[PATH_MAX];
   int n = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, drv_libname);
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(test_channel.get()), ::fidl::StringView(libpath, n));
-  status = resp.status();
+  status = fuchsia_device_ControllerBind(test_channel.get(), libpath, n, &call_status);
   if (status == ZX_OK) {
-    if (resp->result.is_err()) {
-      status = resp->result.err();
-    }
+    status = call_status;
   }
   if (status == ZX_ERR_NOT_SUPPORTED &&
       !strncmp(drv_libname, kBindFailDriver, strlen(kBindFailDriver))) {

@@ -4,10 +4,10 @@
 
 zx_executable("waitfor") {
   sources = [
-    "waitfor.cc",
+    "waitfor.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/gpt",

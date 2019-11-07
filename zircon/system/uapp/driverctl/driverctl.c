@@ -4,9 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,12 +76,12 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  zx::channel device, device_remote;
-  if (zx::channel::create(0, &device, &device_remote) != ZX_OK) {
+  zx_handle_t device, device_remote;
+  if (zx_channel_create(0, &device, &device_remote) != ZX_OK) {
     fprintf(stderr, "could not create channel\n");
     return -1;
   }
-  zx_status_t status = fdio_service_connect(path, device_remote.get());
+  zx_status_t status = fdio_service_connect(path, device_remote);
   if (status != ZX_OK) {
     fprintf(stderr, "could not open %s\n", path);
     return -1;
@@ -92,11 +90,7 @@ int main(int argc, char** argv) {
   if (argc == 3) {
     uint32_t flags;
     zx_status_t call_status;
-    auto resp =
-        ::llcpp::fuchsia::device::Controller::Call::GetDriverLogFlags(zx::unowned_channel(device));
-    status = resp.status();
-    call_status = resp->status;
-    flags = resp->flags;
+    status = fuchsia_device_ControllerGetDriverLogFlags(device, &call_status, &flags);
     if (status != ZX_OK || call_status != ZX_OK) {
       fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
     } else {
@@ -130,7 +124,7 @@ int main(int argc, char** argv) {
       }
       printf("\n");
     }
-    return ret;
+    goto out;
   }
 
   uint32_t clear_flags = 0;
@@ -156,7 +150,7 @@ int main(int argc, char** argv) {
               non_toggle_arg);
       usage();
       ret = -1;
-      return ret;
+      goto out;
     }
 
     if (!strcasecmp(arg, "e") || !strcasecmp(arg, "error")) {
@@ -180,7 +174,7 @@ int main(int argc, char** argv) {
     } else {
       fprintf(stderr, "unknown flag %s\n", arg);
       ret = -1;
-      return ret;
+      goto out;
     }
 
     if (toggle == '+') {
@@ -198,11 +192,12 @@ int main(int argc, char** argv) {
   }
 
   zx_status_t call_status;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::SetDriverLogFlags(
-      zx::unowned_channel(device), clear_flags, set_flags);
-  status = resp.status();
-  call_status = resp->status;
+  status = fuchsia_device_ControllerSetDriverLogFlags(device, clear_flags, set_flags, &call_status);
   if (status != ZX_OK || call_status != ZX_OK) {
     fprintf(stderr, "SetDriverLogFlags failed for %s\n", path);
   }
+
+out:
+  zx_handle_close(device);
+  return ret;
 }

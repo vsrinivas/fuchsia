@@ -15,12 +15,11 @@ zx_library("block-client") {
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "$zx/system/fidl/fuchsia-device:c.headers",
-    "$zx/system/fidl/fuchsia-device:llcpp.headers",
     "$zx/system/fidl/fuchsia-hardware-block:c.headers",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:c",

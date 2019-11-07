@@ -9,7 +9,6 @@ zx_test("fvm") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async",
@@ -53,9 +52,9 @@ zx_test("fvm-integration") {
   ]
 
   deps = [
+    "$zx/system/ulib/fvm/test:devices",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fvm/test:devices",
     "$zx/system/ulib/zxtest",
   ]
 }

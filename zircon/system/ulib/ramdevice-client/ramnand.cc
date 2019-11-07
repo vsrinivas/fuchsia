@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -146,13 +145,8 @@ RamNand::~RamNand() {
       fprintf(stderr, "Could not get service handle when unbinding ram_nand, %d\n", status);
       return;
     }
-    zx_status_t call_status = ZX_OK;
-    auto resp =
-        ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(dev.get()));
-    status = resp.status();
-    if (resp->result.is_err()) {
-      call_status = resp->result.err();
-    }
+    zx_status_t call_status;
+    status = fuchsia_device_ControllerScheduleUnbind(dev.get(), &call_status);
     if (status == ZX_OK) {
       status = call_status;
     }

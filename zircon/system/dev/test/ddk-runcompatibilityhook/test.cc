@@ -1,9 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
@@ -65,6 +60,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_OK);
 }
+*/
 
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   IsolatedDevmgr devmgr;
@@ -100,15 +96,13 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::RunCompatibilityTests(
-      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
-  status = resp.status();
-  call_status = resp->status;
-
+  status = fuchsia_device_ControllerRunCompatibilityTests(
+      parent_device_handle.get(), zx::duration(zx::msec(2000)).get(), &call_status);
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD);
 }
 
+/* TODO(fxb/38095): Fix flakiness and re-enable.
 TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;

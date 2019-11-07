@@ -2,22 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <inttypes.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/time.h>
-#include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +15,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <fbl/auto_call.h>
+#include <fbl/string.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -34,12 +40,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <memory>
-
-#include <fbl/auto_call.h>
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
 #define RAMCTL_DEV_PATH "/dev"
@@ -243,13 +243,8 @@ struct ramdisk_client {
         block_fd_(std::move(block_fd)) {}
 
   static zx_status_t DestroyByHandle(zx::channel ramdisk) {
-    zx_status_t call_status = ZX_OK;
-    auto resp = ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(
-        zx::unowned_channel(ramdisk.get()));
-    zx_status_t status = resp.status();
-    if (resp->result.is_err()) {
-      call_status = resp->result.err();
-    }
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerScheduleUnbind(ramdisk.get(), &call_status);
     if (status != ZX_OK) {
       return status;
     }

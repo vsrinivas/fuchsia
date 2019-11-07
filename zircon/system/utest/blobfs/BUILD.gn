@@ -9,7 +9,7 @@ zx_test("blobfs") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-blobfs:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async",

@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/input_reader/fdio_hid_decoder.h"
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <unistd.h>
 #include <zircon/status.h>
@@ -84,11 +84,11 @@ bool FdioHidDecoder::Init() {
 zx::event FdioHidDecoder::GetEvent() {
   zx::event event;
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetEventHandle(
-      zx::unowned_channel(caller_.borrow_channel()));
-  zx_status_t status = resp.status();
+  zx_status_t call_status;
+  zx_status_t status = fuchsia_device_ControllerGetEventHandle(
+      caller_.borrow_channel(), &call_status, event.reset_and_get_address());
   if (status == ZX_OK) {
-    event = std::move(resp->event);
+    status = call_status;
   }
   if (status != ZX_OK) {
     log_err(status, "event handle", name_);

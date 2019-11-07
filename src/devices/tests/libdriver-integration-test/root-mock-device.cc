@@ -4,21 +4,21 @@
 
 #include "root-mock-device.h"
 
+#include <stdio.h>
+#include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <threads.h>
+
+#include <fbl/auto_call.h>
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/unsafe.h>
-#include <stdio.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
+#include <lib/fdio/directory.h>
 #include <zircon/assert.h>
-
-#include <fbl/auto_call.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 #define MOCK_DEVICE_LIB "/boot/driver/test/mock-device.so"
@@ -87,15 +87,13 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
   // case where we're testing composite devices
   fidl::SynchronousInterfacePtr<fuchsia::device::Controller> test_root_controller;
   test_root_controller.Bind(test_root.Unbind().TakeChannel());
-  fuchsia::device::Controller_GetTopologicalPath_Result result;
-  status = test_root_controller->GetTopologicalPath(&result);
+  status = test_root_controller->GetTopologicalPath(&call_status, &devpath);
   if (status != ZX_OK) {
     return status;
   }
-  if (result.is_err()) {
+  if (call_status != ZX_OK) {
     return status;
   }
-  devpath = result.response().path;
   test_root.Bind(test_root_controller.Unbind().TakeChannel());
 
   const char* kDevPrefix = "/dev/";
@@ -155,8 +153,8 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
         zx::channel test_dev(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx)));
         fidl::SynchronousInterfacePtr<fuchsia::device::Controller> controller;
         controller.Bind(std::move(test_dev));
-        fuchsia::device::Controller_Bind_Result result;
-        controller->Bind(MOCK_DEVICE_LIB, &result);
+        zx_status_t call_status;
+        controller->Bind(MOCK_DEVICE_LIB, &call_status);
         return 0;
       },
       reinterpret_cast<void*>(static_cast<uintptr_t>(test_dev.release())));

@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <getopt.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <fuchsia/device/c/fidl.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 namespace {
 
@@ -84,14 +85,10 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto resp =
-      ::llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(local.get()));
-  status = resp.status();
-
+  zx_status_t call_status;
+  status = fuchsia_device_ControllerScheduleUnbind(local.get(), &call_status);
   if (status == ZX_OK) {
-    if (resp->result.is_err()) {
-      status = resp->result.err();
-    }
+    status = call_status;
   }
   if (status != ZX_OK) {
     printf("Failed to unbind device\n");

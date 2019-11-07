@@ -27,7 +27,6 @@ zx_library("fs-test-utils") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",

@@ -9,7 +9,6 @@ zx_test("driver-test") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-device-test:c",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",

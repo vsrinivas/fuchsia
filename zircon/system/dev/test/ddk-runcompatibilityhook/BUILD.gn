@@ -38,7 +38,7 @@ zx_test("ddk-runcompatibilityhook") {
     "test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",

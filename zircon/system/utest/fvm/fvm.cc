@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -158,12 +157,10 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 
   zx::channel fvm_channel;
   ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
-
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  zx_status_t call_status;
+  ASSERT_OK(fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                          &call_status));
+  ASSERT_OK(call_status);
   fvm_channel.reset();
 
   snprintf(fvm_driver_path_, PATH_MAX, "%s/fvm", ramdisk_path_);
@@ -172,12 +169,15 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 
 void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
   fzl::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
+  zx_status_t call_status;
+  zx_status_t status;
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
-      zx::unowned_channel(disk_caller.borrow_channel()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  status = fuchsia_device_ControllerRebind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
+                                           STRLEN(FVM_DRIVER_LIB), &call_status);
+  if (status != ZX_OK) {
+    ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
+  }
+  ASSERT_OK(call_status);
 
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/fvm", ramdisk_path_);
@@ -548,11 +548,10 @@ TEST_F(FvmTest, TestLarge) {
 
   ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(channel->get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  ASSERT_EQ(fuchsia_device_ControllerBind(channel->get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                          &status),
+            ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
 
   snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));
@@ -2895,15 +2894,13 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // Init fvm with a partition bigger than the underlying disk.
   fvm_init_with_size(ramdisk_fd.get(), kFvmPartitionSize, kSliceSize);
 
+  zx_status_t call_status;
   zx::channel fvm_channel;
   // Try to bind an fvm to the disk.
   ASSERT_OK(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()));
-
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  ASSERT_OK(fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                          &call_status));
+  ASSERT_OK(call_status);
 
   // Ugly way of validating that the driver failed to Load.
   char fvm_path[PATH_MAX];
@@ -2913,11 +2910,9 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // Grow the ramdisk to the appropiate size and bind should succeed.
   ASSERT_OK(ramdisk_grow(ramdisk(), kFvmPartitionSize));
 
-  resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
-      zx::unowned_channel(fvm_channel.get()),
-      ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  ASSERT_OK(fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                          &call_status));
+  ASSERT_OK(call_status);
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));
 }
 

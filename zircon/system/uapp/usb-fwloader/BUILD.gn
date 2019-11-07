@@ -9,7 +9,6 @@ zx_executable("usb-fwloader") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-fwloader:c",
     "$zx/system/fidl/fuchsia-hardware-usb-tester:c",
     "$zx/system/fidl/fuchsia-mem:c",

@@ -7,7 +7,7 @@ zx_executable("unbind") {
     "main.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

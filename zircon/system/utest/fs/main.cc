@@ -3,19 +3,18 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
+#include <unistd.h>
+
+#include <fbl/unique_fd.h>
+#include <fs-management/fvm.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
-#include <limits.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"
@@ -49,27 +48,19 @@ int main(int argc, char** argv) {
       }
       fzl::FdioCaller caller(std::move(fd));
 
+      zx_status_t status;
       size_t path_len;
-      auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-          zx::unowned_channel(caller.borrow_channel()));
-      zx_status_t status = resp.status();
-      if (resp->result.is_err()) {
-        status = resp->result.err();
-      } else {
-        auto r = resp->result.response();
-        path_len = r.path.size();
-        if (path_len > PATH_MAX) {
-          return ZX_ERR_INTERNAL;
-        }
-        memcpy(test_disk_path, r.path.data(), r.path.size());
+      zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
+          caller.borrow_channel(), &status, test_disk_path, PATH_MAX - 1, &path_len);
+      if (io_status != ZX_OK) {
+        status = io_status;
       }
-
       if (status != ZX_OK) {
         fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
         return -1;
       }
       test_disk_path[path_len] = 0;
-      zx_status_t io_status =
+      io_status =
           fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &test_disk_info);
       if (io_status != ZX_OK) {
         status = io_status;

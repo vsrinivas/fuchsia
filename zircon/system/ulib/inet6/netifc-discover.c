@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -36,7 +35,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
 
   int fd;
   if ((fd = openat(dirfd, filename, O_RDWR)) < 0) {
-    return ZX_OK;
+    goto finish;
   }
 
   zx_handle_t netsvc = ZX_HANDLE_INVALID;
@@ -53,22 +52,12 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
   if (ctx->topological_path != NULL) {
     const char* interface = ctx->topological_path;
     char buf[1024];
+    zx_status_t call_status;
     size_t actual_len;
-    auto resp =
-        ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(netsvc));
-    status = resp.status();
+    status = fuchsia_device_ControllerGetTopologicalPath(netsvc, &call_status, buf, sizeof(buf) - 1,
+                                                         &actual_len);
     if (status == ZX_OK) {
-      if (resp->result.is_err()) {
-        status = resp->result.err();
-      } else {
-        auto r = resp->result.response();
-        actual_len = r.path.size();
-        if (actual_len > 1024) {
-          goto fail_close_svc;
-        }
-        memcpy(buf, r.path.data(), r.path.size());
-        status = ZX_OK;
-      }
+      status = call_status;
     }
     if (status != ZX_OK) {
       goto fail_close_svc;
@@ -97,7 +86,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
     goto fail_close_svc;
   }
   memcpy(ctx->netmac, info.mac.octets, sizeof(ctx->netmac));
-  ctx->netmtu = static_cast<uint16_t>(info.mtu);
+  ctx->netmtu = info.mtu;
 
   printf("netsvc: using %s/%s\n", ctx->dirname, filename);
 
@@ -107,7 +96,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
 fail_close_svc:
   zx_handle_close(netsvc);
   netsvc = ZX_HANDLE_INVALID;
-
+finish:
   return ZX_OK;
 }
 
@@ -122,8 +111,6 @@ zx_status_t netifc_discover(const char* ethdir, const char* topological_path,
       .dirname = ethdir,
       .interface = interface,
       .topological_path = topological_path,
-      .netmac = {},
-      .netmtu = 0,
   };
   zx_status_t status = fdio_watch_directory(dirfd, netifc_open_cb, ZX_TIME_INFINITE, (void*)&ctx);
   close(dirfd);

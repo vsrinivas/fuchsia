@@ -69,7 +69,7 @@ source_set("block-watcher") {
   ]
   deps = [
     ":fshost-registry",
-    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",

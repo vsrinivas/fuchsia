@@ -21,12 +21,11 @@ zx_library("inet6") {
 
 zx_library("netifc-discover") {
   sources = [
-    "netifc-discover.cc",
+    "netifc-discover.c",
   ]
 
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

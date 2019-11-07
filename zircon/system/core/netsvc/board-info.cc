@@ -76,13 +76,12 @@ fbl::unique_fd FindGpt() {
       continue;
     }
     const auto& path_response = result2.value();
-    if (path_response.result.is_err()) {
+    if (path_response.status != ZX_OK) {
       continue;
     }
 
-    auto r = path_response.result.response();
     path[PATH_MAX - 1] = '\0';
-    strncpy(path, r.path.data(), std::min<size_t>(PATH_MAX, r.path.size()));
+    strncpy(path, path_response.path.data(), std::min<size_t>(PATH_MAX, path_response.path.size()));
 
     // TODO(ZX-1344): This is a hack, but practically, will work for our
     // usage.

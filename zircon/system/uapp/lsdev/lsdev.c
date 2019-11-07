@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/device/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,22 +30,13 @@ int main(int argc, char* argv[]) {
   }
 
   char path[1025];
+  zx_status_t call_status;
   size_t actual_len;
-
-  auto resp =
-      ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(local));
-  status = resp.status();
-
+  status = fuchsia_device_ControllerGetTopologicalPath(local, &call_status, path, sizeof(path) - 1,
+                                                       &actual_len);
   if (status == ZX_OK) {
-    if (resp->result.is_err()) {
-      status = resp->result.err();
-    } else {
-      actual_len = resp->result.response().path.size();
-      auto r = resp->result.response();
-      memcpy(path, r.path.data(), r.path.size());
-    }
+    status = call_status;
   }
-
   if (status != ZX_OK) {
     fprintf(stderr, "could not get topological path for %s: %s\n", argv[1],
             zx_status_get_string(status));
