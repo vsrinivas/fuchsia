@@ -120,6 +120,10 @@ typedef struct {
 typedef struct {
   void *cookie;
   /**
+   * Returns the current system time in nano seconds.
+   */
+  int64_t (*now)(void *cookie);
+  /**
    * Requests to schedule an event. Returns a a unique ID used to cancel the scheduled event.
    */
   wlan_scheduler_event_id_t (*schedule)(void *cookie, int64_t deadline);

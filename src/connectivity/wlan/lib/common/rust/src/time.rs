@@ -64,13 +64,6 @@ impl TimeUnit {
     pub const DEFAULT_BEACON_INTERVAL: Self = Self(100);
 }
 
-/// Returns a deadline after N beacons assuming a fix Beacon Period of 100ms.
-pub fn deadline_after_beacons(bcn_count: u8) -> zx::Time {
-    // TODO: Take variable beacon_period into account rather than a constant.
-    let duration_tus = TimeUnit::DEFAULT_BEACON_INTERVAL * bcn_count;
-    zx::Time::after(duration_tus.into())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

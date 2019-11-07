@@ -15,7 +15,7 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::{error, info},
-    wlan_common::{mac, time::deadline_after_beacons},
+    wlan_common::{mac, time::TimeUnit},
     wlan_statemachine::*,
     zerocopy::ByteSlice,
 };
@@ -32,7 +32,8 @@ impl Joined {
     fn authenticate(&self, sta: &mut Client, timeout_bcn_count: u8) -> Result<EventId, ()> {
         match sta.send_open_auth_frame() {
             Ok(()) => {
-                let deadline = deadline_after_beacons(timeout_bcn_count);
+                let duration_tus = TimeUnit::DEFAULT_BEACON_INTERVAL * timeout_bcn_count;
+                let deadline = sta.timer.now() + duration_tus.into();
                 let event = TimedEvent::Authenticating;
                 let event_id = sta.timer.schedule_event(deadline, event);
                 Ok(event_id)

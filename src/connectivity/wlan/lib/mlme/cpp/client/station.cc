@@ -79,6 +79,7 @@ Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = static_cast<void*>(this),
+      .now = [](void* cookie) -> zx_time_t { return STA(cookie)->timer_mgr_->Now().get(); },
       .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
         TimeoutId id = {};
         STA(cookie)->timer_mgr_->Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);

@@ -12,6 +12,8 @@ pub struct EventId(u64);
 #[repr(C)]
 pub struct Scheduler {
     cookie: *mut c_void,
+    /// Returns the current system time in nano seconds.
+    now: extern "C" fn(cookie: *mut c_void) -> i64,
     /// Requests to schedule an event. Returns a a unique ID used to cancel the scheduled event.
     schedule: extern "C" fn(cookie: *mut c_void, deadline: i64) -> EventId,
     /// Cancels a previously scheduled event.
@@ -33,6 +35,11 @@ impl<E> Timer<E> {
 impl<E> Timer<E> {
     pub fn new(scheduler: Scheduler) -> Self {
         Self { events: HashMap::default(), scheduler }
+    }
+
+    pub fn now(&self) -> zx::Time {
+        let nanos = (self.scheduler.now)(self.scheduler.cookie);
+        zx::Time::from_nanos(nanos)
     }
 
     pub fn schedule_event(&mut self, deadline: zx::Time, event: E) -> EventId {
@@ -62,6 +69,7 @@ impl<E> Timer<E> {
 #[cfg(test)]
 pub struct FakeScheduler {
     next_id: u64,
+    now: i64,
 }
 
 #[cfg(test)]
@@ -74,13 +82,18 @@ impl FakeScheduler {
     }
     pub extern "C" fn cancel(_cookie: *mut c_void, _id: EventId) {}
 
+    pub extern "C" fn now(cookie: *mut c_void) -> i64 {
+        unsafe { (*(cookie as *mut Self)).now }
+    }
+
     pub fn new() -> Self {
-        Self { next_id: 0 }
+        Self { next_id: 0, now: 0 }
     }
 
     pub fn as_scheduler(&mut self) -> Scheduler {
         Scheduler {
             cookie: self as *mut Self as *mut c_void,
+            now: Self::now,
             cancel: Self::cancel,
             schedule: Self::schedule,
         }
