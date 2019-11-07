@@ -22,11 +22,30 @@ void Environment::Run() {
   }
 }
 
-void Environment::TxBeacon(StationIfc* sender, const wlan_channel_t& chan, const wlan_ssid_t& ssid,
-                           const common::MacAddr& bssid) {
+void Environment::TxBeacon(StationIfc* sender, const wlan_channel_t& channel,
+                           const wlan_ssid_t& ssid, const common::MacAddr& bssid) {
   for (auto sta : stations_) {
     if (sta != sender) {
-      sta->RxBeacon(chan, ssid, bssid);
+      sta->RxBeacon(channel, ssid, bssid);
+    }
+  }
+}
+
+void Environment::TxAssocReq(StationIfc* sender, const wlan_channel_t& channel,
+                             const common::MacAddr& src, const common::MacAddr& bssid) {
+  for (auto sta : stations_) {
+    if (sta != sender) {
+      sta->RxAssocReq(channel, src, bssid);
+    }
+  }
+}
+
+void Environment::TxAssocResp(StationIfc* sender, const wlan_channel_t& channel,
+                              const common::MacAddr& src, const common::MacAddr& dst,
+                              uint16_t status) {
+  for (auto sta : stations_) {
+    if (sta != sender) {
+      sta->RxAssocResp(channel, src, dst, status);
     }
   }
 }

@@ -33,6 +33,10 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   void Rx(void* pkt) override {}
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid) override {}
+  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                  const common::MacAddr& bssid) override {}
+  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, uint16_t status) override {}
   void ReceiveNotification(void* payload) override {}
 
  private:

@@ -7,6 +7,7 @@
 
 #include <net/ethernet.h>
 
+#include <ddk/protocol/wlan/info.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/info.h>
 
@@ -20,6 +21,14 @@ class StationIfc {
   // Simplified beacon handler, eventually to be incorporated into Rx() functionality
   virtual void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                         const common::MacAddr& bssid) = 0;
+
+  // Receive an assocation request
+  virtual void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                          const common::MacAddr& bssid) = 0;
+
+  // Receive an association response
+  virtual void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                           const common::MacAddr& dst, uint16_t status) = 0;
 
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;

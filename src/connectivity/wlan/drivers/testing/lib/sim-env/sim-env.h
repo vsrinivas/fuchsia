@@ -66,8 +66,16 @@ class Environment {
 
   // Send a beacon from sender to the rest of the stations. Note that this will (likely) someday
   // be deprecated in favor of Tx().
-  void TxBeacon(StationIfc* sender, const wlan_channel_t& chan, const wlan_ssid_t& ssid,
+  void TxBeacon(StationIfc* sender, const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);
+
+  // Send a request to associate.
+  void TxAssocReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
+                  const common::MacAddr& bssid);
+
+  // Send an assocation response.
+  void TxAssocResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, uint16_t status);
 
   // Ask for a future notification, time is relative to current time.
   zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload);

@@ -171,7 +171,7 @@ void ScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
 
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
-constexpr wlan_ssid_t kDefaultSsid = {.ssid = "Fuchsia Fake AP", .len = 15};
+constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 TEST_F(ScanTest, BasicFunctionality) {

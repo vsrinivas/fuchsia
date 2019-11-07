@@ -53,6 +53,12 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid) override;
   void ReceiveNotification(void* payload) override;
+
+  // No-op StationIfc methods
+  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                  const common::MacAddr& bssid) override {}
+  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, uint16_t status) override {}
 };
 
 // When we receive a beacon, just add it to our list of received beacons for later validation

@@ -21,14 +21,34 @@ executable("event_unittests") {
   ]
 }
 
+executable("rx_tests") {
+  output_name = "rx_tests"
+
+  testonly = true
+
+  sources = [
+    "rx_tests.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/lib/fxl/test/:gtest_main",
+  ]
+}
+
 unittest_package("wlan-sim-env-test") {
   deps = [
     ":event_unittests",
+    ":rx_tests",
   ]
 
   tests = [
     {
       name = "event_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "rx_tests"
       environments = basic_envs
     },
   ]
