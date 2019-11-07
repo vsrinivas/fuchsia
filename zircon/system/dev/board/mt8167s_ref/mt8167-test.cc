@@ -101,4 +101,17 @@ TEST(Mt8167Test, InitMmPll) {
   dut.TestInitMmPll();
 }
 
+TEST(Mt8167Test, InitSoc) {
+  Mt8167Test dut;
+  constexpr size_t kRegCount = (MT8167_SOC_INT_POL + 256) / 4;
+  uint32_t regs[kRegCount] = {};
+  ddk::MmioBuffer mmio(
+      mmio_buffer_t{.vaddr = regs, .offset = 0, .size = kRegCount * 4, .vmo = ZX_HANDLE_INVALID});
+  dut.UpdateRegisters(std::move(mmio));
+  EXPECT_EQ(0x0f0f'0f0f, regs[MT8167_SOC_INT_POL / 4]);
+  EXPECT_EQ(0x803d'0f0f, regs[MT8167_SOC_INT_POL / 4 + 1]);
+  EXPECT_EQ(0x7dff'fbfd, regs[MT8167_SOC_INT_POL / 4 + 5]);
+  EXPECT_EQ(0x004e'17fc, regs[MT8167_SOC_INT_POL / 4 + 6]);
+}
+
 }  // namespace board_mt8167

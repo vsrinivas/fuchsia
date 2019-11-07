@@ -11,24 +11,16 @@
 
 namespace board_c18 {
 
-zx_status_t C18::SocInit() {
-  zx_status_t status;
-  mmio_buffer_t mmio;
-  status = mmio_buffer_init_physical(&mmio, MT8183_MCUCFG_BASE, MT8183_MCUCFG_SIZE,
-                                     // Please do not use get_root_resource() in new code (ZX-1467).
-                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d \n", __PRETTY_FUNCTION__, status);
-    return status;
-  }
-  ddk::MmioBuffer mmio2(mmio);
+namespace {
 
+constexpr size_t kNumberOfPolarityRegisters = 10;
+constexpr uint32_t GetRegister(size_t offset) {
   // 1 to invert from Low to High, 0 is either already High or a reserved interrupt
-  static constexpr bool L = true;
-  static constexpr bool H = false;
-  static constexpr bool R = false;
-
-  static const std::array<bool, 304> spi_polarities = {
+  constexpr bool L = true;
+  constexpr bool H = false;
+  constexpr bool R = false;
+  // Start from interrupt 32 (first SPI after 32 PPIs)
+  constexpr std::array<bool, kNumberOfPolarityRegisters * 32> spi_polarities = {
     L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, // 32
     L, L, L, L, L, L, L, L, H, L, H, L, L, L, L, L, // 48
     L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, // 64
@@ -50,11 +42,31 @@ zx_status_t C18::SocInit() {
     L, L, L, L, L, L, R, L, R, R, R, R, R, R, R, L  // 320
   };
 
-  // Start from interrupt 32 (first SPI after 32 PPIs)
+  uint32_t temporary_register = 0;
+  for (size_t j = 0; j < 32; ++j) {
+    temporary_register |= static_cast<uint32_t>(spi_polarities[offset + j]) << j;
+  }
+  return temporary_register;
+}
+
+}  // namespace
+
+zx_status_t C18::SocInit() {
+  zx_status_t status;
+  mmio_buffer_t mmio;
+  status = mmio_buffer_init_physical(&mmio, MT8183_MCUCFG_BASE, MT8183_MCUCFG_SIZE,
+                                     // Please do not use get_root_resource() in new code (ZX-1467).
+                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: mmio_buffer_init_physical failed %d \n", __PRETTY_FUNCTION__, status);
+    return status;
+  }
+  ddk::MmioBuffer mmio2(mmio);
+
   // Convert Level interrupt polarity in SOC from Low to High as needed by gicv3.
-  for (size_t i = 0; i < spi_polarities.size(); i++) {
+  for (size_t i = 0; i < kNumberOfPolarityRegisters; ++i) {
     // 32 interrupts per register, one register every 4 bytes.
-    mmio2.ModifyBit<uint32_t>(spi_polarities[i], i % 32, MT8183_MCUCFG_INT_POL_CTL0 + i / 32 * 4);
+    mmio2.Write32(GetRegister(i * 32), MT8183_MCUCFG_INT_POL_CTL0 + i * 4);
   }
   return ZX_OK;
 }

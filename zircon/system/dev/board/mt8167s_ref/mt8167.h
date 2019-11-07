@@ -49,6 +49,7 @@ class Mt8167 : public Mt8167Type {
 
   // Visible for testing.
   int Thread();
+  void UpdateRegisters(ddk::MmioBuffer mmio);
 
  protected:
   explicit Mt8167(zx_device_t* parent) : Mt8167Type(parent) {}
