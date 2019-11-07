@@ -44,10 +44,16 @@ zx_test("minfs-integration") {
   test_group = "fs"
   sources = [
     "integration/backup-superblock.cc",
+    "integration/integration_main.cc",
+    "integration/minfs_fixtures.cc",
+    "integration/utils.cc",
   ]
   deps = [
+    "$zx/system/ulib/async-loop",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/memfs",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

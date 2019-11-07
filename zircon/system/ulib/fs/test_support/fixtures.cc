@@ -49,6 +49,26 @@ void FilesystemTest::Remount() {
   Mount();
 }
 
+void FilesystemTest::Mount() {
+  ASSERT_FALSE(mounted_);
+  int flags = read_only_ ? O_RDONLY : O_RDWR;
+
+  fbl::unique_fd fd(open(device_path_.c_str(), flags));
+  ASSERT_TRUE(fd);
+
+  mount_options_t options = default_mount_options;
+  options.enable_journal = environment_->use_journal();
+
+  if (read_only_) {
+    options.readonly = true;
+  }
+
+  // fd consumed by mount. By default, mount waits until the filesystem is
+  // ready to accept commands.
+  ASSERT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
+  mounted_ = true;
+}
+
 void FilesystemTest::Unmount() {
   if (!mounted_) {
     return;
@@ -69,26 +89,6 @@ void FilesystemTest::GetFsInfo(fuchsia_io_FilesystemInfo* info) {
   fzl::FdioCaller caller(std::move(fd));
   ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info));
   ASSERT_OK(status);
-}
-
-void FilesystemTest::Mount() {
-  ASSERT_FALSE(mounted_);
-  int flags = read_only_ ? O_RDONLY : O_RDWR;
-
-  fbl::unique_fd fd(open(device_path_.c_str(), flags));
-  ASSERT_TRUE(fd);
-
-  mount_options_t options = default_mount_options;
-  options.enable_journal = environment_->use_journal();
-
-  if (read_only_) {
-    options.readonly = true;
-  }
-
-  // fd consumed by mount. By default, mount waits until the filesystem is
-  // ready to accept commands.
-  ASSERT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
-  mounted_ = true;
 }
 
 zx_status_t FilesystemTest::CheckFs() {

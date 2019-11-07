@@ -40,6 +40,9 @@ class FilesystemTest : public zxtest::Test {
   // Unmounts and remounts the filesystem, verifying integrity in between.
   void Remount();
 
+  // Mounts the filesystem.
+  void Mount();
+
   // Unmounts the filesystem, without performing any additional test.
   void Unmount();
 
@@ -55,7 +58,6 @@ class FilesystemTest : public zxtest::Test {
 
 
  protected:
-  void Mount();
   zx_status_t CheckFs();
   virtual void CheckInfo() {}
 
