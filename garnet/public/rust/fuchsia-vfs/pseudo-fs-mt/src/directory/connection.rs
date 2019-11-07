@@ -19,11 +19,10 @@ use crate::{
 
 use {
     failure::Error,
-    fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
-        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE,
+        NodeInfo, NodeMarker, OutOfLineUnion, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -144,7 +143,9 @@ where
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
+            match control_handle
+                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
+            {
                 Ok(()) => (),
                 Err(_) => return,
             }

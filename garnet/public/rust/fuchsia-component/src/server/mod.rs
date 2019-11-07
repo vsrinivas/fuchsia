@@ -18,9 +18,9 @@ use {
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
         FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, NodeRequest, NodeRequestStream,
-        SeekOrigin, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        OutOfLineUnion, SeekOrigin, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
         EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
@@ -703,7 +703,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             new_env_server_end,
             controller_server_end,
             environment_label,
-            Some(fidl::encoding::OutOfLine(&mut service_list)),
+            Some(OutOfLine(&mut service_list)),
             &mut EnvironmentOptions {
                 inherit_parent_services: false,
                 use_parent_runners: false,
@@ -908,7 +908,7 @@ macro_rules! send_info_fn {
             if let Some(mut info) = info {
                 stream
                     .control_handle()
-                    .send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
+                    .send_on_open_(zx::sys::ZX_OK, Some(OutOfLineUnion(&mut info)))
                     .context("fail sending OnOpen event")?;
             }
             Ok(())

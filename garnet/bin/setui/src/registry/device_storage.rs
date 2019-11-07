@@ -127,7 +127,6 @@ fn prefixed(input_string: &str) -> String {
 #[cfg(test)]
 pub mod testing {
     use super::*;
-    use fidl::encoding::OutOfLine;
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use parking_lot::RwLock;
@@ -223,7 +222,7 @@ pub mod testing {
                         }
                         stored_key = Some(key);
 
-                        responder.send(stored_value.as_mut().map(OutOfLine)).unwrap();
+                        responder.send(stored_value.as_mut().map(OutOfLineUnion)).unwrap();
                     }
                     StoreAccessorRequest::SetValue { key, val, control_handle: _ } => {
                         stats_clone.write().record(StashAction::Set);
@@ -251,7 +250,6 @@ pub mod testing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::encoding::OutOfLine;
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use serde_derive::{Deserialize, Serialize};
@@ -287,7 +285,7 @@ mod tests {
                         let mut response =
                             Value::Stringval(serde_json::to_string(&value_to_get).unwrap());
 
-                        responder.send(Some(&mut response).map(OutOfLine)).unwrap();
+                        responder.send(Some(&mut response).map(OutOfLineUnion)).unwrap();
                     }
                     _ => {}
                 }
@@ -311,7 +309,7 @@ mod tests {
                 #[allow(unreachable_patterns)]
                 match req {
                     StoreAccessorRequest::GetValue { key: _, responder } => {
-                        responder.send(None.map(OutOfLine)).unwrap();
+                        responder.send(None.map(OutOfLineUnion)).unwrap();
                     }
                     _ => {}
                 }

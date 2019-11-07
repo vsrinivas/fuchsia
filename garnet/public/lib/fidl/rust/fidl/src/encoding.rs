@@ -2217,6 +2217,7 @@ macro_rules! fidl_union {
         )*],
         size: $size:expr,
         align: $align:expr,
+        out_of_line_ty: $out_of_line_ty:ident,
     ) => {
         $( #[$attrs] )*
         pub enum $name {
@@ -2390,7 +2391,71 @@ macro_rules! fidl_union {
             }
         }
 
-        impl $crate::encoding::Autonull for $name {}
+        impl $crate::encoding::AutonullContainer for $out_of_line_ty<'_, $name> {}
+        impl $crate::encoding::AutonullContainer for Box<$name> {}
+
+        impl $crate::encoding::Layout for $out_of_line_ty<'_, $name> {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
+                8
+            }
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    24
+                } else {
+                    8
+                }
+            }
+        }
+        impl $crate::encoding::Layout for Box<$name> {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
+                8
+            }
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                if context.unions_use_xunion_format {
+                    24
+                } else {
+                    8
+                }
+            }
+        }
+
+        impl $crate::encoding::Encodable for $out_of_line_ty<'_, $name> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                if encoder.context().unions_use_xunion_format {
+                    $crate::fidl_encode!(&mut self.0, encoder)
+                } else {
+                    $crate::fidl_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder)?;
+                    encoder.write_out_of_line(encoder.inline_size_of::<$name>(), |encoder| {
+                        $crate::fidl_encode!(&mut self.0, encoder)
+                    })
+                }
+            }
+        }
+        impl $crate::encoding::Encodable for Box<$name> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                $crate::fidl_encode!(&mut $out_of_line_ty(&mut **self), encoder)
+            }
+        }
+
+        impl $crate::encoding::Decodable for Box<$name> {
+            fn new_empty() -> Self {
+                Box::new($crate::fidl_new_empty!($name))
+            }
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                if decoder.context().unions_use_xunion_format {
+                    (**self).decode(decoder)
+                } else {
+                    let mut present: u64 = 0;
+                    $crate::fidl_decode!(&mut present, decoder)?;
+                    if present != $crate::encoding::ALLOC_PRESENT_U64 {
+                        return Err($crate::Error::NotNullable);
+                    }
+                    decoder.read_out_of_line(decoder.inline_size_of::<$name>(), |decoder| {
+                        (&mut **self).decode(decoder)
+                    })
+                }
+            }
+        }
     }
 }
 
@@ -3046,6 +3111,7 @@ mod test {
             ],
             size: 16,
             align: 8,
+            out_of_line_ty: OutOfLine,
         };
 
         let buf = &mut Vec::new();
@@ -3116,6 +3182,7 @@ mod test {
             ],
             size: 8,
             align: 4,
+            out_of_line_ty: OutOfLine,
         };
 
         let buf = &mut Vec::new();
@@ -3289,6 +3356,7 @@ mod test {
             ],
             size: 24,
             align: 8,
+            out_of_line_ty: OutOfLine,
         };
 
         for ctx in CONTEXTS {
@@ -3806,6 +3874,7 @@ mod test {
         ],
         size: 8,
         align: 4,
+        out_of_line_ty: OutOfLine,
     }
 
     // Ensure single-variant xunion compiles (no irrefutable pattern errors).
@@ -3852,6 +3921,7 @@ mod test {
         ],
         size: 24,
         align: 8,
+        out_of_line_ty: OutOfLine,
     }
 
     fidl_xunion! {
@@ -3919,6 +3989,55 @@ mod test {
         encode_assert_bytes(
             &Context { unions_use_xunion_format: true },
             SimpleUnion::I64(3),
+            &[
+                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion ordinal
+                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
+            ],
+        );
+    }
+
+    #[test]
+    fn encode_decode_nullable_union() {
+        identities![None::<Box<SimpleUnion>>, Some(Box::new(SimpleUnion::I64(3))),];
+    }
+
+    #[test]
+    fn nullable_union_is_out_of_line_in_old_context() {
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: false },
+            None::<Box<SimpleUnion>>,
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union is not present
+            ],
+        );
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: false },
+            Some(Box::new(SimpleUnion::I64(3))),
+            &[
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // union is present
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union tag + padding
+                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            ],
+        );
+    }
+
+    #[test]
+    fn nullable_union_is_inline_in_v1_context() {
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: true },
+            None::<Box<SimpleUnion>>,
+            &[
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 ordinal = null
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 bytes, 0 handles
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // not present
+            ],
+        );
+        encode_assert_bytes(
+            &Context { unions_use_xunion_format: true },
+            Some(Box::new(SimpleUnion::I64(3))),
             &[
                 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion ordinal
                 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles

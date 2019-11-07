@@ -5,11 +5,10 @@
 use crate::{common::send_on_open_with_error, directory::common::new_connection_validate_flags};
 
 use {
-    fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryObject, DirectoryRequestStream, NodeInfo, NodeMarker,
-        OPEN_FLAG_DESCRIBE,
+        OutOfLineUnion, OPEN_FLAG_DESCRIBE,
     },
     fuchsia_zircon::Status,
     futures::{
@@ -81,7 +80,9 @@ where
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
+            match control_handle
+                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
+            {
                 Ok(()) => (),
                 Err(_) => return None,
             }

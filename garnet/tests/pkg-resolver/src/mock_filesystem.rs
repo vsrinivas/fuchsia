@@ -25,7 +25,7 @@ fn handle_directory_request_stream(
             handle_directory_request(req.unwrap(), Arc::clone(&open_counts)).await;
         }
     }
-        .boxed()
+    .boxed()
 }
 
 async fn handle_directory_request(req: DirectoryRequest, open_counts: OpenCounter) {
@@ -54,7 +54,7 @@ fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
     let ch = stream.control_handle();
     if flags & OPEN_FLAG_DESCRIBE != 0 {
         let mut ni = fidl_fuchsia_io::NodeInfo::Directory(DirectoryObject);
-        ch.send_on_open_(Status::OK.into_raw(), Some(fidl::encoding::OutOfLine(&mut ni)))
+        ch.send_on_open_(Status::OK.into_raw(), Some(fidl_fuchsia_io::OutOfLineUnion(&mut ni)))
             .expect("send_on_open");
     }
 }

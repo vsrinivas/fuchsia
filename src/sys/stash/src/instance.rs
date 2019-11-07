@@ -5,10 +5,10 @@
 use fuchsia_async as fasync;
 
 use failure::{err_msg, Error};
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
-    FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
+    FlushError, OutOfLineUnion, StoreAccessorMarker, StoreAccessorRequest,
+    StoreAccessorRequestStream,
 };
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -62,7 +62,7 @@ impl Instance {
                     match req {
                         StoreAccessorRequest::GetValue { key, responder } => {
                             let mut res = acc.get_value(&key).await?;
-                            responder.send(res.as_mut().map(OutOfLine))?;
+                            responder.send(res.as_mut().map(OutOfLineUnion))?;
                         }
                         StoreAccessorRequest::SetValue { key, val, .. } => {
                             acc.set_value(key, val).await?
@@ -91,9 +91,9 @@ impl Instance {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    fx_log_err!("error running accessor interface: {:?}", e)
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                fx_log_err!("error running accessor interface: {:?}", e)
+            }),
         );
         Ok(())
     }

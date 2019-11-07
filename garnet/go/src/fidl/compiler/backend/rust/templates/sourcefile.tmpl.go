@@ -31,6 +31,17 @@ use fidl::{
 	fidl_xunion,
 };
 
+{{/*
+	The fidl_union! macro cannot implement traits for fidl::encoding::OutOfLine<T>
+	on union types due to orphan rules. As a temporary workaround, we define
+	a separate wrapper type in the generated module just for unions.
+
+	TODO(fxb/40850): Remove this.
+*/ -}}
+{{ if .Unions -}}
+pub struct OutOfLineUnion<'a, T>(pub &'a mut T);
+{{ end -}}
+
 {{ range $bits := .Bits -}}
 {{ template "BitsDeclaration" $bits }}
 {{ end -}}

@@ -8,7 +8,6 @@ use super::position;
 use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
 use crate::index_convert as idx;
-use fidl::encoding::OutOfLine;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
@@ -97,7 +96,10 @@ impl ImeState {
     pub fn forward_event(&mut self, ev: uii::KeyboardEvent) {
         let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
         self.client
-            .did_update_state(&mut state, Some(OutOfLine(&mut uii::InputEvent::Keyboard(ev))))
+            .did_update_state(
+                &mut state,
+                Some(uii::OutOfLineUnion(&mut uii::InputEvent::Keyboard(ev))),
+            )
             .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
     }
 

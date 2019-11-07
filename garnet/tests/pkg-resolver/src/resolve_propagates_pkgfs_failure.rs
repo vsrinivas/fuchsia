@@ -6,13 +6,10 @@
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
     super::*,
-    fidl::{
-        encoding::OutOfLine,
-        endpoints::{ClientEnd, ServerEnd},
-    },
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
         FileControlHandle, FileMarker, FileObject, FileRequest, FileRequestStream, NodeInfo,
-        NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,
+        NodeMarker, OutOfLineUnion, DIRENT_TYPE_FILE, INO_UNKNOWN,
     },
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::RepositoryBuilder,
@@ -143,7 +140,7 @@ async fn handle_file_stream_fail_truncate(
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(OutOfLine(&mut NodeInfo::File(FileObject { event: None }))),
+        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {
@@ -158,7 +155,7 @@ async fn handle_file_stream_fail_write(
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(OutOfLine(&mut NodeInfo::File(FileObject { event: None }))),
+        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {
@@ -173,7 +170,7 @@ async fn handle_file_stream_success(
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(OutOfLine(&mut NodeInfo::File(FileObject { event: None }))),
+        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {

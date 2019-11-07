@@ -11,7 +11,7 @@ use {
     fidl::{encoding::OutOfLine, endpoints::ServerEnd},
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        NodeMarker, OutOfLineUnion, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_mem,
@@ -212,7 +212,9 @@ impl FileConnection {
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None });
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
+            match control_handle
+                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
+            {
                 Ok(()) => (),
                 Err(_) => return None,
             }

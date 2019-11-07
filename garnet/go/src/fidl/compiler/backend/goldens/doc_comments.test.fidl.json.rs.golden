@@ -23,6 +23,7 @@ use fidl::{
 	fidl_xunion,
 };
 
+pub struct OutOfLineUnion<'a, T>(pub &'a mut T);
 
 /// const comment #1
 ///
@@ -41,6 +42,7 @@ fidl_union! {
   ],
   size: 8,
   align: 4,
+  out_of_line_ty: OutOfLineUnion,
 }
 
 /// struct comment #1

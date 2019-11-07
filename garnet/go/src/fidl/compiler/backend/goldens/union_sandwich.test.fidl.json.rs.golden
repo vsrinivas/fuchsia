@@ -23,6 +23,7 @@ use fidl::{
 	fidl_xunion,
 };
 
+pub struct OutOfLineUnion<'a, T>(pub &'a mut T);
 
 fidl_union! {
   #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -36,6 +37,7 @@ fidl_union! {
   ],
   size: 8,
   align: 4,
+  out_of_line_ty: OutOfLineUnion,
 }
 
 fidl_union! {
@@ -50,6 +52,7 @@ fidl_union! {
   ],
   size: 12,
   align: 4,
+  out_of_line_ty: OutOfLineUnion,
 }
 
 fidl_union! {
@@ -64,6 +67,7 @@ fidl_union! {
   ],
   size: 24,
   align: 8,
+  out_of_line_ty: OutOfLineUnion,
 }
 
 fidl_union! {
@@ -78,6 +82,7 @@ fidl_union! {
   ],
   size: 36,
   align: 4,
+  out_of_line_ty: OutOfLineUnion,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

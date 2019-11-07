@@ -624,23 +624,33 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			log.Panic("unknown identifier: ", val.Identifier)
 		}
 		switch declType {
-		case types.BitsDeclType:
-			fallthrough
-		case types.EnumDeclType:
+		case types.BitsDeclType, types.EnumDeclType:
 			// Bits and enums are small, simple, and never contain handles,
 			// so no need to borrow
 			borrowed = false
 			fallthrough
-		case types.ConstDeclType:
-			fallthrough
-		case types.StructDeclType:
-			fallthrough
-		case types.UnionDeclType:
-			fallthrough
-		case types.XUnionDeclType:
+		case types.ConstDeclType, types.StructDeclType, types.XUnionDeclType:
 			if val.Nullable {
 				if borrowed {
 					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<%s>>", t)
+				} else {
+					r = fmt.Sprintf("Option<Box<%s>>", t)
+				}
+			} else {
+				if borrowed {
+					r = fmt.Sprintf("&mut %s", t)
+				} else {
+					r = t
+				}
+			}
+		case types.UnionDeclType:
+			if val.Nullable {
+				if borrowed {
+					wrapper := c.compileCompoundIdentifier(types.CompoundIdentifier{
+						Library: types.ParseCompoundIdentifier(val.Identifier).Library,
+						Name:    "OutOfLineUnion",
+					})
+					r = fmt.Sprintf("Option<%s<%s>>", wrapper, t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}

@@ -875,15 +875,6 @@
         "has_flexible_envelope": true,
         "contains_union": false
       },
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 8,
-        "has_padding": true,
-        "has_flexible_envelope": true
-      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
