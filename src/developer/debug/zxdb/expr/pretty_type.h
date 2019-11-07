@@ -236,6 +236,15 @@ class PrettyRecursiveVariant : public PrettyType {
   const std::string no_value_string_;
 };
 
+// Decodes a zx_status_t to the #define value.
+class PrettyZxStatusT : public PrettyType {
+ public:
+  PrettyZxStatusT();
+
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
+};
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_TYPE_H_

@@ -649,38 +649,6 @@ TEST_F(FormatTest, Enumeration) {
                                  hex_opts));
 }
 
-TEST_F(FormatTest, ZxStatusT) {
-  // Types in the global namespace named "zx_status_t" of the right size should get the enum name
-  // expanded (Zircon special-case).
-  auto int32_type = MakeInt32Type();
-  auto status_t_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, int32_type);
-  status_t_type->set_assigned_name("zx_status_t");
-
-  ExprValue status_ok(status_t_type, {0, 0, 0, 0});
-  FormatOptions opts;
-  EXPECT_EQ(" = zx_status_t, 0 (ZX_OK)\n", GetDebugTreeForValue(eval_context(), status_ok, opts));
-
-  // -15 = ZX_ERR_BUFFER_TOO_SMALL
-  ExprValue status_too_small(status_t_type, {0xf1, 0xff, 0xff, 0xff});
-  EXPECT_EQ(" = zx_status_t, -15 (ZX_ERR_BUFFER_TOO_SMALL)\n",
-            GetDebugTreeForValue(eval_context(), status_too_small, opts));
-
-  // Invalid negative number.
-  ExprValue status_invalid(status_t_type, {0xf0, 0xd8, 0xff, 0xff});
-  EXPECT_EQ(" = zx_status_t, -10000 (<unknown>)\n",
-            GetDebugTreeForValue(eval_context(), status_invalid, opts));
-
-  // Positive values.
-  ExprValue status_one(status_t_type, {1, 0, 0, 0});
-  EXPECT_EQ(" = zx_status_t, 1 (<unknown>)\n",
-            GetDebugTreeForValue(eval_context(), status_one, opts));
-
-  // Hex formatting should be applied if requested.
-  opts.num_format = FormatOptions::NumFormat::kHex;
-  EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
-            GetDebugTreeForValue(eval_context(), status_too_small, opts));
-}
-
 TEST_F(FormatTest, EmptyAndBadArray) {
   FormatOptions opts;
 

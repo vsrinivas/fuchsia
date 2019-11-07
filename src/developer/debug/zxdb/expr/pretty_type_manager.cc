@@ -224,6 +224,9 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
 }
 
 void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
+  // Zircon.
+  cpp_.emplace_back(InternalGlob("zx_status_t"), std::make_unique<PrettyZxStatusT>());
+
 // fbl
 #define FBL_STRING_LENGTH_EXPRESSION \
   "*reinterpret_cast<size_t*>(data_ - kDataFieldOffset + kLengthFieldOffset)"

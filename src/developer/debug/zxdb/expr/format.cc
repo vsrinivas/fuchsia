@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/zxdb/expr/format.h"
 
-#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
@@ -169,67 +168,6 @@ void FormatChar(FormatNode* node) {
   node->set_description(std::move(str));
 }
 
-// Formats a numeric-style input. This assumes the type of the value in the given node has already
-// been determined to be numeric. This may also be called as a fallback for things like enums.
-void FormatNumeric(FormatNode* node, const FormatOptions& options) {
-  node->set_description_kind(FormatNode::kBaseType);
-
-  if (node->value().data().size() > sizeof(uint64_t)) {
-    // All >64-bit values get formatted as hex because we can't easily give these things to
-    // printf.
-    FormatUnsignedInt(node, options);
-    return;
-  }
-
-  if (options.num_format != NumFormat::kDefault) {
-    // Overridden format option.
-    switch (options.num_format) {
-      case NumFormat::kUnsigned:
-      case NumFormat::kHex:
-        FormatUnsignedInt(node, options);
-        break;
-      case NumFormat::kSigned:
-        FormatSignedInt(node);
-        break;
-      case NumFormat::kChar:
-        FormatChar(node);
-        break;
-      case NumFormat::kDefault:
-        // Prevent warning for unused enum type.
-        break;
-    }
-  } else {
-    // Default handling for base types based on the number.
-    switch (node->value().GetBaseType()) {
-      case BaseType::kBaseTypeBoolean:
-        FormatBoolean(node);
-        break;
-      case BaseType::kBaseTypeFloat:
-        FormatFloat(node);
-        break;
-      case BaseType::kBaseTypeSigned:
-        FormatSignedInt(node);
-        break;
-      case BaseType::kBaseTypeUnsigned:
-        FormatUnsignedInt(node, options);
-        break;
-      case BaseType::kBaseTypeSignedChar:
-      case BaseType::kBaseTypeUnsignedChar:
-      case BaseType::kBaseTypeUTF:
-        FormatChar(node);
-        break;
-    }
-  }
-}
-void FormatZxStatusT(FormatNode* node, const FormatOptions& options) {
-  FormatNumeric(node, options);
-
-  // Caller should have checked this is the right size.
-  debug_ipc::zx_status_t int_val = node->value().GetAs<debug_ipc::zx_status_t>();
-  node->set_description(node->description() +
-                        fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
-}
-
 void FormatEnum(FormatNode* node, const Enumeration* enum_type, const FormatOptions& options) {
   // Get the value out casted to a uint64.
   Err err;
@@ -265,7 +203,7 @@ void FormatEnum(FormatNode* node, const Enumeration* enum_type, const FormatOpti
   FormatOptions modified_opts = options;
   if (modified_opts.num_format == NumFormat::kDefault)
     modified_opts.num_format = enum_type->is_signed() ? NumFormat::kSigned : NumFormat::kUnsigned;
-  FormatNumeric(node, modified_opts);
+  FormatNumericNode(node, modified_opts);
 }
 
 // Rust enums will resolve to a different type. We put the resolved type in a child of this node.
@@ -448,7 +386,7 @@ void FormatFunctionPointer(FormatNode* node, const FormatOptions& options,
   // provide a hex override to get the address rather than the resolved
   // function name.
   if (options.num_format != NumFormat::kDefault) {
-    FormatNumeric(node, options);
+    FormatNumericNode(node, options);
     return;
   }
 
@@ -606,17 +544,6 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
       context->GetPrettyTypeManager().Format(node, node->value().type(), options, context, cb))
     return;
 
-  // Special-case zx_status_t. Long-term this should be removed and replaced with a pretty-printing
-  // system where this can be expressed generically.
-  //
-  // This code needs to go here because zx_status_t is a typedef that will be expanded away by the
-  // GetConcreteType() below.
-  if (node->value().type()->GetFullName() == "zx_status_t" &&
-      node->value().type()->byte_size() == sizeof(debug_ipc::zx_status_t)) {
-    FormatZxStatusT(node, options);
-    return;
-  }
-
   // Trim "const", "volatile", etc. and follow typedef and using for the type checking below.
   //
   // Always use this variable below instead of value.type().
@@ -653,7 +580,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
     }
   } else if (IsNumericBaseType(node->value().GetBaseType())) {
     // Numeric types.
-    FormatNumeric(node, options);
+    FormatNumericNode(node, options);
   } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
     // Pointers to class/struct members.
     FormatMemberPtr(node, member_ptr, options, context);
@@ -727,6 +654,57 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
   } else {
     // Value already available, can format now.
     FillFormatNodeDescriptionFromValue(node, options, context, std::move(cb));
+  }
+}
+
+void FormatNumericNode(FormatNode* node, const FormatOptions& options) {
+  node->set_description_kind(FormatNode::kBaseType);
+
+  if (node->value().data().size() > sizeof(uint64_t)) {
+    // All >64-bit values get formatted as hex because we can't easily give these things to
+    // printf.
+    FormatUnsignedInt(node, options);
+    return;
+  }
+
+  if (options.num_format != NumFormat::kDefault) {
+    // Overridden format option.
+    switch (options.num_format) {
+      case NumFormat::kUnsigned:
+      case NumFormat::kHex:
+        FormatUnsignedInt(node, options);
+        break;
+      case NumFormat::kSigned:
+        FormatSignedInt(node);
+        break;
+      case NumFormat::kChar:
+        FormatChar(node);
+        break;
+      case NumFormat::kDefault:
+        // Prevent warning for unused enum type.
+        break;
+    }
+  } else {
+    // Default handling for base types based on the number.
+    switch (node->value().GetBaseType()) {
+      case BaseType::kBaseTypeBoolean:
+        FormatBoolean(node);
+        break;
+      case BaseType::kBaseTypeFloat:
+        FormatFloat(node);
+        break;
+      case BaseType::kBaseTypeSigned:
+        FormatSignedInt(node);
+        break;
+      case BaseType::kBaseTypeUnsigned:
+        FormatUnsignedInt(node, options);
+        break;
+      case BaseType::kBaseTypeSignedChar:
+      case BaseType::kBaseTypeUnsignedChar:
+      case BaseType::kBaseTypeUTF:
+        FormatChar(node);
+        break;
+    }
   }
 }
 

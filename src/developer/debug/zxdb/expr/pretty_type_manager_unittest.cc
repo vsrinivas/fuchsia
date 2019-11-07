@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
+#include "src/developer/debug/zxdb/expr/format_test_support.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -199,6 +200,39 @@ TEST_F(PrettyTypeManagerTest, RustStrings) {
 
   EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
             node.description());
+}
+
+TEST_F(PrettyTypeManagerTest, ZxStatusT) {
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Types in the global namespace named "zx_status_t" of the right size should get the enum name
+  // expanded (Zircon special-case).
+  auto int32_type = MakeInt32Type();
+  auto status_t_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, int32_type);
+  status_t_type->set_assigned_name("zx_status_t");
+
+  ExprValue status_ok(status_t_type, {0, 0, 0, 0});
+  FormatOptions opts;
+  EXPECT_EQ(" = zx_status_t, 0 (ZX_OK)\n", GetDebugTreeForValue(context, status_ok, opts));
+
+  // -15 = ZX_ERR_BUFFER_TOO_SMALL
+  ExprValue status_too_small(status_t_type, {0xf1, 0xff, 0xff, 0xff});
+  EXPECT_EQ(" = zx_status_t, -15 (ZX_ERR_BUFFER_TOO_SMALL)\n",
+            GetDebugTreeForValue(context, status_too_small, opts));
+
+  // Invalid negative number.
+  ExprValue status_invalid(status_t_type, {0xf0, 0xd8, 0xff, 0xff});
+  EXPECT_EQ(" = zx_status_t, -10000 (<unknown>)\n",
+            GetDebugTreeForValue(context, status_invalid, opts));
+
+  // Positive values.
+  ExprValue status_one(status_t_type, {1, 0, 0, 0});
+  EXPECT_EQ(" = zx_status_t, 1 (<unknown>)\n", GetDebugTreeForValue(context, status_one, opts));
+
+  // Hex formatting should be applied if requested.
+  opts.num_format = FormatOptions::NumFormat::kHex;
+  EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
+            GetDebugTreeForValue(context, status_too_small, opts));
 }
 
 }  // namespace zxdb

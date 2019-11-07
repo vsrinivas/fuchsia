@@ -46,6 +46,10 @@ void FillFormatNodeValue(FormatNode* node, const fxl::RefPtr<EvalContext>& conte
 void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
                                const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb);
 
+// Formatter for numbers. This assumes the type of the value in the given node has already
+// been determined to be numeric. This may also be called as a fallback for things like enums.
+void FormatNumericNode(FormatNode* node, const FormatOptions& options);
+
 // Formatters for strings. These are public so they can be shared by the pretty-printers.
 //
 // The "char pointer" variant can take a known string length or not. If one is not given, the

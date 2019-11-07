@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/format.h"
@@ -354,6 +355,19 @@ void PrettyRecursiveVariant::Format(FormatNode* node, const FormatOptions& optio
 
   node->set_description_kind(FormatNode::kCollection);
   EvalExpressionOn(context, node->value(), index_expr_, std::move(eval_index_cb));
+}
+
+PrettyZxStatusT::PrettyZxStatusT() : PrettyType({}) {}
+
+void PrettyZxStatusT::Format(FormatNode* node, const FormatOptions& options,
+                             const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
+  FormatNumericNode(node, options);
+
+  if (node->value().type()->byte_size() == sizeof(debug_ipc::zx_status_t)) {
+    debug_ipc::zx_status_t int_val = node->value().GetAs<debug_ipc::zx_status_t>();
+    node->set_description(node->description() +
+                          fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
+  }
 }
 
 }  // namespace zxdb
