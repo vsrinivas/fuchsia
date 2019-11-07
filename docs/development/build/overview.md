@@ -1,4 +1,4 @@
-# The build system
+# The Fuchsia build system
 
 ## Overview
 
@@ -10,11 +10,10 @@ executes the actual build.
 Note that Zircon uses a different build system, though still using GN and
 Ninja.
 
-## Getting started with the build system
+## Getting started
 
-If you are just starting to learn about Fuchsia's build system and GN, then
-[Using GN build][gn-preso] is for you.  It introduces GN from first principles,
-and helps the rest of this page make much more sense.
+If you are unfamiliar with Fuchsia's build system and GN, see [Using GN
+build][gn-preso] which outlines the basic principles of the GN build system.
 
 ## Boards and Products
 
