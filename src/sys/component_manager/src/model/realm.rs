@@ -87,9 +87,9 @@ impl Realm {
     /// Resolves and populates this component's meta directory handle if it has not been done so
     /// already, and returns a reference to the handle. If this component does not use meta storage
     /// Ok(None) will be returned.
-    pub async fn resolve_meta_dir<'a>(
-        &'a self,
-        model: &'a Model,
+    pub async fn resolve_meta_dir(
+        &self,
+        model: &Model,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
@@ -151,10 +151,10 @@ impl Realm {
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
     /// added, the component instance exists but is not bound.
-    pub async fn add_dynamic_child<'a>(
-        &'a self,
+    pub async fn add_dynamic_child(
+        &self,
         collection_name: String,
-        child_decl: &'a ChildDecl,
+        child_decl: &ChildDecl,
     ) -> Result<(), ModelError> {
         match child_decl.startup {
             fsys::StartupMode::Lazy => {}
@@ -196,10 +196,10 @@ impl Realm {
     }
 
     /// Removes the dynamic child `partial_moniker`.
-    pub async fn remove_dynamic_child<'a>(
+    pub async fn remove_dynamic_child(
         model: Model,
         realm: Arc<Realm>,
-        partial_moniker: &'a PartialMoniker,
+        partial_moniker: &PartialMoniker,
     ) -> Result<(), ModelError> {
         realm.resolve_decl().await?;
         let mut state = realm.lock_state().await;
@@ -455,10 +455,10 @@ impl RealmState {
 
     /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,
     /// or None if it already existed.
-    async fn add_child_realm<'a>(
-        &'a mut self,
-        realm: &'a Realm,
-        child: &'a ChildDecl,
+    async fn add_child_realm(
+        &mut self,
+        realm: &Realm,
+        child: &ChildDecl,
         collection: Option<String>,
     ) -> Option<Arc<Realm>> {
         let instance_id = match collection {
@@ -491,7 +491,7 @@ impl RealmState {
         }
     }
 
-    async fn add_static_child_realms<'a>(&'a mut self, realm: &'a Realm, decl: &'a ComponentDecl) {
+    async fn add_static_child_realms(&mut self, realm: &Realm, decl: &ComponentDecl) {
         for child in decl.children.iter() {
             self.add_child_realm(realm, child, None).await;
         }

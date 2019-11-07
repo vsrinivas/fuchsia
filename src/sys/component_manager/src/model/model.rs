@@ -115,12 +115,12 @@ impl Model {
 
     /// Given a realm and path, lazily bind to the instance in the realm, open its outgoing
     /// directory at that path, then bind its eager children.
-    pub async fn bind_instance_open_outgoing<'a>(
-        &'a self,
+    pub async fn bind_instance_open_outgoing(
+        &self,
         realm: Arc<Realm>,
         flags: u32,
         open_mode: u32,
-        path: &'a CapabilityPath,
+        path: &CapabilityPath,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let eager_children = {
@@ -160,8 +160,8 @@ impl Model {
 
     /// Given a realm and path, lazily bind to the instance in the realm, open its exposed
     /// directory, then bind its eager children.
-    pub async fn bind_instance_open_exposed<'a>(
-        &'a self,
+    pub async fn bind_instance_open_exposed(
+        &self,
         realm: Arc<Realm>,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
@@ -204,9 +204,9 @@ impl Model {
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
     /// if that has not already happened.
-    pub async fn look_up_realm<'a>(
-        &'a self,
-        look_up_abs_moniker: &'a AbsoluteMoniker,
+    pub async fn look_up_realm(
+        &self,
+        look_up_abs_moniker: &AbsoluteMoniker,
     ) -> Result<Arc<Realm>, ModelError> {
         let mut cur_realm = self.root_realm.clone();
         for moniker in look_up_abs_moniker.path().iter() {
@@ -229,10 +229,7 @@ impl Model {
     /// already running. Returns the list of child realms whose instances need to be eagerly started
     /// after this function returns. The caller is responsible for calling
     /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
-    async fn bind_single_instance<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-    ) -> Result<Vec<Arc<Realm>>, ModelError> {
+    async fn bind_single_instance(&self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
         let eager_children = self.bind_inner(realm.clone()).await?;
         let event = {
             let routing_facade = RoutingFacade::new(self.clone());
@@ -251,8 +248,8 @@ impl Model {
     }
 
     /// Binds to a list of instances, and any eager children they may return.
-    async fn bind_eager_children_recursive<'a>(
-        &'a self,
+    async fn bind_eager_children_recursive(
+        &self,
         mut instances_to_bind: Vec<Arc<Realm>>,
     ) -> Result<(), ModelError> {
         loop {
