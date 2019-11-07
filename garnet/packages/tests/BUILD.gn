@@ -847,8 +847,8 @@ group("run_tests") {
 group("vulkan") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:test-vk-validation",
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/tests/vkvalidation:test-vk-validation",
     "//src/lib/vulkan:loader_and_validation_tests",
   ]
 }

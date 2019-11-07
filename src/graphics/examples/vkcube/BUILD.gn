@@ -1,0 +1,168 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+package("vkcube-on-scenic") {
+  testonly = true
+
+  deps = [
+    ":vkcube_on_scenic",
+  ]
+  binary = "vkcube_on_scenic"
+
+  meta = [
+    {
+      path = rebase_path("meta/vkcube_on_scenic.cmx")
+      dest = "vkcube_on_scenic.cmx"
+    },
+  ]
+
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain.loadable_modules
+  resources =
+      [
+        {
+          path = rebase_path("bbb_frame.yuv")
+          dest = "bbb_frame.yuv"
+        },
+      ] + vulkan_validation_layers.resources + image_pipe_swapchain.resources
+}
+
+package("vkcube-on-fb") {
+  testonly = true
+
+  deps = [
+    ":vkcube_on_fb",
+  ]
+  binary = "vkcube_on_fb"
+
+  meta = [
+    {
+      path = rebase_path("meta/vkcube_on_fb.cmx")
+      dest = "vkcube_on_fb.cmx"
+    },
+  ]
+
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+  resources =
+      [
+        {
+          path = rebase_path("bbb_frame.yuv")
+          dest = "bbb_frame.yuv"
+        },
+      ] + vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+}
+
+package("vkcube-skip-present") {
+  testonly = true
+
+  deps = [
+    ":vkcube_skip_present",
+  ]
+  binary = "vkcube_skip_present"
+
+  meta = [
+    {
+      path = rebase_path("meta/vkcube_skip_present.cmx")
+      dest = "vkcube_skip_present.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps +
+                image_pipe_swapchain_fb_skip_present.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb_skip_present.loadable_modules
+  resources = [
+                {
+                  path = rebase_path("bbb_frame.yuv")
+                  dest = "bbb_frame.yuv"
+                },
+              ] + vulkan_validation_layers.resources +
+              image_pipe_swapchain_fb_skip_present.resources
+}
+
+executable("vkcube_on_scenic") {
+  sources = [
+    "main.cc",
+    "test_vk_cube.h",
+    "third_party/vkcube/cube.cc",
+    "third_party/vkcube/cube.h",
+  ]
+  cflags = [ "-Wno-reorder-init-list" ]
+  defines = [
+    "VK_USE_PLATFORM_FUCHSIA",
+    "CUBE_USE_IMAGE_PIPE",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/public/lib/trace-provider-with-fdio",
+    "//src/lib/vulkan",
+    "//src/lib/vulkan/imagepipe_view",
+    "//zircon/public/lib/syslog",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+executable("vkcube_on_fb") {
+  sources = [
+    "main.cc",
+    "test_vk_cube.h",
+    "third_party/vkcube/cube.cc",
+    "third_party/vkcube/cube.h",
+  ]
+  cflags = [ "-Wno-reorder-init-list" ]
+  defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/public/lib/trace-provider-with-fdio",
+    "//src/lib/vulkan",
+    "//zircon/public/lib/syslog",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+executable("vkcube_skip_present") {
+  sources = [
+    "main.cc",
+    "test_vk_cube.h",
+    "third_party/vkcube/cube.cc",
+    "third_party/vkcube/cube.h",
+  ]
+  cflags = [ "-Wno-reorder-init-list" ]
+  defines = [
+    "VK_USE_PLATFORM_FUCHSIA",
+    "CUBE_SKIP_PRESENT",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/public/lib/trace-provider",
+    "//src/lib/vulkan",
+    "//zircon/public/lib/syslog",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}

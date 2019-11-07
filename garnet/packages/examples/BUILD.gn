@@ -98,9 +98,9 @@ group("all") {
     "//garnet/packages/examples:scenic",
     "//garnet/packages/examples:speech",
     "//garnet/packages/examples:tcp",
-    "//garnet/packages/examples:vkcube_on_fb",
-    "//garnet/packages/examples:vkcube_on_scenic",
-    "//garnet/packages/examples:vkcube_skip_present",
+    "//garnet/packages/examples:vkcube-on-fb",
+    "//garnet/packages/examples:vkcube-on-scenic",
+    "//garnet/packages/examples:vkcube-skip-present",
     "//garnet/packages/examples:vkprimer",
     "//garnet/packages/examples:vulkaninfo",
   ]
@@ -197,18 +197,18 @@ group("speech") {
   ]
 }
 
-group("vkcube_on_scenic") {
+group("vkcube-on-scenic") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:vkcube_on_scenic",
+    "//src/graphics/examples/vkcube:vkcube-on-scenic",
   ]
 }
 
 group("vulkaninfo") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:vulkaninfo",
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/examples/vulkaninfo",
   ]
 }
 
@@ -250,23 +250,23 @@ group("rust") {
   ]
 }
 
-group("vkcube_on_fb") {
+group("vkcube-on-fb") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:vkcube_on_fb",
+    "//src/graphics/examples/vkcube:vkcube-on-fb",
   ]
 }
 
-group("vkcube_skip_present") {
+group("vkcube-skip-present") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:vkcube_skip_present",
+    "//src/graphics/examples/vkcube:vkcube-skip-present",
   ]
 }
 
 group("vkprimer") {
   testonly = true
   public_deps = [
-    "//garnet/lib/vulkan:vkprimer",
+    "//src/graphics/examples/vkprimer",
   ]
 }

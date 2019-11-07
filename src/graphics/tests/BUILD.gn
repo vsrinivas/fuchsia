@@ -8,5 +8,6 @@ group("tests") {
   deps = [
     "goldfish_benchmark",
     "goldfish_test",
+    "vkvalidation:test-vk-validation",
   ]
 }

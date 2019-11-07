@@ -1,0 +1,38 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+test_package("test-vk-validation") {
+  deps = [
+    ":test_vk_validation",
+    "//src/lib/vulkan:validation_layers",
+  ]
+
+  tests = [
+    {
+      name = "test_vk_validation"
+      environments = magma_libvulkan_hardware_envs
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
+
+executable("test_vk_validation") {
+  testonly = true
+  sources = [
+    "test_validation_layers.cc",
+  ]
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
+  ]
+}

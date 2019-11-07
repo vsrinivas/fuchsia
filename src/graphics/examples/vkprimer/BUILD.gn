@@ -1,0 +1,133 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/graphics/examples/vkprimer/common/common.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+
+package("vkprimer") {
+  testonly = true
+
+  binary = "vkprimer"
+
+  deps = [
+    ":bin",
+  ]
+
+  resources = [
+    {
+      path = "common/shaders/vert.spv"
+      dest = "shaders/vert.spv"
+    },
+    {
+      path = "common/shaders/frag.spv"
+      dest = "shaders/frag.spv"
+    },
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//src/lib/vulkan:validation_layers" ]
+
+    meta = [
+      {
+        path = rebase_path("meta/vkprimer.cmx")
+        dest = "vkprimer.cmx"
+      },
+    ]
+
+    public_deps = vulkan_validation_layers.public_deps +
+                  image_pipe_swapchain_fb.public_deps
+    loadable_modules = vulkan_validation_layers.loadable_modules +
+                       image_pipe_swapchain_fb.loadable_modules
+    resources +=
+        vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+  }
+}
+
+declare_args() {
+  vulkan_sdk = ""
+}
+
+config("vulkan_sdk_linux_config") {
+  # Specify the include/lib dirs and linked libraries for use with the
+  # downloaded LunarG Vulkan SDK.
+  vulkan_sdk = "//prebuilt/third_party/vulkansdk/linux/x86_64"
+  include_dirs = [ "$vulkan_sdk/include" ]
+  lib_dirs = [ "$vulkan_sdk/lib" ]
+  libs = [ "vulkan" ]
+}
+
+executable("bin") {
+  output_name = "vkprimer"
+  sources = common_sources
+
+  include_dirs = [ "//src/graphics/examples/vkprimer/common" ]
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+
+  if (is_fuchsia) {
+    include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]
+
+    deps += [ "//src/lib/vulkan" ]
+
+    sources += [
+      "fuchsia/vulkan_surface.cc",
+      "fuchsia/vulkan_surface.h",
+    ]
+  } else {
+    defines += [ "USE_GLFW=1" ]
+
+    include_dirs += [ "//src/graphics/examples/vkprimer/glfw" ]
+
+    sources += [
+      "glfw/vulkan_surface.cc",
+      "glfw/vulkan_surface.h",
+    ]
+
+    deps += [
+      ":spirv_copy",
+      "//third_party/glfw",
+    ]
+
+    if (is_linux) {
+      configs += [ ":vulkan_sdk_linux_config($host_toolchain)" ]
+    } else if (is_mac) {
+      include_dirs += [ "${vulkan_sdk}/include" ]
+
+      lib_dirs = [ "${vulkan_sdk}/lib" ]
+
+      libs = [ "vulkan" ]
+    }
+  }
+
+  data = [
+    "common/shaders/frag.spv",
+    "common/shaders/vert.spv",
+  ]
+}
+
+copy("spirv_copy") {
+  sources = [
+    "common/shaders/frag.spv",
+    "common/shaders/vert.spv",
+  ]
+
+  outputs = [
+    "$target_out_dir/{{source_file_part}}",
+  ]
+}
+
+#
+# Linux / Mac Build
+#
+group("vkprimer_glfw") {
+  deps = [
+    ":bin($host_toolchain)",
+  ]
+}
