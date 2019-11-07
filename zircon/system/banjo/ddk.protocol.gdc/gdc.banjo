@@ -19,10 +19,10 @@ protocol Gdc {
     // @Returns: |task_index| : Task ID for this task.
     InitTask(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
              zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
-	     zircon.device.sysmem.ImageFormat_2	input_image_format,
+             zircon.device.sysmem.ImageFormat_2	input_image_format,
              vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
-	     uint32 output_image_format_index,
-             handle<vmo> config_vmo,
+             uint32 output_image_format_index,
+             vector<handle<vmo>> config_vmo,
              ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.

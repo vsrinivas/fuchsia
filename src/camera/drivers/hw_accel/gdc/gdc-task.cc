@@ -15,18 +15,30 @@
 
 namespace gdc {
 
-zx_status_t GdcTask::PinConfigVmo(const zx::vmo& config_vmo, const zx::bti& bti) {
-  // Pin the Config VMO.
-  zx_status_t status = config_vmo_pinned_.Pin(config_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, "%s: Failed to pin config VMO\n", __func__);
-    return status;
-  }
-  if (config_vmo_pinned_.region_count() != 1) {
-    FX_LOG(ERROR, "%s: buffer is not contiguous", __func__);
+zx_status_t GdcTask::PinConfigVmos(const zx_handle_t* config_vmo_list, size_t config_vmo_count,
+                                   const zx::bti& bti) {
+  fbl::AllocChecker ac;
+  pinned_config_vmos_ =
+      fbl ::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[config_vmo_count], config_vmo_count);
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  return status;
+
+  for (uint32_t i = 0; i < config_vmo_count; i++) {
+    zx::vmo vmo(config_vmo_list[i]);
+    auto status = pinned_config_vmos_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "%s: Failed to pin config VMO\n", __func__);
+      return status;
+    }
+    if (pinned_config_vmos_[i].region_count() != 1) {
+      FX_LOG(ERROR, "%s: buffer is not contiguous", __func__);
+      return ZX_ERR_NO_MEMORY;
+    }
+    // Release the vmos so that the handle doesn't get closed
+    __UNUSED zx_handle_t handle = vmo.release();
+  }
+  return ZX_OK;
 }
 
 zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collection,
@@ -34,15 +46,19 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
                           const image_format_2_t* input_image_format,
                           const image_format_2_t* output_image_format_table_list,
                           size_t output_image_format_table_count,
-                          uint32_t output_image_format_index, const zx::vmo& config_vmo,
-                          const hw_accel_callback_t* callback, const zx::bti& bti) {
-  if (callback == nullptr) {
+                          uint32_t output_image_format_index, const zx_handle_t* config_vmo_list,
+                          size_t config_vmo_count, const hw_accel_callback_t* callback,
+                          const zx::bti& bti) {
+  if (callback == nullptr || config_vmo_list == nullptr || config_vmo_count == 0 ||
+      config_vmo_count != output_image_format_table_count) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = PinConfigVmo(config_vmo, bti);
-  if (status != ZX_OK)
+  zx_status_t status = PinConfigVmos(config_vmo_list, config_vmo_count, bti);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "%s: PinConfigVmo Failed\n", __func__);
     return status;
+  }
 
   status = InitBuffers(input_buffer_collection, output_buffer_collection, input_image_format,
                        output_image_format_table_list, output_image_format_table_count,

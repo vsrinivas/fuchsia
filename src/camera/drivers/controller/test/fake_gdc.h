@@ -28,36 +28,43 @@ class FakeGdc {
   }
 
   // |ZX_PROTOCOL_GDC|
-  zx_status_t GdcInitTask(const buffer_collection_info_2_t* input_buffer_collection,
-                          const buffer_collection_info_2_t* output_buffer_collection,
-                          const image_format_2_t* input_image_format,
-                          const image_format_2_t* output_image_format_table_list,
-                          size_t output_image_format_table_count,
-                          uint32_t output_image_format_index, zx::vmo config_vmo,
-                          const hw_accel_callback_t* callback, uint32_t* out_task_index) {
+  static zx_status_t GdcInitTask(const buffer_collection_info_2_t* /*input_buffer_collection*/,
+                                 const buffer_collection_info_2_t* /*output_buffer_collection*/,
+                                 const image_format_2_t* /*input_image_format*/,
+                                 const image_format_2_t* /*output_image_format_table_list*/,
+                                 size_t /*output_image_format_table_count*/,
+                                 uint32_t /*output_image_format_index*/,
+                                 const zx_handle_t* /*config_vmo_list*/,
+                                 size_t /*config_vmo_count*/,
+                                 const hw_accel_callback_t* /*callback*/,
+                                 uint32_t* /*out_task_index*/) {
     return ZX_OK;
   }
-  zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) { return ZX_OK; }
+  static zx_status_t GdcProcessFrame(uint32_t /*task_index*/, uint32_t /*input_buffer_index*/) {
+    return ZX_OK;
+  }
   void GdcRemoveTask(uint32_t task_index) {}
   void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {}
 
  private:
-  static zx_status_t GdcInitTask(void* ctx,
+  static zx_status_t GdcInitTask(void* /*ctx*/,
                                  const buffer_collection_info_2_t* input_buffer_collection,
                                  const buffer_collection_info_2_t* output_buffer_collection,
                                  const image_format_2_t* input_image_format,
                                  const image_format_2_t* output_image_format_table_list,
                                  size_t output_image_format_table_count,
-                                 uint32_t output_image_format_index, zx_handle_t config_vmo,
+                                 uint32_t output_image_format_index,
+                                 const zx_handle_t* config_vmo_list, size_t config_vmo_count,
                                  const hw_accel_callback_t* callback, uint32_t* out_task_index) {
-    return static_cast<FakeGdc*>(ctx)->GdcInitTask(
-        input_buffer_collection, output_buffer_collection, input_image_format,
-        output_image_format_table_list, output_image_format_table_count, output_image_format_index,
-        zx::vmo(config_vmo), callback, out_task_index);
+    return FakeGdc::GdcInitTask(input_buffer_collection, output_buffer_collection,
+                                input_image_format, output_image_format_table_list,
+                                output_image_format_table_count, output_image_format_index,
+                                config_vmo_list, config_vmo_count, callback, out_task_index);
   }
 
-  static zx_status_t GdcProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index) {
-    return static_cast<FakeGdc*>(ctx)->GdcProcessFrame(task_index, input_buffer_index);
+  static zx_status_t GdcProcessFrame(void* /*ctx*/, uint32_t task_index,
+                                     uint32_t input_buffer_index) {
+    return FakeGdc::GdcProcessFrame(task_index, input_buffer_index);
   }
 
   static void GdcRemoveTask(void* ctx, uint32_t task_index) {
