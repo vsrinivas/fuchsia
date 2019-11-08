@@ -29,6 +29,7 @@ enum class StopWidth : uint8_t {
 };
 
 
+class NewDeviceProxy;
 enum class Parity : uint8_t {
   NONE = 1u,
   EVEN = 2u,
@@ -36,6 +37,10 @@ enum class Parity : uint8_t {
 };
 
 
+struct NewDevice_Write_Response;
+struct NewDevice_Write_Result;
+struct NewDevice_Read_Response;
+struct NewDevice_Read_Result;
 enum class FlowControl : uint8_t {
   NONE = 1u,
   CTS_RTS = 2u,
@@ -59,6 +64,395 @@ enum class CharacterWidth : uint8_t {
 
 struct Config;
 class Device;
+class NewDevice;
+
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
+
+class NewDeviceProxy final {
+  NewDeviceProxy() = delete;
+ public:
+
+  struct GetChannelRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel req;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel req);
+      ~GetChannel_Impl() = default;
+      GetChannel_Impl(GetChannel_Impl&& other) = default;
+      GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using GetChannel = GetChannel_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+      ~GetChannel_Impl() = default;
+      GetChannel_Impl(GetChannel_Impl&& other) = default;
+      GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using GetChannel = GetChannel_Impl;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetChannel GetChannel(::zx::channel req);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetChannel GetChannel(::fidl::BytePart _request_buffer, ::zx::channel req);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel req);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    static ::fidl::internal::StatusAndError GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = NewDeviceProxy;
+    using _Base = ::fidl::CompleterBase;
+
+    using GetChannelCompleter = ::fidl::Completer<>;
+
+    virtual void GetChannel(::zx::channel req, GetChannelCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetChannelRequest(const ::fidl::DecodedMessage<NewDeviceProxy::GetChannelRequest>& _msg);
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
+
+struct NewDevice_Write_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Write_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Write_ResultTable;
+
+struct NewDevice_Write_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  NewDevice_Write_Result();
+  ~NewDevice_Write_Result();
+
+  NewDevice_Write_Result(NewDevice_Write_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  NewDevice_Write_Result& operator=(NewDevice_Write_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static NewDevice_Write_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response&& val) {
+    NewDevice_Write_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static NewDevice_Write_Result WithErr(int32_t&& val) {
+    NewDevice_Write_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Write_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Write_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(NewDevice_Write_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
+
+struct NewDevice_Read_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+
+  ::fidl::VectorView<uint8_t> data = {};
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Read_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Read_ResultTable;
+
+struct NewDevice_Read_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  NewDevice_Read_Result();
+  ~NewDevice_Read_Result();
+
+  NewDevice_Read_Result(NewDevice_Read_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  NewDevice_Read_Result& operator=(NewDevice_Read_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static NewDevice_Read_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response&& val) {
+    NewDevice_Read_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static NewDevice_Read_Result WithErr(int32_t&& val) {
+    NewDevice_Read_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Read_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Read_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+
+ private:
+  void Destroy();
+  void MoveImpl_(NewDevice_Read_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response response_;
+    int32_t err_;
+  };
+};
 
 extern "C" const fidl_type_t fuchsia_hardware_serial_ConfigTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_ConfigTable;
@@ -94,6 +488,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigRequestTa
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
+// Legacy synchronous device interface.
+// New drivers should implement NewDevice instead.
 class Device final {
   Device() = delete;
  public:
@@ -375,12 +771,540 @@ class Device final {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteResponseTable;
+
+// FIDL device utilizing the new asynchronous serial driver
+// instead of the synchronous FDIO-backed read/write interface.
+// New drivers should implement this instead of the Device interface above.
+class NewDevice final {
+  NewDevice() = delete;
+ public:
+
+  struct GetClassResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::hardware::serial::Class device_class;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetClassRequest = ::fidl::AnyZeroArgMessage;
+
+  struct SetConfigResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t s;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct SetConfigRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::hardware::serial::Config config;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SetConfigResponse;
+  };
+
+  struct ReadResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceReadResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceReadResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using ReadRequest = ::fidl::AnyZeroArgMessage;
+
+  struct WriteResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceWriteResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceWriteResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::VectorView<uint8_t> data;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDeviceWriteRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDeviceWriteRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteResponse;
+  };
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetClass_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetClass_Impl(zx::unowned_channel _client_end);
+      ~GetClass_Impl() = default;
+      GetClass_Impl(GetClass_Impl&& other) = default;
+      GetClass_Impl& operator=(GetClass_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+      ~SetConfig_Impl() = default;
+      SetConfig_Impl(SetConfig_Impl&& other) = default;
+      SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Read_Impl(zx::unowned_channel _client_end);
+      ~Read_Impl() = default;
+      Read_Impl(Read_Impl&& other) = default;
+      Read_Impl& operator=(Read_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Write_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+      ~Write_Impl() = default;
+      Write_Impl(Write_Impl&& other) = default;
+      Write_Impl& operator=(Write_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetClass = GetClass_Impl<GetClassResponse>;
+    using SetConfig = SetConfig_Impl<SetConfigResponse>;
+    using Read = Read_Impl<ReadResponse>;
+    using Write = Write_Impl<WriteResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetClass_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetClass_Impl() = default;
+      GetClass_Impl(GetClass_Impl&& other) = default;
+      GetClass_Impl& operator=(GetClass_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+      ~SetConfig_Impl() = default;
+      SetConfig_Impl(SetConfig_Impl&& other) = default;
+      SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Read_Impl() = default;
+      Read_Impl(Read_Impl&& other) = default;
+      Read_Impl& operator=(Read_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+      ~Write_Impl() = default;
+      Write_Impl(Write_Impl&& other) = default;
+      Write_Impl& operator=(Write_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetClass = GetClass_Impl<GetClassResponse>;
+    using SetConfig = SetConfig_Impl<SetConfigResponse>;
+    using Read = Read_Impl<ReadResponse>;
+    using Write = Write_Impl<WriteResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Lookup what type of serial device this is.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetClass GetClass();
+
+    // Lookup what type of serial device this is.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetClass GetClass(::fidl::BytePart _response_buffer);
+
+    // Set the configuration of this serial device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetConfig SetConfig(::llcpp::fuchsia::hardware::serial::Config config);
+
+    // Set the configuration of this serial device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetConfig SetConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+
+    // Reads data from the serial port
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::Read Read();
+
+    // Reads data from the serial port
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Read Read(::fidl::BytePart _response_buffer);
+
+    // Writes data to the serial port
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::Write Write(::fidl::VectorView<uint8_t> data);
+
+    // Writes data to the serial port
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Write Write(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Lookup what type of serial device this is.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetClass GetClass(zx::unowned_channel _client_end);
+
+    // Lookup what type of serial device this is.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetClass GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Set the configuration of this serial device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+
+    // Set the configuration of this serial device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+
+    // Reads data from the serial port
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::Read Read(zx::unowned_channel _client_end);
+
+    // Reads data from the serial port
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Writes data to the serial port
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+
+    // Writes data to the serial port
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Lookup what type of serial device this is.
+    static ::fidl::DecodeResult<GetClassResponse> GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Set the configuration of this serial device.
+    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
+
+    // Reads data from the serial port
+    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Writes data to the serial port
+    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = NewDevice;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetClassCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::hardware::serial::Class device_class);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::Class device_class);
+      void Reply(::fidl::DecodedMessage<GetClassResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetClassCompleter = ::fidl::Completer<GetClassCompleterBase>;
+
+    virtual void GetClass(GetClassCompleter::Sync _completer) = 0;
+
+    class SetConfigCompleterBase : public _Base {
+     public:
+      void Reply(int32_t s);
+      void Reply(::fidl::BytePart _buffer, int32_t s);
+      void Reply(::fidl::DecodedMessage<SetConfigResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetConfigCompleter = ::fidl::Completer<SetConfigCompleterBase>;
+
+    virtual void SetConfig(::llcpp::fuchsia::hardware::serial::Config config, SetConfigCompleter::Sync _completer) = 0;
+
+    class ReadCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result result);
+      void ReplySuccess(::fidl::VectorView<uint8_t> data);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<uint8_t> data);
+      void Reply(::fidl::DecodedMessage<ReadResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ReadCompleter = ::fidl::Completer<ReadCompleterBase>;
+
+    virtual void Read(ReadCompleter::Sync _completer) = 0;
+
+    class WriteCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<WriteResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteCompleter = ::fidl::Completer<WriteCompleterBase>;
+
+    virtual void Write(::fidl::VectorView<uint8_t> data, WriteCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetClassRequest(const ::fidl::DecodedMessage<NewDevice::GetClassRequest>& _msg);
+    static void GetClassResponse(const ::fidl::DecodedMessage<NewDevice::GetClassResponse>& _msg);
+    static void SetConfigRequest(const ::fidl::DecodedMessage<NewDevice::SetConfigRequest>& _msg);
+    static void SetConfigResponse(const ::fidl::DecodedMessage<NewDevice::SetConfigResponse>& _msg);
+    static void ReadRequest(const ::fidl::DecodedMessage<NewDevice::ReadRequest>& _msg);
+    static void ReadResponse(const ::fidl::DecodedMessage<NewDevice::ReadResponse>& _msg);
+    static void WriteRequest(const ::fidl::DecodedMessage<NewDevice::WriteRequest>& _msg);
+    static void WriteResponse(const ::fidl::DecodedMessage<NewDevice::WriteResponse>& _msg);
+  };
+};
+
 }  // namespace serial
 }  // namespace hardware
 }  // namespace fuchsia
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDeviceProxy::GetChannelRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDeviceProxy::GetChannelRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDeviceProxy::GetChannelRequest)
+    == ::llcpp::fuchsia::hardware::serial::NewDeviceProxy::GetChannelRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDeviceProxy::GetChannelRequest, req) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response) == ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response, data) == 0);
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response) == ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::serial::Config> : public std::true_type {};
@@ -415,5 +1339,53 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::Device::SetConfigRespon
 static_assert(sizeof(::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse)
     == ::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse, s) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::GetClassResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::GetClassResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::GetClassResponse)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::GetClassResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::GetClassResponse, device_class) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigRequest)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigRequest, config) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigResponse)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::SetConfigResponse, s) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::ReadResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::ReadResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::ReadResponse)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::ReadResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::ReadResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::WriteRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::WriteRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::WriteRequest)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::WriteRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::WriteRequest, data) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::NewDevice::WriteResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::NewDevice::WriteResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice::WriteResponse)
+    == ::llcpp::fuchsia::hardware::serial::NewDevice::WriteResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice::WriteResponse, result) == 16);
 
 }  // namespace fidl

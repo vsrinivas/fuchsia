@@ -10,6 +10,7 @@ zx_driver("bt-transport-uart") {
     "$zx/system/banjo/ddk.protocol.bt.hci",
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/banjo/ddk.protocol.serialimpl.async",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

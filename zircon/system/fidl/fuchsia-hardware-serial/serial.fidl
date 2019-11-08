@@ -51,10 +51,31 @@ struct Config {
     uint32 baud_rate;
 };
 
+/// Legacy synchronous device interface.
+/// New drivers should implement NewDevice instead.
+[FragileBase]
 protocol Device {
     /// Lookup what type of serial device this is.
     GetClass() -> (Class device_class);
 
     /// Set the configuration of this serial device.
     SetConfig(Config config) -> (zx.status s);
+};
+
+/// FIDL device utilizing the new asynchronous serial driver
+/// instead of the synchronous FDIO-backed read/write interface.
+/// New drivers should implement this instead of the Device interface above.
+protocol NewDevice {
+    compose Device;
+
+    /// Reads data from the serial port
+    Read() -> (vector<uint8>:MAX data) error zx.status;
+    
+    /// Writes data to the serial port
+    Write(vector<uint8>:MAX data) -> () error zx.status;
+};
+
+
+protocol NewDeviceProxy {
+    GetChannel(request<NewDevice> req);
 };

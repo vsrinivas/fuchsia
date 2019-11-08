@@ -8,6 +8,7 @@ group("serial") {
     "ftdi",
     "ftdi:ftdi-fake-usb",
     "serial",
+    "serial-async",
     "usb-cdc-acm",
     "usb-cdc-acm:fake-usb-cdc-acm",
   ]

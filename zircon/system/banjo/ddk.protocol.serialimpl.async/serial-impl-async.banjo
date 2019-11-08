@@ -1,0 +1,36 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.serialimpl.async;
+
+using zx;
+using ddk.protocol.serial;
+
+enum SerialState : uint32 {
+    READABLE = 0x1;
+    WRITABLE = 0x2;
+};
+
+[Layout = "ddk-protocol"]
+protocol SerialImplAsync {
+    GetInfo() -> (zx.status s, ddk.protocol.serial.SerialPortInfo info);
+    /// Configures the given serial port.
+    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
+    Enable(bool enable) -> (zx.status s);
+    /// Queues a receive operation. It is an error to queue
+    /// more than one receive operation at a time.
+    /// The callback will be invoked on the interrupt thread or the calling thread
+    /// if the write completes immediately.
+    /// ZX_ERR_NOT_SUPPORTED will be returned if a read is already pending.
+    [Async]
+    ReadAsync() -> (zx.status s, vector<voidptr> buf);
+    /// Queues a packet for transmission. It is an error to queue
+    /// more than one transmit at a time. The callback will be invoked
+    /// on the interrupt thread, or the calling thread if data is available.
+    /// ZX_ERR_NOT_SUPPORTED will be returned if a write is already pending.
+    [Async]
+    WriteAsync(vector<voidptr> buf) -> (zx.status s);
+    /// Immediately cancels all outstanding asynchronous I/O
+    CancelAll() -> ();
+};

@@ -10,7 +10,7 @@ zx_driver("aml-uart") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.serial",
-    "$zx/system/banjo/ddk.protocol.serialimpl",
+    "$zx/system/banjo/ddk.protocol.serialimpl.async",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
@@ -22,5 +22,33 @@ zx_driver("aml-uart") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+  ]
+}
+
+
+test("aml-uart-test") {
+  output_name = "aml-uart-test"
+  sources = [
+    "aml-uart-test.cc",
+    "aml-uart.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.serialimpl.async",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake-mmio-reg",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

@@ -21,10 +21,11 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serialimpl/async.h>
 
 // TODO: how can we parameterize this?
 #define TARGET_BAUD_RATE 2000000
+#define DEFAULT_BAUD_RATE 115200
 
 #define MAC_ADDR_LEN 6
 
@@ -100,7 +101,7 @@ typedef struct {
   zx_device_t* zxdev;
   zx_device_t* transport_dev;
   bt_hci_protocol_t hci;
-  serial_protocol_t serial;
+  serial_impl_async_protocol_t serial;
   zx_handle_t command_channel;
   bool is_uart;  // true if underlying transport is UART
 } bcm_hci_t;
@@ -250,8 +251,7 @@ static zx_status_t bcm_hci_set_baud_rate(bcm_hci_t* hci, uint32_t baud_rate) {
   if (status != ZX_OK) {
     return status;
   }
-
-  return serial_config(&hci->serial, TARGET_BAUD_RATE, SERIAL_SET_BAUD_RATE_ONLY);
+  return serial_impl_async_config(&hci->serial, TARGET_BAUD_RATE, SERIAL_SET_BAUD_RATE_ONLY);
 }
 
 static zx_status_t bcm_hci_set_bdaddr(bcm_hci_t* hci, uint8_t bdaddr[MAC_ADDR_LEN]) {
@@ -344,7 +344,7 @@ static zx_status_t bcm_load_firmware(bcm_hci_t* hci) {
 
   if (hci->is_uart) {
     // firmware switched us back to 115200. switch back to TARGET_BAUD_RATE
-    status = serial_config(&hci->serial, 115200, SERIAL_SET_BAUD_RATE_ONLY);
+    status = serial_impl_async_config(&hci->serial, DEFAULT_BAUD_RATE, SERIAL_SET_BAUD_RATE_ONLY);
     if (status != ZX_OK) {
       return status;
     }
@@ -450,7 +450,7 @@ static zx_status_t bcm_hci_bind(void* ctx, zx_device_t* device) {
     zxlogf(ERROR, "bcm_hci_bind: get protocol ZX_PROTOCOL_BT_HCI failed\n");
     return status;
   }
-  status = device_get_protocol(device, ZX_PROTOCOL_SERIAL, &hci->serial);
+  status = device_get_protocol(device, ZX_PROTOCOL_SERIAL_IMPL_ASYNC, &hci->serial);
   if (status == ZX_OK) {
     hci->is_uart = true;
   }

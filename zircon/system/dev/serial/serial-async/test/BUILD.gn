@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":serial-async-unittest",
+  ]
+}
+
+zx_test("serial-async-unittest") {
+  sources = [
+    "serial-async-test.cc",
+  ]
+  include_dirs = [ ".." ]
+  deps = [
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/zxtest",
+    "..:common",
+  ]
+}

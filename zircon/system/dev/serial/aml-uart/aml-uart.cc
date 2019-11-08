@@ -4,8 +4,11 @@
 
 #include "aml-uart.h"
 
+#include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
 
 #include <bits/limits.h>
 #include <ddk/binding.h>
@@ -15,18 +18,17 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <hw/reg.h>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <hw/reg.h>
 #include <hwreg/mmio.h>
-#include <zircon/threads.h>
-#include <zircon/types.h>
 
 #include "registers.h"
 
 namespace serial {
+
+constexpr auto kMinBaudRate = 2;
 
 zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
@@ -62,41 +64,62 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  return uart->Init();
+}
 
-  auto cleanup = fbl::MakeAutoCall([&uart]() { uart->DdkRelease(); });
+zx_status_t AmlUart::Init() {
+  auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
 
   // Default configuration for the case that serial_impl_config is not called.
   constexpr uint32_t kDefaultBaudRate = 115200;
   constexpr uint32_t kDefaultConfig = SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 | SERIAL_PARITY_NONE;
-  uart->SerialImplConfig(kDefaultBaudRate, kDefaultConfig);
-
-  status = uart->DdkAdd("aml-uart");
+  SerialImplAsyncConfig(kDefaultBaudRate, kDefaultConfig);
+  zx_device_prop_t props[] = {
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL_IMPL_ASYNC},
+      {BIND_SERIAL_CLASS, 0, serial_port_info_.serial_class},
+  };
+  zx_status_t status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkDeviceAdd failed\n", __func__);
     return status;
   }
 
   cleanup.cancel();
-  return ZX_OK;
+  return status;
+}
+
+uint32_t AmlUart::ReadState() {
+  auto status = Status::Get().ReadFrom(&mmio_);
+  uint32_t state = 0;
+  if (!status.rx_empty()) {
+    state |= SERIAL_STATE_READABLE;
+  }
+
+  if (!status.tx_full()) {
+    state |= SERIAL_STATE_WRITABLE;
+  }
+  return state;
 }
 
 uint32_t AmlUart::ReadStateAndNotify() {
-  fbl::AutoLock al(&status_lock_);
-
   auto status = Status::Get().ReadFrom(&mmio_);
 
   uint32_t state = 0;
   if (!status.rx_empty()) {
     state |= SERIAL_STATE_READABLE;
+    fbl::AutoLock lock(&read_lock_);
+    if (read_pending_) {
+      lock.release();
+      HandleRX();
+    }
   }
   if (!status.tx_full()) {
     state |= SERIAL_STATE_WRITABLE;
-  }
-  const bool notify = (state != state_);
-  state_ = state;
-
-  if (notify && notify_cb_) {
-    notify_cb_(state);
+    fbl::AutoLock lock(&write_lock_);
+    if (write_pending_) {
+      lock.release();
+      HandleTX();
+    }
   }
 
   return state;
@@ -119,13 +142,16 @@ int AmlUart::IrqThread() {
   return 0;
 }
 
-zx_status_t AmlUart::SerialImplGetInfo(serial_port_info_t* info) {
+zx_status_t AmlUart::SerialImplAsyncGetInfo(serial_port_info_t* info) {
   memcpy(info, &serial_port_info_, sizeof(*info));
   return ZX_OK;
 }
 
-zx_status_t AmlUart::SerialImplConfig(uint32_t baud_rate, uint32_t flags) {
+zx_status_t AmlUart::SerialImplAsyncConfig(uint32_t baud_rate, uint32_t flags) {
   // Control register is determined completely by this logic, so start with a clean slate.
+  if (baud_rate < kMinBaudRate) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   auto ctrl = Control::Get().FromValue(0);
 
   if ((flags & SERIAL_SET_BAUD_RATE_ONLY) == 0) {
@@ -249,7 +275,7 @@ void AmlUart::EnableLocked(bool enable) {
   }
 }
 
-zx_status_t AmlUart::SerialImplEnable(bool enable) {
+zx_status_t AmlUart::SerialImplAsyncEnable(bool enable) {
   fbl::AutoLock al(&enable_lock_);
 
   if (enable && !enabled_) {
@@ -277,55 +303,99 @@ zx_status_t AmlUart::SerialImplEnable(bool enable) {
   return ZX_OK;
 }
 
-zx_status_t AmlUart::SerialImplRead(void* buf, size_t length, size_t* out_actual) {
+void AmlUart::SerialImplAsyncReadAsync(serial_impl_async_read_async_callback callback,
+                                       void* cookie) {
+  fbl::AutoLock lock(&read_lock_);
+  if (read_pending_) {
+    lock.release();
+    callback(cookie, ZX_ERR_NOT_SUPPORTED, nullptr, 0);
+    return;
+  }
+  read_callback_ = callback;
+  read_cookie_ = cookie;
+  read_pending_ = true;
+  lock.release();
+  HandleRX();
+}
+
+void AmlUart::SerialImplAsyncCancelAll() {
+  fbl::AutoLock read_lock(&read_lock_);
+  if (read_pending_) {
+    read_pending_ = false;
+    auto cb = read_callback_;
+    auto cookie = read_cookie_;
+    read_lock.release();
+    cb(cookie, ZX_ERR_CANCELED, nullptr, 0);
+  }
+  fbl::AutoLock write_lock(&write_lock_);
+  if (write_pending_) {
+    write_pending_ = false;
+    auto cb = write_callback_;
+    auto cookie = write_cookie_;
+    write_lock.release();
+    cb(cookie, ZX_ERR_CANCELED);
+  }
+}
+
+void AmlUart::HandleRX() {
+  fbl::AutoLock lock(&read_lock_);
+  unsigned char buf[128];
+  size_t length = 128;
   auto* bufptr = static_cast<uint8_t*>(buf);
   const uint8_t* const end = bufptr + length;
-  while (bufptr < end && (ReadStateAndNotify() & SERIAL_STATE_READABLE)) {
+  while (bufptr < end && (ReadState() & SERIAL_STATE_READABLE)) {
     uint32_t val = mmio_.Read32(AML_UART_RFIFO);
     *bufptr++ = static_cast<uint8_t>(val);
   }
 
   const size_t read = reinterpret_cast<uintptr_t>(bufptr) - reinterpret_cast<uintptr_t>(buf);
-  *out_actual = read;
   if (read == 0) {
-    return ZX_ERR_SHOULD_WAIT;
+    return;
   }
-  return ZX_OK;
+  read_pending_ = false;
+  auto cb = read_callback_;
+  auto cookie = read_cookie_;
+  lock.release();
+  cb(cookie, ZX_OK, buf, read);
 }
 
-zx_status_t AmlUart::SerialImplWrite(const void* buf, size_t length, size_t* out_actual) {
-  const auto* bufptr = static_cast<const uint8_t*>(buf);
-  const uint8_t* const end = bufptr + length;
-  while (bufptr < end && (ReadStateAndNotify() & SERIAL_STATE_WRITABLE)) {
+void AmlUart::HandleTX() {
+  fbl::AutoLock lock(&write_lock_);
+  const auto* bufptr = static_cast<const uint8_t*>(write_buffer_);
+  const uint8_t* const end = bufptr + write_size_;
+  while (bufptr < end && (ReadState() & SERIAL_STATE_WRITABLE)) {
     mmio_.Write32(*bufptr++, AML_UART_WFIFO);
   }
 
-  const size_t written = reinterpret_cast<uintptr_t>(bufptr) - reinterpret_cast<uintptr_t>(buf);
-  *out_actual = written;
-  if (written == 0) {
-    return ZX_ERR_SHOULD_WAIT;
+  const size_t written =
+      reinterpret_cast<uintptr_t>(bufptr) - reinterpret_cast<uintptr_t>(write_buffer_);
+  write_size_ -= written;
+  write_buffer_ += written;
+  if (!write_size_) {
+    write_pending_ = false;
+    auto cb = write_callback_;
+    auto cookie = write_cookie_;
+    lock.release();
+    cb(cookie, ZX_OK);
   }
-  return ZX_OK;
 }
 
-zx_status_t AmlUart::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
-  {
-    fbl::AutoLock al(&enable_lock_);
-
-    if (enabled_) {
-      zxlogf(ERROR, "%s called when driver is enabled\n", __func__);
-      return ZX_ERR_BAD_STATE;
-    }
-
-    fbl::AutoLock al2(&status_lock_);
-    serial_notify_t notify_cb = *cb;
-    notify_cb_ = [=](uint32_t state) { notify_cb.callback(notify_cb.ctx, state); };
+void AmlUart::SerialImplAsyncWriteAsync(const void* buf, size_t length,
+                                        serial_impl_async_write_async_callback callback,
+                                        void* cookie) {
+  fbl::AutoLock lock(&write_lock_);
+  if (write_pending_) {
+    lock.release();
+    callback(cookie, ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-
-  // This will trigger notifying current state.
-  ReadStateAndNotify();
-
-  return ZX_OK;
+  write_buffer_ = static_cast<const uint8_t*>(buf);
+  write_size_ = length;
+  write_callback_ = callback;
+  write_cookie_ = cookie;
+  write_pending_ = true;
+  lock.release();
+  HandleTX();
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

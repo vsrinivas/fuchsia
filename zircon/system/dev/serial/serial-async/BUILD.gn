@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_driver("serial-async") {
+  deps = [
+    ":common",
+    "$zx/system/ulib/driver",
+  ]
+  # TODO (31742): Remove this in the future when we have official libasync support in drivers. 
+  deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+source_set("common") {
+  sources = [
+    "serial.cc",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.serialimpl.async",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+}
