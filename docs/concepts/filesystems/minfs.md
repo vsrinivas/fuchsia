@@ -90,11 +90,12 @@ accessible from Zircon.
  * If you want the device to be mounted automatically on reboot, use the GPT
    tool to set its type. As we did above, **you must** use `lsblk` **again**
    to locate the entry for the disk. We want to edit the type of the zero-th
-   partition.  Here we use the keyword 'DATA' to set the type GUID, but if you
-   wanted to use an arbitrary GUID you would supply it where 'DATA' is used.
+   partition.  Here we use the keyword 'fuchsia-data' to set the type GUID, but
+   if you wanted to use an arbitrary GUID you would supply it where
+   'fuchsia-data' is used.
 
   ```
-  > gpt edit 0 type DATA <DEVICE_PATH>
+  > gpt edit 0 type fuchsia-data <DEVICE_PATH>
   ```
 
  * On any future boots, the partition will be mounted automatically at `/data`.
