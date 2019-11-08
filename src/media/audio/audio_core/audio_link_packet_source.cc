@@ -89,20 +89,6 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
   }
 }
 
-void AudioLinkPacketSource::CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other) {
-  TRACE_DURATION("audio", "AudioLinkPacketSource::CopyPendingQueue");
-  FXL_DCHECK(other != nullptr);
-  FXL_DCHECK(this != other.get());
-
-  std::lock_guard<std::mutex> source_locker(other->pending_mutex_);
-  if (other->pending_packet_queue_.empty())
-    return;
-
-  std::lock_guard<std::mutex> locker(pending_mutex_);
-  FXL_DCHECK(pending_packet_queue_.empty());
-  pending_packet_queue_ = other->pending_packet_queue_;
-}
-
 fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(bool* was_flushed) {
   FXL_DCHECK(was_flushed);
   std::lock_guard<std::mutex> locker(pending_mutex_);

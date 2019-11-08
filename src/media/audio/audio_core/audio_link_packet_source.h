@@ -45,7 +45,6 @@ class AudioLinkPacketSource : public AudioLink {
   // PendingQueue operations used by the packet source. Never call these from the destination.
   void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet);
   void FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
-  void CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other);
 
   // PendingQueue operations used by the destination. Never call these from the source.
   //
