@@ -50,9 +50,10 @@ executable("kcounter_inspect_integration_test") {
   ]
 
   deps = [
-    "//garnet/bin/iquery:lib",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/inspect_deprecated:reader",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
