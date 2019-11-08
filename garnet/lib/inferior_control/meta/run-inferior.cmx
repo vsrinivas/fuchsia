@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/run_inferior"
-    }
-}
