@@ -17,22 +17,24 @@
 #include <zircon/threads.h>
 
 #include <iostream>
-#include <thread>
 #include <mutex>
+#include <thread>
 
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-
-    // auto base_name = files::GetBaseName(__FILE__);                                            \
+// auto base_name = files::GetBaseName(__FILE__);                                            \
     // std::cout << "[" << base_name << ":" << __LINE__ << "][t: " << std::this_thread::get_id()
 
-#define PRINT(...)                                                                            \
-  {                                                                                           \
-    std::cout << "[t: " << std::this_thread::get_id() \
-              << "] " << fxl::StringPrintf(__VA_ARGS__) << std::endl                          \
-              << std::flush;                                                                  \
+#define PRINT_CLEAN(...) \
+  { std::cout << fxl::StringPrintf(__VA_ARGS__) << std::endl << std::flush; }
+
+#define PRINT(...)                                                                           \
+  {                                                                                          \
+    std::cout << "[" << __FILE__ << ":" << __LINE__ << "][t: " << std::this_thread::get_id() \
+              << "] " << fxl::StringPrintf(__VA_ARGS__) << std::endl                         \
+              << std::flush;                                                                 \
   }
 
 #define DEFER_PRINT(...) auto __defer = fit::defer([=]() { PRINT(__VA_ARGS__); });
@@ -44,7 +46,6 @@
   }
 
 #define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a))[0])
-
 
 constexpr char kBeacon[] = "Counter: Thread running.\n";
 constexpr int kPortKey = 0x2312451;
@@ -106,13 +107,9 @@ zx::suspend_token Suspend(const zx::thread& thread);
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address);
 void RemoveHWBreakpoint(const zx::thread& thread);
 
-// |bytes_to_hit| is a bitfield that defines which bytes to hit from |address|.
-//
-// Bit 0 = Match |address|.
-// ...
-// Bit 7 = Match |address| + 7.
-// Bit >= 8 = ignored.
-void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit);
+// Length is how many bytes to hit.
+// Must be a power of 2 (1, 2, 4, 8 bytes).
+void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t length);
 void RemoveWatchpoint(const zx::thread& thread);
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_

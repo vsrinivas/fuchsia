@@ -3,13 +3,14 @@
 
 #include "hw_breakpointer_helpers.h"
 
+#if defined(__x86_64__)
+#elif defined(__aarch64__)
 #include <zircon/hw/debug/arm64.h>
+#endif
 
 #include <vector>
 
 ThreadSetup::~ThreadSetup() {
-  DEFER_PRINT("Joined thread.");
-
   int res = -1;
   /* FXL_DCHECK(thrd_join(c_thread, &res) == thrd_success); */
   /* FXL_DCHECK(res == 0) << res; */
@@ -167,7 +168,7 @@ zx_thread_state_debug_regs_t HWBreakpointRegs(uint64_t address) {
 
   zx_thread_state_debug_regs_t debug_regs = {};
   auto& hw_bp = debug_regs.hw_bps[0];
-  hw_bp.dbgbcr = 1;       // Activate it.
+  hw_bp.dbgbcr = 1;  // Activate it.
   hw_bp.dbgbvr = address;
   return debug_regs;
 }
@@ -214,26 +215,54 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t bytes_to_
   debug_regs.dr7 = 0b1 | 1 << 16;
   debug_regs.dr[0] = address;
   return debug_regs;
-
-
 }
-
 
 void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state) {}
 
 #elif defined(__aarch64__)
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t bytes_to_hit) {
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
   if (address == 0)
     return {};
 
   zx_thread_state_debug_regs_t debug_regs = {};
-  auto& wp = debug_regs.hw_wps[0];
-  wp.dbgwvr = address;
+  auto* wp = debug_regs.hw_wps + 0;
 
-  ARM64_DBGWCR_E_SET(&wp.dbgwcr, 1);
-  ARM64_DBGWCR_LSC_SET(&wp.dbgwcr, 0b10);
-  ARM64_DBGWCR_BAS_SET(&wp.dbgwcr, bytes_to_hit);
+  // The instruction has to be 4 byte aligned.
+  uint64_t aligned_address = address & (uint64_t)(~0b111);
+  uint64_t diff = address - aligned_address;
+  FXL_DCHECK(diff <= 7);
+
+  // Set the BAS value.
+  uint8_t bas = 0;
+  uint8_t extra_bas = 0;
+  for (uint32_t i = 0; i < length; i++) {
+    uint32_t index = i + diff;
+
+    // We cannot go the beyond the BAS boundary.
+    if (index > 7) {
+      extra_bas |= (1 << (index - 8));
+      continue;
+    }
+
+    bas |= (1 << index);
+  }
+
+  wp->dbgwvr = aligned_address;
+
+  ARM64_DBGWCR_E_SET(&wp->dbgwcr, 1);
+  ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, 0b10);
+  ARM64_DBGWCR_BAS_SET(&wp->dbgwcr, bas);
+
+  if (extra_bas) {
+    wp = debug_regs.hw_wps + 1;
+    uint64_t extra_address = aligned_address + 8;
+    wp->dbgwvr = extra_address;
+
+    ARM64_DBGWCR_E_SET(&wp->dbgwcr, 1);
+    ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, 0b10);
+    ARM64_DBGWCR_BAS_SET(&wp->dbgwcr, extra_bas);
+  }
 
   return debug_regs;
 }
@@ -283,17 +312,12 @@ void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state
   }
 }
 
-
-
 #else
 #error Unsupported arch.
 #endif
 
-
 void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
   zx::suspend_token suspend_token = Suspend(thread);
-
-
 
   // Install the HW breakpoint.
   auto debug_regs = WatchpointRegs(address, bytes_to_hit);
@@ -313,27 +337,6 @@ void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to
 
 }  // namespace
 
-std::string BytesToHitStr(uint32_t bytes_to_hit) {
-  std::stringstream ss;
-  bool first = true;
-  for (size_t i = 0; i < 8; i++) {
-    if (((bytes_to_hit >> i) & 0x1) == 0)
-      continue;
-
-    if (first) {
-      first = false;
-    } else {
-      ss << ", ";
-    }
-
-    ss << i + 1;
-  }
-
-  return ss.str();
-}
-
-
-
 void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
   /* PRINT("Installing one byte watchpoint on 0x%zx. Bytes to hit: %s", address, */
   /*       BytesToHitStr(bytes_to_hit).c_str()); */
@@ -344,4 +347,3 @@ void RemoveWatchpoint(const zx::thread& thread) {
   /* PRINT("Unintalling watchpoint."); */
   SetWatchpoint(thread, 0, 0);
 }
-

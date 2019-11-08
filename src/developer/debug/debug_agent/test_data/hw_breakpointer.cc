@@ -120,7 +120,7 @@ void BreakOnFunctionTestCase() {
 // The harness will set a watchpoint on each of those bytes and expects to receive an exception for
 // of them.
 
-uint8_t gDataToTouch[5] = {};
+uint8_t gDataToTouch[16] = {};
 
 int WatchpointThreadFunction(void* user) {
   auto* thread_setup = reinterpret_cast<ThreadSetup*>(user);
@@ -135,7 +135,6 @@ int WatchpointThreadFunction(void* user) {
     uint8_t* byte = reinterpret_cast<uint8_t*>(thread_setup->user);
     FXL_DCHECK(byte);
 
-    PRINT("Writing into 0x%zx.", reinterpret_cast<uint64_t>(byte));
     *byte += 1;
 
     // We signal that we finished this write.
@@ -145,31 +144,36 @@ int WatchpointThreadFunction(void* user) {
   return 0;
 }
 
+constexpr int kExceptionWaitTimeout = 25;
+
 // Returns whether the breakpoint was hit.
 bool TestWatchpointRun(const zx::port& port, const zx::channel& exception_channel,
-                       ThreadSetup* thread_setup, uint64_t wp_address, uint8_t* data_ptr,
-                       uint32_t bytes_to_hit) {
-  thread_setup->user = data_ptr;
+                       ThreadSetup* thread_setup, uint64_t wp_address, uint32_t length,
+                       uint8_t* address_to_write) {
+  thread_setup->user = address_to_write;
 
   // Install the watchpoint.
-  InstallWatchpoint(thread_setup->thread, wp_address, bytes_to_hit);
+  InstallWatchpoint(thread_setup->thread, wp_address, length);
 
   // Tell the thread to continue.
   CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
 
   // Wait until the exception is hit.
-  auto opt_excp = WaitForException(port, exception_channel, zx::deadline_after(zx::msec(250)));
+  auto opt_excp = WaitForException(port, exception_channel,
+                                   zx::deadline_after(zx::msec(kExceptionWaitTimeout)));
 
   // Remove the watchpoint.
   RemoveWatchpoint(thread_setup->thread);
 
-  if (!opt_excp)
+  if (!opt_excp) {
+    PRINT_CLEAN("Writing into 0x%zx.", (uint64_t)address_to_write);
     return false;
+  }
 
   Exception exception = std::move(*opt_excp);
 
   FXL_DCHECK(exception.info.type = ZX_EXCP_HW_BREAKPOINT);
-  PRINT("Hit watchpoint 0x%zx", reinterpret_cast<uint64_t>(data_ptr));
+  PRINT_CLEAN("Writing into 0x%zx. Hit!", (uint64_t)address_to_write);
 
   WaitAsyncOnExceptionChannel(port, exception_channel);
   ResumeException(thread_setup->thread, std::move(exception));
@@ -187,22 +191,30 @@ void WatchpointTestCase() {
   auto [port, exception_channel] = CreateExceptionChannel(thread_setup->thread);
   WaitAsyncOnExceptionChannel(port, exception_channel);
 
-  for (size_t i = 0; i < std::size(gDataToTouch); i++) {
-    uint64_t brk = reinterpret_cast<uint64_t>(gDataToTouch) + i;
-    printf("----------------------------------------\n");
-    PRINT("Setting breakpoint for 0x%zx", brk);
+  uint32_t kSizes[] = {1, 2, 4, 8};
+  for (uint32_t size : kSizes) {
+    PRINT_CLEAN("====================================================================");
+    PRINT_CLEAN("%u BYTE ALIGNED WATCHPOINTS", size);
+    for (size_t i = 0; i < std::size(gDataToTouch); i++) {
+      uint64_t brk = reinterpret_cast<uint64_t>(gDataToTouch) + i;
 
-    for (size_t j = 0; j < std::size(gDataToTouch); j++) {
-      // Pass in the byte to break on.
-      uint8_t* data_ptr = gDataToTouch + j;
-      bool hit = TestWatchpointRun(port, exception_channel, thread_setup.get(),
-                                   reinterpret_cast<uint64_t>(gDataToTouch), data_ptr, (1 << i));
+      if (i > 0)
+        PRINT_CLEAN("----------------------------------------");
+      PRINT_CLEAN("* Setting %u byte watchpoint for 0x%zx\n", size, brk);
 
-      // We should only hit if it is the expected byte.
-      if (i == j) {
-        FXL_DCHECK(hit) << "i: " << i << ", j: " << j << ". Expected hit.";
-      } else {
-        FXL_DCHECK(!hit) << "i: " << i << ", j: " << j << ". Not expected hit.";
+      for (size_t j = 0; j < std::size(gDataToTouch); j++) {
+        // Pass in the byte to break on.
+        uint8_t* data_ptr = gDataToTouch + j;
+        bool hit =
+            TestWatchpointRun(port, exception_channel, thread_setup.get(), brk, size, data_ptr);
+
+        // We should only hit if it is the expected byte.
+        bool in_range = (j - i) < size;
+        if (hit) {
+          FXL_DCHECK(in_range) << "i: " << i << ", j: " << j << ". Didn't get expected hit.";
+        } else {
+          FXL_DCHECK(!in_range) << "i: " << i << ", j: " << j << ". Got unexpected hit.";
+        }
       }
     }
   }
@@ -276,6 +288,8 @@ void ChannelMessagingTestCase() {
 
 // Main --------------------------------------------------------------------------------------------
 
+namespace {
+
 struct TestCase {
   using TestFunction = void (*)();
 
@@ -312,6 +326,8 @@ TestCase::TestFunction GetTestCase(std::string test_name) {
 
   return nullptr;
 }
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
