@@ -79,6 +79,11 @@ typedef struct {
    * |key| is mutable because the underlying API does not take a const wlan_key_config_t.
    */
   int32_t (*set_key)(void *device, wlan_key_config_t *key);
+  /**
+   * Configure the device's BSS.
+   * |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
+   */
+  int32_t (*configure_bss)(void *device, wlan_bss_config_t *cfg);
 } mlme_device_ops_t;
 
 /**

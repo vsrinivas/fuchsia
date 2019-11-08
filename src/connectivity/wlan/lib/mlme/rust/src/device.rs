@@ -39,6 +39,10 @@ pub struct Device {
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
+    /// Configure the device's BSS.
+    /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
+    configure_bss:
+        extern "C" fn(device: *mut c_void, cfg: *mut ddk_protocol_wlan_info::WlanBssConfig) -> i32,
 }
 
 impl Device {
@@ -85,6 +89,17 @@ impl Device {
     pub fn channel(&self) -> ddk_protocol_wlan_info::WlanChannel {
         (self.get_wlan_channel)(self.device)
     }
+
+    pub fn configure_bss(
+        &self,
+        mut cfg: ddk_protocol_wlan_info::WlanBssConfig,
+    ) -> Result<(), zx::Status> {
+        let status = (self.configure_bss)(
+            self.device,
+            &mut cfg as *mut ddk_protocol_wlan_info::WlanBssConfig,
+        );
+        zx::ok(status)
+    }
 }
 
 #[cfg(test)]
@@ -94,6 +109,7 @@ pub struct FakeDevice {
     pub sme_sap: (zx::Channel, zx::Channel),
     pub wlan_channel: ddk_protocol_wlan_info::WlanChannel,
     pub keys: Vec<key::KeyConfig>,
+    pub bss_cfg: Option<ddk_protocol_wlan_info::WlanBssConfig>,
 }
 
 #[cfg(test)]
@@ -110,6 +126,7 @@ impl FakeDevice {
                 secondary80: 0,
             },
             keys: vec![],
+            bss_cfg: None,
         }
     }
 
@@ -166,6 +183,16 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
+    pub extern "C" fn configure_bss(
+        device: *mut c_void,
+        cfg: *mut ddk_protocol_wlan_info::WlanBssConfig,
+    ) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
+        }
+        zx::sys::ZX_OK
+    }
+
     pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -196,6 +223,7 @@ impl FakeDevice {
             get_wlan_channel: Self::get_wlan_channel,
             set_wlan_channel: Self::set_wlan_channel,
             set_key: Self::set_key,
+            configure_bss: Self::configure_bss,
         }
     }
 
@@ -208,6 +236,7 @@ impl FakeDevice {
             set_wlan_channel: Self::set_wlan_channel,
             get_wlan_channel: Self::get_wlan_channel,
             set_key: Self::set_key,
+            configure_bss: Self::configure_bss,
         }
     }
 }
@@ -253,6 +282,7 @@ mod tests {
             get_wlan_channel: FakeDevice::get_wlan_channel,
             set_wlan_channel: FakeDevice::set_wlan_channel,
             set_key: FakeDevice::set_key,
+            configure_bss: FakeDevice::configure_bss,
         };
 
         let result = dev.access_sme_sender(|sender| {
@@ -336,5 +366,18 @@ mod tests {
         })
         .expect("error setting key");
         assert_eq!(fake_device.keys.len(), 1);
+    }
+
+    #[test]
+    fn configure_bss() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        dev.configure_bss(ddk_protocol_wlan_info::WlanBssConfig {
+            bssid: [1, 2, 3, 4, 5, 6],
+            bss_type: ddk_protocol_wlan_info::WlanBssType::Personal,
+            remote: true,
+        })
+        .expect("error setting key");
+        assert!(fake_device.bss_cfg.is_some());
     }
 }

@@ -61,6 +61,9 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
       .set_key = [](void* bss, wlan_key_config_t* key) -> zx_status_t {
         return BSS(bss)->device_->SetKey(key);
       },
+      .configure_bss = [](void* bss, wlan_bss_config_t* cfg) -> zx_status_t {
+        return BSS(bss)->device_->ConfigureBss(cfg);
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = this,
