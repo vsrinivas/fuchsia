@@ -1165,23 +1165,6 @@ void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWat
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-void StoryControllerImpl::GetModuleController(
-    std::vector<std::string> module_path,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
-  operation_queue_.Add(std::make_unique<SyncCall>(
-      [this, module_path = std::move(module_path), request = std::move(request)]() mutable {
-        for (auto& running_mod_info : running_mod_infos_) {
-          if (module_path == running_mod_info.module_data->module_path()) {
-            running_mod_info.module_controller_impl->Connect(std::move(request));
-            return;
-          }
-        }
-
-        // Trying to get a controller for a module that is not active just
-        // drops the connection request.
-      }));
-}
-
 void StoryControllerImpl::StartStoryShell() {
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 

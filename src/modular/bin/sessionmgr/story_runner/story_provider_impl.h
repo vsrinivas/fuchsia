@@ -104,6 +104,13 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // Called by StoryControllerImpl.
   const fuchsia::modular::AppConfig& story_shell_config() const { return story_shell_config_; }
 
+  // Called by SessionmgrImpl.
+  //
+  // Returns a StoryControllerImpl ptr for |story_id| or nullptr if that story
+  // is not running. The returned pointer is safe to use for the stack frame of
+  // the calling function.
+  StoryControllerImpl* GetStoryControllerImpl(std::string story_id);
+
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
       fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,

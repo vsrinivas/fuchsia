@@ -201,9 +201,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void GetInfo2(GetInfo2Callback callback) override;
   void RequestStart() override;
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
-  void GetModuleController(
-      std::vector<std::string> module_path,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override;
 
   // |StoryController|
   void Annotate(std::vector<fuchsia::modular::Annotation> annotations,

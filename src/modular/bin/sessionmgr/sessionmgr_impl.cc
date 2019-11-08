@@ -40,6 +40,7 @@
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
+#include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
@@ -577,29 +578,26 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
   auto focus_provider_request_puppet_master = focus_provider_puppet_master.NewRequest();
-  fuchsia::modular::StoryProviderPtr story_provider_puppet_master;
-  auto story_provider_puppet_master_request = story_provider_puppet_master.NewRequest();
 
   // Initialize the PuppetMaster.
-  // TODO: there's no clean runtime interface we can inject to
+  //
+  // There's no clean runtime interface we can inject to
   // puppet master. Hence, for now we inject this function to be able to focus
-  // mods. Eventually we want to have a StoryRuntime and SessionRuntime classes
-  // similar to Story/SessionStorage but for runtime management.
-  auto module_focuser = [story_provider = std::move(story_provider_puppet_master)](
+  // mods. Capturing a pointer to |story_provider_impl_| is safe because PuppetMaster
+  // is destroyed before StoryProviderImpl.
+  auto module_focuser = [story_provider_impl = story_provider_impl_.get()](
                             std::string story_id, std::vector<std::string> mod_name) {
-    fuchsia::modular::StoryControllerPtr story_controller;
-    story_provider->GetController(story_id, story_controller.NewRequest());
-
-    fuchsia::modular::ModuleControllerPtr module_controller;
-    story_controller->GetModuleController(std::move(mod_name), module_controller.NewRequest());
-    module_controller->Focus();
+    auto story_controller_ptr = story_provider_impl->GetStoryControllerImpl(story_id);
+    if (story_controller_ptr == nullptr) {
+      return;
+    }
+    story_controller_ptr->FocusModule(std::move(mod_name));
   };
   AtEnd(Reset(&session_storage_));
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
       static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), std::move(module_focuser));
-  story_provider_impl_->Connect(std::move(story_provider_puppet_master_request));
   puppet_master_impl_ =
       std::make_unique<PuppetMasterImpl>(session_storage_.get(), story_command_executor_.get());
   puppet_master_impl_->Connect(std::move(puppet_master_request));

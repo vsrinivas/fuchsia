@@ -359,6 +359,15 @@ void StoryProviderImpl::Watch(
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
+StoryControllerImpl* StoryProviderImpl::GetStoryControllerImpl(std::string story_id) {
+  auto it = story_runtime_containers_.find(story_id);
+  if (it == story_runtime_containers_.end()) {
+    return nullptr;
+  }
+  auto& container = it->second;
+  return container.controller_impl.get();
+}
+
 std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
     fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request) {

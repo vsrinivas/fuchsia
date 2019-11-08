@@ -34,10 +34,6 @@ protocol StoryController {
     /// for the holder of a StoryController to provide a watcher.
     Watch(StoryWatcher watcher);
 
-    /// DEPRECATED
-    /// (metadata about, and requesting changes to runtime state).
-    GetModuleController(vector<string> module_path, request<ModuleController> request);
-
     /// Attach the `annotations` to the story.
     ///
     /// Existing annotations with the same key will be overwritten.
