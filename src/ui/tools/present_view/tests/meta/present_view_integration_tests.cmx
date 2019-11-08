@@ -1,0 +1,15 @@
+{
+    "program": {
+        "args": [
+            "--locale=en-US"
+        ],
+        "binary": "test/present_view_integration_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

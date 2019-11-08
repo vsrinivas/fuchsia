@@ -19,10 +19,14 @@
 
 namespace present_view {
 
+// The configuration for PresentView.
 struct ViewInfo {
  public:
+  // The fuchsia component URI of the component to run.
   std::string url;
+  // The command line arguments passed to the started component.
   std::vector<std::string> arguments;
+  // An optional locale if locale properties need to be served.
   std::string locale;
 };
 
@@ -34,6 +38,11 @@ class PresentView {
   bool Present(ViewInfo view_info, fit::function<void(zx_status_t)> on_view_error);
 
  private:
+  // Launches a server for `fuchsia.intl.PropertyProvider`, serving the passed-in nonempty
+  // |locale|, using the |server_side| channel.
+  void RunIntlService(const std::string& locale, zx::channel server_side,
+                      fuchsia::sys::LauncherPtr* launcher);
+
   std::unique_ptr<sys::ComponentContext> context_;
 
   fuchsia::sys::ComponentControllerPtr view_controller_;

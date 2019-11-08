@@ -9,6 +9,17 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/substitute.h"
+
+namespace {
+
+// The component manifest of the component that provides an implementation of
+// fuchsia.intl.PropertyProvider.  present_view will start it up if the flag
+// --locale=... is specified.
+constexpr char kIntlPropertyProviderManifest[] =
+    "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+
+}  // namespace
 
 namespace present_view {
 
@@ -22,6 +33,8 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
     return false;
   }
 
+  fuchsia::sys::LauncherPtr launcher = context_->svc()->Connect<fuchsia::sys::Launcher>();
+
   // Configure the information to launch the component with.
   fuchsia::sys::LaunchInfo launch_info;
   std::shared_ptr<sys::ServiceDirectory> services =
@@ -29,8 +42,21 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
   launch_info.url = std::move(view_info.url);
   launch_info.arguments = fidl::VectorPtr(std::move(view_info.arguments));
 
+  zx::channel server_side, client_side;
+  if (!view_info.locale.empty()) {
+    // If we wanted present_view to serve |fuchsia.intl.ProfileProvider|, then start the
+    // |intl_property_provider| and make it available to the component under test.
+    //
+    FXL_CHECK(ZX_OK == zx::channel::create(0, &server_side, &client_side));
+    RunIntlService(view_info.locale, std::move(server_side), &launcher);
+
+    fuchsia::sys::ServiceListPtr injected_services(new fuchsia::sys::ServiceList);
+    injected_services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
+    injected_services->host_directory = std::move(client_side);
+    launch_info.additional_services = std::move(injected_services);
+  }
+
   // Launch the component.
-  auto launcher = context_->svc()->Connect<fuchsia::sys::Launcher>();
   launcher->CreateComponent(std::move(launch_info), view_controller_.NewRequest());
   view_controller_.set_error_handler(std::move(on_view_error));
 
@@ -42,7 +68,6 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
     // |fuchsia.ui.views.View| interface.
     view_ = services->Connect<fuchsia::ui::views::View>();
     view_->Present(std::move(view_token));
-    // TODO(I18N-13): Provide fuchsia.intl.PropertyProvider instance.
   } else {
     legacy_view_provider_ = services->Connect<fuchsia::ui::app::ViewProvider>();
     legacy_view_provider_->CreateView(std::move(view_token.value), nullptr, nullptr);
@@ -53,6 +78,18 @@ bool PresentView::Present(ViewInfo view_info, fit::function<void(zx_status_t)> o
   presenter_->PresentView(std::move(view_holder_token), nullptr);
 
   return true;
+}
+
+void PresentView::RunIntlService(const std::string& locale, zx::channel server_side,
+                                 fuchsia::sys::LauncherPtr* launcher) {
+  FXL_LOG(INFO) << "Starting intl property provider with locale: " << locale;
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kIntlPropertyProviderManifest;
+  launch_info.arguments.emplace();
+  launch_info.arguments->push_back("--set_initial_profile");
+  launch_info.arguments->push_back(fxl::Substitute("--locale_ids=$0", locale));
+  launch_info.directory_request = std::move(server_side);
+  (*launcher)->CreateComponent(std::move(launch_info), view_controller_.NewRequest());
 }
 
 }  // namespace present_view

@@ -16,6 +16,7 @@ group("tests") {
 test_package("present_view_tests") {
   deps = [
     ":present_view_apptests",
+    ":present_view_integration_tests",
     ":present_view_unittests",
   ]
 
@@ -71,5 +72,24 @@ executable("present_view_apptests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("present_view_integration_tests") {
+  testonly = true
+
+  sources = [
+    "present_view_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/syslog/cpp",
+    "//src/ui/tools/present_view",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
