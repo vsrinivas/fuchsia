@@ -156,7 +156,7 @@ func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKeyF
 	if err != nil {
 		return err
 	}
-	tester, err := NewFuchsiaTester(nodename, sshKey)
+	tester, err := NewFuchsiaTester(nodename, sshKey, useRuntests)
 	if err != nil {
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}

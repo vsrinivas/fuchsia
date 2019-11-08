@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -24,6 +26,13 @@ const (
 	// A conventionally used global request name for checking the status of a client
 	// connection to an OpenSSH server.
 	keepAliveOpenSSH = "keepalive@openssh.com"
+
+	// Various tools for running tests.
+	runtestsName         = "runtests"
+	runTestComponentName = "run-test-component"
+	runTestSuiteName     = "run-test-suite"
+
+	componentV2Suffix = ".cm"
 )
 
 // Tester is executes a Test.
@@ -105,11 +114,12 @@ func (t *SSHTester) Close() error {
 type FuchsiaTester struct {
 	remoteOutputDir string
 	delegate        *SSHTester
+	useRuntests     bool
 }
 
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
 // the remote device. The log_listener output can be read from SysLogOutput().
-func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
+func NewFuchsiaTester(nodename string, sshKey []byte, useRuntests bool) (*FuchsiaTester, error) {
 	newClient := func(ctx context.Context) (*ssh.Client, error) {
 		config, err := sshutil.DefaultSSHConfig(sshKey)
 		if err != nil {
@@ -129,14 +139,23 @@ func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
 	tester := &FuchsiaTester{
 		remoteOutputDir: fuchsiaOutputDir,
 		delegate:        delegate,
+		useRuntests:     useRuntests,
 	}
 	return tester, nil
 }
 
 func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
 	if len(test.Command) == 0 {
-		name := path.Base(test.Path)
-		test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
+		if !useRuntests && test.PackageURL != "" {
+			if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+				test.Command = []string{runTestSuiteName, test.PackageURL}
+			} else {
+				test.Command = []string{runTestComponentName, test.PackageURL}
+			}
+		} else {
+			name := path.Base(test.Path)
+			test.Command = []string{runtestsName, "-t", name, "-o", filepath.Join(t.remoteOutputDir, runtestsName)}
+		}
 	}
 	return t.delegate.Test(ctx, test, stdout, stderr)
 }
