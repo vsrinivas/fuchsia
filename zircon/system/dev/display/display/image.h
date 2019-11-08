@@ -46,18 +46,18 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // Called to immediately retire the image if StartPresent hasn't been called yet.
   void EarlyRetire();
   // Called when the image is passed to the display hardware.
-  void StartPresent();
+  void StartPresent() __TA_REQUIRES(mtx());
   // Called when another image is presented after this one.
-  void StartRetire();
+  void StartRetire() __TA_REQUIRES(mtx());
   // Called on vsync after StartRetire has been called.
-  void OnRetire();
+  void OnRetire() __TA_REQUIRES(mtx());
 
   // Called on all waiting images when any fence fires.
   void OnFenceReady(FenceReference* fence);
 
   // Called to reset fences when client releases the image. Releasing fences
   // is independent of the rest of the image lifecycle.
-  void ResetFences();
+  void ResetFences() __TA_REQUIRES(mtx());
 
   bool IsReady() const { return wait_fence_ == nullptr; }
 
@@ -76,10 +76,13 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // presented image list. The presented image list is protected with the controller mutex,
   // and the waiting list is only accessed on the loop and thus is not generally
   // protected. However, transfers between the lists are protected by the controller mutex.
-  image_node_t node = {
+  image_node_t node __TA_GUARDED(mtx()) = {
       .link = LIST_INITIAL_CLEARED_VALUE,
       .self = nullptr,
   };
+
+  // Aliases controller_->mtx() for the purpose of thread-safety analysis.
+  mtx_t* mtx();
 
  private:
   image_t info_;
@@ -94,17 +97,16 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // signal_fence_ is only accessed on the loop. armed_signal_fence_ is accessed
   // under the controller mutex. See comment in ::OnRetire for more details.
   fbl::RefPtr<FenceReference> signal_fence_ = nullptr;
-  fbl::RefPtr<FenceReference> armed_signal_fence_ = nullptr;
+  fbl::RefPtr<FenceReference> armed_signal_fence_ __TA_GUARDED(mtx()) = nullptr;
 
   // Flag which indicates that the image is currently in some display configuration.
   std::atomic_bool in_use_ = {};
-  // Flag indicating that the image is being managed by the display hardware. Only
-  // accessed under the controller mutex.
-  bool presenting_ = false;
+  // Flag indicating that the image is being managed by the display hardware.
+  bool presenting_ __TA_GUARDED(mtx()) = false;
   // Flag indicating that the image has started the process of retiring and will be free after
   // the next vsync. This is distinct from presenting_ due to multiplexing the display between
-  // multiple clients. Only accessed under the controller mutex.
-  bool retiring_ = false;
+  // multiple clients.
+  bool retiring_ __TA_GUARDED(mtx()) = false;
 
   // flag used to distinguish between an image used for display vs capture
   bool capture_image_ = false;

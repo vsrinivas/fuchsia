@@ -642,6 +642,7 @@ void Client::HandleDestroyLayer(const fuchsia_hardware_display_ControllerDestroy
   do_early_retire(&destroyed->waiting_images_);
   if (destroyed->displayed_image_) {
     fbl::AutoLock lock(controller_->mtx());
+    controller_->AssertMtxAliasHeld(destroyed->displayed_image_->mtx());
     destroyed->displayed_image_->StartRetire();
   }
 }
@@ -1034,6 +1035,7 @@ void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyCon
         if (layer->displayed_image_ != nullptr) {
           {
             fbl::AutoLock lock(controller_->mtx());
+            controller_->AssertMtxAliasHeld(layer->displayed_image_->mtx());
             layer->displayed_image_->StartRetire();
           }
           layer->displayed_image_ = nullptr;
@@ -1051,6 +1053,7 @@ void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyCon
                                                         GetFence(layer->pending_signal_event_id_));
         {
           fbl::AutoLock lock(controller_->mtx());
+          controller_->AssertMtxAliasHeld(layer->pending_image_->mtx());
           list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
           layer->pending_image_->node.self = std::move(layer->pending_image_);
         }
@@ -1072,6 +1075,7 @@ void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyCon
             layer->layer->displayed_image_ && !list_is_empty(&layer->layer->waiting_images_)) {
           {
             fbl::AutoLock lock(controller_->mtx());
+            controller_->AssertMtxAliasHeld(layer->layer->displayed_image_->mtx());
             layer->layer->displayed_image_->StartRetire();
           }
           layer->layer->displayed_image_ = nullptr;
@@ -1555,6 +1559,7 @@ void Client::ApplyConfig() {
         if (layer->displayed_image_ != nullptr) {
           // Start retiring the image which had been displayed
           fbl::AutoLock lock(controller_->mtx());
+          controller_->AssertMtxAliasHeld(layer->displayed_image_->mtx());
           layer->displayed_image_->StartRetire();
         } else {
           // Turning on a new layer is a (pseudo) layer change
@@ -1916,9 +1921,11 @@ bool Client::CleanUpImage(Image* image) {
   {
     fbl::AutoLock lock(controller_->mtx());
     if (image) {
+      controller_->AssertMtxAliasHeld(image->mtx());
       image->ResetFences();
     } else {
       for (auto& image : images_) {
+        controller_->AssertMtxAliasHeld(image.mtx());
         image.ResetFences();
       }
     }
@@ -1947,6 +1954,7 @@ bool Client::CleanUpImage(Image* image) {
     if (layer.displayed_image_ && (image == nullptr || layer.displayed_image_.get() == image)) {
       {
         fbl::AutoLock lock(controller_->mtx());
+        controller_->AssertMtxAliasHeld(layer.displayed_image_->mtx());
         layer.displayed_image_->StartRetire();
       }
       layer.displayed_image_ = nullptr;

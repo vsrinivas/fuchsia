@@ -34,6 +34,8 @@ Image::~Image() {
   }
 }
 
+mtx_t* Image::mtx() { return controller_->mtx(); }
+
 void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
                           fbl::RefPtr<FenceReference>&& signal) {
   wait_fence_ = std::move(wait);

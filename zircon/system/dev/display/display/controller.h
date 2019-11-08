@@ -83,6 +83,10 @@ class Controller : public ControllerParent,
 
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
+  // Thread-safety annotations currently don't deal with pointer aliases. Use this to document
+  // places where we believe a mutex aliases mtx().
+  void AssertMtxAliasHeld(mtx_t* mtx) __TA_ASSERT(mtx) { ZX_DEBUG_ASSERT(mtx == &mtx_); }
+
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);

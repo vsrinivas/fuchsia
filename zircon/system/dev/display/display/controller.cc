@@ -257,6 +257,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     if (target) {
       image_node_t* n;
       while ((n = list_remove_head_type(&target->images, image_node_t, link))) {
+        AssertMtxAliasHeld(n->self->mtx());
         n->self->StartRetire();
         n->self->OnRetire();
         n->self.reset();
@@ -530,6 +531,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
       // those are older than whatever is currently in their layer.
       if (!z_already_matched) {
         list_delete(&cur->link);
+        AssertMtxAliasHeld(cur->self->mtx());
         cur->self->OnRetire();
         // Older images may not be presented. Ending their flows here
         // ensures the sanity of traces.
@@ -660,6 +662,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
 
         // Set the image z index so vsync knows what layer the image is in
         image->set_z_index(layer->z_order());
+        AssertMtxAliasHeld(image->mtx());
         image->StartPresent();
 
         // It's possible that the image's layer was moved between displays. The logic around
@@ -669,6 +672,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         // Even if we're on the same display, the entry needs to be moved to the end of the
         // list to ensure that the last config->current.layer_count elements in the queue
         // are the current images.
+        AssertMtxAliasHeld(image->mtx());
         if (list_in_list(&image->node.link)) {
           list_delete(&image->node.link);
         } else {
