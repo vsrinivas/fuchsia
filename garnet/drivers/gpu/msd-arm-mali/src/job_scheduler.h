@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "magma_util/macros.h"
+#include "msd.h"
 #include "msd_arm_atom.h"
 
 class JobScheduler {
@@ -74,6 +75,7 @@ class JobScheduler {
     return count;
   }
   void ValidateCanSwitchProtected();
+  std::vector<msd_client_id_t> GetSignalingClients(uint64_t semaphore_koid);
 
   Owner* owner_;
   ClockCallback clock_callback_;
@@ -93,6 +95,8 @@ class JobScheduler {
   // other mode until that switch is complete.
   bool want_to_switch_to_protected_ = false;
   bool want_to_switch_to_nonprotected_ = false;
+
+  uint64_t found_signaler_atoms_for_testing_ = 0;
 
   std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
   std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;

@@ -417,6 +417,12 @@ class TestJobScheduler {
     atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom}});
     scheduler.EnqueueAtom(atom2);
 
+    // This has a dependency on atom so it won't execute until after the timeout.
+    auto atom3 = std::make_shared<MsdArmSoftAtom>(connection, kAtomFlagSemaphoreSet, semaphore, 0,
+                                                  magma_arm_mali_user_data());
+    atom3->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom}});
+    scheduler.EnqueueAtom(atom3);
+
     scheduler.TryToSchedule();
     EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(5000));
     EXPECT_EQ(0u, owner.hang_message_output_count());
@@ -428,6 +434,7 @@ class TestJobScheduler {
     EXPECT_EQ(kArmMaliResultTimedOut, atom->result_code());
     EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
     EXPECT_EQ(0u, owner.hang_message_output_count());
+    EXPECT_EQ(1u, scheduler.found_signaler_atoms_for_testing_);
 
     EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
     scheduler.HandleTimedOutAtoms();

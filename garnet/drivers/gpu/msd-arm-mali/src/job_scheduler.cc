@@ -309,6 +309,23 @@ JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration() {
   return timeout_time - clock_callback_();
 }
 
+std::vector<msd_client_id_t> JobScheduler::GetSignalingClients(uint64_t semaphore_koid) {
+  std::vector<msd_client_id_t> signaling_clients;
+  for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
+    auto soft_atom = MsdArmSoftAtom::cast(*it);
+    if (!soft_atom)
+      continue;
+    if (soft_atom->soft_flags() != kAtomFlagSemaphoreSet)
+      continue;
+    if (soft_atom->platform_semaphore()->id() != semaphore_koid)
+      continue;
+    auto connection = soft_atom->connection().lock();
+    uint64_t client_id = connection ? connection->client_id() : UINT64_MAX;
+    signaling_clients.push_back(client_id);
+  }
+  return signaling_clients;
+}
+
 void JobScheduler::HandleTimedOutAtoms() {
   bool have_output_hang_message = false;
   auto now = clock_callback_();
@@ -355,7 +372,18 @@ void JobScheduler::HandleTimedOutAtoms() {
     auto atom_timeout_time =
         atom->execution_start_time() + std::chrono::milliseconds(semaphore_timeout_duration_ms_);
     if (atom_timeout_time <= now) {
-      magma::log(magma::LOG_WARNING, "Timing out hung semaphore");
+      auto connection = atom->connection().lock();
+      uint64_t client_id = connection ? connection->client_id() : UINT64_MAX;
+      auto soft_atom = MsdArmSoftAtom::cast(atom);
+      DASSERT(soft_atom);
+      uint64_t semaphore_koid = soft_atom->platform_semaphore()->id();
+      magma::log(magma::LOG_WARNING, "Timing out hung semaphore on client id %ld, koid %ld",
+                 client_id, semaphore_koid);
+      std::vector<msd_client_id_t> clients = GetSignalingClients(semaphore_koid);
+      for (auto client_id : clients) {
+        magma::log(magma::LOG_WARNING, "Signaled by atom on client id %ld", client_id);
+        found_signaler_atoms_for_testing_++;
+      }
       removed_waiting_atoms = true;
       owner_->AtomCompleted(atom.get(), kArmMaliResultTimedOut);
       // The semaphore wait on the port will be canceled by the closing of the event handle.
