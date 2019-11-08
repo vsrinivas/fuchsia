@@ -29,10 +29,11 @@ class DockyardProxyFake : public DockyardProxy {
                                  uint64_t value) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendSampleList(const SampleList list) override;
+  DockyardProxyStatus SendSampleList(const SampleList& list) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendStringSampleList(StringSampleList list) override;
+  DockyardProxyStatus SendStringSampleList(
+      const StringSampleList& list) override;
 
   // Get the value (or string) for a given dockyard path. Used for testing.
   // Returns true if the value was sent at all; false if it wasn't sent.

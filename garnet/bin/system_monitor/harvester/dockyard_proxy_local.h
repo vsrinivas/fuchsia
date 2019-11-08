@@ -29,10 +29,11 @@ class DockyardProxyLocal : public DockyardProxy {
                                  uint64_t value) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendSampleList(const SampleList list) override;
+  DockyardProxyStatus SendSampleList(const SampleList& list) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendStringSampleList(StringSampleList list) override;
+  DockyardProxyStatus SendStringSampleList(
+      const StringSampleList& list) override;
 };
 
 }  // namespace harvester

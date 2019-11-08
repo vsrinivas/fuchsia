@@ -28,18 +28,22 @@ class AsyncDispatcherFake : public async::DispatcherStub {
 
 class SystemMonitorHarvesterTest : public ::testing::Test {
  public:
-  void SetUp() {
+  void SetUp() override {
     // Create a test harvester.
     std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy =
         std::make_unique<harvester::DockyardProxyFake>();
 
     EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, &dispatcher, std::move(dockyard_proxy));
+        root_resource, &fast_dispatcher, &slow_dispatcher,
+        std::move(dockyard_proxy));
   }
 
-  async_dispatcher_t* GetHarvesterDispatcher() {
-    return test_harvester->dispatcher_;
+  async_dispatcher_t* GetHarvesterFastDispatcher() {
+    return test_harvester->fast_dispatcher_;
+  }
+  async_dispatcher_t* GetHarvesterSlowDispatcher() {
+    return test_harvester->slow_dispatcher_;
   }
   zx_handle_t GetHarvesterRootResource() {
     return test_harvester->root_resource_;
@@ -61,17 +65,21 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
   }
 
   std::unique_ptr<harvester::Harvester> test_harvester;
-  AsyncDispatcherFake dispatcher;
+  AsyncDispatcherFake fast_dispatcher;
+  AsyncDispatcherFake slow_dispatcher;
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx_handle_t root_resource;
 };
 
 TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
   EXPECT_EQ(root_resource, GetHarvesterRootResource());
-  EXPECT_EQ(&dispatcher, GetHarvesterDispatcher());
+  EXPECT_EQ(&fast_dispatcher, GetHarvesterFastDispatcher());
+  EXPECT_EQ(&slow_dispatcher, GetHarvesterSlowDispatcher());
 
-  test_harvester->GatherData();
+  test_harvester->GatherFastData();
   EXPECT_EQ(zx::msec(100), GetGatherCpuPeriod());
+
+  test_harvester->GatherSlowData();
   EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
   EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
   EXPECT_EQ(zx::msec(100), GetGatherMemoryPeriod());

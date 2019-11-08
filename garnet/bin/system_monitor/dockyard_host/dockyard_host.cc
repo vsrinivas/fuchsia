@@ -97,7 +97,7 @@ DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
                                      path_ids.begin(), path_ids.end());
   // Issue the request for the data.
   dockyard_.GetStreamSets(std::move(iter.first->second->request),
-                          [this](const dockyard::StreamSetsRequest& request,
+                          [this](const dockyard::StreamSetsRequest& /*request*/,
                                  const dockyard::StreamSetsResponse& response) {
                             OnStreamSets(response);
                           });
@@ -174,6 +174,9 @@ void DockyardHost::OnConnection(const std::string& device_name) {
     // How much RAM does the Fuchsia device have.
     GT_LOG(INFO) << "memory:device_total_bytes "
                  << *GetSampleValue("memory:device_total_bytes");
+
+    // How much RAM does the Fuchsia device have.
+    GT_LOG(INFO) << "cpu:0:busy_time " << *GetSampleValue("cpu:0:busy_time");
 
     // Dump the dockyard state to a file.
     if (dump_state_) {

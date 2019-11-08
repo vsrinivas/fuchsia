@@ -44,9 +44,10 @@ class DockyardProxy {
                                          uint64_t value) = 0;
 
   // Send a list of samples with the same timestamp to the Dockyard.
-  virtual DockyardProxyStatus SendSampleList(const SampleList list) = 0;
+  virtual DockyardProxyStatus SendSampleList(const SampleList& list) = 0;
 
-  virtual DockyardProxyStatus SendStringSampleList(StringSampleList list) = 0;
+  virtual DockyardProxyStatus SendStringSampleList(
+      const StringSampleList& list) = 0;
 };
 
 }  // namespace harvester

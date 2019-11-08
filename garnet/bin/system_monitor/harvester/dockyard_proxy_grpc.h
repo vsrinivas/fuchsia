@@ -18,13 +18,13 @@ namespace internal {
 // Utility functions for munging data.
 
 void ExtractPathsFromSampleList(
-  std::vector<const std::string*>* dockyard_strings, const SampleList& list);
+    std::vector<const std::string*>* dockyard_strings, const SampleList& list);
 
-void BuildSampleListById(
-  SampleListById* by_id, const std::vector<dockyard::DockyardId>& id_list,
-  const SampleList& sample_list);
+void BuildSampleListById(SampleListById* by_id,
+                         const std::vector<dockyard::DockyardId>& id_list,
+                         const SampleList& sample_list);
 
-} // namespace internal
+}  // namespace internal
 
 class DockyardProxyGrpc : public DockyardProxy {
  public:
@@ -43,15 +43,18 @@ class DockyardProxyGrpc : public DockyardProxy {
                                  uint64_t value) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendSampleList(const SampleList list) override;
+  DockyardProxyStatus SendSampleList(const SampleList& list) override;
 
   // |DockyardProxy|.
-  DockyardProxyStatus SendStringSampleList(StringSampleList list) override;
+  DockyardProxyStatus SendStringSampleList(
+      const StringSampleList& list) override;
 
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
 
+  // The dockyard_path_to_id_ may be accessed by multiple threads.
+  std::mutex dockyard_path_to_id_mutex_;
   // Look up the ID of a Dockyard path.
   std::map<std::string, dockyard::DockyardId> dockyard_path_to_id_ = {};
 
@@ -73,7 +76,7 @@ class DockyardProxyGrpc : public DockyardProxy {
   // Actually send a list of samples with the same timestamp to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendSampleList().
-  grpc::Status SendSampleListById(uint64_t time, const SampleListById list);
+  grpc::Status SendSampleListById(uint64_t time, const SampleListById& list);
 
   // Get the ID from the local cache or from the remote Dockyard if it's not in
   // the cache.

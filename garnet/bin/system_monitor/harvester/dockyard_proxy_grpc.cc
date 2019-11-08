@@ -44,7 +44,7 @@ void BuildSampleListById(SampleListById* by_id,
   }
 }
 
-} // namespace internal
+}  // namespace internal
 
 DockyardProxyStatus DockyardProxyGrpc::Init() {
   dockyard_proto::InitRequest request;
@@ -99,7 +99,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSample(
   return ToDockyardProxyStatus(status);
 }
 
-DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
+DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList& list) {
   // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
@@ -119,7 +119,7 @@ DockyardProxyStatus DockyardProxyGrpc::SendSampleList(const SampleList list) {
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
-    const StringSampleList list) {
+    const StringSampleList& list) {
   // TODO(smbug.com/35): system_clock might be at usec resolution. Consider
   // using high_resolution_clock.
   auto now = std::chrono::system_clock::now();
@@ -185,14 +185,14 @@ grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
 }
 
 grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
-                                                   const SampleListById list) {
+                                                   const SampleListById& list) {
   // Data we are sending to the server.
   dockyard_proto::RawSamples samples;
   samples.set_time(time);
-  for (auto iter = list.begin(); iter != list.end(); ++iter) {
+  for (const auto& iter : list) {
     auto sample = samples.add_sample();
-    sample->set_key(iter->first);
-    sample->set_value(iter->second);
+    sample->set_key(iter.first);
+    sample->set_value(iter.second);
   }
 
   grpc::ClientContext context;
@@ -222,18 +222,21 @@ grpc::Status DockyardProxyGrpc::GetDockyardIdsForPaths(
   dockyard_proto::DockyardPaths need_ids;
 
   std::vector<size_t> indexes;
-  for (const auto& dockyard_path : dockyard_paths) {
-    auto iter = dockyard_path_to_id_.find(*dockyard_path);
-    if (iter != dockyard_path_to_id_.end()) {
-      dockyard_ids->emplace_back(iter->second);
-    } else {
-      need_ids.add_path(*dockyard_path);
-      indexes.emplace_back(dockyard_ids->size());
-      dockyard_ids->emplace_back(-1);
+  {
+    std::lock_guard<std::mutex> lock(dockyard_path_to_id_mutex_);
+    for (const auto& dockyard_path : dockyard_paths) {
+      auto iter = dockyard_path_to_id_.find(*dockyard_path);
+      if (iter != dockyard_path_to_id_.end()) {
+        dockyard_ids->emplace_back(iter->second);
+      } else {
+        need_ids.add_path(*dockyard_path);
+        indexes.emplace_back(dockyard_ids->size());
+        dockyard_ids->emplace_back(-1);
+      }
     }
   }
 
-  if (indexes.size() == 0) {
+  if (indexes.empty()) {
     // All strings had cached IDs.
     return grpc::Status::OK;
   }
@@ -246,6 +249,7 @@ grpc::Status DockyardProxyGrpc::GetDockyardIdsForPaths(
   grpc::Status status =
       stub_->GetDockyardIdsForPaths(&context, need_ids, &reply);
   if (status.ok()) {
+    std::lock_guard<std::mutex> lock(dockyard_path_to_id_mutex_);
     size_t reply_index = 0;
     for (size_t id_index : indexes) {
       dockyard::DockyardId dockyard_id = reply.id(reply_index);

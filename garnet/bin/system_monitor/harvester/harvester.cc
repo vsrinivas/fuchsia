@@ -32,10 +32,13 @@ std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
   return out;
 }
 
-Harvester::Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
+Harvester::Harvester(zx_handle_t root_resource,
+                     async_dispatcher_t* fast_dispatcher,
+                     async_dispatcher_t* slow_dispatcher,
                      std::unique_ptr<DockyardProxy> dockyard_proxy)
     : root_resource_(root_resource),
-      dispatcher_(dispatcher),
+      fast_dispatcher_(fast_dispatcher),
+      slow_dispatcher_(slow_dispatcher),
       dockyard_proxy_(std::move(dockyard_proxy)) {}
 
 void Harvester::GatherDeviceProperties() {
@@ -47,14 +50,19 @@ void Harvester::GatherDeviceProperties() {
   gather_tasks_.GatherDeviceProperties();
 }
 
-void Harvester::GatherData() {
-  zx::time now = async::Now(dispatcher_);
+void Harvester::GatherFastData() {
+  zx::time now = async::Now(fast_dispatcher_);
 
-  gather_cpu_.PostUpdate(dispatcher_, now, zx::msec(100));
-  gather_inspectable_.PostUpdate(dispatcher_, now, zx::sec(3));
-  gather_introspection_.PostUpdate(dispatcher_, now, zx::sec(10));
-  gather_memory_.PostUpdate(dispatcher_, now, zx::msec(100));
-  gather_tasks_.PostUpdate(dispatcher_, now, zx::sec(2));
+  gather_cpu_.PostUpdate(fast_dispatcher_, now, zx::msec(100));
+}
+
+void Harvester::GatherSlowData() {
+  zx::time now = async::Now(slow_dispatcher_);
+
+  gather_inspectable_.PostUpdate(slow_dispatcher_, now, zx::sec(3));
+  gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
+  gather_memory_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
+  gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::sec(2));
 }
 
 }  // namespace harvester

@@ -27,8 +27,8 @@ DockyardProxyStatus DockyardProxyFake::SendSample(
   return DockyardProxyStatus::OK;
 }
 
-DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList list) {
-  EXPECT_TRUE(list.size() > 0);
+DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList& list) {
+  EXPECT_TRUE(!list.empty());
   for (const auto& sample : list) {
 #ifdef VERBOSE_OUTPUT
     std::cout << "Sending " << sample.first << " " << sample.second
@@ -40,8 +40,8 @@ DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList list) {
 }
 
 DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
-    const StringSampleList list) {
-  EXPECT_TRUE(list.size() > 0);
+    const StringSampleList& list) {
+  EXPECT_TRUE(!list.empty());
   for (const auto& sample : list) {
 #ifdef VERBOSE_OUTPUT
     std::cout << "Sending " << sample.first << " " << sample.second

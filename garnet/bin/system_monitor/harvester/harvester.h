@@ -21,18 +21,21 @@ namespace harvester {
 // different types of Dockyard Samples as directed by the Harvester.
 class Harvester {
  public:
-  Harvester(zx_handle_t root_resource, async_dispatcher_t* dispatcher,
+  Harvester(zx_handle_t root_resource, async_dispatcher_t* fast_dispatcher,
+            async_dispatcher_t* slow_dispatcher,
             std::unique_ptr<DockyardProxy> dockyard_proxy);
 
   // Gather one-time data that doesn't vary over time. E.g. total RAM.
   void GatherDeviceProperties();
 
   // Gather a snapshot of data that may vary over time. E.g. used RAM.
-  void GatherData();
+  void GatherFastData();
+  void GatherSlowData();
 
  private:
   zx_handle_t root_resource_;
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* fast_dispatcher_;
+  async_dispatcher_t* slow_dispatcher_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
 
   GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
