@@ -32,6 +32,7 @@ static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
@@ -47,11 +48,12 @@ STATIC_COMMAND_MASKED("fw", "fill range of memory by word", &cmd_fill_mem, CMD_A
 STATIC_COMMAND_MASKED("fh", "fill range of memory by halfword", &cmd_fill_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("fb", "fill range of memory by byte", &cmd_fill_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("mc", "copy a range of memory", &cmd_copy_mem, CMD_AVAIL_ALWAYS)
-STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
-STATIC_COMMAND("stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 #endif
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
+STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
+STATIC_COMMAND("crash_stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
+STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", &cmd_recurse)
 #endif
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
@@ -320,6 +322,21 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags) {
 
   /* if it didn't, panic the system */
   panic("crash");
+
+  return 0;
+}
+
+// Crash by intentionally recursing to itself until the kernel
+// call stack is exceeded.
+__attribute__((noinline)) static int recurse(void *_func) {
+  auto func = reinterpret_cast<int (*)(void *)>(_func);
+  return func(_func) + 1;
+}
+
+static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags) {
+  recurse(reinterpret_cast<void *>(&recurse));
+
+  printf("survived.\n");
 
   return 0;
 }
