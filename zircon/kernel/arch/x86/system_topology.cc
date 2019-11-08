@@ -231,7 +231,7 @@ class ApicDecoder {
   bool has_cache_info() const { return cache_shift_ > 0; }
 
  private:
-  uint32_t ToMask(uint8_t width) const { return valpow2(width) - 1; }
+  uint32_t ToMask(uint8_t width) const { return valpow2<uint32_t>(width) - 1; }
 
   const uint8_t smt_bits_;
   const uint8_t core_bits_;

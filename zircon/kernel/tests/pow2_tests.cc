@@ -72,6 +72,11 @@ static bool pow2_test(void) {
   EXPECT_EQ(1u << 31, round_up_pow2_u32(1u << 31));
   EXPECT_EQ(0u, round_up_pow2_u32((1u << 31) + 1));
   EXPECT_EQ(0u, round_up_pow2_u32(UINT_MAX));
+
+  EXPECT_EQ(1u, valpow2(0u));
+  EXPECT_EQ(0x80000000u, valpow2(31u));
+  EXPECT_EQ(0x100000000lu, valpow2(32lu));
+  EXPECT_EQ(0x8000000000000000lu, valpow2(63lu));
   END_TEST;
 }
 

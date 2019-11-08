@@ -13,8 +13,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 /* routines for dealing with power of 2 values for efficiency
  * Considers 0 to be a power of 2 */
 __CONSTEXPR static inline __ALWAYS_INLINE bool ispow2(uint val) { return ((val - 1) & val) == 0; }
@@ -69,7 +67,8 @@ __CONSTEXPR static inline __ALWAYS_INLINE uint log2_ulong_ceil(ulong val) {
   return _log2_ulong(val, true);
 }
 
-__CONSTEXPR static inline __ALWAYS_INLINE uint valpow2(uint valp2) { return 1U << valp2; }
+template<typename T>
+__CONSTEXPR static inline __ALWAYS_INLINE T valpow2(T valp2) { return static_cast<T>(1) << valp2; }
 
 __CONSTEXPR static inline __ALWAYS_INLINE uint divpow2(uint val, uint divp2) {
   return val >> divp2;
@@ -97,7 +96,5 @@ __CONSTEXPR static inline __ALWAYS_INLINE uint32_t round_up_pow2_u32(uint32_t v)
   v++;
   return v;
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_POW2_H_
