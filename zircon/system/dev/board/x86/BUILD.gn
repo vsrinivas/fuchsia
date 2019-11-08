@@ -57,7 +57,7 @@ zx_driver("platform-bus-x86") {
     "acpi-dev/dev-pwrbtn.cc",
     "acpi-dev/dev-pwrsrc.cc",
     "acpi-dev/dev-tbmc.cc",
-    "acpi-dev/dev-thermal.c",
+    "acpi-dev/dev-thermal.cc",
     "acpi-nswalk.c",
     "debug.c",
     "init.c",
@@ -211,7 +211,9 @@ zx_test("x86-thermal-test") {
   output_name = "x86-thermal-test"
   test_group = "ddk"
   sources = [
-    "acpi-dev/dev-thermal-test.c",
+    "acpi-dev/dev-thermal-test.cc",
+    "acpi-dev/dev-thermal.cc",
+    "acpi-dev/dev-thermal.h",
   ]
   configs += [ ":config" ]
   deps = [
