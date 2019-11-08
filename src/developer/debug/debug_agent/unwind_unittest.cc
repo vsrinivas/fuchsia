@@ -16,13 +16,13 @@ namespace debug_agent {
 
 namespace {
 
-// This would be simpler using a mutex instead of the condition variable since
-// there are only two threads, but the Clang lock checker gets very upset.
+// This would be simpler using a mutex instead of the condition variable since there are only two
+// threads, but the Clang lock checker gets very upset.
 struct ThreadData {
   std::mutex mutex;
 
-  // Set by thread itself before thread_ready is signaled.
-  // zx::thread::native_handle doesn't seem to do what we want.
+  // Set by thread itself before thread_ready is signaled. zx::thread::native_handle doesn't seem to
+  // do what we want.
   zx::thread thread;
 
   bool thread_ready = false;
@@ -51,9 +51,8 @@ void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
   // Put another function on the stack.
   ThreadFunc2(data);
 
-  // This doesn't do anything useful but we need some code the compiler can't
-  // remove after the ThreadFunc2 call to ensure the compiler doesn't optimize
-  // out the return.
+  // This doesn't do anything useful but we need some code the compiler can't remove after the
+  // ThreadFunc2 call to ensure the compiler doesn't optimize out the return.
   data->thread_ready_cv.notify_one();
 }
 
@@ -73,7 +72,7 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
   return token;
 }
 
-void DoUnwindTest(bool expect_registers) {
+void DoUnwindTest() {
   ThreadData data;
   std::thread background(ThreadFunc1, &data);
 
@@ -110,34 +109,32 @@ void DoUnwindTest(bool expect_registers) {
   data.backtrace_done_cv.notify_one();
   background.join();
 
-  // Validate the stack. It's really hard to say what these values will be
-  // without symbols given the few guarantees C++ can provide. But we should
-  // have "several" entries, the first one should have "a bunch" of registers.
-  ASSERT_TRUE(stack.size() >= 2) << "Only got " << stack.size();
-  EXPECT_TRUE(stack[0].ip != 0);
-  EXPECT_TRUE(stack[0].regs.size() >= 8);
+  // Validate the stack. It's really hard to say what these values will be without symbols given the
+  // few guarantees C++ can provide. But we should have "several" entries, and each one should have
+  // "a bunch" of registers.
+  ASSERT_TRUE(stack.size() >= 3) << "Only got " << stack.size() << " stack entries";
 
-  // Non-topmost stack frames should always have at least two registers (IP/SP).
-  EXPECT_TRUE(stack[1].regs.size() >= 2);
-
-  if (expect_registers) {
-    EXPECT_TRUE(stack[1].regs.size() >= 8);
+  // Don't check the bottom stack frame because it sometimes has weird initial state.
+  for (size_t i = 0; i < stack.size() - 1; i++) {
+    EXPECT_TRUE(stack[i].ip != 0);
+    EXPECT_TRUE(stack[i].regs.size() >= 8)
+        << "Only got " << stack[i].regs.size() << " regs for frame " << i;
   }
 
-  // TODO: It might be nice to write the thread functions in assembly so we can
-  // know what the addresses are supposed to be.
+  // TODO: It might be nice to write the thread functions in assembly so we can know what the
+  // addresses are supposed to be.
 }
 
 }  // namespace
 
 TEST(Unwind, Android) {
   SetUnwinderType(UnwinderType::kAndroid);
-  DoUnwindTest(true);
+  DoUnwindTest();
 }
 
 TEST(Unwind, NG) {
   SetUnwinderType(UnwinderType::kNgUnwind);
-  DoUnwindTest(false);
+  DoUnwindTest();
 }
 
 }  // namespace debug_agent

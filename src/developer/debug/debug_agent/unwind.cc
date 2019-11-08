@@ -5,39 +5,107 @@
 #include "src/developer/debug/debug_agent/unwind.h"
 
 #include <inttypes.h>
-#include <ngunwind/fuchsia.h>
-#include <ngunwind/libunwind.h>
 
 #include <algorithm>
+
+#include <ngunwind/fuchsia.h>
+#include <ngunwind/libunwind.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
+#include "src/lib/containers/cpp/array_view.h"
 
 namespace debug_agent {
 
 namespace {
+
+using debug_ipc::RegisterID;
 
 using ModuleVector = std::vector<debug_ipc::Module>;
 
 // Default unwinder type to use.
 UnwinderType unwinder_type = UnwinderType::kNgUnwind;
 
+// These are the registers we attempt to extract from stack frams from NGUnwind This does not
+// include the IP/SP which are specially handled separately.
+struct NGUnwindRegisterMap {
+  int ngunwind;   // NGUnwind's register #define.
+  RegisterID id;  // Our RegisterID for the same thing.
+};
+containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
+  // clang-format off
+#if defined(__x86_64__)
+  static NGUnwindRegisterMap kGeneral[] = {
+      {UNW_X86_64_RAX, RegisterID::kX64_rax},
+      {UNW_X86_64_RBX, RegisterID::kX64_rbx},
+      {UNW_X86_64_RCX, RegisterID::kX64_rcx},
+      {UNW_X86_64_RDX, RegisterID::kX64_rdx},
+      {UNW_X86_64_RSI, RegisterID::kX64_rsi},
+      {UNW_X86_64_RDI, RegisterID::kX64_rdi},
+      {UNW_X86_64_RBP, RegisterID::kX64_rbp},
+      {UNW_X86_64_R8, RegisterID::kX64_r8},
+      {UNW_X86_64_R9, RegisterID::kX64_r9},
+      {UNW_X86_64_R10, RegisterID::kX64_r10},
+      {UNW_X86_64_R11, RegisterID::kX64_r11},
+      {UNW_X86_64_R12, RegisterID::kX64_r12},
+      {UNW_X86_64_R13, RegisterID::kX64_r13},
+      {UNW_X86_64_R14, RegisterID::kX64_r14},
+      {UNW_X86_64_R15, RegisterID::kX64_r15}};
+#elif defined(__aarch64__)
+  static NGUnwindRegisterMap kGeneral[] = {
+      {UNW_AARCH64_X0, RegisterID::kARMv8_x0},
+      {UNW_AARCH64_X1, RegisterID::kARMv8_x1},
+      {UNW_AARCH64_X2, RegisterID::kARMv8_x2},
+      {UNW_AARCH64_X3, RegisterID::kARMv8_x3},
+      {UNW_AARCH64_X4, RegisterID::kARMv8_x4},
+      {UNW_AARCH64_X5, RegisterID::kARMv8_x5},
+      {UNW_AARCH64_X6, RegisterID::kARMv8_x6},
+      {UNW_AARCH64_X7, RegisterID::kARMv8_x7},
+      {UNW_AARCH64_X8, RegisterID::kARMv8_x8},
+      {UNW_AARCH64_X9, RegisterID::kARMv8_x9},
+      {UNW_AARCH64_X10, RegisterID::kARMv8_x10},
+      {UNW_AARCH64_X11, RegisterID::kARMv8_x11},
+      {UNW_AARCH64_X12, RegisterID::kARMv8_x12},
+      {UNW_AARCH64_X13, RegisterID::kARMv8_x13},
+      {UNW_AARCH64_X14, RegisterID::kARMv8_x14},
+      {UNW_AARCH64_X15, RegisterID::kARMv8_x15},
+      {UNW_AARCH64_X16, RegisterID::kARMv8_x16},
+      {UNW_AARCH64_X17, RegisterID::kARMv8_x17},
+      {UNW_AARCH64_X18, RegisterID::kARMv8_x18},
+      {UNW_AARCH64_X19, RegisterID::kARMv8_x19},
+      {UNW_AARCH64_X20, RegisterID::kARMv8_x20},
+      {UNW_AARCH64_X21, RegisterID::kARMv8_x21},
+      {UNW_AARCH64_X22, RegisterID::kARMv8_x22},
+      {UNW_AARCH64_X23, RegisterID::kARMv8_x23},
+      {UNW_AARCH64_X24, RegisterID::kARMv8_x24},
+      {UNW_AARCH64_X25, RegisterID::kARMv8_x25},
+      {UNW_AARCH64_X26, RegisterID::kARMv8_x26},
+      {UNW_AARCH64_X27, RegisterID::kARMv8_x27},
+      {UNW_AARCH64_X28, RegisterID::kARMv8_x28},
+      {UNW_AARCH64_X29, RegisterID::kARMv8_x29},
+      {UNW_AARCH64_X30, RegisterID::kARMv8_lr}};
+#else
+#error Write for your platform
+#endif
+  // clang-format on
+  return containers::array_view<NGUnwindRegisterMap>(std::begin(kGeneral), std::end(kGeneral));
+}
+
 zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_addr,
                                const zx::thread& thread, const zx_thread_state_general_regs& regs,
                                size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
-  // Ignore errors getting modules, the empty case can at least give the
-  // current location, and maybe more if there are stack pointers.
+  // Ignore errors getting modules, the empty case can at least give the current location, and maybe
+  // more if there are stack pointers.
   ModuleVector modules;  // Sorted by load address.
   GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
 
   unwindstack::Maps maps;
   for (size_t i = 0; i < modules.size(); i++) {
-    // Our module currently doesn't have a size so just report the next
-    // address boundary.
+    // Our module currently doesn't have a size so just report the next address boundary.
     // TODO(brettw) hook up the real size.
     uint64_t end;
     if (i < modules.size() - 1)
@@ -45,8 +113,8 @@ zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_add
     else
       end = std::numeric_limits<uint64_t>::max();
 
-    // The offset of the module is the offset in the file where the memory map
-    // starts. For libraries, we can currently always assume 0.
+    // The offset of the module is the offset in the file where the memory map starts. For
+    // libraries, we can currently always assume 0.
     uint64_t offset = 0;
 
     uint64_t flags = 0;  // We don't have flags.
@@ -63,9 +131,8 @@ zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_add
 
   auto memory = std::make_shared<unwindstack::MemoryFuchsia>(process.get());
 
-  // Always ask for one more frame than requested so we can get the canonical
-  // frame address for the frames we do return (the CFA is the previous frame's
-  // stack pointer at the time of the call).
+  // Always ask for one more frame than requested so we can get the canonical frame address for the
+  // frames we do return (the CFA is the previous frame's stack pointer at the time of the call).
   unwindstack::Unwinder unwinder(max_depth + 1, &maps, &unwind_regs, std::move(memory), true);
   // We don't need names from the unwinder since those are computed in the client. This will
   // generally fail anyway since the target binaries don't usually have symbols, so turning off
@@ -84,10 +151,9 @@ zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_add
       next_frame->cfa = src.sp;
     }
 
-    // This termination condition is in the middle here because we don't know
-    // for sure if the unwinder was able to return the number of frames we
-    // requested, and we always want to fill in the CFA (above) for the
-    // returned frames if possible.
+    // This termination condition is in the middle here because we don't know for sure if the
+    // unwinder was able to return the number of frames we requested, and we always want to fill in
+    // the CFA (above) for the returned frames if possible.
     if (i == max_depth)
       break;
 
@@ -96,10 +162,10 @@ zx_status_t UnwindStackAndroid(const zx::process& process, uint64_t dl_debug_add
     dest->sp = src.sp;
     if (src.regs) {
       src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
-        // TODO(sadmac): It'd be nice to be using some sort of ID constant
-        // instead of a converted string here.
+        // TODO(sadmac): It'd be nice to be using some sort of ID constant instead of a converted
+        // string here.
         auto id = debug_ipc::StringToRegisterID(name);
-        if (id != debug_ipc::RegisterID::kUnknown) {
+        if (id != RegisterID::kUnknown) {
           dest->regs.emplace_back(id, val);
         }
       });
@@ -113,11 +179,10 @@ using ModuleVector = std::vector<debug_ipc::Module>;
 
 // Callback for ngunwind.
 int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name) {
-  // Context is a ModuleVector sorted by load address, need to find the
-  // largest one smaller than or equal to the pc.
+  // Context is a ModuleVector sorted by load address, need to find the largest one smaller than or
+  // equal to the pc.
   //
-  // We could use lower_bound for better perf with lots of modules but we
-  // expect O(10) modules.
+  // We could use lower_bound for better perf with lots of modules but we expect O(10) modules.
   const ModuleVector* modules = static_cast<const ModuleVector*>(context);
   for (int i = static_cast<int>(modules->size()) - 1; i >= 0; i--) {
     const debug_ipc::Module& module = (*modules)[i];
@@ -135,8 +200,8 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
                                 size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
-  // Ignore errors getting modules, the empty case can at least give the
-  // current location, and maybe more if there are stack pointers.
+  // Ignore errors getting modules, the empty case can at least give the current location, and maybe
+  // more if there are stack pointers.
   ModuleVector modules;  // Sorted by load address.
   GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
@@ -158,8 +223,8 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
   // Compute the register IDs for this platform's IP/SP.
   arch::ArchProvider arch_provider;
   auto arch = arch_provider.GetArch();
-  debug_ipc::RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
-  debug_ipc::RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
+  RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
+  RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
 
   // Top stack frame.
   debug_ipc::StackFrame frame;
@@ -189,24 +254,21 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
     if (!stack->empty())
       stack->back().cfa = val;
 
-    // Note that libunwind may theoretically be able to give us all
-    // callee-saved register values for a given frame. Currently asking for any
-    // register always returns success, making it impossible to tell what is
-    // valid and what is not.
-    //
-    // If we switch unwinders (maybe to LLVM's or a custom one), this should be
-    // re-evaluated. We may be able to attach a vector of Register structs on
-    // each frame for the values we know about.
+    // Other registers.
+    for (auto& [ng_id, reg_id] : GetNGUnwindGeneralRegisters()) {
+      unw_get_reg(&cursor, ng_id, &val);
+      frame.regs.emplace_back(reg_id, val);
+    }
 
-    // This "if" statement prevents adding more than the max number of stack
-    // entries since we requested one more from libunwind to get the CFA.
+    // This "if" statement prevents adding more than the max number of stack entries since we
+    // requested one more from libunwind to get the CFA.
     if (stack->size() < max_depth)
       stack->push_back(frame);
   }
 
-  // The last stack entry will typically have a 0 IP address. We want to send
-  // this anyway because it will hold the initial stack pointer for the thread,
-  // which in turn allows computation of the first real frame's fingerprint.
+  // The last stack entry will typically have a 0 IP address. We want to send this anyway because it
+  // will hold the initial stack pointer for the thread, which in turn allows computation of the
+  // first real frame's fingerprint.
 
   return ZX_OK;
 }
