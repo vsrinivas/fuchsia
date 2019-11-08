@@ -11,7 +11,7 @@ use {
         startup,
     },
     cm_rust::*,
-    directory_broker,
+    directory_broker::DirectoryBroker,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{
@@ -22,7 +22,8 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_vfs_pseudo_fs::{
-        directory, directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+        directory, directory::entry::DirectoryEntry, file::simple::read_only,
+        tree_builder::TreeBuilder,
     },
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
@@ -838,8 +839,28 @@ pub mod capability_util {
     }
 }
 
+/// Create a file with the given contents, along with any subdirectories
+/// required.
+async fn create_static_file(
+    root: &DirectoryProxy,
+    path: &Path,
+    contents: &str,
+) -> Result<(), failure::Error> {
+    // Create subdirectories if required.
+    if let Some(directory) = path.parent() {
+        let _ = io_util::create_sub_directories(root, directory)?;
+    }
+
+    // Open file.
+    let file_proxy = io_util::open_file(root, path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?;
+
+    // Write contents.
+    io_util::write_file(&file_proxy, contents).await
+}
+
 /// OutDir can be used to construct and then host an out directory, containing a directory
 /// structure with 0 or 1 read-only files, and 0 or 1 services.
+#[derive(Clone)]
 pub struct OutDir {
     // TODO: it would be great if this struct held a `directory::simple::Simple` that was mutated
     // by the `add_*` functions, but this is not possible because `directory::simple::Simple`
@@ -862,93 +883,55 @@ impl OutDir {
     /// `storage` to the out directory, which contains a directory broker that reroutes connections
     /// to an injected memfs directory.
     pub fn add_directory(&mut self, test_dir_proxy: &DirectoryProxy) {
-        let test_dir_proxy = io_util::clone_directory(
-            test_dir_proxy,
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )
-        .expect("failed to clone test dir proxy");
-        self.test_dir_proxy = Some(Arc::new(test_dir_proxy));
+        self.test_dir_proxy = Some(Arc::new(
+            io_util::clone_directory(test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                .expect("could not clone DirectoryProxy"),
+        ));
     }
+
+    /// Build the output directory.
+    async fn build_out_dir(&self) -> Result<directory::simple::Simple<'_>, failure::Error> {
+        let mut tree = TreeBuilder::empty_dir();
+
+        // Add `svc/` if required.
+        if self.host_service {
+            tree.add_entry(&["svc", "foo"], DirectoryBroker::new(Box::new(Self::echo_server_fn)))?;
+            tree.add_entry(&["svc", "file"], read_only(|| Ok(b"hippos".to_vec())))?;
+        }
+
+        // Add `data/` if required.
+        if let Some(test_dir_proxy) = &self.test_dir_proxy {
+            tree.add_entry(
+                &["data"],
+                DirectoryBroker::from_directory_proxy(io_util::clone_directory(
+                    &test_dir_proxy,
+                    CLONE_FLAG_SAME_RIGHTS,
+                )?),
+            )?;
+            create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo").await?;
+        }
+
+        Ok(tree.build())
+    }
+
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
     pub fn host_fn(&self) -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
-        let host_service = self.host_service;
-        let test_dir_proxy = self.test_dir_proxy.clone();
+        let self_ = self.clone();
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            let test_dir_proxy = test_dir_proxy.clone();
-            fasync::spawn(async move {
-                let mut pseudo_dir = directory::simple::empty();
-                if host_service {
-                    pseudo_dir
-                        .add_entry(
-                            "svc",
-                            pseudo_directory! {
-                                "file" => read_only(|| Ok(b"hippos".to_vec())),
-                                "foo" =>
-                                    directory_broker::DirectoryBroker::new(Box::new(
-                                            Self::echo_server_fn)),
-                            },
-                        )
-                        .map_err(|(s, _)| s)
-                        .expect("failed to add svc entry");
-                }
-                if let Some(test_dir_proxy) = test_dir_proxy {
-                    Self::initialize_foo_hippo_in_test_dir(&test_dir_proxy).await;
-
-                    let test_dir_proxy =
-                        io_util::clone_directory(&test_dir_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
-                    pseudo_dir
-                        .add_entry(
-                            "data",
-                            directory_broker::DirectoryBroker::new(Box::new(
-                                move |flags, mode, path, server_end| {
-                                    if path == "" {
-                                        test_dir_proxy
-                                            .clone(
-                                                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                                                server_end,
-                                            )
-                                            .expect("failed to clone cache subdir");
-                                    } else {
-                                        test_dir_proxy
-                                            .open(flags, mode, &path, server_end)
-                                            .expect("failed to open cache subdir");
-                                    }
-                                },
-                            )),
-                        )
-                        .map_err(|(s, _)| s)
-                        .expect("failed to add data entry");
-                }
+            let self_ = self_.clone();
+            fasync::spawn_local(async move {
+                let mut pseudo_dir =
+                    self_.build_out_dir().await.expect("could not build out directory");
                 pseudo_dir.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     MODE_TYPE_DIRECTORY,
                     &mut iter::empty(),
                     ServerEnd::new(server_end.into_channel()),
                 );
-
                 let _ = pseudo_dir.await;
-
                 panic!("the pseudo dir exited!");
             });
         })
-    }
-
-    async fn initialize_foo_hippo_in_test_dir(test_dir_proxy: &DirectoryProxy) {
-        let foo_proxy = io_util::open_directory(
-            &test_dir_proxy,
-            &Path::new("foo"),
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .unwrap();
-        let hippo_proxy = io_util::open_file(
-            &foo_proxy,
-            &Path::new("hippo"),
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .unwrap();
-        let fut = hippo_proxy.write(&mut b"hippo".to_vec().drain(..));
-        let (s, _) = fut.await.expect("failed to write to file");
-        assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
     }
 
     /// Hosts a new service on server_end that implements fidl.examples.echo.Echo

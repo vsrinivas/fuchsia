@@ -136,10 +136,8 @@ pub async fn read_file_bytes(file: &FileProxy) -> Result<Vec<u8>, Error> {
     let mut out = Vec::new();
     loop {
         let (status, mut bytes) = file.read(MAX_BUF).await.map_err(|e| Error::from(e))?;
-        let status = zx::Status::from_raw(status);
-        if status != zx::Status::OK {
-            return Err(format_err!("failed to read file: {}", status));
-        }
+        zx::Status::ok(status).map_err(|s| format_err!("failed to read file: {}", s))?;
+
         if bytes.is_empty() {
             break;
         }
@@ -152,6 +150,25 @@ pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
     let bytes = read_file_bytes(file).await?;
     let out = String::from_utf8(bytes).map_err(|e| Error::from(e))?;
     Ok(out)
+}
+
+/// Write the given bytes into a file open for writing.
+pub async fn write_file_bytes(file: &FileProxy, mut data: &[u8]) -> Result<(), Error> {
+    while data.len() > 0 {
+        let (status, bytes_written) = file
+            .write(&mut data.iter().take(MAX_BUF as usize).cloned())
+            .await
+            .map_err(|e| Error::from(e))?;
+        zx::Status::ok(status).map_err(|s| format_err!("failed to write file: {}", s))?;
+
+        data = &data[bytes_written as usize..];
+    }
+    Ok(())
+}
+
+/// Write the given string as UTF-8 bytes into a file open for writing.
+pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
+    write_file_bytes(file, data.as_bytes()).await
 }
 
 /// node_to_directory will convert the given NodeProxy into a DirectoryProxy. This is unsafe if the
@@ -217,6 +234,28 @@ mod tests {
         let path = Path::new("myfile");
         let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
         let contents = read_file(&file).await.expect("could not read file");
+        assert_eq!(&contents, &data, "File contents did not match");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_and_write_file_test() {
+        // Create temp dir for test.
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let dir = open_directory_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open tmp dir");
+
+        // Write contents.
+        let file_name = Path::new("myfile");
+        let data = "abc".repeat(10000);
+        let file = open_file(&dir, &file_name, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)
+            .expect("could not open file");
+        write_file(&file, &data).await.expect("could not write file");
+
+        // Verify contents.
+        let contents = std::fs::read_to_string(tempdir.path().join(file_name)).unwrap();
         assert_eq!(&contents, &data, "File contents did not match");
     }
 
@@ -321,8 +360,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
         )?;
 
-        let (s, _) = file.write(&mut data.as_bytes().to_vec().into_iter()).await?;
-        assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
+        write_file(&file, &data).await.expect("writing to the file failed");
 
         let contents = std::fs::read_to_string(tempdir.path().join(path).join(file_name))?;
         assert_eq!(&contents, &data, "File contents did not match");
