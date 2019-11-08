@@ -482,7 +482,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     case flat::Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const flat::XUnion*>(decl);
       std::string xunion_name = NameCodedName(xunion_decl->name, wire_format);
-      std::string nullable_xunion_name = NameNullableXUnion(xunion_name);
+      std::string nullable_xunion_name = NameCodedNullableName(xunion_decl->name, wire_format);
 
       // Always create the reference type
       auto nullable_xunion_type = std::make_unique<coded::XUnionType>(

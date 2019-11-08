@@ -527,8 +527,6 @@ std::string NameFields(std::string_view name) {
   return fields_name;
 }
 
-std::string NameNullableXUnion(std::string_view name) { return std::string(name) + "NullableRef"; }
-
 std::string NameFieldsAltField(std::string_view name, uint32_t field_num) {
   std::ostringstream fields_alt_field_name;
   fields_alt_field_name << NameFields(name);
@@ -540,6 +538,13 @@ std::string NameFieldsAltField(std::string_view name, uint32_t field_num) {
 
 std::string NameCodedName(const flat::Name& name, const WireFormat wire_format) {
   return WireFormatPrefix(wire_format) + FormatName(name, "_", "_");
+}
+
+std::string NameCodedNullableName(const flat::Name& name, const WireFormat wire_format) {
+  std::ostringstream nullable_name;
+  nullable_name << NameCodedName(name, wire_format);
+  nullable_name << "NullableRef";
+  return nullable_name.str();
 }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability,
