@@ -249,7 +249,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   // fake an actual HW interrupt to test the callback functionality.
   // This causes the IRQ object to be in a bad state when ACK'd.
   if (packet.key == kPortKeyIrqMsg) {
-    ZX_ASSERT(gdc_irq_.ack());
+    ZX_ASSERT(gdc_irq_.ack() == ZX_OK);
   }
 
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {

@@ -185,7 +185,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
   if (packet.key == kPortKeyIrqMsg) {
-    ZX_ASSERT(ge2d_irq_.ack());
+    ZX_ASSERT(ge2d_irq_.ack() == ZX_OK);
   }
 
   // First lets fetch an unused buffer from the VMO pool.

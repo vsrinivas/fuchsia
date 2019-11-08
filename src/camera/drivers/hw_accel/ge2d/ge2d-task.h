@@ -21,6 +21,8 @@ typedef struct image_canvas_id {
   uint8_t canvas_idx[2];
 } image_canvas_id_t;
 
+enum Ge2dTaskType { GE2D_RESIZE, GE2D_WATERMARK };
+
 class Ge2dTask : public generictask::GenericTask {
  public:
   // Static function to create a task object.
@@ -72,8 +74,6 @@ class Ge2dTask : public generictask::GenericTask {
                    const image_format_2_t* output_image_format_table_list,
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
                    const hw_accel_callback_t* callback, const zx::bti& bti);
-  zx_status_t PinWatermarkVmo(const zx::vmo& watermark_vmo, const zx::bti& bti);
-
   // Allocates canvas ids for every frame in the input and output buffer collections
   // (amlogic). One canvas id is allocated per plane of the image frame. Internally,
   // canvas id allocation pins the vmos (zx_bit_pin()).
@@ -91,6 +91,7 @@ class Ge2dTask : public generictask::GenericTask {
                                    const image_format_2_t* output_image_format);
   void FreeCanvasIds();
 
+  Ge2dTaskType task_type_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   struct watermark_info {
     fzl::PinnedVmo watermark_vmo_pinned_;
@@ -99,6 +100,14 @@ class Ge2dTask : public generictask::GenericTask {
     image_format_2_t wm_image_format;
   };
   watermark_info wm_;
+  // Canvas id for the watermark image and the blended watermark image.
+  // Both are RGBA images.
+  uint8_t wm_input_canvas_id_;
+  uint8_t wm_blended_canvas_id_;
+  // Allocate a contig vmo to hold the input watermark image.
+  zx::vmo watermark_input_vmo_;
+  // vmo to hold blended watermark image.
+  zx::vmo watermark_blended_vmo_;
   resize_info_t res_info_;
   std::unordered_map<zx_handle_t, image_canvas_id_t> buffer_map_;
   uint32_t num_input_canvas_ids_;

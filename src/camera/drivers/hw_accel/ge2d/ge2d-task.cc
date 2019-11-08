@@ -42,15 +42,14 @@ zx_status_t Ge2dTask::AllocCanvasId(const image_format_2_t* image_format, zx_han
   if (status != ZX_OK) {
     return status;
   }
-  status = canvas_.ops->config(canvas_.ctx, vmo_dup,
-                               0,  // offset of plane 0 is at 0.
-                               &info, &canvas_ids.canvas_idx[kYComponent]);
+  status = amlogic_canvas_config(&canvas_, vmo_dup, 0,  // offset of plane 0 is at 0.
+                                 &info, &canvas_ids.canvas_idx[kYComponent]);
   info.height /= 2;  // For NV12, second plane height is 1/2 first.
-  status = canvas_.ops->config(canvas_.ctx, vmo_in,
-                               image_format->display_height * image_format->bytes_per_row, &info,
-                               &canvas_ids.canvas_idx[kUVComponent]);
+  status = amlogic_canvas_config(&canvas_, vmo_in,
+                                 image_format->display_height * image_format->bytes_per_row, &info,
+                                 &canvas_ids.canvas_idx[kUVComponent]);
   if (status != ZX_OK) {
-    canvas_.ops->free(canvas_.ctx, canvas_ids.canvas_idx[kYComponent]);
+    amlogic_canvas_free(&canvas_, canvas_ids.canvas_idx[kYComponent]);
     return ZX_ERR_NO_RESOURCES;
   }
   return ZX_OK;
@@ -78,8 +77,8 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
                            image_canvas_ids[i], CANVAS_FLAGS_READ);
     if (status != ZX_OK) {
       for (uint32_t j = 0; j < i; j++) {
-        canvas_.ops->free(canvas_.ctx, image_canvas_ids[j].canvas_idx[kYComponent]);
-        canvas_.ops->free(canvas_.ctx, image_canvas_ids[j].canvas_idx[kUVComponent]);
+        amlogic_canvas_free(&canvas_, image_canvas_ids[j].canvas_idx[kYComponent]);
+        amlogic_canvas_free(&canvas_, image_canvas_ids[j].canvas_idx[kUVComponent]);
       }
       return status;
     }
@@ -125,8 +124,8 @@ zx_status_t Ge2dTask::AllocOutputCanvasIds(
                       CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
     if (status != ZX_OK) {
       for (uint32_t j = 0; j < i; j++) {
-        canvas_.ops->free(canvas_.ctx, buf_canvas_ids[j].canvas_ids.canvas_idx[kYComponent]);
-        canvas_.ops->free(canvas_.ctx, buf_canvas_ids[j].canvas_ids.canvas_idx[kUVComponent]);
+        amlogic_canvas_free(&canvas_, buf_canvas_ids[j].canvas_ids.canvas_idx[kYComponent]);
+        amlogic_canvas_free(&canvas_, buf_canvas_ids[j].canvas_ids.canvas_idx[kUVComponent]);
         ReleaseOutputBuffer(std::move(buf_canvas_ids[j].output_buffer));
       }
       return status;
@@ -153,13 +152,17 @@ zx_status_t Ge2dTask::AllocCanvasIds(const buffer_collection_info_2_t* input_buf
 
 void Ge2dTask::FreeCanvasIds() {
   for (uint32_t j = 0; j < num_input_canvas_ids_; j++) {
-    canvas_.ops->free(canvas_.ctx, input_image_canvas_ids_[j].canvas_idx[kYComponent]);
-    canvas_.ops->free(canvas_.ctx, input_image_canvas_ids_[j].canvas_idx[kUVComponent]);
+    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_idx[kYComponent]);
+    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_idx[kUVComponent]);
   }
   num_input_canvas_ids_ = 0;
   for (auto it = buffer_map_.cbegin(); it != buffer_map_.cend(); ++it) {
-    canvas_.ops->free(canvas_.ctx, it->second.canvas_idx[kYComponent]);
-    canvas_.ops->free(canvas_.ctx, it->second.canvas_idx[kUVComponent]);
+    amlogic_canvas_free(&canvas_, it->second.canvas_idx[kYComponent]);
+    amlogic_canvas_free(&canvas_, it->second.canvas_idx[kUVComponent]);
+  }
+  if (task_type_ == GE2D_WATERMARK) {
+    amlogic_canvas_free(&canvas_, wm_input_canvas_id_);
+    amlogic_canvas_free(&canvas_, wm_blended_canvas_id_);
   }
 }
 
@@ -174,21 +177,6 @@ void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
     ZX_ASSERT(status == ZX_OK);
     it.second = canvas_ids;
   }
-}
-
-zx_status_t Ge2dTask::PinWatermarkVmo(const zx::vmo& watermark_vmo, const zx::bti& bti) {
-  // Pin the Watermark VMO.
-  zx_status_t status =
-      wm_.watermark_vmo_pinned_.Pin(watermark_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, "%s: Failed to pin watermark VMO\n", __func__);
-    return status;
-  }
-  if (wm_.watermark_vmo_pinned_.region_count() != 1) {
-    FX_LOG(ERROR, "%s: buffer is not contiguous", __func__);
-    return ZX_ERR_NO_MEMORY;
-  }
-  return status;
 }
 
 zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collection,
@@ -240,12 +228,14 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
   // Make a copy of the resize info
   res_info_ = *info;
 
+  task_type_ = GE2D_RESIZE;
+
   return status;
 }
 
 zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                                     const buffer_collection_info_2_t* output_buffer_collection,
-                                    const water_mark_info_t* info, const zx::vmo& watermark_vmo,
+                                    const water_mark_info_t* wm_info, const zx::vmo& watermark_vmo,
                                     const image_format_2_t* input_image_format,
                                     const image_format_2_t* output_image_format_table_list,
                                     size_t output_image_format_table_count,
@@ -262,12 +252,70 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     return status;
   }
 
-  // Make copy of watermark info, pin watermark vmo.
-  wm_.loc_x = info->loc_x;
-  wm_.loc_y = info->loc_y;
-  wm_.wm_image_format = info->wm_image_format;
-  status = PinWatermarkVmo(watermark_vmo, bti);
+  if (wm_info->wm_image_format.pixel_format.type != ZX_PIXEL_FORMAT_ARGB_8888) {
+    FX_LOG(ERROR, "%s: Image format type not supported\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
+  // Make copy of watermark info, pin watermark vmo.
+  wm_.loc_x = wm_info->loc_x;
+  wm_.loc_y = wm_info->loc_y;
+  wm_.wm_image_format = wm_info->wm_image_format;
+
+  task_type_ = GE2D_WATERMARK;
+
+  uint64_t vmo_size;
+  vmo_size = wm_.wm_image_format.display_height * wm_.wm_image_format.bytes_per_row;
+
+  // The watermark vmo may not necessarily be contig. Allocate a contig vmo and
+  // copy the contents of the watermark image into it and use that.
+  status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_input_vmo_);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "Unable to get create contiguous input watermark VMO\n", __func__);
+    return status;
+  }
+  // Copy the watermark image over.
+  fzl::VmoMapper mapped_watermark_input_vmo;
+  status = mapped_watermark_input_vmo.Map(watermark_vmo, 0, vmo_size, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "Unable to get map for watermark input VMO\n", __func__);
+    return status;
+  }
+  fzl::VmoMapper mapped_contig_vmo;
+  status =
+      mapped_contig_vmo.Map(watermark_input_vmo_, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "Unable to get map contig watermark VMO\n", __func__);
+    return status;
+  }
+  memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
+
+  // Allocate input watermark canvas id.
+  canvas_info_t info;
+  info.height = wm_.wm_image_format.display_height;
+  info.stride_bytes = wm_.wm_image_format.bytes_per_row;
+  info.wrap = 0;
+  info.blkmode = 0;
+  // Do 64-bit endianness conversion.
+  info.endianness = 0;
+  info.flags = CANVAS_FLAGS_READ;
+  status =
+      amlogic_canvas_config(&canvas_, watermark_input_vmo_.get(), 0, &info, &wm_input_canvas_id_);
+
+  // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
+  status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_blended_vmo_);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "Unable to get create contiguous blended watermark VMO\n", __func__);
+    return status;
+  }
+
+  info.flags |= CANVAS_FLAGS_WRITE;
+  status = amlogic_canvas_config(&canvas_, watermark_blended_vmo_.get(), 0, &info,
+                                 &wm_blended_canvas_id_);
+  if (status != ZX_OK) {
+    FX_LOG(ERROR, "%s: vmo_creation for blended watermark image Failed\n", __func__);
+    amlogic_canvas_free(&canvas_, wm_input_canvas_id_);
+  }
   return status;
 }
 }  // namespace ge2d

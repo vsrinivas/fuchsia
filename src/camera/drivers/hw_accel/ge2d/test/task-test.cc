@@ -33,7 +33,6 @@ constexpr uint32_t kHeight = 768;
 constexpr uint32_t kNumberOfBuffers = 8;
 constexpr uint32_t kNumberOfMmios = 50;
 constexpr uint32_t kImageFormatTableSize = 8;
-constexpr uint32_t kWatermarkSize = 1000;
 constexpr uint32_t kMaxTasks = 10;
 
 static uint8_t GenFakeCanvasId(zx_handle_t vmo) {
@@ -113,7 +112,9 @@ class TaskTest : public zxtest::Test {
     ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_R8G8B8A8,
                                       watermark_info_.wm_image_format, kWidth / 4, kHeight / 4));
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
-    zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), kWatermarkSize, 0,
+    uint32_t watermark_size =
+        (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
+    zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), watermark_size, 0,
                                                   watermark_vmo_.reset_and_get_address());
     ASSERT_OK(status);
 
@@ -591,7 +592,9 @@ TEST(TaskTest, NonContigVmoTest) {
                                                          bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
-  status = zx_vmo_create(kWatermarkSize, 0, &watermark_vmo);
+  uint32_t watermark_size =
+      (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
+  status = zx_vmo_create_contiguous(bti_handle, watermark_size, 0, &watermark_vmo);
   ASSERT_OK(status);
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
@@ -615,7 +618,9 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   water_mark_info_t watermark_info;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status = zx_vmo_create_contiguous(bti_handle, kWatermarkSize, 0, &watermark_vmo);
+  uint32_t watermark_size =
+      (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
+  zx_status_t status = zx_vmo_create_contiguous(bti_handle, watermark_size, 0, &watermark_vmo);
   ASSERT_OK(status);
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
