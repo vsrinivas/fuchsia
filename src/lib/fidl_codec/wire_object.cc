@@ -152,8 +152,14 @@ bool NullableValue::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uin
     return true;
   }
   if (data != FIDL_ALLOC_PRESENT) {
-    if (decoder->output_errors()) {
-      FXL_LOG(ERROR) << "invalid value <" << std::hex << data << std::dec << "> for nullable";
+    if (type() == nullptr) {
+      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                          << ": Invalid value <" << std::hex << data << std::dec
+                          << "> for nullable\n";
+    } else {
+      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                          << ": Invalid value <" << std::hex << data << std::dec
+                          << "> for nullable " << type()->Name() << "\n";
     }
     return false;
   }
@@ -387,6 +393,16 @@ int EnvelopeValue::DisplaySize(int remaining_size) const {
 }
 
 void EnvelopeValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+  if (offset + num_bytes_ > decoder->num_bytes()) {
+    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                        << ": Not enough data to decode an envelope\n";
+    return;
+  }
+  if (num_handles_ > decoder->GetRemainingHandles()) {
+    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                        << ": Not enough handles to decode an envelope\n";
+    return;
+  }
   MessageDecoder envelope_decoder(decoder, offset, num_bytes_, num_handles_);
   value_ = envelope_decoder.DecodeValue(type());
 }
@@ -399,12 +415,20 @@ void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 
   if (DecodeNullable(decoder, base_offset, num_bytes_)) {
     if (type() == nullptr) {
-      FXL_DCHECK(is_null());
+      if (!is_null()) {
+        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
+                            << ": The envelope should be null\n";
+      }
     }
     if (is_null()) {
-      FXL_DCHECK(num_bytes_ == 0);
-      FXL_DCHECK(num_handles_ == 0);
-      return;
+      if (num_bytes_ != 0) {
+        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
+                            << ": Null envelope shouldn't have bytes\n";
+      }
+      if (num_handles_ != 0) {
+        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
+                            << ": Null envelope shouldn't have handles\n";
+      }
     }
   }
 }

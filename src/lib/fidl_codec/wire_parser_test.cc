@@ -106,8 +106,9 @@ TEST_F(WireParserTest, ParseSingleString) {
   }
 
   std::unique_ptr<fidl_codec::Object> decoded_request;
+  std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                            message.handles().size(), &decoded_request);
+                            message.handles().size(), &decoded_request, error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -164,7 +165,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                    \
     MessageDecoder decoder(message.bytes().data(),                                                 \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
-                           message.handles().size(), /*output_errors=*/true);                      \
+                           message.handles().size(), std::cerr);                                   \
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
     if (num_bytes == -1) {                                                                         \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
@@ -196,16 +197,18 @@ TEST_F(WireParserTest, ParseSingleString) {
         << "expected = " << _pretty_print << " actual = " << result.str();                         \
                                                                                                    \
     for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {                       \
+      std::stringstream error_stream;                                                              \
       MessageDecoder decoder(message.bytes().data(), actual, handle_infos,                         \
-                             message.handles().size(), /*output_errors=*/false);                   \
+                             message.handles().size(), error_stream);                              \
       std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                  \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual         \
                                       << " instead of " << message.bytes().actual();               \
     }                                                                                              \
                                                                                                    \
     for (uint32_t actual = 0; message.handles().actual() > actual; actual++) {                     \
+      std::stringstream error_stream;                                                              \
       MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_infos, actual, \
-                             /*output_errors=*/false);                                             \
+                             error_stream);                                                        \
       std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                  \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual         \
                                       << " instead of " << message.handles().actual();             \
@@ -1226,8 +1229,9 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   ASSERT_NE(method, nullptr);
 
   std::unique_ptr<fidl_codec::Object> decoded_request;
+  std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                            message.handles().size(), &decoded_request);
+                            message.handles().size(), &decoded_request, error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -1401,10 +1405,10 @@ TEST_F(WireParserTest, UnionsAreXUnions) {
 
   {
     // Decode the message using the modified description (the xunion is now a union).
-    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0,
-                           /*output_errors=*/true);
+    std::stringstream stream;
+    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0, stream);
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());
-    ASSERT_FALSE(decoder.HasError()) << "Could not decode message";
+    ASSERT_TRUE(decoder.HasError()) << "Shouldn't be able to decode the message";
     rapidjson::Document actual;
     if (object != nullptr) {
       object->ExtractJson(actual.GetAllocator(), actual);
@@ -1430,8 +1434,7 @@ TEST_F(WireParserTest, UnionsAreXUnions) {
     message.header().flags[0] = FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 
     // Decode the message using the modified description (the xunion is now a union).
-    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0,
-                           /*output_errors=*/true);
+    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0, std::cerr);
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());
     ASSERT_FALSE(decoder.HasError()) << "Could not decode message";
     rapidjson::Document actual;

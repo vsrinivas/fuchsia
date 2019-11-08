@@ -22,7 +22,7 @@ namespace fidl_codec {
 // with the method.
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
                    const zx_handle_info_t* handles, uint32_t num_handles,
-                   std::unique_ptr<Object>* decoded_object);
+                   std::unique_ptr<Object>* decoded_object, std::ostream& error_stream);
 
 // Given a wire-formatted |message| and a schema for that message represented by
 // |method|,  populates |decoded_object| with an object representing that
@@ -32,7 +32,7 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t
 // with the method.
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
                     const zx_handle_info_t* handles, uint32_t num_handles,
-                    std::unique_ptr<Object>* decoded_object);
+                    std::unique_ptr<Object>* decoded_object, std::ostream& error_stream);
 
 }  // namespace fidl_codec
 

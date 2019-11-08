@@ -80,19 +80,28 @@ class MessageDecoderDispatcher {
 class MessageDecoder {
  public:
   MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
-                 uint32_t num_handles, bool output_errors = false);
+                 uint32_t num_handles, std::ostream& error_stream);
   MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
+  uint32_t absolute_offset() const { return absolute_offset_; }
+
+  uint32_t num_bytes() const { return num_bytes_; }
 
   const zx_handle_info_t* handle_pos() const { return handle_pos_; }
 
   uint64_t next_object_offset() const { return next_object_offset_; }
 
-  bool output_errors() const { return output_errors_; }
-
   bool unions_are_xunions() const { return unions_are_xunions_; }
 
   bool HasError() const { return error_count_ > 0; }
+
+  // Add an error.
+  std::ostream& AddError() {
+    ++error_count_;
+    return error_stream_;
+  }
+
+  size_t GetRemainingHandles() const { return end_handle_pos_ - handle_pos_; }
 
   // Used by numeric types to retrieve a numeric value. If there is not enough
   // data, returns false and value is not modified.
@@ -103,11 +112,9 @@ class MessageDecoder {
   // data, returns null.
   const uint8_t* GetAddress(uint64_t offset, uint64_t size) {
     if (offset + size > num_bytes_) {
-      if (output_errors_ && (offset <= num_bytes_)) {
-        FXL_LOG(ERROR) << "not enough data to decode (needs " << size << " at offset " << offset
-                       << ", remains " << (num_bytes_ - offset) << ")";
-      }
-      ++error_count_;
+      AddError() << std::hex << (absolute_offset_ + offset) << std::dec
+                 << ": Not enough data to decode (needs " << size << ", remains "
+                 << (num_bytes_ - offset) << ")\n";
       return nullptr;
     }
     return start_byte_pos_ + offset;
@@ -119,11 +126,10 @@ class MessageDecoder {
   void SkipObject(uint64_t size) {
     uint64_t new_offset = (next_object_offset_ + size + 7) & ~7;
     if (new_offset > num_bytes_) {
-      if (output_errors_ && (next_object_offset_ <= num_bytes_)) {
-        FXL_LOG(ERROR) << "not enough data to decode (needs " << size << " at offset "
-                       << next_object_offset_ << ", remains " << (num_bytes_ - next_object_offset_);
-      }
-      ++error_count_;
+      AddError() << std::hex << (absolute_offset_ + next_object_offset_) << std::dec
+                 << ": Not enough data to decode (needs " << size << ", remains "
+                 << (num_bytes_ - next_object_offset_) << ")\n";
+      new_offset = num_bytes_;
     }
     next_object_offset_ = new_offset;
   }
@@ -132,10 +138,7 @@ class MessageDecoder {
   // available.
   zx_handle_info_t GetNextHandle() {
     if (handle_pos_ == end_handle_pos_) {
-      if (output_errors_) {
-        FXL_LOG(ERROR) << "not enough handles";
-      }
-      ++error_count_;
+      AddError() << "Not enough handles\n";
       zx_handle_info_t result;
       result.handle = FIDL_HANDLE_ABSENT;
       result.type = ZX_OBJ_TYPE_NONE;
@@ -152,6 +155,9 @@ class MessageDecoder {
   std::unique_ptr<Value> DecodeValue(const Type* type);
 
  private:
+  // The absolute offset in the main buffer.
+  const uint32_t absolute_offset_ = 0;
+
   // The size of the message bytes.
   uint32_t num_bytes_;
 
@@ -167,14 +173,14 @@ class MessageDecoder {
   // Location of the next out of line object.
   uint64_t next_object_offset_ = 0;
 
-  // True if we display the errors we find.
-  bool output_errors_;
-
   // True if we must decode unions as xunions.
   const bool unions_are_xunions_;
 
   // Errors found during the message decoding.
   int error_count_ = 0;
+
+  // Stream for the errors.
+  std::ostream& error_stream_;
 };
 
 // Used by numeric types to retrieve a numeric value. If there is not enough
@@ -182,11 +188,11 @@ class MessageDecoder {
 template <typename T>
 bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   if (offset + sizeof(T) > num_bytes_) {
-    if (output_errors_ && (offset <= num_bytes_)) {
-      FXL_LOG(ERROR) << "not enough data to decode (needs " << sizeof(T) << " at offset " << offset
-                     << ", remains " << (num_bytes_ - offset) << ")";
+    if (offset <= num_bytes_) {
+      AddError() << std::hex << (absolute_offset_ + offset) << std::dec
+                 << ": Not enough data to decode (needs " << sizeof(T) << ", remains "
+                 << (num_bytes_ - offset) << ")\n";
     }
-    ++error_count_;
     return false;
   }
   *value = internal::MemoryFrom<T>(start_byte_pos_ + offset);

@@ -117,7 +117,9 @@ std::unique_ptr<XUnionValue> Union::DecodeXUnion(MessageDecoder* decoder, const 
   uint32_t ordinal = 0;
   if (decoder->GetValueAt(offset, &ordinal)) {
     if ((ordinal == 0) && !nullable) {
-      FXL_LOG(ERROR) << "null envelope for a non nullable extensible union";
+      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                          << ": Null envelope for a non nullable extensible union\n";
+      return nullptr;
     }
   }
   offset += sizeof(uint64_t);  // Skips ordinal + padding.

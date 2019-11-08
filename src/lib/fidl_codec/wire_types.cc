@@ -68,7 +68,8 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
   auto result = std::make_unique<TableValue>(this, table_, size);
   if (result->DecodeNullable(decoder, offset, size * 2 * sizeof(uint64_t))) {
     if (result->is_null()) {
-      FXL_LOG(ERROR) << "invalid null value for table pointer";
+      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                          << ": Invalid null value for table pointer\n";
     }
   }
   return result;
@@ -134,7 +135,9 @@ std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offs
   zx_handle_t handle = FIDL_HANDLE_ABSENT;
   decoder->GetValueAt(offset, &handle);
   if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
-    FXL_LOG(ERROR) << "invalid value <" << std::hex << handle << std::dec << "> for handle";
+    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                        << ": Invalid value <" << std::hex << handle << std::dec
+                        << "> for handle\n";
     handle = FIDL_HANDLE_ABSENT;
   }
   zx_handle_info_t handle_info;

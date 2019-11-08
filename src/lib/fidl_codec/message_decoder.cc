@@ -46,12 +46,14 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   const InterfaceMethod* method = (*methods)[0];
 
   std::unique_ptr<Object> decoded_request;
-  bool matched_request =
-      DecodeRequest(method, bytes, num_bytes, handles, num_handles, &decoded_request);
+  std::stringstream request_error_stream;
+  bool matched_request = DecodeRequest(method, bytes, num_bytes, handles, num_handles,
+                                       &decoded_request, request_error_stream);
 
   std::unique_ptr<Object> decoded_response;
-  bool matched_response =
-      DecodeResponse(method, bytes, num_bytes, handles, num_handles, &decoded_response);
+  std::stringstream response_error_stream;
+  bool matched_response = DecodeResponse(method, bytes, num_bytes, handles, num_handles,
+                                         &decoded_response, response_error_stream);
 
   Direction direction = Direction::kUnknown;
   auto handle_direction = handle_directions_.find(std::make_tuple(handle, process_koid));
@@ -172,28 +174,38 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     }
     os << '\n';
   }
-  return matched_request || matched_response;
+  if (matched_request || matched_response) {
+    return true;
+  }
+  os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
+     << "request errors" << colors_.reset << ":\n"
+     << request_error_stream.str();
+  os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
+     << "response errors" << colors_.reset << ":\n"
+     << response_error_stream.str();
+  return false;
 }
 
 MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
                                const zx_handle_info_t* handles, uint32_t num_handles,
-                               bool output_errors)
+                               std::ostream& error_stream)
     : num_bytes_(num_bytes),
       start_byte_pos_(bytes),
       end_handle_pos_(handles + num_handles),
       handle_pos_(handles),
-      output_errors_(output_errors),
       unions_are_xunions_(fidl_should_decode_union_from_xunion(
-          reinterpret_cast<const fidl_message_header_t*>(bytes))) {}
+          reinterpret_cast<const fidl_message_header_t*>(bytes))),
+      error_stream_(error_stream) {}
 
 MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
                                uint64_t num_handles)
-    : num_bytes_(num_bytes),
+    : absolute_offset_(container->absolute_offset() + offset),
+      num_bytes_(num_bytes),
       start_byte_pos_(container->start_byte_pos_ + offset),
       end_handle_pos_(container->handle_pos_ + num_handles),
       handle_pos_(container->handle_pos_),
-      output_errors_(container->output_errors_),
-      unions_are_xunions_(container->unions_are_xunions_) {}
+      unions_are_xunions_(container->unions_are_xunions_),
+      error_stream_(container->error_stream_) {}
 
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).
@@ -202,8 +214,13 @@ std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_form
   std::unique_ptr<Object> object = message_format.DecodeObject(this, /*type=*/nullptr,
                                                                /*offset=*/0, /*nullable=*/false);
   // It's an error if we didn't use all the bytes in the buffer.
-  if ((next_object_offset_ != num_bytes_) && output_errors_) {
-    FXL_LOG(ERROR) << "message not fully decoded";
+  if (next_object_offset_ != num_bytes_) {
+    AddError() << "Message not fully decoded (decoded=" << next_object_offset_
+               << ", size=" << num_bytes_ << ")\n";
+  }
+  // It's an error if we didn't use all the handles in the buffer.
+  if (GetRemainingHandles() != 0) {
+    AddError() << "Message not fully decoded (remain " << GetRemainingHandles() << " handles)\n";
   }
   return object;
 }
@@ -214,8 +231,14 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
   // Decode the envelope.
   std::unique_ptr<Value> result = type->Decode(this, 0);
   // It's an error if we didn't use all the bytes in the buffer.
-  if ((next_object_offset_ != num_bytes_) && output_errors_) {
-    FXL_LOG(ERROR) << "message envelope not fully decoded";
+  if (next_object_offset_ != num_bytes_) {
+    AddError() << "Message envelope not fully decoded (decoded=" << next_object_offset_
+               << ", size=" << num_bytes_ << ")\n";
+  }
+  // It's an error if we didn't use all the handles in the buffer.
+  if (GetRemainingHandles() != 0) {
+    AddError() << "Message envelope not fully decoded (remain " << GetRemainingHandles()
+               << " handles)\n";
   }
   return result;
 }
