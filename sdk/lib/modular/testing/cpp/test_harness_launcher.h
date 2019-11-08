@@ -32,12 +32,15 @@ class TestHarnessLauncher final {
   fuchsia::modular::testing::TestHarnessPtr& test_harness() { return test_harness_; }
 
  private:
-  // In order to avoid depending on the owning thread's run loop, the test
-  // harness component is launched and managed in a separate thread which
-  // contains its own async loop.
+  // This async loop is launched in a separate thread, and hosts |test_harness_ctrl_|. When
+  // |test_harness_ctrl_| is closed, this loop exits and unblocks the destructor.
   async::Loop test_harness_loop_;
+
   std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;
-  fuchsia::sys::ComponentControllerPtr test_harness_ctrl_;
+
+  fuchsia::sys::ComponentControllerPtr
+      test_harness_ctrl_;  // Bound to |test_harness_loop_|'s dispatcher.
+
   fuchsia::modular::testing::TestHarnessPtr test_harness_;
   fuchsia::modular::LifecyclePtr lifecycle_;
 };
