@@ -34,28 +34,15 @@ class FakeAp : public StationIfc {
     std::array<uint8_t, kMaxKeyLen> key;
   };
 
-  // Information received when we get a BEACON notification
-  struct BeaconInfo {
-    // This indicates which beacon id this event corresponds to. Since we can't disable an event
-    // once set, it allows us to ignore an out-of-date beacon that has since been disabled.
-    uint64_t beacon_id;
-  };
-
-  // Information received when we get a notification
-  struct Notification {
-    enum NotificationType { BEACON } type;
-    union {
-      struct BeaconInfo beacon_info;
-    };
-  };
-
   FakeAp() = delete;
 
-  explicit FakeAp(Environment* environ) : environment_(environ) {}
+  explicit FakeAp(Environment* environ) : environment_(environ) { environ->AddStation(this); }
 
   FakeAp(Environment* environ, const common::MacAddr& bssid, const wlan_ssid_t& ssid,
          const wlan_channel_t chan)
-      : environment_(environ), chan_(chan), bssid_(bssid), ssid_(ssid) {}
+      : environment_(environ), chan_(chan), bssid_(bssid), ssid_(ssid) {
+    environ->AddStation(this);
+  }
 
   ~FakeAp() = default;
 
@@ -66,6 +53,9 @@ class FakeAp : public StationIfc {
   wlan_channel_t GetChannel() { return chan_; }
   common::MacAddr GetBssid() { return bssid_; }
   wlan_ssid_t GetSsid() { return ssid_; }
+
+  // Will we receive a message sent on the specified channel?
+  bool CanReceiveChannel(const wlan_channel_t& channel);
 
   // When this is not called, the default is open network.
   void SetSecurity(struct Security sec) { security_ = sec; }
@@ -83,16 +73,18 @@ class FakeAp : public StationIfc {
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid) override {}
   void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {}
+                  const common::MacAddr& bssid) override;
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {}
   void ReceiveNotification(void* payload) override;
 
  private:
   void ScheduleNextBeacon();
+  void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
 
   // Event handlers
-  void HandleBeaconNotification(const BeaconInfo& info);
+  void HandleBeaconNotification(uint64_t beacon_id);
+  void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
 
   // The environment in which this fake AP is operating.
   Environment* environment_;
@@ -111,6 +103,11 @@ class FakeAp : public StationIfc {
   // event once it's been set, we need a way to identify the beacons we are currently emitting
   // from any that may have been set previously.
   uint64_t beacon_index_ = 0;
+
+  // Delay between an association request and an association response
+  zx::duration assoc_resp_interval_ = zx::msec(1);
+
+  std::list<common::MacAddr> clients_;
 };
 
 }  // namespace wlan::simulation

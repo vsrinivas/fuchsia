@@ -49,16 +49,16 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(void* pkt) override { GTEST_FAIL(); }  // Should never be called
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid) override;
   void ReceiveNotification(void* payload) override;
 
   // No-op StationIfc methods
+  void Rx(void* pkt) override { GTEST_FAIL(); }
   void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {}
+                  const common::MacAddr& bssid) override { GTEST_FAIL(); }
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override {}
+                   const common::MacAddr& dst, uint16_t status) override { GTEST_FAIL(); }
 };
 
 // When we receive a beacon, just add it to our list of received beacons for later validation

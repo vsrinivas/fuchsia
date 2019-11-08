@@ -4,13 +4,21 @@
 
 #include "sim-fake-ap.h"
 
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
+
 namespace wlan::simulation {
 
+bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
+  // For now, require an exact match
+  return ((channel.primary == chan_.primary)
+          && (channel.cbw == chan_.cbw)
+          && (channel.secondary80 == chan_.secondary80));
+}
+
 void FakeAp::ScheduleNextBeacon() {
-  Notification* notification = new Notification;
-  notification->type = Notification::BEACON;
-  notification->beacon_info.beacon_id = beacon_index_;
-  environment_->ScheduleNotification(this, beacon_interval_, static_cast<void*>(notification));
+  auto beacon_handler = new std::function<void()>;
+  *beacon_handler = std::bind(&FakeAp::HandleBeaconNotification, this, beacon_index_);
+  environment_->ScheduleNotification(this, beacon_interval_, static_cast<void*>(beacon_handler));
 }
 
 void FakeAp::EnableBeacon(zx::duration beacon_period) {
@@ -26,10 +34,41 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
 
 void FakeAp::DisableBeacon() { is_beaconing_ = false; }
 
-void FakeAp::HandleBeaconNotification(const BeaconInfo& info) {
+void FakeAp::ScheduleAssocResp(uint16_t status, const common::MacAddr& dst) {
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&FakeAp::HandleAssocRespNotification, this, status, dst);
+  environment_->ScheduleNotification(this, assoc_resp_interval_, static_cast<void*>(handler));
+}
+
+void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                        const common::MacAddr& bssid) {
+  // Make sure we heard the message
+  if (!CanReceiveChannel(channel)) {
+    return;
+  }
+
+  // Ignore requests that are not for us
+  if (bssid != bssid_) {
+    return;
+  }
+
+  // Make sure the client is not already associated
+  for (auto client : clients_) {
+    if (client == src) {
+      // Client is already associated
+      ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, src);
+      return;
+    }
+  }
+
+  clients_.push_back(src);
+  ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, src);
+}
+
+void FakeAp::HandleBeaconNotification(uint64_t beacon_id) {
   // Check the beacon index to verify that this was not an event that was scheduled for another
   // beacon.
-  if (!is_beaconing_ || (info.beacon_id != beacon_index_)) {
+  if (!is_beaconing_ || (beacon_id != beacon_index_)) {
     return;
   }
 
@@ -38,14 +77,14 @@ void FakeAp::HandleBeaconNotification(const BeaconInfo& info) {
   ScheduleNextBeacon();
 }
 
+void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
+  environment_->TxAssocResp(this, chan_, bssid_, dst, status);
+}
+
 void FakeAp::ReceiveNotification(void* payload) {
-  Notification* notification = static_cast<Notification*>(payload);
-
-  if (notification->type == Notification::BEACON) {
-    HandleBeaconNotification(notification->beacon_info);
-  }
-
-  delete notification;
+  auto handler = static_cast<std::function<void()>*>(payload);
+  (*handler)();
+  delete handler;
 }
 
 }  // namespace wlan::simulation

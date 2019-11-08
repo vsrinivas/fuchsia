@@ -6,6 +6,22 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
+executable("assoc_unittests") {
+  output_name = "assoc_unittests"
+
+  testonly = true
+
+  sources = [
+    "assoc_unittests.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 executable("beacon_unittests") {
   output_name = "beacon_unittests"
 
@@ -24,10 +40,15 @@ executable("beacon_unittests") {
 
 unittest_package("wlan-sim-fake-ap-test") {
   deps = [
+    ":assoc_unittests",
     ":beacon_unittests",
   ]
 
   tests = [
+    {
+      name = "assoc_unittests"
+      environments = basic_envs
+    },
     {
       name = "beacon_unittests"
       environments = basic_envs
