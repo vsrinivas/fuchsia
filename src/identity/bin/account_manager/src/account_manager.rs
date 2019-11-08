@@ -211,10 +211,14 @@ impl AccountManager {
             warn!("Could not convert AccountListener client end to proxy {:?}", err);
             ApiError::InvalidRequest
         })?;
-        self.event_emitter.add_listener(proxy, options, &account_auth_states).await.map_err(|err| {
-            warn!("Could not instantiate AccountListener client {:?}", err);
-            ApiError::Unknown
-        })
+        self.event_emitter.add_listener(proxy, options, &account_auth_states).await.map_err(
+            |err| {
+                warn!("Could not instantiate AccountListener client {:?}", err);
+                ApiError::Unknown
+            },
+        )?;
+        info!("AccountListener established");
+        Ok(())
     }
 
     async fn remove_account(
