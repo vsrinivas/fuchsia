@@ -192,7 +192,7 @@ async fn main() -> Result<(), failure::Error> {
             let interval = std::time::Duration::from_secs(5);
             let timeout = std::time::Duration::from_secs(600);
             let periodically_emit = fuchsia_async::Interval::new(interval.into())
-                .take(timeout.as_secs() / interval.as_secs())
+                .take((timeout.as_secs() / interval.as_secs()).try_into().unwrap())
                 .for_each(|()| {
                     futures::future::ready(println!(
                         "still waiting for TCP timeouts! don't terminate me please"
