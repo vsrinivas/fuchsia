@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
 
 namespace scenic_impl {

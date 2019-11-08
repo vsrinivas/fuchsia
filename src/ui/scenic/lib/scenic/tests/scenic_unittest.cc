@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/tests/dummy_system.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_gfx_test.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"

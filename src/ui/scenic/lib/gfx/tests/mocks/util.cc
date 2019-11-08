@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 
 #include <lib/zx/vmo.h>
 

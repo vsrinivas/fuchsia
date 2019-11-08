@@ -18,7 +18,7 @@
 #include "src/ui/scenic/lib/gfx/displays/display.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 

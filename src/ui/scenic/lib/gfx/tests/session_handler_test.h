@@ -16,7 +16,7 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl {

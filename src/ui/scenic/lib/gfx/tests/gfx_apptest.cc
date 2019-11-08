@@ -7,7 +7,7 @@
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 
 namespace scenic_impl {
 namespace gfx {

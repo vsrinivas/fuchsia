@@ -28,7 +28,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"

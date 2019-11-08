@@ -8,7 +8,7 @@
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 
 namespace scenic_impl {
 namespace gfx {

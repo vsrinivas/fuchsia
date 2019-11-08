@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"

@@ -7,7 +7,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
-#include "src/ui/scenic/lib/gfx/tests/frame_scheduler_mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/frame_scheduler_mocks.h"
 
 namespace scenic_impl {
 namespace gfx {

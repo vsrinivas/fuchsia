@@ -7,7 +7,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
 
 namespace scenic_impl {
 namespace gfx {

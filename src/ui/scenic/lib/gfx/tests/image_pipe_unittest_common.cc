@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/lib/escher/util/image_utils.h"
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 
 namespace scenic_impl {
 namespace gfx {

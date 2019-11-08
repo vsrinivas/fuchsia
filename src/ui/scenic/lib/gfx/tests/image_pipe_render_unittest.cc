@@ -14,7 +14,7 @@
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_handler_test.h"
 
 namespace scenic_impl {

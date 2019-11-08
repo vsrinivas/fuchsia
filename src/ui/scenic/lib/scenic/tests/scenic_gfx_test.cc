@@ -9,7 +9,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
 namespace scenic_impl {
 namespace test {

@@ -22,7 +22,7 @@
 #include "src/lib/inspect_deprecated/reader.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
 namespace scenic_impl {
 namespace gfx {

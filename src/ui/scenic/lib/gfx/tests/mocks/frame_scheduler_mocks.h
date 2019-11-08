@@ -158,7 +158,8 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   // |FrameRenderer|
-  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time);
+  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings,
+                                zx::time presentation_time)  override;
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned

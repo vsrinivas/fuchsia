@@ -27,21 +27,6 @@ source_set("gfx_tests_main") {
   ]
 }
 
-source_set("mocks") {
-  testonly = true
-  sources = [
-    "frame_scheduler_mocks.cc",
-    "frame_scheduler_mocks.h",
-    "mocks.cc",
-    "mocks.h",
-  ]
-  public_deps = [
-    ":util",
-    "//src/lib/inspect_deprecated",
-    "//src/ui/scenic/lib/gfx",
-  ]
-}
-
 source_set("testing_deps") {
   testonly = true
   sources = [
@@ -63,9 +48,6 @@ source_set("testing_deps") {
     "vk_util.h",
   ]
   public_deps = [
-    ":mocks",
-    ":util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -82,30 +64,12 @@ source_set("testing_deps") {
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/gfx/tests/mocks:frame_scheduler_mocks",
+    "//src/ui/scenic/lib/gfx/tests/mocks:util",
     "//src/ui/scenic/lib/scenic/tests:testing_deps",
     "//src/ui/scenic/lib/scenic/util",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("util") {
-  testonly = true
-  sources = [
-    "util.cc",
-    "util.h",
-  ]
-  public_deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.scenic.internal",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/inspect_deprecated",
-    "//src/ui/lib/glm_workaround",
-    "//src/ui/scenic/lib/scenic",
-    "//src/ui/scenic/lib/scenic/util",
   ]
 }
 

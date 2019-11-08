@@ -16,7 +16,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
-#include "src/ui/scenic/lib/gfx/tests/util.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 
 // This test exercises the properties of a focus chain. The setup has multiple
 // Views arranged in a hierarchy, and also includes a FocusChainListener.  Each
