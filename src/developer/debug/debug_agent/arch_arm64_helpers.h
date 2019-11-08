@@ -29,6 +29,17 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // Useful function for debugging to keep around.
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 
+// Given the current register value in |regs|, applies to it the new updated values for the
+// registers listed in |updates|.
+zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& update,
+                                  zx_thread_state_general_regs_t* regs);
+zx_status_t WriteFloatingPointRegisters(const std::vector<debug_ipc::Register>& update,
+                                        zx_thread_state_fp_regs_t* regs);
+zx_status_t WriteVectorRegisters(const std::vector<debug_ipc::Register>& update,
+                                 zx_thread_state_vector_regs_t* regs);
+zx_status_t WriteDebugRegisters(const std::vector<debug_ipc::Register>& update,
+                                zx_thread_state_debug_regs_t* regs);
+
 }  // namespace arch
 }  // namespace debug_agent
 

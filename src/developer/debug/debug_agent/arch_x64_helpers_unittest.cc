@@ -180,7 +180,7 @@ TEST(x64Helpers, InvalidWriteGeneralRegs) {
   regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_rax, 4));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 
-  // Invalid register.
+  // Invalid (non-canonical) register.
   regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kX64_ymm2, 8));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }

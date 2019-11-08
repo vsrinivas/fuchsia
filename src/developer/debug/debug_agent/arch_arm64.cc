@@ -9,6 +9,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
+#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/register_desc.h"
@@ -72,6 +73,8 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
                    << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // TODO(bug 40992) Add ARM64 hardware watchpoint registers here.
 
   auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
   auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbvr0_el1);
@@ -206,10 +209,57 @@ zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
   }
 }
 
-zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&,
-                                         const std::vector<debug_ipc::Register>&, zx::thread*) {
-  // TODO(donosoc): Implement.
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& category,
+                                         const std::vector<debug_ipc::Register>& registers,
+                                         zx::thread* thread) {
+  switch (category) {
+    case debug_ipc::RegisterCategory::kGeneral: {
+      zx_thread_state_general_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteGeneralRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kFloatingPoint: {
+      return ZX_ERR_INVALID_ARGS;  // No floating point registers.
+    }
+    case debug_ipc::RegisterCategory::kVector: {
+      zx_thread_state_vector_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      // Overwrite the values.
+      res = WriteVectorRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kDebug: {
+      zx_thread_state_debug_regs_t regs;
+      zx_status_t res = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+      if (res != ZX_OK)
+        return res;
+
+      res = WriteDebugRegisters(registers, &regs);
+      if (res != ZX_OK)
+        return res;
+
+      return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
+    }
+    case debug_ipc::RegisterCategory::kNone:
+    case debug_ipc::RegisterCategory::kLast:
+      break;
+  }
+  FXL_NOTREACHED();
+  return ZX_ERR_INVALID_ARGS;
 }
 
 debug_ipc::ExceptionType HardwareNotificationType(const zx::thread&) {

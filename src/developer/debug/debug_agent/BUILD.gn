@@ -16,6 +16,7 @@ static_library("lib") {
     "agent_configuration.h",
     "arch.cc",
     "arch.h",
+    "arch_helpers.h",
     "binary_launcher.cc",
     "binary_launcher.h",
     "breakpoint.cc",

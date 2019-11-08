@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -17,6 +18,13 @@ namespace debug_agent {
 namespace arch {
 
 namespace {
+
+// Implements a case statement for calling WriteRegisterValue assuming the Zircon register
+// field matches the enum name. This avoids implementation typos where the names don't match.
+#define IMPLEMENT_CASE_WRITE_REGISTER_VALUE(name)  \
+  case RegisterID::kX64_##name:                    \
+    status = WriteRegisterValue(reg, &regs->name); \
+    break;
 
 uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
@@ -104,30 +112,6 @@ uint64_t WatchpointDR7SetMask(size_t index) {
   };
   return masks[index];
 }
-
-// Writes the register data to the given output variable, checking that the register data is
-// the same size as the output.
-template <typename RegType>
-zx_status_t WriteRegisterValue(const Register& reg, RegType* dest) {
-  if (reg.data.size() != sizeof(RegType)) {
-    printf("Bad size, expected %zu, got %zu\n", sizeof(RegType), reg.data.size());
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(dest, reg.data.data(), sizeof(RegType));
-  return ZX_OK;
-}
-
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
-
-// Implements a case statement for calling WriteRegisterValue assuming the Zircon register
-// field matches the enum name. This avoids problems with the names not matching.
-#define IMPLEMENT_CASE_WRITE_REGISTER_VALUE(name)  \
-  case RegisterID::kX64_##name:                    \
-    status = WriteRegisterValue(reg, &regs->name); \
-    if (status != ZX_OK)                           \
-      printf("FAILED ON %s\n", TOSTRING(name));    \
-    break;
 
 }  // namespace
 

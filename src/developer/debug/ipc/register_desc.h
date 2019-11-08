@@ -261,6 +261,8 @@ enum class RegisterID : uint32_t {
   kARMv8_dbgbvr14_el1 = 1364,
   kARMv8_dbgbvr15_el1 = 1365,
 
+  // TODO(bug 40992) Add ARM64 hardware watchpoint registers here.
+
   // x64 (Range: 2000-2999) ----------------------------------------------------
 
   // General purpose
