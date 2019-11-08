@@ -227,6 +227,7 @@ async fn test_audio_input() {
 }
 
 // Test to ensure mic input change events are received.
+// TODO(fxb/41006): Add a request.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_bringup_without_input_registry() {
     let service_registry = ServiceRegistry::create();
@@ -249,6 +250,34 @@ async fn test_bringup_without_input_registry() {
 
     // At this point we should not crash.
     assert!(env.connect_to_service::<AudioMarker>().is_ok());
+}
+
+// Ensure that we won't crash if audio core fails.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_bringup_without_audio_core() {
+    let service_registry = ServiceRegistry::create();
+    let input_registry_service_handle = Arc::new(RwLock::new(InputDeviceRegistryService::new()));
+    service_registry.write().register_service(input_registry_service_handle.clone());
+
+    let mut fs = ServiceFs::new();
+
+    create_fidl_service(
+        fs.root_dir(),
+        [SettingType::Audio].iter().cloned().collect(),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
+        Box::new(InMemoryStorageFactory::create()),
+    );
+
+    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+    fasync::spawn(fs.collect());
+
+    // At this point we should not crash.
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
