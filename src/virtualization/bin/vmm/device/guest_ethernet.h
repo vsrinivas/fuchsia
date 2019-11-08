@@ -14,6 +14,7 @@
 struct GuestEthernetDevice {
   virtual void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) = 0;
   virtual void ReadyToSend() = 0;
+  virtual fuchsia::hardware::ethernet::MacAddress GetMacAddress() = 0;
 };
 
 class GuestEthernet : public fuchsia::hardware::ethernet::Device {

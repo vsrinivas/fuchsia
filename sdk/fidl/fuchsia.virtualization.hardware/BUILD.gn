@@ -19,6 +19,7 @@ fidl("fuchsia.virtualization.hardware") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.virtualization",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
     "//zircon/system/fidl/fuchsia-io",
   ]
 }

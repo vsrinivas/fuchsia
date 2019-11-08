@@ -194,11 +194,15 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   // Called by GuestEthernet to notify us when the netstack is ready to receive packets.
   void ReadyToSend() override { tx_stream_.Notify(); }
 
+  fuchsia::hardware::ethernet::MacAddress GetMacAddress() override { return mac_address_; }
+
  private:
   // |fuchsia::virtualization::hardware::VirtioNet|
   void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             StartCallback callback) override {
+             fuchsia::hardware::ethernet::MacAddress mac_address, StartCallback callback) override {
     PrepStart(std::move(start_info));
+
+    mac_address_ = std::move(mac_address);
 
     fuchsia::net::Ipv4Address ipv4;
     memcpy(ipv4.addr.data(), kIpv4Address, 4);
@@ -299,6 +303,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   uint32_t negotiated_features_;
   fit::scope scope_;
   async::Executor executor_ = async::Executor(async_get_default_dispatcher());
+
+  fuchsia::hardware::ethernet::MacAddress mac_address_;
 };
 
 int main(int argc, char** argv) {

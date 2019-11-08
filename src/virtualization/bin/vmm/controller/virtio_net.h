@@ -20,14 +20,13 @@ static constexpr uint16_t kVirtioNetTxQueueIndex = 1;
 static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
               "RX and TX queues must be distinct");
 
-using MacAddress = std::array<uint8_t, VIRTIO_ETH_MAC_SIZE>;
-
 class VirtioNet
     : public VirtioComponentDevice<VIRTIO_ID_NET, kVirtioNetNumQueues, virtio_net_config_t> {
  public:
   explicit VirtioNet(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, const MacAddress mac_address,
+  zx_status_t Start(const zx::guest& guest,
+                    const fuchsia::hardware::ethernet::MacAddress& mac_address,
                     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:

@@ -8,6 +8,7 @@ using fuchsia.io;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.virtualization;
+using fuchsia.hardware.ethernet;
 using zx;
 
 // The following EVENT_* constants indicate which user signal is associated with an event.
@@ -140,7 +141,7 @@ protocol VirtioNet {
     compose VirtioDevice;
 
     /// Start the net device.
-    Start(StartInfo start_info) -> ();
+    Start(StartInfo start_info, fuchsia.hardware.ethernet.MacAddress mac_address) -> ();
 };
 
 [Discoverable]

@@ -89,7 +89,10 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
     services_->Connect(net_.NewRequest());
     RunLoopUntilIdle();
 
-    net_->Start(std::move(start_info), [] {});
+    fuchsia::hardware::ethernet::MacAddress mac_address = {
+        .octets = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    };
+    net_->Start(std::move(start_info), mac_address, [] {});
 
     // Wait for the device to call AddEthernetDevice on the netstack.
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; }, zx::sec(5)));

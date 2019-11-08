@@ -9,10 +9,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-// This is a locally administered MAC address (first byte 0x02) mixed with the
-// Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
-// and the guest gets 00:00:00 for the last three octets.
-static constexpr uint8_t kHostMacAddress[6] = {0x02, 0x1a, 0x11, 0xff, 0xff, 0xff};
 static constexpr uint32_t kMtu = 1500;
 
 zx_status_t GuestEthernet::Send(void* data, size_t length) {
@@ -118,7 +114,8 @@ void GuestEthernet::GetInfo(GetInfoCallback callback) {
   fuchsia::hardware::ethernet::Info info;
   info.features = fuchsia::hardware::ethernet::INFO_FEATURE_SYNTH;
   info.mtu = kMtu;
-  memcpy(&info.mac, kHostMacAddress, sizeof(info.mac));
+  fuchsia::hardware::ethernet::MacAddress mac_address = device_->GetMacAddress();
+  memcpy(&info.mac, mac_address.octets.data(), mac_address.octets.size());
   callback(info);
 }
 

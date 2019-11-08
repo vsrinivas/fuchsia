@@ -13,7 +13,8 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioNet::ConfigureQueue),
                             fit::bind_member(this, &VirtioNet::Ready)) {}
 
-zx_status_t VirtioNet::Start(const zx::guest& guest, const MacAddress mac_address,
+zx_status_t VirtioNet::Start(const zx::guest& guest,
+                             const fuchsia::hardware::ethernet::MacAddress& mac_address,
                              fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -28,7 +29,7 @@ zx_status_t VirtioNet::Start(const zx::guest& guest, const MacAddress mac_addres
   if (status != ZX_OK) {
     return status;
   }
-  status = net_->Start(std::move(start_info));
+  status = net_->Start(std::move(start_info), mac_address);
   if (status != ZX_OK) {
     return status;
   }
@@ -36,7 +37,7 @@ zx_status_t VirtioNet::Start(const zx::guest& guest, const MacAddress mac_addres
   std::lock_guard<std::mutex> lock(device_config_.mutex);
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
-  memcpy(config_.mac, mac_address.data(), sizeof(config_.mac));
+  memcpy(config_.mac, mac_address.octets.data(), sizeof(config_.mac));
 
   return ZX_OK;
 }
