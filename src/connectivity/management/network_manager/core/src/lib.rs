@@ -17,10 +17,12 @@ extern crate log;
 pub mod config;
 pub mod error;
 pub mod hal;
+pub(crate) mod interface;
 pub mod lifmgr;
 pub mod packet_filter;
 pub mod portmgr;
 mod servicemgr;
+
 use crate::lifmgr::{LIFProperties, LIFType, LifIpAddr};
 use crate::portmgr::PortId;
 use fidl_fuchsia_net_stack as stack;
