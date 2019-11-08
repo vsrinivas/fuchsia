@@ -70,8 +70,6 @@ class FakeVolume final : public ftl::Volume {
   uint32_t first_page() const { return first_page_; }
   int num_pages() const { return num_pages_; }
 
-  void set_fake_bad_stats() { fake_bad_stats_ = true; }
-
   // Volume interface.
   const char* Init(std::unique_ptr<ftl::NdmDriver> driver) final {
     device_->OnVolumeAdded(kPageSize, kNumPages);
@@ -116,9 +114,6 @@ class FakeVolume final : public ftl::Volume {
   zx_status_t GarbageCollect() final { return ZX_OK; }
   zx_status_t GetStats(Stats* stats) final {
     *stats = {};
-    if (fake_bad_stats_) {
-      stats->wear_histogram[0] = kPageSize * kNumPages / 2;
-    }
     return ZX_OK;
   }
 
@@ -126,7 +121,6 @@ class FakeVolume final : public ftl::Volume {
   ftl::BlockDevice* device_;
   uint32_t first_page_ = 0;
   int num_pages_ = 0;
-  bool fake_bad_stats_ = false;
   bool written_ = false;
   bool flushed_ = false;
   bool formatted_ = false;
@@ -495,17 +489,6 @@ TEST_F(BlockDeviceTest, Format) {
   EXPECT_OK(device->Format());
   EXPECT_TRUE(GetVolume()->formatted());
   EXPECT_FALSE(GetVolume()->leveled());
-}
-
-TEST_F(BlockDeviceTest, FormatAndLevel) {
-  ftl::BlockDevice* device = GetDevice();
-  ASSERT_TRUE(device);
-
-  GetVolume()->set_fake_bad_stats();
-
-  EXPECT_OK(device->Format());
-  EXPECT_TRUE(GetVolume()->leveled());
-  EXPECT_FALSE(GetVolume()->formatted());
 }
 
 TEST_F(BlockDeviceTest, Suspend) {
