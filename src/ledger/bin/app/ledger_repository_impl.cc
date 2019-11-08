@@ -13,7 +13,9 @@
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
@@ -33,8 +35,9 @@ std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64Ur
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
     DetachedPath content_path, Environment* environment,
-    std::unique_ptr<storage::DbFactory> db_factory, std::unique_ptr<PageUsageDb> db,
-    std::unique_ptr<SyncWatcherSet> watchers, std::unique_ptr<sync_coordinator::UserSync> user_sync,
+    std::unique_ptr<storage::DbFactory> db_factory, std::unique_ptr<DbViewFactory> dbview_factory,
+    std::unique_ptr<PageUsageDb> db, std::unique_ptr<SyncWatcherSet> watchers,
+    std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
     std::unique_ptr<BackgroundSyncManager> background_sync_manager,
     std::vector<PageUsageListener*> page_usage_listeners, inspect_deprecated::Node inspect_node)
@@ -42,6 +45,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       environment_(environment),
       bindings_(environment->dispatcher()),
       db_factory_(std::move(db_factory)),
+      dbview_factory_(std::move(dbview_factory)),
       db_(std::move(db)),
       encryption_service_factory_(environment),
       watchers_(std::move(watchers)),

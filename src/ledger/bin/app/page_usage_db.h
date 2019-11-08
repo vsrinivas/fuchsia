@@ -35,7 +35,7 @@ namespace ledger {
 // - Value: "<timestamp>" or timestamp 0 for open pages
 class PageUsageDb {
  public:
-  PageUsageDb(timekeeper::Clock* clock, storage::DbFactory* db_factory, DetachedPath db_path);
+  PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db);
   ~PageUsageDb();
 
   // Asynchronously initializes this PageUsageDb.
@@ -75,12 +75,9 @@ class PageUsageDb {
   // Deletes the row with the given |key| in the underlying database.
   Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
 
-  timekeeper::Clock* clock_;
-  // |db_factory_| and |db_path_| should only be used during initialization.
-  // After Init() has been called their contents are no longer valid.
-  storage::DbFactory* db_factory_;
-  DetachedPath db_path_;
-  std::unique_ptr<storage::Db> db_;
+  timekeeper::Clock* const clock_;
+  std::unique_ptr<storage::Db> const db_;
+
   // The initialization completer. |Init| method starts marking pages as closed,
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization

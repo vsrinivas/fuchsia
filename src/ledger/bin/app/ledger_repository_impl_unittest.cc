@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <memory>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -17,15 +18,19 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
+#include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/testing/fake_ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -70,12 +75,74 @@ using ::testing::IsEmpty;
                         ChildrenMatch(ElementsAreArray(ledger_expectations)))))));
 }
 
-// Blocks the initialization of the Db. The call of |GetOrCreateDb| will not be finished, as the
-// callback is not being called.
+// BlockingFakeDb is a database that blocks all its calls.
+class BlockingFakeDb : public storage::Db {
+ public:
+  Status StartBatch(coroutine::CoroutineHandler* handler,
+                    std::unique_ptr<Batch>* /*batch*/) override {
+    return Block(handler);
+  }
+
+  Status Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView /*key*/,
+             std::string* /*value*/) override {
+    return Block(handler);
+  }
+
+  Status HasKey(coroutine::CoroutineHandler* handler,
+                convert::ExtendedStringView /*key*/) override {
+    return Block(handler);
+  }
+
+  Status HasPrefix(coroutine::CoroutineHandler* handler,
+                   convert::ExtendedStringView /*prefix*/) override {
+    return Block(handler);
+  }
+
+  Status GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView /*key*/,
+                   storage::ObjectIdentifier /*object_identifier*/,
+                   std::unique_ptr<const storage::Piece>* /*piece*/) override {
+    return Block(handler);
+  }
+
+  Status GetByPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView /*prefix*/,
+                     std::vector<std::string>* /*key_suffixes*/) override {
+    return Block(handler);
+  }
+
+  Status GetEntriesByPrefix(
+      coroutine::CoroutineHandler* handler, convert::ExtendedStringView /*prefix*/,
+      std::vector<std::pair<std::string, std::string>>* /*entries*/) override {
+    return Block(handler);
+  }
+
+  Status GetIteratorAtPrefix(
+      coroutine::CoroutineHandler* handler, convert::ExtendedStringView /*prefix*/,
+      std::unique_ptr<storage::Iterator<
+          const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>* /*iterator*/)
+      override {
+    return Block(handler);
+  }
+
+ private:
+  Status Block(coroutine::CoroutineHandler* handler) {
+    if (coroutine::SyncCall(handler, [this](fit::closure closure) {
+          callbacks_.push_back(std::move(closure));
+        }) == coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
+    }
+    return Status::ILLEGAL_STATE;
+  }
+
+  std::vector<fit::closure> callbacks_;
+};
+
+// BlockingFakeDbFactory returns BlockingFakeDb objects
 class BlockingFakeDbFactory : public storage::DbFactory {
  public:
-  void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
-                     fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) override {}
+  void GetOrCreateDb(ledger::DetachedPath /*db_path*/, DbFactory::OnDbNotFound /*on_db_not_found*/,
+                     fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) override {
+    callback(Status::OK, std::make_unique<BlockingFakeDb>());
+  }
 };
 
 // Provides empty implementation of user-level synchronization. Helps to track ledger-level
@@ -111,27 +178,55 @@ class FakeUserSync : public sync_coordinator::UserSync {
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
-  LedgerRepositoryImplTest() {
+  LedgerRepositoryImplTest() = default;
+
+  void SetUp() override {
+    std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
+        std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+    ResetLedgerRepository(std::move(db_factory));
+  }
+
+  void ResetLedgerRepository(std::unique_ptr<storage::DbFactory> db_factory) {
     auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
     top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
     attachment_node_ =
         top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
 
+    Status status;
+    std::unique_ptr<DbViewFactory> dbview_factory;
+    std::unique_ptr<PageUsageDb> page_usage_db;
     DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
-    std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
-        std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
-    std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
-        environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_db"));
-    auto background_sync_manager = std::make_unique<BackgroundSyncManager>(&environment_, db.get());
+    EXPECT_TRUE(RunInCoroutine([&, this](coroutine::CoroutineHandler* handler) {
+      std::unique_ptr<storage::Db> leveldb;
+      if (coroutine::SyncCall(
+              handler,
+              [&](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) mutable {
+                db_factory->GetOrCreateDb(detached_path.SubPath("db"),
+                                          storage::DbFactory::OnDbNotFound::CREATE,
+                                          std::move(callback));
+              },
+              &status, &leveldb) == coroutine::ContinuationStatus::INTERRUPTED) {
+        status = Status::INTERRUPTED;
+        return;
+      }
+      FXL_CHECK(status == Status::OK);
+      dbview_factory = std::make_unique<DbViewFactory>(std::move(leveldb));
+      page_usage_db = std::make_unique<PageUsageDb>(
+          environment_.clock(), dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+    }));
+
+    auto background_sync_manager =
+        std::make_unique<BackgroundSyncManager>(&environment_, page_usage_db.get());
 
     auto user_sync = std::make_unique<FakeUserSync>();
     user_sync_ = user_sync.get();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
-        detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
-        nullptr, std::move(user_sync), std::move(fake_page_eviction_manager),
-        std::move(background_sync_manager), std::vector<PageUsageListener*>{disk_cleanup_manager_},
+        detached_path.SubPath("ledgers"), &environment_, std::move(db_factory),
+        std::move(dbview_factory), std::move(page_usage_db), nullptr, std::move(user_sync),
+        std::move(fake_page_eviction_manager), std::move(background_sync_manager),
+        std::vector<PageUsageListener*>{disk_cleanup_manager_},
         attachment_node_.CreateChild(kInspectPathComponent));
   }
 
@@ -430,31 +525,15 @@ TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
 
 // Verifies that the object is not destroyed until the initialization of PageUsageDb is finished.
 TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
-  auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
-  auto disk_cleanup_manager = fake_page_eviction_manager.get();
-  auto top_level_node = inspect_deprecated::Node(kTestTopLevelNodeName);
-  auto attachment_node =
-      top_level_node.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
-
-  DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
-  // Makes sure that the initialization of PageusageDb will not be completed.
   std::unique_ptr<BlockingFakeDbFactory> db_factory = std::make_unique<BlockingFakeDbFactory>();
-  std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
-      environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_database"));
-  auto background_sync_manager = std::make_unique<BackgroundSyncManager>(&environment_, db.get());
-
-  auto repository = std::make_unique<LedgerRepositoryImpl>(
-      detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
-      nullptr, nullptr, std::move(fake_page_eviction_manager), std::move(background_sync_manager),
-      std::vector<PageUsageListener*>{disk_cleanup_manager},
-      attachment_node.CreateChild(kInspectPathComponent));
+  ResetLedgerRepository(std::move(db_factory));
 
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
 
-  repository->BindRepository(ledger_repository_ptr1.NewRequest());
+  repository_->BindRepository(ledger_repository_ptr1.NewRequest());
 
   bool on_discardable_called;
-  repository->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;

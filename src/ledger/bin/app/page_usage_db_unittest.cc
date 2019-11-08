@@ -7,9 +7,13 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/db_view_factory.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -23,9 +27,7 @@ namespace {
 
 class PageUsageDbTest : public TestWithEnvironment {
  public:
-  PageUsageDbTest()
-      : db_factory_(dispatcher()),
-        db_(environment_.clock(), &db_factory_, DetachedPath(tmpfs_.root_fd())){};
+  PageUsageDbTest() : db_factory_(dispatcher()) {}
 
   ~PageUsageDbTest() override = default;
 
@@ -37,16 +39,39 @@ class PageUsageDbTest : public TestWithEnvironment {
   }
 
   void SetUp() override {
+    ResetPageUsageDb();
+    RunInCoroutine([this](coroutine::CoroutineHandler* handler) {
+      EXPECT_EQ(db_->Init(handler), Status::OK);
+    });
+  }
+
+  void ResetPageUsageDb() {
     Status status;
-    RunInCoroutine([&](coroutine::CoroutineHandler* handler) { status = db_.Init(handler); });
-    RunLoopUntilIdle();
+    RunInCoroutine([this, &status](coroutine::CoroutineHandler* handler) {
+      std::unique_ptr<storage::Db> leveldb;
+      if (coroutine::SyncCall(
+              handler,
+              [this](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) mutable {
+                db_factory_.GetOrCreateDb(DetachedPath(tmpfs_.root_fd()),
+                                          storage::DbFactory::OnDbNotFound::CREATE,
+                                          std::move(callback));
+              },
+              &status, &leveldb) == coroutine::ContinuationStatus::INTERRUPTED) {
+        status = Status::INTERRUPTED;
+        return;
+      }
+      dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
+      db_ = std::make_unique<PageUsageDb>(
+          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+    });
     FXL_DCHECK(status == Status::OK);
   }
 
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   storage::fake::FakeDbFactory db_factory_;
-  PageUsageDb db_;
+  std::unique_ptr<DbViewFactory> dbview_factory_;
+  std::unique_ptr<PageUsageDb> db_;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDbTest);
@@ -58,7 +83,7 @@ TEST_F(PageUsageDbTest, GetPagesEmpty) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(db_.GetPages(handler, &pages), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
 
     EXPECT_EQ(pages->GetStatus(), Status::OK);
     EXPECT_FALSE(pages->Valid());
@@ -71,11 +96,11 @@ TEST_F(PageUsageDbTest, MarkPageOpened) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open the same page.
-    EXPECT_EQ(db_.MarkPageOpened(handler, ledger_name, page_id), Status::OK);
+    EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, page_id), Status::OK);
 
     // Expect to find a single entry with the opened page marker timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(db_.GetPages(handler, &pages), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
 
     EXPECT_EQ(pages->GetStatus(), Status::OK);
     EXPECT_TRUE(pages->Valid());
@@ -95,13 +120,13 @@ TEST_F(PageUsageDbTest, MarkPageOpenedAndClosed) {
     std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
 
     // Open and close the same page.
-    EXPECT_EQ(db_.MarkPageOpened(handler, ledger_name, page_id), Status::OK);
-    EXPECT_EQ(db_.MarkPageClosed(handler, ledger_name, page_id), Status::OK);
+    EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, page_id), Status::OK);
+    EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, page_id), Status::OK);
 
     // Expect to find a single entry with timestamp != the opened page marker
     // timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(db_.GetPages(handler, &pages), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
 
     EXPECT_EQ(pages->GetStatus(), Status::OK);
     EXPECT_TRUE(pages->Valid());
@@ -126,16 +151,16 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 
     // Open 5 pages.
     for (int i = 0; i < N; ++i) {
-      EXPECT_EQ(db_.MarkPageOpened(handler, ledger_name, page_ids[i]), Status::OK);
+      EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, page_ids[i]), Status::OK);
     }
 
     // Close 1 of them.
-    EXPECT_EQ(db_.MarkPageClosed(handler, ledger_name, page_ids[0]), Status::OK);
+    EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, page_ids[0]), Status::OK);
 
     // Expect to find 4 entries with timestamp equal to the opened page marker
     // timestamp.
     std::unique_ptr<storage::Iterator<const PageInfo>> pages;
-    EXPECT_EQ(db_.GetPages(handler, &pages), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
 
     int open_pages_count = 0;
     zx::time_utc page_0_timestamp(0);
@@ -159,9 +184,9 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 
     // Call MarkAllPagesClosed and expect all 5 pages to be closed, 4 with the
     // same value.
-    EXPECT_EQ(db_.MarkAllPagesClosed(handler), Status::OK);
+    EXPECT_EQ(db_->MarkAllPagesClosed(handler), Status::OK);
 
-    EXPECT_EQ(db_.GetPages(handler, &pages), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
     zx::time_utc timestamp(PageInfo::kOpenedPageTimestamp);
     for (int i = 0; i < N; ++i) {
       EXPECT_EQ(pages->GetStatus(), Status::OK);
@@ -187,19 +212,18 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 // Verifies that calls to the Db are correctly queued until an initialization of PageUsageDb is
 // completed.
 TEST_F(PageUsageDbTest, OperationsQueueWhileInitRunning) {
-  storage::fake::FakeDbFactory db_factory(dispatcher());
-  PageUsageDb db(environment_.clock(), &db_factory, DetachedPath(tmpfs_.root_fd()));
+  ResetPageUsageDb();
   Status status;
   std::unique_ptr<storage::Iterator<const PageInfo>> pages;
 
-  // Makes call to uninitialized PageUsageDb via Environment CoroutineService as Test RunInCoroutine
-  // does not allow to have two coroutines at the same time.
+  // Makes call to uninitialized PageUsageDb via Environment CoroutineService as Test
+  // RunInCoroutine does not allow to have two coroutines at the same time.
   environment_.coroutine_service()->StartCoroutine(
-      [&](coroutine::CoroutineHandler* handler) { status = db.GetPages(handler, &pages); });
+      [&](coroutine::CoroutineHandler* handler) { status = db_->GetPages(handler, &pages); });
   EXPECT_EQ(pages, nullptr);
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
-    Status init_status = db.Init(handler);
+    Status init_status = db_->Init(handler);
     EXPECT_EQ(init_status, Status::OK);
   });
   RunLoopUntilIdle();

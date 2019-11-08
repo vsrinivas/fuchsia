@@ -58,6 +58,11 @@ class LedgerRepositoryFactoryImpl
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
       fit::function<void(Status)> callback);
+  Status SynchronousCreateLedgerRepository(
+      coroutine::CoroutineHandler* handler,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      RepositoryInformation repository_information,
+      std::unique_ptr<LedgerRepositoryImpl>* repository);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
@@ -77,6 +82,8 @@ class LedgerRepositoryFactoryImpl
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 
   inspect_deprecated::Node inspect_node_;
+
+  coroutine::CoroutineManager coroutine_manager_;
 
   fxl::WeakPtrFactory<LedgerRepositoryFactoryImpl> weak_factory_;
 

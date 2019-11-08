@@ -4,10 +4,15 @@
 #include "src/ledger/bin/app/background_sync_manager.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <unistd.h>
+
+#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/db_view_factory.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -27,15 +32,19 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
         background_sync_manager_(background_sync_manager),
         coroutine_manager_(environment->coroutine_service()) {}
 
+  ~FakeDelegate() override = default;
+
   void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) override {
     ++sync_calls_[{ledger_name.ToString(), page_id.ToString()}];
     coroutine_manager_.StartCoroutine(
         [db = db_, background_sync_manager = background_sync_manager_,
          ledger_name_str = ledger_name.ToString(),
          page_id_str = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-          Status status = Status::OK;
-          status = db->MarkPageOpened(handler, ledger_name_str, page_id_str);
+          Status status = db->MarkPageOpened(handler, ledger_name_str, page_id_str);
           EXPECT_EQ(status, Status::OK);
+          if (status != Status::OK) {
+            return;
+          }
           background_sync_manager->OnInternallyUsed(ledger_name_str, page_id_str);
         });
   }
@@ -47,9 +56,11 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
         [db = db_, background_sync_manager = background_sync_manager_,
          ledger_name_str = ledger_name.ToString(),
          page_id_str = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-          Status status = Status::OK;
-          status = db->MarkPageClosed(handler, ledger_name_str, page_id_str);
+          Status status = db->MarkPageClosed(handler, ledger_name_str, page_id_str);
           EXPECT_EQ(status, Status::OK);
+          if (status != Status::OK) {
+            return;
+          }
           background_sync_manager->OnInternallyUnused(ledger_name_str, page_id_str);
         });
   }
@@ -78,21 +89,39 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
 
 class BackgroundSyncManagerTest : public TestWithEnvironment {
  public:
-  BackgroundSyncManagerTest()
-      : db_factory_(environment_.dispatcher()),
-        db_(std::make_unique<PageUsageDb>(environment_.clock(), &db_factory_,
-                                          DetachedPath(tmpfs_.root_fd()))),
-        background_sync_manager_(&environment_, db_.get(), /*open_pages_limit=*/10),
-        delegate_(&environment_, db_.get(), &background_sync_manager_) {}
+  BackgroundSyncManagerTest() : db_factory_(environment_.dispatcher()) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {
-    Status status;
-    RunInCoroutine([&](coroutine::CoroutineHandler* handler) { status = db_->Init(handler); });
-    RunLoopUntilIdle();
-    FXL_DCHECK(status == Status::OK);
-    delegate_.Clear();
-    background_sync_manager_.SetDelegate(&delegate_);
+    ResetPageUsageDb();
+    background_sync_manager_ =
+        std::make_unique<BackgroundSyncManager>(&environment_, db_.get(), /*open_pages_limit=*/10);
+    delegate_ =
+        std::make_unique<FakeDelegate>(&environment_, db_.get(), background_sync_manager_.get());
+    background_sync_manager_->SetDelegate(delegate_.get());
+  }
+
+  void ResetPageUsageDb() {
+    Status status = Status::ILLEGAL_STATE;
+    EXPECT_TRUE(RunInCoroutine([this, &status](coroutine::CoroutineHandler* handler) {
+      std::unique_ptr<storage::Db> leveldb;
+      if (coroutine::SyncCall(
+              handler,
+              [this](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) mutable {
+                db_factory_.GetOrCreateDb(DetachedPath(tmpfs_.root_fd()),
+                                          storage::DbFactory::OnDbNotFound::CREATE,
+                                          std::move(callback));
+              },
+              &status, &leveldb) == coroutine::ContinuationStatus::INTERRUPTED) {
+        status = Status::INTERRUPTED;
+        return;
+      }
+      dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
+      db_ = std::make_unique<PageUsageDb>(
+          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+      status = db_->Init(handler);
+    }));
+    FXL_CHECK(status == Status::OK);
   }
 
  private:
@@ -100,9 +129,10 @@ class BackgroundSyncManagerTest : public TestWithEnvironment {
 
  protected:
   storage::fake::FakeDbFactory db_factory_;
+  std::unique_ptr<DbViewFactory> dbview_factory_;
   std::unique_ptr<PageUsageDb> db_;
-  BackgroundSyncManager background_sync_manager_;
-  FakeDelegate delegate_;
+  std::unique_ptr<BackgroundSyncManager> background_sync_manager_;
+  std::unique_ptr<FakeDelegate> delegate_;
 };
 
 TEST_F(BackgroundSyncManagerTest, AsynchronousExternalUsedAndUnused) {
@@ -112,18 +142,18 @@ TEST_F(BackgroundSyncManagerTest, AsynchronousExternalUsedAndUnused) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // Check for external usage.
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUsed(ledger_name, first_page_id);
     EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
-    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUnused(ledger_name, first_page_id);
 
     RunLoopUntilIdle();
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 0);
 
-    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUnused(ledger_name, first_page_id);
 
     RunLoopUntilIdle();
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 1);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 1);
   });
 }
 
@@ -134,18 +164,18 @@ TEST_F(BackgroundSyncManagerTest, AsynchronousInternalUsedAndUnused) {
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // Check for internal usage.
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUsed(ledger_name, first_page_id);
     EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
-    background_sync_manager_.OnInternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUnused(ledger_name, first_page_id);
 
     RunLoopUntilIdle();
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 0);
 
-    background_sync_manager_.OnInternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUnused(ledger_name, first_page_id);
 
     RunLoopUntilIdle();
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 1);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 1);
   });
 }
 
@@ -159,29 +189,29 @@ TEST_F(BackgroundSyncManagerTest, SyncOnPageUnused) {
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUsed(ledger_name, first_page_id);
 
     EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUnused(ledger_name, first_page_id);
     RunLoopUntilIdle();
 
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 1);
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, second_page_id), 0);
-    delegate_.FinishSyncPage(ledger_name, first_page_id);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 1);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, second_page_id), 0);
+    delegate_->FinishSyncPage(ledger_name, first_page_id);
     RunLoopUntilIdle();
 
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, second_page_id), Status::OK);
-    background_sync_manager_.OnInternallyUsed(ledger_name, second_page_id);
+    background_sync_manager_->OnInternallyUsed(ledger_name, second_page_id);
 
     EXPECT_EQ(db_->MarkPageClosed(handler, ledger_name, second_page_id), Status::OK);
-    background_sync_manager_.OnInternallyUnused(ledger_name, second_page_id);
+    background_sync_manager_->OnInternallyUnused(ledger_name, second_page_id);
     RunLoopUntilIdle();
 
     // By the time the second page is unused, first one is closed after synchronization. This leads
     // to sync being triggered for this page again, as the limit of open at once pages was not
     // reached.
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 2);
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, second_page_id), 1);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 2);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, second_page_id), 1);
   });
 }
 
@@ -191,13 +221,13 @@ TEST_F(BackgroundSyncManagerTest, DontSyncWhenInternalConnectionRemain) {
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
-    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUsed(ledger_name, first_page_id);
 
-    background_sync_manager_.OnExternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUnused(ledger_name, first_page_id);
     RunLoopUntilIdle();
 
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 0);
   });
 }
 
@@ -207,13 +237,13 @@ TEST_F(BackgroundSyncManagerTest, DontSyncWhenExternalConnectionRemain) {
 
   RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, first_page_id), Status::OK);
-    background_sync_manager_.OnExternallyUsed(ledger_name, first_page_id);
-    background_sync_manager_.OnInternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnExternallyUsed(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUsed(ledger_name, first_page_id);
 
-    background_sync_manager_.OnInternallyUnused(ledger_name, first_page_id);
+    background_sync_manager_->OnInternallyUnused(ledger_name, first_page_id);
     RunLoopUntilIdle();
 
-    EXPECT_EQ(delegate_.GetSyncCallsCount(ledger_name, first_page_id), 0);
+    EXPECT_EQ(delegate_->GetSyncCallsCount(ledger_name, first_page_id), 0);
   });
 }
 

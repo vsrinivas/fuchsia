@@ -19,6 +19,7 @@ class BackgroundSyncManager : public PageUsageListener {
   // sync with the cloud of the given page.
   class Delegate {
    public:
+    virtual ~Delegate() = default;
     virtual void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
   };
 

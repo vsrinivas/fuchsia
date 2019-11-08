@@ -14,6 +14,7 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/background_sync_manager.h"
+#include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
 #include "src/ledger/bin/app/ledger_manager.h"
 #include "src/ledger/bin/app/page_eviction_manager.h"
@@ -46,6 +47,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   // will outlive the given |disk_cleanup_manager|.
   LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
                        std::unique_ptr<storage::DbFactory> db_factory,
+                       std::unique_ptr<DbViewFactory> dbview_factory,
                        std::unique_ptr<PageUsageDb> db, std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
@@ -114,6 +116,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
   std::unique_ptr<storage::DbFactory> db_factory_;
+  std::unique_ptr<DbViewFactory> dbview_factory_;
   std::unique_ptr<PageUsageDb> db_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;

@@ -98,6 +98,8 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       ledger_repository_ptr->NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
+  RunLoopUntilIdle();
+
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to GetRepository not called!";
   }

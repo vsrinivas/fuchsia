@@ -98,37 +98,13 @@ bool LogOnInitializationError(fxl::StringView operation_description, Status stat
 }
 }  // namespace
 
-PageUsageDb::PageUsageDb(timekeeper::Clock* clock, storage::DbFactory* db_factory,
-                         DetachedPath db_path)
-    : clock_(clock),
-      db_factory_(db_factory),
-      db_path_(db_path.SubPath(kPageUsageDbSerializationVersion)) {}
+PageUsageDb::PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db)
+    : clock_(clock), db_(std::move(db)) {}
 
 PageUsageDb::~PageUsageDb() = default;
 
 Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
-  // Initializing the DB and marking pages as closed are slow operations and we
-  // shouldn't wait for them to finish, before returning from initialization:
-  // Start these operations and finalize the initialization completer when done.
-  if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
-    initialization_completer_.Complete(Status::IO_ERROR);
-    return Status::IO_ERROR;
-  }
-  Status status;
-  if (coroutine::SyncCall(
-          handler,
-          [this](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) {
-            db_factory_->GetOrCreateDb(
-                std::move(db_path_), storage::DbFactory::OnDbNotFound::CREATE, std::move(callback));
-          },
-          &status, &db_) == coroutine::ContinuationStatus::INTERRUPTED) {
-    return Status::INTERRUPTED;
-  }
-  if (status != Status::OK) {
-    initialization_completer_.Complete(status);
-    return status;
-  }
-  status = MarkAllPagesClosed(handler);
+  Status status = MarkAllPagesClosed(handler);
   if (status == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
   }

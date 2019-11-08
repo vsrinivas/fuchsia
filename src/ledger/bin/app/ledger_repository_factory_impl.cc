@@ -15,11 +15,15 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -28,6 +32,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -247,6 +252,7 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
       user_communicator_factory_(std::move(user_communicator_factory)),
       repositories_(environment_->dispatcher()),
       inspect_node_(std::move(inspect_node)),
+      coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() = default;
@@ -287,18 +293,58 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   auto ret = repositories_.try_emplace(repository_information.name, std::move(root_fd));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
+  coroutine_manager_.StartCoroutine([this,
+                                     repository_information = std::move(repository_information),
+                                     cloud_provider = std::move(cloud_provider),
+                                     container](coroutine::CoroutineHandler* handler) mutable {
+    std::unique_ptr<LedgerRepositoryImpl> repository;
+    Status status = SynchronousCreateLedgerRepository(
+        handler, std::move(cloud_provider), std::move(repository_information), &repository);
 
+    container->SetRepository(status, std::move(repository));
+  });
+}
+
+Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
+    coroutine::CoroutineHandler* handler,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    RepositoryInformation repository_information,
+    std::unique_ptr<LedgerRepositoryImpl>* repository) {
   auto db_factory =
       std::make_unique<storage::LevelDbFactory>(environment_, repository_information.cache_path);
   db_factory->Init();
-  auto db = std::make_unique<PageUsageDb>(environment_->clock(), db_factory.get(),
-                                          repository_information.page_usage_db_path);
+  auto db_path =
+      repository_information.page_usage_db_path.SubPath(kRepositoryDbSerializationVersion);
+  if (!files::CreateDirectoryAt(db_path.root_fd(), db_path.path())) {
+    return Status::IO_ERROR;
+  }
+  std::unique_ptr<storage::Db> base_db;
+  Status status;
+  if (coroutine::SyncCall(
+          handler,
+          [db_factory_ptr = db_factory.get(), db_path = std::move(db_path)](
+              fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) mutable {
+            db_factory_ptr->GetOrCreateDb(
+                std::move(db_path), storage::DbFactory::OnDbNotFound::CREATE, std::move(callback));
+          },
+          &status, &base_db) == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  RETURN_ON_ERROR(status);
 
-  auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(environment_, db.get());
-  auto background_sync_manager = std::make_unique<BackgroundSyncManager>(environment_, db.get());
+  auto dbview_factory = std::make_unique<DbViewFactory>(std::move(base_db));
+
+  auto page_usage_db = std::make_unique<PageUsageDb>(
+      environment_->clock(), dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+
+  auto disk_cleanup_manager =
+      std::make_unique<DiskCleanupManagerImpl>(environment_, page_usage_db.get());
+  auto background_sync_manager =
+      std::make_unique<BackgroundSyncManager>(environment_, page_usage_db.get());
 
   std::unique_ptr<SyncWatcherSet> watchers =
       std::make_unique<SyncWatcherSet>(environment_->dispatcher());
+
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync =
       CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());
   if (!user_sync) {
@@ -308,15 +354,15 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   BackgroundSyncManager* background_sync_manager_ptr = background_sync_manager.get();
-  auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.ledgers_path, environment_, std::move(db_factory), std::move(db),
-      std::move(watchers), std::move(user_sync), std::move(disk_cleanup_manager),
-      std::move(background_sync_manager),
+  *repository = std::make_unique<LedgerRepositoryImpl>(
+      repository_information.ledgers_path, environment_, std::move(db_factory),
+      std::move(dbview_factory), std::move(page_usage_db), std::move(watchers),
+      std::move(user_sync), std::move(disk_cleanup_manager), std::move(background_sync_manager),
       std::vector<PageUsageListener*>{disk_cleanup_manager_ptr, background_sync_manager_ptr},
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
-  disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
-  background_sync_manager_ptr->SetDelegate(repository.get());
-  container->SetRepository(Status::OK, std::move(repository));
+  disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository->get());
+  background_sync_manager_ptr->SetDelegate(repository->get());
+  return Status::OK;
 }
 
 std::unique_ptr<sync_coordinator::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateUserSync(

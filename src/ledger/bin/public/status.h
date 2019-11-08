@@ -48,12 +48,12 @@ zx_status_t ConvertToEpitaph(Status status);
 std::ostream& operator<<(std::ostream& os, Status status);
 
 // Returns the provided status from the current function if Status represents an error.
-#define RETURN_ON_ERROR(expr) \
-  do {                        \
-    Status s = (expr);        \
-    if (s != Status::OK) {    \
-      return s;               \
-    }                         \
+#define RETURN_ON_ERROR(expr)        \
+  do {                               \
+    ::ledger::Status s = (expr);     \
+    if (s != ::ledger::Status::OK) { \
+      return s;                      \
+    }                                \
   } while (0)
 
 }  // namespace ledger

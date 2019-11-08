@@ -19,8 +19,8 @@ extern const fxl::StringView kRootPageId;
 // the repository dir of that user.
 inline constexpr fxl::StringView kServerIdFilename = "server_id";
 
-// The serialization version of PageUsage DB.
-inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
+// The serialization version of the repository DB.
+inline constexpr fxl::StringView kRepositoryDbSerializationVersion = "2";
 
 }  // namespace ledger
 
