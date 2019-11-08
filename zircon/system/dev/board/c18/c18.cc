@@ -48,7 +48,15 @@ zx_status_t C18::Create(void* ctx, zx_device_t* parent) {
 }
 
 int C18::Thread() {
-  zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
+  zx_status_t status;
+
+  status = SocInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s:%d SocInit() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    return -1;
+  }
+
+  status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
     return -1;

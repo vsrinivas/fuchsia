@@ -27,6 +27,7 @@ group("lib") {
     "mock-sdio",
     "msm8x53",
     "mt8167",
+    "mt8183",
     "operation",
     "ot-radio",
     "pci",

@@ -26,6 +26,9 @@ class C18 : public C18Type {
   DISALLOW_COPY_ASSIGN_AND_MOVE(C18);
 
   zx_status_t Start();
+
+  static zx_status_t SocInit();
+
   int Thread();
 
   ddk::PBusProtocolClient pbus_;
