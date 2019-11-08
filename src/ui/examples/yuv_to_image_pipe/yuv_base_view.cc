@@ -4,6 +4,7 @@
 
 #include "src/ui/examples/yuv_to_image_pipe/yuv_base_view.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/images/cpp/images.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -23,19 +24,47 @@ constexpr float kDisplayHeight = 50;
 constexpr float kInitialWindowXPos = 320;
 constexpr float kInitialWindowYPos = 240;
 
+fuchsia::sysmem::ColorSpaceType DefaultColorSpaceForPixelFormat(
+    fuchsia::sysmem::PixelFormatType pixel_format) {
+  switch (pixel_format) {
+    case fuchsia::sysmem::PixelFormatType::NV12:
+    case fuchsia::sysmem::PixelFormatType::I420:
+      return fuchsia::sysmem::ColorSpaceType::REC709;
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      return fuchsia::sysmem::ColorSpaceType::SRGB;
+    default:
+      FXL_NOTREACHED() << "Pixel format not supported.";
+  }
+  return fuchsia::sysmem::ColorSpaceType::INVALID;
+}
+
+uint32_t StrideBytesPerWidthPixel(fuchsia::sysmem::PixelFormatType pixel_format) {
+  switch (pixel_format) {
+    case fuchsia::sysmem::PixelFormatType::NV12:
+    case fuchsia::sysmem::PixelFormatType::I420:
+      return 1u;
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      return 4u;
+    default:
+      FXL_NOTREACHED() << "Pixel format not supported.";
+  }
+  return 0;
+}
+
 }  // namespace
 
-YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
+YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::sysmem::PixelFormatType pixel_format)
     : BaseView(std::move(context), "YuvBaseView Example"),
       node_(session()),
       pixel_format_(pixel_format),
-      stride_(
-          static_cast<uint32_t>(kShapeWidth * images::StrideBytesPerWidthPixel(pixel_format_))) {
+      stride_(static_cast<uint32_t>(kShapeWidth * StrideBytesPerWidthPixel(pixel_format_))) {
   FXL_VLOG(4) << "Creating View";
 
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(image_pipe_id, image_pipe_.NewRequest()));
+  session()->Enqueue(scenic::NewCreateImagePipe2Cmd(image_pipe_id, image_pipe_.NewRequest()));
+  // Make sure that |image_pipe_| is created by flushing the enqueued calls.
+  session()->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
   // Create a material that has our image pipe mapped onto it:
   scenic::Material material(session());
@@ -52,41 +81,96 @@ YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelForm
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, -kDisplayHeight);
   InvalidateScene();
+
+  zx_status_t status = component_context()->svc()->Connect(sysmem_allocator_.NewRequest());
+  FXL_CHECK(status == ZX_OK);
 }
 
 uint32_t YuvBaseView::AddImage() {
   ++next_image_id_;
 
-  fuchsia::images::ImageInfo image_info{
-      .width = kShapeWidth,
-      .height = kShapeHeight,
-      .stride = stride_,
-      .pixel_format = pixel_format_,
-  };
-  uint64_t image_vmo_bytes = images::ImageSize(image_info);
-  zx::vmo image_vmo;
-  zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
-  if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "zx::vmo::create() failed";
-    FXL_NOTREACHED();
-  }
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
+  FXL_CHECK(status == ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr scenic_token;
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), scenic_token.NewRequest());
+  FXL_CHECK(status == ZX_OK);
+  status = local_token->Sync();
+  FXL_CHECK(status == ZX_OK);
+
+  // Use |next_image_id_| as buffer_id.
+  image_pipe_->AddBufferCollection(next_image_id_, std::move(scenic_token));
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
+                                                   buffer_collection.NewRequest());
+  FXL_CHECK(status == ZX_OK);
+
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count = 1;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.image_format_constraints_count = 1;
+  fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+      constraints.image_format_constraints[0];
+  image_constraints = fuchsia::sysmem::ImageFormatConstraints();
+  image_constraints.required_min_coded_width = kShapeWidth;
+  image_constraints.required_min_coded_height = kShapeHeight;
+  image_constraints.required_max_coded_width = kShapeWidth;
+  image_constraints.required_max_coded_height = kShapeHeight;
+  image_constraints.required_min_bytes_per_row = stride_;
+  image_constraints.required_max_bytes_per_row = stride_;
+  image_constraints.pixel_format.type = pixel_format_;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = DefaultColorSpaceForPixelFormat(pixel_format_);
+  status = buffer_collection->SetConstraints(true, constraints);
+  FXL_CHECK(status == ZX_OK);
+
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  FXL_CHECK(status == ZX_OK);
+  FXL_CHECK(allocation_status == ZX_OK);
+  FXL_CHECK(buffer_collection_info.buffers[0].vmo != ZX_HANDLE_INVALID);
+  FXL_CHECK(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
+            image_constraints.pixel_format.type);
+  const bool needs_flush = buffer_collection_info.settings.buffer_settings.coherency_domain ==
+                           fuchsia::sysmem::CoherencyDomain::RAM;
+
+  fuchsia::sysmem::ImageFormat_2 image_format = {};
+  image_format.coded_width = kShapeWidth;
+  image_format.coded_height = kShapeHeight;
+  image_pipe_->AddImage(next_image_id_, next_image_id_, 0, image_format);
+  FXL_CHECK(allocation_status == ZX_OK);
 
   uint8_t* vmo_base;
+  const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
+  auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
+  FXL_CHECK(image_vmo_bytes > 0);
   status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
                                       ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
+  vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
 
-  constexpr uint64_t kMemoryOffset = 0;
-  image_pipe_->AddImage(next_image_id_, image_info, std::move(image_vmo), kMemoryOffset,
-                        image_vmo_bytes, fuchsia::images::MemoryType::HOST_MEMORY);
-  image_vmos_[next_image_id_] = vmo_base;
+  image_vmos_.emplace(std::piecewise_construct, std::forward_as_tuple(next_image_id_),
+                      std::forward_as_tuple(vmo_base, image_vmo_bytes, needs_flush));
+
+  buffer_collection->Close();
   return next_image_id_;
 }
 
 void YuvBaseView::PaintImage(uint32_t image_id, uint8_t pixel_multiplier) {
   FXL_CHECK(image_vmos_.count(image_id));
 
-  SetVmoPixels(image_vmos_[image_id], pixel_multiplier);
+  const ImageVmo& image_vmo = image_vmos_.find(image_id)->second;
+  SetVmoPixels(image_vmo.vmo_ptr, pixel_multiplier);
+
+  if (image_vmo.needs_flush) {
+    zx_cache_flush(image_vmo.vmo_ptr, image_vmo.image_bytes, ZX_CACHE_FLUSH_DATA);
+  }
 }
 
 void YuvBaseView::PresentImage(uint32_t image_id) {
@@ -105,22 +189,21 @@ void YuvBaseView::PresentImage(uint32_t image_id) {
 
 void YuvBaseView::SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   switch (pixel_format_) {
-    case fuchsia::images::PixelFormat::BGRA_8:
-      SetBgra8Pixels(vmo_base, pixel_multiplier);
-      break;
-    case fuchsia::images::PixelFormat::YUY2:
-      SetYuy2Pixels(vmo_base, pixel_multiplier);
-      break;
-    case fuchsia::images::PixelFormat::NV12:
+    case fuchsia::sysmem::PixelFormatType::NV12:
       SetNv12Pixels(vmo_base, pixel_multiplier);
       break;
-    case fuchsia::images::PixelFormat::YV12:
-      SetYv12Pixels(vmo_base, pixel_multiplier);
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      SetBgra32Pixels(vmo_base, pixel_multiplier);
       break;
+    case fuchsia::sysmem::PixelFormatType::I420:
+      SetI420Pixels(vmo_base, pixel_multiplier);
+      break;
+    default:
+      FXL_NOTREACHED() << "Pixel format not supported.";
   }
 }
 
-void YuvBaseView::SetBgra8Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
+void YuvBaseView::SetBgra32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
@@ -130,21 +213,6 @@ void YuvBaseView::SetBgra8Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
       uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
       yuv::YuvToBgra(y_value, u_value, v_value,
                      &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
-    }
-  }
-}
-
-void YuvBaseView::SetYuy2Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
-  for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
-    double y = static_cast<double>(y_iter) / kShapeHeight;
-    for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter += 2) {
-      double x0 = static_cast<double>(x_iter) / kShapeWidth;
-      double x1 = static_cast<double>(x_iter + 1) / kShapeWidth;
-      uint8_t* two_pixels = &vmo_base[y_iter * stride_ + x_iter * sizeof(uint16_t)];
-      two_pixels[0] = GetYValue(x0, y) * pixel_multiplier;
-      two_pixels[1] = GetUValue(x0, y) * pixel_multiplier;
-      two_pixels[2] = GetYValue(x1, y) * pixel_multiplier;
-      two_pixels[3] = GetVValue(x0, y) * pixel_multiplier;
     }
   }
 }
@@ -171,7 +239,7 @@ void YuvBaseView::SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   }
 }
 
-void YuvBaseView::SetYv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
+void YuvBaseView::SetI420Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   // Y plane
   uint8_t* y_base = vmo_base;
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
@@ -182,8 +250,8 @@ void YuvBaseView::SetYv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     }
   }
   // U and V work the same as each other, so do them together
-  uint8_t* u_base = y_base + kShapeHeight * stride_ + kShapeHeight / 2 * stride_ / 2;
-  uint8_t* v_base = y_base + kShapeHeight * stride_;
+  uint8_t* u_base = y_base + kShapeHeight * stride_;
+  uint8_t* v_base = u_base + kShapeHeight / 2 * stride_ / 2;
   for (uint32_t y_iter = 0; y_iter < kShapeHeight / 2; y_iter++) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {

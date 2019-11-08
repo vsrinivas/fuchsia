@@ -29,15 +29,14 @@ int main(int argc, const char** argv) {
 
   static struct OptionEntry {
     std::string option;
-    fuchsia::images::PixelFormat pixel_format;
+    fuchsia::sysmem::PixelFormatType pixel_format;
   } table[] = {
-      {"NV12", fuchsia::images::PixelFormat::NV12},
-      {"YUY2", fuchsia::images::PixelFormat::YUY2},
-      {"BGRA_8", fuchsia::images::PixelFormat::BGRA_8},
-      {"YV12", fuchsia::images::PixelFormat::YV12},
+      {"NV12", fuchsia::sysmem::PixelFormatType::NV12},
+      {"BGRA32", fuchsia::sysmem::PixelFormatType::BGRA32},
+      {"I420", fuchsia::sysmem::PixelFormatType::I420},
   };
 
-  fuchsia::images::PixelFormat pixel_format;
+  fuchsia::sysmem::PixelFormatType pixel_format;
   uint32_t option_count = 0;
   for (const OptionEntry& option_entry : table) {
     if (command_line.HasOption(option_entry.option)) {

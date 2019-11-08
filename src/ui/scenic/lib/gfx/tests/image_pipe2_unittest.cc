@@ -12,8 +12,8 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
-#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 namespace scenic_impl::gfx::test {
@@ -44,7 +44,8 @@ SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocato
 
 void SetConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t width,
-                    uint32_t height, uint32_t image_count, bool wait_for_buffers_allocated,
+                    uint32_t height, uint32_t image_count,
+                    fuchsia::sysmem::PixelFormatType pixel_format, bool wait_for_buffers_allocated,
                     fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_output) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
@@ -66,9 +67,18 @@ void SetConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     image_constraints.max_coded_width = width * 4;
     image_constraints.max_coded_height = width * 4;
     image_constraints.max_bytes_per_row = 0xffffffff;
-    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.type = pixel_format;
     image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+    switch (pixel_format) {
+      case fuchsia::sysmem::PixelFormatType::BGRA32:
+        image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+        break;
+      case fuchsia::sysmem::PixelFormatType::NV12:
+        image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+        break;
+      default:
+        FXL_NOTREACHED();
+    }
   }
 
   status = buffer_collection->SetConstraints(true, constraints);
@@ -136,6 +146,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
 
   void set_next_image_is_protected(bool is_protected) { next_image_is_protected_ = is_protected; }
 
+  fuchsia::sysmem::PixelFormatType pixel_format_;
   std::vector<fxl::RefPtr<FakeImage>> fake_images_;
 
  private:
@@ -143,7 +154,8 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
       Session* session, fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
       const vk::ImageCreateInfo& create_info,
       vk::BufferCollectionFUCHSIA* out_buffer_collection_fuchsia) override {
-    SetConstraints(sysmem_allocator_.get(), std::move(token), 0u, 0u, 1u, false, nullptr);
+    SetConstraints(sysmem_allocator_.get(), std::move(token), 0u, 0u, 1u,
+                   fuchsia::sysmem::PixelFormatType::BGRA32, false, nullptr);
     return true;
   }
 
@@ -154,6 +166,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
                        const ImagePipe2::BufferCollectionInfo& info,
                        uint32_t buffer_collection_index,
                        const ::fuchsia::sysmem::ImageFormat_2& image_format) override {
+    pixel_format_ = info.buffer_collection_info.settings.image_format_constraints.pixel_format.type;
     escher::ImageInfo escher_info;
     escher_info.width = image_format.coded_width;
     escher_info.height = image_format.coded_height;
@@ -229,7 +242,7 @@ TEST_F(ImagePipe2Test, AddMultipleImagesFromABufferCollection) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -255,7 +268,7 @@ TEST_F(ImagePipe2Test, BufferCollectionIdMustBeValid) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -281,7 +294,7 @@ TEST_F(ImagePipe2Test, BufferCollectionIndexMustBeValid) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -307,7 +320,7 @@ TEST_F(ImagePipe2Test, RemoveBufferCollectionRemovesImages) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -337,7 +350,7 @@ TEST_F(ImagePipe2Test, PresentImagesOutOfOrder) {
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
-                 true, nullptr);
+                 fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
@@ -367,7 +380,7 @@ TEST_F(ImagePipe2Test, PresentImagesInOrder) {
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
-                 true, nullptr);
+                 fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
@@ -397,7 +410,7 @@ TEST_F(ImagePipe2Test, PresentImagesWithOddSize) {
   const uint32_t kHeight = 35;
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
-                 true, &buffer_collection);
+                 fuchsia::sysmem::PixelFormatType::BGRA32, true, &buffer_collection);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
@@ -427,7 +440,7 @@ TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -507,7 +520,7 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
   const uint32_t kImage1Width = 32;
   const uint32_t kImage1Height = 32;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens1.dup_token), kImage1Width,
-                 kImage1Height, 1u, true, nullptr);
+                 kImage1Height, 1u, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format1 = {};
   image_format1.coded_width = kImage1Width;
@@ -524,7 +537,7 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
   const uint32_t kImage2Width = 48;
   const uint32_t kImage2Height = 48;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens2.dup_token), kImage2Width,
-                 kImage2Height, 1u, true, nullptr);
+                 kImage2Height, 1u, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format_2 = {};
   image_format_2.coded_width = kImage2Width;
@@ -583,7 +596,7 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   // Add first image
   const uint32_t kImageId1 = 1;
@@ -667,7 +680,7 @@ TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
   SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
-                 kImageCount, true, nullptr);
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
@@ -686,6 +699,37 @@ TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
 
   EXPECT_ERROR_COUNT(0);
 }
+
+// Checks if NV12 and BGRAimage can be added.
+TEST_F(ImagePipe2Test, AddMultipleFormatsImage) {
+  auto image_pipe = CreateImagePipe();
+
+  std::vector<fuchsia::sysmem::PixelFormatType> formats{fuchsia::sysmem::PixelFormatType::BGRA32,
+                                                        fuchsia::sysmem::PixelFormatType::NV12};
+  for (auto format : formats) {
+    auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+    const uint32_t kBufferId = 1;
+    image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+
+    const uint32_t kWidth = 32;
+    const uint32_t kHeight = 32;
+    const uint32_t kImageCount = 1;
+    SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+                   kImageCount, format, true, nullptr);
+
+    fuchsia::sysmem::ImageFormat_2 image_format = {};
+    image_format.coded_width = kWidth;
+    image_format.coded_height = kHeight;
+    const uint32_t kImageId1 = 1;
+    image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+    EXPECT_EQ(format, image_pipe->pixel_format_);
+    image_pipe->RemoveBufferCollection(kBufferId);
+  }
+
+  EXPECT_ERROR_COUNT(0);
+}
+
+// Detects not supported pixel format.
 
 // TODO(23406): More tests.
 // - Test that you can't add the same image twice.

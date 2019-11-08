@@ -21,12 +21,26 @@ namespace gfx {
 
 namespace {
 
-vk::ImageCreateInfo GetDefaultImageConstraints() {
+vk::Format SysmemPixelFormatTypeToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format) {
+  switch (pixel_format) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      return vk::Format::eB8G8R8A8Unorm;
+    case fuchsia::sysmem::PixelFormatType::NV12:
+      return vk::Format::eG8B8R82Plane420Unorm;
+    case fuchsia::sysmem::PixelFormatType::I420:
+      return vk::Format::eG8B8R83Plane420Unorm;
+    default:
+      break;
+  }
+  return vk::Format::eUndefined;
+}
+
+vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{1, 1, 1};
   create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-  create_info.format = vk::Format::eB8G8R8A8Unorm;
+  create_info.format = vk_format;
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;
   create_info.samples = vk::SampleCountFlagBits::e1;
@@ -139,7 +153,7 @@ void ImagePipe2::AddBufferCollection(
   }
 
   // Set VkImage constraints
-  const vk::ImageCreateInfo& create_info = GetDefaultImageConstraints();
+  const vk::ImageCreateInfo& create_info = GetDefaultImageConstraints(vk::Format::eUndefined);
   vk::BufferCollectionFUCHSIA buffer_collection_fuchsia;
   const bool set_constraints = SetBufferCollectionConstraints(
       session_, std::move(vulkan_token), create_info, &buffer_collection_fuchsia);
@@ -475,12 +489,19 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
     return nullptr;
   }
 
+  vk::Format pixel_format = SysmemPixelFormatTypeToVkFormat(
+      info.buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+  if (pixel_format == vk::Format::eUndefined) {
+    error_reporter_->ERROR() << __func__ << ": Pixel format not supported.";
+    return nullptr;
+  }
+
   // Make a copy of |vk_image_create_info|. Set size constraint that we didn't have in
   // AddBufferCollection(). Also, check if |protected buffer| is allocated.
   vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
   collection_image_info.collection = info.vk_buffer_collection;
   collection_image_info.index = buffer_collection_index;
-  vk::ImageCreateInfo image_create_info = GetDefaultImageConstraints();
+  vk::ImageCreateInfo image_create_info = GetDefaultImageConstraints(pixel_format);
   image_create_info.setPNext(&collection_image_info);
   image_create_info.extent = vk::Extent3D{image_format.coded_width, image_format.coded_height, 1};
   if (info.buffer_collection_info.settings.buffer_settings.is_secure) {

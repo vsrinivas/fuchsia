@@ -253,7 +253,7 @@ package("yuv_to_image_pipe") {
 
   meta = [
     {
-      path = rebase_path("meta/ui_example.cmx")
+      path = rebase_path("yuv_to_image_pipe/meta/yuv_to_image_pipe.cmx")
       dest = "yuv_to_image_pipe.cmx"
     },
   ]
