@@ -83,6 +83,25 @@ test_package("network_manager_tests") {
       environments = basic_envs
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path("testdata/invalid_empty.json")
+      dest = "invalid_empty.json"
+    },
+    {
+      path = rebase_path("testdata/valid_empty.json")
+      dest = "valid_empty.json"
+    },
+    {
+      path = rebase_path("testdata/valid_factory_config.json")
+      dest = "valid_factory_config.json"
+    },
+    {
+      path = rebase_path("data/device_schema.json")
+      dest = "device_schema.json"
+    },
+  ]
 }
 
 config_data("network_manager_sysmgr_config") {

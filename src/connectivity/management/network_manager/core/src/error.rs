@@ -75,7 +75,6 @@ impl From<Context<&'static str>> for NetworkManager {
 
 #[derive(Fail, Debug)]
 pub struct ErrorWithContext {
-    #[cause]
     inner: Context<String>,
 }
 impl Display for ErrorWithContext {
@@ -161,6 +160,8 @@ pub enum Config {
     ConfigNotFound { path: String },
     #[fail(display = "Could not load the requested config: {}, because: {}", path, error)]
     ConfigNotLoaded { path: String, error: String },
+    #[fail(display = "Could not load the device schema: {}", path)]
+    SchemaNotLoaded { path: String },
     #[fail(display = "Failed to deserialize config: {}, because: {}", path, error)]
     FailedToDeserializeConfig { path: String, error: String },
     #[fail(display = "Failed to load device schema: {}, because {}", path, error)]

@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error;
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use valico::json_schema::{self, schema};
 
 /// Interface types defined by the OpenConfig interfaces model.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
@@ -85,13 +90,13 @@ pub enum PortSpeed {
 // TODO(cgibson): WLAN.
 // TODO(cgibson): Need to figure out versioning. Having "unknown" fields and "flatten"'ing themn
 // into an `extras` field might be an interesting experiment.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DeviceConfig {
     pub device: Option<Device>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Device {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -100,14 +105,14 @@ pub struct Device {
     pub acls: Option<Acls>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Interfaces {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interface: Option<Vec<Interface>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Interface {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -122,7 +127,7 @@ pub struct Interface {
     pub tcp_offload: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct InterfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -133,14 +138,14 @@ pub struct InterfaceConfig {
     pub r#type: Option<InterfaceType>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Subinterfaces {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subinterface: Option<Vec<Subinterface>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Subinterface {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -151,7 +156,7 @@ pub struct Subinterface {
     pub ipv6: Option<IpAddressConfig>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct SubinterfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -162,13 +167,13 @@ pub struct SubinterfaceConfig {
     pub index: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpAddressConfig {
     pub addresses: Option<Vec<IpAddress>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,14 +186,14 @@ pub struct IpAddress {
     pub prefix_length: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Ethernet {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<EthernetConfig>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct EthernetConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,18 +210,32 @@ pub struct EthernetConfig {
     pub port_speed: Option<PortSpeed>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Acls {}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct DeviceConfigPaths {
     user_config_path: PathBuf,
     factory_config_path: PathBuf,
     device_schema_path: PathBuf,
 }
 
-#[derive(Debug)]
+/// Converts a Valico JSON SchemaError to a string.
+fn schema_error(error: schema::SchemaError) -> String {
+    match error {
+        schema::SchemaError::WrongId => String::from("Wrong Id"),
+        schema::SchemaError::IdConflicts => String::from("Id conflicts"),
+        schema::SchemaError::NotAnObject => String::from("Not an object"),
+        schema::SchemaError::UrlParseError(p) => String::from(format!("Url parse error: {}", p)),
+        schema::SchemaError::UnknownKey(key) => String::from(format!("Unknown key: {}", key)),
+        schema::SchemaError::Malformed { path, detail } => {
+            String::from(format!("Malformed: {}, {}", path, detail))
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Config {
     config: Option<DeviceConfig>,
     paths: DeviceConfigPaths,
@@ -250,15 +269,108 @@ impl Config {
         self.paths.device_schema_path.as_path()
     }
 
-    /// TODO(cgibson): Implement me.
-    pub fn load_config(&mut self) {
-        // TODO(cgibson): Implement me.
+    /// Loads the relevant configuration file.
+    ///
+    /// This method tries to load the user configuration file. If the user config file does not
+    /// exist yet (e.g. OOBE, FDR, etc), fallback to trying to load the factory configuration
+    /// file.
+    ///
+    /// If this method successfully returns, then there should now be a validated configuration
+    /// available.
+    pub async fn load_config(&mut self) -> error::Result<()> {
+        let loaded_config;
+        match self.try_load_config(&self.user_config_path()) {
+            Ok(c) => {
+                loaded_config = c;
+            }
+            Err(e) => {
+                warn!("Failed to load user config: {}", e);
+                loaded_config = self.try_load_config(&self.factory_config_path())?;
+            }
+        }
+
+        match self.is_valid_config(&loaded_config) {
+            Ok(_) => {
+                let valid_config = serde_json::from_value(loaded_config)?;
+                info!("Successfully validated new config!");
+                self.config = Some(valid_config);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Tries to load the given configuration file.
+    fn try_load_config(&self, config_path: &Path) -> error::Result<Value> {
+        if config_path.is_file() {
+            let mut contents = String::new();
+            let mut f = File::open(config_path).map_err(|e| {
+                error::NetworkManager::CONFIG(error::Config::ConfigNotLoaded {
+                    path: String::from(config_path.to_string_lossy()),
+                    error: e.to_string(),
+                })
+            })?;
+            f.read_to_string(&mut contents).map_err(|e| {
+                error::NetworkManager::CONFIG(error::Config::ConfigNotLoaded {
+                    path: String::from(config_path.to_string_lossy()),
+                    error: e.to_string(),
+                })
+            })?;
+            // Note that counter to intuition it is faster to read the full configuration file
+            // into memory and deserialize it using serde_json::from_str(), than using
+            // serde_json::from_reader(), see: https://github.com/serde-rs/json/issues/160.
+            let json: Value = serde_json::from_str(&contents).map_err(|e| {
+                error::NetworkManager::CONFIG(error::Config::FailedToDeserializeConfig {
+                    path: String::from(config_path.to_string_lossy()),
+                    error: e.to_string(),
+                })
+            })?;
+            return Ok(json);
+        }
+        Err(error::NetworkManager::CONFIG(error::Config::ConfigNotFound {
+            path: String::from(config_path.to_string_lossy()),
+        }))
+    }
+
+    /// Validates an in-memory deserialized configuration.
+    fn is_valid_config(&self, config: &Value) -> error::Result<()> {
+        let device_schema = self.try_load_config(&self.device_schema_path())?;
+        let mut scope = json_schema::Scope::new();
+        let compiled_device_schema =
+            scope.compile_and_return(device_schema, false).map_err(|e| {
+                error!("Failed to validate schema: {:?}", e);
+                error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                    path: String::from(self.device_schema_path().to_string_lossy()),
+                    error: schema_error(e),
+                })
+            })?;
+        let result = compiled_device_schema.validate(config);
+        if !result.is_strictly_valid() {
+            let mut err_msgs = Vec::new();
+            for e in &result.errors {
+                err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
+            }
+            for u in &result.missing {
+                err_msgs.push(format!("Device Config missing: {}", u).into_boxed_str());
+            }
+            // The ordering in which valico emits these errors is unstable. Sort error messages so
+            // that the resulting message is predictable.
+            err_msgs.sort_unstable();
+            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: String::from(self.device_schema_path().to_string_lossy()),
+                error: err_msgs.join(", "),
+            }));
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::error::NetworkManager::CONFIG;
+    use std::fs;
 
     #[test]
     fn test_new() {
@@ -283,5 +395,61 @@ mod tests {
         assert_eq!(test_config.user_config_path(), Path::new(user_cfg));
         assert_eq!(test_config.factory_config_path(), Path::new(factory_cfg));
         assert_eq!(test_config.device_schema_path(), Path::new(device_schema));
+    }
+
+    #[test]
+    fn test_try_load_config() {
+        let test_config = Config::new("/test", "/test", "/test");
+        let doesntexist = String::from("/doesntexist");
+        match test_config.try_load_config(Path::new(&doesntexist)) {
+            Err(CONFIG(error::Config::ConfigNotFound { path })) => {
+                assert_eq!(doesntexist, path);
+            }
+            Ok(r) => panic!("Unexpected 'Ok' result: {}", r),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+
+        let invalid_empty = String::from("/pkg/data/invalid_empty.json");
+        match test_config.try_load_config(Path::new(&invalid_empty)) {
+            Err(CONFIG(error::Config::FailedToDeserializeConfig { path, error: _ })) => {
+                assert_eq!(invalid_empty, path);
+            }
+            Ok(r) => panic!("Unexpected 'Ok' result: {}", r),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+
+        let valid_empty = String::from("/pkg/data/valid_empty.json");
+        let contents = fs::read_to_string(&valid_empty)
+            .expect(format!("Failed to open testdata file: {}", valid_empty).as_str());
+        let expected_config: Value;
+        match serde_json::from_str(&contents) {
+            Ok(j) => expected_config = j,
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+        match test_config.try_load_config(Path::new(&valid_empty)) {
+            Ok(j) => {
+                assert_eq!(expected_config, j);
+            }
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_is_valid_config() {
+        let device_schema_path = "/pkg/data/device_schema.json";
+        let valid_factory_path = "/pkg/data/valid_factory_config.json";
+        let test_config = Config::new("", valid_factory_path, device_schema_path);
+        let valid_config = String::from("/pkg/data/valid_factory_config.json");
+        let contents = fs::read_to_string(&valid_config)
+            .expect(format!("Failed to open testdata file: {}", valid_config).as_ref());
+        let expected_config: Value;
+        match serde_json::from_str(&contents) {
+            Ok(j) => expected_config = j,
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+        match test_config.is_valid_config(&expected_config) {
+            Ok(_) => (),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
     }
 }

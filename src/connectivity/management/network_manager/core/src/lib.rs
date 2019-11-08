@@ -127,10 +127,15 @@ impl DeviceState {
         }
     }
 
-    /// TODO(cgibson): Implement me.
+    /// Loads the device configuration.
     pub async fn load_config(&mut self) -> error::Result<()> {
-        self.config.load_config();
-        Ok(())
+        if let Err(e) = self.config.load_config().await {
+            error!("Failed to load new config: {}", e);
+            Err(e)
+        } else {
+            info!("Successfully loaded configuration!");
+            Ok(())
+        }
     }
 
     /// Returns the underlying event streams associated with the open channels to fuchsia.net.stack
