@@ -53,6 +53,8 @@ class BlockBufferView {
     return const_cast<void*>(const_cast<const BlockBufferView*>(this)->Data(index));
   }
 
+  uint32_t BlockSize() const { return buffer_ ? buffer_->BlockSize() : 0; }
+
   const void* Data(size_t index) const {
     ZX_ASSERT_MSG(index < length_, "Accessing data outside the length of the view");
     return buffer_->Data((start_ + index) % buffer_->capacity());

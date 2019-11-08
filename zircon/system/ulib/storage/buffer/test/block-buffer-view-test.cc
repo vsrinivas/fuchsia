@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <storage/buffer/block-buffer-view.h>
+#include <lib/zx/vmo.h>
 
 #include <array>
 
-#include <lib/zx/vmo.h>
-
+#include <storage/buffer/block-buffer-view.h>
 #include <storage/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
@@ -44,6 +43,7 @@ TEST(BlockBufferViewTest, EmptyView) {
   EXPECT_EQ(0, view.start());
   EXPECT_EQ(0, view.length());
   EXPECT_EQ(BLOCK_VMOID_INVALID, view.vmoid());
+  EXPECT_EQ(0, view.BlockSize());
 }
 
 class BlockBufferViewFixture : public zxtest::Test {
@@ -71,6 +71,7 @@ TEST_F(BlockBufferViewTest, WholeView) {
   BlockBufferView view(&buffer, 0, kCapacity);
   EXPECT_EQ(0, view.start());
   ASSERT_EQ(kCapacity, view.length());
+  ASSERT_EQ(kBlockSize, view.BlockSize());
   EXPECT_BYTES_EQ(buf_a.data(), view.Data(0), kBlockSize);
   EXPECT_BYTES_EQ(buf_b.data(), view.Data(1), kBlockSize);
   EXPECT_BYTES_EQ(buf_c.data(), view.Data(2), kBlockSize);
@@ -87,6 +88,7 @@ TEST_F(BlockBufferViewTest, WraparoundBeforeEndView) {
   BlockBufferView view(&buffer, 2, kCapacity);
   EXPECT_EQ(2, view.start());
   ASSERT_EQ(kCapacity, view.length());
+  ASSERT_EQ(kBlockSize, view.BlockSize());
   EXPECT_BYTES_EQ(buf_c.data(), view.Data(0), kBlockSize);
   EXPECT_BYTES_EQ(buf_a.data(), view.Data(1), kBlockSize);
   EXPECT_BYTES_EQ(buf_b.data(), view.Data(2), kBlockSize);
@@ -96,6 +98,7 @@ TEST_F(BlockBufferViewTest, WraparoundAtEndView) {
   BlockBufferView view(&buffer, kCapacity, kCapacity);
   EXPECT_EQ(0, view.start());
   ASSERT_EQ(kCapacity, view.length());
+  ASSERT_EQ(kBlockSize, view.BlockSize());
   EXPECT_BYTES_EQ(buf_a.data(), view.Data(0), kBlockSize);
   EXPECT_BYTES_EQ(buf_b.data(), view.Data(1), kBlockSize);
   EXPECT_BYTES_EQ(buf_c.data(), view.Data(2), kBlockSize);
@@ -108,6 +111,7 @@ TEST_F(BlockBufferViewTest, CreateSubViewNoOffsetNoWraparound) {
   BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
   EXPECT_EQ(kNewRelativeStart, subview.start());
   ASSERT_EQ(kNewLength, subview.length());
+  ASSERT_EQ(kBlockSize, subview.BlockSize());
   EXPECT_BYTES_EQ(buf_a.data(), subview.Data(0), kBlockSize);
 }
 
@@ -119,6 +123,7 @@ TEST_F(BlockBufferViewTest, CreateSubViewWithOffsetNoWraparound) {
   BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
   EXPECT_EQ(kOldStart + kNewRelativeStart, subview.start());
   EXPECT_EQ(kNewLength, subview.length());
+  ASSERT_EQ(kBlockSize, subview.BlockSize());
   EXPECT_BYTES_EQ(buf_c.data(), subview.Data(0), kBlockSize);
 }
 
@@ -130,6 +135,7 @@ TEST_F(BlockBufferViewTest, CreateSubViewWithOffsetAndWraparound) {
   BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
   EXPECT_EQ(kOldStart + kNewRelativeStart, subview.start());
   ASSERT_EQ(kNewLength, subview.length());
+  ASSERT_EQ(kBlockSize, subview.BlockSize());
   EXPECT_BYTES_EQ(buf_c.data(), subview.Data(0), kBlockSize);
   EXPECT_BYTES_EQ(buf_a.data(), subview.Data(1), kBlockSize);
 }
