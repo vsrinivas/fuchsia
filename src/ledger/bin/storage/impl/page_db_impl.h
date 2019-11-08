@@ -60,6 +60,9 @@ class PageDbImpl : public PageDb {
   Status GetInboundCommitReferences(coroutine::CoroutineHandler* handler,
                                     const ObjectIdentifier& object_identifier,
                                     std::vector<CommitId>* references) override;
+  Status EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
+                               const ObjectDigest& object_digest,
+                               std::vector<std::string>* object_status_keys) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
                          std::string* value) override;
   Status IsPageOnline(coroutine::CoroutineHandler* handler, bool* page_is_online) override;

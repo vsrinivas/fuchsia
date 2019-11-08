@@ -49,10 +49,15 @@ std::unique_ptr<LevelDb> GetLevelDb(async_dispatcher_t* dispatcher, ledger::Deta
   return db;
 }
 
+// Garbage collection is disabled for these tests because we are using object identifiers generated
+// from the page storage in another database.
 class PageDbTest : public ledger::TestWithEnvironment {
  public:
   PageDbTest()
-      : encryption_service_(dispatcher()),
+      : ledger::TestWithEnvironment([](ledger::EnvironmentBuilder* builder) {
+          builder->SetGcPolicy(GarbageCollectionPolicy::NEVER);
+        }),
+        encryption_service_(dispatcher()),
         base_path(tmpfs_.root_fd()),
         page_storage_(&environment_, &encryption_service_,
                       GetLevelDb(dispatcher(), base_path.SubPath("storage")), "page_id",

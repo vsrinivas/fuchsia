@@ -56,6 +56,12 @@ Status PageDbEmptyImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* 
                                                    std::vector<CommitId>* /*references*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::EnsureObjectDeletable(coroutine::CoroutineHandler* /*handler*/,
+                                              const ObjectDigest& /*object_digest*/,
+                                              std::vector<std::string>* /*object_status_keys*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(CoroutineHandler* /*handler*/,
                                              std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;

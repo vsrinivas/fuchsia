@@ -58,8 +58,7 @@ PageDbImpl::~PageDbImpl() = default;
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
   RETURN_ON_ERROR(db_->StartBatch(handler, &db_batch));
-  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this, db_.get(),
-                                             object_identifier_factory_);
+  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this, object_identifier_factory_);
   return Status::OK;
 }
 
@@ -167,6 +166,53 @@ Status PageDbImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* handl
   references->clear();
   return db_->GetByPrefix(
       handler, ReferenceRow::GetCommitKeyPrefixFor(object_identifier.object_digest()), references);
+}
+
+Status PageDbImpl::EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
+                                         const ObjectDigest& object_digest,
+                                         std::vector<std::string>* object_status_keys) {
+  FXL_DCHECK(object_status_keys);
+
+  // If there is any object-object reference to the object, it cannot be garbage collected.
+  Status status = db_->HasPrefix(handler, ReferenceRow::GetObjectKeyPrefixFor(object_digest));
+  if (status == Status::OK) {
+    return Status::CANCELED;
+  }
+  if (status != Status::INTERNAL_NOT_FOUND) {
+    return status;
+  }
+
+  std::map<std::string, PageDbObjectStatus> keys;
+  RETURN_ON_ERROR(GetObjectStatusKeys(handler, object_digest, &keys));
+  // object-object references have already been checked.  Collect object status keys, and check if
+  // any of them requires checking commit-object links.
+  bool check_commit_object_refs = false;
+  for (const auto& [object_status_key, object_status] : keys) {
+    object_status_keys->push_back(object_status_key);
+    switch (object_status) {
+      case PageDbObjectStatus::UNKNOWN:
+        FXL_NOTREACHED();
+        return Status::INTERNAL_ERROR;
+      case PageDbObjectStatus::TRANSIENT:
+      case PageDbObjectStatus::LOCAL:
+        // object-object and commit-object links must both be zero for transient and local objects.
+        check_commit_object_refs = true;
+        break;
+      case PageDbObjectStatus::SYNCED:
+        // Only object-object links are relevant for synced objects.
+        break;
+    }
+  }
+  if (check_commit_object_refs) {
+    Status status = db_->HasPrefix(handler, ReferenceRow::GetKeyPrefixFor(object_digest));
+    if (status == Status::OK) {
+      return Status::CANCELED;
+    }
+    if (status != Status::INTERNAL_NOT_FOUND) {
+      return status;
+    }
+  }
+  return Status::OK;
 }
 
 Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,

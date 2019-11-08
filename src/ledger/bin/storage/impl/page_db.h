@@ -236,6 +236,15 @@ class PageDb : public PageDbMutator {
       coroutine::CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
       std::vector<CommitId>* references) = 0;
 
+  // Checks whether this object is deletable. Returns |Status::CANCELED| if the object cannot be
+  // deleted, |Status::OK| if it can be deleted. Callers that intend to perform the deletion based
+  // on this information must track the deletion in the object identifier factory to ensure no new
+  // references are created. Returns the list of keys storing the sync status of this object in
+  // |object_status_keys|.
+  FXL_WARN_UNUSED_RESULT virtual Status EnsureObjectDeletable(
+      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+      std::vector<std::string>* object_status_keys) = 0;
+
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|
   // with their ids. The result is ordered by the timestamps given when calling

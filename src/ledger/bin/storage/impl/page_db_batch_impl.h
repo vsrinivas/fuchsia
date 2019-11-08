@@ -15,7 +15,7 @@ namespace storage {
 
 class PageDbBatchImpl : public PageDb::Batch {
  public:
-  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_db, Db* db,
+  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_db,
                            ObjectIdentifierFactory* factory);
   ~PageDbBatchImpl() override;
 
@@ -67,10 +67,6 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:
-  // Sets |result| to |true| if the object can be garbage collected.
-  Status IsGarbageCollectable(coroutine::CoroutineHandler* handler, const ObjectDigest& digest,
-                            PageDbObjectStatus object_status, bool* result);
-
   // Stops tracking all deletions for this batch and clears |pending_deletions_|.
   // Returns false if any of the pending deletions was aborted by the object identifier factory
   // tracking them.
@@ -80,7 +76,6 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   std::unique_ptr<Db::Batch> batch_;
   PageDb* const page_db_;
-  Db* const db_;
   ObjectIdentifierFactory* const factory_;
   // Object digests to be deleted when the batch is executed.
   std::set<ObjectDigest> pending_deletion_;

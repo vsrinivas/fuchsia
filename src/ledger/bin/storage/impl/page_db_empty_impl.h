@@ -48,6 +48,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetInboundCommitReferences(coroutine::CoroutineHandler* handler,
                                     const ObjectIdentifier& object_identifier,
                                     std::vector<CommitId>* references) override;
+  Status EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
+                               const ObjectDigest& object_digest,
+                               std::vector<std::string>* object_status_keys) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
                          std::string* value) override;
 

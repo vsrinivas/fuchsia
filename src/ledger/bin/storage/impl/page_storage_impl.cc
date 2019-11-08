@@ -500,6 +500,10 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
     FXL_VLOG(2) << "Object is inline, cannot be deleted: " << object_digest;
     return Status::INTERNAL_NOT_FOUND;
   }
+  if (object_identifier_factory_.count(object_digest) != 0) {
+    // A reference to this object has been created since garbage collection has been scheduled.
+    return Status::CANCELED;
+  }
   if (!pending_garbage_collection_.insert(object_digest).second) {
     // Delete object is already in progress.
     return Status::CANCELED;
@@ -508,6 +512,15 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
       fit::defer(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
         pending_garbage_collection_.erase(object_digest);
       }));
+  if (environment_->gc_policy() == GarbageCollectionPolicy::EAGER_LIVE_REFERENCES) {
+    // With the eager GC policy we expect most GC attempts to be unsuccessful.  Failed GC attempts
+    // are costly: we need to load the references, but end up not using them. This also creates a
+    // lot of short-lived object identifiers that will themselves trigger a failed collection (since
+    // they are referenced by the object we just failed to delete).
+    // Avoid this by checking that the object is deletable before doing anything.
+    std::vector<std::string> object_status_keys;
+    RETURN_ON_ERROR(db_->EnsureObjectDeletable(handler, object_digest, &object_status_keys));
+  }
   // Collect outbound references from the deleted object. Scope ancillary variables to avoid
   // live references to the object when calling |PageDb::DeleteObject| below, which would
   // abort the deletion.
