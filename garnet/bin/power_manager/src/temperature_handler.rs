@@ -24,7 +24,8 @@ use std::rc::Rc;
 ///
 /// Sends Messages: N/A
 ///
-/// FIDL: fidl_fuchsia_hardware_thermal
+/// FIDL dependencies:
+///     - fidl_fuchsia_hardware_thermal: used by this node to query the thermal driver.
 
 pub struct TemperatureHandler {
     drivers: RefCell<HashMap<String, fthermal::DeviceProxy>>,
@@ -112,6 +113,8 @@ mod tests {
         });
     }
 
+    /// Tests that the node can handle the 'ReadTemperature' message as expected. The test
+    /// checks for the expected temperature value which is returned by the fake thermal driver.
     #[fasync::run_singlethreaded(test)]
     async fn test_read_temperature() {
         let test_temperature = 12.34;
@@ -138,6 +141,8 @@ mod tests {
         }
     }
 
+    /// Tests that an invalid argument to the 'ReadTemperature' message is handled gracefully
+    /// and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_read_temperature_bad_arg() {
         let thermal_driver = "";
@@ -147,10 +152,11 @@ mod tests {
         assert!(result.is_err());
     }
 
+    /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
         let node = TemperatureHandler::new();
-        let message = Message::GetCpuIdlePct;
+        let message = Message::GetTotalCpuLoad;
         let result = node.handle_message(&message).await;
         assert!(result.is_err());
     }

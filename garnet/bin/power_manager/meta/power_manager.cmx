@@ -9,7 +9,8 @@
         ],
         "services": [
             "fuchsia.ui.activity.Provider",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.kernel.Stats"
         ]
     }
 }

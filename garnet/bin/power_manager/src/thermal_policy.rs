@@ -23,7 +23,7 @@ use std::rc::Rc;
 ///     - ReadTemperature
 ///     - GetCpuIdlePct
 ///
-/// FIDL: N/A
+/// FIDL dependencies: N/A
 
 #[allow(dead_code)]
 pub struct ThermalPolicy {
@@ -44,8 +44,10 @@ impl ThermalPolicy {
         temperature_node: Rc<dyn Node>,
         cpu_stats_node: Rc<dyn Node>,
         cpu_control_node: Rc<dyn Node>,
-    ) -> Rc<Self> {
-        Rc::new(Self { config, temperature_node, cpu_stats_node, cpu_control_node })
+    ) -> Result<Rc<Self>, Error> {
+        let node = Rc::new(Self { config, temperature_node, cpu_stats_node, cpu_control_node });
+        node.clone().setup_poll_timer()?;
+        Ok(node)
     }
 
     fn setup_poll_timer(self: Rc<Self>) -> Result<(), Error> {
@@ -69,7 +71,7 @@ impl ThermalPolicy {
         let get_temperature_future =
             self.send_message(&self.temperature_node, &get_temperature_message);
 
-        let get_cpu_load_message = Message::GetCpuIdlePct;
+        let get_cpu_load_message = Message::GetTotalCpuLoad;
         let get_cpu_load_future = self.send_message(&self.cpu_stats_node, &get_cpu_load_message);
 
         let (temperature, load) = join(get_temperature_future, get_cpu_load_future).await;
@@ -81,9 +83,9 @@ impl ThermalPolicy {
         };
 
         let load = match load {
-            Ok(MessageReturn::GetCpuIdlePct(l)) => l,
-            Ok(r) => Err(format_err!("GetCpuIdlePct had unexpected return value: {:?}", r))?,
-            Err(e) => Err(format_err!("GetCpuIdlePct failed: {:?}", e))?,
+            Ok(MessageReturn::GetTotalCpuLoad(l)) => l,
+            Ok(r) => Err(format_err!("GetTotalCpuLoad had unexpected return value: {:?}", r))?,
+            Err(e) => Err(format_err!("GetTotalCpuLoad failed: {:?}", e))?,
         };
 
         fx_log_info!("temperature={}; load={}", temperature.0, load);
@@ -96,11 +98,6 @@ impl ThermalPolicy {
 impl Node for ThermalPolicy {
     fn name(&self) -> &'static str {
         "ThermalPolicy"
-    }
-
-    fn init(self: Rc<Self>) -> Result<(), Error> {
-        self.setup_poll_timer()?;
-        Ok(())
     }
 
     async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error> {

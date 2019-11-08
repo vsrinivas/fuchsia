@@ -17,16 +17,6 @@ pub trait Node {
     /// The name may be used for logging and/or debugging purposes.
     fn name(&self) -> &'static str;
 
-    /// Perform any init tasks that the node requires
-    ///
-    /// For many nodes, this is the appropriate place to query data
-    /// from other nodes, setup a periodic timer, register as a listener
-    /// to an external service, etc. The default implementation means
-    /// a node may choose not to implement this function.
-    fn init(self: Rc<Self>) -> Result<(), Error> {
-        Ok(())
-    }
-
     /// Handle a new message
     ///
     /// All nodes must implement this message to support communication between nodes. This

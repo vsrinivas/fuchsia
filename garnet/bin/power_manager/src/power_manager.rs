@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use failure::{format_err, Error, ResultExt};
+use failure::{format_err, Error};
 use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
 
@@ -29,10 +29,7 @@ impl PowerManager {
             _ => Err(format_err!("Invalid target: {}", self.board)),
         }?;
 
-        for node in self.nodes.iter() {
-            node.clone().init().context(format!("init failed for {}", node.name()))?;
-            fx_log_info!("Added node: {}", node.name());
-        }
+        self.nodes.iter().for_each(|n| fx_log_info!("Added node: {}", n.name()));
 
         fx_log_info!("init complete");
 
@@ -43,7 +40,7 @@ impl PowerManager {
         let temperature = temperature_handler::TemperatureHandler::new();
         self.nodes.push(temperature.clone());
 
-        let stats = cpu_stats_handler::CpuStatsHandler::new();
+        let stats = cpu_stats_handler::CpuStatsHandler::new()?;
         self.nodes.push(stats.clone());
 
         let control = cpu_control_handler::CpuControlHandler::new();
@@ -54,7 +51,7 @@ impl PowerManager {
             poll_interval_ms: 1000,
         };
         let thermal =
-            thermal_policy::ThermalPolicy::new(thermal_config, temperature, stats, control);
+            thermal_policy::ThermalPolicy::new(thermal_config, temperature, stats, control)?;
         self.nodes.push(thermal);
 
         Ok(())

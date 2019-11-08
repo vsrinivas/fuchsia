@@ -6,14 +6,22 @@ use crate::types::Celsius;
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum Message<'a> {
-    /// Purpose: read the temperature from a given temperature driver
-    /// Arg: string specifying the complete driver path to read
+    /// Read the temperature from a given temperature driver
+    /// Arg: a string specifying the complete driver path to read
     ReadTemperature(&'a str),
 
-    /// Purpose: get the CPU % idle
-    /// TODO(pshickel): may want to add an argument to specify a time duration
-    GetCpuIdlePct,
+    /// Get the number of CPUs in the system
+    GetNumCpus,
+
+    /// Get the total CPU load which is the sum of the load of all CPUs in the system. Per-CPU load
+    /// is reported as a value between 0.0 - 1.0 and is calculated by dividing the total time a
+    /// CPU spent not idle during a duration by the total time elapsed during the same duration,
+    /// where the duration is defined as the time since the previous GetTotalCpuLoad call. The
+    /// first call returns a load of 0.0 because the time duration required to calculate load is
+    /// undefined without a second call.
+    GetTotalCpuLoad,
 }
 
 /// Defines the return values for each of the Message types from above
@@ -23,6 +31,10 @@ pub enum MessageReturn {
     /// Arg: temperature in Celsius
     ReadTemperature(Celsius),
 
-    /// Arg: percent of time CPU was idle
-    GetCpuIdlePct(u32),
+    /// Arg: the number of CPUs in the system
+    GetNumCpus(u32),
+
+    /// Arg: the sum of the load from all CPUs in the system. The value is defined as
+    /// 0.0 - [number_cpus]. The first call will return a load of 0.0.
+    GetTotalCpuLoad(f32),
 }

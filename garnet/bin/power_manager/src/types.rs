@@ -9,3 +9,6 @@
 /// A newtype struct to represent degrees Celsius implemented by an underlying f32
 #[derive(Debug)]
 pub struct Celsius(pub f32);
+
+#[derive(Default)]
+pub struct Nanoseconds(pub i64);

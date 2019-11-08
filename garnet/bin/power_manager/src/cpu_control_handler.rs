@@ -16,7 +16,7 @@ use std::rc::Rc;
 ///
 /// Sends Messages: WIP
 ///
-/// FIDL: WIP
+/// FIDL dependencies: WIP
 
 pub struct CpuControlHandler;
 
