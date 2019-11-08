@@ -21,6 +21,7 @@ static_library("line_input") {
     deps += [
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty_c",
     ]
   }
 }

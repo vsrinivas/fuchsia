@@ -10,6 +10,7 @@
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #else
 #include <sys/ioctl.h>
 #include <termios.h>
