@@ -55,7 +55,7 @@ zx_driver("platform-bus-x86") {
     "acpi-dev/dev-lid.cc",
     "acpi-dev/dev-lid.h",
     "acpi-dev/dev-pwrbtn.cc",
-    "acpi-dev/dev-pwrsrc.c",
+    "acpi-dev/dev-pwrsrc.cc",
     "acpi-dev/dev-tbmc.cc",
     "acpi-dev/dev-thermal.c",
     "acpi-nswalk.c",
@@ -172,7 +172,8 @@ zx_test("x86-pwrsrc-test") {
   output_name = "x86-pwrsrc-test"
   test_group = "ddk"
   sources = [
-    "acpi-dev/dev-pwrsrc-test.c",
+    "acpi-dev/dev-pwrsrc-test.cc",
+    "acpi-dev/dev-pwrsrc.cc",
   ]
   configs += [ ":config" ]
   deps = [

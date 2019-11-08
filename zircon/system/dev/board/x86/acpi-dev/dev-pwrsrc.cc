@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dev-pwrsrc.h"
+
 #include <fuchsia/hardware/power/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,26 +21,9 @@
 #include "errors.h"
 #include "power.h"
 
-// function pointer for testability, used to mock out AcpiEvaluateObject where necessary
-typedef ACPI_STATUS (*AcpiObjectEvalFunc)(ACPI_HANDLE, char*, ACPI_OBJECT_LIST*, ACPI_BUFFER*);
+namespace acpi_pwrsrc {
 
-typedef struct acpi_pwrsrc_device {
-  zx_device_t* zxdev;
-
-  ACPI_HANDLE acpi_handle;
-
-  // event to notify on
-  zx_handle_t event;
-
-  power_info_t info;
-
-  mtx_t lock;
-
-  AcpiObjectEvalFunc acpi_eval;
-
-} acpi_pwrsrc_device_t;
-
-static zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
+zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
   ACPI_OBJECT obj = {
       .Type = ACPI_TYPE_INTEGER,
   };
@@ -65,7 +50,7 @@ static zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
 }
 
 static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
-  acpi_pwrsrc_device_t* dev = ctx;
+  acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
   zxlogf(TRACE, "acpi-pwrsrc: notify got event 0x%x\n", value);
 
   // TODO(fxbug.dev/37719): there seems to exist an ordering problem in
@@ -78,7 +63,7 @@ static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
 }
 
 static void acpi_pwrsrc_release(void* ctx) {
-  acpi_pwrsrc_device_t* dev = ctx;
+  acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
   AcpiRemoveNotifyHandler(dev->acpi_handle, ACPI_DEVICE_NOTIFY, acpi_pwrsrc_notify);
   if (dev->event != ZX_HANDLE_INVALID) {
     zx_handle_close(dev->event);
@@ -87,12 +72,12 @@ static void acpi_pwrsrc_release(void* ctx) {
 }
 
 zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
-  acpi_pwrsrc_device_t* dev = ctx;
+  acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
   struct fuchsia_hardware_power_SourceInfo info;
 
   mtx_lock(&dev->lock);
-  info.state = dev->info.state;
-  info.type = dev->info.type;
+  info.state = static_cast<uint8_t>(dev->info.state);
+  info.type = static_cast<fuchsia_hardware_power_PowerType>(dev->info.type);
   mtx_unlock(&dev->lock);
 
   // reading state clears the signal
@@ -101,7 +86,7 @@ zx_status_t fidl_pwrsrc_get_power_info(void* ctx, fidl_txn_t* txn) {
 }
 
 zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
-  acpi_pwrsrc_device_t* dev = ctx;
+  acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
   zx_handle_t out_handle;
   zx_rights_t rights = ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER;
   zx_status_t status = zx_handle_duplicate(dev->event, rights, &out_handle);
@@ -113,27 +98,34 @@ zx_status_t fidl_pwrsrc_get_state_change_event(void* ctx, fidl_txn_t* txn) {
   return fuchsia_hardware_power_SourceGetStateChangeEvent_reply(txn, status, out_handle);
 }
 
-static fuchsia_hardware_power_Source_ops_t fidl_ops = {
-    .GetPowerInfo = fidl_pwrsrc_get_power_info,
-    .GetStateChangeEvent = fidl_pwrsrc_get_state_change_event,
-};
+static fuchsia_hardware_power_Source_ops_t fidl_ops = []() {
+  fuchsia_hardware_power_Source_ops_t ops = {};
+  ops.GetPowerInfo = fidl_pwrsrc_get_power_info;
+  ops.GetStateChangeEvent = fidl_pwrsrc_get_state_change_event;
+  return ops;
+}();
 
 static zx_status_t fuchsia_hardware_power_message_instance(void* ctx, fidl_msg_t* msg,
                                                            fidl_txn_t* txn) {
   return fuchsia_hardware_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
-static zx_protocol_device_t acpi_pwrsrc_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .message = fuchsia_hardware_power_message_instance,
-    .release = acpi_pwrsrc_release,
-};
+static zx_protocol_device_t acpi_pwrsrc_device_proto = []() {
+  zx_protocol_device_t ops;
+  ops.version = DEVICE_OPS_VERSION;
+  ops.release = acpi_pwrsrc_release;
+  ops.message = fuchsia_hardware_power_message_instance;
+  return ops;
+}();
+
+}  // namespace acpi_pwrsrc
 
 zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   // driver trace logging can be enabled for debug as needed
   // driver_set_log_flags(driver_get_log_flags() | DDK_LOG_TRACE);
 
-  acpi_pwrsrc_device_t* dev = calloc(1, sizeof(acpi_pwrsrc_device_t));
+  acpi_pwrsrc::acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc::acpi_pwrsrc_device_t*>(
+      calloc(1, sizeof(acpi_pwrsrc::acpi_pwrsrc_device_t)));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -152,8 +144,8 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   // use real AcpiEvaluateObject
   dev->acpi_eval = &AcpiEvaluateObject;
 
-  ACPI_STATUS acpi_status =
-      AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY, acpi_pwrsrc_notify, dev);
+  ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
+                                                     acpi_pwrsrc::acpi_pwrsrc_notify, dev);
 
   call_PSR(dev);
 
@@ -163,13 +155,15 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     return acpi_to_zx_status(acpi_status);
   }
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "acpi-pwrsrc",
-      .ctx = dev,
-      .ops = &acpi_pwrsrc_device_proto,
-      .proto_id = ZX_PROTOCOL_POWER,
-  };
+  device_add_args_t args = [&]() {
+    device_add_args_t args;
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "acpi-pwrsrc";
+    args.ctx = dev;
+    args.ops = &acpi_pwrsrc::acpi_pwrsrc_device_proto;
+    args.proto_id = ZX_PROTOCOL_POWER;
+    return args;
+  }();
 
   status = device_add(parent, &args, &dev->zxdev);
   if (status != ZX_OK) {

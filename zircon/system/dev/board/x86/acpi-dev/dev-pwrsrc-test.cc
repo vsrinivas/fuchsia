@@ -1,21 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "dev-pwrsrc.c"
+
+#include "dev-pwrsrc.h"
 
 #include <dirent.h>
 #include <zircon/syscalls/port.h>
 
+#include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
 #define SIGNAL_WAIT_TIMEOUT (5000u)
+
+namespace acpi_pwrsrc {
 
 acpi_pwrsrc_device_t* dev;
 
 ACPI_STATUS AcpiFakeEvaluatePsrOnline(ACPI_HANDLE handle, char* key, ACPI_OBJECT_LIST* args,
                                       ACPI_BUFFER* buffer) {
   if (strcmp("_PSR", key) == 0) {  // device power source state
-    ACPI_OBJECT* obj = buffer->Pointer;
+    ACPI_OBJECT* obj = static_cast<ACPI_OBJECT*>(buffer->Pointer);
     EXPECT_NOT_NULL(obj);
     obj->Integer.Value = POWER_STATE_ONLINE;
   } else {
@@ -25,7 +30,7 @@ ACPI_STATUS AcpiFakeEvaluatePsrOnline(ACPI_HANDLE handle, char* key, ACPI_OBJECT
 }
 
 void create_pwrsrc_device(void) {
-  dev = calloc(1, sizeof(acpi_pwrsrc_device_t));
+  dev = static_cast<acpi_pwrsrc_device_t*>(calloc(1, sizeof(acpi_pwrsrc_device_t)));
   EXPECT_NOT_NULL(dev, "Failed to allocate memory for pwrsrc device");
 
   dev->acpi_handle = NULL;
@@ -88,6 +93,8 @@ TEST(TestCase, TestNoSignalOnPsrStateUnchanged) {
   verify_psr_state_signal(false);
   teardown();
 }
+
+}  // namespace acpi_pwrsrc
 
 // required stubs for faking ddk
 zx_driver_rec_t __zircon_driver_rec__ = {};
