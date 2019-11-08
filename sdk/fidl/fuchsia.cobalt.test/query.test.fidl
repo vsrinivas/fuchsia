@@ -38,7 +38,11 @@ protocol LoggerQuerier {
     ///
     /// Returns an error if a Logger for the given `project_name` has not been
     /// created through a request to the LoggerFactory protocol.
-    QueryLogger(string:64 project_name, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more) error QueryError;
+    ///
+    /// Repeated calls to WatchLogs for a given LogMethod will block until new
+    /// events are logged with that method, enabling tests to synchronize
+    /// without sleeps or timeouts.
+    WatchLogs(string:64 project_name, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more) error QueryError;
 
     /// Clear all logged events by logging `method` for the logger with the
     /// given `project_name`.

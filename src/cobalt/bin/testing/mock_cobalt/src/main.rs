@@ -17,22 +17,48 @@ use {
 /// MAX_QUERY_LENGTH is used as a usize in this component
 const MAX_QUERY_LENGTH: usize = cobalt_test::MAX_QUERY_LENGTH as usize;
 
+struct LogState {
+    log: Vec<CobaltEvent>,
+    hanging: Vec<HangingGetState>,
+}
+
 #[derive(Default)]
 // Does not record StartTimer, EndTimer, and LogCustomEvent requests
 struct EventsLog {
-    log_event: Vec<CobaltEvent>,
-    log_event_count: Vec<CobaltEvent>,
-    log_elapsed_time: Vec<CobaltEvent>,
-    log_frame_rate: Vec<CobaltEvent>,
-    log_memory_usage: Vec<CobaltEvent>,
-    log_string: Vec<CobaltEvent>,
-    log_int_histogram: Vec<CobaltEvent>,
-    log_cobalt_event: Vec<CobaltEvent>,
-    log_cobalt_events: Vec<CobaltEvent>,
+    log_event: LogState,
+    log_event_count: LogState,
+    log_elapsed_time: LogState,
+    log_frame_rate: LogState,
+    log_memory_usage: LogState,
+    log_string: LogState,
+    log_int_histogram: LogState,
+    log_cobalt_event: LogState,
+    log_cobalt_events: LogState,
 }
 
+impl Default for LogState {
+    fn default() -> LogState {
+        LogState { log: vec![], hanging: vec![] }
+    }
+}
+
+struct HangingGetState {
+    // last_observed is concurrently mutated by calls to run_cobalt_query_service (one for each client
+    // of fuchsia.cobalt.test.LoggerQuerier) and calls to handle_cobalt_logger (one for each client
+    // of fuchsia.cobalt.Logger).
+    last_observed: Arc<Mutex<usize>>,
+    responder: fidl_fuchsia_cobalt_test::LoggerQuerierWatchLogsResponder,
+}
+
+// The LogState#log vectors in EventsLog are mutated by handle_cobalt_logger and
+// concurrently observed by run_cobalt_query_service.
+//
+// The LogState#hanging vectors in EventsLog are concurrently mutated by run_cobalt_query_service
+// (new values pushed) and handle_cobalt_logger (new values popped).
 type EventsLogHandle = Arc<Mutex<EventsLog>>;
 
+// Entries in the HashMap are concurrently added by run_cobalt_service and
+// looked up by run_cobalt_query_service.
 type LoggersHandle = Arc<Mutex<HashMap<String, EventsLogHandle>>>;
 
 /// Create a new Logger. Accepts all `project_name` values.
@@ -44,12 +70,8 @@ async fn run_cobalt_service(
         if let CreateLoggerFromProjectName { project_name, logger, responder, release_stage: _ } =
             event
         {
-            let log = loggers
-                .lock()
-                .await
-                .entry(project_name)
-                .or_insert_with(EventsLogHandle::default)
-                .clone();
+            let log =
+                loggers.lock().await.entry(project_name).or_insert_with(Default::default).clone();
             fasync::spawn_local(handle_cobalt_logger(logger.into_stream()?, log));
             responder.send(cobalt::Status::Ok)?;
         } else {
@@ -67,11 +89,14 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
     use cobalt::LoggerRequest::*;
     while let Some(Ok(event)) = stream.next().await {
         let mut log = log.lock().await;
-        match event {
+        let log_state = match event {
             LogEvent { metric_id, event_code, responder } => {
-                log.log_event
+                let state = &mut log.log_event;
+                state
+                    .log
                     .push(CobaltEvent::builder(metric_id).with_event_code(event_code).as_event());
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogEventCount {
                 metric_id,
@@ -81,63 +106,87 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 count,
                 responder,
             } => {
-                log.log_event_count.push(
+                let state = &mut log.log_event_count;
+                state.log.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
                         .as_count_event(period_duration_micros, count),
                 );
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogElapsedTime { metric_id, event_code, component, elapsed_micros, responder } => {
-                log.log_elapsed_time.push(
+                let state = &mut log.log_elapsed_time;
+                state.log.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
                         .as_elapsed_time(elapsed_micros),
                 );
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogFrameRate { metric_id, event_code, component, fps, responder } => {
-                log.log_frame_rate.push(
+                let state = &mut log.log_frame_rate;
+                state.log.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
                         .as_frame_rate(fps),
                 );
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogMemoryUsage { metric_id, event_code, component, bytes, responder } => {
-                log.log_memory_usage.push(
+                let state = &mut log.log_memory_usage;
+                state.log.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
                         .as_memory_usage(bytes),
                 );
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogString { metric_id, s, responder } => {
-                log.log_string.push(CobaltEvent::builder(metric_id).as_string_event(s));
+                let state = &mut log.log_string;
+                state.log.push(CobaltEvent::builder(metric_id).as_string_event(s));
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
-                log.log_int_histogram.push(
+                let state = &mut log.log_int_histogram;
+                state.log.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
                         .as_int_histogram(histogram),
                 );
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogCobaltEvent { event, responder } => {
-                log.log_cobalt_event.push(event);
+                let state = &mut log.log_cobalt_event;
+                state.log.push(event);
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             LogCobaltEvents { mut events, responder } => {
-                log.log_cobalt_events.append(&mut events);
+                let state = &mut log.log_cobalt_events;
+                state.log.append(&mut events);
                 let _ = responder.send(cobalt::Status::Ok);
+                state
             }
             e => unimplemented!("Event {:?} is not supported by the mock cobalt server", e),
+        };
+
+        while let Some(hanging_get_state) = log_state.hanging.pop() {
+            let mut last_observed = hanging_get_state.last_observed.lock().await;
+            *last_observed = log_state.log.len();
+            let events =
+                (&mut log_state.log).iter().take(MAX_QUERY_LENGTH).map(Clone::clone).collect();
+            let _ = hanging_get_state.responder.send(&mut Ok((events, false)));
         }
     }
 }
@@ -147,27 +196,48 @@ async fn run_cobalt_query_service(
     mut stream: cobalt_test::LoggerQuerierRequestStream,
     loggers: LoggersHandle,
 ) -> Result<(), Error> {
+    let mut client_state: HashMap<
+        String,
+        HashMap<fidl_fuchsia_cobalt_test::LogMethod, Arc<Mutex<usize>>>,
+    > = HashMap::new();
     use cobalt_test::LogMethod::*;
 
     while let Some(event) = stream.try_next().await? {
         match event {
-            cobalt_test::LoggerQuerierRequest::QueryLogger { project_name, method, responder } => {
-                if let Some(log) = loggers.lock().await.get(&project_name) {
-                    let mut log = log.lock().await;
-                    let events = match method {
-                        LogEvent => &mut log.log_event,
-                        LogEventCount => &mut log.log_event_count,
-                        LogElapsedTime => &mut log.log_elapsed_time,
-                        LogFrameRate => &mut log.log_frame_rate,
-                        LogMemoryUsage => &mut log.log_memory_usage,
-                        LogString => &mut log.log_string,
-                        LogIntHistogram => &mut log.log_int_histogram,
-                        LogCobaltEvent => &mut log.log_cobalt_event,
-                        LogCobaltEvents => &mut log.log_cobalt_events,
+            cobalt_test::LoggerQuerierRequest::WatchLogs { project_name, method, responder } => {
+                if let Some(state) = loggers.lock().await.get(&project_name) {
+                    let mut state = state.lock().await;
+                    let log_state = match method {
+                        LogEvent => &mut state.log_event,
+                        LogEventCount => &mut state.log_event_count,
+                        LogElapsedTime => &mut state.log_elapsed_time,
+                        LogFrameRate => &mut state.log_frame_rate,
+                        LogMemoryUsage => &mut state.log_memory_usage,
+                        LogString => &mut state.log_string,
+                        LogIntHistogram => &mut state.log_int_histogram,
+                        LogCobaltEvent => &mut state.log_cobalt_event,
+                        LogCobaltEvents => &mut state.log_cobalt_events,
                     };
-                    let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
-                    let events = events.iter().take(MAX_QUERY_LENGTH).map(Clone::clone).collect();
-                    responder.send(&mut Ok((events, more)))?;
+                    let last_observed = client_state
+                        .entry(project_name)
+                        .or_insert_with(Default::default)
+                        .entry(method)
+                        .or_insert_with(Default::default);
+                    let mut last_observed_len = last_observed.lock().await;
+                    let current_len = log_state.log.len();
+                    if current_len != *last_observed_len {
+                        *last_observed_len = current_len;
+                        let events = &mut log_state.log;
+                        let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
+                        let events =
+                            events.iter().take(MAX_QUERY_LENGTH).map(Clone::clone).collect();
+                        responder.send(&mut Ok((events, more)))?;
+                    } else {
+                        log_state.hanging.push(HangingGetState {
+                            responder: responder,
+                            last_observed: last_observed.clone(),
+                        });
+                    }
                 } else {
                     responder.send(&mut Err(cobalt_test::QueryError::LoggerNotFound))?;
                 }
@@ -178,17 +248,17 @@ async fn run_cobalt_query_service(
                 control_handle: _,
             } => {
                 if let Some(log) = loggers.lock().await.get(&project_name) {
-                    let mut log = log.lock().await;
+                    let mut state = log.lock().await;
                     match method {
-                        LogEvent => log.log_event.clear(),
-                        LogEventCount => log.log_event_count.clear(),
-                        LogElapsedTime => log.log_elapsed_time.clear(),
-                        LogFrameRate => log.log_frame_rate.clear(),
-                        LogMemoryUsage => log.log_memory_usage.clear(),
-                        LogString => log.log_string.clear(),
-                        LogIntHistogram => log.log_int_histogram.clear(),
-                        LogCobaltEvent => log.log_cobalt_event.clear(),
-                        LogCobaltEvents => log.log_cobalt_events.clear(),
+                        LogEvent => state.log_event.log.clear(),
+                        LogEventCount => state.log_event_count.log.clear(),
+                        LogElapsedTime => state.log_elapsed_time.log.clear(),
+                        LogFrameRate => state.log_frame_rate.log.clear(),
+                        LogMemoryUsage => state.log_memory_usage.log.clear(),
+                        LogString => state.log_string.log.clear(),
+                        LogIntHistogram => state.log_int_histogram.log.clear(),
+                        LogCobaltEvent => state.log_cobalt_event.log.clear(),
+                        LogCobaltEvents => state.log_cobalt_events.log.clear(),
                     }
                 }
             }
@@ -283,7 +353,7 @@ mod tests {
         assert_eq!(
             Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
-                .query_logger("foo", LogMethod::LogEvent)
+                .watch_logs("foo", LogMethod::LogEvent)
                 .await
                 .expect("log_event fidl call to succeed")
         );
@@ -320,9 +390,9 @@ mod tests {
                 .expect("repeated log_event fidl call to succeed");
         }
         let (events, more) = querier_proxy
-            .query_logger("foo", LogMethod::LogEvent)
+            .watch_logs("foo", LogMethod::LogEvent)
             .await
-            .expect("query_logger fidl call to succeed")
+            .expect("watch_logs fidl call to succeed")
             .expect("logger to exist and have recorded events");
         assert_eq!(CobaltEvent::builder(0).with_event_code(1).as_event(), events[0]);
         assert_eq!(MAX_QUERY_LENGTH, events.len());
@@ -345,9 +415,9 @@ mod tests {
         assert_eq!(
             Err(QueryError::LoggerNotFound),
             querier_proxy
-                .query_logger("foo", LogMethod::LogEvent)
+                .watch_logs("foo", LogMethod::LogEvent)
                 .await
-                .expect("query_logger fidl call to succeed")
+                .expect("watch_logs fidl call to succeed")
         );
     }
 
@@ -399,15 +469,15 @@ mod tests {
         logger_proxy.log_cobalt_events(&mut vec![].into_iter()).await?;
         let log = loggers.lock().await;
         let log = log.get(project_name).expect("project should have been created");
-        let log = log.lock().await;
-        assert_eq!(log.log_event.len(), 1);
-        assert_eq!(log.log_event_count.len(), 1);
-        assert_eq!(log.log_elapsed_time.len(), 1);
-        assert_eq!(log.log_memory_usage.len(), 1);
-        assert_eq!(log.log_frame_rate.len(), 1);
-        assert_eq!(log.log_string.len(), 1);
-        assert_eq!(log.log_int_histogram.len(), 1);
-        assert_eq!(log.log_cobalt_event.len(), 1);
+        let state = log.lock().await;
+        assert_eq!(state.log_event.log.len(), 1);
+        assert_eq!(state.log_event_count.log.len(), 1);
+        assert_eq!(state.log_elapsed_time.log.len(), 1);
+        assert_eq!(state.log_memory_usage.log.len(), 1);
+        assert_eq!(state.log_frame_rate.log.len(), 1);
+        assert_eq!(state.log_string.log.len(), 1);
+        assert_eq!(state.log_int_histogram.log.len(), 1);
+        assert_eq!(state.log_cobalt_event.log.len(), 1);
         Ok(())
     }
 
@@ -438,7 +508,7 @@ mod tests {
         assert_eq!(
             Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
-                .query_logger("foo", LogMethod::LogEvent)
+                .watch_logs("foo", LogMethod::LogEvent)
                 .await
                 .expect("log_event fidl call to succeed")
         );
@@ -451,9 +521,102 @@ mod tests {
         assert_eq!(
             Ok((vec![], false)),
             querier_proxy
-                .query_logger("foo", LogMethod::LogEvent)
+                .watch_logs("foo", LogMethod::LogEvent)
                 .await
-                .expect("query_logger fidl call to succeed")
+                .expect("watch_logs fidl call to succeed")
         );
+    }
+
+    #[test]
+    fn mock_query_interface_hanging_get() {
+        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let loggers = LoggersHandle::default();
+
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (logger_proxy, logger_proxy_server_end) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+        let (querier_proxy, query_stream) = create_proxy_and_stream::<LoggerQuerierMarker>()
+            .expect("create logger querier proxy and stream to succeed");
+
+        let cobalt_service = run_cobalt_service(factory_stream, loggers.clone());
+        let cobalt_query_service = run_cobalt_query_service(query_stream, loggers.clone());
+
+        futures::pin_mut!(cobalt_service);
+        futures::pin_mut!(cobalt_query_service);
+
+        // Neither of these futures should ever return if there no errors, so the joined future
+        // will never return.
+        let services = futures::future::join(cobalt_service, cobalt_query_service);
+
+        let project_name = "foo";
+        let mut create_logger = futures::future::select(
+            services,
+            factory_proxy.create_logger_from_project_name(
+                project_name,
+                ReleaseStage::Ga,
+                logger_proxy_server_end,
+            ),
+        );
+        let create_logger_poll = executor.run_until_stalled(&mut create_logger);
+        assert!(create_logger_poll.is_ready());
+
+        let continuation = match create_logger_poll {
+            core::task::Poll::Pending => unreachable!("we asserted that create_logger_poll was ready"),
+            core::task::Poll::Ready(either) => match either {
+                futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with default formatter)"),
+                futures::future::Either::Right((create_logger_status, services_continuation)) => {
+                    assert_eq!(create_logger_status.expect("fidl call failed"), fidl_fuchsia_cobalt::Status::Ok);
+                    services_continuation
+                },
+            }
+        };
+
+        let watch_logs_hanging_get = querier_proxy.watch_logs(project_name, LogMethod::LogEvent);
+        let mut watch_logs_hanging_get =
+            futures::future::select(continuation, watch_logs_hanging_get);
+        let watch_logs_poll = executor.run_until_stalled(&mut watch_logs_hanging_get);
+        assert!(watch_logs_poll.is_pending());
+
+        let event_metric_id = 1;
+        let event_code = 2;
+        let log_event = logger_proxy.log_event(event_metric_id, event_code);
+
+        let mut resolved_hanging_get = futures::future::join(watch_logs_hanging_get, log_event);
+        let resolved_hanging_get = executor.run_until_stalled(&mut resolved_hanging_get);
+        assert!(resolved_hanging_get.is_ready());
+
+        let mut continuation = match resolved_hanging_get {
+            core::task::Poll::Pending => {
+                unreachable!("we asserted that resolved_hanging_get was ready")
+            }
+            core::task::Poll::Ready((watch_logs_result, log_event_result)) => {
+                assert_eq!(
+                    log_event_result.expect("expected log event to succeed"),
+                    fidl_fuchsia_cobalt::Status::Ok
+                );
+
+                match watch_logs_result {
+                    futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with the default formatter)"),
+                    futures::future::Either::Right((
+                        cobalt_query_result,
+                        services_continuation,
+                    )) => {
+                        let (mut logged_events, more) = cobalt_query_result
+                            .expect("expect cobalt query FIDL call to succeed")
+                            .expect("expect cobalt query call to return success");
+                        assert_eq!(logged_events.len(), 1);
+                        let mut logged_event = logged_events.pop().unwrap();
+                        assert_eq!(logged_event.metric_id, event_metric_id);
+                        assert_eq!(logged_event.event_codes.len(), 1);
+                        assert_eq!(logged_event.event_codes.pop().unwrap(), event_code);
+                        assert_eq!(more, false);
+                        services_continuation
+                    }
+                }
+            }
+        };
+
+        assert!(executor.run_until_stalled(&mut continuation).is_pending());
     }
 }
