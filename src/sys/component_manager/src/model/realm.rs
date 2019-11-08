@@ -125,7 +125,7 @@ impl Realm {
 
         let mut state = self.lock_state().await;
         let state = state.as_mut().expect("resolve_meta_dir: not resolved");
-        state.set_meta_dir(meta_dir.clone());
+        state.meta_dir = Some(meta_dir.clone());
         Ok(Some(meta_dir))
     }
 
@@ -446,11 +446,6 @@ impl RealmState {
     /// Removes a child realm.
     pub fn remove_child_realm(&mut self, moniker: &ChildMoniker) {
         self.child_realms.remove(moniker);
-    }
-
-    /// Populates `meta_dir`.
-    pub fn set_meta_dir(&mut self, meta_dir: Arc<DirectoryProxy>) {
-        self.meta_dir = Some(meta_dir);
     }
 
     /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,
