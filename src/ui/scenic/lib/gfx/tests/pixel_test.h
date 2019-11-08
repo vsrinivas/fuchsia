@@ -82,7 +82,7 @@ class PixelTest : public sys::testing::TestWithEnvironment {
   scenic::Screenshot TakeScreenshot();
 
   // Gets a view token for presentation by |RootPresenter|. See also
-  // garnet/examples/ui/hello_base_view
+  // src/ui/examples/hello_base_view
   fuchsia::ui::views::ViewToken CreatePresentationViewToken();
 
   // Create a |ViewContext| that allows us to present a view via

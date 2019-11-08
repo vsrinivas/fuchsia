@@ -41,23 +41,23 @@ group("carnelian") {
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/examples/ui:bouncing_ball",
-    "//garnet/examples/ui:direct_input",
-    "//garnet/examples/ui:direct_input_child",
-    "//garnet/examples/ui:embedder",
-    "//garnet/examples/ui:pose_buffer_presenter",
-    "//garnet/examples/ui:scenic_dev_app",
-    "//garnet/examples/ui:shadertoy_client",
-    "//garnet/examples/ui:shadertoy_service",
-    "//garnet/examples/ui:simplest_app",
-    "//garnet/examples/ui:simplest_app",
-    "//garnet/examples/ui:simplest_embedder",
-    "//garnet/examples/ui:spinning_square_view",
-    "//garnet/examples/ui:standalone_app",
-    "//garnet/examples/ui:tile_view",
-    "//garnet/examples/ui:yuv_to_image_pipe",
     "//garnet/packages/prod:scenic",
     "//src/camera/examples/video_display",
+    "//src/ui/examples:bouncing_ball",
+    "//src/ui/examples:direct_input",
+    "//src/ui/examples:direct_input_child",
+    "//src/ui/examples:embedder",
+    "//src/ui/examples:pose_buffer_presenter",
+    "//src/ui/examples:scenic_dev_app",
+    "//src/ui/examples:shadertoy_client",
+    "//src/ui/examples:shadertoy_service",
+    "//src/ui/examples:simplest_app",
+    "//src/ui/examples:simplest_app",
+    "//src/ui/examples:simplest_embedder",
+    "//src/ui/examples:spinning_square_view",
+    "//src/ui/examples:standalone_app",
+    "//src/ui/examples:tile_view",
+    "//src/ui/examples:yuv_to_image_pipe",
   ]
 }
 

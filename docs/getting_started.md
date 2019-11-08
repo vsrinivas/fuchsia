@@ -232,7 +232,7 @@ Note: To select tabs, you may need to enter "console mode". See the next section
 
 Warning: QEMU does not support Vulkan and therefore cannot run our graphics stack. Commands in this section will not work on QEMU.
 
-Most graphical components in Fuchsia use the [Scenic](/garnet/bin/ui/) system
+Most graphical components in Fuchsia use the [Scenic](/src/ui/scenic/) system
 compositor. You can launch such components, commonly found in `/system/apps`,
 like this:
 
@@ -240,7 +240,7 @@ like this:
 present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
 ```
 
-Source code for Scenic example apps is [here](/garnet/examples/ui).
+Source code for Scenic example apps is [here](/src/ui/examples).
 
 When you launch something that uses Scenic, uses hardware-accelerated graphics, or if you build
 the [default](https://fuchsia.googlesource.com/topaz/+/master/packages) package (which will

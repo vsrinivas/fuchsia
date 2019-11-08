@@ -269,7 +269,7 @@ TODO(SCN-1228): Talk about synchronization.
 
 # Examples of using Scenic
 
-A simple example of using Scenic is the [bouncing ball](/garnet/examples/ui/bouncing_ball/README.md) app.
+A simple example of using Scenic is the [bouncing ball](/src/ui/examples/bouncing_ball/README.md) app.
 
 # API Guide
 
