@@ -63,6 +63,10 @@ readonly \
     LLCPP_TEST_PATH="${FUCHSIA_DIR}/garnet/public/lib/fidl/llcpp/conformance_test.cc"
 readonly \
     RUST_TEST_PATH="${FUCHSIA_DIR}/garnet/public/lib/fidl/rust/fidl_tests/src/conformance_test.rs"
+readonly \
+    TRANSFORMER_TABLES_PATH="${FUCHSIA_DIR}/zircon/system/utest/fidl/generated/transformer_conformance_tables.h"
+readonly \
+    TRANSFORMER_TEST_PATH="${FUCHSIA_DIR}/zircon/system/utest/fidl/transformer_conformance_tests.cc"
 
 readonly tmpbackup="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpbackup' )"
 readonly tmpout="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpout' )"
@@ -74,6 +78,8 @@ cp ${DART_DEFINITION_PATH} ${tmpbackup}/conformance_test_types.dart
 cp ${DART_TEST_PATH} ${tmpbackup}/conformance_test.dart
 cp ${LLCPP_TEST_PATH} ${tmpbackup}/llcpp_conformance_test.cc
 cp ${RUST_TEST_PATH} ${tmpbackup}/conformance_test.rs
+cp ${TRANSFORMER_TABLES_PATH} ${tmpbackup}/transformer_conformance_tables.h
+cp ${TRANSFORMER_TEST_PATH} ${tmpbackup}/transformer_conformance_tests.cc
 
 function cleanup {
     readonly EXIT_CODE=$?
@@ -85,6 +91,8 @@ function cleanup {
         cp ${tmpbackup}/conformance_test.dart ${DART_TEST_PATH}
         cp ${tmpbackup}/llcpp_conformance_test.cc ${LLCPP_TEST_PATH}
         cp ${tmpbackup}/conformance_test.rs ${RUST_TEST_PATH}
+        cp ${tmpbackup}/transformer_conformance_tables.h ${TRANSFORMER_TABLES_PATH}
+        cp ${tmpbackup}/transformer_conformance_tests.cc ${TRANSFORMER_TEST_PATH}
     fi
     rm -rf ${tmpout}
     rm -rf ${tmpbackup}
@@ -174,3 +182,24 @@ ${GIDL} \
     -json "${json_path}" \
     ${GIDL_SRCS} >> "${RUST_TEST_PATH}"
 fx format-code --files="$RUST_TEST_PATH"
+
+# Transformer
+# TODO(fxb/41049): Depend on a build target instead of generating the file here.
+${FIDLC} \
+  --tables ${tmpout}/transformer_conformance_tables.h \
+  --files ${EXAMPLE_DIR}/transformer.test.fidl
+TRANSFORMER_INCLUDE_GUARD="ZIRCON_SYSTEM_UTEST_FIDL_GENERATED_TRANSFORMER_CONFORMANCE_TABLES_H_"
+cat <<EOS > "${TRANSFORMER_TABLES_PATH}"
+$generated_source_header
+#ifndef $TRANSFORMER_INCLUDE_GUARD
+#define $TRANSFORMER_INCLUDE_GUARD
+EOS
+cat "${tmpout}/transformer_conformance_tables.h" >> "${TRANSFORMER_TABLES_PATH}"
+echo "#endif // $TRANSFORMER_INCLUDE_GUARD" >> "${TRANSFORMER_TABLES_PATH}"
+fx format-code --files="$TRANSFORMER_TABLES_PATH"
+echo "$generated_source_header" > "${TRANSFORMER_TEST_PATH}"
+${GIDL} \
+    -language transformer \
+    -json "${json_path}" \
+    ${EXAMPLE_DIR}/transformer.gidl >> "${TRANSFORMER_TEST_PATH}"
+fx format-code --files="$TRANSFORMER_TEST_PATH"

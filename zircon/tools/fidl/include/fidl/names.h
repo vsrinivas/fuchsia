@@ -52,7 +52,7 @@ std::string NameMembers(std::string_view name);
 std::string NameFields(std::string_view name);
 std::string NameFieldsAltField(std::string_view name, uint32_t field_num);
 
-std::string NameNullableXUnion(std::string_view name, const WireFormat wire_format);
+std::string NameNullableXUnion(std::string_view name);
 
 std::string NameCodedName(const flat::Name& name, const WireFormat wire_format);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability,

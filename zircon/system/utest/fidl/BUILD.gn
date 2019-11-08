@@ -58,6 +58,8 @@ if (is_fuchsia) {
       "formatting_tests.cc",
       "message_tests.cc",
       "run_with_handle_policy_tests.cc",
+      "transformer_conformance_tests.cc",
+      "transformer_conformance_utils.cc",
       "transformer_tests.cc",
       "validating_tests.cc",
     ]
@@ -71,7 +73,7 @@ if (is_fuchsia) {
 fidl_library("example") {
   visibility = [
     ":*",
-    "$zx/system/utest/fidl-simple:*"
+    "$zx/system/utest/fidl-simple:*",
   ]
   sources = [
     "transformer.test.fidl",

@@ -21,13 +21,14 @@ import (
 	gidlllcpp "gidl/llcpp"
 	gidlparser "gidl/parser"
 	gidlrust "gidl/rust"
+	gidltransformer "gidl/transformer"
 )
 
 // GIDLFlags for GIDL backends.
 //
 // --json <path>  path to the JSON IR
 // --gidl <path>  path to the GIDL file
-// --language (dart|go|cpp|llcpp|rust)  language to output
+// --language (dart|go|cpp|llcpp|rust|transformer)  language to output
 type GIDLFlags struct {
 	JSONPath *string
 	Language *string
@@ -124,6 +125,11 @@ func main() {
 		}
 	case "rust":
 		err := gidlrust.Generate(buf, gidl, fidl)
+		if err != nil {
+			panic(err)
+		}
+	case "transformer":
+		err := gidltransformer.Generate(buf, gidl, fidl)
 		if err != nil {
 			panic(err)
 		}
