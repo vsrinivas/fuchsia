@@ -43,6 +43,10 @@ import "C"
    diff --color --ignore-all-space --unified - src/connectivity/network/netstack/socket_conv.go
 */
 
+// DefaultTTL is linux's default TTL. All network protocols in all stacks used
+// with this package must have this value set as their default TTL.
+const DefaultTTL = 64
+
 const sizeOfInt32 int = 4
 
 func GetSockOpt(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
@@ -311,6 +315,19 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	switch name {
+	case C.IP_TTL:
+		var v tcpip.TTLOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		// Fill in default value, if needed.
+		if v == 0 {
+			v = DefaultTTL
+		}
+
+		return int32(v), nil
+
 	case C.IP_MULTICAST_TTL:
 		var v tcpip.MulticastTTLOption
 		if err := ep.GetSockOpt(&v); err != nil {
@@ -699,6 +716,19 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		// still allow setting TTL, and multicast-enable/disable type options.
 		return tcpip.ErrNotSupported
 
+	case C.IP_TTL:
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+		// -1 means default TTL.
+		if v == -1 {
+			v = 0
+		} else if v < 1 || v > 255 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		return ep.SetSockOpt(tcpip.TTLOption(v))
+
 	case C.IP_TOS:
 		if len(optVal) == 0 {
 			return nil
@@ -733,7 +763,6 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.IP_RECVTTL,
 		C.IP_RETOPTS,
 		C.IP_TRANSPARENT,
-		C.IP_TTL,
 		C.IP_UNBLOCK_SOURCE,
 		C.IP_UNICAST_IF,
 		C.IP_XFRM_POLICY,

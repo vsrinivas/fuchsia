@@ -193,6 +193,104 @@ class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
 };
 
 // The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
+TEST_P(SocketOptsTest, TtlDefault) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_sz = sizeof(get);
+  constexpr int kDefaultTTL = 64;
+  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get, &get_sz), 0) << strerror(errno);
+  EXPECT_EQ(get, kDefaultTTL);
+  EXPECT_EQ(get_sz, sizeof(get));
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetTtl) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get1 = -1;
+  socklen_t get1_sz = sizeof(get1);
+  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get1, &get1_sz), 0) << strerror(errno);
+  EXPECT_EQ(get1_sz, sizeof(get1));
+
+  int set = 100;
+  if (set == get1) {
+    set += 1;
+  }
+  socklen_t set_sz = sizeof(set);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), 0) << strerror(errno);
+
+  int get2 = -1;
+  socklen_t get2_sz = sizeof(get2);
+  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get2, &get2_sz), 0) << strerror(errno);
+  EXPECT_EQ(get2_sz, sizeof(get2));
+  EXPECT_EQ(get2, set);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, ResetTtlToDefault) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get1 = -1;
+  socklen_t get1_sz = sizeof(get1);
+  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get1, &get1_sz), 0) << strerror(errno);
+  EXPECT_EQ(get1_sz, sizeof(get1));
+
+  int set1 = 100;
+  if (set1 == get1) {
+    set1 += 1;
+  }
+  socklen_t set1_sz = sizeof(set1);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set1, set1_sz), 0) << strerror(errno);
+
+  int set2 = -1;
+  socklen_t set2_sz = sizeof(set2);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set2, set2_sz), 0) << strerror(errno);
+
+  int get2 = -1;
+  socklen_t get2_sz = sizeof(get2);
+  EXPECT_EQ(getsockopt(s.get(), IPPROTO_IP, IP_TTL, &get2, &get2_sz), 0) << strerror(errno);
+  EXPECT_EQ(get2_sz, sizeof(get2));
+  EXPECT_EQ(get2, get1);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, ZeroTtl) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 0;
+  socklen_t set_sz = sizeof(set);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
+  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, InvalidLargeTtl) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = 256;
+  socklen_t set_sz = sizeof(set);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
+  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, InvalidNegativeTtl) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int set = -2;
+  socklen_t set_sz = sizeof(set);
+  EXPECT_EQ(setsockopt(s.get(), IPPROTO_IP, IP_TTL, &set, set_sz), -1);
+  EXPECT_EQ(errno, EINVAL);
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
 TEST_P(SocketOptsTest, TOSDefault) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
