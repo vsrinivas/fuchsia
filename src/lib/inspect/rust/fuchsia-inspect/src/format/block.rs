@@ -360,8 +360,13 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
-        if self.block_type() != block_type {
-            bail!("Expected type {}, got type {}", block_type, self.block_type())
+        self.check_type_eq(self.read_header().block_type(), block_type)
+    }
+
+    fn check_type_eq(&self, actual: u8, expected: BlockType) -> Result<(), Error> {
+        let actual = BlockType::from_u8(actual).ok_or(format_err!("Invalid block type"))?;
+        if actual != expected {
+            bail!("Expected type {}, got type {}", expected, actual);
         } else {
             Ok(())
         }
@@ -492,19 +497,23 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
 
     /// Initializes a TOMBSTONE block.
     pub fn become_tombstone(&self) -> Result<(), Error> {
-        self.check_type(BlockType::NodeValue)?;
-        let mut header = self.read_header();
-        header.set_block_type(BlockType::Tombstone.to_u8().unwrap());
-        self.write_header(header);
+        let header = self.read_header();
+        self.check_type_eq(header.block_type(), BlockType::NodeValue)?;
+        let mut new_header = BlockHeader(0);
+        new_header.set_order(header.order());
+        new_header.set_block_type(BlockType::Tombstone.to_u8().unwrap());
+        self.write_header(new_header);
         Ok(())
     }
 
     /// Converts a FREE block to a RESERVED block
     pub fn become_reserved(&self) -> Result<(), Error> {
-        self.check_type(BlockType::Free)?;
-        let mut header = self.read_header();
-        header.set_block_type(BlockType::Reserved.to_u8().unwrap());
-        self.write_header(header);
+        let header = self.read_header();
+        self.check_type_eq(header.block_type(), BlockType::Free)?;
+        let mut new_header = BlockHeader(0);
+        new_header.set_order(header.order());
+        new_header.set_block_type(BlockType::Reserved.to_u8().unwrap());
+        self.write_header(new_header);
         Ok(())
     }
 
@@ -513,10 +522,12 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
 
     /// Converts a block to a FREE block
     pub fn become_free(&self, next: u32) {
-        let mut header = self.read_header();
-        header.set_block_type(BlockType::Free.to_u8().unwrap());
-        header.set_free_next_index(next);
-        self.write_header(header);
+        let header = self.read_header();
+        let mut new_header = BlockHeader(0);
+        new_header.set_order(header.order());
+        new_header.set_block_type(BlockType::Free.to_u8().unwrap());
+        new_header.set_free_next_index(next);
+        self.write_header(new_header);
         // TODO(fxb/39975): Uncomment or delete the next lines depending on the resolution of
         // fxb/40012. They've been verified to pass the Validator test for cleared Free payload.
         //self.container.write_bytes(utils::offset_for_index(self.index) + 8,
@@ -779,12 +790,14 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         if !block_type.is_any_value() {
             bail!("Block type {} is not *_VALUE", block_type);
         }
-        self.check_type(BlockType::Reserved)?;
-        let mut header = self.read_header();
-        header.set_block_type(block_type.to_u8().unwrap());
-        header.set_value_name_index(name_index);
-        header.set_value_parent_index(parent_index);
-        self.write_header(header);
+        let header = self.read_header();
+        self.check_type_eq(header.block_type(), BlockType::Reserved)?;
+        let mut new_header = BlockHeader(0);
+        new_header.set_order(header.order());
+        new_header.set_block_type(block_type.to_u8().unwrap());
+        new_header.set_value_name_index(name_index);
+        new_header.set_value_parent_index(parent_index);
+        self.write_header(new_header);
         Ok(())
     }
 
@@ -955,7 +968,7 @@ mod tests {
         let block = Block::new_free(&container[..], 0, 1, 2).unwrap();
         assert!(block.become_reserved().is_ok());
         assert_eq!(block.block_type(), BlockType::Reserved);
-        assert_eq!(container[..8], [0x11, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
@@ -1024,7 +1037,7 @@ mod tests {
         assert!(block.become_tombstone().is_ok());
         assert_eq!(block.block_type(), BlockType::Tombstone);
         assert_eq!(block.child_count().unwrap(), 4);
-        assert_eq!(container[..8], [0xa1, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(
             move |b| b.become_tombstone(),
