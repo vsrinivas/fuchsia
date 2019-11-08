@@ -317,7 +317,7 @@ TEST_F(TxTest, Init) {
   }
 }
 
-TEST_F(TxTest, HostCommandEmpty) {
+TEST_F(TxTest, AsyncHostCommandEmpty) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
   struct iwl_host_cmd hcmd = {
       .flags = CMD_ASYNC,
@@ -329,7 +329,7 @@ TEST_F(TxTest, HostCommandEmpty) {
   ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 }
 
-TEST_F(TxTest, HostCommandOneFragment) {
+TEST_F(TxTest, AsyncHostCommandOneFragment) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
   uint8_t fragment[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   struct iwl_host_cmd hcmd = {
@@ -349,7 +349,7 @@ TEST_F(TxTest, HostCommandOneFragment) {
   EXPECT_BYTES_EQ(out_cmd->payload, fragment, sizeof(fragment));
 }
 
-TEST_F(TxTest, HostCommandTwoFragments) {
+TEST_F(TxTest, AsyncHostCommandTwoFragments) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
   uint8_t fragment1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   uint8_t fragment2[] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
@@ -373,7 +373,7 @@ TEST_F(TxTest, HostCommandTwoFragments) {
   EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment1), fragment2, sizeof(fragment2));
 }
 
-TEST_F(TxTest, HostCommandTooLarge) {
+TEST_F(TxTest, AsyncHostCommandTooLarge) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
   std::array<uint8_t, TFD_MAX_PAYLOAD_SIZE> fragment = {0};
   struct iwl_host_cmd default_hcmd = {
