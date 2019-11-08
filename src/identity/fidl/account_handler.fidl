@@ -8,8 +8,10 @@ using fuchsia.auth;
 using fuchsia.identity.account;
 using fuchsia.kms;
 
-using GlobalIdHash = array<byte>:32;
-using HashSalt = array<byte>:32;
+const uint32 HASH_SIZE = 32;
+const uint32 HASH_SALT_SIZE = 32;
+using GlobalIdHash = array<byte>:HASH_SIZE;
+using HashSalt = array<byte>:HASH_SALT_SIZE;
 
 /// The control channel for an AccountHandler component.
 ///

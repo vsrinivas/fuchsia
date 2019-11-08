@@ -12,12 +12,13 @@ use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProvid
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
-    AccountHandlerControlRequestStream,
+    AccountHandlerControlRequestStream, HASH_SALT_SIZE, HASH_SIZE,
 };
 use fuchsia_inspect::{Inspector, Node, Property};
 use futures::prelude::*;
 use identity_common::TaskGroupError;
 use log::{error, info, warn};
+use mundane::hash::{Digest, Hasher, Sha256};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -32,6 +33,9 @@ enum Lifecycle {
     /// There is no account present, and initialization is not possible.
     Finished,
 }
+
+type GlobalIdHash = [u8; HASH_SIZE as usize];
+type GlobalIdHashSalt = [u8; HASH_SALT_SIZE as usize];
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context and a TokenManager.
@@ -115,8 +119,9 @@ impl AccountHandler {
             AccountHandlerControlRequest::GetPublicKey { responder } => {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
-            AccountHandlerControlRequest::GetGlobalIdHash { responder, .. } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            AccountHandlerControlRequest::GetGlobalIdHash { salt, responder } => {
+                let mut response = self.get_global_id_hash(salt);
+                responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
                 self.terminate().await;
@@ -268,6 +273,19 @@ impl AccountHandler {
                 // inconsistent state rather than a conflict
                 ApiError::Internal
             })
+    }
+
+    fn get_global_id_hash(&self, salt: GlobalIdHashSalt) -> Result<GlobalIdHash, ApiError> {
+        let account_lock = self.account.read();
+        let global_id = match &*account_lock {
+            Lifecycle::Initialized { account } => account.global_id().as_ref(),
+            _ => return Err(ApiError::FailedPrecondition),
+        };
+
+        let mut salted_id = Vec::with_capacity(global_id.len() + HASH_SALT_SIZE as usize);
+        salted_id.extend_from_slice(&salt);
+        salted_id.extend_from_slice(global_id.as_slice());
+        Ok(Sha256::hash(&salted_id).bytes())
     }
 
     async fn terminate(&self) {
@@ -460,6 +478,30 @@ mod tests {
             |proxy, ahc_client_end| {
                 async move {
                     proxy.load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    #[test]
+    fn test_global_id_hashes_unique() {
+        let location = TempLocation::new();
+        request_stream_test(
+            location.to_persistent_lifetime(),
+            Arc::new(Inspector::new()),
+            |proxy, ahc_client_end| {
+                async move {
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+
+                    // Different given different salts
+                    let mut salt_1 = [0u8; 32];
+                    let hash_1 = proxy.get_global_id_hash(&mut salt_1).await??;
+
+                    let mut salt_2 = [37u8; 32];
+                    let hash_2 = proxy.get_global_id_hash(&mut salt_2).await??;
+
+                    assert_ne!(hash_1[..], hash_2[..]);
                     Ok(())
                 }
             },
