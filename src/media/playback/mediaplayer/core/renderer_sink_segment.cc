@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/core/conversion_pipeline_builder.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
@@ -19,8 +19,8 @@ std::unique_ptr<RendererSinkSegment> RendererSinkSegment::Create(std::shared_ptr
 RendererSinkSegment::RendererSinkSegment(std::shared_ptr<Renderer> renderer,
                                          DecoderFactory* decoder_factory)
     : renderer_(renderer), decoder_factory_(decoder_factory) {
-  FXL_DCHECK(renderer_);
-  FXL_DCHECK(decoder_factory_);
+  FX_DCHECK(renderer_);
+  FX_DCHECK(decoder_factory_);
 }
 
 RendererSinkSegment::~RendererSinkSegment() {}
@@ -42,9 +42,9 @@ void RendererSinkSegment::WillDeprovision() {
 
 void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
                                   ConnectCallback callback) {
-  FXL_DCHECK(provisioned());
-  FXL_DCHECK(renderer_);
-  FXL_DCHECK(renderer_node_);
+  FX_DCHECK(provisioned());
+  FX_DCHECK(renderer_);
+  FX_DCHECK(renderer_node_);
 
   connected_output_ = nullptr;
 
@@ -69,9 +69,9 @@ void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
 }
 
 void RendererSinkSegment::Disconnect() {
-  FXL_DCHECK(provisioned());
-  FXL_DCHECK(renderer_node_);
-  FXL_DCHECK(connected_output_);
+  FX_DCHECK(provisioned());
+  FX_DCHECK(renderer_node_);
+  FX_DCHECK(connected_output_);
 
   // TODO(dalesat): Consider keeping the conversions until we know they won't
   // work for the next connection.
@@ -83,18 +83,18 @@ void RendererSinkSegment::Disconnect() {
 }
 
 void RendererSinkSegment::Prime(fit::closure callback) {
-  FXL_DCHECK(renderer_);
+  FX_DCHECK(renderer_);
   renderer_->Prime(std::move(callback));
 }
 
 void RendererSinkSegment::SetTimelineFunction(media::TimelineFunction timeline_function,
                                               fit::closure callback) {
-  FXL_DCHECK(renderer_);
+  FX_DCHECK(renderer_);
   renderer_->SetTimelineFunction(timeline_function, std::move(callback));
 }
 
 void RendererSinkSegment::SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) {
-  FXL_DCHECK(renderer_);
+  FX_DCHECK(renderer_);
   renderer_->SetProgramRange(program, min_pts, max_pts);
 }
 

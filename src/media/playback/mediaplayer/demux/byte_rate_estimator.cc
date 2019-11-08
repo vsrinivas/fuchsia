@@ -6,7 +6,7 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -44,13 +44,13 @@ std::optional<float> ByteRateEstimator::Estimate() {
     numerator += samples_[i] * (n - i);
   }
   int64_t denominator = n * (n + 1) / 2;
-  FXL_DCHECK(denominator != 0);
+  FX_DCHECK(denominator != 0);
   zx::duration time_per_byte = numerator / denominator;
   return float(ZX_SEC(1)) / float(time_per_byte.to_nsecs());
 }
 
 void ByteRateEstimator::AddSample(const ByteRateSample& sample) {
-  FXL_DCHECK(sample.stop_time > sample.start_time);
+  FX_DCHECK(sample.stop_time > sample.start_time);
   zx::duration duration = sample.stop_time - sample.start_time;
   zx::duration time_per_byte = duration / sample.bytes_processed;
   samples_.push_front(time_per_byte);

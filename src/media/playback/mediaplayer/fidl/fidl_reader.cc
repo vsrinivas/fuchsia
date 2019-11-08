@@ -11,7 +11,7 @@
 #include <limits>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 
 namespace media_player {
@@ -21,7 +21,7 @@ FidlReader::FidlReader(
     : seeking_reader_(seeking_reader.Bind()),
       dispatcher_(async_get_default_dispatcher()),
       ready_(dispatcher_) {
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
 
   read_in_progress_ = false;
 
@@ -43,10 +43,10 @@ void FidlReader::Describe(DescribeCallback callback) {
 
 void FidlReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
-  FXL_DCHECK(buffer);
-  FXL_DCHECK(bytes_to_read);
+  FX_DCHECK(buffer);
+  FX_DCHECK(bytes_to_read);
 
-  FXL_DCHECK(!read_in_progress_) << "ReadAt called while previous call still in progress";
+  FX_DCHECK(!read_in_progress_) << "ReadAt called while previous call still in progress";
   read_in_progress_ = true;
   read_at_position_ = position;
   read_at_buffer_ = buffer;
@@ -69,7 +69,7 @@ void FidlReader::ContinueReadAt() {
       return;
     }
 
-    FXL_DCHECK(read_at_position_ < size_);
+    FX_DCHECK(read_at_position_ < size_);
 
     if (read_at_position_ + read_at_bytes_to_read_ > size_) {
       read_at_bytes_to_read_ = size_ - read_at_position_;
@@ -78,7 +78,7 @@ void FidlReader::ContinueReadAt() {
     read_at_bytes_remaining_ = read_at_bytes_to_read_;
 
     if (read_at_position_ == socket_position_) {
-      FXL_DCHECK(socket_);
+      FX_DCHECK(socket_);
       ReadFromSocket();
       return;
     }
@@ -106,7 +106,7 @@ void FidlReader::ContinueReadAt() {
 
 void FidlReader::ReadFromSocket() {
   while (true) {
-    FXL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
+    FX_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
     size_t byte_count = 0;
     zx_status_t status = socket_.read(0u, read_at_buffer_, read_at_bytes_remaining_, &byte_count);
 
@@ -118,7 +118,7 @@ void FidlReader::ReadFromSocket() {
                                   zx_status_t status, const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {
-            FXL_LOG(ERROR) << "Wait failed, status " << status;
+            FX_LOGS(ERROR) << "Wait failed, status " << status;
           }
 
           FailReadAt(status);
@@ -136,7 +136,7 @@ void FidlReader::ReadFromSocket() {
     waiter_ = nullptr;
 
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;
+      FX_LOGS(ERROR) << "zx::socket::read failed, status " << status;
       FailReadAt(status);
       break;
     }

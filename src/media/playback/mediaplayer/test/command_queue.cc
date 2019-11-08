@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "lib/media/cpp/type_converters.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
@@ -124,7 +123,7 @@ void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
 
   if (url.SchemeIsFile()) {
     auto fd = fbl::unique_fd(open(url.path().c_str(), O_RDONLY));
-    FXL_CHECK(fd.is_valid());
+    FX_CHECK(fd.is_valid());
     command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   } else {
     command_queue->player_->SetHttpSource(url_, nullptr);
@@ -141,7 +140,7 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
   }
 
   auto fd = fbl::unique_fd(open(path_.c_str(), O_RDONLY));
-  FXL_CHECK(fd.is_valid());
+  FX_CHECK(fd.is_valid());
   command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   command_queue->prev_seek_position_ = 0;
   command_queue->status_ = nullptr;
@@ -182,7 +181,7 @@ void CommandQueue::InvokeCommand::Execute(CommandQueue* command_queue) {
     std::cerr << "Invoke\n";
   }
 
-  FXL_DCHECK(action_);
+  FX_DCHECK(action_);
   action_();
   command_queue->ExecuteNextCommand();
 }

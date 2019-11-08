@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include "lib/fidl/cpp/optional.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -116,12 +116,12 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
         break;
 
       case fuchsia::ui::scenic::Command::Tag::kViews:
-        FXL_LOG(INFO) << "Enqueue: views (not implemented), tag "
+        FX_LOGS(INFO) << "Enqueue: views (not implemented), tag "
                       << static_cast<fidl_union_tag_t>(command.views().Which());
         break;
 
       default:
-        FXL_LOG(INFO) << "Enqueue: (not implemented), tag "
+        FX_LOGS(INFO) << "Enqueue: (not implemented), tag "
                       << static_cast<fidl_union_tag_t>(command.Which());
         break;
     }
@@ -132,8 +132,8 @@ void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acq
                           std::vector<zx::event> release_fences, PresentCallback callback) {
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.
-  FXL_CHECK(acquire_fences.empty()) << "Present: acquire_fences not supported.";
-  FXL_CHECK(release_fences.empty()) << "Present: release_fences not supported.";
+  FX_CHECK(acquire_fences.empty()) << "Present: acquire_fences not supported.";
+  FX_CHECK(release_fences.empty()) << "Present: release_fences not supported.";
 
   async::PostTask(dispatcher_, [this, callback = std::move(callback), weak_this = GetWeakThis()]() {
     if (!weak_this) {
@@ -153,8 +153,8 @@ void FakeSession::Present2(zx_time_t requested_presentation_time,
                            zx_duration_t requested_prediction_span, Present2Callback callback) {
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.
-  FXL_CHECK(acquire_fences.empty()) << "Present2: acquire_fences not supported.";
-  FXL_CHECK(release_fences.empty()) << "Present2: release_fences not supported.";
+  FX_CHECK(acquire_fences.empty()) << "Present2: acquire_fences not supported.";
+  FX_CHECK(release_fences.empty()) << "Present2: release_fences not supported.";
 
   // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
   // we are providing no information.
@@ -195,8 +195,8 @@ void FakeSession::HandleSetEventMask(uint32_t resource_id, uint32_t event_mask) 
 
 void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::ResourceArgs args) {
   if (args.is_image_pipe()) {
-    FXL_CHECK(!image_pipe_) << "fake supports only one image pipe.";
-    FXL_CHECK(args.image_pipe().image_pipe_request);
+    FX_CHECK(!image_pipe_) << "fake supports only one image pipe.";
+    FX_CHECK(args.image_pipe().image_pipe_request);
     image_pipe_ = std::make_unique<FakeImagePipe>();
     image_pipe_->Bind(std::move(args.image_pipe().image_pipe_request));
     image_pipe_->OnPresentScene(zx::time(), next_presentation_time_, kPresentationInterval);
@@ -206,7 +206,7 @@ void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::R
     }
 
     if (!expected_packets_info_.empty()) {
-      FXL_CHECK(expected_image_info_);
+      FX_CHECK(expected_image_info_);
       image_pipe_->SetExpectations(expected_black_image_id_, *expected_black_image_info_,
                                    *expected_image_info_, expected_display_height_,
                                    std::move(expected_packets_info_));
@@ -225,7 +225,7 @@ void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::R
 
 void FakeSession::HandleReleaseResource(uint32_t resource_id) {
   if (resources_by_id_.erase(resource_id) != 1) {
-    FXL_LOG(ERROR) << "Asked to release unrecognized resource " << resource_id
+    FX_LOGS(ERROR) << "Asked to release unrecognized resource " << resource_id
                    << ", closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -237,7 +237,7 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
   Resource* child = FindResource(child_id);
 
   if (!parent) {
-    FXL_LOG(ERROR) << "Asked to add child, parent_id (" << parent_id
+    FX_LOGS(ERROR) << "Asked to add child, parent_id (" << parent_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -245,7 +245,7 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
   }
 
   if (!parent->can_have_children()) {
-    FXL_LOG(ERROR) << "Asked to add child, parent_id (" << parent_id
+    FX_LOGS(ERROR) << "Asked to add child, parent_id (" << parent_id
                    << ") can't have children, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -253,7 +253,7 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
   }
 
   if (!child) {
-    FXL_LOG(ERROR) << "Asked to add child, child_id (" << child_id
+    FX_LOGS(ERROR) << "Asked to add child, child_id (" << child_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -261,7 +261,7 @@ void FakeSession::HandleAddChild(uint32_t parent_id, uint32_t child_id) {
   }
 
   if (!child->can_have_parent()) {
-    FXL_LOG(ERROR) << "Asked to add child, child_id (" << child_id
+    FX_LOGS(ERROR) << "Asked to add child, child_id (" << child_id
                    << ") can't have parent, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -285,7 +285,7 @@ void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {
   Resource* material = FindResource(material_id);
 
   if (!node) {
-    FXL_LOG(ERROR) << "Asked to set material, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set material, node_id (" << node_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -293,7 +293,7 @@ void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {
   }
 
   if (!node->can_have_material()) {
-    FXL_LOG(ERROR) << "Asked to set material, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set material, node_id (" << node_id
                    << ") can't have material, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -301,7 +301,7 @@ void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {
   }
 
   if (!material) {
-    FXL_LOG(ERROR) << "Asked to set material, material_id (" << material_id
+    FX_LOGS(ERROR) << "Asked to set material, material_id (" << material_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -309,7 +309,7 @@ void FakeSession::HandleSetMaterial(uint32_t node_id, uint32_t material_id) {
   }
 
   if (!material->is_material()) {
-    FXL_LOG(ERROR) << "Asked to set material, material_id (" << material_id
+    FX_LOGS(ERROR) << "Asked to set material, material_id (" << material_id
                    << ") is not a material, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -324,7 +324,7 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
   Resource* texture = FindResource(texture_id);
 
   if (!material) {
-    FXL_LOG(ERROR) << "Asked to set texture, material_id (" << material_id
+    FX_LOGS(ERROR) << "Asked to set texture, material_id (" << material_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -332,7 +332,7 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
   }
 
   if (!material->is_material()) {
-    FXL_LOG(ERROR) << "Asked to set texture, material_id (" << material_id
+    FX_LOGS(ERROR) << "Asked to set texture, material_id (" << material_id
                    << ") is not a material, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -340,7 +340,7 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
   }
 
   if (!texture) {
-    FXL_LOG(ERROR) << "Asked to set texture, texture_id (" << texture_id
+    FX_LOGS(ERROR) << "Asked to set texture, texture_id (" << texture_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -348,7 +348,7 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
   }
 
   if (!texture->is_texture()) {
-    FXL_LOG(ERROR) << "Asked to set texture, texture_id (" << texture_id
+    FX_LOGS(ERROR) << "Asked to set texture, texture_id (" << texture_id
                    << ") is not a texture, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -363,7 +363,7 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
   Resource* shape = FindResource(shape_id);
 
   if (!node) {
-    FXL_LOG(ERROR) << "Asked to set shape, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set shape, node_id (" << node_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -371,7 +371,7 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
   }
 
   if (!node->can_have_shape()) {
-    FXL_LOG(ERROR) << "Asked to set shape, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set shape, node_id (" << node_id
                    << ") can't have a shape, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -379,7 +379,7 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
   }
 
   if (!shape) {
-    FXL_LOG(ERROR) << "Asked to set shape, shape_id (" << shape_id
+    FX_LOGS(ERROR) << "Asked to set shape, shape_id (" << shape_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -387,7 +387,7 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
   }
 
   if (!shape->is_shape()) {
-    FXL_LOG(ERROR) << "Asked to set shape, shape_id (" << shape_id
+    FX_LOGS(ERROR) << "Asked to set shape, shape_id (" << shape_id
                    << ") is not a shape, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -402,7 +402,7 @@ void FakeSession::HandleSetTranslation(uint32_t node_id,
   Resource* node = FindResource(node_id);
 
   if (!node) {
-    FXL_LOG(ERROR) << "Asked to set translation, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set translation, node_id (" << node_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -410,7 +410,7 @@ void FakeSession::HandleSetTranslation(uint32_t node_id,
   }
 
   if (!node->can_have_transform()) {
-    FXL_LOG(ERROR) << "Asked to set translation, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set translation, node_id (" << node_id
                    << ") can't have a transform, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -424,7 +424,7 @@ void FakeSession::HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vecto
   Resource* node = FindResource(node_id);
 
   if (!node) {
-    FXL_LOG(ERROR) << "Asked to set scale, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set scale, node_id (" << node_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -432,7 +432,7 @@ void FakeSession::HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vecto
   }
 
   if (!node->can_have_transform()) {
-    FXL_LOG(ERROR) << "Asked to set scale, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set scale, node_id (" << node_id
                    << ") can't have a transform, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -447,7 +447,7 @@ void FakeSession::HandleSetClipPlanes(uint32_t node_id,
   Resource* node = FindResource(node_id);
 
   if (!node) {
-    FXL_LOG(ERROR) << "Asked to set clip planes, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set clip planes, node_id (" << node_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -455,7 +455,7 @@ void FakeSession::HandleSetClipPlanes(uint32_t node_id,
   }
 
   if (!node->can_have_clip_planes()) {
-    FXL_LOG(ERROR) << "Asked to set clip planes, node_id (" << node_id
+    FX_LOGS(ERROR) << "Asked to set clip planes, node_id (" << node_id
                    << ") can't have clip planes, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -505,7 +505,7 @@ void FakeSession::DetectZFighting() {
   for (size_t i = 0; i < shape_nodes.size() - 1; ++i) {
     for (size_t j = i + 1; j < shape_nodes.size(); ++j) {
       if (shape_nodes[i].Intersects(shape_nodes[j])) {
-        FXL_LOG(ERROR) << "Node " << shape_nodes[i].id_ << " z-fights with node "
+        FX_LOGS(ERROR) << "Node " << shape_nodes[i].id_ << " z-fights with node "
                        << shape_nodes[j].id_ << ".";
         expected_ = false;
       }
@@ -516,30 +516,30 @@ void FakeSession::DetectZFighting() {
 void FakeSession::FindShapeNodes(uint32_t node_id, fuchsia::ui::gfx::vec3 translation,
                                  fuchsia::ui::gfx::vec3 scale,
                                  std::vector<ShapeNode>* shape_nodes) {
-  FXL_CHECK(shape_nodes);
+  FX_CHECK(shape_nodes);
   Resource* node = FindResource(node_id);
-  FXL_CHECK(node);
+  FX_CHECK(node);
 
   if (node->translation_) {
-    FXL_CHECK(node->translation_->variable_id == 0) << "Variables not supported.";
+    FX_CHECK(node->translation_->variable_id == 0) << "Variables not supported.";
     translation.x += node->translation_->value.x * scale.x;
     translation.y += node->translation_->value.y * scale.y;
     translation.z += node->translation_->value.z * scale.z;
   }
 
   if (node->scale_) {
-    FXL_CHECK(node->scale_->variable_id == 0) << "Variables not supported.";
+    FX_CHECK(node->scale_->variable_id == 0) << "Variables not supported.";
     scale.x *= node->scale_->value.x;
     scale.y *= node->scale_->value.y;
     scale.z *= node->scale_->value.z;
   }
 
   if (node->shape_args_) {
-    FXL_CHECK(node->shape_args_->is_rectangle()) << "Only rectangle shapes are supported";
+    FX_CHECK(node->shape_args_->is_rectangle()) << "Only rectangle shapes are supported";
     fuchsia::ui::gfx::vec3 extent;
-    FXL_CHECK(node->shape_args_->rectangle().width.is_vector1())
+    FX_CHECK(node->shape_args_->rectangle().width.is_vector1())
         << "Only vector1 values are supported.";
-    FXL_CHECK(node->shape_args_->rectangle().height.is_vector1())
+    FX_CHECK(node->shape_args_->rectangle().height.is_vector1())
         << "Only vector1 values are supported.";
     extent.x = scale.x * node->shape_args_->rectangle().width.vector1();
     extent.y = scale.y * node->shape_args_->rectangle().height.vector1();

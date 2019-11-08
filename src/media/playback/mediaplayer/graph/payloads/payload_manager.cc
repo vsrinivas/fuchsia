@@ -5,7 +5,6 @@
 #include "src/media/playback/mediaplayer/graph/payloads/payload_manager.h"
 
 #include "lib/fostr/fidl_types.h"
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -24,7 +23,7 @@ static uint64_t AlignUp(uint64_t size, uint64_t alignment) {
 // 3) For |kVmoPerBuffer|, |max_payload_size_| and |max_payload_count_| are set to good values
 //    (non-zero and the product is at least |max_aggregate_payload_size_|).
 PayloadConfig Concretize(PayloadConfig config) {
-  FXL_DCHECK(config.vmo_allocation_ != VmoAllocation::kNotApplicable);
+  FX_DCHECK(config.vmo_allocation_ != VmoAllocation::kNotApplicable);
 
   // If allocation is unrestricted, choose |kSingleVmo| by default.
   if (config.vmo_allocation_ == VmoAllocation::kUnrestricted) {
@@ -35,13 +34,13 @@ PayloadConfig Concretize(PayloadConfig config) {
     if (config.max_aggregate_payload_size_ == 0) {
       // |max_aggregate_payload_size_| was not provided, so both |max_payload_size_| and
       // |max_payload_count_| must be provided.
-      FXL_DCHECK(config.max_payload_size_ != 0);
-      FXL_DCHECK(config.max_payload_count_ != 0);
+      FX_DCHECK(config.max_payload_size_ != 0);
+      FX_DCHECK(config.max_payload_count_ != 0);
     } else if (config.max_payload_size_ == 0) {
       // |max_aggregate_payload_size_| was provided, but |max_payload_size_| was not. Calculate
       // |max_payload_size_| from |max_aggregate_payload_size_| and |max_payload_count_|, which must
       // be provided.
-      FXL_DCHECK(config.max_payload_count_ != 0);
+      FX_DCHECK(config.max_payload_count_ != 0);
       config.max_payload_size_ =
           (config.max_aggregate_payload_size_ + config.max_payload_count_ - 1) /
           config.max_payload_count_;
@@ -54,7 +53,7 @@ PayloadConfig Concretize(PayloadConfig config) {
           config.max_payload_size_;
     }
   } else {
-    FXL_DCHECK(config.vmo_allocation_ == VmoAllocation::kSingleVmo);
+    FX_DCHECK(config.vmo_allocation_ == VmoAllocation::kSingleVmo);
 
     // Ensure that |max_aggregate_payload_size_| is at least the product of |max_payload_size_| and
     // |max_payload_count_|.
@@ -157,8 +156,8 @@ void PayloadManager::RegisterReadyCallbacks(fit::closure output, fit::closure in
 void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
                                               ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
+  FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
+  FX_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -194,12 +193,12 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
                                              AllocateCallback allocate_callback,
                                              ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK(config.mode_ != PayloadMode::kProvidesLocalMemory);
-  FXL_DCHECK(allocate_callback == nullptr || config.mode_ == PayloadMode::kUsesVmos ||
+  FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
+  FX_DCHECK(config.mode_ != PayloadMode::kProvidesLocalMemory);
+  FX_DCHECK(allocate_callback == nullptr || config.mode_ == PayloadMode::kUsesVmos ||
              config.mode_ == PayloadMode::kProvidesVmos ||
              config.mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
+  FX_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -239,8 +238,8 @@ bool PayloadManager::ready() const {
 
 fbl::RefPtr<PayloadBuffer> PayloadManager::AllocatePayloadBufferForOutput(uint64_t size) const {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
-  FXL_DCHECK(output_.config_.mode_ != PayloadMode::kProvidesLocalMemory);
+  FX_DCHECK(ready_locked());
+  FX_DCHECK(output_.config_.mode_ != PayloadMode::kProvidesLocalMemory);
 
   PayloadAllocator* allocator = output_.payload_allocator();
 
@@ -258,86 +257,86 @@ fbl::RefPtr<PayloadBuffer> PayloadManager::AllocatePayloadBufferForOutput(uint64
     allocator = input_.payload_allocator();
   }
 
-  FXL_DCHECK(allocator);
+  FX_DCHECK(allocator);
 
   return allocator->AllocatePayloadBuffer(size);
 }
 
 PayloadVmos& PayloadManager::input_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
-  FXL_DCHECK(input_.config_.mode_ == PayloadMode::kUsesVmos ||
+  FX_DCHECK(ready_locked());
+  FX_DCHECK(input_.config_.mode_ == PayloadMode::kUsesVmos ||
              input_.config_.mode_ == PayloadMode::kProvidesVmos ||
              input_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
 
   VmoPayloadAllocator* result = input_vmo_payload_allocator_locked();
-  FXL_DCHECK(result);
+  FX_DCHECK(result);
 
   return *result;
 }
 
 PayloadVmoProvision& PayloadManager::input_external_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
-  FXL_DCHECK(input_.config_.mode_ == PayloadMode::kProvidesVmos);
+  FX_DCHECK(ready_locked());
+  FX_DCHECK(input_.config_.mode_ == PayloadMode::kProvidesVmos);
 
   VmoPayloadAllocator* result = input_vmo_payload_allocator_locked();
-  FXL_DCHECK(result);
+  FX_DCHECK(result);
 
   return *result;
 }
 
 fuchsia::sysmem::BufferCollectionTokenPtr PayloadManager::TakeInputSysmemToken() {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(input_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK(input_.sysmem_token_for_node_);
+  FX_DCHECK(input_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
+  FX_DCHECK(input_.sysmem_token_for_node_);
   return std::move(input_.sysmem_token_for_node_);
 }
 
 PayloadVmos& PayloadManager::output_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
-  FXL_DCHECK(output_.config_.mode_ == PayloadMode::kUsesVmos ||
+  FX_DCHECK(ready_locked());
+  FX_DCHECK(output_.config_.mode_ == PayloadMode::kUsesVmos ||
              output_.config_.mode_ == PayloadMode::kProvidesVmos ||
              output_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
 
   VmoPayloadAllocator* result = output_vmo_payload_allocator_locked();
-  FXL_DCHECK(result);
+  FX_DCHECK(result);
 
   return *result;
 }
 
 PayloadVmoProvision& PayloadManager::output_external_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
-  FXL_DCHECK(output_.config_.mode_ == PayloadMode::kProvidesVmos);
+  FX_DCHECK(ready_locked());
+  FX_DCHECK(output_.config_.mode_ == PayloadMode::kProvidesVmos);
 
   VmoPayloadAllocator* result = output_vmo_payload_allocator_locked();
-  FXL_DCHECK(result);
+  FX_DCHECK(result);
 
   return *result;
 }
 
 fuchsia::sysmem::BufferCollectionTokenPtr PayloadManager::TakeOutputSysmemToken() {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(output_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK(output_.sysmem_token_for_node_);
+  FX_DCHECK(output_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
+  FX_DCHECK(output_.sysmem_token_for_node_);
   return std::move(output_.sysmem_token_for_node_);
 }
 
 bool PayloadManager::MaybeAllocatePayloadBufferForCopy(
     uint64_t size, fbl::RefPtr<PayloadBuffer>* payload_buffer_out) const {
-  FXL_DCHECK(payload_buffer_out || (size == 0));
+  FX_DCHECK(payload_buffer_out || (size == 0));
 
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(ready_locked());
+  FX_DCHECK(ready_locked());
 
   if (!copy_) {
     // Don't need to copy.
     return false;
   }
 
-  FXL_DCHECK(input_.payload_allocator());
+  FX_DCHECK(input_.payload_allocator());
 
   if (size == 0) {
     // Need to copy, but the size is zero, so we don't need a destination buffer.
@@ -371,7 +370,7 @@ void PayloadManager::OnDisconnect() {
 
   // If the input is configured to use sysmem, we'll need a new pair of buffer collection tokens.
   if (input_.config_.mode_ == PayloadMode::kUsesSysmemVmos) {
-    FXL_DCHECK(sysmem_allocator_);
+    FX_DCHECK(sysmem_allocator_);
     sysmem_allocator_->AllocateSharedCollection(input_.sysmem_token_for_node_.NewRequest());
     input_.sysmem_token_for_node_->Duplicate(
         ZX_DEFAULT_VMO_RIGHTS, input_.sysmem_token_for_mate_or_provisioning_.NewRequest());
@@ -385,14 +384,14 @@ bool PayloadManager::ready_locked() const {
 
 void PayloadManager::EnsureBufferCollectionTokens(Connector* connector,
                                                   ServiceProvider* service_provider) {
-  FXL_DCHECK(connector);
+  FX_DCHECK(connector);
 
   if (connector->sysmem_token_for_mate_or_provisioning_) {
     // Already has tokens.
     return;
   }
 
-  FXL_DCHECK(service_provider);
+  FX_DCHECK(service_provider);
   EnsureSysmemAllocator(service_provider);
   sysmem_allocator_->AllocateSharedCollection(connector->sysmem_token_for_node_.NewRequest());
   connector->sysmem_token_for_node_->Duplicate(
@@ -404,7 +403,7 @@ void PayloadManager::DecrementReadyDeferrals() {
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(ready_deferrals_ != 0);
+    FX_DCHECK(ready_deferrals_ != 0);
     --ready_deferrals_;
 
     if (!ready_locked()) {
@@ -425,7 +424,7 @@ void PayloadManager::DecrementReadyDeferrals() {
 
 void PayloadManager::EnsureSysmemAllocator(ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(service_provider);
+  FX_DCHECK(service_provider);
   if (!sysmem_allocator_) {
     sysmem_allocator_ = service_provider->ConnectToService<fuchsia::sysmem::Allocator>();
   }
@@ -433,9 +432,9 @@ void PayloadManager::EnsureSysmemAllocator(ServiceProvider* service_provider) {
 
 void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_.config_.mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK(input_.config_.mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK(input_.config_.mode_ != PayloadMode::kProvidesLocalMemory);
+  FX_DCHECK(output_.config_.mode_ != PayloadMode::kNotConfigured);
+  FX_DCHECK(input_.config_.mode_ != PayloadMode::kNotConfigured);
+  FX_DCHECK(input_.config_.mode_ != PayloadMode::kProvidesLocalMemory);
 
   // This method is called by |ApplyOutputConfiguration| and |ApplyInputConfiguration|, which may
   // be called in either order. The first time one of the Apply methods is called, we don't have
@@ -503,7 +502,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           input_.EnsureNoAllocator();
           break;
         default:
-          FXL_DCHECK(false);
+          FX_DCHECK(false);
           break;
       }
       break;
@@ -575,7 +574,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           }
           break;
         default:
-          FXL_DCHECK(false);
+          FX_DCHECK(false);
           break;
       }
       break;
@@ -636,7 +635,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           break;
         default:
           // Input never has PayloadMode::kProvidesLocalMemory.
-          FXL_DCHECK(false);
+          FX_DCHECK(false);
           break;
       }
       break;
@@ -703,7 +702,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           copy_ = true;
           break;
         case PayloadMode::kUsesSysmemVmos:
-          FXL_DCHECK(output_.sysmem_token_for_mate_or_provisioning_ ||
+          FX_DCHECK(output_.sysmem_token_for_mate_or_provisioning_ ||
                      input_.sysmem_token_for_mate_or_provisioning_);
           if (ConfigsAreCompatible()) {
             // The output and input will share sysmem VMOs.
@@ -717,7 +716,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             if (input_.sysmem_token_for_mate_or_provisioning_) {
               // The downstream connector (input) has been given its tokens, so we'll use that
               // collection.
-              FXL_DCHECK(!output_.sysmem_token_for_mate_or_provisioning_);
+              FX_DCHECK(!output_.sysmem_token_for_mate_or_provisioning_);
               output_.sysmem_token_for_node_ =
                   std::move(input_.sysmem_token_for_mate_or_provisioning_);
               output_.sysmem_token_for_node_->Duplicate(ZX_DEFAULT_VMO_RIGHTS,
@@ -725,7 +724,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             } else {
               // The upstream connector (output) has been given its tokens, so we'll use that
               // collection.
-              FXL_DCHECK(output_.sysmem_token_for_mate_or_provisioning_);
+              FX_DCHECK(output_.sysmem_token_for_mate_or_provisioning_);
               input_.sysmem_token_for_node_ =
                   std::move(output_.sysmem_token_for_mate_or_provisioning_);
               input_.sysmem_token_for_node_->Duplicate(ZX_DEFAULT_VMO_RIGHTS,
@@ -736,8 +735,8 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // collection. This adds a third 'silent' participant in the collection, which is why
             // we created a third token.
             // TODO(fxb/38243): Remove when we don't need to know the buffer count.
-            FXL_CHECK(third_token);
-            FXL_CHECK(!input_.sysmem_token_for_mate_or_provisioning_);
+            FX_CHECK(third_token);
+            FX_CHECK(!input_.sysmem_token_for_mate_or_provisioning_);
             input_.sysmem_token_for_mate_or_provisioning_ = std::move(third_token);
             ++ready_deferrals_;
             input_.EnsureProvisionedSysmemVmoAllocator(
@@ -767,18 +766,18 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           break;
         default:
           // Input never has PayloadMode::kProvidesLocalMemory.
-          FXL_DCHECK(false);
+          FX_DCHECK(false);
           break;
       }
       break;
     default:
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       break;
   }
 }
 
 bool PayloadManager::ConfigsAreCompatible() const {
-  FXL_DCHECK(ConfigModesAreCompatible());
+  FX_DCHECK(ConfigModesAreCompatible());
 
   if (output_.config_.vmo_allocation_ == VmoAllocation::kSingleVmo &&
       input_.config_.vmo_allocation_ == VmoAllocation::kVmoPerBuffer) {
@@ -833,7 +832,7 @@ bool PayloadManager::ConfigModesAreCompatible() const {
 VmoAllocation PayloadManager::CombinedVmoAllocation() const {
   switch (output_.config_.vmo_allocation_) {
     case VmoAllocation::kNotApplicable:
-      FXL_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kNotApplicable);
+      FX_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kNotApplicable);
       // Falls through.
     case VmoAllocation::kUnrestricted:
       if (input_.config_.vmo_allocation_ == VmoAllocation::kSingleVmo ||
@@ -844,11 +843,11 @@ VmoAllocation PayloadManager::CombinedVmoAllocation() const {
       return VmoAllocation::kUnrestricted;
 
     case VmoAllocation::kSingleVmo:
-      FXL_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kVmoPerBuffer);
+      FX_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kVmoPerBuffer);
       return VmoAllocation::kSingleVmo;
 
     case VmoAllocation::kVmoPerBuffer:
-      FXL_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kSingleVmo);
+      FX_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kSingleVmo);
       return VmoAllocation::kVmoPerBuffer;
   }
 }
@@ -908,8 +907,8 @@ PayloadConfig PayloadManager::CopyToOutputConfig() const {
 }
 
 fbl::RefPtr<PayloadBuffer> PayloadManager::AllocateUsingAllocateCallback(uint64_t size) const {
-  FXL_DCHECK(allocate_callback_);
-  FXL_DCHECK(input_.vmo_allocator_);
+  FX_DCHECK(allocate_callback_);
+  FX_DCHECK(input_.vmo_allocator_);
 
   // The input side has provided a callback to do the actual allocation.
   // In addition to the size, it needs the |PayloadVmos| interface from
@@ -940,7 +939,7 @@ void PayloadManager::Connector::EnsureEmptyVmoAllocator(VmoAllocation vmo_alloca
     vmo_allocator_ = VmoPayloadAllocator::Create();
   }
 
-  FXL_DCHECK(vmo_allocator_);
+  FX_DCHECK(vmo_allocator_);
   // TODO(dalesat): Reuse VMOs?
   vmo_allocator_->RemoveAllVmos();
 
@@ -952,7 +951,7 @@ void PayloadManager::Connector::EnsureEmptyVmoAllocator(VmoAllocation vmo_alloca
 void PayloadManager::Connector::EnsureExternalVmoAllocator(VmoAllocation vmo_allocation) {
   if (vmo_allocation == VmoAllocation::kNotApplicable) {
     vmo_allocation = config_.vmo_allocation_;
-    FXL_DCHECK(vmo_allocation != VmoAllocation::kNotApplicable);
+    FX_DCHECK(vmo_allocation != VmoAllocation::kNotApplicable);
   }
 
   EnsureEmptyVmoAllocator(vmo_allocation);
@@ -964,8 +963,8 @@ void PayloadManager::Connector::EnsureProvisionedVmoAllocator(const PayloadConfi
   EnsureEmptyVmoAllocator(concrete_config.vmo_allocation_);
 
   if (concrete_config.vmo_allocation_ == VmoAllocation::kVmoPerBuffer) {
-    FXL_DCHECK(concrete_config.max_payload_size_ != 0);
-    FXL_DCHECK(concrete_config.max_payload_count_ != 0);
+    FX_DCHECK(concrete_config.max_payload_size_ != 0);
+    FX_DCHECK(concrete_config.max_payload_count_ != 0);
 
     // Allocate a VMO for each payload.
     for (uint64_t i = 0; i < concrete_config.max_payload_count_; ++i) {
@@ -973,8 +972,8 @@ void PayloadManager::Connector::EnsureProvisionedVmoAllocator(const PayloadConfi
                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
     }
   } else {
-    FXL_DCHECK(concrete_config.vmo_allocation_ == VmoAllocation::kSingleVmo);
-    FXL_DCHECK(concrete_config.max_aggregate_payload_size_ != 0);
+    FX_DCHECK(concrete_config.vmo_allocation_ == VmoAllocation::kSingleVmo);
+    FX_DCHECK(concrete_config.max_aggregate_payload_size_ != 0);
 
     // Create a single VMO from which to allocate all payloads.
     vmo_allocator_->AddVmo(PayloadVmo::Create(concrete_config.max_aggregate_payload_size_,
@@ -985,9 +984,9 @@ void PayloadManager::Connector::EnsureProvisionedVmoAllocator(const PayloadConfi
 void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
     const PayloadConfig& local_config, fuchsia::sysmem::Allocator* sysmem_allocator,
     VmoAllocation vmo_allocation) {
-  FXL_DCHECK(sysmem_allocator);
-  FXL_DCHECK(sysmem_token_for_mate_or_provisioning_);
-  FXL_DCHECK(owner_);
+  FX_DCHECK(sysmem_allocator);
+  FX_DCHECK(sysmem_token_for_mate_or_provisioning_);
+  FX_DCHECK(owner_);
 
   EnsureEmptyVmoAllocator(vmo_allocation);
 
@@ -996,7 +995,7 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
   }
 
   sysmem_token_for_mate_or_provisioning_->Sync([this, config = local_config, sysmem_allocator]() {
-    FXL_DCHECK(sysmem_token_for_mate_or_provisioning_);
+    FX_DCHECK(sysmem_token_for_mate_or_provisioning_);
     sysmem_allocator->BindSharedCollection(std::move(sysmem_token_for_mate_or_provisioning_),
                                            sysmem_collection_.NewRequest());
 
@@ -1040,14 +1039,14 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
         [this, map_flags = config.map_flags_](
             zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 collection_info) {
           if (status != ZX_OK) {
-            FXL_PLOG(ERROR, status) << "Sysmem buffer allocation failed";
+            FX_PLOGS(ERROR, status) << "Sysmem buffer allocation failed";
             return;
           }
 
           for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
             auto& vmo_buffer = collection_info.buffers[i];
-            FXL_DCHECK(vmo_buffer.vmo_usable_start == 0);
-            FXL_DCHECK(vmo_buffer.vmo);
+            FX_DCHECK(vmo_buffer.vmo_usable_start == 0);
+            FX_DCHECK(vmo_buffer.vmo);
             // When |map_flags| is |ZX_VM_PERM_WRITE|, we 'or' in |ZX_VM_PERM_READ|, otherwise the
             // map call fails with |ZX_ERR_INVALID_ARGS|.
             vmo_allocator_->AddVmo(PayloadVmo::Create(
@@ -1062,7 +1061,7 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
 
 PayloadAllocator* PayloadManager::Connector::payload_allocator() const {
   if (local_memory_allocator_) {
-    FXL_DCHECK(!vmo_allocator_);
+    FX_DCHECK(!vmo_allocator_);
     return local_memory_allocator_.get();
   }
 

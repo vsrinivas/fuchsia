@@ -14,7 +14,7 @@
 #include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"
@@ -57,7 +57,7 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
     commands_.Init(player_.get());
 
     player_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Player connection closed, status " << status << ".";
+      FX_LOGS(ERROR) << "Player connection closed, status " << status << ".";
       player_connection_closed_ = true;
       QuitLoop();
     });
@@ -233,7 +233,7 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();
   });
@@ -274,7 +274,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();
   });
@@ -311,7 +311,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();
   });
@@ -348,7 +348,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();
   });
@@ -385,7 +385,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
+    FX_LOGS(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
     QuitLoop();
   });

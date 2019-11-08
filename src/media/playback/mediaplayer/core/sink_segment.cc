@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/core/sink_segment.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

@@ -33,7 +33,7 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   enum class State { kPaused, kPlaying, kEnded };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   // Implements --experiment. Implementations of this method should not, in
   // general, be submitted. This is for developer experiments.

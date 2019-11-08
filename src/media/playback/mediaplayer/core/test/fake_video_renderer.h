@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_VIDEO_RENDERER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_VIDEO_RENDERER_H_
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/render/renderer.h"
 
 namespace media_player {
@@ -23,14 +23,14 @@ class FakeVideoRenderer : public Renderer {
 
   // Renderer implementation.
   void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override {
-    FXL_DCHECK(input_index == 0);
-    FXL_DCHECK(callback);
+    FX_DCHECK(input_index == 0);
+    FX_DCHECK(callback);
     callback();
   }
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override {
-    FXL_DCHECK(packet);
-    FXL_DCHECK(input_index == 0);
+    FX_DCHECK(packet);
+    FX_DCHECK(input_index == 0);
     RequestInputPacket();
   }
 

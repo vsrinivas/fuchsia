@@ -8,6 +8,7 @@
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
@@ -54,7 +55,7 @@ FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medi
       break;
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:
-      FXL_CHECK(false) << "Only audio and video are supported.";
+      FX_CHECK(false) << "Only audio and video are supported.";
       break;
   }
 }
@@ -62,7 +63,7 @@ FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medi
 void FidlProcessor::Init(fuchsia::media::StreamProcessorPtr processor,
                          fit::function<void(bool)> callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(processor);
+  FX_DCHECK(processor);
 
   outboard_processor_ = std::move(processor);
   init_callback_ = std::move(callback);
@@ -133,16 +134,16 @@ void FidlProcessor::ConfigureConnectors() {
 }
 
 void FidlProcessor::OnInputConnectionReady(size_t input_index) {
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(input_buffers_.has_current_set());
+  FX_DCHECK(input_index == 0);
+  FX_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
   current_set.SetBufferCount(UseInputVmos().GetVmos().size());
 }
 
 void FidlProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(input_index == 0);
+  FX_DCHECK(callback);
 
   // This processor will always receive a FlushOutput shortly after a FlushInput.
   // We call CloseCurrentStream now to let the outboard processor know we're
@@ -159,9 +160,9 @@ void FidlProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure
 
 void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(packet);
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(input_buffers_.has_current_set());
+  FX_DCHECK(packet);
+  FX_DCHECK(input_index == 0);
+  FX_DCHECK(input_buffers_.has_current_set());
 
   if (flushing_) {
     return;
@@ -170,7 +171,7 @@ void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
   if (pts_rate_ == media::TimelineRate()) {
     pts_rate_ = packet->pts_rate();
   } else {
-    FXL_DCHECK(pts_rate_ == packet->pts_rate());
+    FX_DCHECK(pts_rate_ == packet->pts_rate());
   }
 
   if (packet->size() != 0) {
@@ -179,7 +180,7 @@ void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
 
     BufferSet& current_set = input_buffers_.current_set();
 
-    FXL_DCHECK(packet->payload_buffer()->id() < current_set.buffer_count())
+    FX_DCHECK(packet->payload_buffer()->id() < current_set.buffer_count())
         << "Buffer ID " << packet->payload_buffer()->id()
         << " is out of range, should be less than " << current_set.buffer_count();
     current_set.AddRefBufferForProcessor(packet->payload_buffer()->id(), packet->payload_buffer());
@@ -195,7 +196,7 @@ void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
     codec_packet.set_start_access_unit(packet->keyframe());
     codec_packet.set_known_end_access_unit(false);
 
-    FXL_DCHECK(packet->size() <= current_set.buffer_size());
+    FX_DCHECK(packet->size() <= current_set.buffer_size());
 
     outboard_processor_->QueueInputPacket(std::move(codec_packet));
   }
@@ -207,7 +208,7 @@ void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
 }
 
 void FidlProcessor::OnOutputConnectionReady(size_t output_index) {
-  FXL_DCHECK(output_index == 0);
+  FX_DCHECK(output_index == 0);
 
   if (allocate_output_buffers_for_processor_pending_) {
     allocate_output_buffers_for_processor_pending_ = false;
@@ -219,7 +220,7 @@ void FidlProcessor::OnOutputConnectionReady(size_t output_index) {
     // reflects the fact that the outboard processor is free to use output buffers
     // as references and even use the same output buffer for multiple packets as
     // happens with VP9.
-    FXL_DCHECK(output_buffers_.has_current_set());
+    FX_DCHECK(output_buffers_.has_current_set());
     BufferSet& current_set = output_buffers_.current_set();
     current_set.SetBufferCount(UseOutputVmos().GetVmos().size());
     current_set.AllocateAllBuffersForProcessor(UseOutputVmos());
@@ -228,8 +229,8 @@ void FidlProcessor::OnOutputConnectionReady(size_t output_index) {
 
 void FidlProcessor::FlushOutput(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(output_index == 0);
+  FX_DCHECK(callback);
 
   // This processor will always receive a FlushInput shortly before a FlushOutput.
   // In FlushInput, we've already closed the stream. Now we sync with the
@@ -245,14 +246,14 @@ void FidlProcessor::RequestOutputPacket() {
 }
 
 void FidlProcessor::SetInputStreamType(const StreamType& stream_type) {
-  FXL_DCHECK(stream_type.medium() == medium_);
+  FX_DCHECK(stream_type.medium() == medium_);
 
   if (function_ == Function::kDecode) {
     // Decoders know their input stream type when they come from the factory.
     return;
   }
 
-  FXL_DCHECK(stream_type.encrypted());
+  FX_DCHECK(stream_type.encrypted());
 
   switch (medium_) {
     case StreamType::Medium::kAudio: {
@@ -270,14 +271,14 @@ void FidlProcessor::SetInputStreamType(const StreamType& stream_type) {
     } break;
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:
-      FXL_CHECK(false) << "Only audio and video are supported.";
+      FX_CHECK(false) << "Only audio and video are supported.";
       break;
   }
 }
 
 std::unique_ptr<StreamType> FidlProcessor::output_stream_type() const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_stream_type_);
+  FX_DCHECK(output_stream_type_);
   return output_stream_type_->Clone();
 }
 
@@ -317,7 +318,7 @@ void FidlProcessor::MaybeRequestInputPacket() {
 void FidlProcessor::OnConnectionFailed(zx_status_t error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  FXL_PLOG(ERROR, error) << "OnConnectionFailed";
+  FX_PLOGS(ERROR, error) << "OnConnectionFailed";
 
   InitFailed();
   // TODO(dalesat): Report failure.
@@ -326,17 +327,17 @@ void FidlProcessor::OnConnectionFailed(zx_status_t error) {
 void FidlProcessor::OnStreamFailed(uint64_t stream_lifetime_ordinal,
                                    fuchsia::media::StreamError error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_LOG(ERROR) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
+  FX_LOGS(ERROR) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
                  << " error: " << std::hex << static_cast<uint32_t>(error);
   // TODO(dalesat): Report failure.
 }
 
 void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(!input_buffers_.has_current_set()) << "OnInputConstraints received more than once.";
+  FX_DCHECK(!input_buffers_.has_current_set()) << "OnInputConstraints received more than once.";
 
   input_buffers_.ApplyConstraints(constraints, true);
-  FXL_DCHECK(input_buffers_.has_current_set());
+  FX_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
   ConfigureInputToUseSysmemVmos(
@@ -366,7 +367,7 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
 
   if (constraints.has_buffer_constraints_action_required() &&
       constraints.buffer_constraints_action_required() && !constraints.has_buffer_constraints()) {
-    FXL_LOG(ERROR) << "OnOutputConstraints: constraints action required but constraints missing";
+    FX_LOGS(ERROR) << "OnOutputConstraints: constraints action required but constraints missing";
     InitFailed();
     return;
   }
@@ -374,7 +375,7 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
   if (!constraints.has_buffer_constraints_action_required() ||
       !constraints.buffer_constraints_action_required()) {
     if (init_callback_) {
-      FXL_LOG(ERROR)
+      FX_LOGS(ERROR)
           << "OnOutputConstraints: constraints action not required on initial constraints.";
       InitFailed();
       return;
@@ -392,12 +393,12 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
   const bool success = output_buffers_.ApplyConstraints(constraints.buffer_constraints(),
                                                         medium_ == StreamType::Medium::kAudio);
   if (!success) {
-    FXL_LOG(ERROR) << "OnOutputConstraints: Failed to apply constraints.";
+    FX_LOGS(ERROR) << "OnOutputConstraints: Failed to apply constraints.";
     InitFailed();
     return;
   }
 
-  FXL_DCHECK(output_buffers_.has_current_set());
+  FX_DCHECK(output_buffers_.has_current_set());
   BufferSet& current_set = output_buffers_.current_set();
 
   ConfigureOutputToUseSysmemVmos(
@@ -427,20 +428,20 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
 
 void FidlProcessor::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
   if (!format.has_format_details()) {
-    FXL_LOG(ERROR) << "Config has no format details.";
+    FX_LOGS(ERROR) << "Config has no format details.";
     InitFailed();
     return;
   }
 
   auto stream_type = fidl::To<std::unique_ptr<StreamType>>(format.format_details());
   if (!stream_type) {
-    FXL_LOG(ERROR) << "Can't comprehend format details.";
+    FX_LOGS(ERROR) << "Can't comprehend format details.";
     InitFailed();
     return;
   }
 
   if (!format.format_details().has_format_details_version_ordinal()) {
-    FXL_LOG(ERROR) << "Format details do not have version ordinal.";
+    FX_LOGS(ERROR) << "Format details do not have version ordinal.";
     InitFailed();
     return;
   }
@@ -465,30 +466,30 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
   if (!packet.has_header() || !packet.header().has_buffer_lifetime_ordinal() ||
       !packet.header().has_packet_index() || !packet.has_buffer_index() ||
       !packet.has_valid_length_bytes() || !packet.has_stream_lifetime_ordinal()) {
-    FXL_LOG(ERROR) << "Packet not fully initialized.";
+    FX_LOGS(ERROR) << "Packet not fully initialized.";
     return;
   }
 
   uint64_t buffer_lifetime_ordinal = packet.header().buffer_lifetime_ordinal();
   uint32_t packet_index = packet.header().packet_index();
   uint32_t buffer_index = packet.buffer_index();
-  FXL_DCHECK(buffer_index != 0x80000000);
+  FX_DCHECK(buffer_index != 0x80000000);
 
   if (error_detected_before) {
-    FXL_LOG(WARNING) << "OnOutputPacket: error_detected_before";
+    FX_LOGS(WARNING) << "OnOutputPacket: error_detected_before";
   }
 
   if (error_detected_during) {
-    FXL_LOG(WARNING) << "OnOutputPacket: error_detected_during";
+    FX_LOGS(WARNING) << "OnOutputPacket: error_detected_during";
   }
 
   if (!output_buffers_.has_current_set()) {
-    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputConstraints event";
+    FX_LOGS(FATAL) << "OnOutputPacket event without prior OnOutputConstraints event";
     // TODO(dalesat): Report error rather than crashing.
   }
 
   if (!have_real_output_stream_type_) {
-    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputFormat event";
+    FX_LOGS(FATAL) << "OnOutputPacket event without prior OnOutputFormat event";
     // TODO(dalesat): Report error rather than crashing.
   }
 
@@ -498,7 +499,7 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
     // Refers to an obsolete buffer. We've already assumed the outboard
     // processor gave up this buffer, so there's no need to free it. Also, this
     // shouldn't happen, and there's no evidence that it does.
-    FXL_LOG(FATAL) << "OnOutputPacket delivered tacket with obsolete "
+    FX_LOGS(FATAL) << "OnOutputPacket delivered tacket with obsolete "
                       "buffer_lifetime_ordinal.";
     return;
   }
@@ -513,12 +514,12 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
   // All the output buffers in the current set are always owned by the outboard
   // processor. Get another reference to the |PayloadBuffer| for the specified
   // buffer.
-  FXL_DCHECK(buffer_lifetime_ordinal == current_set.lifetime_ordinal());
+  FX_DCHECK(buffer_lifetime_ordinal == current_set.lifetime_ordinal());
   fbl::RefPtr<PayloadBuffer> payload_buffer = current_set.GetProcessorOwnedBuffer(buffer_index);
 
   // TODO(dalesat): Tolerate !has_timestamp_ish somehow.
   if (!packet.has_timestamp_ish()) {
-    FXL_LOG(ERROR) << "We demand has_timestamp_ish for now (TODO)";
+    FX_LOGS(ERROR) << "We demand has_timestamp_ish for now (TODO)";
     return;
   }
 
@@ -539,7 +540,7 @@ void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_det
 
           // |outboard_processor_| is always set after |Init| is called, so we
           // can rely on it here.
-          FXL_DCHECK(outboard_processor_);
+          FX_DCHECK(outboard_processor_);
           fuchsia::media::PacketHeader header;
           header.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal);
           header.set_packet_index(packet_index);
@@ -555,7 +556,7 @@ void FidlProcessor::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (error_detected_before) {
-    FXL_LOG(WARNING) << "OnOutputEndOfStream: error_detected_before";
+    FX_LOGS(WARNING) << "OnOutputEndOfStream: error_detected_before";
   }
 
   PutOutputPacket(Packet::CreateEndOfStream(next_pts_, pts_rate_));
@@ -565,7 +566,7 @@ void FidlProcessor::OnFreeInputPacket(fuchsia::media::PacketHeader packet_header
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (!packet_header.has_buffer_lifetime_ordinal() || !packet_header.has_packet_index()) {
-    FXL_LOG(ERROR) << "Freed packet missing ordinal or index.";
+    FX_LOGS(ERROR) << "Freed packet missing ordinal or index.";
     return;
   }
 

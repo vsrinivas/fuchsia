@@ -71,17 +71,17 @@ void Node::Release() {
     }
   }
 
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
   async::PostTask(dispatcher_, [shared_this = shared_from_this()]() { shared_this->RunTasks(); });
 }
 
 void Node::SetDispatcher(async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(dispatcher);
+  FX_DCHECK(dispatcher);
   dispatcher_ = dispatcher;
 }
 
 void Node::PostTask(fit::closure task) {
-  FXL_DCHECK(task);
+  FX_DCHECK(task);
 
   {
     std::lock_guard<std::mutex> locker(tasks_mutex_);
@@ -93,12 +93,12 @@ void Node::PostTask(fit::closure task) {
     }
   }
 
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
   async::PostTask(dispatcher_, [shared_this = shared_from_this()]() { shared_this->RunTasks(); });
 }
 
 void Node::PostShutdownTask(fit::closure task) {
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
   async::PostTask(dispatcher_,
                   [shared_this = shared_from_this(), task = std::move(task)]() { task(); });
 }
@@ -207,7 +207,7 @@ size_t Node::input_count() const {
 
 Input& Node::input(size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
   return inputs_[input_index];
 }
 
@@ -218,12 +218,12 @@ size_t Node::output_count() const {
 
 Output& Node::output(size_t output_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
   return outputs_[output_index];
 }
 
 void Node::NotifyInputConnectionReady(size_t index) {
-  FXL_DCHECK(index < inputs_.size());
+  FX_DCHECK(index < inputs_.size());
 
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -234,7 +234,7 @@ void Node::NotifyInputConnectionReady(size_t index) {
 }
 
 void Node::NotifyOutputConnectionReady(size_t index) {
-  FXL_DCHECK(index < outputs_.size());
+  FX_DCHECK(index < outputs_.size());
 
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -280,7 +280,7 @@ void Node::Update() {
 
 bool Node::MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(packet_out);
+  FX_DCHECK(packet_out);
 
   if (!output.needs_packet()) {
     return false;
@@ -306,7 +306,7 @@ bool Node::MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out)
 
 void Node::FlushInputExternal(size_t input_index, bool hold_frame, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].Flush();
 
@@ -316,7 +316,7 @@ void Node::FlushInputExternal(size_t input_index, bool hold_frame, fit::closure 
 
 void Node::FlushOutputExternal(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
 
   FlushOutput(output_index, [this, output_index, callback = std::move(callback)]() mutable {
     {
@@ -340,7 +340,7 @@ void Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                           uint32_t max_payload_count, zx_vm_option_t map_flags,
                                           size_t input_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
+  FX_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
 
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -361,7 +361,7 @@ void Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t
                                    zx_vm_option_t map_flags, AllocateCallback allocate_callback,
                                    size_t input_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
+  FX_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
 
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -416,48 +416,48 @@ void Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
 }
 
 bool Node::InputConnectionReady(size_t input_index) const {
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
 
   return inputs_[input_index].payload_manager().ready();
 }
 
 const PayloadVmos& Node::UseInputVmos(size_t input_index) const {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
   const Input& input = inputs_[input_index];
 
-  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesVmos ||
+  FX_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesVmos ||
              input.payload_config().mode_ == PayloadMode::kProvidesVmos ||
              input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK(input.payload_manager().ready());
+  FX_DCHECK(input.payload_manager().ready());
 
   return input.payload_manager().input_vmos();
 }
 
 PayloadVmoProvision& Node::ProvideInputVmos(size_t input_index) const {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
   const Input& input = inputs_[input_index];
 
-  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kProvidesVmos);
-  FXL_DCHECK(input.payload_manager().ready());
+  FX_DCHECK(input.payload_config().mode_ == PayloadMode::kProvidesVmos);
+  FX_DCHECK(input.payload_manager().ready());
 
   return input.payload_manager().input_external_vmos();
 }
 
 fuchsia::sysmem::BufferCollectionTokenPtr Node::TakeInputSysmemToken(size_t input_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
   Input& input = inputs_[input_index];
 
-  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+  FX_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
 
   return input.payload_manager().TakeInputSysmemToken();
 }
 
 void Node::RequestInputPacket(size_t input_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(input_index < inputs_.size());
+  FX_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].RequestPacket();
 }
@@ -471,7 +471,7 @@ void Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                            uint32_t max_payload_count, uint64_t max_payload_size,
                                            zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
+  FX_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -509,7 +509,7 @@ void Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_
                                     uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                     zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
+  FX_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -564,64 +564,64 @@ void Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
 }
 
 bool Node::OutputConnectionReady(size_t output_index) const {
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
 
   return outputs_[output_index].mate()->payload_manager().ready();
 }
 
 fbl::RefPtr<PayloadBuffer> Node::AllocatePayloadBuffer(uint64_t size, size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
   Output& output = outputs_[output_index];
 
-  FXL_DCHECK(output.payload_config().mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK(output.connected());
-  FXL_DCHECK(output.mate()->payload_manager().ready());
+  FX_DCHECK(output.payload_config().mode_ != PayloadMode::kNotConfigured);
+  FX_DCHECK(output.connected());
+  FX_DCHECK(output.mate()->payload_manager().ready());
 
   return output.mate()->payload_manager().AllocatePayloadBufferForOutput(size);
 }
 
 const PayloadVmos& Node::UseOutputVmos(size_t output_index) const {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
   const Output& output = outputs_[output_index];
 
-  FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesVmos ||
+  FX_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesVmos ||
              output.payload_config().mode_ == PayloadMode::kProvidesVmos ||
              output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK(output.connected());
-  FXL_DCHECK(output.mate()->payload_manager().ready());
+  FX_DCHECK(output.connected());
+  FX_DCHECK(output.mate()->payload_manager().ready());
 
   return output.mate()->payload_manager().output_vmos();
 }
 
 PayloadVmoProvision& Node::ProvideOutputVmos(size_t output_index) const {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
   const Output& output = outputs_[output_index];
 
-  FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kProvidesVmos);
-  FXL_DCHECK(output.connected());
-  FXL_DCHECK(output.mate()->payload_manager().ready());
+  FX_DCHECK(output.payload_config().mode_ == PayloadMode::kProvidesVmos);
+  FX_DCHECK(output.connected());
+  FX_DCHECK(output.mate()->payload_manager().ready());
 
   return output.mate()->payload_manager().output_external_vmos();
 }
 
 fuchsia::sysmem::BufferCollectionTokenPtr Node::TakeOutputSysmemToken(size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(output_index < outputs_.size());
   Output& output = outputs_[output_index];
 
-  FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
-  FXL_DCHECK(output.connected());
+  FX_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+  FX_DCHECK(output.connected());
 
   return output.mate()->payload_manager().TakeOutputSysmemToken();
 }
 
 void Node::PutOutputPacket(PacketPtr packet, size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(packet);
-  FXL_DCHECK(output_index < outputs_.size());
+  FX_DCHECK(packet);
+  FX_DCHECK(output_index < outputs_.size());
 
   // Queue the packet if the output is connected, otherwise discard the
   // packet.
@@ -653,7 +653,7 @@ void Node::EnsureOutput(size_t output_index) {
 }
 
 void Node::ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
   if (!output->connected()) {
     return;
@@ -666,7 +666,7 @@ void Node::ApplyOutputConfiguration(Output* output, ServiceProvider* service_pro
 
 void Node::ApplyInputConfiguration(Input* input, PayloadManager::AllocateCallback allocate_callback,
                                    ServiceProvider* service_provider) {
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 
   auto& payload_manager = input->payload_manager();
 

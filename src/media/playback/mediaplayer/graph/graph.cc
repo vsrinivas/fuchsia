@@ -15,8 +15,8 @@ Graph::Graph(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 Graph::~Graph() { Reset(); }
 
 NodeRef Graph::Add(std::shared_ptr<Node> node) {
-  FXL_DCHECK(node);
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(node);
+  FX_DCHECK(dispatcher_);
 
   node->SetDispatcher(dispatcher_);
   node->ConfigureConnectors();
@@ -35,7 +35,7 @@ NodeRef Graph::Add(std::shared_ptr<Node> node) {
 }
 
 void Graph::RemoveNode(NodeRef node_ref) {
-  FXL_DCHECK(node_ref);
+  FX_DCHECK(node_ref);
 
   Node* node = node_ref.node_;
 
@@ -61,8 +61,8 @@ void Graph::RemoveNode(NodeRef node_ref) {
 }
 
 NodeRef Graph::Connect(const OutputRef& output_ref, const InputRef& input_ref) {
-  FXL_DCHECK(output_ref);
-  FXL_DCHECK(input_ref);
+  FX_DCHECK(output_ref);
+  FX_DCHECK(input_ref);
 
   if (output_ref.connected()) {
     DisconnectOutput(output_ref);
@@ -89,60 +89,60 @@ NodeRef Graph::Connect(const OutputRef& output_ref, const InputRef& input_ref) {
 }
 
 NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
-  FXL_DCHECK(upstream_node);
-  FXL_DCHECK(downstream_node);
+  FX_DCHECK(upstream_node);
+  FX_DCHECK(downstream_node);
   Connect(upstream_node.output(), downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectOutputToNode(const OutputRef& output, NodeRef downstream_node) {
-  FXL_DCHECK(output);
-  FXL_DCHECK(downstream_node);
+  FX_DCHECK(output);
+  FX_DCHECK(downstream_node);
   Connect(output, downstream_node.input());
   return downstream_node;
 }
 
 NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node, const InputRef& input) {
-  FXL_DCHECK(upstream_node);
-  FXL_DCHECK(input);
+  FX_DCHECK(upstream_node);
+  FX_DCHECK(input);
   Connect(upstream_node.output(), input);
   return input.node();
 }
 
 void Graph::DisconnectOutput(const OutputRef& output) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
   if (!output.connected()) {
     return;
   }
 
   Output* actual_output = output.actual();
-  FXL_DCHECK(actual_output);
+  FX_DCHECK(actual_output);
   Input* mate = actual_output->mate();
-  FXL_DCHECK(mate);
+  FX_DCHECK(mate);
 
   mate->Disconnect();
   actual_output->Disconnect();
 }
 
 void Graph::DisconnectInput(const InputRef& input) {
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 
   if (!input.connected()) {
     return;
   }
 
   Input* actual_input = input.actual();
-  FXL_DCHECK(actual_input);
+  FX_DCHECK(actual_input);
   Output* mate = actual_input->mate();
-  FXL_DCHECK(mate);
+  FX_DCHECK(mate);
 
   mate->Disconnect();
   actual_input->Disconnect();
 }
 
 void Graph::RemoveNodesConnectedToNode(NodeRef node) {
-  FXL_DCHECK(node);
+  FX_DCHECK(node);
 
   std::deque<NodeRef> to_remove{node};
 
@@ -167,7 +167,7 @@ void Graph::RemoveNodesConnectedToNode(NodeRef node) {
 }
 
 void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
   if (!output.connected()) {
     return;
@@ -179,7 +179,7 @@ void Graph::RemoveNodesConnectedToOutput(const OutputRef& output) {
 }
 
 void Graph::RemoveNodesConnectedToInput(const InputRef& input) {
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 
   if (!input.connected()) {
     return;
@@ -210,14 +210,14 @@ void Graph::Reset() {
 }
 
 void Graph::FlushOutput(const OutputRef& output, bool hold_frame, fit::closure callback) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
   std::queue<Output*> backlog;
   backlog.push(output.actual());
   FlushOutputs(&backlog, hold_frame, std::move(callback));
 }
 
 void Graph::FlushAllOutputs(NodeRef node, bool hold_frame, fit::closure callback) {
-  FXL_DCHECK(node);
+  FX_DCHECK(node);
 
   std::queue<Output*> backlog;
   size_t output_count = node.output_count();
@@ -246,7 +246,7 @@ void Graph::PostTask(fit::closure task, std::initializer_list<NodeRef> node_refs
 }
 
 void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame, fit::closure callback) {
-  FXL_DCHECK(backlog);
+  FX_DCHECK(backlog);
 
   auto callback_joiner = CallbackJoiner::Create();
 
@@ -259,14 +259,14 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame, fit::clo
   while (!backlog->empty()) {
     Output* output = backlog->front();
     backlog->pop();
-    FXL_DCHECK(output);
+    FX_DCHECK(output);
 
     if (!output->connected()) {
       continue;
     }
 
     Input* input = output->mate();
-    FXL_DCHECK(input);
+    FX_DCHECK(input);
     Node* input_node = input->node();
 
     output->node()->FlushOutputExternal(output->index(), callback_joiner->NewCallback());
@@ -282,7 +282,7 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame, fit::clo
 }
 
 void Graph::VisitUpstream(Input* input, const Visitor& visitor) {
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 
   std::queue<Input*> backlog;
   backlog.push(input);
@@ -290,7 +290,7 @@ void Graph::VisitUpstream(Input* input, const Visitor& visitor) {
   while (!backlog.empty()) {
     Input* input = backlog.front();
     backlog.pop();
-    FXL_DCHECK(input);
+    FX_DCHECK(input);
 
     if (!input->connected()) {
       continue;

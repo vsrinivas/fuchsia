@@ -236,13 +236,13 @@ std::ostream& operator<<(std::ostream& os, media::TimelineFunction value) {
 std::ostream& operator<<(std::ostream& os, const Node& value) { return os << value.label(); }
 
 std::ostream& operator<<(std::ostream& os, const Input& value) {
-  FXL_DCHECK(value.node());
+  FX_DCHECK(value.node());
 
   return os << *value.node() << ".input#" << value.index();
 }
 
 std::ostream& operator<<(std::ostream& os, const Output& value) {
-  FXL_DCHECK(value.node());
+  FX_DCHECK(value.node());
 
   return os << *value.node() << ".output#" << value.index();
 }

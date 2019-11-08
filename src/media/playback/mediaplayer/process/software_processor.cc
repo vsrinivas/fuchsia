@@ -7,7 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/zx/clock.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/thread_priority.h"
 
@@ -22,12 +22,12 @@ SoftwareProcessor::SoftwareProcessor()
   PostTaskToWorkerThread([]() { ThreadPriority::SetToHigh(); });
 }
 
-SoftwareProcessor::~SoftwareProcessor() { FXL_DCHECK(is_main_thread()); }
+SoftwareProcessor::~SoftwareProcessor() { FX_DCHECK(is_main_thread()); }
 
 void SoftwareProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(is_main_thread());
+  FX_DCHECK(input_index == 0);
+  FX_DCHECK(callback);
 
   flushing_ = true;
   input_packet_ = nullptr;
@@ -42,9 +42,9 @@ void SoftwareProcessor::FlushInput(bool hold_frame, size_t input_index, fit::clo
 }
 
 void SoftwareProcessor::FlushOutput(size_t output_index, fit::closure callback) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(output_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(is_main_thread());
+  FX_DCHECK(output_index == 0);
+  FX_DCHECK(callback);
 
   flushing_ = true;
   end_of_output_stream_ = false;
@@ -64,12 +64,12 @@ void SoftwareProcessor::FlushOutput(size_t output_index, fit::closure callback) 
 }
 
 void SoftwareProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(packet);
-  FXL_DCHECK(input_index == 0);
+  FX_DCHECK(is_main_thread());
+  FX_DCHECK(packet);
+  FX_DCHECK(input_index == 0);
 
-  FXL_DCHECK(!input_packet_);
-  FXL_DCHECK(!end_of_input_stream_);
+  FX_DCHECK(!input_packet_);
+  FX_DCHECK(!end_of_input_stream_);
 
   if (flushing_) {
     // We're flushing. Discard the packet.
@@ -97,12 +97,12 @@ void SoftwareProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
 }
 
 void SoftwareProcessor::RequestOutputPacket() {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(!end_of_output_stream_);
+  FX_DCHECK(is_main_thread());
+  FX_DCHECK(!end_of_output_stream_);
 
   if (flushing_) {
-    FXL_DCHECK(!end_of_input_stream_);
-    FXL_DCHECK(!input_packet_);
+    FX_DCHECK(!end_of_input_stream_);
+    FX_DCHECK(!input_packet_);
     flushing_ = false;
     RequestInputPacket();
   }
@@ -120,7 +120,7 @@ void SoftwareProcessor::RequestOutputPacket() {
   }
 
   if (!input_packet_) {
-    FXL_DCHECK(!end_of_input_stream_);
+    FX_DCHECK(!end_of_input_stream_);
 
     // We're expecting an input packet. Wait for it.
     output_state_ = OutputState::kWaitingForInput;
@@ -139,8 +139,8 @@ void SoftwareProcessor::RequestOutputPacket() {
 }
 
 void SoftwareProcessor::HandleInputPacketOnWorker(PacketPtr input) {
-  FXL_DCHECK(is_worker_thread());
-  FXL_DCHECK(input);
+  FX_DCHECK(is_worker_thread());
+  FX_DCHECK(input);
 
   bool done = false;
   bool new_input = true;
@@ -171,8 +171,8 @@ void SoftwareProcessor::HandleInputPacketOnWorker(PacketPtr input) {
 }
 
 void SoftwareProcessor::HandleOutputPacket(PacketPtr packet) {
-  FXL_DCHECK(is_main_thread());
-  FXL_DCHECK(!end_of_output_stream_);
+  FX_DCHECK(is_main_thread());
+  FX_DCHECK(!end_of_output_stream_);
 
   if (flushing_) {
     // We're flushing. Discard the packet.
@@ -181,10 +181,10 @@ void SoftwareProcessor::HandleOutputPacket(PacketPtr packet) {
 
   switch (output_state_) {
     case OutputState::kIdle:
-      FXL_DCHECK(false) << "HandleOutputPacket called when idle.";
+      FX_DCHECK(false) << "HandleOutputPacket called when idle.";
       break;
     case OutputState::kWaitingForInput:
-      FXL_DCHECK(false) << "HandleOutputPacket called waiting for input.";
+      FX_DCHECK(false) << "HandleOutputPacket called waiting for input.";
       break;
     case OutputState::kWaitingForWorker:
       // We got the requested packet. Indicate we've satisfied the request for
@@ -201,15 +201,15 @@ void SoftwareProcessor::HandleOutputPacket(PacketPtr packet) {
 }
 
 void SoftwareProcessor::WorkerDoneWithInputPacket() {
-  FXL_DCHECK(is_main_thread());
+  FX_DCHECK(is_main_thread());
 
   switch (output_state_) {
     case OutputState::kIdle:
-      FXL_DCHECK(false) << "WorkerDoneWithInputPacket called in idle state.";
+      FX_DCHECK(false) << "WorkerDoneWithInputPacket called in idle state.";
       break;
 
     case OutputState::kWaitingForInput:
-      FXL_DCHECK(false) << "WorkerDoneWithInputPacket called waiting for input.";
+      FX_DCHECK(false) << "WorkerDoneWithInputPacket called waiting for input.";
       break;
 
     case OutputState::kWaitingForWorker:
@@ -237,7 +237,7 @@ void SoftwareProcessor::WorkerDoneWithInputPacket() {
 }
 
 void SoftwareProcessor::Dump(std::ostream& os) const {
-  FXL_DCHECK(is_main_thread());
+  FX_DCHECK(is_main_thread());
 
   os << label() << fostr::Indent;
   Node::Dump(os);

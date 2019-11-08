@@ -9,19 +9,17 @@
 #include <cstdlib>
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media_player {
 
 // static
 fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size, zx_vm_option_t map_flags) {
-  FXL_DCHECK(vmo_size != 0);
+  FX_DCHECK(vmo_size != 0);
 
   zx::vmo vmo;
 
   zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create VMO of size " << vmo_size;
+    FX_PLOGS(ERROR, status) << "Failed to create VMO of size " << vmo_size;
     return nullptr;
   }
 
@@ -34,7 +32,7 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo, zx_vm_option_t map_flags
   uint64_t vmo_size;
   zx_status_t status = vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to get VMO size";
+    FX_PLOGS(ERROR, status) << "Failed to get VMO size";
     return nullptr;
   }
 
@@ -45,14 +43,14 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo, zx_vm_option_t map_flags
 PayloadVmo::PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags,
                        zx_status_t* status_out)
     : vmo_(std::move(vmo)), size_(vmo_size) {
-  FXL_DCHECK(vmo_);
-  FXL_DCHECK(vmo_size != 0);
-  FXL_DCHECK(status_out != nullptr);
+  FX_DCHECK(vmo_);
+  FX_DCHECK(vmo_size != 0);
+  FX_DCHECK(status_out != nullptr);
 
   if (map_flags != 0) {
     zx_status_t status = vmo_mapper_.Map(vmo_, 0, size_, map_flags, nullptr);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to map VMO, size " << size_ << ", map_flags " << map_flags;
+      FX_PLOGS(ERROR, status) << "Failed to map VMO, size " << size_ << ", map_flags " << map_flags;
       *status_out = status;
       return;
     }
@@ -65,7 +63,7 @@ zx::vmo PayloadVmo::Duplicate(zx_rights_t rights) {
   zx::vmo duplicate;
   zx_status_t status = vmo_.duplicate(rights, &duplicate);
   if (status != ZX_OK) {
-    FXL_PLOG(FATAL, status) << "Failed to duplicate VMO, rights " << rights;
+    FX_PLOGS(FATAL, status) << "Failed to duplicate VMO, rights " << rights;
   }
 
   return duplicate;
@@ -85,11 +83,11 @@ fbl::RefPtr<PayloadBuffer> PayloadBuffer::Create(uint64_t size, void* data,
 
 // static
 fbl::RefPtr<PayloadBuffer> PayloadBuffer::CreateWithMalloc(uint64_t size) {
-  FXL_DCHECK(size > 0);
+  FX_DCHECK(size > 0);
   return PayloadBuffer::Create(
       size, std::aligned_alloc(PayloadBuffer::kByteAlignment, PayloadBuffer::AlignUp(size)),
       [](PayloadBuffer* payload_buffer) {
-        FXL_DCHECK(payload_buffer);
+        FX_DCHECK(payload_buffer);
         std::free(payload_buffer->data());
         // The |PayloadBuffer| deletes itself.
       });
@@ -97,32 +95,32 @@ fbl::RefPtr<PayloadBuffer> PayloadBuffer::CreateWithMalloc(uint64_t size) {
 
 PayloadBuffer::PayloadBuffer(uint64_t size, void* data, Recycler recycler)
     : size_(size), data_(data), recycler_(std::move(recycler)) {
-  FXL_DCHECK(size_ != 0);
-  FXL_DCHECK(data_ != nullptr);
-  FXL_DCHECK(recycler_);
+  FX_DCHECK(size_ != 0);
+  FX_DCHECK(data_ != nullptr);
+  FX_DCHECK(recycler_);
 }
 
 PayloadBuffer::PayloadBuffer(uint64_t size, void* data, fbl::RefPtr<PayloadVmo> vmo,
                              uint64_t offset_in_vmo, Recycler recycler)
     : size_(size), data_(data), vmo_(vmo), offset_(offset_in_vmo), recycler_(std::move(recycler)) {
-  FXL_DCHECK(size_ != 0);
-  FXL_DCHECK(vmo_);
-  FXL_DCHECK((data_ == nullptr) || (reinterpret_cast<uint8_t*>(vmo_->start()) + offset_ ==
+  FX_DCHECK(size_ != 0);
+  FX_DCHECK(vmo_);
+  FX_DCHECK((data_ == nullptr) || (reinterpret_cast<uint8_t*>(vmo_->start()) + offset_ ==
                                     reinterpret_cast<uint8_t*>(data_)));
-  FXL_DCHECK(recycler_);
+  FX_DCHECK(recycler_);
 }
 
 PayloadBuffer::~PayloadBuffer() {
-  FXL_DCHECK(!recycler_) << "PayloadBuffers must delete themselves.";
+  FX_DCHECK(!recycler_) << "PayloadBuffers must delete themselves.";
 }
 
 void PayloadBuffer::AfterRecycling(Action action) {
-  FXL_DCHECK(!after_recycling_) << "AfterRecycling may only be called once.";
+  FX_DCHECK(!after_recycling_) << "AfterRecycling may only be called once.";
   after_recycling_ = std::move(action);
 }
 
 void PayloadBuffer::fbl_recycle() {
-  FXL_DCHECK(recycler_ != nullptr);
+  FX_DCHECK(recycler_ != nullptr);
 
   recycler_(this);
   // This tells the destructor that deletion is being done properly.

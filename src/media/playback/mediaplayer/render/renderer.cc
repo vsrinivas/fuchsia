@@ -44,16 +44,16 @@ void Renderer::ConfigureConnectors() {
 }
 
 void Renderer::SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) {
-  FXL_DCHECK(program == 0) << "Only program 0 is currently supported.";
+  FX_DCHECK(program == 0) << "Only program 0 is currently supported.";
   program_0_min_pts_ = min_pts;
   program_0_max_pts_ = max_pts;
 }
 
 void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
                                    fit::closure callback) {
-  FXL_DCHECK(timeline_function.subject_time() != Packet::kNoPts);
-  FXL_DCHECK(timeline_function.reference_time() != Packet::kNoPts);
-  FXL_DCHECK(timeline_function.reference_delta() != 0);
+  FX_DCHECK(timeline_function.subject_time() != Packet::kNoPts);
+  FX_DCHECK(timeline_function.reference_time() != Packet::kNoPts);
+  FX_DCHECK(timeline_function.reference_delta() != 0);
 
   bool was_progressing = Progressing();
 

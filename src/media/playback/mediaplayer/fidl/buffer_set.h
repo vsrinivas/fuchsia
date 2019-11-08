@@ -12,6 +12,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
@@ -174,7 +175,7 @@ class BufferSetManager {
   // false.
   BufferSet& current_set() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-    FXL_DCHECK(current_set_);
+    FX_DCHECK(current_set_);
     return *current_set_;
   }
 

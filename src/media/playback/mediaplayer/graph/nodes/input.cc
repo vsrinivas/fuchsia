@@ -16,7 +16,7 @@ namespace {
 // original's payload buffer. |copied_payload_buffer| may be nullptr if and
 // only if |original| has no payload.
 PacketPtr CopyPacket(const Packet& original, fbl::RefPtr<PayloadBuffer> copied_payload_buffer) {
-  FXL_DCHECK(copied_payload_buffer || (original.size() == 0 && !original.payload_buffer()));
+  FX_DCHECK(copied_payload_buffer || (original.size() == 0 && !original.payload_buffer()));
 
   PacketPtr copy =
       Packet::Create(original.pts(), original.pts_rate(), original.keyframe(),
@@ -32,7 +32,7 @@ PacketPtr CopyPacket(const Packet& original, fbl::RefPtr<PayloadBuffer> copied_p
 }  // namespace
 
 Input::Input(Node* node, size_t index) : node_(node), index_(index), state_(State::kRefusesPacket) {
-  FXL_DCHECK(node_);
+  FX_DCHECK(node_);
   RegisterConnectionReadyCallbacks();
 }
 
@@ -40,25 +40,25 @@ Input::Input(Input&& input)
     : node_(input.node()), index_(input.index()), state_(input.state_.load()) {
   // We can't move an input that's connected, has a packet or is configured.
   // TODO(dalesat): Make |Input| non-movable.
-  FXL_DCHECK(input.mate() == nullptr);
-  FXL_DCHECK(input.packet() == nullptr);
-  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kNotConfigured);
+  FX_DCHECK(input.mate() == nullptr);
+  FX_DCHECK(input.packet() == nullptr);
+  FX_DCHECK(input.payload_config().mode_ == PayloadMode::kNotConfigured);
   RegisterConnectionReadyCallbacks();
 }
 
 Input::~Input() {}
 
 void Input::Connect(Output* output) {
-  FXL_DCHECK(output);
-  FXL_DCHECK(!mate_);
+  FX_DCHECK(output);
+  FX_DCHECK(!mate_);
   mate_ = output;
 }
 
 bool Input::needs_packet() const { return state_.load() == State::kNeedsPacket; }
 
 void Input::PutPacket(PacketPtr packet) {
-  FXL_DCHECK(packet);
-  FXL_DCHECK(needs_packet());
+  FX_DCHECK(packet);
+  FX_DCHECK(needs_packet());
 
   std::atomic_store(&packet_, packet);
   state_.store(State::kHasPacket);
@@ -66,7 +66,7 @@ void Input::PutPacket(PacketPtr packet) {
 }
 
 PacketPtr Input::TakePacket(bool request_another) {
-  FXL_DCHECK(mate_);
+  FX_DCHECK(mate_);
 
   if (!payload_manager_.ready()) {
     return nullptr;
@@ -104,7 +104,7 @@ PacketPtr Input::TakePacket(bool request_another) {
     // We just drop the packet, so there will be a glitch.
     // TODO(dalesat): Leave the packet behind so we can try again later.
     // We'll also need a NeedsUpdate when the allocator is no longer empty.
-    FXL_LOG(ERROR) << "No buffer for copy, dropping packet.";
+    FX_LOGS(ERROR) << "No buffer for copy, dropping packet.";
 
     // We needed a packet and couldn't produce one, so we still need one.
     state_.store(State::kNeedsPacket);
@@ -114,7 +114,7 @@ PacketPtr Input::TakePacket(bool request_another) {
   }
 
   // Copy the payload.
-  FXL_DCHECK(copy_destination_buffer->size() >= size);
+  FX_DCHECK(copy_destination_buffer->size() >= size);
   memcpy(copy_destination_buffer->data(), packet->payload(), size);
 
   // Return a new packet like |packet| but with the new payload buffer.
@@ -122,7 +122,7 @@ PacketPtr Input::TakePacket(bool request_another) {
 }
 
 void Input::RequestPacket() {
-  FXL_DCHECK(mate_);
+  FX_DCHECK(mate_);
 
   State expected = State::kRefusesPacket;
   if (state_.compare_exchange_strong(expected, State::kNeedsPacket)) {
@@ -135,12 +135,12 @@ void Input::Flush() { TakePacket(false); }
 void Input::RegisterConnectionReadyCallbacks() {
   payload_manager_.RegisterReadyCallbacks(
       [this]() {
-        FXL_DCHECK(mate_);
-        FXL_DCHECK(mate_->node());
+        FX_DCHECK(mate_);
+        FX_DCHECK(mate_->node());
         mate_->node()->NotifyOutputConnectionReady(mate_->index());
       },
       [this]() {
-        FXL_DCHECK(node_);
+        FX_DCHECK(node_);
         node_->NotifyInputConnectionReady(index());
       });
 }

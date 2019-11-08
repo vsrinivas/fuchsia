@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -21,7 +21,7 @@ FifoAllocator::~FifoAllocator() {
 }
 
 void FifoAllocator::Reset(uint64_t size) {
-  FXL_DCHECK(size < kNullOffset);
+  FX_DCHECK(size < kNullOffset);
   DeleteFrontToBack(front_);
   DeleteFrontToBack(free_);
   size_ = size;
@@ -32,7 +32,7 @@ void FifoAllocator::Reset(uint64_t size) {
 }
 
 uint64_t FifoAllocator::AllocateRegion(uint64_t size) {
-  FXL_DCHECK(size != 0);
+  FX_DCHECK(size != 0);
 
   if (active_->size < size) {
     // The active region is too small. Look for one that's large enough.
@@ -61,7 +61,7 @@ uint64_t FifoAllocator::AllocateRegion(uint64_t size) {
   // The active region can accommodate this allocation with room left over.
   // Create a new region (allocated) of the requested size at the front of the
   // active region, and adjust the active region to reflect the deficit.
-  FXL_DCHECK(active_->size > size);
+  FX_DCHECK(active_->size > size);
   Region* allocated = get_free(true, size, active_->offset);
   active_->size -= size;
   active_->offset += size;
@@ -73,7 +73,7 @@ void FifoAllocator::ReleaseRegion(uint64_t offset) {
   // Start at active_->next. That's usually the region we're looking for.
   bool __UNUSED released =
       Release(offset, active_->next, nullptr) || Release(offset, front_, active_);
-  FXL_DCHECK(released);
+  FX_DCHECK(released);
 }
 
 bool FifoAllocator::AnyCurrentAllocatedRegions() const {
@@ -81,10 +81,10 @@ bool FifoAllocator::AnyCurrentAllocatedRegions() const {
 }
 
 bool FifoAllocator::Release(uint64_t offset, Region* begin, Region* end) {
-  FXL_DCHECK(begin != nullptr || end == nullptr);
+  FX_DCHECK(begin != nullptr || end == nullptr);
   for (Region* region = begin; region != end; region = region->next) {
     if (region->offset == offset) {
-      FXL_DCHECK(region->allocated);
+      FX_DCHECK(region->allocated);
       region->allocated = false;
 
       Region* prev = region->prev;
@@ -117,7 +117,7 @@ bool FifoAllocator::Release(uint64_t offset, Region* begin, Region* end) {
 }
 
 bool FifoAllocator::AdvanceActive(uint64_t size) {
-  FXL_DCHECK(size != 0);
+  FX_DCHECK(size != 0);
   return AdvanceActive(size, active_->next, nullptr) || AdvanceActive(size, front_, active_);
 }
 
@@ -126,7 +126,7 @@ bool FifoAllocator::AdvanceActive(uint64_t size, Region* begin, Region* end) {
     if (!region->allocated && region->size >= size) {
       if (active_->size == 0) {
         // The old active region is zero-sized. Get rid of it.
-        FXL_DCHECK(!active_->allocated);
+        FX_DCHECK(!active_->allocated);
         remove(active_);
         put_free(active_);
       }
@@ -143,50 +143,50 @@ void FifoAllocator::MakeActivePlaceholder() {
   // a bit more efficient and because we don't need to implement insert_after.
   Region* new_active = get_free(false, 0, active_ == back_ ? 0 : active_->offset + active_->size);
 
-  FXL_DCHECK((active_ == back_) == (active_->next == nullptr));
+  FX_DCHECK((active_ == back_) == (active_->next == nullptr));
   insert_before(new_active, active_ == back_ ? front_ : active_->next);
   active_ = new_active;
 }
 
 void FifoAllocator::remove(Region* region) {
-  FXL_DCHECK(region);
+  FX_DCHECK(region);
 
   if (region->prev == nullptr) {
-    FXL_DCHECK(front_ == region);
+    FX_DCHECK(front_ == region);
     front_ = region->next;
   } else {
-    FXL_DCHECK(region->prev->next == region);
+    FX_DCHECK(region->prev->next == region);
     region->prev->next = region->next;
   }
 
   if (region->next == nullptr) {
-    FXL_DCHECK(back_ == region);
+    FX_DCHECK(back_ == region);
     back_ = region->prev;
   } else {
-    FXL_DCHECK(region->next->prev == region);
+    FX_DCHECK(region->next->prev == region);
     region->next->prev = region->prev;
   }
 }
 
 void FifoAllocator::insert_before(Region* region, Region* before_this) {
-  FXL_DCHECK(region);
-  FXL_DCHECK(before_this);
+  FX_DCHECK(region);
+  FX_DCHECK(before_this);
 
   region->prev = before_this->prev;
   before_this->prev = region;
   region->next = before_this;
   if (front_ == before_this) {
-    FXL_DCHECK(region->prev == nullptr);
+    FX_DCHECK(region->prev == nullptr);
     front_ = region;
   } else {
-    FXL_DCHECK(region->prev);
+    FX_DCHECK(region->prev);
     region->prev->next = region;
   }
 }
 
 FifoAllocator::Region* FifoAllocator::get_free(bool allocated, uint64_t size, uint64_t offset) {
-  FXL_DCHECK(size <= size_);
-  FXL_DCHECK(offset <= size_ - size);
+  FX_DCHECK(size <= size_);
+  FX_DCHECK(offset <= size_ - size);
 
   Region* result = free_;
   if (result == nullptr) {

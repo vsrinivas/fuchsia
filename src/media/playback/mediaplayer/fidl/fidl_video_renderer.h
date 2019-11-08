@@ -18,6 +18,7 @@
 #include <fbl/array.h>
 
 #include "src/lib/ui/base_view/base_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/video_renderer.h"
 
@@ -134,7 +135,7 @@ class FidlVideoRenderer : public VideoRenderer {
     void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
     // |scenic::SessionListener|
-    void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+    void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
 

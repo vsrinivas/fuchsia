@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/media/playback/mediaplayer/core/segment.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
@@ -33,21 +33,21 @@ class SourceSegment : public Segment {
     // Indicates whether this stream is valid. An invalid stream is a
     // placeholder for a removed stream.
     bool valid() const {
-      FXL_DCHECK((stream_type_ != nullptr) == static_cast<bool>(output_));
+      FX_DCHECK((stream_type_ != nullptr) == static_cast<bool>(output_));
       return stream_type_ != nullptr;
     }
 
     // Gets the type of the stream. This method must not be called on an invalid
     // |Stream|.
     const StreamType& type() const {
-      FXL_DCHECK(stream_type_);
+      FX_DCHECK(stream_type_);
       return *stream_type_;
     }
 
     // The output that produces the stream. This method must not be called on
     // an invalid |Stream|.
     const OutputRef output() const {
-      FXL_DCHECK(output_);
+      FX_DCHECK(output_);
       return output_;
     }
 

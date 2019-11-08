@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -27,12 +27,12 @@ size_t SlidingBuffer::Read(size_t pos, uint8_t* buffer, size_t bytes_to_read) {
     bytes_read += block.size;
   }
 
-  FXL_DCHECK(read_size == bytes_read);
+  FX_DCHECK(read_size == bytes_read);
   return read_size;
 }
 
 std::vector<SlidingBuffer::Block> SlidingBuffer::Slide(size_t dest_pos, size_t budget) {
-  FXL_DCHECK(budget <= store_.size())
+  FX_DCHECK(budget <= store_.size())
       << budget << " bytes were requested but buffer has capacity of " << store_.size() << ".";
 
   const Range desired_range = FindNewRange(dest_pos, budget);

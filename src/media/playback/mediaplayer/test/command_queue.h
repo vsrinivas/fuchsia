@@ -14,7 +14,7 @@
 #include <queue>
 
 #include "lib/media/cpp/timeline_function.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {
@@ -154,14 +154,14 @@ class CommandQueue {
   };
 
   struct InvokeCommand : public Command {
-    InvokeCommand(fit::closure action) : action_(std::move(action)) { FXL_DCHECK(action_); }
+    InvokeCommand(fit::closure action) : action_(std::move(action)) { FX_DCHECK(action_); }
     void Execute(CommandQueue* command_queue) override;
     fit::closure action_;
   };
 
   struct WaitForStatusConditionCommand : public Command {
     WaitForStatusConditionCommand(StatusCondition condition) : condition_(std::move(condition)) {
-      FXL_DCHECK(condition_);
+      FX_DCHECK(condition_);
     }
     void Execute(CommandQueue* command_queue) override;
     StatusCondition condition_;

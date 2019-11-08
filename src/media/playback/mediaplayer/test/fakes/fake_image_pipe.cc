@@ -10,7 +10,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {
@@ -20,7 +20,7 @@ FakeImagePipe::FakeImagePipe()
 
 FakeImagePipe::~FakeImagePipe() {
   while (!image_presentation_queue_.empty()) {
-    FXL_DCHECK(image_presentation_queue_.front().release_fences_);
+    FX_DCHECK(image_presentation_queue_.front().release_fences_);
     for (auto& release_fence : *image_presentation_queue_.front().release_fences_) {
       release_fence.signal(0, ZX_EVENT_SIGNALED);
     }
@@ -41,7 +41,7 @@ void FakeImagePipe::OnPresentScene(zx::time presentation_time, zx::time next_pre
   while (image_presentation_queue_.size() > 1 &&
          image_presentation_queue_.front().presentation_time_ <
              static_cast<uint64_t>(presentation_time.get())) {
-    FXL_DCHECK(image_presentation_queue_.front().release_fences_);
+    FX_DCHECK(image_presentation_queue_.front().release_fences_);
     for (auto& release_fence : *(image_presentation_queue_.front().release_fences_)) {
       release_fence.signal(0, ZX_EVENT_SIGNALED);
     }
@@ -59,7 +59,7 @@ void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image
     }
   } else {
     if (dump_expectations_) {
-      FXL_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
+      FX_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
       std::cerr << "{.width = " << image_info.width << ",\n"
                 << ".height = " << image_info.height << ",\n"
                 << ".stride = " << image_info.stride << ",\n"
@@ -75,7 +75,7 @@ void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image
   auto [iter, inserted] = images_by_id_.emplace(
       image_id, Image(std::move(image_info), std::move(memory), offset_bytes, size_bytes));
   if (!inserted) {
-    FXL_LOG(ERROR) << "AddImage image_id: (" << image_id
+    FX_LOGS(ERROR) << "AddImage image_id: (" << image_id
                    << ") refers to existing image, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -84,7 +84,7 @@ void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image
 
   auto& image = iter->second;
   if (image.offset_bytes_ + image.size_bytes_ > image.vmo_mapper_.size()) {
-    FXL_LOG(ERROR) << "AddImage image_id: (" << image_id << ") offset_bytes ("
+    FX_LOGS(ERROR) << "AddImage image_id: (" << image_id << ") offset_bytes ("
                    << image.offset_bytes_ << ") plus size_bytes (" << image.size_bytes_
                    << ") exceeds vmo size (" << image.vmo_mapper_.size()
                    << "), closing connection.";
@@ -97,7 +97,7 @@ void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image
 void FakeImagePipe::RemoveImage(uint32_t image_id) {
   auto removed = images_by_id_.erase(image_id);
   if (removed != 1) {
-    FXL_LOG(ERROR) << "RemoveImage: image_id (" << image_id
+    FX_LOGS(ERROR) << "RemoveImage: image_id (" << image_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -106,7 +106,7 @@ void FakeImagePipe::RemoveImage(uint32_t image_id) {
 
   for (auto& image_presentation : image_presentation_queue_) {
     if (image_presentation.image_id_ == image_id) {
-      FXL_DCHECK(image_presentation.release_fences_);
+      FX_DCHECK(image_presentation.release_fences_);
       for (auto& release_fence : *image_presentation.release_fences_) {
         release_fence.signal(0, ZX_EVENT_SIGNALED);
       }
@@ -118,13 +118,13 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
                                  std::vector<zx::event> acquire_fences,
                                  std::vector<zx::event> release_fences,
                                  PresentImageCallback callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
   // The video renderer doesn't use the acquire fences, so we don't support
   // them in the fake.
-  FXL_CHECK(acquire_fences.empty()) << "PresentImage: acquire_fences not supported.";
+  FX_CHECK(acquire_fences.empty()) << "PresentImage: acquire_fences not supported.";
 
   if (prev_presentation_time_ > presentation_time) {
-    FXL_LOG(ERROR) << "PresentImage: presentation_time (" << presentation_time
+    FX_LOGS(ERROR) << "PresentImage: presentation_time (" << presentation_time
                    << ") less than previous (" << prev_presentation_time_
                    << "), closing connection.";
     expected_ = false;
@@ -139,7 +139,7 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
 
   auto iter = images_by_id_.find(image_id);
   if (iter == images_by_id_.end()) {
-    FXL_LOG(ERROR) << "PresentImage: image_id (" << image_id
+    FX_LOGS(ERROR) << "PresentImage: image_id (" << image_id
                    << ") not recognized, closing connection.";
     expected_ = false;
     binding_.Unbind();
@@ -151,11 +151,11 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   uint64_t size = image.image_info_.stride * image.image_info_.height;
 
   if (image.offset_bytes_ + size > image.vmo_mapper_.size()) {
-    FXL_LOG(ERROR) << "PresentImage: image exceeds vmo limits";
-    FXL_LOG(ERROR) << "    vmo size     " << image.vmo_mapper_.size();
-    FXL_LOG(ERROR) << "    image offset " << image.offset_bytes_;
-    FXL_LOG(ERROR) << "    image stride " << image.image_info_.stride;
-    FXL_LOG(ERROR) << "    image height " << image.image_info_.height;
+    FX_LOGS(ERROR) << "PresentImage: image exceeds vmo limits";
+    FX_LOGS(ERROR) << "    vmo size     " << image.vmo_mapper_.size();
+    FX_LOGS(ERROR) << "    image offset " << image.offset_bytes_;
+    FX_LOGS(ERROR) << "    image stride " << image.image_info_.stride;
+    FX_LOGS(ERROR) << "    image height " << image.image_info_.height;
     expected_ = false;
     return;
   }
@@ -165,7 +165,7 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   if (dump_expectations_) {
     // Here's we're dumping the packet to the console to generate some C++ code
     // that can easily be pasted into a test as a 'golden'. We use |std::cerr|,
-    // because we don't want/need the usual log line header we get with FXL_LOG.
+    // because we don't want/need the usual log line header we get with FX_LOGS.
     // Also, this ends up on the console, not in the logs.
     std::cerr << "{ " << presentation_time - initial_presentation_time_ << ", " << size << ", 0x"
               << std::hex << std::setw(16) << std::setfill('0')
@@ -174,17 +174,17 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
 
   if (!expected_packets_info_.empty()) {
     if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      FXL_LOG(ERROR) << "PresentImage: frame supplied after expected packets";
+      FX_LOGS(ERROR) << "PresentImage: frame supplied after expected packets";
       expected_ = false;
     }
 
     if (expected_packets_info_iter_->size() != size ||
         expected_packets_info_iter_->hash() != PacketHash(image_payload, image.image_info_)) {
-      FXL_LOG(ERROR) << "PresentImage: supplied frame doesn't match expected packet info";
-      FXL_LOG(ERROR) << "actual:   " << presentation_time - initial_presentation_time_ << ", "
+      FX_LOGS(ERROR) << "PresentImage: supplied frame doesn't match expected packet info";
+      FX_LOGS(ERROR) << "actual:   " << presentation_time - initial_presentation_time_ << ", "
                      << size << ", 0x" << std::hex << std::setw(16) << std::setfill('0')
                      << PacketHash(image_payload, image.image_info_) << std::dec;
-      FXL_LOG(ERROR) << "expected: " << expected_packets_info_iter_->pts() << ", "
+      FX_LOGS(ERROR) << "expected: " << expected_packets_info_iter_->pts() << ", "
                      << expected_packets_info_iter_->size() << ", 0x" << std::hex << std::setw(16)
                      << std::setfill('0') << expected_packets_info_iter_->hash() << std::dec;
       expected_ = false;
@@ -211,55 +211,55 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
 void FakeImagePipe::ExpectImageInfo(const fuchsia::images::ImageInfo& expected,
                                     const fuchsia::images::ImageInfo& actual) {
   if (actual.transform != expected.transform) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.transform value "
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.transform value "
                    << fidl::ToUnderlying(actual.transform);
     expected_ = false;
   }
 
   if (actual.width != expected.width) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.width value " << actual.width;
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.width value " << actual.width;
     expected_ = false;
   }
 
   if (actual.height != expected.height) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.height value " << actual.height;
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.height value " << actual.height;
     expected_ = false;
   }
 
   if (actual.stride != expected.stride) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.stride value " << actual.stride;
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.stride value " << actual.stride;
     expected_ = false;
   }
 
   if (actual.pixel_format != expected.pixel_format) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.pixel_format value "
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.pixel_format value "
                    << fidl::ToUnderlying(actual.pixel_format);
     expected_ = false;
   }
 
   if (actual.color_space != expected.color_space) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.color_space value "
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.color_space value "
                    << fidl::ToUnderlying(actual.color_space);
     expected_ = false;
   }
 
   if (actual.tiling != expected.tiling) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.tiling value "
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.tiling value "
                    << fidl::ToUnderlying(actual.tiling);
     expected_ = false;
   }
 
   if (actual.alpha_format != expected.alpha_format) {
-    FXL_LOG(ERROR) << "ExpectImageInfo: unexpected ImageInfo.alpha_format value "
+    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.alpha_format value "
                    << fidl::ToUnderlying(actual.alpha_format);
     expected_ = false;
   }
 }
 
 uint64_t FakeImagePipe::PacketHash(const void* data, const fuchsia::images::ImageInfo& image_info) {
-  FXL_DCHECK(data);
-  FXL_DCHECK(expected_display_height_ <= image_info.height);
-  FXL_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
+  FX_DCHECK(data);
+  FX_DCHECK(expected_display_height_ <= image_info.height);
+  FX_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
   uint64_t hash = 0;
 
@@ -296,10 +296,10 @@ FakeImagePipe::Image::Image(fuchsia::images::ImageInfo image_info, zx::vmo memor
     : image_info_(std::move(image_info)), offset_bytes_(offset_bytes), size_bytes_(size_bytes) {
   uint64_t size;
   zx_status_t status = memory.get_size(&size);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 
   status = vmo_mapper_.Map(memory, 0, size, ZX_VM_PERM_READ, nullptr);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 }  // namespace test

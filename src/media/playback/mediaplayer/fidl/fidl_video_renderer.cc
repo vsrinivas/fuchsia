@@ -10,7 +10,6 @@
 
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
@@ -55,7 +54,7 @@ FidlVideoRenderer::FidlVideoRenderer(sys::ComponentContext* component_context)
   zx_status_t status = mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                            &black_image_vmo_, kVmoDupRights);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "Failed to create and map VMO, status " << status;
+    FX_LOGS(FATAL) << "Failed to create and map VMO, status " << status;
   }
 
   memset(mapper.start(), 0, mapper.size());
@@ -98,7 +97,7 @@ void FidlVideoRenderer::ConfigureConnectors() {
 }
 
 void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
-  FXL_DCHECK(input_index == 0);
+  FX_DCHECK(input_index == 0);
 
   input_connection_ready_ = true;
 
@@ -108,8 +107,8 @@ void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(input_index == 0);
+  FX_DCHECK(callback);
 
   flushed_ = true;
 
@@ -131,8 +130,8 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index, fit::clo
 }
 
 void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK(packet);
-  FXL_DCHECK(input_index == 0);
+  FX_DCHECK(packet);
+  FX_DCHECK(input_index == 0);
 
   CheckForRevisedStreamType(packet);
 
@@ -212,7 +211,7 @@ void FidlVideoRenderer::PresentPacket(PacketPtr packet, int64_t scenic_presentat
   auto release_tracker = fbl::AdoptRef(
       new ReleaseTracker(packet, std::static_pointer_cast<FidlVideoRenderer>(shared_from_this())));
 
-  FXL_DCHECK(packet->payload_buffer()->vmo());
+  FX_DCHECK(packet->payload_buffer()->vmo());
   uint32_t buffer_index = packet->payload_buffer()->vmo()->index();
 
   for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
@@ -226,8 +225,8 @@ void FidlVideoRenderer::PresentPacket(PacketPtr packet, int64_t scenic_presentat
 }
 
 void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
-  FXL_DCHECK(stream_type.medium() == StreamType::Medium::kVideo);
-  FXL_DCHECK(stream_type.encoding() == StreamType::kVideoEncodingUncompressed);
+  FX_DCHECK(stream_type.medium() == StreamType::Medium::kVideo);
+  FX_DCHECK(stream_type.encoding() == StreamType::kVideoEncodingUncompressed);
 
   const VideoStreamType& video_stream_type = *stream_type.video();
 
@@ -271,11 +270,11 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
     default:
       // Not supported.
       // TODO(dalesat): Report the problem.
-      FXL_LOG(FATAL) << "Unsupported pixel format.";
+      FX_LOGS(FATAL) << "Unsupported pixel format.";
       break;
   }
 
-  FXL_DCHECK(have_valid_image_info());
+  FX_DCHECK(have_valid_image_info());
 
   if (!had_valid_image_info && input_connection_ready_) {
     // Updating images was deferred when |OnInputConnectionReady| was called,
@@ -331,14 +330,14 @@ void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
   if (have_valid_image_info() && input_connection_ready_) {
     // We're ready to add images to the new view, so do so.
     std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
-    FXL_DCHECK(!vmos.empty());
+    FX_DCHECK(!vmos.empty());
     view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_, display_height_, vmos);
   }
 }
 
 void FidlVideoRenderer::UpdateImages() {
   std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
-  FXL_DCHECK(!vmos.empty());
+  FX_DCHECK(!vmos.empty());
 
   if (vmos[0]->size() < image_info_.stride * image_info_.height) {
     // The payload VMOs are too small for the images. We will be getting a new
@@ -410,7 +409,7 @@ void FidlVideoRenderer::OnTimelineTransition() {
 }
 
 void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
-  FXL_DCHECK(packet);
+  FX_DCHECK(packet);
 
   auto revised_stream_type = packet->revised_stream_type();
   if (!revised_stream_type) {
@@ -418,10 +417,10 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
   }
 
   if (revised_stream_type->medium() != StreamType::Medium::kVideo) {
-    FXL_LOG(FATAL) << "Revised stream type was not video.";
+    FX_LOGS(FATAL) << "Revised stream type was not video.";
   }
 
-  FXL_DCHECK(revised_stream_type->video());
+  FX_DCHECK(revised_stream_type->video());
 
   SetStreamType(*revised_stream_type);
 
@@ -438,8 +437,8 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
 FidlVideoRenderer::ReleaseTracker::ReleaseTracker(PacketPtr packet,
                                                   std::shared_ptr<FidlVideoRenderer> renderer)
     : packet_(packet), renderer_(renderer) {
-  FXL_DCHECK(packet_);
-  FXL_DCHECK(renderer_);
+  FX_DCHECK(packet_);
+  FX_DCHECK(renderer_);
 }
 
 FidlVideoRenderer::ReleaseTracker::~ReleaseTracker() { renderer_->PacketReleased(packet_); }
@@ -469,7 +468,7 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
       entity_node_(session()),
       image_pipe_node_(session()),
       image_pipe_material_(session()) {
-  FXL_DCHECK(renderer_);
+  FX_DCHECK(renderer_);
 
   // Create an |ImagePipe|.
   uint32_t image_pipe_id = session()->AllocResourceId();
@@ -504,23 +503,23 @@ FidlVideoRenderer::View::~View() {}
 void FidlVideoRenderer::View::AddBlackImage(uint32_t image_id,
                                             fuchsia::images::ImageInfo image_info,
                                             const zx::vmo& vmo) {
-  FXL_DCHECK(vmo);
+  FX_DCHECK(vmo);
 
   if (!image_pipe_) {
-    FXL_LOG(FATAL) << "View::AddBlackImage called with no ImagePipe.";
+    FX_LOGS(FATAL) << "View::AddBlackImage called with no ImagePipe.";
     return;
   }
 
   zx::vmo duplicate;
   zx_status_t status = vmo.duplicate(kVmoDupRights, &duplicate);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "Failed to duplicate VMO, status " << status;
+    FX_LOGS(FATAL) << "Failed to duplicate VMO, status " << status;
   }
 
   uint64_t size;
   status = vmo.get_size(&size);
   if (status != ZX_OK) {
-    FXL_LOG(FATAL) << "Failed to get size of VMO, status " << status;
+    FX_LOGS(FATAL) << "Failed to get size of VMO, status " << status;
   }
 
   // For now, we don't support non-zero memory offsets.
@@ -532,10 +531,10 @@ void FidlVideoRenderer::View::UpdateImages(uint32_t image_id_base,
                                            fuchsia::images::ImageInfo image_info,
                                            uint32_t display_width, uint32_t display_height,
                                            const std::vector<fbl::RefPtr<PayloadVmo>>& vmos) {
-  FXL_DCHECK(!vmos.empty());
+  FX_DCHECK(!vmos.empty());
 
   if (!image_pipe_) {
-    FXL_LOG(FATAL) << "View::UpdateImages called with no ImagePipe.";
+    FX_LOGS(FATAL) << "View::UpdateImages called with no ImagePipe.";
     return;
   }
 
@@ -568,7 +567,7 @@ void FidlVideoRenderer::View::UpdateImages(uint32_t image_id_base,
 
 void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id, uint64_t presentation_time) {
   if (!image_pipe_) {
-    FXL_LOG(FATAL) << "View::PresentBlackImage called with no ImagePipe.";
+    FX_LOGS(FATAL) << "View::PresentBlackImage called with no ImagePipe.";
     return;
   }
 
@@ -580,14 +579,14 @@ void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id, uint64_t pres
 void FidlVideoRenderer::View::PresentImage(uint32_t buffer_index, uint64_t presentation_time,
                                            fbl::RefPtr<ReleaseTracker> release_tracker,
                                            async_dispatcher_t* dispatcher) {
-  FXL_DCHECK(dispatcher);
+  FX_DCHECK(dispatcher);
 
   if (!image_pipe_) {
-    FXL_LOG(FATAL) << "View::PresentImage called with no ImagePipe.";
+    FX_LOGS(FATAL) << "View::PresentImage called with no ImagePipe.";
     return;
   }
 
-  FXL_DCHECK(buffer_index < images_.size());
+  FX_DCHECK(buffer_index < images_.size());
 
   auto& image = images_[buffer_index];
 
@@ -595,7 +594,7 @@ void FidlVideoRenderer::View::PresentImage(uint32_t buffer_index, uint64_t prese
   if (status != ZX_OK) {
     // The image won't get presented, but this is otherwise unharmful.
     // TODO(dalesat): Shut down playback and report the problem to the client.
-    FXL_LOG(ERROR) << "Failed to create event in PresentImage.";
+    FX_LOGS(ERROR) << "Failed to create event in PresentImage.";
     return;
   }
 
@@ -604,7 +603,7 @@ void FidlVideoRenderer::View::PresentImage(uint32_t buffer_index, uint64_t prese
   if (status != ZX_OK) {
     // The image won't get presented, but this is otherwise unharmful.
     // TODO(dalesat): Shut down playback and report the problem to the client.
-    FXL_LOG(ERROR) << "Failed to duplicate event in PresentImage.";
+    FX_LOGS(ERROR) << "Failed to duplicate event in PresentImage.";
     image.release_fence_ = zx::event();
     return;
   }

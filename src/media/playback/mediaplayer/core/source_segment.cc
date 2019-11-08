@@ -6,8 +6,6 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media_player {
 
 SourceSegment::SourceSegment(bool stream_add_imminent)
@@ -18,8 +16,8 @@ SourceSegment::~SourceSegment() {}
 void SourceSegment::Provision(Graph* graph, async_dispatcher_t* dispatcher,
                               fit::closure updateCallback,
                               StreamUpdateCallback stream_update_callback) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(dispatcher);
+  FX_DCHECK(graph);
+  FX_DCHECK(dispatcher);
 
   stream_update_callback_ = std::move(stream_update_callback);
   Segment::Provision(graph, dispatcher, std::move(updateCallback));
@@ -36,7 +34,7 @@ void SourceSegment::SetStreamUpdateCallback(StreamUpdateCallback stream_update_c
 
 void SourceSegment::OnStreamUpdated(size_t index, const StreamType& type, OutputRef output,
                                     bool more) {
-  FXL_DCHECK(output);
+  FX_DCHECK(output);
 
   if (streams_.size() <= index) {
     streams_.resize(index + 1);
@@ -54,7 +52,7 @@ void SourceSegment::OnStreamUpdated(size_t index, const StreamType& type, Output
 }
 
 void SourceSegment::OnStreamRemoved(size_t index, bool more) {
-  FXL_DCHECK(index < streams_.size());
+  FX_DCHECK(index < streams_.size());
 
   Stream& stream = streams_[index];
   stream.stream_type_ = nullptr;

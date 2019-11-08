@@ -14,6 +14,7 @@ source_set("process") {
   ]
 
   deps = [
+    "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/metrics",
     "//zircon/public/lib/async-loop-cpp",

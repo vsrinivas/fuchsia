@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {

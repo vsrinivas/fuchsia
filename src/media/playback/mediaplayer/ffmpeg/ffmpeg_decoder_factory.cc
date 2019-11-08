@@ -4,6 +4,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_factory.h"
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_audio_decoder.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_video_decoder.h"
@@ -21,18 +22,18 @@ FfmpegDecoderFactory::~FfmpegDecoderFactory() {}
 
 void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
                                          fit::function<void(std::shared_ptr<Processor>)> callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
 
   AvCodecContextPtr av_codec_context(AvCodecContext::Create(stream_type));
   if (!av_codec_context) {
-    FXL_LOG(ERROR) << "couldn't create codec context";
+    FX_LOGS(ERROR) << "couldn't create codec context";
     callback(nullptr);
     return;
   }
 
   AVCodec* ffmpeg_decoder = avcodec_find_decoder(av_codec_context->codec_id);
   if (ffmpeg_decoder == nullptr) {
-    FXL_LOG(ERROR) << "couldn't find decoder context "
+    FX_LOGS(ERROR) << "couldn't find decoder context "
                    << avcodec_get_name(av_codec_context->codec_id);
     callback(nullptr);
     return;
@@ -40,7 +41,7 @@ void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
 
   int r = avcodec_open2(av_codec_context.get(), ffmpeg_decoder, nullptr);
   if (r < 0) {
-    FXL_LOG(ERROR) << "couldn't open the decoder " << r;
+    FX_LOGS(ERROR) << "couldn't open the decoder " << r;
     callback(nullptr);
     return;
   }
@@ -53,7 +54,7 @@ void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
       callback(FfmpegVideoDecoder::Create(std::move(av_codec_context)));
       break;
     default:
-      FXL_LOG(ERROR) << "unsupported codec type " << av_codec_context->codec_type;
+      FX_LOGS(ERROR) << "unsupported codec type " << av_codec_context->codec_type;
       callback(nullptr);
       break;
   }

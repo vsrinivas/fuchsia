@@ -11,6 +11,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/local_memory_payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_config.h"
@@ -259,14 +260,14 @@ class PayloadManager {
 
   VmoPayloadAllocator* input_vmo_payload_allocator_locked() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
-    FXL_DCHECK(ready_locked());
+    FX_DCHECK(ready_locked());
     return input_.vmo_allocator_ ? input_.vmo_allocator_.get() : output_.vmo_allocator_.get();
   }
 
   // TEST ONLY.
   VmoPayloadAllocator* output_vmo_payload_allocator_locked() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
-    FXL_DCHECK(ready_locked());
+    FX_DCHECK(ready_locked());
     return output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
   }
 

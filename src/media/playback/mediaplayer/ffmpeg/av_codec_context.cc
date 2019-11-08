@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/subpicture_stream_type.h"
@@ -27,10 +27,10 @@ constexpr uint32_t kKeyIdSize = 16;         // Key IDs in pssh boxes are always 
 
 // Deposits |size| bytes copied from |data| at |*p_in_out| and increases |*p_in_out| by |size|.
 void Deposit(const uint8_t* data, size_t size, uint8_t** p_in_out) {
-  FXL_DCHECK(size);
-  FXL_DCHECK(data);
-  FXL_DCHECK(p_in_out);
-  FXL_DCHECK(*p_in_out);
+  FX_DCHECK(size);
+  FX_DCHECK(data);
+  FX_DCHECK(p_in_out);
+  FX_DCHECK(*p_in_out);
   memcpy(*p_in_out, data, size);
   *p_in_out += size;
 }
@@ -83,7 +83,7 @@ std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
       sizeof(PsshBoxInvariantPrefix) + sizeof(uint32_t) + encryption_init_info->data_size;
   if (encryption_init_info->num_key_ids != 0) {
     box_size += sizeof(uint32_t) + kKeyIdSize * encryption_init_info->num_key_ids;
-    FXL_DCHECK(encryption_init_info->key_id_size == kKeyIdSize);
+    FX_DCHECK(encryption_init_info->key_id_size == kKeyIdSize);
   }
 
   // Create a buffer of the correct size.
@@ -98,7 +98,7 @@ std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
   prefix->flags_[1] = 0;
   prefix->flags_[2] = 0;
 
-  FXL_DCHECK(encryption_init_info->system_id_size == kSystemIdSize);
+  FX_DCHECK(encryption_init_info->system_id_size == kSystemIdSize);
   memcpy(prefix->system_id_, encryption_init_info->system_id, kSystemIdSize);
 
   // Set |p| to point to the first byte after |prefix|. |p| will be our write pointer into
@@ -109,7 +109,7 @@ std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
   if (encryption_init_info->num_key_ids != 0) {
     Deposit(htobe32(encryption_init_info->num_key_ids), &p);
     for (uint32_t i = 0; i < encryption_init_info->num_key_ids; ++i) {
-      FXL_DCHECK(encryption_init_info->key_ids[i]);
+      FX_DCHECK(encryption_init_info->key_ids[i]);
       Deposit(encryption_init_info->key_ids[i], kKeyIdSize, &p);
     }
   }
@@ -118,7 +118,7 @@ std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
   Deposit(htobe32(encryption_init_info->data_size), &p);
   Deposit(encryption_init_info->data, encryption_init_info->data_size, &p);
 
-  FXL_DCHECK(p == result->data() + box_size);
+  FX_DCHECK(p == result->data() + box_size);
 
   av_encryption_init_info_free(encryption_init_info);
 
@@ -146,7 +146,7 @@ AudioStreamType::SampleFormat Convert(AVSampleFormat av_sample_format) {
     case AV_SAMPLE_FMT_DBLP:
     case AV_SAMPLE_FMT_NB:
     default:
-      FXL_LOG(ERROR) << "unsupported av_sample_format " << av_sample_format;
+      FX_LOGS(ERROR) << "unsupported av_sample_format " << av_sample_format;
       abort();
   }
 }
@@ -208,7 +208,7 @@ const char* EncodingFromCodecId(AVCodecID from) {
     case AV_CODEC_ID_VP9:
       return StreamType::kVideoEncodingVp9;
     default:
-      FXL_LOG(WARNING) << "unsupported codec_id " << avcodec_get_name(from);
+      FX_LOGS(WARNING) << "unsupported codec_id " << avcodec_get_name(from);
       return StreamType::kMediaEncodingUnsupported;
   }
 }
@@ -240,7 +240,7 @@ std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(const AVCodecContext
 
 // Creates a StreamType from an AVCodecContext describing an audio type.
 std::unique_ptr<StreamType> StreamTypeFromAudioStream(const AVStream& from) {
-  FXL_DCHECK(from.codecpar);
+  FX_DCHECK(from.codecpar);
 
   auto& codecpar = *from.codecpar;
   bool decoded = IsLpcm(codecpar.codec_id);
@@ -279,8 +279,8 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(const AVCodecContext
   int coded_width = from.coded_width;
   int coded_height = from.coded_height;
   avcodec_align_dimensions(const_cast<AVCodecContext*>(&from), &coded_width, &coded_height);
-  FXL_DCHECK(coded_width >= from.coded_width);
-  FXL_DCHECK(coded_height >= from.coded_height);
+  FX_DCHECK(coded_width >= from.coded_width);
+  FX_DCHECK(coded_height >= from.coded_height);
 
   uint32_t aspect_ratio_width = from.sample_aspect_ratio.num;
   uint32_t aspect_ratio_height = from.sample_aspect_ratio.den;
@@ -297,7 +297,7 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(const AVCodecContext
       break;
     default:
       line_stride = 0;
-      FXL_LOG(FATAL) << "Unrecognized pixel format " << from.pix_fmt;
+      FX_LOGS(FATAL) << "Unrecognized pixel format " << from.pix_fmt;
   }
 
   return VideoStreamType::Create(
@@ -357,7 +357,7 @@ std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(const AVCodecP
 
 // Creates an AVCodecContext from an AudioStreamType.
 AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& stream_type) {
-  FXL_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
+  FX_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
 
   AVCodecID codec_id;
   AVSampleFormat sample_format = AV_SAMPLE_FMT_NONE;
@@ -381,7 +381,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
         sample_format = AV_SAMPLE_FMT_FLT;
         break;
       default:
-        FXL_LOG(ERROR) << "unsupported sample format";
+        FX_LOGS(ERROR) << "unsupported sample format";
         abort();
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingAac) {
@@ -420,7 +420,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
         sample_format = AV_SAMPLE_FMT_FLTP;
         break;
       default:
-        FXL_LOG(ERROR) << "unsupported sample format";
+        FX_LOGS(ERROR) << "unsupported sample format";
         abort();
     }
   } else if (stream_type.encoding() == StreamType::kAudioEncodingVorbis) {
@@ -428,7 +428,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& strea
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
     codec_id = AV_CODEC_ID_NONE;
   } else {
-    FXL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    FX_LOGS(WARNING) << "unsupported encoding " << stream_type.encoding();
     codec_id = AV_CODEC_ID_NONE;
   }
 
@@ -468,7 +468,7 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(const VideoStreamType& strea
   } else if (stream_type.encoding() == StreamType::kMediaEncodingUnsupported) {
     codec_id = AV_CODEC_ID_NONE;
   } else {
-    FXL_LOG(WARNING) << "unsupported encoding " << stream_type.encoding();
+    FX_LOGS(WARNING) << "unsupported encoding " << stream_type.encoding();
     codec_id = AV_CODEC_ID_NONE;
   }
 
@@ -499,14 +499,14 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(const VideoStreamType& strea
 // Creats an AVCodecContext from a TextStreamType.
 AvCodecContextPtr AVCodecContextFromTextStreamType(const TextStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  FXL_LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
+  FX_LOGS(ERROR) << "AVCodecContextFromTextStreamType not implemented";
   abort();
 }
 
 // Creats an AVCodecContext from a SubpictureStreamType.
 AvCodecContextPtr AVCodecContextFromSubpictureStreamType(const SubpictureStreamType& stream_type) {
   // TODO(dalesat): Implement.
-  FXL_LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
+  FX_LOGS(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
   abort();
 }
 
@@ -551,7 +551,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVCodecContext& 
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      FXL_LOG(ERROR) << "unsupported code type " << from.codec_type;
+      FX_LOGS(ERROR) << "unsupported code type " << from.codec_type;
       abort();
   }
 }
@@ -572,14 +572,14 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVStream& from) 
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      FXL_LOG(ERROR) << "unsupported code type " << from.codecpar->codec_type;
+      FX_LOGS(ERROR) << "unsupported code type " << from.codecpar->codec_type;
       abort();
   }
 }
 
 // static
 AvCodecContextPtr AvCodecContext::Create(const StreamType& stream_type) {
-  FXL_DCHECK(!stream_type.encrypted());
+  FX_DCHECK(!stream_type.encrypted());
 
   InitFfmpeg();
 

@@ -12,27 +12,27 @@ namespace media_player {
 fbl::RefPtr<BufferSet> BufferSet::Create(const fuchsia::media::StreamBufferSettings& settings,
                                          uint64_t buffer_lifetime_ordinal, bool single_vmo) {
   if (!settings.has_buffer_constraints_version_ordinal()) {
-    FXL_LOG(ERROR) << "Settings missing buffer_constraints_version_ordinal.";
+    FX_LOGS(ERROR) << "Settings missing buffer_constraints_version_ordinal.";
     return nullptr;
   }
 
   if (!settings.has_single_buffer_mode()) {
-    FXL_LOG(ERROR) << "Settings missing single_buffer_mode.";
+    FX_LOGS(ERROR) << "Settings missing single_buffer_mode.";
     return nullptr;
   }
 
   if (!settings.has_packet_count_for_client()) {
-    FXL_LOG(ERROR) << "Settings missing packet_count_for_client.";
+    FX_LOGS(ERROR) << "Settings missing packet_count_for_client.";
     return nullptr;
   }
 
   if (!settings.has_packet_count_for_server()) {
-    FXL_LOG(ERROR) << "Settings missing packet_count_for_server.";
+    FX_LOGS(ERROR) << "Settings missing packet_count_for_server.";
     return nullptr;
   }
 
   if (!settings.has_per_packet_buffer_bytes()) {
-    FXL_LOG(ERROR) << "Settings missing per_packet_buffer_bytes.";
+    FX_LOGS(ERROR) << "Settings missing per_packet_buffer_bytes.";
     return nullptr;
   }
 
@@ -56,7 +56,7 @@ BufferSet::~BufferSet() {
 }
 
 void BufferSet::SetBufferCount(uint32_t buffer_count) {
-  FXL_DCHECK(buffer_count > 0);
+  FX_DCHECK(buffer_count > 0);
   std::lock_guard<std::mutex> locker(mutex_);
   buffers_.resize(buffer_count);
   free_buffer_count_ = buffer_count;
@@ -64,7 +64,7 @@ void BufferSet::SetBufferCount(uint32_t buffer_count) {
 
 fuchsia::media::StreamBufferPartialSettings BufferSet::PartialSettings(
     fuchsia::sysmem::BufferCollectionTokenPtr token) const {
-  FXL_DCHECK(token);
+  FX_DCHECK(token);
   std::lock_guard<std::mutex> locker(mutex_);
   fuchsia::media::StreamBufferPartialSettings partial_settings;
   partial_settings.set_buffer_lifetime_ordinal(lifetime_ordinal_);
@@ -79,27 +79,27 @@ fuchsia::media::StreamBufferPartialSettings BufferSet::PartialSettings(
 fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(uint64_t size,
                                                      const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(!buffers_.empty());
-  FXL_DCHECK(size <= buffer_size_);
-  FXL_DCHECK(free_buffer_count_ != 0);
-  FXL_DCHECK(suggest_next_to_allocate_ < buffers_.size());
+  FX_DCHECK(!buffers_.empty());
+  FX_DCHECK(size <= buffer_size_);
+  FX_DCHECK(free_buffer_count_ != 0);
+  FX_DCHECK(suggest_next_to_allocate_ < buffers_.size());
 
   std::vector<fbl::RefPtr<PayloadVmo>> vmos = payload_vmos.GetVmos();
-  FXL_DCHECK(vmos.size() == buffers_.size());
+  FX_DCHECK(vmos.size() == buffers_.size());
 
-  FXL_DCHECK(single_vmo_ ? (vmos.size() == 1) : (vmos.size() == buffers_.size()));
+  FX_DCHECK(single_vmo_ ? (vmos.size() == 1) : (vmos.size() == buffers_.size()));
 
   uint32_t index = suggest_next_to_allocate_;
   while (!buffers_[index].free_) {
     index = (index + 1) % buffers_.size();
     if (index == suggest_next_to_allocate_) {
-      FXL_LOG(WARNING) << "AllocateBuffer: ran out of buffers";
+      FX_LOGS(WARNING) << "AllocateBuffer: ran out of buffers";
       return nullptr;
     }
   }
 
-  FXL_DCHECK(buffers_[index].processor_ref_ == nullptr);
-  FXL_DCHECK(buffers_[index].free_);
+  FX_DCHECK(buffers_[index].processor_ref_ == nullptr);
+  FX_DCHECK(buffers_[index].free_);
   buffers_[index].free_ = false;
 
   suggest_next_to_allocate_ = (index + 1) % buffers_.size();
@@ -109,20 +109,20 @@ fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(uint64_t size,
 
 void BufferSet::AddRefBufferForProcessor(uint32_t buffer_index,
                                          fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  FXL_DCHECK(payload_buffer);
+  FX_DCHECK(payload_buffer);
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(buffer_index < buffers_.size());
-  FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(!buffers_[buffer_index].processor_ref_);
+  FX_DCHECK(buffer_index < buffers_.size());
+  FX_DCHECK(!buffers_[buffer_index].free_);
+  FX_DCHECK(!buffers_[buffer_index].processor_ref_);
 
   buffers_[buffer_index].processor_ref_ = payload_buffer;
 }
 
 fbl::RefPtr<PayloadBuffer> BufferSet::TakeBufferFromProcessor(uint32_t buffer_index) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(buffer_index < buffers_.size());
-  FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(buffers_[buffer_index].processor_ref_);
+  FX_DCHECK(buffer_index < buffers_.size());
+  FX_DCHECK(!buffers_[buffer_index].free_);
+  FX_DCHECK(buffers_[buffer_index].processor_ref_);
 
   auto result = buffers_[buffer_index].processor_ref_;
   buffers_[buffer_index].processor_ref_ = nullptr;
@@ -132,24 +132,24 @@ fbl::RefPtr<PayloadBuffer> BufferSet::TakeBufferFromProcessor(uint32_t buffer_in
 
 fbl::RefPtr<PayloadBuffer> BufferSet::GetProcessorOwnedBuffer(uint32_t buffer_index) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(buffer_index < buffers_.size());
+  FX_DCHECK(buffer_index < buffers_.size());
   // Buffer must already be owned by the processor.
-  FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(buffers_[buffer_index].processor_ref_);
+  FX_DCHECK(!buffers_[buffer_index].free_);
+  FX_DCHECK(buffers_[buffer_index].processor_ref_);
 
   return buffers_[buffer_index].processor_ref_;
 }
 
 void BufferSet::AllocateAllBuffersForProcessor(const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(!buffers_.empty());
+  FX_DCHECK(!buffers_.empty());
 
   std::vector<fbl::RefPtr<PayloadVmo>> vmos = payload_vmos.GetVmos();
-  FXL_DCHECK(vmos.size() == buffers_.size());
+  FX_DCHECK(vmos.size() == buffers_.size());
 
   for (size_t index = 0; index < buffers_.size(); ++index) {
-    FXL_DCHECK(buffers_[index].free_);
-    FXL_DCHECK(!buffers_[index].processor_ref_);
+    FX_DCHECK(buffers_[index].free_);
+    FX_DCHECK(!buffers_[index].processor_ref_);
 
     buffers_[index].free_ = false;
     buffers_[index].processor_ref_ = CreateBuffer(index, vmos);
@@ -198,7 +198,7 @@ void BufferSet::Decommission() {
 
 fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
     uint32_t buffer_index, const std::vector<fbl::RefPtr<PayloadVmo>>& payload_vmos) {
-  FXL_DCHECK(single_vmo_ ? (payload_vmos.size() == 1) : (buffer_index < payload_vmos.size()));
+  FX_DCHECK(single_vmo_ ? (payload_vmos.size() == 1) : (buffer_index < payload_vmos.size()));
 
   fbl::RefPtr<PayloadVmo> payload_vmo =
       (single_vmo_ ? payload_vmos[0] : payload_vmos[buffer_index]);
@@ -213,9 +213,9 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
 
         {
           std::lock_guard<std::mutex> locker(mutex_);
-          FXL_DCHECK(buffer_index < buffers_.size());
-          FXL_DCHECK(!buffers_[buffer_index].free_);
-          FXL_DCHECK(!buffers_[buffer_index].processor_ref_);
+          FX_DCHECK(buffer_index < buffers_.size());
+          FX_DCHECK(!buffers_[buffer_index].free_);
+          FX_DCHECK(!buffers_[buffer_index].processor_ref_);
 
           buffers_[buffer_index].free_ = true;
           ++free_buffer_count_;
@@ -240,7 +240,7 @@ bool BufferSetManager::ApplyConstraints(const fuchsia::media::StreamBufferConstr
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (!constraints.has_default_settings()) {
-    FXL_LOG(ERROR) << "FIDL buffer constraints do not have default settings.";
+    FX_LOGS(ERROR) << "FIDL buffer constraints do not have default settings.";
     return false;
   }
 
@@ -255,7 +255,7 @@ bool BufferSetManager::ApplyConstraints(const fuchsia::media::StreamBufferConstr
                                    prefer_single_vmo && constraints.single_buffer_mode_allowed());
 
   if (current_set_ == nullptr) {
-    FXL_LOG(ERROR) << "Could not create bufferset from FIDL buffer settings.";
+    FX_LOGS(ERROR) << "Could not create bufferset from FIDL buffer settings.";
     return false;
   }
 

@@ -6,8 +6,6 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media_player {
 
 Segment::Segment() {}
@@ -16,8 +14,8 @@ Segment::~Segment() {}
 
 void Segment::Provision(Graph* graph, async_dispatcher_t* dispatcher,
                         fit::closure update_callback) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(dispatcher);
+  FX_DCHECK(graph);
+  FX_DCHECK(dispatcher);
 
   graph_ = graph;
   dispatcher_ = dispatcher;

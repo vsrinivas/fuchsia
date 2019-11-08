@@ -6,7 +6,6 @@
 
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 extern "C" {
@@ -17,7 +16,7 @@ namespace media_player {
 
 void AVIOContextDeleter::operator()(AVIOContext* context) const {
   AvIoContextOpaque* av_io_context = reinterpret_cast<AvIoContextOpaque*>(context->opaque);
-  FXL_DCHECK(av_io_context);
+  FX_DCHECK(av_io_context);
   // This is the matching delete for the new that happens in
   // AvIoContext::Create. This is part of the deleter for the io context, which
   // is managed by AvIoContextPtr, a unique_ptr that uses this deleter.
@@ -29,7 +28,7 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
 // static
 zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader, AvIoContextPtr* context_ptr_out,
                                 async_dispatcher_t* dispatcher) {
-  FXL_CHECK(context_ptr_out);
+  FX_CHECK(context_ptr_out);
 
   // Internal buffer size used by AVIO for reading.
   constexpr int kBufferSize = 32 * 1024;
@@ -91,13 +90,13 @@ AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader, async_dispa
 }
 
 int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
-  FXL_DCHECK(position_ >= 0);
+  FX_DCHECK(position_ >= 0);
 
   if (position_ >= size_) {
     return AVERROR_EOF;
   }
 
-  FXL_DCHECK(static_cast<uint64_t>(position_) < std::numeric_limits<size_t>::max());
+  FX_DCHECK(static_cast<uint64_t>(position_) < std::numeric_limits<size_t>::max());
 
   zx_status_t read_at_status;
   size_t read_at_bytes_read;
@@ -115,7 +114,7 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
   WaitForCallback();
 
   if (read_at_status != ZX_OK) {
-    FXL_LOG(ERROR) << "read failed";
+    FX_LOGS(ERROR) << "read failed";
     return AVERROR(EIO);
   }
 
@@ -127,7 +126,7 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
   switch (whence) {
     case SEEK_SET:
       if (size_ != -1 && offset >= size_) {
-        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_SET, size "
+        FX_LOGS(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_SET, size "
                         << size_;
         return AVERROR(EIO);
       }
@@ -137,7 +136,7 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
 
     case SEEK_CUR:
       if (size_ != -1 && position_ + offset >= size_) {
-        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset
+        FX_LOGS(ERROR) << "Seek out of range: offset " << offset
                         << ", whence SEEK_CUR, current position " << position_ << ", size "
                         << size_;
         return AVERROR(EIO);
@@ -148,12 +147,12 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
 
     case SEEK_END:
       if (size_ == -1) {
-        FXL_DLOG(ERROR) << "SEEK_END specified, size unknown";
+        FX_LOGS(ERROR) << "SEEK_END specified, size unknown";
         return AVERROR(EIO);
       }
 
       if (offset < -size_ || offset >= 0) {
-        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_END, size "
+        FX_LOGS(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_END, size "
                         << size_;
         return AVERROR(EIO);
       }
@@ -163,18 +162,18 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
 
     case AVSEEK_SIZE:
       if (size_ == -1) {
-        FXL_DLOG(ERROR) << "AVSEEK_SIZE specified, size unknown";
+        FX_LOGS(ERROR) << "AVSEEK_SIZE specified, size unknown";
         return AVERROR(EIO);
       }
 
       return size_;
 
     default:
-      FXL_DLOG(ERROR) << "unrecognized whence value " << whence;
+      FX_LOGS(ERROR) << "unrecognized whence value " << whence;
       return AVERROR(EIO);
   }
 
-  FXL_DCHECK(size_ == -1 || position_ < size_);
+  FX_DCHECK(size_ == -1 || position_ < size_);
   return position_;
 }
 

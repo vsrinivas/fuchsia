@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -25,7 +25,7 @@ class FakeWavReader : public fuchsia::media::playback::SeekingReader {
   ~FakeWavReader() override;
 
   void SetSize(uint64_t size) {
-    FXL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
+    FX_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
     size_ = size;
     WriteHeader();
   }

@@ -50,7 +50,7 @@ executable("mediaplayer_bin") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/media/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
     "//src/media/playback/mediaplayer/core",
     "//src/media/playback/mediaplayer/demux",

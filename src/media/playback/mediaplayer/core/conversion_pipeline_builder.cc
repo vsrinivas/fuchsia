@@ -41,7 +41,7 @@ int Score(const AudioStreamType& in_type, const AudioStreamTypeSet& out_type_set
         score += 4;
         break;
       default:
-        FXL_DCHECK(false) << "unsupported sample format " << out_type_set.sample_format();
+        FX_DCHECK(false) << "unsupported sample format " << out_type_set.sample_format();
         return 0;
     }
   }
@@ -114,7 +114,7 @@ Builder::Builder(const StreamType& in_type,
 void Builder::Build() {
   if (type_->encrypted()) {
     // TODO(dalesat): Support encrypted types.
-    FXL_DLOG(ERROR) << "encrypted types not supported.";
+    FX_LOGS(ERROR) << "encrypted types not supported.";
     Fail();
     return;
   }
@@ -135,7 +135,7 @@ void Builder::Build() {
       }
       break;
     default:
-      FXL_DLOG(ERROR) << "conversion not supported for medium" << type_->medium();
+      FX_LOGS(ERROR) << "conversion not supported for medium" << type_->medium();
       Fail();
       break;
   }
@@ -174,7 +174,7 @@ void Builder::AddTransformsForCompressedAudio(const AudioStreamType& audio_type)
     return;
   }
 
-  FXL_DCHECK(output->IncludesEncoding(StreamType::kAudioEncodingLpcm));
+  FX_DCHECK(output->IncludesEncoding(StreamType::kAudioEncodingLpcm));
 
   // Need to decode. Create a decoder and go from there.
   AddDecoder();
@@ -225,21 +225,21 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
   if (audio_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     // TODO(dalesat): Insert sample format converter.
-    FXL_DLOG(ERROR) << "conversion requires sample format change - not supported";
+    FX_LOGS(ERROR) << "conversion requires sample format change - not supported";
     Fail();
     return;
   }
 
   if (!out_type_set.channels().contains(audio_type.channels())) {
     // TODO(dalesat): Insert mixdown/up transform.
-    FXL_DLOG(ERROR) << "conversion requires mixdown/up - not supported";
+    FX_LOGS(ERROR) << "conversion requires mixdown/up - not supported";
     Fail();
     return;
   }
 
   if (!out_type_set.frames_per_second().contains(audio_type.frames_per_second())) {
     // TODO(dalesat): Insert resampler.
-    FXL_DLOG(ERROR) << "conversion requires resampling - not supported";
+    FX_LOGS(ERROR) << "conversion requires resampling - not supported";
     Fail();
     return;
   }
@@ -259,7 +259,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type) {
   auto output = BestLpcmOutputForInput(audio_type);
   if (output == nullptr) {
     // TODO(dalesat): Support a compressed output type by encoding.
-    FXL_DLOG(ERROR) << "conversion using encoder not supported";
+    FX_LOGS(ERROR) << "conversion using encoder not supported";
     Fail();
     return;
   }
@@ -273,10 +273,10 @@ void BuildConversionPipeline(const StreamType& in_type,
                              const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
                              Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
                              fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(decoder_factory);
-  FXL_DCHECK(output);
-  FXL_DCHECK(callback);
+  FX_DCHECK(graph);
+  FX_DCHECK(decoder_factory);
+  FX_DCHECK(output);
+  FX_DCHECK(callback);
 
   auto builder =
       new Builder(in_type, out_type_sets, graph, decoder_factory, output, std::move(callback));

@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 
 #include "gtest/gtest.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 extern "C" {
 #include "libavformat/avformat.h"
@@ -60,33 +61,33 @@ TEST(AvCodecContext, EncryptionParameters) {
   AVEncryptionInitInfo* av_encryption_init_info = av_encryption_init_info_alloc(
       kSystemId.size(), kKeyIds.size(), kKeyIds[0].size(), kData.size());
 
-  FXL_CHECK(av_encryption_init_info);
+  FX_CHECK(av_encryption_init_info);
 
-  FXL_CHECK(av_encryption_init_info->system_id);
-  FXL_CHECK(av_encryption_init_info->system_id_size == kSystemId.size());
+  FX_CHECK(av_encryption_init_info->system_id);
+  FX_CHECK(av_encryption_init_info->system_id_size == kSystemId.size());
   memcpy(av_encryption_init_info->system_id, kSystemId.data(), kSystemId.size());
 
-  FXL_CHECK(av_encryption_init_info->key_ids);
-  FXL_CHECK(av_encryption_init_info->num_key_ids == kKeyIds.size());
-  FXL_CHECK(av_encryption_init_info->key_id_size == kKeyIds[0].size());
+  FX_CHECK(av_encryption_init_info->key_ids);
+  FX_CHECK(av_encryption_init_info->num_key_ids == kKeyIds.size());
+  FX_CHECK(av_encryption_init_info->key_id_size == kKeyIds[0].size());
   for (size_t i = 0; i < kKeyIds.size(); ++i) {
-    FXL_CHECK(av_encryption_init_info->key_ids[i]);
+    FX_CHECK(av_encryption_init_info->key_ids[i]);
     EXPECT_EQ(kKeyIds[0].size(), kKeyIds[i].size());
     memcpy(av_encryption_init_info->key_ids[i], kKeyIds[i].data(), kKeyIds[i].size());
   }
 
-  FXL_CHECK(av_encryption_init_info->data);
-  FXL_CHECK(av_encryption_init_info->data_size == kData.size());
+  FX_CHECK(av_encryption_init_info->data);
+  FX_CHECK(av_encryption_init_info->data_size == kData.size());
   memcpy(av_encryption_init_info->data, kData.data(), kData.size());
 
-  FXL_CHECK(av_encryption_init_info->next == 0);
+  FX_CHECK(av_encryption_init_info->next == 0);
 
   // Add the |AVEncryptionInitInfo| to the |AVStream| as side data.
   size_t side_data_size;
   auto side_data_bytes =
       av_encryption_init_info_add_side_data(av_encryption_init_info, &side_data_size);
-  FXL_CHECK(side_data_bytes);
-  FXL_CHECK(side_data_size > 0);
+  FX_CHECK(side_data_bytes);
+  FX_CHECK(side_data_size > 0);
 
   av_encryption_init_info_free(av_encryption_init_info);
 

@@ -4,6 +4,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux_factory.h"
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux.h"
 
 namespace media_player {
@@ -20,8 +21,8 @@ FfmpegDemuxFactory::~FfmpegDemuxFactory() {}
 // Creates a |Demux| object for a given reader.
 Result FfmpegDemuxFactory::CreateDemux(std::shared_ptr<ReaderCache> reader_cache,
                                        std::shared_ptr<Demux>* demux_out) {
-  FXL_DCHECK(reader_cache);
-  FXL_DCHECK(demux_out);
+  FX_DCHECK(reader_cache);
+  FX_DCHECK(demux_out);
 
   *demux_out = FfmpegDemux::Create(reader_cache);
 

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/types/bytes.h"
 
 namespace media_player {
@@ -91,7 +91,7 @@ class StreamType {
 template <typename T>
 struct Range {
   Range(T min_param, T max_param) : min(min_param), max(max_param) {
-    FXL_DCHECK(min_param <= max_param);
+    FX_DCHECK(min_param <= max_param);
   }
 
   T min;

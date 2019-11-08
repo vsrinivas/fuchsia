@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {
@@ -52,8 +52,8 @@ class AudioStreamType : public StreamType {
   uint64_t min_buffer_size(uint64_t frame_count) const { return frame_count * bytes_per_frame(); }
 
   uint64_t frame_count(uint64_t size) const {
-    FXL_DCHECK(bytes_per_frame() != 0);
-    FXL_DCHECK(size % bytes_per_frame() == 0);
+    FX_DCHECK(bytes_per_frame() != 0);
+    FX_DCHECK(size % bytes_per_frame() == 0);
     return size / bytes_per_frame();
   }
 

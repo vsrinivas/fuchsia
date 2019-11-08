@@ -20,8 +20,8 @@
 
 #include <fs/pseudo_file.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 #include "src/media/playback/mediaplayer/demux/file_reader.h"
@@ -79,16 +79,16 @@ PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> 
       component_context_(component_context),
       quit_callback_(std::move(quit_callback)),
       core_(dispatcher_) {
-  FXL_DCHECK(request);
-  FXL_DCHECK(component_context_);
-  FXL_DCHECK(quit_callback_);
+  FX_DCHECK(request);
+  FX_DCHECK(component_context_);
+  FX_DCHECK(quit_callback_);
 
   ThreadPriority::SetToHigh();
 
   demux_factory_ = DemuxFactory::Create(this);
-  FXL_DCHECK(demux_factory_);
+  FX_DCHECK(demux_factory_);
   decoder_factory_ = DecoderFactory::Create(this);
-  FXL_DCHECK(decoder_factory_);
+  FX_DCHECK(decoder_factory_);
 
   component_context_->outgoing()->debug_dir()->AddEntry(
       kDumpEntry,
@@ -177,7 +177,7 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       }
       break;
     default:
-      FXL_DCHECK(false) << "Only audio and video are currently supported";
+      FX_DCHECK(false) << "Only audio and video are currently supported";
       break;
   }
 }
@@ -280,7 +280,7 @@ void PlayerImpl::Update() {
             if (!core_.can_seek()) {
               // We can't seek, so |target_position| should
               // be zero.
-              FXL_DCHECK(target_position == 0)
+              FX_DCHECK(target_position == 0)
                   << "Can't seek, target_position is " << target_position;
               state_ = State::kFlushed;
               Update();
@@ -415,7 +415,7 @@ void PlayerImpl::SetFileSource(zx::channel file_channel) {
 
 void PlayerImpl::AddBindingInternal(
     fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
-  FXL_DCHECK(request);
+  FX_DCHECK(request);
   bindings_.AddBinding(this, std::move(request));
 
   // Fire |OnStatusChanged| event for the new client.
@@ -436,9 +436,9 @@ void PlayerImpl::BeginSetSource(std::unique_ptr<SourceImpl> source) {
 }
 
 void PlayerImpl::FinishSetSource() {
-  FXL_DCHECK(setting_source_);
-  FXL_DCHECK(state_ == State::kInactive);
-  FXL_DCHECK(!core_.has_source_segment());
+  FX_DCHECK(setting_source_);
+  FX_DCHECK(state_ == State::kInactive);
+  FX_DCHECK(!core_.has_source_segment());
 
   setting_source_ = false;
 
@@ -464,7 +464,7 @@ void PlayerImpl::FinishSetSource() {
 
   current_source_ = std::move(new_source_);
   current_source_handle_ = std::move(new_source_handle_);
-  FXL_DCHECK(current_source_);
+  FX_DCHECK(current_source_);
   // There's no handle if |SetHttpSource|, |SetFileSource| or |SetReaderSource|
   // was used.
 }
@@ -476,7 +476,7 @@ void PlayerImpl::Play() {
 
 void PlayerImpl::Pause() {
   if (target_state_ == State::kPlaying && !core_.can_pause()) {
-    FXL_LOG(WARNING) << "Pause requested, cannot pause. Ignoring.";
+    FX_LOGS(WARNING) << "Pause requested, cannot pause. Ignoring.";
     return;
   }
 
@@ -486,7 +486,7 @@ void PlayerImpl::Pause() {
 
 void PlayerImpl::Seek(int64_t position) {
   if (!core_.can_seek()) {
-    FXL_LOG(WARNING) << "Seek requested, cannot seek. Ignoring.";
+    FX_LOGS(WARNING) << "Seek requested, cannot seek. Ignoring.";
     return;
   }
 
@@ -509,19 +509,19 @@ void PlayerImpl::BindGainControl(
     MaybeCreateRenderer(StreamType::Medium::kAudio);
   }
 
-  FXL_DCHECK(audio_renderer_);
+  FX_DCHECK(audio_renderer_);
   audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
 void PlayerImpl::AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
-  FXL_DCHECK(request);
+  FX_DCHECK(request);
   AddBindingInternal(std::move(request));
 }
 
 void PlayerImpl::CreateHttpSource(
     std::string http_url, fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
-  FXL_DCHECK(source_request);
+  FX_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
@@ -533,8 +533,8 @@ void PlayerImpl::CreateHttpSource(
 void PlayerImpl::CreateFileSource(
     zx::channel file_channel,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
-  FXL_DCHECK(file_channel);
-  FXL_DCHECK(source_request);
+  FX_DCHECK(file_channel);
+  FX_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
@@ -545,8 +545,8 @@ void PlayerImpl::CreateFileSource(
 void PlayerImpl::CreateReaderSource(
     fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader> seeking_reader,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
-  FXL_DCHECK(seeking_reader);
-  FXL_DCHECK(source_request);
+  FX_DCHECK(seeking_reader);
+  FX_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
@@ -558,7 +558,7 @@ void PlayerImpl::CreateElementarySource(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<fuchsia::media::Metadata> metadata,
     fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> source_request) {
-  FXL_DCHECK(source_request);
+  FX_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
@@ -583,7 +583,7 @@ void PlayerImpl::SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Sourc
 
   auto iter = source_impls_by_koid_.find(source_koid);
   if (iter == source_impls_by_koid_.end()) {
-    FXL_LOG(ERROR) << "Bad source handle passed to SetSource. Closing connection.";
+    FX_LOGS(ERROR) << "Bad source handle passed to SetSource. Closing connection.";
     bindings_.CloseAll();
     return;
   }
@@ -592,24 +592,24 @@ void PlayerImpl::SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Sourc
   // to be processed.
   new_source_handle_ = std::move(source_handle);
 
-  FXL_DCHECK(iter->second);
+  FX_DCHECK(iter->second);
   BeginSetSource(std::move(iter->second));
 }
 
 void PlayerImpl::TransitionToSource(fidl::InterfaceHandle<fuchsia::media::playback::Source> source,
                                     int64_t transition_pts, int64_t start_pts) {
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
   bindings_.CloseAll();
 }
 
 void PlayerImpl::CancelSourceTransition(
     fidl::InterfaceRequest<fuchsia::media::playback::Source> returned_source_request) {
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
   bindings_.CloseAll();
 }
 
 void PlayerImpl::ConnectToService(std::string service_path, zx::channel channel) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
   component_context_->svc()->Connect(service_path, std::move(channel));
 }
 
@@ -620,7 +620,7 @@ std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(
   std::shared_ptr<Demux> demux;
   demux_factory_->CreateDemux(ReaderCache::Create(reader), &demux);
   // TODO(dalesat): Handle CreateDemux failure.
-  FXL_DCHECK(demux);
+  FX_DCHECK(demux);
   demux->SetCacheOptions(kCacheLead, kCacheBacktrack);
   return DemuxSourceImpl::Create(demux, core_.graph(), std::move(source_request),
                                  std::move(connection_failure_callback));

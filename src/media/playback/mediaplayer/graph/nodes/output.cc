@@ -15,14 +15,14 @@ Output::Output(Output&& output)
     : node_(output.node()), index_(output.index()), payload_config_(output.payload_config()) {
   // We can't move an output that's connected.
   // TODO(dalesat): Make |Output| non-movable.
-  FXL_DCHECK(output.mate() == nullptr);
+  FX_DCHECK(output.mate() == nullptr);
 }
 
 Output::~Output() {}
 
 void Output::Connect(Input* input) {
-  FXL_DCHECK(input);
-  FXL_DCHECK(!mate_);
+  FX_DCHECK(input);
+  FX_DCHECK(!mate_);
   mate_ = input;
 
   if (payload_config_.mode_ != PayloadMode::kNotConfigured) {
@@ -31,14 +31,14 @@ void Output::Connect(Input* input) {
 }
 
 bool Output::needs_packet() const {
-  FXL_DCHECK(mate_);
+  FX_DCHECK(mate_);
   return mate_->needs_packet();
 }
 
 void Output::SupplyPacket(PacketPtr packet) const {
-  FXL_DCHECK(packet);
-  FXL_DCHECK(mate_);
-  FXL_DCHECK(needs_packet());
+  FX_DCHECK(packet);
+  FX_DCHECK(mate_);
+  FX_DCHECK(needs_packet());
 
   mate_->PutPacket(std::move(packet));
 }

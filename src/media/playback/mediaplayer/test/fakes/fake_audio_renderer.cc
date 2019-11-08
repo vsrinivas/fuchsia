@@ -12,8 +12,6 @@
 #include <iostream>
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media_player {
 namespace test {
 
@@ -31,11 +29,11 @@ void FakeAudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 }
 
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
-  FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
+  FX_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);
 }
 
-void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) { FXL_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) { FX_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
@@ -46,7 +44,7 @@ void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   threshold_seconds_ = threshold_seconds;
 }
 
-void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) { FXL_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) { FX_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
@@ -61,7 +59,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
 
   if (!expected_packets_info_.empty()) {
     if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      FXL_LOG(ERROR) << "packet supplied after expected packets";
+      FX_LOGS(ERROR) << "packet supplied after expected packets";
       expected_ = false;
     }
 
@@ -71,7 +69,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
             PacketInfo::Hash(
                 reinterpret_cast<uint8_t*>(vmo_mapper_.start()) + packet.payload_offset,
                 packet.payload_size)) {
-      FXL_LOG(ERROR) << "supplied packet doesn't match expected packet info";
+      FX_LOGS(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
 
@@ -89,7 +87,7 @@ void FakeAudioRenderer::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
   SendPacket(std::move(packet), []() {});
 }
 
-void FakeAudioRenderer::EndOfStream() { FXL_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::EndOfStream() { FX_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   while (!packet_queue_.empty()) {
@@ -106,7 +104,7 @@ void FakeAudioRenderer::DiscardAllPacketsNoReply() {
 
 void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
   if (vmo_mapper_.start() == nullptr) {
-    FXL_LOG(ERROR) << "Play called with no buffer added";
+    FX_LOGS(ERROR) << "Play called with no buffer added";
     expected_ = false;
     binding_.Unbind();
     return;
@@ -140,7 +138,7 @@ void FakeAudioRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) 
 
 void FakeAudioRenderer::Pause(PauseCallback callback) {
   if (vmo_mapper_.start() == nullptr) {
-    FXL_LOG(ERROR) << "Pause called with no buffer added";
+    FX_LOGS(ERROR) << "Pause called with no buffer added";
     expected_ = false;
     binding_.Unbind();
     return;
@@ -158,7 +156,7 @@ void FakeAudioRenderer::PauseNoReply() {
 
 void FakeAudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
 }
 
 void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) {

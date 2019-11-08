@@ -10,7 +10,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 
@@ -53,12 +53,12 @@ class Segment {
 
  protected:
   Graph& graph() {
-    FXL_DCHECK(graph_) << "graph() called on unprovisioned segment.";
+    FX_DCHECK(graph_) << "graph() called on unprovisioned segment.";
     return *graph_;
   }
 
   async_dispatcher_t* dispatcher() {
-    FXL_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned segment.";
+    FX_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned segment.";
     return dispatcher_;
   }
 

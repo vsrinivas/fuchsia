@@ -15,7 +15,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/fifo_allocator.h"
 
 namespace media_player {
@@ -50,7 +50,7 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // Returns |start()| offset by |offset| if the VMO is mapped, nullptr
   // otherwise.
   void* at_offset(uint64_t offset) {
-    FXL_DCHECK(offset < size_);
+    FX_DCHECK(offset < size_);
 
     if (start() == nullptr) {
       return nullptr;

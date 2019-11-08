@@ -4,7 +4,6 @@
 
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {
@@ -36,7 +35,7 @@ uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
     case SampleFormat::kNone:
       return 0;
     case SampleFormat::kAny:
-      FXL_LOG(ERROR) << "sample size requested for SampleFormat::kAny";
+      FX_LOGS(ERROR) << "sample size requested for SampleFormat::kAny";
       abort();
     case SampleFormat::kUnsigned8:
       return sizeof(uint8_t);
@@ -77,7 +76,7 @@ bool AudioStreamTypeSet::Includes(const StreamType& type) const {
     return false;
   }
 
-  FXL_DCHECK(type.audio() != nullptr);
+  FX_DCHECK(type.audio() != nullptr);
 
   return (sample_format() == type.audio()->sample_format() ||
           sample_format() == AudioStreamType::SampleFormat::kAny) &&

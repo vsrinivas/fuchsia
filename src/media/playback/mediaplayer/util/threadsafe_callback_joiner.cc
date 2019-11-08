@@ -32,7 +32,7 @@ void ThreadsafeCallbackJoiner::Complete() {
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(counter_ != 0);
+    FX_DCHECK(counter_ != 0);
     --counter_;
     if (counter_ != 0 || !join_callback_) {
       return;
@@ -50,21 +50,21 @@ void ThreadsafeCallbackJoiner::Complete() {
 fit::closure ThreadsafeCallbackJoiner::NewCallback() {
   Spawn();
   std::shared_ptr<ThreadsafeCallbackJoiner> this_ptr = shared_from_this();
-  FXL_DCHECK(!this_ptr.unique());
+  FX_DCHECK(!this_ptr.unique());
   return [this_ptr]() {
-    FXL_DCHECK(this_ptr);
+    FX_DCHECK(this_ptr);
     this_ptr->Complete();
   };
 }
 
 void ThreadsafeCallbackJoiner::WhenJoined(async_dispatcher_t* dispatcher,
                                           fit::closure join_callback) {
-  FXL_DCHECK(dispatcher);
-  FXL_DCHECK(join_callback);
+  FX_DCHECK(dispatcher);
+  FX_DCHECK(join_callback);
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(!join_callback_);
+    FX_DCHECK(!join_callback_);
     if (counter_ != 0) {
       join_callback_ = std::move(join_callback);
       join_callback_dispatcher_ = dispatcher;

@@ -9,8 +9,8 @@
 #include <mutex>
 
 #include "lib/async/cpp/task.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
 extern "C" {
 #include "libavformat/avio.h"
@@ -79,7 +79,7 @@ class AvIoContextOpaque {
 
   void CallbackComplete() {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(!callback_happened_);
+    FX_DCHECK(!callback_happened_);
     callback_happened_ = true;
     condition_variable_.notify_all();
   }

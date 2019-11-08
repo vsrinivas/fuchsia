@@ -4,6 +4,8 @@
 
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media_player {
 
 // static
@@ -16,7 +18,7 @@ CallbackJoiner::CallbackJoiner() {}
 CallbackJoiner::~CallbackJoiner() {}
 
 void CallbackJoiner::Complete() {
-  FXL_DCHECK(counter_ != 0);
+  FX_DCHECK(counter_ != 0);
   --counter_;
   if (counter_ == 0 && join_callback_) {
     fit::closure join_callback = std::move(join_callback_);
@@ -27,16 +29,16 @@ void CallbackJoiner::Complete() {
 fit::closure CallbackJoiner::NewCallback() {
   Spawn();
   std::shared_ptr<CallbackJoiner> this_ptr = shared_from_this();
-  FXL_DCHECK(!this_ptr.unique());
+  FX_DCHECK(!this_ptr.unique());
   return [this_ptr]() {
-    FXL_DCHECK(this_ptr);
+    FX_DCHECK(this_ptr);
     this_ptr->Complete();
   };
 }
 
 void CallbackJoiner::WhenJoined(fit::closure join_callback) {
-  FXL_DCHECK(join_callback);
-  FXL_DCHECK(!join_callback_);
+  FX_DCHECK(join_callback);
+  FX_DCHECK(!join_callback_);
   if (counter_ == 0) {
     join_callback();
   } else {

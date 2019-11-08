@@ -11,6 +11,8 @@
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_view.h"
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"mediaplayer_test"});
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   media_player::test::MediaPlayerTestUtilParams params(command_line);
   if (!params.is_valid()) {

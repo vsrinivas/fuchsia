@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 

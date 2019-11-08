@@ -42,7 +42,7 @@ class FakeDecoder : public Processor {
   void SetInputStreamType(const StreamType& stream_type) override {}
 
   std::unique_ptr<StreamType> output_stream_type() const override {
-    FXL_DCHECK(output_stream_type_);
+    FX_DCHECK(output_stream_type_);
     return output_stream_type_->Clone();
   }
 

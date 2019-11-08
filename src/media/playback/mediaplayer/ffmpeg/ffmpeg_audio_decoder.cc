@@ -5,7 +5,7 @@
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_audio_decoder.h"
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -16,12 +16,12 @@ std::shared_ptr<Processor> FfmpegAudioDecoder::Create(AvCodecContextPtr av_codec
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
-  FXL_DCHECK(context());
-  FXL_DCHECK(context()->channels > 0);
+  FX_DCHECK(context());
+  FX_DCHECK(context()->channels > 0);
 
   std::unique_ptr<StreamType> stream_type = output_stream_type();
-  FXL_DCHECK(stream_type);
-  FXL_DCHECK(stream_type->audio());
+  FX_DCHECK(stream_type);
+  FX_DCHECK(stream_type->audio());
   set_pts_rate(media::TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
   stream_type_ = std::move(stream_type);
@@ -51,7 +51,7 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
 }
 
 int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) {
-  FXL_DCHECK(av_frame);
+  FX_DCHECK(av_frame);
 
   AVSampleFormat av_sample_format = static_cast<AVSampleFormat>(av_frame->format);
 
@@ -59,7 +59,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
                                                av_frame->nb_samples, av_sample_format,
                                                FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
-    FXL_LOG(WARNING) << "av_samples_get_buffer_size failed";
+    FX_LOGS(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
   }
 
@@ -75,8 +75,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
 
   // Check that the allocator has met the common alignment requirements and
   // that those requirements are good enough for the decoder.
-  FXL_DCHECK(PayloadBuffer::IsAligned(buffer->data()));
-  FXL_DCHECK(PayloadBuffer::kByteAlignment >= kChannelAlign);
+  FX_DCHECK(PayloadBuffer::IsAligned(buffer->data()));
+  FX_DCHECK(PayloadBuffer::kByteAlignment >= kChannelAlign);
 
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
@@ -87,11 +87,11 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
     int bytes_per_channel = buffer_size / channels;
     uint8_t* channel_buffer = reinterpret_cast<uint8_t*>(buffer->data());
 
-    FXL_DCHECK(buffer || bytes_per_channel == 0);
+    FX_DCHECK(buffer || bytes_per_channel == 0);
 
     if (channels <= AV_NUM_DATA_POINTERS) {
       // The buffer pointers will fit in av_frame->data.
-      FXL_DCHECK(av_frame->extended_data == av_frame->data);
+      FX_DCHECK(av_frame->extended_data == av_frame->data);
       for (int channel = 0; channel < channels; ++channel) {
         av_frame->data[channel] = channel_buffer;
         channel_buffer += bytes_per_channel;
@@ -125,8 +125,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
 
 PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  FXL_DCHECK(av_frame.buf[0]);
-  FXL_DCHECK(payload_buffer);
+  FX_DCHECK(av_frame.buf[0]);
+  FX_DCHECK(payload_buffer);
 
   // We infer the PTS for a packet based on the assumption that the decoder
   // produces an uninterrupted stream of frames. The PTS value in av_frame is
@@ -138,8 +138,8 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
     set_next_pts(pts + av_frame.nb_samples);
   }
 
-  FXL_DCHECK(stream_type_);
-  FXL_DCHECK(stream_type_->audio());
+  FX_DCHECK(stream_type_);
+  FX_DCHECK(stream_type_->audio());
 
   uint64_t payload_size = stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
 

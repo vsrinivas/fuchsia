@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/lpcm_util.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -48,7 +48,7 @@ std::unique_ptr<LpcmUtil> LpcmUtil::Create(const AudioStreamType& stream_type) {
       result = new LpcmUtilImpl<float>(stream_type);
       break;
     default:
-      FXL_DCHECK(false) << "unsupported sample format " << stream_type.sample_format();
+      FX_DCHECK(false) << "unsupported sample format " << stream_type.sample_format();
       result = nullptr;
       break;
   }
@@ -120,16 +120,16 @@ void LpcmUtilImpl<uint8_t>::Mix(const void* in, void* out, size_t frame_count) c
 template <typename T>
 void LpcmUtilImpl<T>::Interleave(const void* in, size_t in_byte_count, void* out,
                                  size_t frame_count) const {
-  FXL_DCHECK(in);
-  FXL_DCHECK(in_byte_count);
-  FXL_DCHECK(out);
-  FXL_DCHECK(frame_count);
+  FX_DCHECK(in);
+  FX_DCHECK(in_byte_count);
+  FX_DCHECK(out);
+  FX_DCHECK(frame_count);
 
   uint32_t channels = stream_type_.channels();
-  FXL_DCHECK(channels);
-  FXL_DCHECK(stream_type_.bytes_per_frame() != 0);
-  FXL_DCHECK(in_byte_count % stream_type_.bytes_per_frame() == 0);
-  FXL_DCHECK(in_byte_count >= frame_count * stream_type_.bytes_per_frame());
+  FX_DCHECK(channels);
+  FX_DCHECK(stream_type_.bytes_per_frame() != 0);
+  FX_DCHECK(in_byte_count % stream_type_.bytes_per_frame() == 0);
+  FX_DCHECK(in_byte_count >= frame_count * stream_type_.bytes_per_frame());
   uint64_t in_channel_stride = in_byte_count / stream_type_.bytes_per_frame();
 
   const T* in_channel = reinterpret_cast<const T*>(in);

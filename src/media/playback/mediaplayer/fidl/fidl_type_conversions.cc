@@ -8,6 +8,7 @@
 #include "src/media/playback/mediaplayer/graph/types/subpicture_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/text_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace fidl {
 
@@ -80,7 +81,7 @@ TypeConverter<media_player::AudioStreamType::SampleFormat, fuchsia::media::Audio
       return media_player::AudioStreamType::SampleFormat::kFloat;
   }
 
-  FXL_LOG(ERROR) << "unrecognized sample format";
+  FX_LOGS(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -136,7 +137,7 @@ TypeConverter<fuchsia::media::AudioSampleFormat, media_player::AudioStreamType::
       break;
   }
 
-  FXL_LOG(ERROR) << "unrecognized sample format";
+  FX_LOGS(ERROR) << "unrecognized sample format";
   abort();
 }
 
@@ -156,7 +157,7 @@ TypeConverter<fuchsia::images::PixelFormat, media_player::VideoStreamType::Pixel
       return fuchsia::images::PixelFormat::YV12;
   }
 
-  FXL_LOG(ERROR) << "unrecognized pixel format";
+  FX_LOGS(ERROR) << "unrecognized pixel format";
   abort();
 }
 
@@ -176,14 +177,14 @@ TypeConverter<fuchsia::media::ColorSpace, media_player::VideoStreamType::ColorSp
       return fuchsia::media::ColorSpace::SD_REC601;
   }
 
-  FXL_LOG(ERROR) << "unrecognized color space";
+  FX_LOGS(ERROR) << "unrecognized color space";
   abort();
 }
 
 fuchsia::media::StreamType
 TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
     const media_player::StreamType& input) {
-  FXL_DCHECK(KnownEncodingsMatch());
+  FX_DCHECK(KnownEncodingsMatch());
 
   switch (input.medium()) {
     case media_player::StreamType::Medium::kAudio: {
@@ -240,14 +241,14 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
     }
   }
 
-  FXL_LOG(ERROR) << "unrecognized medium";
+  FX_LOGS(ERROR) << "unrecognized medium";
   abort();
 }
 
 std::unique_ptr<media_player::StreamType>
 TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamType>::Convert(
     const fuchsia::media::StreamType& input) {
-  FXL_DCHECK(KnownEncodingsMatch());
+  FX_DCHECK(KnownEncodingsMatch());
 
   switch (input.medium_specific.Which()) {
     case fuchsia::media::MediumSpecificStreamType::Tag::kAudio:

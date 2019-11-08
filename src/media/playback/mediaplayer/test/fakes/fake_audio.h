@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio_renderer.h"
 
 namespace media_player {
@@ -37,12 +36,12 @@ class FakeAudio : public fuchsia::media::Audio {
   void CreateAudioCapturer(
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       bool loopback) override {
-    FXL_NOTIMPLEMENTED();
+    FX_NOTIMPLEMENTED();
   }
 
-  void SetSystemGain(float gain_db) override { FXL_NOTIMPLEMENTED(); }
+  void SetSystemGain(float gain_db) override { FX_NOTIMPLEMENTED(); }
 
-  void SetSystemMute(bool muted) override { FXL_NOTIMPLEMENTED(); }
+  void SetSystemMute(bool muted) override { FX_NOTIMPLEMENTED(); }
 
  private:
   fidl::BindingSet<fuchsia::media::Audio> bindings_;

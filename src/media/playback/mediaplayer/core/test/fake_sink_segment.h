@@ -21,7 +21,7 @@ class FakeSinkSegment : public SinkSegment {
 
   FakeSinkSegment(fit::function<void(FakeSinkSegment*)> destroy_callback)
       : destroy_callback_(std::move(destroy_callback)) {
-    FXL_DCHECK(destroy_callback_);
+    FX_DCHECK(destroy_callback_);
   }
 
   ~FakeSinkSegment() override { destroy_callback_(this); }

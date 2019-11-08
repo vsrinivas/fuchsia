@@ -6,7 +6,7 @@
 
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace {
@@ -50,8 +50,8 @@ void ReaderCache::Describe(DescribeCallback callback) {
 
 void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                          ReadAtCallback callback) {
-  FXL_DCHECK(buffer);
-  FXL_DCHECK(bytes_to_read > 0);
+  FX_DCHECK(buffer);
+  FX_DCHECK(bytes_to_read > 0);
 
   describe_is_complete_.When(
       [this, position, buffer, bytes_to_read, callback = std::move(callback)]() mutable {
@@ -74,7 +74,7 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 }
 
 void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
-  FXL_DCHECK(!load_in_progress_) << "SetCacheOptions cannot be called while a load is"
+  FX_DCHECK(!load_in_progress_) << "SetCacheOptions cannot be called while a load is"
                                     " in progress.";
 
   buffer_ = SlidingBuffer(capacity);
@@ -83,10 +83,10 @@ void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
 }
 
 void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
-  FXL_DCHECK(buffer_);
-  FXL_DCHECK(request.buffer);
-  FXL_DCHECK(request.callback);
-  FXL_DCHECK(request.position < upstream_size_);
+  FX_DCHECK(buffer_);
+  FX_DCHECK(request.buffer);
+  FX_DCHECK(request.callback);
+  FX_DCHECK(request.position < upstream_size_);
 
   size_t bytes_read = buffer_->Read(request.position, request.buffer, request.bytes_to_read);
 
@@ -119,12 +119,12 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
 
 void ReaderCache::StartLoadForPosition(size_t position,
                                        fit::function<void(zx_status_t)> load_callback) {
-  FXL_DCHECK(buffer_);
-  FXL_DCHECK(!load_in_progress_);
+  FX_DCHECK(buffer_);
+  FX_DCHECK(!load_in_progress_);
   load_in_progress_ = true;
 
   auto load_range = CalculateLoadRange(position);
-  FXL_DCHECK(load_range) << "The media is fully cached for the read, but a load was requested.";
+  FX_DCHECK(load_range) << "The media is fully cached for the read, but a load was requested.";
 
   auto [load_start, load_size] = *load_range;
   auto holes = buffer_->Slide(load_start, std::min({load_size, upstream_size_ - load_start,
@@ -139,7 +139,7 @@ void ReaderCache::StartLoadForPosition(size_t position,
 }
 
 std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(size_t position) {
-  FXL_DCHECK(buffer_);
+  FX_DCHECK(buffer_);
 
   auto next_missing_byte = buffer_->NextMissingByte(position);
   if (next_missing_byte == upstream_size_) {

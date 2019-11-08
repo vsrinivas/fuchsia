@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {
@@ -22,13 +22,13 @@ void FakeScenic::CreateSession(
   fake_session_.Bind(std::move(session), listener.Bind());
 }
 
-void FakeScenic::GetDisplayInfo(GetDisplayInfoCallback callback) { FXL_NOTIMPLEMENTED(); }
+void FakeScenic::GetDisplayInfo(GetDisplayInfoCallback callback) { FX_NOTIMPLEMENTED(); }
 
 void FakeScenic::GetDisplayOwnershipEvent(GetDisplayOwnershipEventCallback callback) {
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
 }
 
-void FakeScenic::TakeScreenshot(TakeScreenshotCallback callback) { FXL_NOTIMPLEMENTED(); }
+void FakeScenic::TakeScreenshot(TakeScreenshotCallback callback) { FX_NOTIMPLEMENTED(); }
 
 }  // namespace test
 }  // namespace media_player

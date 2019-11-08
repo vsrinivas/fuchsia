@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {
@@ -57,7 +57,7 @@ bool VideoStreamTypeSet::Includes(const StreamType& type) const {
     return false;
   }
 
-  FXL_DCHECK(type.video() != nullptr);
+  FX_DCHECK(type.video() != nullptr);
 
   return width().contains(type.video()->width()) && height().contains(type.video()->height());
 }

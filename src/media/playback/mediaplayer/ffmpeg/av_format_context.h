@@ -36,7 +36,7 @@ struct AvFormatContext {
     int r = avformat_open_input(&format_context, nullptr, nullptr, nullptr);
     if (r < 0) {
       // avformat_open_input promises to delete the context if it fails.
-      FXL_DCHECK(format_context == nullptr);
+      FX_DCHECK(format_context == nullptr);
       format_context = nullptr;
     }
 

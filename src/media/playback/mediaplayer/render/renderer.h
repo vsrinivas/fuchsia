@@ -59,7 +59,7 @@ class Renderer : public Node {
 
  protected:
   async_dispatcher_t* dispatcher() const {
-    FXL_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned renderer.";
+    FX_DCHECK(dispatcher_) << "dispatcher() called on unprovisioned renderer.";
     return dispatcher_;
   }
 
@@ -104,13 +104,13 @@ class Renderer : public Node {
 
   // Returns the minimum PTS for the specified program.
   int64_t min_pts(uint64_t program) {
-    FXL_DCHECK(program == 0);
+    FX_DCHECK(program == 0);
     return program_0_min_pts_;
   }
 
   // Returns the maximum PTS for the specified program.
   int64_t max_pts(uint64_t program) {
-    FXL_DCHECK(program == 0);
+    FX_DCHECK(program == 0);
     return program_0_max_pts_;
   }
 

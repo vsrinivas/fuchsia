@@ -13,7 +13,7 @@
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
@@ -25,14 +25,14 @@ SourceImpl::SourceImpl(Graph* graph, fit::closure connection_failure_callback)
     : graph_(graph),
       connection_failure_callback_(std::move(connection_failure_callback)),
       dispatcher_(async_get_default_dispatcher()) {
-  FXL_DCHECK(graph_);
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(graph_);
+  FX_DCHECK(dispatcher_);
 }
 
 SourceImpl::~SourceImpl() {}
 
 void SourceImpl::CompleteConstruction(SourceSegment* source_segment) {
-  FXL_DCHECK(source_segment);
+  FX_DCHECK(source_segment);
 
   source_segment_ = source_segment;
 
@@ -113,7 +113,7 @@ void SourceImpl::UpdateStatus() {
           break;
         case StreamType::Medium::kText:
         case StreamType::Medium::kSubpicture:
-          FXL_NOTIMPLEMENTED();
+          FX_NOTIMPLEMENTED();
           break;
       }
     }
@@ -138,8 +138,8 @@ std::unique_ptr<DemuxSourceImpl> DemuxSourceImpl::Create(
     std::shared_ptr<Demux> demux, Graph* graph,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
     fit::closure connection_failure_callback) {
-  FXL_DCHECK(demux);
-  FXL_DCHECK(graph);
+  FX_DCHECK(demux);
+  FX_DCHECK(graph);
   return std::make_unique<DemuxSourceImpl>(demux, graph, std::move(request),
                                            std::move(connection_failure_callback));
 }
@@ -151,7 +151,7 @@ DemuxSourceImpl::DemuxSourceImpl(std::shared_ptr<Demux> demux, Graph* graph,
       demux_(demux),
       binding_(this),
       demux_source_segment_(DemuxSourceSegment::Create(demux_)) {
-  FXL_DCHECK(demux_);
+  FX_DCHECK(demux_);
 
   if (request) {
     binding_.Bind(std::move(request));
@@ -164,7 +164,7 @@ DemuxSourceImpl::DemuxSourceImpl(std::shared_ptr<Demux> demux, Graph* graph,
 DemuxSourceImpl::~DemuxSourceImpl() {}
 
 std::unique_ptr<SourceSegment> DemuxSourceImpl::TakeSourceSegment() {
-  FXL_DCHECK(demux_source_segment_);
+  FX_DCHECK(demux_source_segment_);
   Clear();
   return std::move(demux_source_segment_);
 }
@@ -186,8 +186,8 @@ std::unique_ptr<ElementarySourceImpl> ElementarySourceImpl::Create(
     std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
     fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> request,
     fit::closure connection_failure_callback) {
-  FXL_DCHECK(graph);
-  FXL_DCHECK(request);
+  FX_DCHECK(graph);
+  FX_DCHECK(request);
   return std::make_unique<ElementarySourceImpl>(duration_ns, can_pause, can_seek,
                                                 std::move(metadata), graph, std::move(request),
                                                 std::move(connection_failure_callback));
@@ -219,7 +219,7 @@ ElementarySourceImpl::ElementarySourceImpl(
 ElementarySourceImpl::~ElementarySourceImpl() {}
 
 std::unique_ptr<SourceSegment> ElementarySourceImpl::TakeSourceSegment() {
-  FXL_DCHECK(elementary_source_segment_);
+  FX_DCHECK(elementary_source_segment_);
   // We don't call |Clear|, because we want this |ElementarySourceImpl| to
   // continue to function event without |elementary_source_segment_| set.
   return std::move(elementary_source_segment_);
@@ -237,11 +237,11 @@ void ElementarySourceImpl::AddStream(
     fuchsia::media::StreamType type, uint32_t tick_per_second_numerator,
     uint32_t tick_per_second_denominator,
     fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> simple_stream_sink_request) {
-  FXL_DCHECK(simple_stream_sink_request);
-  FXL_DCHECK(elementary_source_segment_raw_ptr_);
+  FX_DCHECK(simple_stream_sink_request);
+  FX_DCHECK(elementary_source_segment_raw_ptr_);
 
   auto output_stream_type = fidl::To<std::unique_ptr<media_player::StreamType>>(type);
-  FXL_DCHECK(output_stream_type);
+  FX_DCHECK(output_stream_type);
 
   elementary_source_segment_raw_ptr_->AddStream(
       SimpleStreamSinkImpl::Create(
@@ -253,13 +253,13 @@ void ElementarySourceImpl::AddStream(
 
 void ElementarySourceImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> elementary_source_request) {
-  FXL_DCHECK(elementary_source_request);
+  FX_DCHECK(elementary_source_request);
   AddBindingInternal(std::move(elementary_source_request));
 }
 
 void ElementarySourceImpl::AddBindingInternal(
     fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> elementary_source_request) {
-  FXL_DCHECK(elementary_source_request);
+  FX_DCHECK(elementary_source_request);
 
   bindings_.AddBinding(this, std::move(elementary_source_request));
 

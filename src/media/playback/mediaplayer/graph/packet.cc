@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/graph/packet.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 
 namespace media_player {
@@ -44,7 +44,7 @@ Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe, bool di
       end_of_stream_(end_of_stream),
       size_(size),
       payload_buffer_(std::move(payload_buffer)) {
-  FXL_DCHECK(!payload_buffer_ || (payload_buffer_->size() >= size_));
+  FX_DCHECK(!payload_buffer_ || (payload_buffer_->size() >= size_));
 }
 
 Packet::~Packet() {

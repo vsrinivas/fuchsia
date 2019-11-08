@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"
@@ -76,7 +77,7 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // This method will be called on the graph's thread.
   virtual void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
-    FXL_CHECK(false) << "FlushInput not implemented.";
+    FX_CHECK(false) << "FlushInput not implemented.";
   }
 
   // Supplies the node with a packet that arrived on the specified input. This
@@ -85,7 +86,7 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // This method will be called on the graph's thread.
   virtual void PutInputPacket(PacketPtr packet, size_t input_index) {
-    FXL_CHECK(false) << "PutInputPacket not implemented.";
+    FX_CHECK(false) << "PutInputPacket not implemented.";
   }
 
   // Returns the number of input connections.
@@ -174,13 +175,13 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // This method will be called on the graph's thread.
   virtual void FlushOutput(size_t output_index, fit::closure callback) {
-    FXL_CHECK(false) << "FlushOutput not implemented.";
+    FX_CHECK(false) << "FlushOutput not implemented.";
   }
 
   // Requests an output packet. The default implementation aborts.
   //
   // This method will be called on the graph's thread.
-  virtual void RequestOutputPacket() { FXL_CHECK(false) << "RequestOutputPacket not implemented."; }
+  virtual void RequestOutputPacket() { FX_CHECK(false) << "RequestOutputPacket not implemented."; }
 
   //////////////////////////////////////////////////////////////////////////////
   // Methods relating to inputs (inbound packets from upstream).

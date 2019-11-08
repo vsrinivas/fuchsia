@@ -7,7 +7,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {
@@ -19,7 +19,7 @@ std::unique_ptr<DemuxSourceSegment> DemuxSourceSegment::Create(std::shared_ptr<D
 
 DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
     : SourceSegment(true), demux_(demux) {
-  FXL_DCHECK(demux_);
+  FX_DCHECK(demux_);
 
   demux_->SetStatusCallback([this](int64_t duration_ns, bool can_seek, const Metadata& metadata,
                                    const std::string& problem_type,
@@ -82,13 +82,13 @@ void DemuxSourceSegment::BuildGraph() {
 }
 
 void DemuxSourceSegment::Flush(bool hold_frame, fit::closure callback) {
-  FXL_DCHECK(demux_initialized_.occurred());
+  FX_DCHECK(demux_initialized_.occurred());
   graph().FlushAllOutputs(demux_node_, hold_frame, std::move(callback));
 }
 
 void DemuxSourceSegment::Seek(int64_t position, fit::closure callback) {
-  FXL_DCHECK(demux_initialized_.occurred());
-  FXL_DCHECK(can_seek_);
+  FX_DCHECK(demux_initialized_.occurred());
+  FX_DCHECK(can_seek_);
   demux_->Seek(position, std::move(callback));
 }
 

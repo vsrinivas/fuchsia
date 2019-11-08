@@ -53,7 +53,7 @@ void CompositeDecoderFactory::AddFactory(std::unique_ptr<DecoderFactory> factory
 
 void CompositeDecoderFactory::CreateDecoder(
     const StreamType& stream_type, fit::function<void(std::shared_ptr<Processor>)> callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
 
   ContinueCreateDecoder(children_.begin(), stream_type, std::move(callback));
 }
@@ -61,14 +61,14 @@ void CompositeDecoderFactory::CreateDecoder(
 void CompositeDecoderFactory::ContinueCreateDecoder(
     std::vector<std::unique_ptr<DecoderFactory>>::iterator iter, const StreamType& stream_type,
     fit::function<void(std::shared_ptr<Processor>)> callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
 
   if (iter == children_.end()) {
     callback(nullptr);
     return;
   }
 
-  FXL_DCHECK(*iter);
+  FX_DCHECK(*iter);
 
   (*iter)->CreateDecoder(stream_type, [this, iter, &stream_type, callback = std::move(callback)](
                                           std::shared_ptr<Processor> decoder) mutable {

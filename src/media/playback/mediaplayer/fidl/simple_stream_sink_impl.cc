@@ -13,7 +13,7 @@ namespace media_player {
 std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
     fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request) {
-  FXL_DCHECK(request);
+  FX_DCHECK(request);
   return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate, std::move(request));
 }
 
@@ -23,8 +23,8 @@ SimpleStreamSinkImpl::SimpleStreamSinkImpl(
     : output_stream_type_(output_stream_type.Clone()),
       pts_rate_(pts_rate),
       binding_(this, std::move(request)) {
-  FXL_DCHECK(output_stream_type_);
-  FXL_DCHECK(binding_.is_bound());
+  FX_DCHECK(output_stream_type_);
+  FX_DCHECK(binding_.is_bound());
 }
 
 SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {
@@ -55,8 +55,8 @@ void SimpleStreamSinkImpl::ConfigureConnectors() {
 
 void SimpleStreamSinkImpl::FlushOutput(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(output_index == 0);
-  FXL_DCHECK(callback);
+  FX_DCHECK(output_index == 0);
+  FX_DCHECK(callback);
 
   // TODO(dalesat): The client will need to know about this.
   flushing_ = true;
@@ -78,7 +78,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer)
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (payload_vmo_infos_by_id_.find(id) != payload_vmo_infos_by_id_.end()) {
-    FXL_LOG(ERROR) << "AddPayloadBuffer: payload buffer with id " << id
+    FX_LOGS(ERROR) << "AddPayloadBuffer: payload buffer with id " << id
                    << " already exists. Closing connection.";
     binding_.Unbind();
     return;
@@ -86,7 +86,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer)
 
   auto payload_vmo = PayloadVmo::Create(std::move(payload_buffer), ZX_VM_PERM_READ);
   if (!payload_vmo) {
-    FXL_LOG(ERROR) << "AddPayloadBuffer: cannot map VMO for reading.";
+    FX_LOGS(ERROR) << "AddPayloadBuffer: cannot map VMO for reading.";
     binding_.Unbind();
     return;
   }
@@ -101,7 +101,7 @@ void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
 
   auto iter = payload_vmo_infos_by_id_.find(id);
   if (iter == payload_vmo_infos_by_id_.end()) {
-    FXL_LOG(ERROR) << "RemovePayloadBuffer: no payload buffer with id " << id
+    FX_LOGS(ERROR) << "RemovePayloadBuffer: no payload buffer with id " << id
                    << " exists. Closing connection.";
     binding_.Unbind();
     return;
@@ -110,7 +110,7 @@ void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
   auto& payload_vmo_info = iter->second;
 
   if (payload_vmo_info.packet_count_ != 0) {
-    FXL_LOG(ERROR) << "RemovePayloadBuffer: payload buffer " << id
+    FX_LOGS(ERROR) << "RemovePayloadBuffer: payload buffer " << id
                    << " has pending StreamPackets. Closing connection.";
     binding_.Unbind();
     return;
@@ -139,7 +139,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   auto iter = payload_vmo_infos_by_id_.find(vmo_id);
   if (iter == payload_vmo_infos_by_id_.end()) {
-    FXL_LOG(ERROR) << "SendPacket: no payload buffer with id " << vmo_id
+    FX_LOGS(ERROR) << "SendPacket: no payload buffer with id " << vmo_id
                    << " exists. Closing connection.";
     binding_.Unbind();
     return;
@@ -148,7 +148,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   auto& payload_vmo_info = iter->second;
 
   if (payload_offset + packet.payload_size > payload_vmo_info.vmo_->size()) {
-    FXL_LOG(ERROR) << "SendPacket: packet offset/size out of range.";
+    FX_LOGS(ERROR) << "SendPacket: packet offset/size out of range.";
     binding_.Unbind();
     return;
   }
@@ -162,10 +162,10 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
        callback = std::move(callback)](PayloadBuffer* payload_buffer) mutable {
         PostTask([this, shared_this, vmo_id, callback = std::move(callback)]() {
           auto iter = payload_vmo_infos_by_id_.find(vmo_id);
-          FXL_DCHECK(iter != payload_vmo_infos_by_id_.end());
+          FX_DCHECK(iter != payload_vmo_infos_by_id_.end());
           auto& payload_vmo_info = iter->second;
-          FXL_DCHECK(payload_vmo_info.vmo_);
-          FXL_DCHECK(payload_vmo_info.packet_count_ != 0);
+          FX_DCHECK(payload_vmo_info.vmo_);
+          FX_DCHECK(payload_vmo_info.packet_count_ != 0);
 
           --payload_vmo_info.packet_count_;
 

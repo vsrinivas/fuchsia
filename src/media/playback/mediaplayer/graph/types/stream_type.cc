@@ -4,7 +4,6 @@
 
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {
@@ -47,22 +46,22 @@ StreamType::StreamType(Medium medium, std::unique_ptr<Bytes> encryption_paramete
 StreamType::~StreamType() {}
 
 const AudioStreamType* StreamType::audio() const {
-  FXL_LOG(ERROR) << "audio method called on non-audio stream type";
+  FX_LOGS(ERROR) << "audio method called on non-audio stream type";
   return nullptr;
 }
 
 const VideoStreamType* StreamType::video() const {
-  FXL_LOG(ERROR) << "video method called on non-video stream type";
+  FX_LOGS(ERROR) << "video method called on non-video stream type";
   return nullptr;
 }
 
 const TextStreamType* StreamType::text() const {
-  FXL_LOG(ERROR) << "text method called on non-text stream type";
+  FX_LOGS(ERROR) << "text method called on non-text stream type";
   return nullptr;
 }
 
 const SubpictureStreamType* StreamType::subpicture() const {
-  FXL_LOG(ERROR) << "subpicture method called on non-subpicture stream type";
+  FX_LOGS(ERROR) << "subpicture method called on non-subpicture stream type";
   return nullptr;
 }
 
@@ -77,22 +76,22 @@ StreamTypeSet::StreamTypeSet(StreamType::Medium medium, const std::vector<std::s
 StreamTypeSet::~StreamTypeSet() {}
 
 const AudioStreamTypeSet* StreamTypeSet::audio() const {
-  FXL_LOG(ERROR) << "audio method called on non-audio stream type set";
+  FX_LOGS(ERROR) << "audio method called on non-audio stream type set";
   return nullptr;
 }
 
 const VideoStreamTypeSet* StreamTypeSet::video() const {
-  FXL_LOG(ERROR) << "video method called on non-video stream type set";
+  FX_LOGS(ERROR) << "video method called on non-video stream type set";
   return nullptr;
 }
 
 const TextStreamTypeSet* StreamTypeSet::text() const {
-  FXL_LOG(ERROR) << "text method called on non-text stream type set";
+  FX_LOGS(ERROR) << "text method called on non-text stream type set";
   return nullptr;
 }
 
 const SubpictureStreamTypeSet* StreamTypeSet::subpicture() const {
-  FXL_LOG(ERROR) << "subpicture method called on non-subpicture stream type set";
+  FX_LOGS(ERROR) << "subpicture method called on non-subpicture stream type set";
   return nullptr;
 }
 

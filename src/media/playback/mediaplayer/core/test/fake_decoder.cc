@@ -15,12 +15,12 @@ namespace test {
 std::unique_ptr<StreamType> FakeDecoder::OutputStreamType(const StreamType& stream_type) {
   switch (stream_type.medium()) {
     case StreamType::Medium::kAudio:
-      FXL_DCHECK(stream_type.audio());
+      FX_DCHECK(stream_type.audio());
       return AudioStreamType::Create(
           nullptr, StreamType::kAudioEncodingLpcm, nullptr, stream_type.audio()->sample_format(),
           stream_type.audio()->channels(), stream_type.audio()->frames_per_second());
     case StreamType::Medium::kVideo:
-      FXL_DCHECK(stream_type.video());
+      FX_DCHECK(stream_type.video());
       return VideoStreamType::Create(
           nullptr, StreamType::kVideoEncodingUncompressed, nullptr,
           stream_type.video()->pixel_format(), stream_type.video()->color_space(),
@@ -30,7 +30,7 @@ std::unique_ptr<StreamType> FakeDecoder::OutputStreamType(const StreamType& stre
           stream_type.video()->pixel_aspect_ratio_height(), stream_type.video()->line_stride());
     case StreamType::Medium::kText:
     case StreamType::Medium::kSubpicture:
-      FXL_DCHECK(false) << "Text and Subpicture media not supported.";
+      FX_DCHECK(false) << "Text and Subpicture media not supported.";
       return nullptr;
   }
 }
@@ -41,7 +41,7 @@ FakeDecoderFactory::~FakeDecoderFactory() {}
 
 void FakeDecoderFactory::CreateDecoder(const StreamType& stream_type,
                                        fit::function<void(std::shared_ptr<Processor>)> callback) {
-  FXL_DCHECK(callback);
+  FX_DCHECK(callback);
   callback(std::make_shared<test::FakeDecoder>(stream_type));
 }
 

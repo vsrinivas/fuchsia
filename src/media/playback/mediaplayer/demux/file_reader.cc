@@ -11,6 +11,7 @@
 
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -21,7 +22,7 @@ std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
 
 FileReader::FileReader(fbl::unique_fd fd)
     : dispatcher_(async_get_default_dispatcher()), fd_(std::move(fd)) {
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
 
   status_ = fd_.is_valid() ? ZX_OK : ZX_ERR_NOT_FOUND;
 
@@ -46,7 +47,7 @@ void FileReader::Describe(DescribeCallback callback) {
 
 void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
-  FXL_DCHECK(position < size_);
+  FX_DCHECK(position < size_);
 
   if (status_ != ZX_OK) {
     callback(status_, 0);
@@ -55,7 +56,7 @@ void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
-    FXL_LOG(ERROR) << "seek failed, result " << seek_result << " errno " << errno;
+    FX_LOGS(ERROR) << "seek failed, result " << seek_result << " errno " << errno;
     // TODO(dalesat): More specific error code.
     status_ = ZX_ERR_INTERNAL;
     callback(status_, 0);

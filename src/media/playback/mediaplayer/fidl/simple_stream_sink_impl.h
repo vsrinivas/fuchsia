@@ -30,7 +30,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   ~SimpleStreamSinkImpl() override;
 
   const StreamType& output_stream_type() const {
-    FXL_DCHECK(output_stream_type_);
+    FX_DCHECK(output_stream_type_);
     return *output_stream_type_;
   }
 

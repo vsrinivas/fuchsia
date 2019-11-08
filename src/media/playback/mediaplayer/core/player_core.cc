@@ -11,7 +11,7 @@
 #include <queue>
 #include <unordered_set>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
 
@@ -24,9 +24,9 @@ PlayerCore::~PlayerCore() {}
 
 void PlayerCore::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                                   fit::closure callback) {
-  FXL_DCHECK(source_segment);
-  FXL_DCHECK(source_segment->provisioned());
-  FXL_DCHECK(callback);
+  FX_DCHECK(source_segment);
+  FX_DCHECK(source_segment->provisioned());
+  FX_DCHECK(callback);
 
   ClearSourceSegment();
 
@@ -112,7 +112,7 @@ void PlayerCore::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
 
   Stream* stream = GetStream(medium);
   if (stream) {
-    FXL_DCHECK(!stream->sink_segment_);
+    FX_DCHECK(!stream->sink_segment_);
     stream->sink_segment_ = std::move(sink_segment);
     ConnectStream(stream);
     return;
@@ -152,7 +152,7 @@ void PlayerCore::Flush(bool hold_frame, fit::closure callback) {
 
 void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
                                      fit::closure callback) {
-  FXL_DCHECK(timeline_function.reference_delta() != 0);
+  FX_DCHECK(timeline_function.reference_delta() != 0);
 
   // We allow pause even though the source may not be capable. We should be
   // able to stop progress prior to shutting down the player.
@@ -194,7 +194,7 @@ void PlayerCore::SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_
 
 void PlayerCore::Seek(int64_t position, fit::closure callback) {
   if (source_segment_) {
-    FXL_DCHECK(can_seek());
+    FX_DCHECK(can_seek());
 
     source_segment_->Seek(position, [this, callback = std::move(callback)]() mutable {
       async::PostTask(dispatcher_, std::move(callback));
@@ -307,11 +307,11 @@ void PlayerCore::OnStreamUpdated(size_t index, const SourceSegment::Stream& upda
   Stream& stream = streams_[index];
 
   if (stream.sink_segment_) {
-    FXL_DCHECK(stream.stream_type_);
+    FX_DCHECK(stream.stream_type_);
 
     if (stream.stream_type_->medium() != update_stream.type().medium()) {
       // The sink segment for this stream is for the wrong medium. Park it.
-      FXL_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
+      FX_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
       parked_sink_segments_[stream.stream_type_->medium()] = TakeSinkSegment(&stream);
     }
   }
@@ -339,10 +339,10 @@ void PlayerCore::OnStreamRemoved(size_t index) {
   Stream& stream = streams_[index];
 
   if (stream.sink_segment_) {
-    FXL_DCHECK(stream.stream_type_);
+    FX_DCHECK(stream.stream_type_);
 
     // Park this stream segment.
-    FXL_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
+    FX_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
     parked_sink_segments_[stream.stream_type_->medium()] = TakeSinkSegment(&stream);
   }
 
@@ -384,8 +384,8 @@ std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(StreamType::Medium medi
 }
 
 std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(Stream* stream) {
-  FXL_DCHECK(stream);
-  FXL_DCHECK(stream->sink_segment_);
+  FX_DCHECK(stream);
+  FX_DCHECK(stream->sink_segment_);
 
   if (stream->sink_segment_->connected()) {
     stream->sink_segment_->Disconnect();
@@ -395,10 +395,10 @@ std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(Stream* stream) {
 }
 
 void PlayerCore::ConnectStream(Stream* stream) {
-  FXL_DCHECK(stream);
-  FXL_DCHECK(stream->sink_segment_);
-  FXL_DCHECK(stream->stream_type_);
-  FXL_DCHECK(stream->output_);
+  FX_DCHECK(stream);
+  FX_DCHECK(stream->sink_segment_);
+  FX_DCHECK(stream->stream_type_);
+  FX_DCHECK(stream->output_);
 
   stream->sink_segment_->Connect(
       *stream->stream_type_, stream->output_, [this, stream](Result result) {

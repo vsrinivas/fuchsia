@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -21,8 +21,8 @@ class Bytes {
   static std::unique_ptr<Bytes> Create(const uint8_t* data, size_t size) {
     std::unique_ptr<Bytes> result = Create(size);
     if (size != 0) {
-      FXL_DCHECK(result->data());
-      FXL_DCHECK(data);
+      FX_DCHECK(result->data());
+      FX_DCHECK(data);
       std::memcpy(result->data(), data, size);
     }
     return result;

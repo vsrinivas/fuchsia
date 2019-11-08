@@ -4,7 +4,6 @@
 
 #include "src/media/playback/mediaplayer/graph/types/text_stream_type.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {

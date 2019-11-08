@@ -11,7 +11,7 @@
 #include <memory>
 #include <mutex>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 

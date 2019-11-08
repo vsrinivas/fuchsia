@@ -7,7 +7,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
@@ -33,7 +33,7 @@ ElementarySourceSegment::~ElementarySourceSegment() {}
 
 void ElementarySourceSegment::AddStream(std::shared_ptr<Node> node,
                                         const StreamType& output_stream_type) {
-  FXL_DCHECK(node);
+  FX_DCHECK(node);
 
   size_t index = nodes_.size();
 
@@ -72,9 +72,9 @@ void ElementarySourceSegment::Flush(bool hold_frame, fit::closure callback) {
 }
 
 void ElementarySourceSegment::Seek(int64_t position, fit::closure callback) {
-  FXL_DCHECK(can_seek_);
+  FX_DCHECK(can_seek_);
   // TODO(dalesat): Implement.
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
 }
 
 }  // namespace media_player

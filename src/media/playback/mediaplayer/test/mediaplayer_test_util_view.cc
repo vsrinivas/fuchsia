@@ -56,9 +56,9 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
       background_node_(session()),
       progress_bar_node_(session()),
       progress_bar_slider_node_(session()) {
-  FXL_DCHECK(quit_callback_);
-  FXL_DCHECK(params_.is_valid());
-  FXL_DCHECK(!params_.urls().empty());
+  FX_DCHECK(quit_callback_);
+  FX_DCHECK(params_.is_valid());
+  FX_DCHECK(!params_.urls().empty());
 
   scenic::Material background_material(session());
   background_material.SetColor(0x00, 0x00, 0x00, 0xff);
@@ -148,7 +148,7 @@ void MediaPlayerTestUtilView::ContinueTestSeek() {
     commands_.Play();
     commands_.WaitForEndOfStream();
     commands_.Invoke([this]() { ContinueTestSeek(); });
-    FXL_LOG(INFO) << "Seek interval: beginning to end";
+    FX_LOGS(INFO) << "Seek interval: beginning to end";
     return;
   }
 
@@ -169,10 +169,10 @@ void MediaPlayerTestUtilView::ContinueTestSeek() {
   commands_.Seek(seek_interval_start);
   commands_.Play();
   if (seek_interval_end >= duration_ns_) {
-    FXL_LOG(INFO) << "Seek interval: " << AsNs(seek_interval_start) << " to end";
+    FX_LOGS(INFO) << "Seek interval: " << AsNs(seek_interval_start) << " to end";
     commands_.WaitForEndOfStream();
   } else {
-    FXL_LOG(INFO) << "Seek interval: " << AsNs(seek_interval_start) << " to "
+    FX_LOGS(INFO) << "Seek interval: " << AsNs(seek_interval_start) << " to "
                   << AsNs(seek_interval_end);
     commands_.WaitForSeekCompletion();
     commands_.WaitForPosition(seek_interval_end);
@@ -363,13 +363,13 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
 }
 
 void MediaPlayerTestUtilView::OnChildAttached(uint32_t view_holder_id) {
-  FXL_DCHECK(view_holder_id == video_view_holder_->id());
+  FX_DCHECK(view_holder_id == video_view_holder_->id());
   Layout();
 }
 
 void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t view_holder_id) {
-  FXL_DCHECK(view_holder_id == video_view_holder_->id());
-  FXL_LOG(ERROR) << "Video view died unexpectedly, quitting.";
+  FX_DCHECK(view_holder_id == video_view_holder_->id());
+  FX_LOGS(ERROR) << "Video view died unexpectedly, quitting.";
 
   video_host_node_->Detach();
   video_host_node_ = nullptr;
@@ -394,7 +394,7 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
 
   if (status.problem) {
     if (!problem_shown_) {
-      FXL_LOG(ERROR) << "PROBLEM: " << status.problem->type << ", " << status.problem->details;
+      FX_LOGS(ERROR) << "PROBLEM: " << status.problem->type << ", " << status.problem->details;
       problem_shown_ = true;
     }
   } else {

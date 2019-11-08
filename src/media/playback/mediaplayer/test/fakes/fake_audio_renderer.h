@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/cpp/timeline_function.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/test/fakes/packet_info.h"
 
 namespace media_player {
@@ -52,12 +52,12 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
     if (!expected_packets_info_.empty() &&
         expected_packets_info_iter_ != expected_packets_info_.end()) {
-      FXL_LOG(ERROR) << "Expected packets did not arrive.";
+      FX_LOGS(ERROR) << "Expected packets did not arrive.";
       return false;
     }
 
     if ((delay_packet_retirement_pts_ != fuchsia::media::NO_TIMESTAMP) && !packet_queue_.empty()) {
-      FXL_LOG(ERROR) << "Packet queue not empty, contains " << packet_queue_.size() << " packets.";
+      FX_LOGS(ERROR) << "Packet queue not empty, contains " << packet_queue_.size() << " packets.";
       return false;
     }
 
@@ -108,13 +108,13 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override;
 
-  void SetUsage(fuchsia::media::AudioRenderUsage usage) final { FXL_NOTIMPLEMENTED(); }
+  void SetUsage(fuchsia::media::AudioRenderUsage usage) final { FX_NOTIMPLEMENTED(); }
 
   // GainControl interface.
   void SetGain(float gain_db) override;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final {
-    FXL_NOTIMPLEMENTED();
+    FX_NOTIMPLEMENTED();
   };
   void SetMute(bool muted) override;
 

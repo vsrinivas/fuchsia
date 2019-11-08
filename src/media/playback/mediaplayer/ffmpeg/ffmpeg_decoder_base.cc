@@ -8,7 +8,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 extern "C" {
@@ -19,7 +19,7 @@ namespace media_player {
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)), av_frame_ptr_(ffmpeg::AvFrame::Create()) {
-  FXL_DCHECK(av_codec_context_);
+  FX_DCHECK(av_codec_context_);
 
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
@@ -33,15 +33,15 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() const {
 }
 
 void FfmpegDecoderBase::Flush() {
-  FXL_DCHECK(is_worker_thread());
+  FX_DCHECK(is_worker_thread());
   avcodec_flush_buffers(av_codec_context_.get());
   next_pts_ = Packet::kNoPts;
 }
 
 bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) {
-  FXL_DCHECK(is_worker_thread());
-  FXL_DCHECK(input);
-  FXL_DCHECK(output);
+  FX_DCHECK(is_worker_thread());
+  FX_DCHECK(input);
+  FX_DCHECK(output);
 
   TRACE_DURATION("motown", "DecodePacket", "type",
                  (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video" : "audio"));
@@ -127,12 +127,12 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
     case AVERROR_EOF:
       // Succeeded, no frame produced, end-of-stream sequence complete.
       // Produce an end-of-stream packet.
-      FXL_DCHECK(input->end_of_stream());
+      FX_DCHECK(input->end_of_stream());
       *output = CreateEndOfStreamPacket();
       return true;
 
     default:
-      FXL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
+      FX_LOGS(ERROR) << "avcodec_receive_frame failed " << result;
       if (input->end_of_stream()) {
         // The input packet was end-of-stream. We won't get called again before
         // a flush, so make sure the output gets an end-of-stream packet.
@@ -144,7 +144,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
 }
 
 int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
-  FXL_DCHECK(input);
+  FX_DCHECK(input);
 
   AVPacket av_packet;
   av_init_packet(&av_packet);
@@ -158,7 +158,7 @@ int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
   int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
 
   if (result != 0) {
-    FXL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
+    FX_LOGS(ERROR) << "avcodec_send_packet failed " << result;
   }
 
   return result;
@@ -167,8 +167,8 @@ int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
 void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 
 AVBufferRef* FfmpegDecoderBase::CreateAVBuffer(fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  FXL_DCHECK(payload_buffer);
-  FXL_DCHECK(payload_buffer->size() <= static_cast<uint64_t>(std::numeric_limits<int>::max()));
+  FX_DCHECK(payload_buffer);
+  FX_DCHECK(payload_buffer->size() <= static_cast<uint64_t>(std::numeric_limits<int>::max()));
   uint8_t* data = reinterpret_cast<uint8_t*>(payload_buffer->data());
   int size = static_cast<int>(payload_buffer->size());
   void* opaque = fbl::ExportToRawPtr(&payload_buffer);
@@ -185,22 +185,22 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(AVCodecContext* av_codec_context
   // self->av_codec_context_.
 
   // AV_CODEC_CAP_DR1 is required in order to do allocation this way.
-  FXL_DCHECK(av_codec_context->codec->capabilities & AV_CODEC_CAP_DR1);
+  FX_DCHECK(av_codec_context->codec->capabilities & AV_CODEC_CAP_DR1);
 
   FfmpegDecoderBase* self = reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
-  FXL_DCHECK(self);
+  FX_DCHECK(self);
 
   return self->BuildAVFrame(*av_codec_context, av_frame);
 }
 
 // static
 void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
-  FXL_DCHECK(opaque);
-  FXL_DCHECK(buffer);
+  FX_DCHECK(opaque);
+  FX_DCHECK(buffer);
 
   auto ref = fbl::ImportFromRawPtr(reinterpret_cast<PayloadBuffer*>(opaque));
 
-  FXL_DCHECK(buffer == ref->data());
+  FX_DCHECK(buffer == ref->data());
 }
 
 PacketPtr FfmpegDecoderBase::CreateEndOfStreamPacket() {

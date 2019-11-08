@@ -15,8 +15,8 @@
 #include <thread>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_format_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"
@@ -46,7 +46,7 @@ constexpr uint32_t kMaxPayloadCount = 1;
 
 // TODO(dalesat): Refine this function.
 uint64_t MaxPayloadSize(StreamType* stream_type) {
-  FXL_DCHECK(stream_type);
+  FX_DCHECK(stream_type);
   constexpr uint64_t kMaxPayloadSizeAudio = (64 * 1024);
   constexpr uint64_t kMaxPayloadSizeVideo = (512 * 1024);
   return stream_type->medium() == StreamType::Medium::kVideo ? kMaxPayloadSizeVideo
@@ -170,7 +170,7 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<ReaderCache> reader_c
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<ReaderCache> reader_cache)
     : reader_cache_(reader_cache), dispatcher_(async_get_default_dispatcher()) {
-  FXL_DCHECK(dispatcher_);
+  FX_DCHECK(dispatcher_);
   ffmpeg_thread_ = std::thread([this]() {
     ThreadPriority::SetToHigh();
     Worker();
@@ -194,7 +194,7 @@ void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
 }
 
 void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) {
-  FXL_DCHECK(lead > 0);
+  FX_DCHECK(lead > 0);
 
   WhenInitialized([this, lead, backtrack](zx_status_t init_status) {
     if (init_status != ZX_OK) {
@@ -277,7 +277,7 @@ void FfmpegDemuxImpl::Worker() {
 
   status_ = AvIoContext::Create(reader_cache_, &io_context_, dispatcher_);
   if (status_ != ZX_OK) {
-    FXL_LOG(ERROR) << "AvIoContext::Create failed, status " << status_;
+    FX_LOGS(ERROR) << "AvIoContext::Create failed, status " << status_;
     ReportProblem(status_ == ZX_ERR_NOT_FOUND ? fuchsia::media::playback::PROBLEM_ASSET_NOT_FOUND
                                               : fuchsia::media::playback::PROBLEM_INTERNAL,
                   "");
@@ -286,11 +286,11 @@ void FfmpegDemuxImpl::Worker() {
     return;
   }
 
-  FXL_DCHECK(io_context_);
+  FX_DCHECK(io_context_);
 
   format_context_ = AvFormatContext::OpenInput(io_context_);
   if (!format_context_) {
-    FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
+    FX_LOGS(ERROR) << "AvFormatContext::OpenInput failed";
     status_ = ZX_ERR_NOT_SUPPORTED;
     ReportProblem(fuchsia::media::playback::PROBLEM_CONTAINER_NOT_SUPPORTED, "");
     NotifyInitComplete();
@@ -299,7 +299,7 @@ void FfmpegDemuxImpl::Worker() {
 
   int r = avformat_find_stream_info(format_context_.get(), nullptr);
   if (r < 0) {
-    FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
+    FX_LOGS(ERROR) << "avformat_find_stream_info failed, result " << r;
     status_ = ZX_ERR_INTERNAL;
     ReportProblem(fuchsia::media::playback::PROBLEM_INTERNAL, "avformat_find_stream_info failed");
     NotifyInitComplete();
@@ -345,7 +345,7 @@ void FfmpegDemuxImpl::Worker() {
       // and the seek position.
       int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000, AVSEEK_FLAG_BACKWARD);
       if (r < 0) {
-        FXL_LOG(WARNING) << "av_seek_frame failed, result " << r;
+        FX_LOGS(WARNING) << "av_seek_frame failed, result " << r;
       }
 
       next_stream_to_end_ = -1;
@@ -394,7 +394,7 @@ bool FfmpegDemuxImpl::Wait(bool* packet_requested, int64_t* seek_position,
 }
 
 PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
-  FXL_DCHECK(stream_index_out);
+  FX_DCHECK(stream_index_out);
 
   if (next_stream_to_end_ != -1) {
     // We're producing end-of-stream packets for all the streams.
@@ -416,8 +416,8 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   // TODO(dalesat): What if the packet has no PTS or duration?
   next_pts_ = av_packet->pts + av_packet->duration;
   // TODO(dalesat): Implement packet side data.
-  FXL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
-  FXL_DCHECK(av_packet->side_data_elems == 0);
+  FX_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
+  FX_DCHECK(av_packet->side_data_elems == 0);
 
   int64_t pts = (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kNoPts : av_packet->pts;
   bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;
@@ -442,14 +442,14 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
-  FXL_DCHECK(next_stream_to_end_ >= 0);
+  FX_DCHECK(next_stream_to_end_ >= 0);
 
   if (static_cast<std::size_t>(next_stream_to_end_) >= streams_.size()) {
     // This shouldn't happen if downstream nodes are behaving properly, but
     // it's not fatal. We DLOG at ERROR level to avoid test failures until
     // this is resolved.
     // TODO(MTWN-247): Restore DCHECK.
-    FXL_DLOG(ERROR) << "PullPacket called after all streams have ended";
+    FX_LOGS(ERROR) << "PullPacket called after all streams have ended";
     return nullptr;
   }
 

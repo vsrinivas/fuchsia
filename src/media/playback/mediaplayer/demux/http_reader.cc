@@ -9,7 +9,7 @@
 
 #include "garnet/bin/http/http_errors.h"
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 
@@ -52,7 +52,7 @@ HttpReader::HttpReader(ServiceProvider* service_provider, const std::string& url
 
   url_loader_->Start(std::move(url_request), [this](http::URLResponse response) {
     if (response.error) {
-      FXL_LOG(ERROR) << "HEAD response error " << response.error->code << " "
+      FX_LOGS(ERROR) << "HEAD response error " << response.error->code << " "
                      << (response.error->description ? response.error->description
                                                      : "<no description>");
       status_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED ? ZX_ERR_NOT_FOUND
@@ -62,7 +62,7 @@ HttpReader::HttpReader(ServiceProvider* service_provider, const std::string& url
     }
 
     if (response.status_code != kStatusOk) {
-      FXL_LOG(ERROR) << "HEAD response status code " << response.status_code;
+      FX_LOGS(ERROR) << "HEAD response status code " << response.status_code;
       status_ = response.status_code == kStatusNotFound ? ZX_ERR_NOT_FOUND : ZX_ERR_INTERNAL;
       ready_.Occur();
       return;
@@ -136,7 +136,7 @@ void HttpReader::ReadFromSocket() {
                                   zx_status_t status, const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {
-            FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
+            FX_LOGS(ERROR) << "AsyncWait failed, status " << status;
           }
 
           FailReadAt(status);
@@ -154,7 +154,7 @@ void HttpReader::ReadFromSocket() {
     waiter_ = nullptr;
 
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;
+      FX_LOGS(ERROR) << "zx::socket::read failed, status " << status;
       FailReadAt(status);
       break;
     }
@@ -184,7 +184,7 @@ void HttpReader::FailReadAt(zx_status_t status) {
 }
 
 void HttpReader::LoadAndReadFromSocket() {
-  FXL_DCHECK(!socket_);
+  FX_DCHECK(!socket_);
 
   if (!can_seek_ && read_at_position_ != 0) {
     FailReadAt(ZX_ERR_INVALID_ARGS);
@@ -211,7 +211,7 @@ void HttpReader::LoadAndReadFromSocket() {
 
   url_loader_->Start(std::move(request), [this](http::URLResponse response) {
     if (response.status_code != kStatusOk && response.status_code != kStatusPartialContent) {
-      FXL_LOG(WARNING) << "GET response status code " << response.status_code;
+      FX_LOGS(WARNING) << "GET response status code " << response.status_code;
       FailReadAt(ZX_ERR_INTERNAL);
       return;
     }

@@ -9,8 +9,6 @@
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media_player {
 
 // CallbackJoiner is used to take action after multiple 'child' operations are

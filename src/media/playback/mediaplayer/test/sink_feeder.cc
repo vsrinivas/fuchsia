@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media_player {
 namespace test {
@@ -14,11 +14,11 @@ static const uint32_t kPayloadBufferId = 0;
 zx_status_t SinkFeeder::Init(fuchsia::media::SimpleStreamSinkPtr sink, size_t size,
                              uint32_t frame_size, uint32_t max_packet_size,
                              uint32_t max_packet_count) {
-  FXL_DCHECK(sink);
-  FXL_DCHECK(size > 0);
-  FXL_DCHECK(frame_size > 0);
-  FXL_DCHECK(max_packet_size > 0);
-  FXL_DCHECK(max_packet_count > 0);
+  FX_DCHECK(sink);
+  FX_DCHECK(size > 0);
+  FX_DCHECK(frame_size > 0);
+  FX_DCHECK(max_packet_size > 0);
+  FX_DCHECK(max_packet_count > 0);
 
   sink_ = std::move(sink);
   bytes_remaining_ = size;

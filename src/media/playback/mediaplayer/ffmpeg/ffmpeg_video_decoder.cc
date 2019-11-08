@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_formatting.h"
 extern "C" {
 #include "libavutil/imgutils.h"
@@ -29,7 +29,7 @@ std::shared_ptr<Processor> FfmpegVideoDecoder::Create(AvCodecContextPtr av_codec
 
 FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
-  FXL_DCHECK(context());
+  FX_DCHECK(context());
 
   // Turn on multi-proc decoding by allowing the decoder to use three threads
   // (the calling thread and the two specified here). FF_THREAD_FRAME means
@@ -59,8 +59,8 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
 }
 
 void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
-  FXL_DCHECK(context());
-  FXL_DCHECK(packet->pts() != Packet::kNoPts);
+  FX_DCHECK(context());
+  FX_DCHECK(packet->pts() != Packet::kNoPts);
 
   if (pts_rate() == media::TimelineRate::Zero) {
     set_pts_rate(packet->pts_rate());
@@ -74,7 +74,7 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
 }
 
 int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) {
-  FXL_DCHECK(av_frame);
+  FX_DCHECK(av_frame);
 
   if (UpdateSize(av_codec_context)) {
     revised_stream_type_ = AvCodecContext::GetStreamType(av_codec_context);
@@ -91,8 +91,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
   // are not overread / overwritten.  See ff_init_buffer_info() for details.
 
   // When lowres is non-zero, dimensions should be divided by 2^(lowres), but
-  // since we don't use this, just FXL_DCHECK that it's zero.
-  FXL_DCHECK(av_codec_context.lowres == 0);
+  // since we don't use this, just FX_DCHECK that it's zero.
+  FX_DCHECK(av_codec_context.lowres == 0);
   VideoStreamType::Extent coded_size(
       std::max(visible_size.width(), static_cast<uint32_t>(av_codec_context.coded_width)),
       std::max(visible_size.height(), static_cast<uint32_t>(av_codec_context.coded_height)));
@@ -117,14 +117,14 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
   fbl::RefPtr<PayloadBuffer> payload_buffer = AllocatePayloadBuffer(buffer_size_);
 
   if (!payload_buffer) {
-    FXL_LOG(ERROR) << "failed to allocate payload buffer of size " << buffer_size_;
+    FX_LOGS(ERROR) << "failed to allocate payload buffer of size " << buffer_size_;
     return -1;
   }
 
   // Check that the allocator has met the common alignment requirements and
   // that those requirements are good enough for the decoder.
-  FXL_DCHECK(PayloadBuffer::IsAligned(payload_buffer->data()));
-  FXL_DCHECK(PayloadBuffer::kByteAlignment >= kFrameBufferAlign);
+  FX_DCHECK(PayloadBuffer::IsAligned(payload_buffer->data()));
+  FX_DCHECK(PayloadBuffer::kByteAlignment >= kFrameBufferAlign);
 
   // Decoders require a zeroed buffer.
   std::memset(payload_buffer->data(), 0, buffer_size_);
@@ -144,7 +144,7 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
   av_frame->format = av_codec_context.pix_fmt;
   av_frame->reordered_opaque = av_codec_context.reordered_opaque;
 
-  FXL_DCHECK(av_frame->data[0] == payload_buffer->data());
+  FX_DCHECK(av_frame->data[0] == payload_buffer->data());
   av_frame->buf[0] = CreateAVBuffer(std::move(payload_buffer));
 
   return 0;
@@ -152,8 +152,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
 
 PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  FXL_DCHECK(av_frame.buf[0]);
-  FXL_DCHECK(payload_buffer);
+  FX_DCHECK(av_frame.buf[0]);
+  FX_DCHECK(payload_buffer);
 
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
@@ -180,8 +180,8 @@ bool FfmpegVideoDecoder::UpdateSize(const AVCodecContext& av_codec_context) {
 
   avcodec_align_dimensions(const_cast<AVCodecContext*>(&av_codec_context), &aligned_width,
                            &aligned_height);
-  FXL_DCHECK(aligned_width >= av_codec_context.coded_width);
-  FXL_DCHECK(aligned_height >= av_codec_context.coded_height);
+  FX_DCHECK(aligned_width >= av_codec_context.coded_width);
+  FX_DCHECK(aligned_height >= av_codec_context.coded_height);
 
   if (aligned_width_ == static_cast<uint32_t>(aligned_width) &&
       aligned_height_ == static_cast<uint32_t>(aligned_height)) {
