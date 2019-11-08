@@ -2,22 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dev-thermal.h"
+#include "dev-thermal.c"
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
-#include <math.h>
 #include <zircon/syscalls.h>
-
 #include <zxtest/zxtest.h>
 
-#include "methods.h"
-#include "util.h"
+struct thermal_test_context {
+  acpi_thermal_device_t dev;
+  async_loop_t* loop;
+  zx_handle_t client;
+  thrd_t thread;
+};
 
-zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out) { return ZX_OK; }
+zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out) {
+  return ZX_OK;
+}
 
-zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out) { return ZX_OK; }
+zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out) {
+  return ZX_OK;
+}
 
 static uint64_t acpi_tmp_call_out = 0;
 zx_status_t acpi_tmp_call(ACPI_HANDLE dev_obj, uint64_t* out) {
@@ -32,18 +38,6 @@ ACPI_STATUS acpi_evaluate_method_intarg(ACPI_HANDLE handle, const char* name, ui
 ACPI_STATUS acpi_evaluate_integer(ACPI_HANDLE handle, const char* name, uint64_t* out) {
   return AE_OK;
 }
-
-namespace acpi_thermal {
-
-// For testing we want to hook into the underlying FIDL ops of the device.
-extern const fuchsia_hardware_thermal_Device_ops_t fidl_ops;
-
-struct thermal_test_context {
-  acpi_thermal_device_t dev;
-  async_loop_t* loop;
-  zx_handle_t client;
-  thrd_t thread;
-};
 
 static void setup(struct thermal_test_context* ctx) {
   ctx->dev.acpi_handle = NULL;
@@ -68,7 +62,9 @@ static void teardown(struct thermal_test_context* ctx) {
   zx_handle_close(ctx->client);
 }
 
-static bool float_near(float a, float b) { return fabsf(a - b) < 0.001; }
+static bool float_near(float a, float b) {
+  return fabsf(a - b) < 0.001;
+}
 
 TEST(ThermalTests, GetTemperature) {
   struct thermal_test_context ctx;
@@ -103,5 +99,3 @@ TEST(ThermalTests, GetTemperatureNegative) {
 
   ASSERT_NO_FATAL_FAILURES(teardown(&ctx));
 }
-
-}  // namespace acpi_thermal
