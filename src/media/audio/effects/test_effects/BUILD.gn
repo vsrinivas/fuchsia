@@ -9,6 +9,5 @@ loadable_module("test_effects") {
 
   deps = [
     "//sdk/lib/media/audio/effects",
-    "//src/lib/fxl",
   ]
 }

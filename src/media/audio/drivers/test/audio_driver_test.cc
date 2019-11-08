@@ -115,7 +115,7 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
     } else {
       AudioDriverTest::no_output_devices_found_ = true;
     }
-    FXL_LOG(WARNING) << "*** No audio " << ((device_type == DeviceType::Input) ? "input" : "output")
+    FX_LOGS(WARNING) << "*** No audio " << ((device_type == DeviceType::Input) ? "input" : "output")
                      << " devices detected on this target. ***";
     return false;
   }
@@ -135,14 +135,14 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
 void AudioDriverTest::AddDevice(int dir_fd, const std::string& name, DeviceType device_type) {
   // TODO(mpuryear): on systems with more than one audio device of a given type, test them all.
   if (stream_channel_ready_) {
-    FXL_LOG(WARNING) << "More than one device detected. For now, we need to ignore it.";
+    FX_LOGS(WARNING) << "More than one device detected. For now, we need to ignore it.";
     return;
   }
 
   // Open the device node.
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
-    FXL_LOG(ERROR) << "AudioDriverTest failed to open device node at \"" << name << "\". ("
+    FX_LOGS(ERROR) << "AudioDriverTest failed to open device node at \"" << name << "\". ("
                    << strerror(errno) << " : " << errno << ")";
     FAIL();
   }
@@ -152,7 +152,7 @@ void AudioDriverTest::AddDevice(int dir_fd, const std::string& name, DeviceType 
   zx_status_t status =
       fdio_get_service_handle(dev_node.release(), dev_channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to obtain FDIO service channel to audio "
+    FX_PLOGS(ERROR, status) << "Failed to obtain FDIO service channel to audio "
                             << ((device_type == DeviceType::Input) ? "input" : "output");
     FAIL();
   }
@@ -163,7 +163,7 @@ void AudioDriverTest::AddDevice(int dir_fd, const std::string& name, DeviceType 
 
   status = dev->GetChannel(&stream_channel_);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to open channel to audio "
+    FX_PLOGS(ERROR, status) << "Failed to open channel to audio "
                             << ((device_type == DeviceType::Input) ? "input" : "output");
     FAIL();
   }
@@ -261,7 +261,7 @@ void AudioDriverTest::RequestSetGain() {
   ASSERT_TRUE(received_get_gain_);
 
   if (max_gain_ == min_gain_) {
-    FXL_LOG(WARNING) << "*** Audio " << ((device_type_ == DeviceType::Input) ? "input" : "output")
+    FX_LOGS(WARNING) << "*** Audio " << ((device_type_ == DeviceType::Input) ? "input" : "output")
                      << " has fixed gain (" << cur_gain_ << " dB). Skipping SetGain test. ***";
     return;
   }

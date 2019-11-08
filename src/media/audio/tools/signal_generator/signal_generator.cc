@@ -11,12 +11,12 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::tools {
 
 MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
-  FXL_DCHECK(quit_callback_);
+  FX_DCHECK(quit_callback_);
 }
 
 // Prepare for playback, submit initial data, start the presentation timeline.
@@ -45,7 +45,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
                                     : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
                                                   : fuchsia::media::AudioSampleFormat::FLOAT),
                                 num_channels_, frame_rate_, sample_size_ * 8)) {
-      FXL_LOG(ERROR) << "WavWriter::Initialize() failed";
+      FX_LOGS(ERROR) << "WavWriter::Initialize() failed";
     } else {
       wav_writer_is_initialized_ = true;
     }
@@ -69,51 +69,51 @@ bool MediaApp::ParameterRangeChecks() {
   bool ret_val = true;
 
   if (num_channels_ < fuchsia::media::MIN_PCM_CHANNEL_COUNT) {
-    FXL_LOG(ERROR) << "Number of channels must be at least "
+    FX_LOGS(ERROR) << "Number of channels must be at least "
                    << fuchsia::media::MIN_PCM_CHANNEL_COUNT;
     ret_val = false;
   }
   if (num_channels_ > fuchsia::media::MAX_PCM_CHANNEL_COUNT) {
-    FXL_LOG(ERROR) << "Number of channels must be no greater than "
+    FX_LOGS(ERROR) << "Number of channels must be no greater than "
                    << fuchsia::media::MAX_PCM_CHANNEL_COUNT;
     ret_val = false;
   }
 
   if (frame_rate_ < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) {
-    FXL_LOG(ERROR) << "Frame rate must be at least " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND;
+    FX_LOGS(ERROR) << "Frame rate must be at least " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND;
     ret_val = false;
   }
   if (frame_rate_ > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND) {
-    FXL_LOG(ERROR) << "Frame rate must be no greater than "
+    FX_LOGS(ERROR) << "Frame rate must be no greater than "
                    << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
     ret_val = false;
   }
 
   if (frequency_ < 0.0) {
-    FXL_LOG(ERROR) << "Frequency cannot be negative";
+    FX_LOGS(ERROR) << "Frequency cannot be negative";
     ret_val = false;
   }
 
   if (amplitude_ > 1.0) {
-    FXL_LOG(ERROR) << "Amplitude must be no greater than 1.0";
+    FX_LOGS(ERROR) << "Amplitude must be no greater than 1.0";
     ret_val = false;
   }
   if (amplitude_ < -1.0) {
-    FXL_LOG(ERROR) << "Amplitude must be no less than -1.0";
+    FX_LOGS(ERROR) << "Amplitude must be no less than -1.0";
     ret_val = false;
   }
 
   if (duration_secs_ < 0.0) {
-    FXL_LOG(ERROR) << "Duration cannot be negative";
+    FX_LOGS(ERROR) << "Duration cannot be negative";
     ret_val = false;
   }
 
   if (frames_per_payload_ > frame_rate_ / 2) {
-    FXL_LOG(ERROR) << "Payload size must be 500 milliseconds or less.";
+    FX_LOGS(ERROR) << "Payload size must be 500 milliseconds or less.";
     ret_val = false;
   }
   if (frames_per_payload_ < frame_rate_ / 1000) {
-    FXL_LOG(ERROR) << "Payload size must be 1 millisecond or more.";
+    FX_LOGS(ERROR) << "Payload size must be 1 millisecond or more.";
     ret_val = false;
   }
 
@@ -242,13 +242,13 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.AudioRenderer failed";
+    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.AudioRenderer failed";
     Shutdown();
   });
 
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
+    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
     Shutdown();
   });
 
@@ -257,7 +257,7 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
 // Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_);
+  FX_DCHECK(audio_renderer_);
 
   fuchsia::media::AudioStreamType format;
 
@@ -300,7 +300,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
         ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "VmoMapper:::CreateAndMap failed";
+      FX_PLOGS(ERROR, status) << "VmoMapper:::CreateAndMap failed";
       return status;
     }
 
@@ -433,7 +433,7 @@ void MediaApp::SendPacket(uint64_t payload_num) {
     if (!wav_writer_.Write(
             reinterpret_cast<char*>(packet.vmo->start()) + packet.stream_packet.payload_offset,
             packet.stream_packet.payload_size)) {
-      FXL_LOG(ERROR) << "WavWriter::Write() failed";
+      FX_LOGS(ERROR) << "WavWriter::Write() failed";
     }
   }
 
@@ -443,7 +443,7 @@ void MediaApp::SendPacket(uint64_t payload_num) {
 
 void MediaApp::OnSendPacketComplete() {
   ++num_packets_completed_;
-  FXL_DCHECK(num_packets_completed_ <= num_packets_to_send_);
+  FX_DCHECK(num_packets_completed_ <= num_packets_to_send_);
 
   if (num_packets_sent_ < num_packets_to_send_) {
     SendPacket(num_packets_sent_);
@@ -456,7 +456,7 @@ void MediaApp::OnSendPacketComplete() {
 void MediaApp::Shutdown() {
   if (wav_writer_is_initialized_) {
     if (!wav_writer_.Close()) {
-      FXL_LOG(ERROR) << "WavWriter::Close() failed";
+      FX_LOGS(ERROR) << "WavWriter::Close() failed";
     }
   }
 

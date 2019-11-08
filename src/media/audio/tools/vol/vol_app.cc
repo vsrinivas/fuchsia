@@ -19,6 +19,7 @@
 #include "lib/media/audio/cpp/perceived_level.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media {
 namespace {
@@ -84,7 +85,7 @@ class VolApp {
   VolApp(int argc, const char** argv, fit::closure quit_callback)
       : component_context_(sys::ComponentContext::Create()),
         quit_callback_(std::move(quit_callback)) {
-    FXL_DCHECK(quit_callback_);
+    FX_DCHECK(quit_callback_);
 
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -163,7 +164,7 @@ class VolApp {
 
     audio_ = component_context_->svc()->Connect<fuchsia::media::AudioDeviceEnumerator>();
     audio_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
+      FX_LOGS(ERROR) << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
                      << status;
       quit_callback_();
     });
@@ -212,21 +213,21 @@ class VolApp {
   }
 
   bool Parse(const std::string& string_value, float* float_out) {
-    FXL_DCHECK(float_out);
+    FX_DCHECK(float_out);
 
     std::istringstream istream(string_value);
     return (istream >> *float_out) && istream.eof();
   }
 
   bool Parse(const std::string& string_value, uint64_t* uint_out) {
-    FXL_DCHECK(uint_out);
+    FX_DCHECK(uint_out);
 
     std::istringstream istream(string_value);
     return (istream >> *uint_out) && istream.eof();
   }
 
   bool Parse(const std::string& string_value, BoolAction* bool_out) {
-    FXL_DCHECK(bool_out);
+    FX_DCHECK(bool_out);
 
     static const char* TRUE_STRINGS[] = {"yes", "on", "true"};
     for (const char* s : TRUE_STRINGS) {
@@ -605,6 +606,8 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"vol_util"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   media::VolApp app(argc, argv,
                     [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

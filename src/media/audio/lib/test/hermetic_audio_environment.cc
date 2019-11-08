@@ -9,7 +9,7 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 namespace {
@@ -93,11 +93,11 @@ HermeticAudioEnvironment::HermeticAudioEnvironment() {
   ConnectToService(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
   fuchsia::io::NodeInfo info;
   zx_status_t status = devfs_dir->Describe(&info);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 void HermeticAudioEnvironment::Start(async::Loop* loop) {
-  FXL_CHECK(loop_ == nullptr);
+  FX_CHECK(loop_ == nullptr);
   loop_ = loop;
   auto real_services = sys::ServiceDirectory::CreateFromNamespace();
   auto real_env = real_services->Connect<fuchsia::sys::Environment>();

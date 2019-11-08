@@ -7,9 +7,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio/audio_core_client.h"
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"audio_core_client"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // ComponentContext is safe to initialize early as we publish all implemented interfaces before we

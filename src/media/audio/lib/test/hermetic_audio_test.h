@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/test/test_fixture.h"
@@ -15,7 +16,7 @@ class HermeticAudioTest : public TestFixture {
  public:
   static HermeticAudioEnvironment* environment() {
     auto ptr = HermeticAudioTest::environment_.get();
-    FXL_CHECK(ptr) << "No Environment; Did you forget to call SetUpTestSuite?";
+    FX_CHECK(ptr) << "No Environment; Did you forget to call SetUpTestSuite?";
     return ptr;
   }
 

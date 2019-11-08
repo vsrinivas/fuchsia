@@ -6,7 +6,6 @@
 
 #include <dlfcn.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/effects/test_effects/test_effects.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 

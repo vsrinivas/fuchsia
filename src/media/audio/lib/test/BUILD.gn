@@ -60,6 +60,7 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/syslog/cpp",
   ]
 
   deps = [
@@ -75,6 +76,7 @@ source_set("message_transceiver") {
   ]
 
   deps = [
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
   ]
 }

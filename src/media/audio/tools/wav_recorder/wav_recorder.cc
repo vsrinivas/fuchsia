@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "lib/media/audio/cpp/types.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace media::tools {
@@ -36,8 +36,8 @@ constexpr float kMinBufferSizeMsec = 1.0f;  // 1msec payload buffer!
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
-    FXL_DCHECK(payload_buf_size_ != 0);
-    FXL_DCHECK(bytes_per_frame_ != 0);
+    FX_DCHECK(payload_buf_size_ != 0);
+    FX_DCHECK(bytes_per_frame_ != 0);
     zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
   }
 }
@@ -68,11 +68,11 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
   audio_capturer_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Client connection to fuchsia.media.AudioCapturer failed: " << status;
+    FX_LOGS(ERROR) << "Client connection to fuchsia.media.AudioCapturer failed: " << status;
     Shutdown();
   });
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Client connection to fuchsia.media.GainControl failed: " << status;
+    FX_LOGS(ERROR) << "Client connection to fuchsia.media.GainControl failed: " << status;
     Shutdown();
   });
 
@@ -167,7 +167,7 @@ bool WavRecorder::SetupPayloadBuffer() {
   zx_status_t res;
   res = zx::vmo::create(payload_buf_size_, 0, &payload_buf_vmo_);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create " << payload_buf_size_ << " byte payload buffer (res "
+    FX_LOGS(ERROR) << "Failed to create " << payload_buf_size_ << " byte payload buffer (res "
                    << res << ")";
     return false;
   }
@@ -176,7 +176,7 @@ bool WavRecorder::SetupPayloadBuffer() {
   res =
       zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_, ZX_VM_PERM_READ, &tmp);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map " << payload_buf_size_ << " byte payload buffer (res " << res
+    FX_LOGS(ERROR) << "Failed to map " << payload_buf_size_ << " byte payload buffer (res " << res
                    << ")";
     return false;
   }
@@ -186,8 +186,8 @@ bool WavRecorder::SetupPayloadBuffer() {
 }
 
 void WavRecorder::SendCaptureJob() {
-  FXL_DCHECK(capture_frame_offset_ < payload_buf_frames_);
-  FXL_DCHECK((capture_frame_offset_ + capture_frames_per_chunk_) <= payload_buf_frames_);
+  FX_DCHECK(capture_frame_offset_ < payload_buf_frames_);
+  FX_DCHECK((capture_frame_offset_ + capture_frames_per_chunk_) <= payload_buf_frames_);
 
   ++outstanding_capture_jobs_;
 
@@ -214,7 +214,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   zx_status_t res;
 
   if (!type.medium_specific.is_audio()) {
-    FXL_LOG(ERROR) << "Default format is not audio!";
+    FX_LOGS(ERROR) << "Default format is not audio!";
     return;
   }
 
@@ -371,7 +371,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   res = payload_buf_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &audio_capturer_vmo);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate VMO handle (res " << res << ")";
+    FX_LOGS(ERROR) << "Failed to duplicate VMO handle (res " << res << ")";
     return;
   }
   audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
@@ -384,9 +384,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
       SendCaptureJob();
     }
   } else {
-    FXL_DCHECK(payload_buf_frames_);
-    FXL_DCHECK(capture_frames_per_chunk_);
-    FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
+    FX_DCHECK(payload_buf_frames_);
+    FX_DCHECK(capture_frames_per_chunk_);
+    FX_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
     audio_capturer_.events().OnPacketProduced = [this](fuchsia::media::StreamPacket pkt) {
       OnPacketProduced(pkt);
     };
@@ -394,7 +394,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   }
 
   if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
-    FXL_DCHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32));
+    FX_DCHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32));
     if (pack_24bit_samples_ == true) {
       compress_32_24_buff_ = std::make_unique<uint8_t[]>(payload_buf_size_ * 3 / 4);
     }
@@ -434,10 +434,10 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
     --outstanding_capture_jobs_;
   }
 
-  FXL_DCHECK((pkt.payload_offset + pkt.payload_size) <= (payload_buf_frames_ * bytes_per_frame_));
+  FX_DCHECK((pkt.payload_offset + pkt.payload_size) <= (payload_buf_frames_ * bytes_per_frame_));
 
   if (pkt.payload_size) {
-    FXL_DCHECK(payload_buf_virt_);
+    FX_DCHECK(payload_buf_virt_);
 
     auto tgt = reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset;
 

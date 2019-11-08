@@ -10,7 +10,7 @@
 
 #include <string_view>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/effects_loader/effects_module.h"
 
 namespace media::audio {
@@ -31,7 +31,7 @@ class Effect {
       : effects_handle_(effects_handle), module_(std::move(module)) {
     // If handle_ is valid, module_ must be valid. If effects_handle_ is invalid, module_ must be
     // invalid.
-    FXL_DCHECK((effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) == (module_.is_valid()));
+    FX_DCHECK((effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) == (module_.is_valid()));
   }
 
   ~Effect();

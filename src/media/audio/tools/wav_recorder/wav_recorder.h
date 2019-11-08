@@ -10,7 +10,7 @@
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace media::tools {
@@ -19,7 +19,7 @@ class WavRecorder {
  public:
   WavRecorder(fxl::CommandLine cmd_line, fit::closure quit_callback)
       : cmd_line_(std::move(cmd_line)), quit_callback_(std::move(quit_callback)) {
-    FXL_DCHECK(quit_callback_);
+    FX_DCHECK(quit_callback_);
   }
 
   ~WavRecorder();

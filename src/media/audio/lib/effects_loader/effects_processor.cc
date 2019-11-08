@@ -6,14 +6,14 @@
 
 #include <lib/trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 
 // Insert an effect instance at the end of the chain.
 zx_status_t EffectsProcessor::AddEffect(Effect e) {
   TRACE_DURATION("audio", "EffectsProcessor::AddEffect");
-  FXL_DCHECK(e);
+  FX_DCHECK(e);
 
   fuchsia_audio_effects_parameters params;
   zx_status_t status = e.GetParameters(&params);
@@ -23,7 +23,7 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
 
   // For now we only support in-place processors.
   if (params.channels_in != params.channels_out) {
-    FXL_LOG(ERROR) << "Can't add effect; only in-place effects are currently supported.";
+    FX_LOGS(ERROR) << "Can't add effect; only in-place effects are currently supported.";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -34,7 +34,7 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   } else if (params.channels_in != channels_out_) {
     // We have existing effects and this effect excepts different channelization than what we're
     // currently producing.
-    FXL_LOG(ERROR) << "Can't add effect; needs " << params.channels_in << " channels but have "
+    FX_LOGS(ERROR) << "Can't add effect; needs " << params.channels_in << " channels but have "
                    << channels_out_ << " channels";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -47,7 +47,7 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
 // Aborts if position is out-of-range.
 const Effect& EffectsProcessor::GetEffectAt(size_t position) const {
   TRACE_DURATION("audio", "EffectsProcessor::GetEffectAt", "position", position);
-  FXL_DCHECK(position < effects_chain_.size());
+  FX_DCHECK(position < effects_chain_.size());
   return effects_chain_[position];
 }
 

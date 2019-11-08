@@ -4,12 +4,14 @@
 
 #include "src/media/audio/audio/audio_core_client.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media::audio {
 AudioCoreClient::AudioCoreClient(sys::ComponentContext* component_context,
                                  fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   audio_core_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Connection to fuchsia.media.AudioCore failed: " << status;
+    FX_PLOGS(ERROR,status) << "Connection to fuchsia.media.AudioCore failed: ";
     quit_callback_();
   });
 

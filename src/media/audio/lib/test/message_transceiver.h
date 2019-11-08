@@ -10,7 +10,7 @@
 
 #include <queue>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 
@@ -25,7 +25,7 @@ class MessageTransceiver {
     // Returns a T& overlaid on the message data.
     template <typename T>
     T& BytesAs() {
-      FXL_CHECK(sizeof(T) <= bytes_.size());
+      FX_CHECK(sizeof(T) <= bytes_.size());
       return *reinterpret_cast<T*>(bytes_.data());
     }
 

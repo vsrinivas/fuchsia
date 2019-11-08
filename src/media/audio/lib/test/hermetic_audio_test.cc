@@ -4,8 +4,6 @@
 
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio::test {
 
 std::unique_ptr<HermeticAudioEnvironment> HermeticAudioTest::environment_;

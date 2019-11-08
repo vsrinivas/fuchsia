@@ -38,7 +38,7 @@ zx_status_t MessageTransceiver::SendMessage(Message message) {
   zx_status_t status = channel_.write(0, message.bytes_.data(), message.bytes_.size(),
                                       message.handles_.data(), message.handles_.size());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "zx::channel::write failed";
+    FX_PLOGS(ERROR, status) << "zx::channel::write failed";
     OnError(status);
     return status;
   }
@@ -64,7 +64,7 @@ void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, asy
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
-        FXL_PLOG(ERROR, status) << "async::WaitMethod::Begin failed";
+        FX_PLOGS(ERROR, status) << "async::WaitMethod::Begin failed";
         OnError(status);
       }
       break;
@@ -77,7 +77,7 @@ void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, asy
     }
 
     if (status != ZX_ERR_BUFFER_TOO_SMALL) {
-      FXL_PLOG(ERROR, status) << "Failed to read (peek) from a zx::channel";
+      FX_PLOGS(ERROR, status) << "Failed to read (peek) from a zx::channel";
       OnError(status);
       break;
     }
@@ -87,13 +87,13 @@ void MessageTransceiver::ReadChannelMessages(async_dispatcher_t* dispatcher, asy
                            message.handles_.size(), &actual_byte_count, &actual_handle_count);
 
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "zx::channel::read failed";
+      FX_PLOGS(ERROR, status) << "zx::channel::read failed";
       OnError(status);
       break;
     }
 
-    FXL_CHECK(message.bytes_.size() == actual_byte_count);
-    FXL_CHECK(message.handles_.size() == actual_handle_count);
+    FX_CHECK(message.bytes_.size() == actual_byte_count);
+    FX_CHECK(message.handles_.size() == actual_handle_count);
 
     if (incoming_message_callback_) {
       incoming_message_callback_(std::move(message));

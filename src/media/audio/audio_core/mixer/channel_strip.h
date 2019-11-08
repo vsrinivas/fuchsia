@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 
+#include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::mixer {

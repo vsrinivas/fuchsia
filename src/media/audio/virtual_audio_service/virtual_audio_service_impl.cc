@@ -8,7 +8,7 @@
 #include <fuchsia/virtualaudio/c/fidl.h>
 #include <lib/fdio/fdio.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio.h"
 
 namespace virtual_audio {
@@ -16,7 +16,7 @@ namespace virtual_audio {
 VirtualAudioServiceImpl::VirtualAudioServiceImpl(
     std::unique_ptr<sys::ComponentContext> component_context)
     : component_context_(std::move(component_context)) {
-  FXL_DCHECK(component_context_);
+  FX_DCHECK(component_context_);
 
   component_context_->outgoing()->AddPublicService<fuchsia::virtualaudio::Control>(
       [this](fidl::InterfaceRequest<fuchsia::virtualaudio::Control> request) {
@@ -42,7 +42,7 @@ VirtualAudioServiceImpl::VirtualAudioServiceImpl(
 
 VirtualAudioServiceImpl::~VirtualAudioServiceImpl() {
   if (driver_open_) {
-    FXL_LOG(INFO) << "Closing '" << virtual_audio::kCtlNodeName << "'";
+    FX_LOGS(INFO) << "Closing '" << virtual_audio::kCtlNodeName << "'";
     zx_handle_close(channel_handle_);
   }
 }
@@ -55,21 +55,21 @@ zx_status_t VirtualAudioServiceImpl::Init() {
 // Return a bool representing whether control driver was successfully opened.
 bool VirtualAudioServiceImpl::OpenControlDriver() {
   if (driver_open_) {
-    FXL_LOG(WARNING) << "Already connected to '" << virtual_audio::kCtlNodeName << "'";
+    FX_LOGS(WARNING) << "Already connected to '" << virtual_audio::kCtlNodeName << "'";
     return true;
   }
 
   int ctl_node_file_desc = open(virtual_audio::kCtlNodeName, O_RDONLY);
 
   if (ctl_node_file_desc <= 0) {
-    FXL_LOG(WARNING) << "Failed to open '" << virtual_audio::kCtlNodeName << "' - result "
+    FX_LOGS(WARNING) << "Failed to open '" << virtual_audio::kCtlNodeName << "' - result "
                      << ctl_node_file_desc;
     return false;
   }
 
   zx_status_t status = fdio_get_service_handle(ctl_node_file_desc, &channel_handle_);
   if (status != ZX_OK || channel_handle_ == ZX_KOID_INVALID) {
-    FXL_LOG(WARNING) << "fdio_get_service_handle returned " << status << "; handle is "
+    FX_LOGS(WARNING) << "fdio_get_service_handle returned " << status << "; handle is "
                      << channel_handle_ << "; we will exit now";
     return false;
   }
@@ -86,7 +86,7 @@ zx_status_t VirtualAudioServiceImpl::ForwardControlRequest(
   zx_status_t status =
       fuchsia_virtualaudio_ForwarderSendControl(channel_handle_, control_request_handle);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << __func__ << " returned " << status;
+    FX_LOGS(WARNING) << __func__ << " returned " << status;
   }
 
   return status;
@@ -99,7 +99,7 @@ zx_status_t VirtualAudioServiceImpl::ForwardInputRequest(
   zx_status_t status =
       fuchsia_virtualaudio_ForwarderSendInput(channel_handle_, input_request_handle);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << __func__ << " returned " << status;
+    FX_LOGS(WARNING) << __func__ << " returned " << status;
   }
 
   return status;
@@ -112,7 +112,7 @@ zx_status_t VirtualAudioServiceImpl::ForwardOutputRequest(
   zx_status_t status =
       fuchsia_virtualaudio_ForwarderSendOutput(channel_handle_, output_request_handle);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << __func__ << " returned " << status;
+    FX_LOGS(WARNING) << __func__ << " returned " << status;
   }
 
   return status;

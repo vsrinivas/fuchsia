@@ -9,7 +9,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
@@ -218,7 +218,7 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
   static_assert(kMaxNumRenderers == fbl::count_of(kPlaybackData),
                 "Incorrect amount of kPlaybackData specified");
 
-  FXL_CHECK(index < kMaxNumRenderers) << "Renderer index too high";
+  FX_CHECK(index < kMaxNumRenderers) << "Renderer index too high";
 
   int16_t* buffer;
   zx::vmo payload_vmo;
@@ -258,7 +258,7 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
 //
 // Flush the output and free the vmo that was used by Renderer1.
 void AudioLoopbackTest::CleanUpRenderer(unsigned int index) {
-  FXL_CHECK(index < kMaxNumRenderers) << "Renderer index too high";
+  FX_CHECK(index < kMaxNumRenderers) << "Renderer index too high";
 
   // Flush the audio
   audio_renderer_[index]->DiscardAllPackets(CompletionCallback());
@@ -306,7 +306,7 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
 }
 
 void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
-  FXL_CHECK(num_renderers <= kMaxNumRenderers);
+  FX_CHECK(num_renderers <= kMaxNumRenderers);
   fuchsia::media::StreamPacket packet[kMaxNumRenderers];
 
   // SetUp loopback capture

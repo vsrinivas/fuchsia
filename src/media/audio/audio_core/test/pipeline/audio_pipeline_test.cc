@@ -8,6 +8,7 @@
 
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/timeline_rate.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {

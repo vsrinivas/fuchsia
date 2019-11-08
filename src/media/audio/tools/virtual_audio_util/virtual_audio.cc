@@ -19,6 +19,7 @@
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace virtual_audio {
 
@@ -1092,6 +1093,8 @@ void VirtualAudioUtil::PositionCallback(zx_time_t time_for_pos, uint32_t rb_pos)
 }  // namespace virtual_audio
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"virtual_audio_util"});
+
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

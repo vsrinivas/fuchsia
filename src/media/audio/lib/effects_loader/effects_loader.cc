@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <optional>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {
@@ -70,18 +70,18 @@ std::unique_ptr<EffectsLoader> EffectsLoader::CreateWithNullModule() {
 EffectsLoader::EffectsLoader(EffectsModuleV1 module,
                              std::vector<fuchsia_audio_effects_description> effect_infos)
     : module_(std::move(module)), effect_infos_(std::move(effect_infos)) {
-  FXL_CHECK(module_->num_effects == effect_infos_.size());
+  FX_CHECK(module_->num_effects == effect_infos_.size());
 }
 
 uint32_t EffectsLoader::GetNumEffects() const {
-  FXL_DCHECK(module_);
+  FX_DCHECK(module_);
   return module_->num_effects;
 }
 
 zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
                                          fuchsia_audio_effects_description* desc) const {
   TRACE_DURATION("audio", "EffectsLoader::GetEffectInfo");
-  FXL_DCHECK(module_);
+  FX_DCHECK(module_);
 
   if (desc == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -110,7 +110,7 @@ Effect EffectsLoader::CreateEffectByName(std::string_view name, uint32_t frame_r
 Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
                                    uint16_t channels_out, std::string_view config) const {
   TRACE_DURATION("audio", "EffectsLoader::CreateEffect");
-  FXL_DCHECK(module_);
+  FX_DCHECK(module_);
 
   if (effect_id >= module_->num_effects) {
     return {};

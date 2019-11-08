@@ -6,19 +6,19 @@
 
 #include <dlfcn.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::internal {
 namespace {
 
 bool TryLoad(void* lib, const char* export_name, void** export_ptr) {
-  FXL_DCHECK(lib != nullptr);
-  FXL_DCHECK(export_name != nullptr);
-  FXL_DCHECK(export_ptr != nullptr);
+  FX_DCHECK(lib != nullptr);
+  FX_DCHECK(export_name != nullptr);
+  FX_DCHECK(export_ptr != nullptr);
 
   *export_ptr = dlsym(lib, export_name);
   if (*export_ptr == nullptr) {
-    FXL_LOG(ERROR) << "Failed to load .SO export [" << export_name << "]";
+    FX_LOGS(ERROR) << "Failed to load .SO export [" << export_name << "]";
     return false;
   }
 
@@ -48,7 +48,7 @@ EffectsModule<ModuleImpl> EffectsModule<ModuleImpl>::Open(const char* name) {
   // don't actually own the module pointer (it's just some data within the loaded module), but
   // instead we want to unload the module when the refcount reaches 0.
   return EffectsModule<ModuleImpl>(std::shared_ptr<const ModuleImpl>(
-      module, [lib](ModuleImpl* ptr) { FXL_DCHECK(dlclose(lib) == 0); }));
+      module, [lib](ModuleImpl* ptr) { FX_DCHECK(dlclose(lib) == 0); }));
 }
 
 template <typename ModuleImpl>

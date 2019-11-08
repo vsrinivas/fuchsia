@@ -9,8 +9,6 @@
 
 #include <optional>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio::test {
 
 // For operations expected to generate a response, wait __1 minute__. We do this to avoid flaky
