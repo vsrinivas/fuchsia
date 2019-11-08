@@ -118,8 +118,6 @@ source_set("data_provider_src") {
     "annotations.h",
     "attachments.cc",
     "attachments.h",
-    "channel_ptr.cc",
-    "channel_ptr.h",
     "config.cc",
     "config.h",
     "data_provider.cc",
@@ -142,7 +140,6 @@ source_set("data_provider_src") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
@@ -156,9 +153,8 @@ source_set("data_provider_src") {
     ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/lib/fidl/cpp",
+    "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
     "//src/developer/feedback/utils:archive",
-    "//src/developer/feedback/utils:time",
-    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/inspect_deprecated/query",
     "//src/lib/inspect_deprecated/query:json_formatter",
@@ -170,7 +166,6 @@ source_set("data_provider_src") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-logger",
-    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 }
 

@@ -1,36 +1,63 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
+// file.
 
-#include "src/developer/feedback/feedback_agent/channel_ptr.h"
+#include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <zircon/errors.h>
 
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 zx::duration timeout) {
-  std::unique_ptr<ChannelProvider> update_info =
-      std::make_unique<ChannelProvider>(dispatcher, services);
-
-  // We move |update_info| in a subsequent chained promise to guarantee its lifetime.
-  return update_info->GetCurrent(timeout).then(
-      [update_info = std::move(update_info)](fit::result<std::string>& result) {
-        return std::move(result);
-      });
-}
+using fuchsia::feedback::Annotation;
+using internal::ChannelProviderPtr;
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
-                                 std::shared_ptr<sys::ServiceDirectory> services)
+                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                 zx::duration timeout)
+    : dispatcher_(dispatcher), services_(services), timeout_(timeout) {}
+
+std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
+  return {
+      kAnnotationChannel,
+  };
+}
+
+std::vector<fit::promise<Annotation>> ChannelProvider::GetAnnotations() {
+  std::vector<fit::promise<Annotation>> annotations;
+
+  auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_);
+
+  // Move |channel_ptr| in to the callback to ensure its lifetime.
+  auto promise = channel_ptr->GetCurrent(timeout_)
+                     .and_then([channel_ptr = std::move(channel_ptr)](
+                                   const std::string& channel) -> fit::result<Annotation> {
+                       Annotation annotation;
+                       annotation.key = kAnnotationChannel;
+                       annotation.value = channel;
+                       return fit::ok(std::move(annotation));
+                     })
+                     .or_else([] {
+                       FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationChannel;
+                       return fit::error();
+                     });
+  annotations.push_back(std::move(promise));
+
+  return annotations;
+}
+
+namespace internal {
+
+ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
+                                       std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
-fit::promise<std::string> ChannelProvider::GetCurrent(zx::duration timeout) {
+fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
   FXL_CHECK(!has_called_get_current_) << "GetCurrent() is not intended to be called twice";
   has_called_get_current_ = true;
 
@@ -82,5 +109,7 @@ fit::promise<std::string> ChannelProvider::GetCurrent(zx::duration timeout) {
     return std::move(result);
   });
 }
+
+}  // namespace internal
 
 }  // namespace feedback

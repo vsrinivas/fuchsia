@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/channel_ptr_unittest"
+        "binary": "test/channel_provider_unittest"
     },
     "sandbox": {
         "services": [

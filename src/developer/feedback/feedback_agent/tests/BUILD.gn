@@ -28,7 +28,7 @@ group("tests") {
 test_package("feedback_agent_tests") {
   tests = [
     {
-      name = "channel_ptr_unittest"
+      name = "channel_provider_unittest"
     },
     {
       name = "data_provider_unittest"
@@ -122,7 +122,7 @@ test_package("feedback_agent_tests") {
   ]
 
   deps = [
-    ":channel_ptr_unittest",
+    ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
@@ -137,11 +137,11 @@ test_package("feedback_agent_tests") {
   ]
 }
 
-executable("channel_ptr_unittest") {
+executable("channel_provider_unittest") {
   testonly = true
 
   sources = [
-    "channel_ptr_unittest.cc",
+    "channel_provider_unittest.cc",
   ]
 
   deps = [
@@ -149,6 +149,7 @@ executable("channel_ptr_unittest") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent/annotations:channel_provider",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
