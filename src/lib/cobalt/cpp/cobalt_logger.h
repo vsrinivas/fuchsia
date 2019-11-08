@@ -6,7 +6,7 @@
 #define SRC_LIB_COBALT_CPP_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
 namespace cobalt {
@@ -309,8 +309,8 @@ class CobaltLogger {
 // |dispatcher| A pointer to an async_dispatcher_t to be used for all
 // asynchronous operations.
 //
-// |context| A pointer to the StartupContext that provides access to the
-// environment of the component using this CobaltLogger.
+// |services| A shared pointer to the ServiceDirectory that provides access to the
+// services received by the component using this CobaltLogger.
 //
 // |registry_path| The path to the registry file for the Cobalt project
 // associated with the new Logger. This is a binary file containing the compiled
@@ -330,7 +330,7 @@ class CobaltLogger {
 // returned CobaltLogger. This method allows the caller to provide updated
 // versions of those definitions.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::string& registry_path,
     fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
 
@@ -339,8 +339,8 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // |dispatcher| A pointer to an async_dispatcher_t to be used for all
 // asynchronous operations.
 //
-// |context| A pointer to the StartupContext that provides access to the
-// environment of the component using this CobaltLogger.
+// |services| A shared pointer to the ServiceDirectory that provides access to the
+// services received by the component using this CobaltLogger.
 //
 // |profile| A ProjectProfile that contains (among other data) a VMO containing
 // the compiled metric and report definitions to be used by the returned
@@ -352,7 +352,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
 // returned CobaltLogger. This method allows the caller to provide updated
 // versions of those definitions.
 std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
-                                              sys::ComponentContext* context,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
                                               fuchsia::cobalt::ProjectProfile profile);
 
 // Returns a CobaltLogger initialized with the provided parameters.
@@ -360,8 +360,9 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
 // |dispatcher| A pointer to an async_dispatcher_t to be used for all
 // asynchronous operations.
 //
-// |context| A pointer to the StartupContext that provides access to the
-// environment of the component using this CobaltLogger.
+// |services| A shared pointer to the ServiceDirectory that provides access to the
+// services received by the component using this CobaltLogger.
+//
 //
 // |project_name| The name of the Cobalt project to be associated with the
 // returned CobaltLogger.
@@ -377,7 +378,8 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
 // CobaltLogger. The |project_name| should be the name of one of the projects in
 // that bundled registry.
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context, std::string project_name,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    std::string project_name,
     fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
 
 }  // namespace cobalt

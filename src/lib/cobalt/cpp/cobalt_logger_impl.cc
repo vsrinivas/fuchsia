@@ -253,21 +253,23 @@ void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event, Status statu
 }
 
 fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
-  return context_->svc()->Connect<LoggerFactory>();
+  return services_->Connect<LoggerFactory>();
 }
 
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                   std::shared_ptr<sys::ServiceDirectory> services,
                                    ProjectProfile profile)
     : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA, std::move(profile)),
-      context_(context) {
+      services_(services) {
   ConnectToCobaltApplication();
 }
 
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                   std::shared_ptr<sys::ServiceDirectory> services,
                                    std::string project_name,
                                    fuchsia::cobalt::ReleaseStage release_stage)
     : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), release_stage, ProjectProfile()),
-      context_(context) {
+      services_(services) {
   ConnectToCobaltApplication();
 }
 

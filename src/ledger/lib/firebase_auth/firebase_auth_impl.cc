@@ -57,7 +57,7 @@ FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
   if (config.collect_cobalt_metrics && component_context) {
-    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(dispatcher, component_context,
+    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(dispatcher, component_context->svc(),
                                                             cobalt_registry::kProjectName);
   } else {
     cobalt_logger_ = nullptr;

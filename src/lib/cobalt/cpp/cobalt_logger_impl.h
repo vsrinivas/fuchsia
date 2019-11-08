@@ -338,12 +338,12 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
  public:
   // Use this version of the constructor in order to connect to the Cobalt
   // application via CreateLogger().
-  CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+  CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                    fuchsia::cobalt::ProjectProfile profile);
 
   // Use this version of the constructor in order to connect to the Cobalt
   // application via CreateLoggerFromProjectName().
-  CobaltLoggerImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+  CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage);
 
   ~CobaltLoggerImpl() override{};
@@ -352,7 +352,7 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
   virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory> ConnectToLoggerFactory() override;
 
  private:
-  sys::ComponentContext* context_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltLoggerImpl);
 };
 

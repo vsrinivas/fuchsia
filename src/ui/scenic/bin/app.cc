@@ -128,7 +128,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
   escher_ = std::move(escher);
 
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(
-      async_get_default_dispatcher(), app_context_.get(), cobalt_registry::kProjectName);
+      async_get_default_dispatcher(), app_context_->svc(), cobalt_registry::kProjectName);
   if (cobalt_logger == nullptr) {
     FX_LOGS(ERROR) << "CobaltLogger creation failed!";
   }

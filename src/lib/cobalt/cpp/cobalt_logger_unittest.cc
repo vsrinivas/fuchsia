@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
@@ -307,7 +307,9 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
   CobaltLoggerTest() {}
   ~CobaltLoggerTest() override {}
 
-  sys::ComponentContext* context() { return context_provider_.context(); }
+  std::shared_ptr<sys::ServiceDirectory>& service_directory() {
+    return service_provider_.service_directory();
+  }
 
   FakeLoggerFactoryImpl* logger_factory() { return factory_impl_.get(); }
 
@@ -317,17 +319,16 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 
  private:
   virtual void SetUp() override {
-    auto service_provider = context_provider_.service_directory_provider();
     factory_impl_.reset(new FakeLoggerFactoryImpl());
-    service_provider->AddService<fuchsia::cobalt::LoggerFactory>(
+    service_provider_.AddService<fuchsia::cobalt::LoggerFactory>(
         [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    service_provider->AddService<fuchsia::sys::Environment>(
+    service_provider_.AddService<fuchsia::sys::Environment>(
         [this](fidl::InterfaceRequest<fuchsia::sys::Environment> request) {
           app_environment_request_ = std::move(request);
         });
-    service_provider->AddService<fuchsia::sys::Launcher>(
+    service_provider_.AddService<fuchsia::sys::Launcher>(
         [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
           launcher_request_ = std::move(request);
         });
@@ -336,7 +337,8 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
     ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
     fuchsia::cobalt::ProjectProfile profile;
     profile.config = std::move(fake_cobalt_config).ToTransport();
-    cobalt_logger_ = NewCobaltLogger(async_get_default_dispatcher(), context(), std::move(profile));
+    cobalt_logger_ =
+        NewCobaltLogger(async_get_default_dispatcher(), service_directory(), std::move(profile));
     RunLoopUntilIdle();
   }
 
@@ -345,7 +347,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
   fidl::InterfaceRequest<fuchsia::sys::Launcher> launcher_request_;
   fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;
-  sys::testing::ComponentContextProvider context_provider_;
+  sys::testing::ServiceDirectoryProvider service_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltLoggerTest);
 };
@@ -354,7 +356,7 @@ TEST_F(CobaltLoggerTest, InitializeCobalt) {
   EXPECT_NE(cobalt_logger(), nullptr);
   EXPECT_EQ("", logger_factory()->received_project_name());
   EXPECT_EQ(fuchsia::cobalt::ReleaseStage::GA, logger_factory()->received_release_stage());
-  NewCobaltLoggerFromProjectName(async_get_default_dispatcher(), context(), "MyProject",
+  NewCobaltLoggerFromProjectName(async_get_default_dispatcher(), service_directory(), "MyProject",
                                  fuchsia::cobalt::ReleaseStage::DEBUG);
   RunLoopUntilIdle();
   EXPECT_EQ("MyProject", logger_factory()->received_project_name());
