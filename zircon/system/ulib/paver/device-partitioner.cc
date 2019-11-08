@@ -1092,6 +1092,11 @@ zx_status_t FixedDevicePartitioner::FindPartition(
   uint8_t type[GPT_GUID_LEN];
 
   switch (partition_type) {
+    case Partition::kBootloader: {
+      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+      memcpy(type, bootloader_type, GPT_GUID_LEN);
+      break;
+    }
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
       memcpy(type, zircon_a_type, GPT_GUID_LEN);

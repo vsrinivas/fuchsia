@@ -32,7 +32,7 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-// constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -376,6 +376,7 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
 
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kBootloader));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconA));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconB));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconR));
@@ -385,7 +386,9 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
 }
 
 TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
-  std::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b, vbmeta_r;
+  std::unique_ptr<BlockDevice> fvm, bootloader, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b,
+      vbmeta_r;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kBootloaderType, &bootloader));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconAType, &zircon_a));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconBType, &zircon_b));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconRType, &zircon_r));
@@ -399,6 +402,7 @@ TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
   ASSERT_NE(partitioner.get(), nullptr);
 
   std::unique_ptr<paver::PartitionClient> partition;
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &partition));
