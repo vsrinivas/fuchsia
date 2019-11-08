@@ -443,7 +443,7 @@ struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name
 static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request)
     == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request::PrimarySize);
 {{- range $index, $param := .Request }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.OffsetOld }});
 {{- end }}
 {{- end }}
 {{- if and .HasResponse .Response }}
@@ -455,7 +455,7 @@ struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name
 static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response)
     == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response::PrimarySize);
 {{- range $index, $param := .Response }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.OffsetOld }});
 {{- end }}
 {{- end }}
 {{- end }}

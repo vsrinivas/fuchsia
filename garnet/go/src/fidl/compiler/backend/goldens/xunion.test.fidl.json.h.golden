@@ -414,19 +414,21 @@ class TestProtocol_ResponseEncoder {
   static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder, StrictBoundedXUnion* xu) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, xu, 16);
     } else {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, xu, 16);
     }
-    ::fidl::Encode(_encoder, xu, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder, OlderSimpleUnion* xu) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, xu, 16);
     } else {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, xu, 16);
     }
-    ::fidl::Encode(_encoder, xu, 16);
     return _encoder->GetMessage();
   }
 };

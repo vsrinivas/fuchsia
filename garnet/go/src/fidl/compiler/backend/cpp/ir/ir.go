@@ -334,9 +334,10 @@ type LLProps struct {
 }
 
 type Parameter struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type      Type
+	Name      string
+	OffsetOld int
+	OffsetV1  int
 }
 
 type Root struct {
@@ -827,18 +828,16 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 }
 
 func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
-	r := []Parameter{}
-
+	var params []Parameter = []Parameter{}
 	for _, v := range val {
-		p := Parameter{
-			c.compileType(v.Type),
-			changeIfReserved(v.Name, ""),
-			v.Offset,
-		}
-		r = append(r, p)
+		params = append(params, Parameter{
+			Type:      c.compileType(v.Type),
+			Name:      changeIfReserved(v.Name, ""),
+			OffsetOld: v.FieldShapeOld.Offset,
+			OffsetV1:  v.FieldShapeV1NoEE.Offset,
+		})
 	}
-
-	return r
+	return params
 }
 
 // TODO(fxb/38600) Remove these and use the type shape in the JSON ir.

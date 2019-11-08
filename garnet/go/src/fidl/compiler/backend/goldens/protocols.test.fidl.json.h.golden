@@ -421,30 +421,35 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::Message MethodA(::fidl::Encoder* _encoder, int64_t* a, int64_t* b) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     }
-    ::fidl::Encode(_encoder, a, 16);
-    ::fidl::Encode(_encoder, b, 24);
     return _encoder->GetMessage();
   }
   static ::fidl::Message MethodB(::fidl::Encoder* _encoder, int64_t* a, int64_t* b) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     }
-    ::fidl::Encode(_encoder, a, 16);
-    ::fidl::Encode(_encoder, b, 24);
     return _encoder->GetMessage();
   }
   static ::fidl::Message MutateSocket(::fidl::Encoder* _encoder, ::zx::socket* a) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
     } else {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
     }
-    ::fidl::Encode(_encoder, a, 16);
     return _encoder->GetMessage();
   }
 };
@@ -508,29 +513,33 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::Message EventA(::fidl::Encoder* _encoder, int64_t* a, int64_t* b) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, b, 24);
     }
-    ::fidl::Encode(_encoder, a, 16);
-    ::fidl::Encode(_encoder, b, 24);
     return _encoder->GetMessage();
   }
   static ::fidl::Message MethodB(::fidl::Encoder* _encoder, int64_t* result) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     } else {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     }
-    ::fidl::Encode(_encoder, result, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message MutateSocket(::fidl::Encoder* _encoder, ::zx::socket* b) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, b, 16);
     } else {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, b, 16);
     }
-    ::fidl::Encode(_encoder, b, 16);
     return _encoder->GetMessage();
   }
 };
@@ -710,28 +719,31 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::Message WithRequestNoResponse(::fidl::Encoder* _encoder, ::std::string* arg) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     }
-    ::fidl::Encode(_encoder, arg, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message WithRequestEmptyResponse(::fidl::Encoder* _encoder, ::std::string* arg) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     }
-    ::fidl::Encode(_encoder, arg, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message WithRequestWithResponse(::fidl::Encoder* _encoder, ::std::string* arg) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, arg, 16);
     }
-    ::fidl::Encode(_encoder, arg, 16);
     return _encoder->GetMessage();
   }
 };
@@ -822,10 +834,11 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::Message NoRequestWithResponse(::fidl::Encoder* _encoder, ::std::string* ret) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     }
-    ::fidl::Encode(_encoder, ret, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message WithRequestEmptyResponse(::fidl::Encoder* _encoder) {
@@ -839,10 +852,11 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::Message WithRequestWithResponse(::fidl::Encoder* _encoder, ::std::string* ret) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     }
-    ::fidl::Encode(_encoder, ret, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message OnEmptyResponse(::fidl::Encoder* _encoder) {
@@ -856,10 +870,11 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::Message OnWithResponse(::fidl::Encoder* _encoder, ::std::string* ret) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     } else {
       _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, ret, 16);
     }
-    ::fidl::Encode(_encoder, ret, 16);
     return _encoder->GetMessage();
   }
 };
@@ -1215,28 +1230,31 @@ class WithErrorSyntax_ResponseEncoder {
   static ::fidl::Message ResponseAsStruct(::fidl::Encoder* _encoder, WithErrorSyntax_ResponseAsStruct_Result* result) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     } else {
       _encoder->Alloc(48 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     }
-    ::fidl::Encode(_encoder, result, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message ErrorAsPrimitive(::fidl::Encoder* _encoder, WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     } else {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     }
-    ::fidl::Encode(_encoder, result, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message ErrorAsEnum(::fidl::Encoder* _encoder, WithErrorSyntax_ErrorAsEnum_Result* result) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     } else {
       _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+      ::fidl::Encode(_encoder, result, 16);
     }
-    ::fidl::Encode(_encoder, result, 16);
     return _encoder->GetMessage();
   }
 };

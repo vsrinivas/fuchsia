@@ -112,12 +112,15 @@ class {{ .RequestEncoderName }} {
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc({{ .RequestSizeV1NoEE }} - sizeof(fidl_message_header_t));
+      {{- range .Request }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      {{- end }}
     } else {
       _encoder->Alloc({{ .RequestSizeOld }} - sizeof(fidl_message_header_t));
+      {{- range .Request }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetOld }});
+      {{- end }}
     }
-    {{- range .Request }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{- end }}
     return _encoder->GetMessage();
   }
     {{- end }}
@@ -151,7 +154,7 @@ class {{ .RequestDecoderName }} {
       {
           {{- if .Request }}
             {{- range $index, $param := .Request }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .Offset }});
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .OffsetOld }});
             {{- end }}
           {{- end }}
         {{ .Name }}(
@@ -185,12 +188,15 @@ class {{ .ResponseEncoderName }} {
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
     if (_encoder->ShouldEncodeUnionAsXUnion()) {
       _encoder->Alloc({{ .ResponseSizeV1NoEE }} - sizeof(fidl_message_header_t));
+      {{- range .Response }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      {{- end }}
     } else {
       _encoder->Alloc({{ .ResponseSizeOld }} - sizeof(fidl_message_header_t));
-    }
       {{- range .Response }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetOld }});
       {{- end }}
+    }
     return _encoder->GetMessage();
   }
     {{- end }}
@@ -222,7 +228,7 @@ class {{ .ResponseDecoderName }} {
           {{- end }}
       {
             {{- range $index, $param := .Response }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .Offset }});
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .OffsetOld }});
             {{- end }}
         {{ .Name }}(
           {{- range $index, $param := .Response -}}
@@ -424,7 +430,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
         {{- if .Response }}
       ::fidl::Decoder decoder(std::move(message));
           {{- range $index, $param := .Response }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
           {{- end }}
         {{- end }}
       {{ .Name }}(
@@ -468,7 +474,7 @@ class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler
       {{- if .Response }}
     ::fidl::Decoder decoder(std::move(message));
         {{- range $index, $param := .Response }}
-    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
         {{- end }}
       {{- end }}
     callback_(
@@ -572,7 +578,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
           {{- range $index, $param := .Request }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
           {{- end }}
         {{- end }}
       impl_->{{ .Name }}(
@@ -633,7 +639,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .Offset }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .OffsetOld }});
         {{- end }}
       {{- end }}
   return ZX_OK;
