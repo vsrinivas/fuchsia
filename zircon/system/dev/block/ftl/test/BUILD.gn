@@ -2,11 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
 group("test") {
   testonly = true
   deps = [
     ":ftl",
     ":ftl-integration",
+    ":ftl-read-write-fuzzer",
+  ]
+}
+
+source_set("shared") {
+  testonly = true
+  sources = [
+    "ftl-shell.cc",
+    "ndm-ram-driver.cc",
+  ]
+  public_deps = [
+    "$zx/system/dev/block/ftl:common",
+    "$zx/system/dev/lib/fake_ddk",
   ]
 }
 
@@ -14,17 +29,14 @@ zx_test("ftl") {
   sources = [
     "block_device_test.cc",
     "driver-test.cc",
-    "ftl-shell.cc",
     "ftl-test.cc",
     "nand_driver_test.cc",
     "nand_operation_test.cc",
-    "ndm-ram-driver.cc",
     "oob_doubler_test.cc",
   ]
   include_dirs = [ "$zx/system/dev/block/ftl" ]
   deps = [
-    "$zx/system/dev/block/ftl:common",
-    "$zx/system/dev/lib/fake_ddk",
+    ":shared",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zxtest",
   ]
@@ -50,5 +62,15 @@ zx_test("ftl-integration") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("ftl-read-write-fuzzer") {
+  sources = [
+    "ftl-fuzzer.cc",
+  ]
+  include_dirs = [ "$zx/system/dev/block/ftl" ]
+  deps = [
+    ":shared",
   ]
 }
