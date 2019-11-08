@@ -7,8 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/trace-provider/provider.h>
 
 #include <string>
@@ -26,13 +26,12 @@ void ConnectToIsolate(fidl::InterfaceRequest<Interface> request, fuchsia::sys::L
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kIsolateUrl;
   launch_info.arguments.emplace({kIsolateArgument});
-  component::Services services;
-  launch_info.directory_request = services.NewRequest();
+  std::shared_ptr<sys::ServiceDirectory> services =
+      sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
   fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
-  services.ConnectToService(std::move(request), Interface::Name_);
+  services->Connect<Interface>(std::move(request));
 
   controller->Detach();
 }

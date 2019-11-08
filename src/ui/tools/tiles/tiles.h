@@ -17,6 +17,8 @@
 
 #include "src/lib/ui/base_view/base_view.h"
 
+#include <unordered_map>
+
 namespace tiles {
 
 class Tiles : public fuchsia::developer::tiles::Controller, public scenic::BaseView {

@@ -6,6 +6,7 @@
 #define SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 
 #include <fuchsia/simplecamera/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <deque>
@@ -14,6 +15,7 @@
 #include <fbl/vector.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 namespace video_display {
@@ -36,7 +38,7 @@ class SimpleCameraView : public scenic::BaseView {
   scenic::ShapeNode node_;
 
   // Client Application:
-  component::Services simple_camera_provider_;
+  std::shared_ptr<sys::ServiceDirectory> simple_camera_provider_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::simplecamera::SimpleCameraPtr simple_camera_;
 

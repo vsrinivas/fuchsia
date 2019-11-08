@@ -19,13 +19,16 @@ EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& l
 
   EmbeddedViewInfo info;
 
-  launcher->CreateComponent({.url = component_url,
-                             .arguments = fidl::VectorPtr(std::vector<std::string>(
-                                 component_args.begin(), component_args.end())),
-                             .directory_request = info.app_services.NewRequest()},
-                            info.controller.NewRequest());
+  // Configure the information to launch the component with.
+  fuchsia::sys::LaunchInfo launch_info;
+  info.app_services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+  launch_info.url = component_url;
+  launch_info.arguments =
+      fidl::VectorPtr(std::vector<std::string>(component_args.begin(), component_args.end()));
 
-  info.app_services.ConnectToService(info.view_provider.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), info.controller.NewRequest());
+
+  info.view_provider = info.app_services->Connect<fuchsia::ui::app::ViewProvider>();
 
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_to_child_view;
   info.services_to_child_view = services_to_child_view.NewRequest();

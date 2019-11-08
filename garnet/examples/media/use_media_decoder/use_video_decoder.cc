@@ -17,6 +17,7 @@
 
 #include <thread>
 
+#include <fbl/algorithm.h>
 #include <src/media/lib/raw_video_writer/raw_video_writer.h>
 
 #include "in_stream_peeker.h"

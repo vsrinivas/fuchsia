@@ -7,6 +7,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>

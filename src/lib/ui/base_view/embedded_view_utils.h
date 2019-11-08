@@ -10,7 +10,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 
@@ -25,7 +25,7 @@ struct EmbeddedViewInfo {
   // Services provided by the launched app.  Must not be destroyed
   // immediately, otherwise the |view_provider| connection may not be
   // established.
-  component::Services app_services;
+  std::shared_ptr<sys::ServiceDirectory> app_services;
 
   // ViewProvider service obtained from the app via |app_services|.  Must not
   // be destroyed immediately, otherwise the call to CreateView() might not be

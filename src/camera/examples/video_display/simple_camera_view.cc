@@ -46,14 +46,14 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   // Connect to the simple camera service:
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kSimpleCameraServiceUrl;
-  launch_info.directory_request = simple_camera_provider_.NewRequest();
+  simple_camera_provider_ =
+      sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
   fuchsia::sys::LauncherPtr launcher;
   component_context()->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
-  simple_camera_provider_.ConnectToService(simple_camera_.NewRequest().TakeChannel(),
-                                           fuchsia::simplecamera::SimpleCamera::Name_);
+  simple_camera_ = simple_camera_provider_->Connect<fuchsia::simplecamera::SimpleCamera>();
 
   // Now pass the other end of the image pipe to the simple camera interface:
   simple_camera_->ConnectToCamera(camera_id, std::move(image_pipe_handle));

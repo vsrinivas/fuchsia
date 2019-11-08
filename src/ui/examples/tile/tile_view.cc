@@ -10,7 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <fs/service.h>
@@ -39,17 +39,18 @@ void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token
 
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    component::Services services;
     fuchsia::sys::ComponentControllerPtr controller;
 
     fuchsia::sys::LaunchInfo launch_info;
+
+    std::shared_ptr<sys::ServiceDirectory> services =
+        sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
     // Pass arguments to children, if there are any.
     std::vector<std::string> split_url =
         fxl::SplitStringCopy(url, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     FXL_CHECK(split_url.size() >= 1);
     launch_info.url = split_url[0];
-    launch_info.directory_request = services.NewRequest();
 
     if (split_url.size() > 1) {
       launch_info.arguments.emplace();
@@ -64,7 +65,7 @@ void TileView::ConnectViews() {
     // Create a View from the launched component.
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    auto view_provider = services.ConnectToService<fuchsia::ui::app::ViewProvider>();
+    auto view_provider = services->Connect<fuchsia::ui::app::ViewProvider>();
     view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
     // Add the view.

@@ -6,6 +6,7 @@
 #define SRC_CAMERA_EXAMPLES_DEMO_DEMO_VIEW_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <stream_provider.h>
 #include <text_node.h>

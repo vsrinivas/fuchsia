@@ -8,8 +8,6 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/svc/cpp/service_namespace.h>
-#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>

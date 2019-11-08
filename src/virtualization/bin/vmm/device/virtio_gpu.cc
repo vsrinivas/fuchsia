@@ -12,6 +12,8 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <unordered_map>
+
 #include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"

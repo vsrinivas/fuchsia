@@ -7,6 +7,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
