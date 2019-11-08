@@ -906,6 +906,82 @@ fn test_sandwich1_case1_v1_encode() {
 }
 
 #[test]
+fn test_sandwich1_with_opt_union_present_encode() {
+    let value = &mut conformance::Sandwich1WithOptUnion {
+        before: 67305985u32,
+        opt_union: Some(Box::new(conformance::UnionSize8Align4::Variant(202050057u32))),
+        after: 134678021u32,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+            0x09, 0x0a, 0x0b, 0x0c,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_present_v1_encode() {
+    let value = &mut conformance::Sandwich1WithOptUnion {
+        before: 67305985u32,
+        opt_union: Some(Box::new(conformance::UnionSize8Align4::Variant(202050057u32))),
+        after: 134678021u32,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a,
+            0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_absent_encode() {
+    let value = &mut conformance::Sandwich1WithOptUnion {
+        before: 67305985u32,
+        after: 134678021u32,
+        opt_union: None,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_absent_v1_encode() {
+    let value = &mut conformance::Sandwich1WithOptUnion {
+        before: 67305985u32,
+        after: 134678021u32,
+        opt_union: None,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
 fn test_sandwich2_case1_encode() {
     let value = &mut conformance::Sandwich2 {
         before: 67305985u32,
@@ -1555,6 +1631,391 @@ fn test_sandwich6_case8_v1_encode() {
 }
 
 #[test]
+fn test_sandwich7_case1_encode() {
+    let value = &mut conformance::Sandwich7 {
+        before: 336794129u32,
+        opt_sandwich1: Some(Box::new(conformance::Sandwich1 {
+            before: 67305985u32,
+            the_union: conformance::UnionSize8Align4::Variant(202050057u32),
+            after: 134678021u32,
+        })),
+        after: 606282273u32,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+            0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich7_case1_v1_encode() {
+    let value = &mut conformance::Sandwich7 {
+        before: 336794129u32,
+        opt_sandwich1: Some(Box::new(conformance::Sandwich1 {
+            before: 67305985u32,
+            the_union: conformance::UnionSize8Align4::Variant(202050057u32),
+            after: 134678021u32,
+        })),
+        after: 606282273u32,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+            0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00,
+            0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich7_case2_encode() {
+    let value = &mut conformance::Sandwich7 {
+        before: 336794129u32,
+        after: 606282273u32,
+        opt_sandwich1: None,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_sandwich7_case2_v1_encode() {
+    let value = &mut conformance::Sandwich7 {
+        before: 336794129u32,
+        after: 606282273u32,
+        opt_sandwich1: None,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression1_encode() {
+    let value =
+        &mut conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression1_v1_encode() {
+    let value =
+        &mut conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression2_encode() {
+    let value = &mut conformance::Regression2 {
+        head: conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 },
+        f7: 7u8,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression2_v1_encode() {
+    let value = &mut conformance::Regression2 {
+        head: conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 },
+        f7: 7u8,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression3_absent_encode() {
+    let value = &mut conformance::Regression3 { opt_value: None };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(*bytes, &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,][..]);
+}
+
+#[test]
+fn test_regression3_absent_v1_encode() {
+    let value = &mut conformance::Regression3 { opt_value: None };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(*bytes, &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,][..]);
+}
+
+#[test]
+fn test_regression3_present_encode() {
+    let value = &mut conformance::Regression3 {
+        opt_value: Some(Box::new(conformance::Regression2 {
+            head: conformance::Regression1 {
+                f1: 1u8,
+                f2: 2u32,
+                f3: 3u8,
+                f4: 4u16,
+                f5: 5u64,
+                f6: 6u8,
+            },
+            f7: 7u8,
+        })),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
+            0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_regression3_present_v1_encode() {
+    let value = &mut conformance::Regression3 {
+        opt_value: Some(Box::new(conformance::Regression2 {
+            head: conformance::Regression1 {
+                f1: 1u8,
+                f2: 2u32,
+                f3: 3u8,
+                f4: 4u16,
+                f5: 5u64,
+                f6: 6u8,
+            },
+            f7: 7u8,
+        })),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
+            0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment1_array_encode() {
+    let value = &mut conformance::Size5Alignment1Array {
+        a: [
+            conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+            conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+            conformance::Size5Alignment1 { data: [11u8, 12u8, 13u8, 14u8, 15u8] },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment1_array_v1_encode() {
+    let value = &mut conformance::Size5Alignment1Array {
+        a: [
+            conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+            conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+            conformance::Size5Alignment1 { data: [11u8, 12u8, 13u8, 14u8, 15u8] },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment4_array_encode() {
+    let value = &mut conformance::Size5Alignment4Array {
+        a: [
+            conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+            conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+            conformance::Size5Alignment4 { four: 235736075u32, one: 15u8 },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00,
+            0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment4_array_v1_encode() {
+    let value = &mut conformance::Size5Alignment4Array {
+        a: [
+            conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+            conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+            conformance::Size5Alignment4 { four: 235736075u32, one: 15u8 },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00,
+            0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment1_vector_encode() {
+    let value = &mut conformance::Size5Alignment1Vector {
+        v: vec![
+            conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+            conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment1_vector_v1_encode() {
+    let value = &mut conformance::Size5Alignment1Vector {
+        v: vec![
+            conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+            conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment4_vector_encode() {
+    let value = &mut conformance::Size5Alignment4Vector {
+        v: vec![
+            conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+            conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+            0x0a, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_size5_alignment4_vector_v1_encode() {
+    let value = &mut conformance::Size5Alignment4Vector {
+        v: vec![
+            conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+            conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+        ],
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+            0x0a, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
 fn test_table_struct_with_reserved_sandwich_encode() {
     let value = &mut conformance::TableStructWithReservedSandwichStruct {
         table: conformance::TableStructWithReservedSandwich {
@@ -1870,146 +2331,6 @@ fn test_array_struct_v1_encode() {
             0xff, 0xff, 0xff, 0xff, 0x66, 0x69, 0x76, 0x65, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0x73, 0x69, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression1_encode() {
-    let value =
-        &mut conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression1_v1_encode() {
-    let value =
-        &mut conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression2_encode() {
-    let value = &mut conformance::Regression2 {
-        head: conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 },
-        f7: 7u8,
-    };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression2_v1_encode() {
-    let value = &mut conformance::Regression2 {
-        head: conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 },
-        f7: 7u8,
-    };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression3_absent_encode() {
-    let value = &mut conformance::Regression3 { opt_value: None };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(*bytes, &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,][..]);
-}
-
-#[test]
-fn test_regression3_absent_v1_encode() {
-    let value = &mut conformance::Regression3 { opt_value: None };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(*bytes, &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,][..]);
-}
-
-#[test]
-fn test_regression3_present_encode() {
-    let value = &mut conformance::Regression3 {
-        opt_value: Some(Box::new(conformance::Regression2 {
-            head: conformance::Regression1 {
-                f1: 1u8,
-                f2: 2u32,
-                f3: 3u8,
-                f4: 4u16,
-                f5: 5u64,
-                f6: 6u8,
-            },
-            f7: 7u8,
-        })),
-    };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
-            0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ][..]
-    );
-}
-
-#[test]
-fn test_regression3_present_v1_encode() {
-    let value = &mut conformance::Regression3 {
-        opt_value: Some(Box::new(conformance::Regression2 {
-            head: conformance::Regression1 {
-                f1: 1u8,
-                f2: 2u32,
-                f3: 3u8,
-                f4: 4u16,
-                f5: 5u64,
-                f6: 6u8,
-            },
-            f7: 7u8,
-        })),
-    };
-    let bytes = &mut Vec::new();
-    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
-    assert_eq!(
-        *bytes,
-        &[
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
-            0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ][..]
     );
 }
@@ -3114,6 +3435,82 @@ fn test_sandwich1_case1_v1_decode() {
 }
 
 #[test]
+fn test_sandwich1_with_opt_union_present_decode() {
+    let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a,
+        0x0b, 0x0c,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich1WithOptUnion {
+            before: 67305985u32,
+            opt_union: Some(Box::new(conformance::UnionSize8Align4::Variant(202050057u32))),
+            after: 134678021u32
+        }
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_present_v1_decode() {
+    let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00,
+        0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich1WithOptUnion {
+            before: 67305985u32,
+            opt_union: Some(Box::new(conformance::UnionSize8Align4::Variant(202050057u32))),
+            after: 134678021u32
+        }
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_absent_decode() {
+    let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich1WithOptUnion {
+            before: 67305985u32,
+            after: 134678021u32,
+            opt_union: None
+        }
+    );
+}
+
+#[test]
+fn test_sandwich1_with_opt_union_absent_v1_decode() {
+    let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich1WithOptUnion {
+            before: 67305985u32,
+            after: 134678021u32,
+            opt_union: None
+        }
+    );
+}
+
+#[test]
 fn test_sandwich2_case1_decode() {
     let value = &mut conformance::Sandwich2::new_empty();
     let bytes = &mut [
@@ -3757,6 +4154,394 @@ fn test_sandwich6_case8_v1_decode() {
 }
 
 #[test]
+fn test_sandwich7_case1_decode() {
+    let value = &mut conformance::Sandwich7::new_empty();
+    let bytes = &mut [
+        0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x02, 0x00,
+        0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich7 {
+            before: 336794129u32,
+            opt_sandwich1: Some(Box::new(conformance::Sandwich1 {
+                before: 67305985u32,
+                the_union: conformance::UnionSize8Align4::Variant(202050057u32),
+                after: 134678021u32
+            })),
+            after: 606282273u32
+        }
+    );
+}
+
+#[test]
+fn test_sandwich7_case1_v1_decode() {
+    let value = &mut conformance::Sandwich7::new_empty();
+    let bytes = &mut [
+        0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08,
+        0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich7 {
+            before: 336794129u32,
+            opt_sandwich1: Some(Box::new(conformance::Sandwich1 {
+                before: 67305985u32,
+                the_union: conformance::UnionSize8Align4::Variant(202050057u32),
+                after: 134678021u32
+            })),
+            after: 606282273u32
+        }
+    );
+}
+
+#[test]
+fn test_sandwich7_case2_decode() {
+    let value = &mut conformance::Sandwich7::new_empty();
+    let bytes = &mut [
+        0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich7 { before: 336794129u32, after: 606282273u32, opt_sandwich1: None }
+    );
+}
+
+#[test]
+fn test_sandwich7_case2_v1_decode() {
+    let value = &mut conformance::Sandwich7::new_empty();
+    let bytes = &mut [
+        0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Sandwich7 { before: 336794129u32, after: 606282273u32, opt_sandwich1: None }
+    );
+}
+
+#[test]
+fn test_regression1_decode() {
+    let value = &mut conformance::Regression1::new_empty();
+    let bytes = &mut [
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 }
+    );
+}
+
+#[test]
+fn test_regression1_v1_decode() {
+    let value = &mut conformance::Regression1::new_empty();
+    let bytes = &mut [
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 }
+    );
+}
+
+#[test]
+fn test_regression2_decode() {
+    let value = &mut conformance::Regression2::new_empty();
+    let bytes = &mut [
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression2 {
+            head: conformance::Regression1 {
+                f1: 1u8,
+                f2: 2u32,
+                f3: 3u8,
+                f4: 4u16,
+                f5: 5u64,
+                f6: 6u8
+            },
+            f7: 7u8
+        }
+    );
+}
+
+#[test]
+fn test_regression2_v1_decode() {
+    let value = &mut conformance::Regression2::new_empty();
+    let bytes = &mut [
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression2 {
+            head: conformance::Regression1 {
+                f1: 1u8,
+                f2: 2u32,
+                f3: 3u8,
+                f4: 4u16,
+                f5: 5u64,
+                f6: 6u8
+            },
+            f7: 7u8
+        }
+    );
+}
+
+#[test]
+fn test_regression3_absent_decode() {
+    let value = &mut conformance::Regression3::new_empty();
+    let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(*value, conformance::Regression3 { opt_value: None });
+}
+
+#[test]
+fn test_regression3_absent_v1_decode() {
+    let value = &mut conformance::Regression3::new_empty();
+    let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(*value, conformance::Regression3 { opt_value: None });
+}
+
+#[test]
+fn test_regression3_present_decode() {
+    let value = &mut conformance::Regression3::new_empty();
+    let bytes = &mut [
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
+        0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression3 {
+            opt_value: Some(Box::new(conformance::Regression2 {
+                head: conformance::Regression1 {
+                    f1: 1u8,
+                    f2: 2u32,
+                    f3: 3u8,
+                    f4: 4u16,
+                    f5: 5u64,
+                    f6: 6u8
+                },
+                f7: 7u8
+            }))
+        }
+    );
+}
+
+#[test]
+fn test_regression3_present_v1_decode() {
+    let value = &mut conformance::Regression3::new_empty();
+    let bytes = &mut [
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
+        0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Regression3 {
+            opt_value: Some(Box::new(conformance::Regression2 {
+                head: conformance::Regression1 {
+                    f1: 1u8,
+                    f2: 2u32,
+                    f3: 3u8,
+                    f4: 4u16,
+                    f5: 5u64,
+                    f6: 6u8
+                },
+                f7: 7u8
+            }))
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment1_array_decode() {
+    let value = &mut conformance::Size5Alignment1Array::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment1Array {
+            a: [
+                conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+                conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+                conformance::Size5Alignment1 { data: [11u8, 12u8, 13u8, 14u8, 15u8] }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment1_array_v1_decode() {
+    let value = &mut conformance::Size5Alignment1Array::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment1Array {
+            a: [
+                conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+                conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] },
+                conformance::Size5Alignment1 { data: [11u8, 12u8, 13u8, 14u8, 15u8] }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment4_array_decode() {
+    let value = &mut conformance::Size5Alignment4Array::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00,
+        0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment4Array {
+            a: [
+                conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+                conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+                conformance::Size5Alignment4 { four: 235736075u32, one: 15u8 }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment4_array_v1_decode() {
+    let value = &mut conformance::Size5Alignment4Array::new_empty();
+    let bytes = &mut [
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00,
+        0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment4Array {
+            a: [
+                conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+                conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 },
+                conformance::Size5Alignment4 { four: 235736075u32, one: 15u8 }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment1_vector_decode() {
+    let value = &mut conformance::Size5Alignment1Vector::new_empty();
+    let bytes = &mut [
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment1Vector {
+            v: vec![
+                conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+                conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment1_vector_v1_decode() {
+    let value = &mut conformance::Size5Alignment1Vector::new_empty();
+    let bytes = &mut [
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment1Vector {
+            v: vec![
+                conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
+                conformance::Size5Alignment1 { data: [6u8, 7u8, 8u8, 9u8, 10u8] }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment4_vector_decode() {
+    let value = &mut conformance::Size5Alignment4Vector::new_empty();
+    let bytes = &mut [
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment4Vector {
+            v: vec![
+                conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+                conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 }
+            ]
+        }
+    );
+}
+
+#[test]
+fn test_size5_alignment4_vector_v1_decode() {
+    let value = &mut conformance::Size5Alignment4Vector::new_empty();
+    let bytes = &mut [
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::Size5Alignment4Vector {
+            v: vec![
+                conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
+                conformance::Size5Alignment4 { four: 151521030u32, one: 10u8 }
+            ]
+        }
+    );
+}
+
+#[test]
 fn test_table_struct_with_reserved_sandwich_decode() {
     let value = &mut conformance::TableStructWithReservedSandwichStruct::new_empty();
     let bytes = &mut [
@@ -4069,158 +4854,6 @@ fn test_array_struct_v1_decode() {
                 Some(Box::new(conformance::StringUnion::S(String::from("five")))),
                 Some(Box::new(conformance::StringUnion::S(String::from("six"))))
             ]
-        }
-    );
-}
-
-#[test]
-fn test_regression1_decode() {
-    let value = &mut conformance::Regression1::new_empty();
-    let bytes = &mut [
-        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
-    ];
-    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 }
-    );
-}
-
-#[test]
-fn test_regression1_v1_decode() {
-    let value = &mut conformance::Regression1::new_empty();
-    let bytes = &mut [
-        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
-    ];
-    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 }
-    );
-}
-
-#[test]
-fn test_regression2_decode() {
-    let value = &mut conformance::Regression2::new_empty();
-    let bytes = &mut [
-        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression2 {
-            head: conformance::Regression1 {
-                f1: 1u8,
-                f2: 2u32,
-                f3: 3u8,
-                f4: 4u16,
-                f5: 5u64,
-                f6: 6u8
-            },
-            f7: 7u8
-        }
-    );
-}
-
-#[test]
-fn test_regression2_v1_decode() {
-    let value = &mut conformance::Regression2::new_empty();
-    let bytes = &mut [
-        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression2 {
-            head: conformance::Regression1 {
-                f1: 1u8,
-                f2: 2u32,
-                f3: 3u8,
-                f4: 4u16,
-                f5: 5u64,
-                f6: 6u8
-            },
-            f7: 7u8
-        }
-    );
-}
-
-#[test]
-fn test_regression3_absent_decode() {
-    let value = &mut conformance::Regression3::new_empty();
-    let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(*value, conformance::Regression3 { opt_value: None });
-}
-
-#[test]
-fn test_regression3_absent_v1_decode() {
-    let value = &mut conformance::Regression3::new_empty();
-    let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(*value, conformance::Regression3 { opt_value: None });
-}
-
-#[test]
-fn test_regression3_present_decode() {
-    let value = &mut conformance::Regression3::new_empty();
-    let bytes = &mut [
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
-        0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00,
-    ];
-    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression3 {
-            opt_value: Some(Box::new(conformance::Regression2 {
-                head: conformance::Regression1 {
-                    f1: 1u8,
-                    f2: 2u32,
-                    f3: 3u8,
-                    f4: 4u16,
-                    f5: 5u64,
-                    f6: 6u8
-                },
-                f7: 7u8
-            }))
-        }
-    );
-}
-
-#[test]
-fn test_regression3_present_v1_decode() {
-    let value = &mut conformance::Regression3::new_empty();
-    let bytes = &mut [
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
-        0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00,
-    ];
-    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
-    assert_eq!(
-        *value,
-        conformance::Regression3 {
-            opt_value: Some(Box::new(conformance::Regression2 {
-                head: conformance::Regression1 {
-                    f1: 1u8,
-                    f2: 2u32,
-                    f3: 3u8,
-                    f4: 4u16,
-                    f5: 5u64,
-                    f6: 6u8
-                },
-                f7: 7u8
-            }))
         }
     );
 }

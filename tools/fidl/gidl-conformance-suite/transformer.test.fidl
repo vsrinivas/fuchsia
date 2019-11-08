@@ -35,6 +35,12 @@ struct Sandwich1 {
    uint32 after;
 };
 
+struct Sandwich1WithOptUnion {
+    uint32 before;
+    UnionSize8Align4? opt_union;
+    uint32 after;
+};
+
 struct Sandwich2 {
    uint32 before;
    UnionSize12Align4 the_union;
@@ -204,29 +210,29 @@ xunion XUnionWithUnions {
     UnionSize12Align4 u2;
 };
 
-struct StructSize5Align1 {
+struct Size5Alignment1 {
     array<uint8>:5 data;
 };
 
-struct StructSize5Align4 {
+struct Size5Alignment4 {
     uint32 four;
     uint8 one;
 };
 
-struct StructSize5Align1Vector {
-    vector<StructSize5Align1> v;
+struct Size5Alignment1Vector {
+    vector<Size5Alignment1> v;
 };
 
-struct StructSize5Align4Vector {
-    vector<StructSize5Align4> v;
+struct Size5Alignment4Vector {
+    vector<Size5Alignment4> v;
 };
 
-struct StructSize5Align1Array {
-    array<StructSize5Align1>:3 a;
+struct Size5Alignment1Array {
+    array<Size5Alignment1>:3 a;
 };
 
-struct StructSize5Align4Array {
-    array<StructSize5Align4>:3 a;
+struct Size5Alignment4Array {
+    array<Size5Alignment4>:3 a;
 };
 
 union StringUnion {

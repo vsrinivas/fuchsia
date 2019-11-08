@@ -363,6 +363,14 @@ fx cp `find topaz -name run_fidl_compatibility_test_topaz.sh` /tmp/
 fx shell /tmp/run_fidl_compatibility_test_topaz.sh
 ```
 
+### GIDL
+
+To rebuild GIDL:
+
+```sh
+fx build host-tools/gidl
+```
+
 ### All Tests
 
 | Name                     | Test Command                                        | Directories Covered                                                     |

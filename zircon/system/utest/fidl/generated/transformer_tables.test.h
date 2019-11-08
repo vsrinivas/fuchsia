@@ -644,16 +644,16 @@ extern const fidl_type_t v1_example_Sandwich4Align8Table;
 extern const fidl_type_t v1_example_NoCodingTablesStresssorTable;
 extern const fidl_type_t v1_example_UnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_XUnionWithUnionsTable;
-extern const fidl_type_t v1_v1_example_XUnionWithUnionsNullableRefTable;
+extern const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable;
 extern const fidl_type_t v1_example_Sandwich2Table;
 extern const fidl_type_t v1_example_Table_TwoReservedFieldsTable;
 extern const fidl_type_t v1_example_Table_NoFieldsTable;
 extern const fidl_type_t v1_example_StructSize3Alignment2Table;
 extern const fidl_type_t v1_example_StructSize3Alignment1Table;
 extern const fidl_type_t v1_example_XUnionWithStructTable;
-extern const fidl_type_t v1_v1_example_XUnionWithStructNullableRefTable;
+extern const fidl_type_t v1_example_XUnionWithStructNullableRefTable;
 extern const fidl_type_t v1_example_XUnionWithXUnionTable;
-extern const fidl_type_t v1_v1_example_XUnionWithXUnionNullableRefTable;
+extern const fidl_type_t v1_example_XUnionWithXUnionNullableRefTable;
 extern const fidl_type_t v1_example_UnionWithVectorTable;
 extern const fidl_type_t v1_example_Table_UnionWithVector_StructSandwichTable;
 extern const fidl_type_t v1_example_Table_UnionWithVector_ReservedSandwichTable;
@@ -935,11 +935,11 @@ static const ::fidl::FidlXUnionField Fields27v1_example_XUnionWithUnions[] = {
 };
 const fidl_type_t v1_example_XUnionWithUnionsTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields27v1_example_XUnionWithUnions, ::fidl::kNonnullable, "example/XUnionWithUnions", ::fidl::kFlexible));
 
-static const ::fidl::FidlXUnionField Fields41v1_v1_example_XUnionWithUnionsNullableRef[] = {
+static const ::fidl::FidlXUnionField Fields38v1_example_XUnionWithUnionsNullableRef[] = {
     ::fidl::FidlXUnionField(&v1_example_UnionSize8Aligned4Table,156307043u),
     ::fidl::FidlXUnionField(&v1_example_UnionSize12Aligned4Table,1987954326u)
 };
-const fidl_type_t v1_v1_example_XUnionWithUnionsNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields41v1_v1_example_XUnionWithUnionsNullableRef, ::fidl::kNullable, "example/XUnionWithUnions", ::fidl::kFlexible));
+const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields38v1_example_XUnionWithUnionsNullableRef, ::fidl::kNullable, "example/XUnionWithUnions", ::fidl::kFlexible));
 
 constexpr static inline const ::fidl::FidlStructField* Fields20v1_example_Sandwich2_field1_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields20v1_example_Sandwich2[] = {
@@ -971,20 +971,20 @@ static const ::fidl::FidlXUnionField Fields27v1_example_XUnionWithStruct[] = {
 };
 const fidl_type_t v1_example_XUnionWithStructTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields27v1_example_XUnionWithStruct, ::fidl::kNonnullable, "example/XUnionWithStruct", ::fidl::kFlexible));
 
-static const ::fidl::FidlXUnionField Fields41v1_v1_example_XUnionWithStructNullableRef[] = {
+static const ::fidl::FidlXUnionField Fields38v1_example_XUnionWithStructNullableRef[] = {
     ::fidl::FidlXUnionField(&v1_example_StructSize3Alignment1Table,78693387u)
 };
-const fidl_type_t v1_v1_example_XUnionWithStructNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields41v1_v1_example_XUnionWithStructNullableRef, ::fidl::kNullable, "example/XUnionWithStruct", ::fidl::kFlexible));
+const fidl_type_t v1_example_XUnionWithStructNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields38v1_example_XUnionWithStructNullableRef, ::fidl::kNullable, "example/XUnionWithStruct", ::fidl::kFlexible));
 
 static const ::fidl::FidlXUnionField Fields27v1_example_XUnionWithXUnion[] = {
     ::fidl::FidlXUnionField(&v1_example_XUnionWithStructTable,1316738703u)
 };
 const fidl_type_t v1_example_XUnionWithXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields27v1_example_XUnionWithXUnion, ::fidl::kNonnullable, "example/XUnionWithXUnion", ::fidl::kFlexible));
 
-static const ::fidl::FidlXUnionField Fields41v1_v1_example_XUnionWithXUnionNullableRef[] = {
+static const ::fidl::FidlXUnionField Fields38v1_example_XUnionWithXUnionNullableRef[] = {
     ::fidl::FidlXUnionField(&v1_example_XUnionWithStructTable,1316738703u)
 };
-const fidl_type_t v1_v1_example_XUnionWithXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields41v1_v1_example_XUnionWithXUnionNullableRef, ::fidl::kNullable, "example/XUnionWithXUnion", ::fidl::kFlexible));
+const fidl_type_t v1_example_XUnionWithXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields38v1_example_XUnionWithXUnionNullableRef, ::fidl::kNullable, "example/XUnionWithXUnion", ::fidl::kFlexible));
 
 static const ::fidl::FidlUnionField Fields26v1_example_UnionWithVector[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u),

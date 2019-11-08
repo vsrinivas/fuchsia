@@ -25,6 +25,36 @@ uint8_t sandwich1_case1_v1_bytes[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
+uint8_t sandwich1_with_opt_union_present_old_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
+    0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,  //
+};
+
+uint8_t sandwich1_with_opt_union_present_v1_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
+    0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t sandwich1_with_opt_union_absent_old_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t sandwich1_with_opt_union_absent_v1_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
+};
+
 uint8_t sandwich2_case1_old_bytes[] = {
     0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00, 0x00,  //
@@ -307,6 +337,144 @@ uint8_t sandwich6_case8_v1_bytes[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
+uint8_t sandwich7_case1_old_bytes[] = {
+    0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
+    0x01, 0x02, 0x03, 0x04, 0x02, 0x00, 0x00, 0x00,  //
+    0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,  //
+};
+
+uint8_t sandwich7_case1_v1_bytes[] = {
+    0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
+    0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
+    0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t sandwich7_case2_old_bytes[] = {
+    0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t sandwich7_case2_v1_bytes[] = {
+    0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression1_old_bytes[] = {
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression1_v1_bytes[] = {
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression2_old_bytes[] = {
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression2_v1_bytes[] = {
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression3_absent_old_bytes[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression3_absent_v1_bytes[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression3_present_old_bytes[] = {
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t regression3_present_v1_bytes[] = {
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
+    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment1_array_old_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
+    0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,  //
+};
+
+uint8_t size5_alignment1_array_v1_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
+    0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,  //
+};
+
+uint8_t size5_alignment4_array_old_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
+    0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
+    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment4_array_v1_bytes[] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
+    0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
+    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment1_vector_old_bytes[] = {
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
+    0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment1_vector_v1_bytes[] = {
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
+    0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment4_vector_old_bytes[] = {
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
+    0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t size5_alignment4_vector_v1_bytes[] = {
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
+    0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
+};
+
 uint8_t table_struct_with_reserved_sandwich_old_bytes[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -514,62 +682,6 @@ uint8_t array_struct_v1_bytes[] = {
     0x73, 0x69, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t regression1_old_bytes[] = {
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression1_v1_bytes[] = {
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression2_old_bytes[] = {
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression2_v1_bytes[] = {
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression3_absent_old_bytes[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression3_absent_v1_bytes[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression3_present_old_bytes[] = {
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
-uint8_t regression3_present_v1_bytes[] = {
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-    0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
-    0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-    0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
-};
-
 bool test_sandwich1_case1_old_to_v1() {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1Table,
@@ -583,6 +695,43 @@ bool test_sandwich1_case1_v1_to_old() {
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1Table,
                                    sandwich1_case1_v1_bytes, sizeof sandwich1_case1_v1_bytes,
                                    sandwich1_case1_old_bytes, sizeof sandwich1_case1_old_bytes));
+  END_TEST;
+}
+
+bool test_sandwich1_with_opt_union_present_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_present_old_bytes, sizeof sandwich1_with_opt_union_present_old_bytes,
+      sandwich1_with_opt_union_present_v1_bytes, sizeof sandwich1_with_opt_union_present_v1_bytes));
+  END_TEST;
+}
+
+bool test_sandwich1_with_opt_union_present_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_present_v1_bytes, sizeof sandwich1_with_opt_union_present_v1_bytes,
+      sandwich1_with_opt_union_present_old_bytes,
+      sizeof sandwich1_with_opt_union_present_old_bytes));
+  END_TEST;
+}
+
+bool test_sandwich1_with_opt_union_absent_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_absent_old_bytes, sizeof sandwich1_with_opt_union_absent_old_bytes,
+      sandwich1_with_opt_union_absent_v1_bytes, sizeof sandwich1_with_opt_union_absent_v1_bytes));
+  END_TEST;
+}
+
+bool test_sandwich1_with_opt_union_absent_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1WithOptUnionTable,
+      sandwich1_with_opt_union_absent_v1_bytes, sizeof sandwich1_with_opt_union_absent_v1_bytes,
+      sandwich1_with_opt_union_absent_old_bytes, sizeof sandwich1_with_opt_union_absent_old_bytes));
   END_TEST;
 }
 
@@ -812,6 +961,178 @@ bool test_sandwich6_case8_v1_to_old() {
   END_TEST;
 }
 
+bool test_sandwich7_case1_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich7Table,
+                                   sandwich7_case1_old_bytes, sizeof sandwich7_case1_old_bytes,
+                                   sandwich7_case1_v1_bytes, sizeof sandwich7_case1_v1_bytes));
+  END_TEST;
+}
+
+bool test_sandwich7_case1_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich7Table,
+                                   sandwich7_case1_v1_bytes, sizeof sandwich7_case1_v1_bytes,
+                                   sandwich7_case1_old_bytes, sizeof sandwich7_case1_old_bytes));
+  END_TEST;
+}
+
+bool test_sandwich7_case2_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich7Table,
+                                   sandwich7_case2_old_bytes, sizeof sandwich7_case2_old_bytes,
+                                   sandwich7_case2_v1_bytes, sizeof sandwich7_case2_v1_bytes));
+  END_TEST;
+}
+
+bool test_sandwich7_case2_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich7Table,
+                                   sandwich7_case2_v1_bytes, sizeof sandwich7_case2_v1_bytes,
+                                   sandwich7_case2_old_bytes, sizeof sandwich7_case2_old_bytes));
+  END_TEST;
+}
+
+bool test_regression1_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression1Table,
+                                   regression1_old_bytes, sizeof regression1_old_bytes,
+                                   regression1_v1_bytes, sizeof regression1_v1_bytes));
+  END_TEST;
+}
+
+bool test_regression1_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression1Table,
+                                   regression1_v1_bytes, sizeof regression1_v1_bytes,
+                                   regression1_old_bytes, sizeof regression1_old_bytes));
+  END_TEST;
+}
+
+bool test_regression2_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression2Table,
+                                   regression2_old_bytes, sizeof regression2_old_bytes,
+                                   regression2_v1_bytes, sizeof regression2_v1_bytes));
+  END_TEST;
+}
+
+bool test_regression2_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression2Table,
+                                   regression2_v1_bytes, sizeof regression2_v1_bytes,
+                                   regression2_old_bytes, sizeof regression2_old_bytes));
+  END_TEST;
+}
+
+bool test_regression3_absent_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
+                                   regression3_absent_old_bytes,
+                                   sizeof regression3_absent_old_bytes, regression3_absent_v1_bytes,
+                                   sizeof regression3_absent_v1_bytes));
+  END_TEST;
+}
+
+bool test_regression3_absent_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
+                                   regression3_absent_v1_bytes, sizeof regression3_absent_v1_bytes,
+                                   regression3_absent_old_bytes,
+                                   sizeof regression3_absent_old_bytes));
+  END_TEST;
+}
+
+bool test_regression3_present_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
+                           regression3_present_old_bytes, sizeof regression3_present_old_bytes,
+                           regression3_present_v1_bytes, sizeof regression3_present_v1_bytes));
+  END_TEST;
+}
+
+bool test_regression3_present_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
+                           regression3_present_v1_bytes, sizeof regression3_present_v1_bytes,
+                           regression3_present_old_bytes, sizeof regression3_present_old_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment1_array_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1ArrayTable,
+      size5_alignment1_array_old_bytes, sizeof size5_alignment1_array_old_bytes,
+      size5_alignment1_array_v1_bytes, sizeof size5_alignment1_array_v1_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment1_array_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1ArrayTable,
+      size5_alignment1_array_v1_bytes, sizeof size5_alignment1_array_v1_bytes,
+      size5_alignment1_array_old_bytes, sizeof size5_alignment1_array_old_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment4_array_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4ArrayTable,
+      size5_alignment4_array_old_bytes, sizeof size5_alignment4_array_old_bytes,
+      size5_alignment4_array_v1_bytes, sizeof size5_alignment4_array_v1_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment4_array_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4ArrayTable,
+      size5_alignment4_array_v1_bytes, sizeof size5_alignment4_array_v1_bytes,
+      size5_alignment4_array_old_bytes, sizeof size5_alignment4_array_old_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment1_vector_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1VectorTable,
+      size5_alignment1_vector_old_bytes, sizeof size5_alignment1_vector_old_bytes,
+      size5_alignment1_vector_v1_bytes, sizeof size5_alignment1_vector_v1_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment1_vector_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1VectorTable,
+      size5_alignment1_vector_v1_bytes, sizeof size5_alignment1_vector_v1_bytes,
+      size5_alignment1_vector_old_bytes, sizeof size5_alignment1_vector_old_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment4_vector_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4VectorTable,
+      size5_alignment4_vector_old_bytes, sizeof size5_alignment4_vector_old_bytes,
+      size5_alignment4_vector_v1_bytes, sizeof size5_alignment4_vector_v1_bytes));
+  END_TEST;
+}
+
+bool test_size5_alignment4_vector_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4VectorTable,
+      size5_alignment4_vector_v1_bytes, sizeof size5_alignment4_vector_v1_bytes,
+      size5_alignment4_vector_old_bytes, sizeof size5_alignment4_vector_old_bytes));
+  END_TEST;
+}
+
 bool test_table_struct_with_reserved_sandwich_old_to_v1() {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
@@ -934,80 +1255,18 @@ bool test_array_struct_v1_to_old() {
   END_TEST;
 }
 
-bool test_regression1_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression1Table,
-                                   regression1_old_bytes, sizeof regression1_old_bytes,
-                                   regression1_v1_bytes, sizeof regression1_v1_bytes));
-  END_TEST;
-}
-
-bool test_regression1_v1_to_old() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression1Table,
-                                   regression1_v1_bytes, sizeof regression1_v1_bytes,
-                                   regression1_old_bytes, sizeof regression1_old_bytes));
-  END_TEST;
-}
-
-bool test_regression2_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression2Table,
-                                   regression2_old_bytes, sizeof regression2_old_bytes,
-                                   regression2_v1_bytes, sizeof regression2_v1_bytes));
-  END_TEST;
-}
-
-bool test_regression2_v1_to_old() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression2Table,
-                                   regression2_v1_bytes, sizeof regression2_v1_bytes,
-                                   regression2_old_bytes, sizeof regression2_old_bytes));
-  END_TEST;
-}
-
-bool test_regression3_absent_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
-                                   regression3_absent_old_bytes,
-                                   sizeof regression3_absent_old_bytes, regression3_absent_v1_bytes,
-                                   sizeof regression3_absent_v1_bytes));
-  END_TEST;
-}
-
-bool test_regression3_absent_v1_to_old() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
-                                   regression3_absent_v1_bytes, sizeof regression3_absent_v1_bytes,
-                                   regression3_absent_old_bytes,
-                                   sizeof regression3_absent_old_bytes));
-  END_TEST;
-}
-
-bool test_regression3_present_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(
-      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
-                           regression3_present_old_bytes, sizeof regression3_present_old_bytes,
-                           regression3_present_v1_bytes, sizeof regression3_present_v1_bytes));
-  END_TEST;
-}
-
-bool test_regression3_present_v1_to_old() {
-  BEGIN_TEST;
-  ASSERT_TRUE(
-      check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
-                           regression3_present_v1_bytes, sizeof regression3_present_v1_bytes,
-                           regression3_present_old_bytes, sizeof regression3_present_old_bytes));
-  END_TEST;
-}
-
 }  // namespace
 
 BEGIN_TEST_CASE(transformer_conformance)
 
 RUN_TEST(test_sandwich1_case1_old_to_v1)
 RUN_TEST(test_sandwich1_case1_v1_to_old)
+
+RUN_TEST(test_sandwich1_with_opt_union_present_old_to_v1)
+RUN_TEST(test_sandwich1_with_opt_union_present_v1_to_old)
+
+RUN_TEST(test_sandwich1_with_opt_union_absent_old_to_v1)
+RUN_TEST(test_sandwich1_with_opt_union_absent_v1_to_old)
 
 RUN_TEST(test_sandwich2_case1_old_to_v1)
 RUN_TEST(test_sandwich2_case1_v1_to_old)
@@ -1051,6 +1310,36 @@ RUN_TEST(test_sandwich6_case7_v1_to_old)
 RUN_TEST(test_sandwich6_case8_old_to_v1)
 RUN_TEST(test_sandwich6_case8_v1_to_old)
 
+RUN_TEST(test_sandwich7_case1_old_to_v1)
+RUN_TEST(test_sandwich7_case1_v1_to_old)
+
+RUN_TEST(test_sandwich7_case2_old_to_v1)
+RUN_TEST(test_sandwich7_case2_v1_to_old)
+
+RUN_TEST(test_regression1_old_to_v1)
+RUN_TEST(test_regression1_v1_to_old)
+
+RUN_TEST(test_regression2_old_to_v1)
+RUN_TEST(test_regression2_v1_to_old)
+
+RUN_TEST(test_regression3_absent_old_to_v1)
+RUN_TEST(test_regression3_absent_v1_to_old)
+
+RUN_TEST(test_regression3_present_old_to_v1)
+RUN_TEST(test_regression3_present_v1_to_old)
+
+RUN_TEST(test_size5_alignment1_array_old_to_v1)
+RUN_TEST(test_size5_alignment1_array_v1_to_old)
+
+RUN_TEST(test_size5_alignment4_array_old_to_v1)
+RUN_TEST(test_size5_alignment4_array_v1_to_old)
+
+RUN_TEST(test_size5_alignment1_vector_old_to_v1)
+RUN_TEST(test_size5_alignment1_vector_v1_to_old)
+
+RUN_TEST(test_size5_alignment4_vector_old_to_v1)
+RUN_TEST(test_size5_alignment4_vector_v1_to_old)
+
 RUN_TEST(test_table_struct_with_reserved_sandwich_old_to_v1)
 RUN_TEST(test_table_struct_with_reserved_sandwich_v1_to_old)
 
@@ -1068,17 +1357,5 @@ RUN_TEST(test_x_union_with_struct_v1_to_old)
 
 RUN_TEST(test_array_struct_old_to_v1)
 RUN_TEST(test_array_struct_v1_to_old)
-
-RUN_TEST(test_regression1_old_to_v1)
-RUN_TEST(test_regression1_v1_to_old)
-
-RUN_TEST(test_regression2_old_to_v1)
-RUN_TEST(test_regression2_v1_to_old)
-
-RUN_TEST(test_regression3_absent_old_to_v1)
-RUN_TEST(test_regression3_absent_v1_to_old)
-
-RUN_TEST(test_regression3_present_old_to_v1)
-RUN_TEST(test_regression3_present_v1_to_old)
 
 END_TEST_CASE(transformer_conformance)

@@ -48,6 +48,89 @@ success("Sandwich1Case1") {
     },
 }
 
+success("Sandwich1WithOptUnionPresent") {
+    value = Sandwich1WithOptUnion {
+        before: 0x04030201,
+        opt_union: UnionSize8Align4 {
+            variant: 0x0c0b0a09,
+        },
+        after: 0x08070605,
+    },
+    bytes = {
+        old = [
+            32: raw(
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
+
+                0xff, 0xff, 0xff, 0xff,  // Sandwich1WithOptUnion.opt_union (present)
+                0xff, 0xff, 0xff, 0xff,  // Sandwich1WithOptUnion.opt_union (present) [cont.]
+
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1WithOptUnion.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
+
+                0x02, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1WithOptUnion.opt_union
+                0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data
+            )
+        ],
+        v1 = [
+            48: raw(
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
+
+                0x03, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1WithOptUnion.union
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.padding
+                0x08, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_bytes
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_handle
+                0xff, 0xff, 0xff, 0xff,  // UnionSize8Aligned4.env.presence (present)
+                0xff, 0xff, 0xff, 0xff,  // UnionSize8Aligned4.presence (present) [cont.]
+
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1WithOptUnion.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
+
+                0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data, i.e. Sandwich1WithOptUnion.union.data
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
+            )
+        ],
+    },
+}
+
+success("Sandwich1WithOptUnionAbsent") {
+    value = Sandwich1WithOptUnion {
+        before: 0x04030201,
+        after: 0x08070605,
+    },
+    bytes = {
+        old = [
+            24: raw(
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
+
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.opt_union (absent)
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.opt_union (absent) [cont.]
+
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1WithOptUnion.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
+            )
+        ],
+        v1 = [
+            40: raw(
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
+
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1WithOptUnion.opt_union
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.padding
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_bytes
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_handle
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.presence (absent)
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.presence (absent) [cont.]
+
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1WithOptUnion.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
+            )
+        ],
+    },
+}
+
 success("Sandwich2Case1") {
     value = Sandwich2 {
         before: 0x04030201,
@@ -884,6 +967,404 @@ success("Sandwich6Case8") {
     },
 }
 
+success("Sandwich7Case1") {
+    value = Sandwich7 {
+        before: 0x14131211,
+        opt_sandwich1: Sandwich1 {
+            before: 0x04030201,
+            the_union: UnionSize8Align4 {
+                variant: 0x0c0b0a09,
+            },
+            after: 0x08070605,
+        },
+        after: 0x24232221,
+    },
+    bytes = {
+        old = [
+            40: raw(
+                0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
+                0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence
+                0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence [cont.]
+                0x21, 0x22, 0x23, 0x24,  // Sandwich7.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
+
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
+                0x02, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1.the_union
+                0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
+            )
+        ],
+        v1 = [
+            72: raw(
+                0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
+                0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence
+                0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence [cont.]
+                0x21, 0x22, 0x23, 0x24,  // Sandwich7.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
+
+                0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1.before (padding)
+                0x03, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1.the_union
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.padding
+                0x08, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_bytes
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.env.num_handle
+                0xff, 0xff, 0xff, 0xff,  // UnionSize8Aligned4.env.presence
+                0xff, 0xff, 0xff, 0xff,  // UnionSize8Aligned4.presence [cont.]
+                0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich1.after (padding)
+
+                0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data, i.e. Sandwich1.the_union.data
+                0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
+            )
+        ],
+    },
+}
+
+success("Sandwich7Case2") {
+    value = Sandwich7 {
+        before: 0x14131211,
+        after: 0x24232221,
+    },
+    bytes = {
+        old = [
+            24: raw(
+                0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.absence
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.absence [cont.]
+                0x21, 0x22, 0x23, 0x24,  // Sandwich7.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
+            )
+        ],
+        v1 = [
+            24: raw(
+                0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.absence
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.absence [cont.]
+                0x21, 0x22, 0x23, 0x24,  // Sandwich7.after
+                0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
+            )
+        ],
+    },
+}
+
+success("Regression1") {
+    value = Regression1 {
+        f1: 0x01,
+        f2: 0x02,
+        f3: 0x03,
+        f4: 0x04,
+        f5: 0x05,
+        f6: 0x06,
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            32: raw(
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+            )
+        ],
+        v1 = [
+            32: raw(
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+            )
+        ],
+    },
+}
+
+success("Regression2") {
+    value = Regression2 {
+        head: Regression1 {
+            f1: 0x01,
+            f2: 0x02,
+            f3: 0x03,
+            f4: 0x04,
+            f5: 0x05,
+            f6: 0x06,
+        },
+        f7: 0x07,
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            40: raw(
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+                0x07, 0x00, 0x00, 0x00,  // f7 and padding
+                0x00, 0x00, 0x00, 0x00,  // f7 padding
+            )
+        ],
+        v1 = [
+            40: raw(
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+                0x07, 0x00, 0x00, 0x00,  // f7 and padding
+                0x00, 0x00, 0x00, 0x00,  // f7 padding
+            )
+        ],
+    },
+}
+
+success("Regression3Absent") {
+    value = Regression3 {
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            8: raw(
+                0x00, 0x00, 0x00, 0x00,  // opt_value.absence
+                0x00, 0x00, 0x00, 0x00,  // opt_value.absence [cont.]
+            )
+        ],
+        v1 = [
+            8: raw(
+                0x00, 0x00, 0x00, 0x00,  // opt_value.absence
+                0x00, 0x00, 0x00, 0x00,  // opt_value.absence [cont.]
+            )
+        ],
+    },
+}
+
+success("Regression3Present") {
+    value = Regression3 {
+        opt_value: Regression2 {
+            head: Regression1 {
+                f1: 0x01,
+                f2: 0x02,
+                f3: 0x03,
+                f4: 0x04,
+                f5: 0x05,
+                f6: 0x06,
+            },
+            f7: 0x07,
+        },
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            48: raw(
+                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence [cont.]
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+                0x07, 0x00, 0x00, 0x00,  // f7 and padding
+                0x00, 0x00, 0x00, 0x00,  // f7 padding
+            )
+        ],
+        v1 = [
+            48: raw(
+                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence [cont.]
+                0x01, 0x00, 0x00, 0x00,  // f1 and padding
+                0x02, 0x00, 0x00, 0x00,  // f2 and padding
+                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
+                0x00, 0x00, 0x00, 0x00,  // f4 padding
+                0x05, 0x00, 0x00, 0x00,  // f5
+                0x00, 0x00, 0x00, 0x00,  // f5
+                0x06, 0x00, 0x00, 0x00,  // f6 and padding
+                0x00, 0x00, 0x00, 0x00,  // f6 padding
+                0x07, 0x00, 0x00, 0x00,  // f7 and padding
+                0x00, 0x00, 0x00, 0x00,  // f7 padding
+            )
+        ],
+    },
+}
+
+success("Size5Alignment1Array") {
+    value = Size5Alignment1Array {
+        a: [
+            Size5Alignment1 {
+                data: [0x01, 0x02, 0x03, 0x04, 0x05],
+            },
+            Size5Alignment1 {
+                data: [0x06, 0x07, 0x08, 0x09, 0x0a],
+            },
+            Size5Alignment1 {
+                data: [0x0b, 0x0c, 0x0d, 0x0e, 0x0f],
+            },
+        ],
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            16: raw(
+                0x01, 0x02, 0x03, 0x04,  // a.data[0]
+                0x05, 0x06, 0x07, 0x08,  // a.data[0] & a.data[1]
+                0x09, 0x0a, 0x0b, 0x0c,  // a.data[1] & a.data[2]
+                0x0d, 0x0e, 0x0f, 0x00,  // a.data[2] & padding
+            )
+        ],
+        v1 = [
+            16: raw(
+                0x01, 0x02, 0x03, 0x04,  // a.data[0]
+                0x05, 0x06, 0x07, 0x08,  // a.data[0] & a.data[1]
+                0x09, 0x0a, 0x0b, 0x0c,  // a.data[1] & a.data[2]
+                0x0d, 0x0e, 0x0f, 0x00,  // a.data[2] & padding
+            )
+        ],
+    },
+}
+
+
+success("Size5Alignment4Array") {
+    value = Size5Alignment4Array {
+        a: [
+            Size5Alignment4 {
+                four: 0x04030201,
+                one: 0x05,
+            },
+            Size5Alignment4 {
+                four: 0x09080706,
+                one: 0x0a,
+            },
+            Size5Alignment4 {
+                four: 0x0e0d0c0b,
+                one: 0x0f,
+            },
+        ],
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            24: raw(
+                0x01, 0x02, 0x03, 0x04,  // a[0].four
+                0x05, 0x00, 0x00, 0x00,  // a[0].one + padding
+                0x06, 0x07, 0x08, 0x09,  // a[1].four
+                0x0a, 0x00, 0x00, 0x00,  // a[1].one + padding
+                0x0b, 0x0c, 0x0d, 0x0e,  // a[2].four
+                0x0f, 0x00, 0x00, 0x00,  // a[2].one + padding
+            )
+        ],
+        v1 = [
+            24: raw(
+                0x01, 0x02, 0x03, 0x04,  // a[0].four
+                0x05, 0x00, 0x00, 0x00,  // a[0].one + padding
+                0x06, 0x07, 0x08, 0x09,  // a[1].four
+                0x0a, 0x00, 0x00, 0x00,  // a[1].one + padding
+                0x0b, 0x0c, 0x0d, 0x0e,  // a[2].four
+                0x0f, 0x00, 0x00, 0x00,  // a[2].one + padding
+            )
+        ]
+    }
+}
+
+success("Size5Alignment1Vector") {
+    value = Size5Alignment1Vector {
+        v: [
+            Size5Alignment1 {
+                data: [0x01, 0x02, 0x03, 0x04, 0x05],
+            },
+            Size5Alignment1 {
+                data: [0x06, 0x07, 0x08, 0x09, 0x0a],
+            },
+        ],
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            32: raw(
+                0x02, 0x00, 0x00, 0x00,  // v.size
+                0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence [cont.]
+                0x01, 0x02, 0x03, 0x04,  // v[0].a.data
+                0x05, 0x06, 0x07, 0x08,  // v[0].a.data [cont.] & v[1].a.data
+                0x09, 0x0a, 0x00, 0x00,  // v[1].a.data [cont.] & padding
+                0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
+            )
+        ],
+        v1 = [
+            32: raw(
+                0x02, 0x00, 0x00, 0x00,  // v.size
+                0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence [cont.]
+                0x01, 0x02, 0x03, 0x04,  // v[0].a.data
+                0x05, 0x06, 0x07, 0x08,  // v[0].a.data [cont.] & v[1].a.data
+                0x09, 0x0a, 0x00, 0x00,  // v[1].a.data [cont.] & padding
+                0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
+            )
+        ],
+    },
+}
+
+success("Size5Alignment4Vector") {
+    value = Size5Alignment4Vector {
+        v: [
+            Size5Alignment4 {
+                four: 0x04030201,
+                one: 0x05,
+            },
+            Size5Alignment4 {
+                four: 0x09080706,
+                one: 0x0a,
+            },
+        ],
+    },
+    bytes = {
+        // old & v1 bytes are the same.
+        old = [
+            32: raw(
+                0x02, 0x00, 0x00, 0x00,  // v.size
+                0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence [cont.]
+                0x01, 0x02, 0x03, 0x04,  // a[0].four
+                0x05, 0x00, 0x00, 0x00,  // a[0].one + padding
+                0x06, 0x07, 0x08, 0x09,  // a[1].four
+                0x0a, 0x00, 0x00, 0x00,  // a[1].one + padding
+            )
+        ],
+        v1 = [
+            32: raw(
+                0x02, 0x00, 0x00, 0x00,  // v.size
+                0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
+                0xFF, 0xFF, 0xFF, 0xFF,  // v.presence [cont.]
+                0x01, 0x02, 0x03, 0x04,  // a[0].four
+                0x05, 0x00, 0x00, 0x00,  // a[0].one + padding
+                0x06, 0x07, 0x08, 0x09,  // a[1].four
+                0x0a, 0x00, 0x00, 0x00,  // a[1].one + padding
+            )
+        ],
+    }
+}
+
 success("Table_StructWithReservedSandwich") {
     value = Table_StructWithReservedSandwichStruct {
         table: Table_StructWithReservedSandwich {
@@ -1461,162 +1942,6 @@ success("ArrayStruct") {
 
                 0x73, 0x69, 0x78, 0x00,  // optional_unions[2].s data ("six")
                 0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
-            )
-        ],
-    },
-}
-
-success("Regression1") {
-    value = Regression1 {
-        f1: 0x01,
-        f2: 0x02,
-        f3: 0x03,
-        f4: 0x04,
-        f5: 0x05,
-        f6: 0x06,
-    },
-    bytes = {
-        // old & v1 bytes are the same.
-        old = [
-            32: raw(
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-            )
-        ],
-        v1 = [
-            32: raw(
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-            )
-        ],
-    },
-}
-
-success("Regression2") {
-    bindings_denylist = [cpp],
-    value = Regression2 {
-        head: Regression1 {
-            f1: 0x01,
-            f2: 0x02,
-            f3: 0x03,
-            f4: 0x04,
-            f5: 0x05,
-            f6: 0x06,
-        },
-        f7: 0x07,
-    },
-    bytes = {
-        // old & v1 bytes are the same.
-        old = [
-            40: raw(
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-                0x07, 0x00, 0x00, 0x00,  // f7 and padding
-                0x00, 0x00, 0x00, 0x00,  // f7 padding
-            )
-        ],
-        v1 = [
-            40: raw(
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-                0x07, 0x00, 0x00, 0x00,  // f7 and padding
-                0x00, 0x00, 0x00, 0x00,  // f7 padding
-            )
-        ],
-    },
-}
-
-success("Regression3Absent") {
-    value = Regression3 {
-    },
-    bytes = {
-        // old & v1 bytes are the same.
-        old = [
-            8: raw(
-                0x00, 0x00, 0x00, 0x00,  // opt_value.absence
-                0x00, 0x00, 0x00, 0x00,  // opt_value.absence [cont.]
-            )
-        ],
-        v1 = [
-            8: raw(
-                0x00, 0x00, 0x00, 0x00,  // opt_value.absence
-                0x00, 0x00, 0x00, 0x00,  // opt_value.absence [cont.]
-            )
-        ],
-    },
-}
-
-success("Regression3Present") {
-    bindings_denylist = [cpp],
-    value = Regression3 {
-        opt_value: Regression2 {
-            head: Regression1 {
-                f1: 0x01,
-                f2: 0x02,
-                f3: 0x03,
-                f4: 0x04,
-                f5: 0x05,
-                f6: 0x06,
-            },
-            f7: 0x07,
-        },
-    },
-    bytes = {
-        // old & v1 bytes are the same.
-        old = [
-            48: raw(
-                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-                0x07, 0x00, 0x00, 0x00,  // f7 and padding
-                0x00, 0x00, 0x00, 0x00,  // f7 padding
-            )
-        ],
-        v1 = [
-            48: raw(
-                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence
-                0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence [cont.]
-                0x01, 0x00, 0x00, 0x00,  // f1 and padding
-                0x02, 0x00, 0x00, 0x00,  // f2 and padding
-                0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
-                0x00, 0x00, 0x00, 0x00,  // f4 padding
-                0x05, 0x00, 0x00, 0x00,  // f5
-                0x00, 0x00, 0x00, 0x00,  // f5
-                0x06, 0x00, 0x00, 0x00,  // f6 and padding
-                0x00, 0x00, 0x00, 0x00,  // f6 padding
-                0x07, 0x00, 0x00, 0x00,  // f7 and padding
-                0x00, 0x00, 0x00, 0x00,  // f7 padding
             )
         ],
     },
