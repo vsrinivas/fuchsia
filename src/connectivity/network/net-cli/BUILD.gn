@@ -29,7 +29,7 @@ rustc_binary("bin") {
     "//src/lib/argh",
     "//src/sys/tools/cs:lib",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:prettytable-rs",

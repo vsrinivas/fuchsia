@@ -63,7 +63,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
@@ -99,7 +99,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rouille",
   ]

@@ -54,7 +54,7 @@ rustc_library("breakpoints_capability") {
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
   ]
 }

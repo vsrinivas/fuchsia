@@ -25,7 +25,7 @@ rustc_library("fuchsia-audio-device-output") {
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",

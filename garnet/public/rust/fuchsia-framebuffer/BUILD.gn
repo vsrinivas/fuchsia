@@ -21,7 +21,7 @@ rustc_library("fuchsia-framebuffer") {
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display-rustc",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
@@ -37,7 +37,7 @@ rustc_binary("box") {
     "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -70,7 +70,7 @@ rustc_binary("fb_integration_test_bin") {
     "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

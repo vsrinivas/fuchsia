@@ -19,7 +19,7 @@ rustc_binary("locate_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_index/fidl:index-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

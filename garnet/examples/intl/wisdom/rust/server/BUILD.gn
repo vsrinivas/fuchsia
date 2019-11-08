@@ -29,7 +29,7 @@ rustc_binary("intl_wisdom_server_rust") {
     "//src/lib/icu/rust/rust_icu_udat",
     "//src/lib/icu_data/rust/icu_data",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
   non_rust_deps = [
     "//third_party/icu",

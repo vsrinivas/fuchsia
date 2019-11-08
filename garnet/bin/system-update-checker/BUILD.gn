@@ -33,7 +33,7 @@ rustc_binary("bin") {
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",

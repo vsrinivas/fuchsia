@@ -18,7 +18,7 @@ rustc_test("driver") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]

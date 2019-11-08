@@ -18,7 +18,7 @@ rustc_library("system-health-check") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 }

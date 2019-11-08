@@ -18,7 +18,7 @@ rustc_library("text") {
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",

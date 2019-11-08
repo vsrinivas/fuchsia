@@ -33,7 +33,7 @@ rustc_library("lib") {
     "//src/connectivity/network/testing/netemul/runner/test/guest:lib",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

@@ -19,7 +19,7 @@ rustc_binary("advanced_routing_reporter_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -47,7 +47,7 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -64,7 +64,7 @@ rustc_binary("visibility_reporter_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -83,7 +83,7 @@ rustc_library("component_side_testing_lib") {
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

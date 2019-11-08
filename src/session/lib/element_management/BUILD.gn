@@ -20,7 +20,7 @@ rustc_library("element_management") {
     "//src/session/lib/realm_management",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

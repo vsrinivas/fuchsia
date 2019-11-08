@@ -39,7 +39,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
@@ -88,7 +88,7 @@ rustc_binary("setui_client_interface_test_bin") {
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
   ]
   source_root = "src/interface_test.rs"

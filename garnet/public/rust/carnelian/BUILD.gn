@@ -36,7 +36,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rand",
@@ -59,7 +59,7 @@ rustc_binary("spinning_square_example") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -78,7 +78,7 @@ rustc_binary("embedding_example") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
   ]
 }
@@ -94,7 +94,7 @@ rustc_binary("button_example") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -110,7 +110,7 @@ rustc_binary("perf_test_01") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
   ]
 }
@@ -126,7 +126,7 @@ rustc_binary("perf_test_02") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -141,7 +141,7 @@ rustc_binary("perf_test_03") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -155,7 +155,7 @@ rustc_binary("perf_test_04") {
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -173,7 +173,7 @@ rustc_binary("drawing") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -191,7 +191,7 @@ rustc_binary("drawing_mold") {
     "//src/graphics/lib/compute/mold",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rusttype",
   ]
 }
@@ -215,7 +215,7 @@ rustc_binary("clockface") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:vk-sys",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
@@ -461,7 +461,7 @@ rustc_binary("carnelian_integration_test_bin") {
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -489,7 +489,7 @@ rustc_binary("carnelian_fb_integration_test_bin") {
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

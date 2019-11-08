@@ -44,7 +44,7 @@ rustc_binary("bin") {
     "//src/lib/cstr",
     "//src/lib/shared-buffer",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
     "//zircon/system/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty-rustc",

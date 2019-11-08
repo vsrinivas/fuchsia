@@ -16,6 +16,6 @@ rustc_binary("basic_integration") {
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }

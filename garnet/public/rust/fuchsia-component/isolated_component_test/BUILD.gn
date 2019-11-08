@@ -25,7 +25,7 @@ rustc_binary("fuchsia_component_test_outer_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
   source_root = "outer.rs"
 }
@@ -54,7 +54,7 @@ rustc_binary("fuchsia_component_test_middle_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tempfile",
   ]
   source_root = "middle.rs"
@@ -86,7 +86,7 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
   source_root = "middle_sibling.rs"
 }

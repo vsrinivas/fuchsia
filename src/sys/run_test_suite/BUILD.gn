@@ -24,7 +24,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

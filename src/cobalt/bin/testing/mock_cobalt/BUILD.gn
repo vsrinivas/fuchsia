@@ -20,7 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }

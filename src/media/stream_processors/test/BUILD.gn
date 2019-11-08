@@ -37,7 +37,7 @@ rustc_library("stream_processor_test_lib") {
     "//src/lib/fidl_table_validation",
     "//src/media/stream_processors/fuchsia-stream-processors",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
@@ -70,7 +70,7 @@ rustc_library("stream_processor_decoder_factory_lib") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -87,7 +87,7 @@ rustc_library("stream_processor_encoder_factory_lib") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -106,7 +106,7 @@ rustc_test("audio_encoder_test_bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rand",
@@ -174,7 +174,7 @@ rustc_test("h264_decoder_test_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
   ]

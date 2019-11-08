@@ -16,7 +16,7 @@ rustc_binary("util") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test-rustc",
   ]

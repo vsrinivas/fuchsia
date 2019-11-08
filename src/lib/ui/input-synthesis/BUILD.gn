@@ -16,7 +16,7 @@ rustc_library("input-synthesis") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

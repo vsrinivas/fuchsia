@@ -24,7 +24,7 @@ rustc_test("bin") {
     "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

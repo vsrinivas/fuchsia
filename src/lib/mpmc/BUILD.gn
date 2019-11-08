@@ -19,7 +19,7 @@ rustc_library("mpmc") {
   edition = "2018"
   deps = [
     "//third_party/rust_crates:crossbeam",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -29,7 +29,7 @@ rustc_test("mpmc_lib_test") {
   deps = [
     ":mpmc",
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

@@ -50,7 +50,7 @@ rustc_binary("trigger_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

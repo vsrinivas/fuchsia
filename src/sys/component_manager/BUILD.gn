@@ -46,7 +46,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
@@ -94,7 +94,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

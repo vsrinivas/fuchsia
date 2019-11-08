@@ -19,7 +19,7 @@ rustc_library("fuchsia-component") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
@@ -41,7 +41,7 @@ rustc_test("fuchsia-component-blackbox-unit-tests") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/test_util",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

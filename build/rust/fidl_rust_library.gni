@@ -34,7 +34,7 @@ template("fidl_rust_library") {
     deps = [
       "//garnet/public/lib/fidl/rust/fidl",
       "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-status",
-      "//third_party/rust_crates:futures-preview",
+      "//third_party/rust_crates:futures",
     ]
 
     if (is_fuchsia) {

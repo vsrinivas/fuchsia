@@ -60,7 +60,7 @@ rustc_binary("bin") {
     "//src/lib/waitgroup",
     "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
@@ -68,7 +68,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/lib/test_util",
-    "//third_party/rust_crates:futures-test-preview",
+    "//third_party/rust_crates:futures-test",
   ]
 }
 

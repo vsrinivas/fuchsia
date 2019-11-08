@@ -18,7 +18,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.location:fuchsia.location.namedplace-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -27,7 +27,7 @@ rustc_library("lib") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust_crates:futures-test-preview",
+    "//third_party/rust_crates:futures-test",
   ]
   with_unit_tests = true
 }

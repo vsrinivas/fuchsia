@@ -17,7 +17,7 @@ rustc_binary("dummy_proc") {
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
   ]
 }

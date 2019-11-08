@@ -22,7 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
     "//zircon/system/fidl/fuchsia-hardware-power:fuchsia-hardware-power-rustc",

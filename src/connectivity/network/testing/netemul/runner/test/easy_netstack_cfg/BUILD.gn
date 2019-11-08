@@ -20,7 +20,7 @@ rustc_binary("easy_netstack_cfg") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/argh",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

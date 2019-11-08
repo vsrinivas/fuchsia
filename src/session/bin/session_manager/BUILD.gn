@@ -40,7 +40,7 @@ rustc_library("lib") {
     "//src/lib/argh",
     "//src/session/lib/realm_management",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
