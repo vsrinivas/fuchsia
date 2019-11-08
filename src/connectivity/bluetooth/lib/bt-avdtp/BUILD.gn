@@ -18,6 +18,7 @@ rustc_library("bt-avdtp") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:matches",
