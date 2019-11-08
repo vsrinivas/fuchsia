@@ -50,7 +50,8 @@ mod tests {
             DeviceServiceMarker, DeviceServiceRequest::*, IfaceListItem, ListIfacesResponse,
             QueryIfaceResponse,
         },
-        futures::{pin_mut, Poll, StreamExt},
+        futures::{pin_mut, StreamExt},
+        std::task::Poll,
         wlan_common::assert_variant,
     };
 

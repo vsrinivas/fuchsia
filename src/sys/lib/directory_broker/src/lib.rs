@@ -6,8 +6,8 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
     fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
-    futures::{future::FusedFuture, task::Context, Future, Poll},
-    std::pin::Pin,
+    futures::future::FusedFuture,
+    std::{future::Future, pin::Pin, task::{Context, Poll}},
     void::Void,
 };
 

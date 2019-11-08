@@ -32,15 +32,16 @@ use {
     futures::{
         future::{FusedFuture, FutureExt},
         stream::{FusedStream, FuturesUnordered, StreamExt, StreamFuture},
-        task::Context,
-        Future, Poll, Stream,
+        Stream,
     },
     std::{
         default::Default,
+        future::Future,
         iter::{self, ExactSizeIterator},
         marker::{PhantomData, Unpin},
         mem::replace,
         pin::Pin,
+        task::{Context, Poll}
     },
     void::{unreachable, Void},
 };

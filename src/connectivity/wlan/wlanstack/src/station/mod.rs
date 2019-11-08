@@ -148,9 +148,9 @@ mod tests {
     use {
         fuchsia_zircon::{self as zx, DurationNum},
         futures::channel::mpsc::{self, UnboundedSender},
-        futures::Poll,
         pin_utils::pin_mut,
         wlan_common::assert_variant,
+        std::task::Poll,
     };
 
     type Event = u32;

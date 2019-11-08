@@ -8,12 +8,13 @@ use {
     fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_async as fasync,
     fuchsia_zircon::{Channel, MessageBuf},
-    futures::{task::Context, Poll, Stream},
+    futures::Stream,
     std::{
         fs::{File, OpenOptions},
         marker::Unpin,
         path::PathBuf,
         pin::Pin,
+        task::{Context, Poll},
         time::{SystemTime, UNIX_EPOCH},
     },
 };

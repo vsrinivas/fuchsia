@@ -9,8 +9,8 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{FileMarker, FileProxy},
     fuchsia_async::Executor,
-    futures::{channel::mpsc, future::join, select, Future, Poll, StreamExt},
-    std::iter,
+    futures::{channel::mpsc, future::join, select, StreamExt},
+    std::{future::Future, iter, task::Poll},
     void::unreachable,
 };
 

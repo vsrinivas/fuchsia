@@ -129,19 +129,19 @@ impl futures::Stream for FirstProtocolEventStream {
 	type Item = Result<FirstProtocolEvent, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
 			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
-			None => return futures::Poll::Ready(None),
+			None => return std::task::Poll::Ready(None),
 		};
 		let (bytes, _handles) = buf.split_mut();
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
 				service_name: <FirstProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
@@ -225,35 +225,35 @@ impl futures::Stream for FirstProtocolRequestStream {
 	type Item = Result<FirstProtocolRequest, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(cx) {
 			this.is_terminated = true;
-			return futures::Poll::Ready(None);
+			return std::task::Poll::Ready(None);
 		}
 		if this.is_terminated {
 			panic!("polled FirstProtocolRequestStream after completion");
 		}
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
-				futures::Poll::Ready(Ok(())) => {},
-				futures::Poll::Pending => return futures::Poll::Pending,
-				futures::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+				std::task::Poll::Ready(Ok(())) => {},
+				std::task::Poll::Pending => return std::task::Poll::Pending,
+				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
 					this.is_terminated = true;
-					return futures::Poll::Ready(None);
+					return std::task::Poll::Ready(None);
 				}
-				futures::Poll::Ready(Err(e)) => return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
 
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return futures::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			futures::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal {
 				0x2838a83100000000 | 0x580cbd0d43ccbe3b => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -476,19 +476,19 @@ impl futures::Stream for SecondProtocolEventStream {
 	type Item = Result<SecondProtocolEvent, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
 			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
-			None => return futures::Poll::Ready(None),
+			None => return std::task::Poll::Ready(None),
 		};
 		let (bytes, _handles) = buf.split_mut();
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
 				service_name: <SecondProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
@@ -572,35 +572,35 @@ impl futures::Stream for SecondProtocolRequestStream {
 	type Item = Result<SecondProtocolRequest, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(cx) {
 			this.is_terminated = true;
-			return futures::Poll::Ready(None);
+			return std::task::Poll::Ready(None);
 		}
 		if this.is_terminated {
 			panic!("polled SecondProtocolRequestStream after completion");
 		}
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
-				futures::Poll::Ready(Ok(())) => {},
-				futures::Poll::Pending => return futures::Poll::Pending,
-				futures::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+				std::task::Poll::Ready(Ok(())) => {},
+				std::task::Poll::Pending => return std::task::Poll::Pending,
+				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
 					this.is_terminated = true;
-					return futures::Poll::Ready(None);
+					return std::task::Poll::Ready(None);
 				}
-				futures::Poll::Ready(Err(e)) => return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
 
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return futures::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			futures::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal {
 				0xd09c00f00000000 | 0x5785f9c1f2aece21 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;

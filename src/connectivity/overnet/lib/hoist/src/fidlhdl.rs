@@ -481,7 +481,7 @@ mod test {
         let mut cx = Context::from_waker(&waker);
 
         let mut rx = b.recv_msg(&mut buf);
-        assert_eq!(Pin::new(&mut rx).poll(&mut cx), futures::Poll::Pending);
+        assert_eq!(Pin::new(&mut rx).poll(&mut cx), std::task::Poll::Pending);
         a.write(&[1, 2, 3], &mut vec![]).unwrap();
         block_on(Pin::new(&mut rx)).unwrap();
         assert_eq!(buf.bytes(), &[1, 2, 3]);

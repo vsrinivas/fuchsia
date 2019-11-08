@@ -11,13 +11,14 @@ use fidl_fuchsia_hardware_ethernet as sys;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::{ready, task::{Context, Waker}, FutureExt, Poll, Stream};
+use futures::{ready, task::{Context, Waker}, FutureExt, Stream};
 
 use std::fs::File;
 use std::marker::Unpin;
 use std::os::unix::io::AsRawFd;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+use std::task::Poll;
 
 mod buffer;
 mod ethernet_sys;

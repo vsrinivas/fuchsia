@@ -48,11 +48,10 @@ use {
     futures::{
         future::{Fuse, FusedFuture, FutureObj},
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Context,
-        Future, FutureExt, Poll,
+        FutureExt,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
-    std::{marker::Unpin, pin::Pin},
+    std::{future::Future, marker::Unpin, pin::Pin, task::{Context, Poll}},
     void::Void,
 };
 

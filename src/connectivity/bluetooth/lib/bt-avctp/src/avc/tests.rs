@@ -5,7 +5,8 @@
 use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
-    futures::{executor::block_on, Poll},
+    futures::{executor::block_on},
+    std::task::Poll,
 };
 
 use super::*;

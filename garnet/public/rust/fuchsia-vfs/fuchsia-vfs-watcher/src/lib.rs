@@ -12,11 +12,7 @@ use fuchsia_zircon::{self as zx, assoc_values};
 use fdio::fdio_sys;
 use fidl_fuchsia_io::WATCH_MASK_ALL;
 use fidl::endpoints::Proxy;
-use futures::{
-    stream::{FusedStream, Stream},
-    task::Context,
-    Poll,
-};
+use futures::stream::{FusedStream, Stream};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -24,6 +20,7 @@ use std::marker::Unpin;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 /// Describes the type of event that occurred in the direcotry being watched.
 #[repr(C)]

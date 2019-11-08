@@ -19,7 +19,7 @@ impl Timer for FuchsiaTimer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::Poll;
+    use std::task::Poll;
 
     #[test]
     fn test_timer() {

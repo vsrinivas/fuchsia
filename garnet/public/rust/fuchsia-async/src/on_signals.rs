@@ -8,11 +8,12 @@ use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::future::Future;
+use std::task::Poll;
 
 use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::task::{AtomicWaker, Context};
-use futures::{Future, Poll};
 
 struct OnSignalsReceiver {
     maybe_signals: AtomicUsize,

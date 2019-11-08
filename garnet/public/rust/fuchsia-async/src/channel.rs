@@ -5,9 +5,11 @@
 use std::fmt;
 use std::io;
 use std::pin::Pin;
+use std::future::Future;
+use std::task::{Context, Poll};
 
 use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
-use futures::{task::Context, ready, Future, Poll};
+use futures::ready;
 
 use crate::RWHandle;
 

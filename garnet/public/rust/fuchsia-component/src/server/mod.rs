@@ -30,8 +30,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased as _, Peered, Signals},
     futures::{
         stream::{FuturesUnordered, StreamExt},
-        task::Context,
-        Poll, Stream,
+        Stream,
     },
     std::{
         cmp::min,
@@ -40,6 +39,7 @@ use {
         marker::{PhantomData, Unpin},
         pin::Pin,
         sync::Arc,
+        task::{Context, Poll},
     },
 };
 

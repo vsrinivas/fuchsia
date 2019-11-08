@@ -16,12 +16,12 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
     fuchsia_zircon as zx,
-    futures::Future,
     serde_json,
     std::{
         convert::{TryFrom, TryInto},
         env,
         fs::File,
+        future::Future,
         io, process,
     },
 };

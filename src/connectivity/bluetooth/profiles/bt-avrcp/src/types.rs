@@ -5,9 +5,9 @@
 use {
     bt_avctp::Error as AvctpError,
     failure::{Error, Fail},
-    futures::{sink::Sink, stream::FusedStream, task::Context, Poll, Stream},
+    futures::{sink::Sink, stream::FusedStream, Stream},
     pin_utils::unsafe_pinned,
-    std::pin::Pin,
+    std::{pin::Pin, task::{Context, Poll}},
 };
 
 use crate::packets::Error as PacketError;

@@ -21,10 +21,8 @@ use {
         future::{FusedFuture, FutureExt},
         sink::SinkExt,
         stream::{FusedStream, StreamExt},
-        task::Context,
-        Future, Poll,
     },
-    std::{fmt, marker::Unpin, pin::Pin},
+    std::{fmt, future::Future, marker::Unpin, pin::Pin, task::{Context, Poll}},
     void::{unreachable, Void},
 };
 

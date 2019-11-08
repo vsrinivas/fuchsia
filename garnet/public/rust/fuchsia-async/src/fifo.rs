@@ -5,11 +5,13 @@
 use {
     crate::RWHandle,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{ready, task::Context, Future, Poll},
+    futures::ready,
     std::{
         fmt,
+        future::Future,
         marker::{PhantomData, Unpin},
         pin::Pin,
+        task::{Context, Poll},
     },
 };
 

@@ -15,14 +15,15 @@ mod test;
 use futures::{
     lock::{Mutex, MutexLockFuture},
     stream::{FusedStream, SelectAll},
-    task::Context,
-    Future, Poll, Stream,
+    Stream,
 };
 use rental::*;
+use std::future::Future;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 rental! {
   mod rentals {

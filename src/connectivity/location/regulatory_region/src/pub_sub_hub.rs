@@ -5,8 +5,13 @@
 //! A simple publish-and-subscribe facility.
 
 use {
-    fuchsia_async::futures::{task::Context, task::Waker, Future, Poll},
-    std::{cell::RefCell, collections::BTreeMap, pin::Pin},
+    std::{
+        cell::RefCell,
+        collections::BTreeMap,
+        future::Future,
+        pin::Pin,
+        task::{Context, Waker, Poll},
+    },
 };
 
 /// A rendezvous point for publishers and subscribers.
@@ -101,12 +106,11 @@ impl PubSubHubInner {
 mod tests {
     use {
         super::PubSubHub,
-        fuchsia_async::{
-            self as fasync,
-            futures::{task::Context, Future, Poll},
-        },
+        fuchsia_async as fasync,
         futures_test::task::new_count_waker,
+        std::future::Future,
         std::pin::Pin,
+        std::task::{Context, Poll},
     };
 
     #[fasync::run_until_stalled(test)]

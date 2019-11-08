@@ -13,7 +13,7 @@ pub use self::udp::*;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite};
 use futures::task::{AtomicWaker, Context};
-use futures::{ready, Poll};
+use futures::ready;
 use libc;
 
 use std::io::{Read, Write};
@@ -23,6 +23,7 @@ use std::os::unix::io::{AsRawFd, RawFd};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::task::Poll;
 
 use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
 

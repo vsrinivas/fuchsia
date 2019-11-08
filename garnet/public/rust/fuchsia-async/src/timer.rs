@@ -12,11 +12,13 @@ use {
     fuchsia_zircon as zx,
     futures::{
         task::{AtomicWaker, Context},
-        Future, FutureExt, Poll, Stream,
+        FutureExt, Stream,
         stream::FusedStream,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
+        future::Future,
+        task::Poll,
         marker::Unpin,
         pin::Pin,
         sync::{

@@ -11,12 +11,8 @@ use {
         OutOfLineUnion, OPEN_FLAG_DESCRIBE,
     },
     fuchsia_zircon::Status,
-    futures::{
-        stream::{Stream, StreamExt, StreamFuture},
-        task::Context,
-        Poll,
-    },
-    std::{default::Default, pin::Pin},
+    futures::stream::{Stream, StreamExt, StreamFuture},
+    std::{default::Default, pin::Pin, task::{Context, Poll}},
 };
 
 /// Represents a FIDL connection to a directory.  A single directory may contain multiple

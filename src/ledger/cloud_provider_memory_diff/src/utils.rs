@@ -5,11 +5,9 @@
 use {
     futures::{
         channel::oneshot,
-        future::{self, FusedFuture, Future, FutureExt},
-        task::Context,
-        Poll,
+        future::{self, FusedFuture, FutureExt},
     },
-    std::{marker::Unpin, mem, pin::Pin},
+    std::{future::Future, marker::Unpin, mem, pin::Pin, task::{Context, Poll}},
 };
 
 pub struct FutureOrEmpty<'a, F>(pub Option<&'a mut F>);

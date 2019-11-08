@@ -308,7 +308,7 @@ mod tests {
             ElementarySourceRequest, PlayerMarker, PlayerRequest, PlayerRequestStream, PlayerStatus,
         },
         fuchsia_async as fasync,
-        futures::Poll,
+        std::task::Poll,
     };
 
     #[test]

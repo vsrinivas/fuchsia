@@ -21,12 +21,11 @@ use {
     },
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
-        task::Context,
-        Future, FutureExt, Poll,
+        FutureExt,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     static_assertions::assert_eq_size,
-    std::{io::Write, iter, mem, pin::Pin},
+    std::{future::Future, io::Write, iter, mem, pin::Pin, task::{Context, Poll}},
 };
 
 /// Return type for [`handle_request`] functions.

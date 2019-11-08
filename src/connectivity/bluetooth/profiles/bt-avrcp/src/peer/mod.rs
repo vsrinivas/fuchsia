@@ -19,8 +19,7 @@ use {
         future::{BoxFuture, FutureExt},
         ready,
         stream::{FusedStream, FuturesUnordered, SelectAll, StreamExt, TryStreamExt},
-        task::Context,
-        Poll, Stream,
+        Stream,
     },
     parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard},
     pin_utils::pin_mut,
@@ -30,6 +29,7 @@ use {
         pin::Pin,
         string::String,
         sync::{Arc, Weak},
+        task::{Context, Poll},
     },
 };
 

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use futures::future::FutureObj;
-use futures::task::Context;
-use futures::{FutureExt, Poll};
+use futures::FutureExt;
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{AcqRel, Relaxed};
+use std::task::{Context, Poll};
 
 /// A lock-free thread-safe future.
 pub struct AtomicFuture {

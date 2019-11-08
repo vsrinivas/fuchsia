@@ -4,17 +4,18 @@
 
 //! UDP socket bindings.
 
+use std::future::Future;
 use std::num::NonZeroU16;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 
 use failure::{format_err, Error};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased};
 use futures::{
-    channel::mpsc, channel::oneshot, future::Either, task::Context, Future, Poll, TryFutureExt,
-    TryStreamExt,
+    channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt,
 };
 use log::{debug, error, trace};
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};

@@ -34,7 +34,7 @@ impl fidl::endpoints::DiscoverableService for {{ $interface.Name }}Marker {}
 pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasResponse }}
-	type {{ $method.CamelName }}ResponseFut: futures::Future<Output = Result<(
+	type {{ $method.CamelName }}ResponseFut: std::future::Future<Output = Result<(
 		{{- range $index, $response := $method.Response -}}
 		{{- if (eq $index 0) -}} {{ $response.Type }}
 		{{- else -}}, {{ $response.Type }} {{- end -}}
@@ -238,19 +238,19 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
 			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
-			None => return futures::Poll::Ready(None),
+			None => return std::task::Poll::Ready(None),
 		};
 		let (bytes, _handles) = buf.split_mut();
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal {
 			{{- range $method := $interface.Methods }}
 			{{- if not $method.HasRequest }}
 			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
@@ -435,35 +435,35 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(cx) {
 			this.is_terminated = true;
-			return futures::Poll::Ready(None);
+			return std::task::Poll::Ready(None);
 		}
 		if this.is_terminated {
 			panic!("polled {{ $interface.Name }}RequestStream after completion");
 		}
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
-				futures::Poll::Ready(Ok(())) => {},
-				futures::Poll::Pending => return futures::Poll::Pending,
-				futures::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+				std::task::Poll::Ready(Ok(())) => {},
+				std::task::Poll::Pending => return std::task::Poll::Pending,
+				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
 					this.is_terminated = true;
-					return futures::Poll::Ready(None);
+					return std::task::Poll::Ready(None);
 				}
-				futures::Poll::Ready(Err(e)) => return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
 
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return futures::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			futures::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal {
 				{{- range $method := $interface.Methods }}
 				{{- if $method.HasRequest }}
 				{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {

@@ -5,9 +5,17 @@
 use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon::{DurationNum, Signals, Status},
-    futures::{io, stream::Stream, task::Context, Poll},
+    futures::{io, stream::Stream},
     parking_lot::Mutex,
-    std::{convert::TryFrom, fmt, ops::Deref, pin::Pin, sync::Arc, sync::Weak},
+    std::{
+        convert::TryFrom,
+        fmt,
+        ops::Deref,
+        pin::Pin,
+        sync::Arc,
+        sync::Weak,
+        task::{Context, Poll},
+    },
 };
 
 use crate::{

@@ -53,10 +53,8 @@ use {
     futures::{
         future::FusedFuture,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
-        task::Context,
-        Future, Poll,
     },
-    std::{marker::Unpin, pin::Pin},
+    std::{future::Future, marker::Unpin, pin::Pin, task::{Context, Poll}},
     void::Void,
 };
 

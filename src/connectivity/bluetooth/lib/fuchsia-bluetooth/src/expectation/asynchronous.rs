@@ -31,10 +31,10 @@ use {
     failure::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
-    futures::{future::FutureObj, task, Future, FutureExt, Poll},
+    futures::{future::FutureObj, FutureExt},
     parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard},
     slab::Slab,
-    std::{pin::Pin, sync::Arc},
+    std::{future::Future, pin::Pin, sync::Arc, task::{self, Poll}},
 };
 
 use crate::expectation::Predicate;

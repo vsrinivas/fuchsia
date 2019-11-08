@@ -27,8 +27,8 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
     fuchsia_async::Executor,
-    futures::{channel::mpsc, future::join, select, Future, Poll, StreamExt},
-    std::{io::Write, iter},
+    futures::{channel::mpsc, future::join, select, StreamExt},
+    std::{future::Future, io::Write, iter, task::Poll},
     void::unreachable,
 };
 

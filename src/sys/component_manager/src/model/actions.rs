@@ -306,7 +306,7 @@ mod tests {
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
-        futures::task::Context,
+        std::task::Context,
     };
 
     macro_rules! results_eq {

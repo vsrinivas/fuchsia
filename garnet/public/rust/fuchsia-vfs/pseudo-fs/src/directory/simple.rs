@@ -32,12 +32,16 @@ use {
     futures::{
         future::{FusedFuture, FutureExt},
         stream::{FusedStream, FuturesUnordered, StreamExt, StreamFuture},
-        task::Context,
-        Future, Poll,
     },
     static_assertions::assert_eq_size,
     std::{
-        collections::BTreeMap, iter, iter::ExactSizeIterator, marker::Unpin, ops::Bound, pin::Pin,
+        collections::BTreeMap,
+        future::Future,
+        iter::{self, ExactSizeIterator},
+        marker::Unpin,
+        ops::Bound,
+        pin::Pin,
+        task::{Context, Poll},
     },
     void::Void,
 };

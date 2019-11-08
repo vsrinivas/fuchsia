@@ -6,17 +6,15 @@ use crate::errors::QmuxError;
 use bytes::Buf;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{
-    task::{Context, Waker},
-    Future, Poll,
-};
 use parking_lot::Mutex;
 use slab::Slab;
 use std::collections::HashMap;
+use std::future::Future;
 use std::io::Cursor;
 use std::marker::Unpin;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll, Waker};
 
 /// A client ID indicating the endpoint
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]

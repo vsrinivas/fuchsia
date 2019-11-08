@@ -9,8 +9,7 @@ use crate::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, p
 use {
     fidl::endpoints::{create_proxy, ServiceMarker},
     fuchsia_async::Executor,
-    futures::{Future, Poll},
-    std::{pin::Pin, sync::Arc},
+    std::{future::Future, pin::Pin, sync::Arc, task::Poll},
 };
 
 /// A helper to connect a pseudo fs server to a client and the run the client on a single threaded

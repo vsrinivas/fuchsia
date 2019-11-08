@@ -8,8 +8,8 @@ use {
     fuchsia_async::{Time, Timer},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
-    futures::{channel::oneshot, task::Context, Future, FutureExt, Poll, StreamExt},
-    std::{marker::Unpin, pin::Pin, sync::Arc},
+    futures::{channel::oneshot, FutureExt, StreamExt},
+    std::{future::Future, marker::Unpin, pin::Pin, sync::Arc, task::{Context, Poll}},
     wlan_common::test_utils::ExpectWithin,
     wlantap_client::Wlantap,
 };

@@ -6,18 +6,19 @@ use crate::atomic_future::AtomicFuture;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
+use futures::FutureExt;
 use futures::task::{waker_ref, ArcWake, AtomicWaker, Spawn, SpawnError};
-use futures::{Future, FutureExt, Poll};
 use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
 use slab::Slab;
 use std::cell::RefCell;
 use std::collections::BinaryHeap;
+use std::future::Future;
 use std::marker::Unpin;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
-use std::task::{Context, Waker};
+use std::task::{Context, Poll, Waker};
 use std::{cmp, fmt, mem, ops, thread, u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
@@ -1063,9 +1064,10 @@ impl ArcWake for Task {
 mod tests {
     use core::task::{Context, Waker};
     use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum};
-    use futures::{future::poll_fn, Future, Poll};
+    use futures::{future::poll_fn, Future};
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
+    use std::task::Poll;
 
     use super::*;
     use crate::{on_signals::OnSignals, timer::Timer};

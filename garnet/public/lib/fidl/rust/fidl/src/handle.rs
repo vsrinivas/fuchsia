@@ -47,12 +47,9 @@ pub mod fuchsia_handles {
 pub mod non_fuchsia_handles {
 
     use fuchsia_zircon_status as zx_status;
-    use futures::{
-        task::{AtomicWaker, Context},
-        Poll,
-    };
+    use futures::task::{AtomicWaker, Context};
     use parking_lot::Mutex;
-    use std::{borrow::BorrowMut, pin::Pin, sync::Arc};
+    use std::{borrow::BorrowMut, pin::Pin, sync::Arc, task::Poll};
 
     /// Invalid handle value
     pub const INVALID_HANDLE: u32 = 0xffff_ffff;

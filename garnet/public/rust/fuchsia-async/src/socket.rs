@@ -9,12 +9,13 @@ use futures::{
     future::poll_fn,
     stream::Stream,
     task::{AtomicWaker, Context},
-    ready, Poll,
+    ready,
 };
 use std::fmt;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::task::Poll;
 
 pub struct SocketPacketReceiver {
     signals: AtomicU32,

@@ -7,10 +7,11 @@
 //! A library with futures-aware mpmc channels.
 
 use crossbeam::queue::MsQueue;
-use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, task::Context, Poll, Stream};
+use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, Stream};
 use std::{
     pin::Pin,
     sync::{Arc, Weak},
+    task::{Context, Poll},
 };
 
 /// The default number of messages that will be buffered per-receiver.

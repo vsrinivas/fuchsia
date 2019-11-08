@@ -39,8 +39,8 @@ pub trait SwitchingOrdinalsProxyInterface: Send + Sync {
 	)-> Result<(), fidl::Error>;
 	fn only_generated_ordinal(&self,
 	)-> Result<(), fidl::Error>;
-	type EventOrdinalFifteenResponseFut: futures::Future<Output = Result<(), fidl::Error>> + Send;
-	type EventOnlyGeneratedOrdinalResponseFut: futures::Future<Output = Result<(), fidl::Error>> + Send;
+	type EventOrdinalFifteenResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+	type EventOnlyGeneratedOrdinalResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
 }
 
 #[derive(Debug)]
@@ -147,19 +147,19 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 	type Item = Result<SwitchingOrdinalsEvent, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
 			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
-			None => return futures::Poll::Ready(None),
+			None => return std::task::Poll::Ready(None),
 		};
 		let (bytes, _handles) = buf.split_mut();
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		futures::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal {
 			0x577495a100000000 | 0x15e4293098574a7 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
@@ -304,35 +304,35 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 	type Item = Result<SwitchingOrdinalsRequest, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
-		-> futures::Poll<Option<Self::Item>>
+		-> std::task::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(cx) {
 			this.is_terminated = true;
-			return futures::Poll::Ready(None);
+			return std::task::Poll::Ready(None);
 		}
 		if this.is_terminated {
 			panic!("polled SwitchingOrdinalsRequestStream after completion");
 		}
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
-				futures::Poll::Ready(Ok(())) => {},
-				futures::Poll::Pending => return futures::Poll::Pending,
-				futures::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+				std::task::Poll::Ready(Ok(())) => {},
+				std::task::Poll::Pending => return std::task::Poll::Pending,
+				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
 					this.is_terminated = true;
-					return futures::Poll::Ready(None);
+					return std::task::Poll::Ready(None);
 				}
-				futures::Poll::Ready(Err(e)) => return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 			}
 
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return futures::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			futures::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal {
 				0x7784636700000000 | 0x254f3bdfa9d3dcab => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;

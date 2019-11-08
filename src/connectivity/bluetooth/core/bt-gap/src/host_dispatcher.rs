@@ -27,16 +27,17 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
-        task::{Context, Waker},
-        Future, FutureExt, Poll, TryFutureExt,
+        FutureExt, TryFutureExt,
     },
     parking_lot::RwLock,
     slab::Slab,
     std::collections::HashMap,
+    std::future::Future,
     std::fs::File,
     std::marker::Unpin,
     std::path::Path,
     std::sync::{Arc, Weak},
+    std::task::{Context, Poll, Waker},
 };
 
 use crate::{
