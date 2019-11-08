@@ -1,0 +1,13 @@
+{
+  "program": { "binary": "bin/root_component" },
+  "children": [
+    {
+      "name": "echo_server",
+      // This will be resolved by the base package resolver
+      "url": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
+    },
+  ],
+  "expose": [
+    { "directory": "/pkgfs", "from": "self", "rights": ["r*"] },
+  ]
+}

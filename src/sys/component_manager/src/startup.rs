@@ -6,8 +6,9 @@ use {
     crate::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         framework::RealmCapabilityHost,
+        fuchsia_base_pkg_resolver,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
-        fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
+        fuchsia_pkg_resolver,
         model::{
             error::ModelError, hooks::*, hub::Hub, Model, ModelConfig, ModelParams,
             ResolverRegistry,
@@ -23,6 +24,7 @@ use {
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_component::client,
     fuchsia_runtime::HandleType,
+    futures::lock::Mutex,
     log::*,
     std::{path::PathBuf, sync::Arc},
 };
@@ -110,7 +112,9 @@ impl Arguments {
 
 /// Returns a ResolverRegistry configured with the component resolvers available to the current
 /// process.
-pub fn available_resolvers() -> Result<ResolverRegistry, Error> {
+pub fn available_resolvers(
+    model_for_resolver: Arc<Mutex<Option<Model>>>,
+) -> Result<ResolverRegistry, Error> {
     let mut resolver_registry = ResolverRegistry::new();
 
     // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
@@ -125,7 +129,12 @@ pub fn available_resolvers() -> Result<ResolverRegistry, Error> {
     if let Some(loader) = connect_sys_loader()? {
         resolver_registry.register(
             fuchsia_pkg_resolver::SCHEME.to_string(),
-            Box::new(FuchsiaPkgResolver::new(loader)),
+            Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
+        );
+    } else {
+        resolver_registry.register(
+            fuchsia_base_pkg_resolver::SCHEME.to_string(),
+            Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(model_for_resolver)),
         );
     }
 
@@ -210,9 +219,15 @@ pub async fn model_setup(
     args: &Arguments,
     additional_capabilities: Vec<HookRegistration>,
 ) -> Result<Model, Error> {
+    // The model needs the resolver registry to be created, but the resolver registry needs the
+    // model to be created so that the fuchsia_pkg resolver can route the pkgfs handle. Thus we
+    // create an empty Arc<Mutex<<Option<Model>>>, give it to the resolvers, create the model with
+    // the resolvers, and then lock this mutex and set it to a clone of the model we just created.
+    let model_for_resolver = Arc::new(Mutex::new(None));
+
     let launcher_connector = ProcessLauncherConnector::new(&args);
     let runner = ElfRunner::new(launcher_connector);
-    let resolver_registry = available_resolvers()?;
+    let resolver_registry = available_resolvers(model_for_resolver.clone())?;
     let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
@@ -221,6 +236,7 @@ pub async fn model_setup(
         config: ModelConfig::default(),
         builtin_capabilities: builtin_capabilities.clone(),
     };
+
     let mut model = Model::new(params);
     let realm_capability_host = RealmCapabilityHost::new(model.clone());
     model.root_realm.hooks.install(realm_capability_host.hooks()).await;
@@ -235,6 +251,10 @@ pub async fn model_setup(
     // TODO(geb, fsamuel): model refers to a RealmCapabilityHost and RealmCapabilityHost
     // refers to model. We need to break this cycle.
     model.realm_capability_host = Some(realm_capability_host);
+
+    // TODO(dgonyeo): need to break this one too.
+    *model_for_resolver.lock().await = Some(model.clone());
+
     Ok(model)
 }
 

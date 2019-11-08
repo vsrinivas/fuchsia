@@ -1,0 +1,82 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("base_resolver_test_bin") {
+  name = "base_resolver_test"
+  edition = "2018"
+  source_root = "base_resolver_test.rs"
+
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/component_manager:lib",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("root_component_bin") {
+  name = "root_component"
+  edition = "2018"
+  source_root = "root_component.rs"
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/lib/directory_broker",
+    "//third_party/rust_crates:failure",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("base_resolver_test") {
+  deps = [
+    ":base_resolver_test_bin",
+    ":root_component_bin",
+    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
+  ]
+
+  binaries = [
+    {
+      name = "root_component"
+    },
+    {
+      name = "echo_server_rust"
+      dest = "echo_server"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/root.cml")
+      dest = "root.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+  ]
+
+  tests = [
+    {
+      name = "base_resolver_test"
+    },
+  ]
+}

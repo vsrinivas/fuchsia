@@ -41,7 +41,7 @@ pub enum ModelError {
         #[fail(cause)]
         err: ResolverError,
     },
-    #[fail(display = "runner error")]
+    #[fail(display = "runner error: {}", err)]
     RunnerError {
         #[fail(cause)]
         err: RunnerError,

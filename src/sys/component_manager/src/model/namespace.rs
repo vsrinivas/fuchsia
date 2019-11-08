@@ -205,7 +205,7 @@ impl IncomingNamespace {
             )
             .await;
             if let Err(e) = res {
-                error!("failed to route storage for component {}: {:?}", abs_moniker, e);
+                error!("failed to route directory for component {}: {:?}", abs_moniker, e);
             }
         };
 

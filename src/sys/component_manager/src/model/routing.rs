@@ -5,8 +5,8 @@
 use {
     crate::{capability::*, model::*},
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
+        OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
         StorageDecl, StorageDirectorySource, UseDecl, UseStorageDecl,
     },
     failure::format_err,
@@ -111,6 +111,12 @@ async fn open_capability_at_source<'a>(
         }
         CapabilitySource::Component(source_capability, realm) => {
             if let Some(path) = source_capability.source_path() {
+                // TODO(36541): changing the flags for pkgfs is a hack, directory permissions
+                // should be recorded in the manifests
+                let mut flags = flags;
+                if path.to_string().contains("pkgfs") {
+                    flags = fio::OPEN_RIGHT_READABLE;
+                }
                 Model::bind_instance_open_outgoing(
                     &model,
                     realm,
@@ -381,6 +387,69 @@ async fn find_used_capability_source<'a>(
     }
     let capability = RoutedCapability::Use(use_decl.clone());
     find_offered_capability_source(model, capability, abs_moniker).await
+}
+
+/// Finds the providing realm and path of a directory exposed by the root realm to component
+/// manager.
+pub async fn find_exposed_root_directory_capability<'a>(
+    model: &'a Model,
+    path: CapabilityPath,
+) -> Result<(CapabilityPath, Arc<Realm>), ModelError> {
+    let expose_dir_decl = {
+        let root_moniker = AbsoluteMoniker::new(vec![]);
+        let root_realm = model.look_up_realm(&root_moniker).await?;
+        let realm_state = root_realm.lock_state().await;
+        let root_decl = realm_state
+            .as_ref()
+            .expect("find_exposed_root_directory_capability: not resolved")
+            .decl();
+        root_decl
+            .exposes
+            .iter()
+            .find_map(|e| match e {
+                ExposeDecl::Directory(dir_decl) if dir_decl.target_path == path => Some(dir_decl),
+                _ => None,
+            })
+            .ok_or(ModelError::capability_discovery_error(format_err!(
+                "root component does not expose directory {:?}",
+                path
+            )))?
+            .clone()
+    };
+    match &expose_dir_decl.source {
+        ExposeSource::Framework => {
+            return Err(ModelError::capability_discovery_error(format_err!(
+                "root realm cannot expose framework directories"
+            )))
+        }
+        ExposeSource::Self_ => {
+            return Ok((expose_dir_decl.source_path.clone(), model.root_realm.clone()))
+        }
+        ExposeSource::Child(_) => {
+            let mut wp = WalkPosition {
+                capability: RoutedCapability::Expose(ExposeDecl::Directory(
+                    expose_dir_decl.clone(),
+                )),
+                last_child_moniker: None,
+                moniker: Some(vec![].into()),
+            };
+            let capability_source = walk_expose_chain(model, &mut wp).await?;
+            match &capability_source {
+                CapabilitySource::Component(
+                    RoutedCapability::Expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source_path,
+                        ..
+                    })),
+                    realm,
+                ) => return Ok((source_path.clone(), realm.clone())),
+                _ => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "unexpected capability source"
+                    )))
+                }
+            }
+        }
+    }
 }
 
 /// Walks the component tree to find the originating source of a capability, starting on the given
