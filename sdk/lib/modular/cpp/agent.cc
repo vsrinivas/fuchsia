@@ -21,9 +21,6 @@ void Agent::Connect(
   agent_service_provider_bindings_.AddBinding(this, std::move(outgoing_services_request));
 }
 
-// |fuchsia::modular::Agent|
-void Agent::RunTask(std::string task_id, fit::function<void()> done) { done(); }
-
 // |fuchsia::sys::ServiceProvider|
 void Agent::ConnectToService(std::string service_name, zx::channel request) {
   auto it = service_name_to_handler_.find(service_name);

@@ -90,12 +90,6 @@ class TestHarnessImpl::InterceptedSessionAgent final {
   void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {}
 
   // Called by AgentDriver.
-  void RunTask(const fidl::StringPtr& task_id, const fit::function<void()>& done) {
-    FXL_DLOG(WARNING) << "This session agent does not run tasks";
-    done();
-  }
-
-  // Called by AgentDriver.
   void Terminate(const fit::function<void()>& done) { done(); }
 };
 

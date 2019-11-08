@@ -119,11 +119,6 @@ class TestAgent : fuchsia::modular::Agent,
     }
   }
 
-  // |fuchsia::modular::Agent|
-  void RunTask(std::string /*task_id*/, RunTaskCallback /*callback*/) override {
-    ++counts["RunTask"];
-  }
-
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;

@@ -84,8 +84,6 @@ class AgentContextImpl::InitializeCall : public Operation<> {
         });
 
     // When the agent process dies, we remove it.
-    // TODO(alhaad): In the future we would want to detect a crashing agent and
-    // stop scheduling tasks for it.
     agent_context_impl_->app_client_->SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->agent_runner_->RemoveAgent(agent_context_impl->url_);
@@ -105,9 +103,8 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 };
 
 // If |terminating| is set to true, the agent will be torn down irrespective
-// of whether there is an open-connection or running task. Returns |true| if the
-// agent was stopped, false otherwise (could be because agent has pending
-// tasks).
+// of whether there is an open-connection. Returns |true| if the
+// agent was stopped, false otherwise.
 class AgentContextImpl::StopCall : public Operation<bool> {
  public:
   StopCall(const bool terminating, AgentContextImpl* const agent_context_impl,
@@ -124,8 +121,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
       return;
     }
 
-    if (terminating_ || (agent_context_impl_->agent_controller_bindings_.size() == 0 &&
-                         agent_context_impl_->incomplete_task_count_ == 0)) {
+    if (terminating_ || agent_context_impl_->agent_controller_bindings_.size() == 0) {
       Stop(flow);
     }
   }
@@ -217,19 +213,6 @@ void AgentContextImpl::NewEntityProviderConnection(
         app_client_->services().ConnectToService(std::move(entity_provider_request));
         agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
       }));
-}
-
-void AgentContextImpl::NewTask(const std::string& task_id) {
-  operation_queue_.Add(std::make_unique<SyncCall>([this, task_id] {
-    FXL_CHECK(state_ == State::RUNNING);
-    // Increment the counter for number of incomplete tasks. Decrement it when
-    // we receive its callback;
-    incomplete_task_count_++;
-    agent_->RunTask(task_id, [this] {
-      incomplete_task_count_--;
-      StopAgentIfIdle();
-    });
-  }));
 }
 
 void AgentContextImpl::GetComponentContext(

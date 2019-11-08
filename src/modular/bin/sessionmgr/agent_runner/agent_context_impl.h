@@ -50,8 +50,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
-  // AgentControllers or outstanding tasks. Calls into
-  // |AgentRunner::RemoveAgent()| to remove itself.
+  // AgentControllers. Calls into |AgentRunner::RemoveAgent()| to remove itself.
   void StopForTeardown(fit::function<void()> callback);
 
   // Called by AgentRunner when a component wants to connect to this agent.
@@ -69,9 +68,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   void NewEntityProviderConnection(
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
-
-  // Called by AgentRunner when a new task has been scheduled.
-  void NewTask(const std::string& task_id);
 
   enum class State { INITIALIZING, RUNNING, TERMINATING };
   State state() { return state_; }
@@ -117,8 +113,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
-  // AgentControllers and no outstanding task, fuchsia::modular::Agent.Stop() is
-  // called with a timeout.
+  // AgentControllers, fuchsia::modular::Agent.Stop() is called with a timeout.
   void StopAgentIfIdle();
 
   const std::string url_;
@@ -144,10 +139,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   inspect::Node agent_node_;
 
   State state_ = State::INITIALIZING;
-
-  // Number of times fuchsia::modular::Agent.RunTask() was called but we're
-  // still waiting on its completion callback.
-  int incomplete_task_count_ = 0;
 
   OperationQueue operation_queue_;
 

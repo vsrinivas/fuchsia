@@ -140,11 +140,6 @@ class MyEntityProvider : fuchsia::modular::Agent,
                fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) override {
     ++counts["Connect"];
   }
-  // |fuchsia::modular::Agent|
-  void RunTask(std::string task_id, fit::function<void()> done) override {
-    ++counts["RunTask"];
-    done();
-  }
 
   // |fuchsia::modular::EntityProvider|
   void GetTypes(std::string cookie, GetTypesCallback callback) override {

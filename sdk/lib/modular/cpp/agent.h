@@ -84,9 +84,6 @@ class Agent final : fuchsia::modular::Agent,
       std::string requestor_id,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services_request) override;
 
-  // |fuchsia::modular::Agent|
-  void RunTask(std::string task_id, fit::function<void()> done) override;
-
   // |fuchsia::sys::ServiceProvider|
   void ConnectToService(std::string service_name, zx::channel request) override;
 
