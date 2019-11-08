@@ -2,21 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate::{self, Number, NumberType, ROOT_ID};
+use super::validate::{self, Action, Number, NumberType, ROOT_ID};
 
-pub struct Step {
-    pub actions: Vec<validate::Action>,
-    pub do_metrics: bool,
-}
-
-impl Step {
-    pub fn new(actions: Vec<validate::Action>) -> Step {
-        Step { actions, do_metrics: false }
-    }
-
-    pub fn new_with_metrics(actions: Vec<validate::Action>) -> Step {
-        Step { actions, do_metrics: true }
-    }
+pub enum Step {
+    Actions(Vec<validate::Action>),
+    WithMetrics(Vec<validate::Action>, String),
 }
 
 pub struct Trial {
@@ -38,7 +28,7 @@ pub fn real_trials() -> Vec<Trial> {
         int_histogram_ops_trial(),
         uint_histogram_ops_trial(),
         double_histogram_ops_trial(),
-        metrics_trial(),
+        deletions_trial(),
     ]
 }
 
@@ -229,7 +219,7 @@ macro_rules! insert_multiple {
 fn basic_node() -> Trial {
     Trial {
         name: "Basic Node".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_node!(parent: ROOT_ID, id: 1, name: "child"),
             create_node!(parent: 1, id: 2, name: "grandchild"),
             delete_node!( id: 2),
@@ -246,7 +236,7 @@ fn basic_node() -> Trial {
 fn basic_string() -> Trial {
     Trial {
         name: "Basic String".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
             set_string!(id: 1, value: "bar"),
             set_string!(id: 1, value: "This Is A Longer String"),
@@ -261,7 +251,7 @@ fn basic_string() -> Trial {
 fn basic_bytes() -> Trial {
     Trial {
         name: "Basic bytes".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_bytes_property!(parent: ROOT_ID, id: 8, name: "bytes", value: vec![1u8, 2u8]),
             set_bytes!(id: 8, value: vec![3u8, 4, 5, 6, 7]),
             set_bytes!(id: 8, value: vec![8u8]),
@@ -273,7 +263,7 @@ fn basic_bytes() -> Trial {
 fn basic_int() -> Trial {
     Trial {
         name: "Basic Int".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(10)),
             set_number!(id: 5, value: Number::IntT(std::i64::MAX)),
             subtract_number!(id: 5, value: Number::IntT(3)),
@@ -287,7 +277,7 @@ fn basic_int() -> Trial {
 fn basic_uint() -> Trial {
     Trial {
         name: "Basic Uint".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1)),
             set_number!(id: 5, value: Number::UintT(std::u64::MAX)),
             subtract_number!(id: 5, value: Number::UintT(3)),
@@ -301,7 +291,7 @@ fn basic_uint() -> Trial {
 fn basic_double() -> Trial {
     Trial {
         name: "Basic Double".into(),
-        steps: vec![Step::new(vec![
+        steps: vec![Step::Actions(vec![
             create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint",
                                      value: Number::DoubleT(1.0)),
             set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
@@ -330,7 +320,7 @@ fn basic_int_array() -> Trial {
         actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
     }
     actions.push(delete_property!(id: 5));
-    Trial { name: "Int Array Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Int Array Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn basic_uint_array() -> Trial {
@@ -342,7 +332,7 @@ fn basic_uint_array() -> Trial {
         actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
     }
     actions.push(delete_property!(id: 6));
-    Trial { name: "Unt Array Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Unt Array Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn basic_double_array() -> Trial {
@@ -354,7 +344,7 @@ fn basic_double_array() -> Trial {
         actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));
     }
     actions.push(delete_property!(id: 4));
-    Trial { name: "Int Array Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Int Array Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn int_histogram_ops_trial() -> Trial {
@@ -379,7 +369,7 @@ fn int_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Int Histogram Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Int Histogram Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn uint_histogram_ops_trial() -> Trial {
@@ -404,7 +394,7 @@ fn uint_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Uint Histogram Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Uint Histogram Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn double_histogram_ops_trial() -> Trial {
@@ -429,12 +419,78 @@ fn double_histogram_ops_trial() -> Trial {
     }
     actions.push(delete_property!(id: 4));
     actions.push(delete_property!(id: 5));
-    Trial { name: "Double Histogram Ops".into(), steps: vec![Step::new(actions)] }
+    Trial { name: "Double Histogram Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
-fn metrics_trial() -> Trial {
-    let actions = vec![create_node!(parent: ROOT_ID, id: 1, name: "foo")];
-    Trial { name: "Do Metrics".into(), steps: vec![Step::new_with_metrics(actions)] }
+fn deletions_trial() -> Trial {
+    // Action, being a FIDL struct, doesn't implement Clone, so we have to build a new
+    // Action each time we want to invoke it.
+    fn n1() -> Action {
+        create_node!(parent: ROOT_ID, id: 1, name: "root")
+    }
+    fn n2() -> Action {
+        create_node!(parent: 1, id: 2, name: "parent")
+    }
+    fn n3() -> Action {
+        create_node!(parent: 2, id: 3, name: "child")
+    }
+    fn p1() -> Action {
+        create_numeric_property!(parent: 1, id: 4, name: "root_int", value: Number::IntT(1))
+    }
+    fn p2() -> Action {
+        create_numeric_property!(parent: 2, id: 5, name: "parent_int", value: Number::IntT(2))
+    }
+    fn p3() -> Action {
+        create_numeric_property!(parent: 3, id: 6, name: "child_int", value: Number::IntT(3))
+    }
+    fn create() -> Vec<Action> {
+        vec![n1(), n2(), n3(), p1(), p2(), p3()]
+    }
+    fn create2() -> Vec<Action> {
+        vec![n1(), p1(), n2(), p2(), n3(), p3()]
+    }
+    fn d1() -> Action {
+        delete_node!(id: 1)
+    }
+    fn d2() -> Action {
+        delete_node!(id: 2)
+    }
+    fn d3() -> Action {
+        delete_node!(id: 3)
+    }
+    fn x1() -> Action {
+        delete_property!(id: 4)
+    }
+    fn x2() -> Action {
+        delete_property!(id: 5)
+    }
+    fn x3() -> Action {
+        delete_property!(id: 6)
+    }
+    let mut steps = Vec::new();
+    steps.push(Step::Actions(create()));
+    steps.push(Step::Actions(vec![d3(), d2(), d1(), x3(), x2(), x1()]));
+    steps.push(Step::Actions(create2()));
+    steps.push(Step::WithMetrics(vec![d1(), d2()], "Delete Except Grandchild".into()));
+    steps.push(Step::WithMetrics(vec![d3(), x3(), x2(), x1()], "Deleted Grandchild".into()));
+    // This list tests all 6 sequences of node deletion.
+    // TODO(fxb/40843): Get the permutohedron crate and test all 720 sequences.
+    steps.push(Step::Actions(create()));
+    steps.push(Step::Actions(vec![d1(), d2(), d3(), x3(), x2(), x1()]));
+    steps.push(Step::Actions(create2()));
+    steps.push(Step::Actions(vec![d1(), x3(), d2(), x1(), d3(), x2()]));
+    steps.push(Step::Actions(create()));
+    steps.push(Step::Actions(vec![d1(), x2(), d3(), x3(), d2(), x1()]));
+    steps.push(Step::Actions(create2()));
+    steps.push(Step::Actions(vec![x1(), x3(), d2(), d1(), d3(), x2()]));
+    steps.push(Step::Actions(create()));
+    steps.push(Step::Actions(vec![d2(), x3(), x2(), x1(), d3(), d1()]));
+    steps.push(Step::Actions(create2()));
+    steps.push(Step::Actions(vec![d3(), x3(), d2(), x1(), d1(), x2()]));
+    steps.push(Step::Actions(create2()));
+    steps.push(Step::Actions(vec![x3(), d3(), d1(), x1(), d2(), x2()]));
+    steps.push(Step::WithMetrics(vec![], "Everything should be gone".into()));
+    Trial { name: "Delete With Metrics".into(), steps }
 }
 
 #[cfg(test)]
@@ -442,6 +498,6 @@ pub(crate) mod tests {
     use {super::*, fidl_test_inspect_validate::*};
 
     pub fn trial_with_action(name: &str, action: Action) -> Trial {
-        Trial { name: name.into(), steps: vec![Step::new(vec![action])] }
+        Trial { name: name.into(), steps: vec![Step::Actions(vec![action])] }
     }
 }

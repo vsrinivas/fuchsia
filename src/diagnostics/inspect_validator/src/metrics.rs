@@ -214,11 +214,12 @@ mod tests {
         let puppet = puppet::tests::local_incomplete_puppet().await?;
         let metrics = puppet.metrics().unwrap();
         let mut results = Results::new();
-        results.remember_metrics(metrics, "trialfoo", 42);
+        results.remember_metrics(metrics, "trialfoo", 42, "stepfoo");
         let json = results.to_json();
         assert!(json.contains("\"trial_name\":\"trialfoo\""), json);
         assert!(json.contains(&format!("\"size\":{}", puppet::VMO_SIZE)), json);
         assert!(json.contains("\"step_index\":42"), json);
+        assert!(json.contains("\"step_name\":\"stepfoo\""), json);
         assert!(json.contains("\"block_count\":9"), json);
         assert!(json.contains("\"HEADER\":{\"count\":1,\"header_bytes\":16,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), json);
         Ok(())

@@ -36,6 +36,8 @@ const ROOT_NAME: &str = "root";
 pub struct Data {
     nodes: HashMap<u32, Node>,
     properties: HashMap<u32, Property>,
+    tombstone_nodes: HashSet<u32>,
+    tombstone_properties: HashSet<u32>,
 }
 
 // Data is the only public struct in this file. The internal data structures are
@@ -481,6 +483,9 @@ impl Data {
             children: HashSet::new(),
             properties: HashSet::new(),
         };
+        if self.tombstone_nodes.contains(&id) {
+            bail!("Tried to create implicitly deleted node {}", id);
+        }
         if let Some(_) = self.nodes.insert(id, node) {
             bail!("Create called when node already existed at {}", id);
         }
@@ -496,26 +501,61 @@ impl Data {
         if id == 0 {
             bail!("Do not try to delete node 0");
         }
+        if self.tombstone_nodes.remove(&id) {
+            return Ok(());
+        }
         if let Some(node) = self.nodes.remove(&id) {
-            // It's legal for a parent to be deleted first, so the parent may not exist when
-            // the child is deleted; this isn't an error.
+            // Tombstone all descendents. An orphan descendent may reappear improperly if a new
+            // node is created with a recycled ID.
+            for child in node.children.clone().iter() {
+                self.make_tombstone_node(*child)?;
+            }
+            for property in node.properties.clone().iter() {
+                self.make_tombstone_property(*property)?;
+            }
             if let Some(parent) = self.nodes.get_mut(&node.parent) {
                 if !parent.children.remove(&id) {
-                    // Most of these can only happen in case of internal logic errors.
+                    // Some of these can only happen in case of internal logic errors.
                     // I can't think of a way to test them; I think the errors are
                     // actually impossible. Should I leave them untested? Remove them
                     // from the code? Add a special test_cfg make_illegal_node()
                     // function just to test them?
-                    bail!("Parent {} didn't know about this child {}", node.parent, id);
+                    bail!(
+                        "Internal error! Parent {} didn't know about this child {}",
+                        node.parent,
+                        id
+                    );
                 }
             }
-        // Don't delete descendents.
-        // They won't be reached during to_string() and they should be deleted
-        // explicitly later. RAII puppets certainly won't delete them implicity
-        // and Dart should be happy with any deletion order.
         } else {
-            bail!("Delete called on node that doesn't exist: {}", id);
+            bail!("Delete of nonexistent node {}", id);
         }
+        Ok(())
+    }
+
+    fn make_tombstone_node(&mut self, id: u32) -> Result<(), Error> {
+        if id == 0 {
+            bail!("Internal error! Do not try to delete node 0.");
+        }
+        if let Some(node) = self.nodes.remove(&id) {
+            for child in node.children.clone().iter() {
+                self.make_tombstone_node(*child)?;
+            }
+            for property in node.properties.clone().iter() {
+                self.make_tombstone_property(*property)?;
+            }
+        } else {
+            bail!("Internal error! Tried to tombstone nonexistent node {}", id);
+        }
+        self.tombstone_nodes.insert(id);
+        Ok(())
+    }
+
+    fn make_tombstone_property(&mut self, id: u32) -> Result<(), Error> {
+        if let None = self.properties.remove(&id) {
+            bail!("Internal error! Tried to tombstone nonexistent property {}", id);
+        }
+        self.tombstone_properties.insert(id);
         Ok(())
     }
 
@@ -531,6 +571,9 @@ impl Data {
         } else {
             bail!("Parent {} of property {} not found", parent, id);
         }
+        if self.tombstone_properties.contains(&id) {
+            bail!("Tried to create implicitly deleted property {}", id);
+        }
         let property = Property { parent, id, name: name.into(), payload };
         if let Some(_) = self.properties.insert(id, property) {
             bail!("Property insert called on existing id {}", id);
@@ -539,16 +582,27 @@ impl Data {
     }
 
     fn delete_property(&mut self, id: u32) -> Result<(), Error> {
+        if self.tombstone_properties.remove(&id) {
+            return Ok(());
+        }
         if let Some(property) = self.properties.remove(&id) {
             if let Some(node) = self.nodes.get_mut(&property.parent) {
                 if !node.properties.remove(&id) {
-                    bail!("Property {}'s parent {} didn't have it as child", id, property.parent);
+                    bail!(
+                        "Internal error! Property {}'s parent {} didn't have it as child",
+                        id,
+                        property.parent
+                    );
                 }
             } else {
-                bail!("Property {}'s parent {} doesn't exist on delete", id, property.parent);
+                bail!(
+                    "Internal error! Property {}'s parent {} doesn't exist on delete",
+                    id,
+                    property.parent
+                );
             }
         } else {
-            bail!("Tried to delete nonexistent property {}", id);
+            bail!("Delete of nonexistent property {}", id);
         }
         Ok(())
     }
@@ -718,7 +772,12 @@ impl Data {
     /// This creates a new Data. Note that the standard "root" node of the VMO API
     /// corresponds to the index-0 node added here.
     pub fn new() -> Data {
-        let mut ret = Data { nodes: HashMap::new(), properties: HashMap::new() };
+        let mut ret = Data {
+            nodes: HashMap::new(),
+            properties: HashMap::new(),
+            tombstone_nodes: HashSet::new(),
+            tombstone_properties: HashSet::new(),
+        };
         ret.nodes.insert(
             0,
             Node {
@@ -732,7 +791,12 @@ impl Data {
     }
 
     fn build(nodes: HashMap<u32, Node>, properties: HashMap<u32, Property>) -> Data {
-        Data { nodes, properties }
+        Data {
+            nodes,
+            properties,
+            tombstone_nodes: HashSet::new(),
+            tombstone_properties: HashSet::new(),
+        }
     }
 }
 
@@ -1420,6 +1484,71 @@ mod tests {
         data.apply(&create_node!(parent: 0, id: 1, name: "first")).ok();
         assert!(data.apply(&delete_node!(id: 1)).is_ok());
         assert!(data.apply(&delete_node!(id: 1)).is_err());
+    }
+
+    #[test]
+    // Make sure tombstoning works correctly (tracking implicitly deleted descendants).
+    fn test_node_tombstoning() {
+        // Can delete, but not double-delete, a tombstoned node.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data
+            .apply(&create_numeric_property!(parent: 1, id: 2,
+            name: "answer", value: Number::IntT(42)))
+            .is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data.apply(&delete_property!(id: 2)).is_ok());
+        assert!(data.apply(&delete_property!(id: 2)).is_err());
+        // Can tombstone, then delete, then create.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data
+            .apply(&create_numeric_property!(parent: 1, id: 2,
+            name: "answer", value: Number::IntT(42)))
+            .is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data.apply(&delete_property!(id: 2)).is_ok());
+        assert!(data
+            .apply(&create_numeric_property!(parent: 0, id: 2,
+            name: "root_answer", value: Number::IntT(42)))
+            .is_ok());
+        // Cannot tombstone, then create.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data
+            .apply(&create_numeric_property!(parent: 1, id: 2,
+            name: "answer", value: Number::IntT(42)))
+            .is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data
+            .apply(&create_numeric_property!(parent: 0, id: 2,
+            name: "root_answer", value: Number::IntT(42)))
+            .is_err());
+    }
+
+    #[test]
+    fn test_property_tombstoning() {
+        // Make sure tombstoning works correctly (tracking implicitly deleted descendants).
+        // Can delete, but not double-delete, a tombstoned property.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data.apply(&create_node!(parent: 1, id: 2, name: "second")).is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data.apply(&delete_node!(id: 2)).is_ok());
+        assert!(data.apply(&delete_node!(id: 2)).is_err());
+        // Can tombstone, then delete, then create.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data.apply(&create_node!(parent: 1, id: 2, name: "second")).is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data.apply(&delete_node!(id: 2)).is_ok());
+        assert!(data.apply(&create_node!(parent: 0, id: 2, name: "new_root_second")).is_ok());
+        // Cannot tombstone, then create.
+        let mut data = Data::new();
+        assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
+        assert!(data.apply(&create_node!(parent: 1, id: 2, name: "second")).is_ok());
+        assert!(data.apply(&delete_node!(id: 1)).is_ok());
+        assert!(data.apply(&create_node!(parent: 0, id: 2, name: "new_root_second")).is_err());
     }
 
     #[test]

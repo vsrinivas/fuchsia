@@ -90,6 +90,7 @@ struct TrialMetrics {
     step_index: usize,
     trial_name: String,
     metrics: Metrics,
+    step_name: String,
 }
 
 impl Results {
@@ -112,8 +113,19 @@ impl Results {
         self.unimplemented.insert(format!("{}: {}", puppet_name, action.summary()));
     }
 
-    pub fn remember_metrics(&mut self, metrics: Metrics, trial_name: &str, step_index: usize) {
-        self.metrics.push(TrialMetrics { metrics, trial_name: trial_name.into(), step_index });
+    pub fn remember_metrics(
+        &mut self,
+        metrics: Metrics,
+        trial_name: &str,
+        step_index: usize,
+        step_name: &str,
+    ) {
+        self.metrics.push(TrialMetrics {
+            metrics,
+            trial_name: trial_name.into(),
+            step_index,
+            step_name: step_name.into(),
+        });
     }
 
     pub fn to_json(&self) -> String {
@@ -125,8 +137,12 @@ impl Results {
 
     fn print_pretty_metric(metric: &TrialMetrics) {
         println!(
-            "Name: \"{}\" Step: {} Blocks: {} Size: {}",
-            metric.trial_name, metric.step_index, metric.metrics.block_count, metric.metrics.size
+            "Trial: '{}' Step {}: '{}' Blocks: {} Size: {}",
+            metric.trial_name,
+            metric.step_index,
+            metric.step_name,
+            metric.metrics.block_count,
+            metric.metrics.size
         );
         println!("Count\tHeader\tData\tTotal\tData %\tType");
         for (name, statistics) in metric.metrics.block_statistics.iter() {
@@ -298,14 +314,11 @@ mod tests {
         // Recording the same sample twice should double all the values.
         metrics.record(&sample, metrics::BlockStatus::Used);
         metrics.record(&sample, metrics::BlockStatus::Used);
-        results.remember_metrics(metrics, "FooTrial", 42);
+        results.remember_metrics(metrics, "FooTrial", 42, "BarStep");
         let json = results.to_json();
-        assert!(
-            json.contains(
-                "\"metrics\":[{\"step_index\":42,\"trial_name\":\"FooTrial\",\"metrics\":"
-            ),
-            json
-        );
+        assert!(json
+            .contains("\"metrics\":[{\"step_index\":42,\"trial_name\":\"FooTrial\",\"metrics\":"));
+        assert!(json.contains("\"step_name\":\"BarStep\""));
         assert!(json.contains(
             "\"MyBlock(UNUSED)\":{\"count\":1,\"header_bytes\":8,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), json);
         assert!(json.contains(
