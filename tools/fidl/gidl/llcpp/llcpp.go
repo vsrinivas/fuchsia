@@ -36,7 +36,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{
 		{{ .ValueBuild }}
 
-		EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess({{ .ValueVarName }}, expected));
+		EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&{{ .ValueVarName }}, expected));
 	}
 }
 {{ end }}
@@ -50,7 +50,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	{
 		{{ .ValueBuild }}
 
-		EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess({{ .ValueVarName }}, std::move(bytes)));
+		EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&{{ .ValueVarName }}, std::move(bytes)));
 	}
 }
 {{ end }}
@@ -224,45 +224,19 @@ func (b *llcppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 
 func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
 	containerVar := b.newVar()
-	nullable := decl.IsNullable()
-	if nullable {
-		b.Builder.WriteString(fmt.Sprintf(
-			"llcpp::conformance::%s %s_pointee{};\n", value.Name, containerVar))
-		b.Builder.WriteString(fmt.Sprintf(
-			"auto %s = &%s_pointee;\n", containerVar, containerVar))
-	} else {
-		bufName := b.newVar()
-		b.Builder.WriteString(
-			fmt.Sprintf("char buf_%s[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::%s))];\n",
-				bufName, value.Name))
-		b.Builder.WriteString(
-			fmt.Sprintf("llcpp::conformance::%s* %s = new (buf_%s) llcpp::conformance::%s();\n",
-				value.Name, containerVar, bufName, value.Name))
-	}
-
+	b.Builder.WriteString(fmt.Sprintf(
+		"llcpp::conformance::%s %s{};\n", value.Name, containerVar))
 	for _, field := range value.Fields {
 		fieldDecl, _ := decl.ForKey(field.Key)
-		fieldNullable := fieldDecl.IsNullable()
 		gidlmixer.Visit(b, field.Value, fieldDecl)
-		fieldVar := b.lastVar
-
-		var rhs string
-		if _, isStruct := fieldDecl.(*gidlmixer.StructDecl); isStruct {
-			if fieldNullable {
-				rhs = fieldVar
-			} else {
-				rhs = fmt.Sprintf("std::move(*%s)", fieldVar)
-			}
-		} else if _, isXUnion := fieldDecl.(*gidlmixer.XUnionDecl); fieldNullable && !isXUnion {
-			rhs = fmt.Sprintf("&%s", fieldVar)
-		} else {
-			rhs = fmt.Sprintf("std::move(%s)", fieldVar)
-		}
-
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s->%s = %s;\n", containerVar, field.Key.Name, rhs))
+			"%s.%s = std::move(%s);\n", containerVar, field.Key.Name, b.lastVar))
 	}
-	b.lastVar = containerVar
+	if decl.IsNullable() {
+		b.lastVar = "&" + containerVar
+	} else {
+		b.lastVar = containerVar
+	}
 }
 
 func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
@@ -278,14 +252,8 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
-
-		if _, ok := fieldDecl.(*gidlmixer.StructDecl); ok {
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(%s);\n", builderVar, field.Key.Name, fieldVar))
-		} else {
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(&%s);\n", builderVar, field.Key.Name, fieldVar))
-		}
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.set_%s(&%s);\n", builderVar, field.Key.Name, fieldVar))
 	}
 	tableVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
@@ -307,14 +275,8 @@ func (b *llcppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnion
 		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
-
-		if _, ok := fieldDecl.(*gidlmixer.StructDecl); ok {
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(%s);\n", containerVar, field.Key.Name, fieldVar))
-		} else {
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
-		}
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
 	}
 	b.lastVar = containerVar
 }
@@ -323,6 +285,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"llcpp::conformance::%s %s;\n", value.Name, containerVar))
+
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
 			panic("unknown field not supported")
@@ -330,32 +293,22 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
-
-		switch fieldDecl.(type) {
-		case *gidlmixer.StringDecl:
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(std::move(%s));\n", containerVar, field.Key.Name, fieldVar))
-		case *gidlmixer.StructDecl:
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(*%s);\n", containerVar, field.Key.Name, fieldVar))
-		default:
-			b.Builder.WriteString(fmt.Sprintf(
-				"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
-		}
+		b.Builder.WriteString(fmt.Sprintf(
+			"%s.set_%s(std::move(%s));\n", containerVar, field.Key.Name, fieldVar))
 	}
-	b.lastVar = containerVar
+	if decl.IsNullable() {
+		b.lastVar = "&" + containerVar
+	} else {
+		b.lastVar = containerVar
+	}
 }
 
 func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
 	var elements []string
 	elemDecl, _ := decl.Elem()
-	dereference := ""
-	if _, ok := elemDecl.(*gidlmixer.StructDecl); ok && !elemDecl.IsNullable() {
-		dereference = "*"
-	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, dereference+b.lastVar)
+		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
 	}
 	sliceVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
@@ -374,13 +327,9 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	}
 	var elements []string
 	elemDecl, _ := decl.Elem()
-	dereference := ""
-	if _, ok := elemDecl.(*gidlmixer.StructDecl); ok && !elemDecl.IsNullable() {
-		dereference = "*"
-	}
 	for _, item := range value {
 		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, dereference+b.lastVar)
+		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
 	}
 	arrayVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
