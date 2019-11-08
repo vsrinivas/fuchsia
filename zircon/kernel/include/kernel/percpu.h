@@ -19,6 +19,7 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <ktl/forward.h>
+#include <lockdep/thread_lock_state.h>
 #include <vm/page_state.h>
 
 struct percpu {
@@ -46,7 +47,7 @@ struct percpu {
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in irq context
-  lockdep_state_t lock_state;
+  lockdep::ThreadLockState lock_state;
 #endif
 
   // thread/cpu level statistics

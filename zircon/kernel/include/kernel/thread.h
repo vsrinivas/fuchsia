@@ -24,6 +24,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
+#include <lockdep/thread_lock_state.h>
 #include <vm/kstack.h>
 
 // fwd decls
@@ -83,16 +84,6 @@ typedef void (*thread_tls_callback_t)(void* tls_value);
 #define THREAD_MAX_TLS_ENTRY 2
 
 struct vmm_aspace;
-
-// This is a parallel structure to lockdep::ThreadLockState to work around the
-// fact that this header is included by C code and cannot reference C++ types
-// directly. This structure MUST NOT be touched by code outside of the lockdep
-// implementation and MUST be kept in sync with the C++ counterpart.
-typedef struct lockdep_state {
-  uintptr_t acquired_locks;
-  uint16_t reporting_disabled_count;
-  uint8_t last_result;
-} lockdep_state_t;
 
 struct thread_t {
   // Default constructor/destructor declared to be not-inline in order to
@@ -161,7 +152,7 @@ struct thread_t {
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context
-  lockdep_state_t lock_state;
+  lockdep::ThreadLockState lock_state;
 #endif
 
   // pointer to the kernel address space this thread is associated with
@@ -380,8 +371,7 @@ void thread_kill(thread_t* t);
 static inline bool thread_is_signaled(thread_t* t) { return t->signals != 0; }
 
 // Call the arch-specific signal handler.
-extern "C"
-void arch_iframe_process_pending_signals(iframe_t* iframe);
+extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 
 // process pending signals, may never return because of kill signal
 void thread_process_pending_signals(void);

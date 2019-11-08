@@ -67,6 +67,12 @@ class AcquiredLockEntry : public fbl::DoublyLinkedListable<AcquiredLockEntry*> {
 // release operations.
 class ThreadLockState {
  public:
+  ThreadLockState() = default;
+  ~ThreadLockState() = default;
+
+  ThreadLockState(const ThreadLockState&) = delete;
+  ThreadLockState& operator=(const ThreadLockState&) = delete;
+
   // Returns the ThreadLockState instance for the current thread.
   static ThreadLockState* Get() { return SystemGetThreadLockState(); }
 
@@ -150,11 +156,6 @@ class ThreadLockState {
   friend ThreadLockState* SystemGetThreadLockState();
   friend void SystemInitThreadLockState(ThreadLockState*);
   friend void AcquiredLockEntry::Replace(AcquiredLockEntry*);
-
-  ThreadLockState() = default;
-  ~ThreadLockState() = default;
-  ThreadLockState(const ThreadLockState&) = delete;
-  void operator=(const ThreadLockState&) = delete;
 
   // Replaces the given original entry with the replacement entry. This permits
   // lock entries to be allocated on the stack and migrate between stack

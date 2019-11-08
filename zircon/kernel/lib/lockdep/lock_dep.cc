@@ -21,10 +21,6 @@
 #include <lockdep/lockdep.h>
 #include <vm/vm.h>
 
-// Always assert to catch changes when lockdep is not enabled.
-static_assert(sizeof(lockdep_state_t) == sizeof(lockdep::ThreadLockState),
-              "lockdep_state_t and lockdep::ThreadLockState out of sync!");
-
 #if WITH_LOCK_DEP
 
 namespace {
@@ -102,11 +98,6 @@ int CommandLockDep(int argc, const cmd_args* argv, uint32_t flags) {
   return 0;
 }
 
-// Utility to cast from lockdep_state_t* to ThreadLockState*.
-inline lockdep::ThreadLockState* ToThreadLockState(lockdep_state_t* state) {
-  return reinterpret_cast<lockdep::ThreadLockState*>(state);
-}
-
 }  // anonymous namespace
 
 STATIC_COMMAND_START
@@ -166,18 +157,14 @@ void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
 // Returns a pointer to the ThreadLockState instance for the current thread when
 // thread context or for the current CPU when in irq context.
 ThreadLockState* SystemGetThreadLockState() {
-  ThreadLockState* state;
-
-  if (arch_blocking_disallowed())
-    state = ToThreadLockState(&get_local_percpu()->lock_state);
-  else
-    state = ToThreadLockState(&get_current_thread()->lock_state);
-
-  return state;
+  if (arch_blocking_disallowed()) {
+    return &get_local_percpu()->lock_state;
+  }
+  return &get_current_thread()->lock_state;
 }
 
 // Initializes an instance of ThreadLockState.
-void SystemInitThreadLockState(ThreadLockState* state) { new (state) ThreadLockState(); }
+void SystemInitThreadLockState(ThreadLockState*) {}
 
 // Wakes up the loop detector thread to re-evaluate the dependency graph.
 void SystemTriggerLoopDetection() { event_signal(&graph_edge_event, /*reschedule=*/false); }
