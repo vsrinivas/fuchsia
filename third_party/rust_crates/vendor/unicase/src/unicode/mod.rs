@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use self::map::lookup;
 mod map;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Unicode<S>(pub S);
 
 impl<S1: AsRef<str>, S2: AsRef<str>> PartialEq<Unicode<S2>> for Unicode<S1> {

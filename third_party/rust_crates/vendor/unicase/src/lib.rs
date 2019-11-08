@@ -1,11 +1,11 @@
 #![cfg_attr(test, deny(missing_docs))]
 #![cfg_attr(test, deny(warnings))]
-#![doc(html_root_url = "https://docs.rs/unicase/2.2.0")]
+#![doc(html_root_url = "https://docs.rs/unicase/2.5.1")]
 #![cfg_attr(feature = "nightly", feature(test))]
 
 //! # UniCase
 //!
-//! UniCase provices a way of specifying strings that are case-insensitive.
+//! UniCase provides a way of specifying strings that are case-insensitive.
 //!
 //! UniCase supports full [Unicode case
 //! folding](https://www.w3.org/International/wiki/Case_folding). It can also
@@ -45,6 +45,7 @@
 #[cfg(feature = "nightly")]
 extern crate test;
 
+use std::borrow::Cow;
 #[cfg(__unicase__iter_cmp)]
 use std::cmp::Ordering;
 use std::fmt;
@@ -62,7 +63,7 @@ mod unicode;
 pub struct UniCase<S>(Encoding<S>);
 
 /// Case Insensitive wrapper of Ascii strings.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Ascii<S>(S);
 
 /// Compare two string-like types for case-less equality, using unicode folding.
@@ -106,6 +107,12 @@ macro_rules! inner {
     });
 }
 
+impl<S: AsRef<str> + Default> Default for UniCase<S> {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
 impl<S: AsRef<str>> UniCase<S> {
     /// Creates a new `UniCase`.
     ///
@@ -119,10 +126,52 @@ impl<S: AsRef<str>> UniCase<S> {
             UniCase(Encoding::Unicode(Unicode(s)))
         }
     }
+}
+
+impl<S> UniCase<S> {
+    /// Creates a new `UniCase`, skipping the ASCII check.
+    #[cfg(__unicase__const_fns)]
+    pub const fn unicode(s: S) -> UniCase<S> {
+        UniCase(Encoding::Unicode(Unicode(s)))
+    }
 
     /// Creates a new `UniCase`, skipping the ASCII check.
+    ///
+    /// For Rust versions >= 1.31, this is a `const fn`.
+    #[cfg(not(__unicase__const_fns))]
     pub fn unicode(s: S) -> UniCase<S> {
         UniCase(Encoding::Unicode(Unicode(s)))
+    }
+
+    /// Creates a new `UniCase` which performs only ASCII case folding.
+    #[cfg(__unicase__const_fns)]
+    pub const fn ascii(s: S) -> UniCase<S> {
+        UniCase(Encoding::Ascii(Ascii(s)))
+    }
+
+    /// Creates a new `UniCase` which performs only ASCII case folding.
+    ///
+    /// For Rust versions >= 1.31, this is a `const fn`.
+    #[cfg(not(__unicase__const_fns))]
+    pub fn ascii(s: S) -> UniCase<S> {
+        UniCase(Encoding::Ascii(Ascii(s)))
+    }
+
+    /// Return `true` if this instance will only perform ASCII case folding.
+    pub fn is_ascii(&self) -> bool {
+        match self.0 {
+            Encoding::Ascii(_) => true,
+            Encoding::Unicode(_) => false,
+        }
+    }
+
+    /// Unwraps the inner value held by this `UniCase`.
+    #[inline]
+    pub fn into_inner(self) -> S {
+        match self.0 {
+            Encoding::Ascii(s) => s.0,
+            Encoding::Unicode(s) => s.0,
+        }
     }
 }
 
@@ -188,6 +237,12 @@ impl<S: AsRef<str>> Hash for UniCase<S> {
     }
 }
 
+impl<S> From<Ascii<S>> for UniCase<S> {
+    fn from(ascii: Ascii<S>) -> Self {
+        UniCase(Encoding::Ascii(ascii))
+    }
+}
+
 macro_rules! from_impl {
     ($from:ty => $to:ty; $by:ident) => (
         impl<'a> From<$from> for UniCase<$to> {
@@ -203,22 +258,27 @@ macro_rules! into_impl {
     ($to:ty) => (
         impl<'a> Into<$to> for UniCase<$to> {
             fn into(self) -> $to {
-                match self.0 {
-                    Encoding::Ascii(Ascii(s)) => s,
-                    Encoding::Unicode(Unicode(s)) => s,
-                }
+                self.into_inner()
             }
         }
     );
 }
 
-from_impl!(&'a str => &'a str);
+impl<S: AsRef<str>> From<S> for UniCase<S> {
+    fn from(s: S) -> Self {
+        UniCase::unicode(s)
+    }
+}
+
+from_impl!(&'a str => Cow<'a, str>);
+from_impl!(String => Cow<'a, str>);
 from_impl!(&'a str => String);
+from_impl!(Cow<'a, str> => String; into_owned);
 from_impl!(&'a String => &'a str; as_ref);
-from_impl!(String => String);
 
 into_impl!(&'a str);
 into_impl!(String);
+into_impl!(Cow<'a, str>);
 
 #[cfg(__unicase__iter_cmp)]
 impl<T: AsRef<str>> PartialOrd for UniCase<T> {
@@ -278,9 +338,15 @@ mod tests {
     fn test_eq_ascii() {
         let a = UniCase::new("foobar");
         let b = UniCase::new("FOOBAR");
+        let c = UniCase::ascii("FoObAr");
 
         assert_eq!(a, b);
+        assert_eq!(a, c);
         assert_eq!(hash(&a), hash(&b));
+        assert_eq!(hash(&a), hash(&c));
+        assert!(a.is_ascii());
+        assert!(b.is_ascii());
+        assert!(c.is_ascii());
     }
 
     #[test]
@@ -306,7 +372,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[inline(never)]
     fn is_ascii(bytes: &[u8]) -> bool {
-        #[allow(unused)]
+        #[allow(unused, deprecated)]
         use std::ascii::AsciiExt;
         bytes.is_ascii()
     }
@@ -356,5 +422,11 @@ mod tests {
         let owned: UniCase<String> = "foobar".into();
         let _: String = owned.clone().into();
         let _: &str = owned.as_ref();
+    }
+
+    #[cfg(__unicase__const_fns)]
+    #[test]
+    fn test_unicase_unicode_const() {
+        const _UNICASE: UniCase<&'static str> = UniCase::unicode("");
     }
 }

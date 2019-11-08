@@ -7,12 +7,37 @@ use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
-use super::Ascii;
+use super::{Ascii, Encoding, UniCase};
 
 impl<S> Ascii<S> {
     #[inline]
+    #[cfg(__unicase__const_fns)]
+    pub const fn new(s: S) -> Ascii<S> {
+        Ascii(s)
+    }
+
+    /// Construct a new `Ascii`.
+    ///
+    /// For Rust versions >= 1.31, this is a `const fn`.
+    #[inline]
+    #[cfg(not(__unicase__const_fns))]
     pub fn new(s: S) -> Ascii<S> {
         Ascii(s)
+    }
+
+    #[cfg(__unicase_const_fns)]
+    pub const fn into_unicase(self) -> UniCase<S> {
+        UniCase(Encoding::Ascii(self))
+    }
+
+    #[cfg(not(__unicase_const_fns))]
+    pub fn into_unicase(self) -> UniCase<S> {
+        UniCase(Encoding::Ascii(self))
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> S {
+        self.0
     }
 }
 
@@ -150,5 +175,11 @@ mod tests {
 
         assert!(Ascii("a") < Ascii("aa"));
         assert!(Ascii("a") < Ascii("AA"));
+    }
+
+    #[cfg(__unicase__const_fns)]
+    #[test]
+    fn test_ascii_new_const() {
+        const _ASCII: Ascii<&'static str> = Ascii::new("");
     }
 }
