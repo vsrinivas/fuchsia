@@ -55,7 +55,8 @@ struct NumberCollision {
     string:1 f;
 };
 
-// MyUnion & MyUnionContainer below are designed to test the alt_type pointers in the coding tables.
+// MyUnion & MyUnionContainer below are designed to test the alt_type pointers in the coding tables,
+// and sizing of optional (nullable) unions.
 union MyUnion {
     1: uint8 one;
     2: uint16 two;
@@ -64,6 +65,7 @@ union MyUnion {
 struct MyUnionContainer {
     MyUnion u;
     array<MyUnion>:5 a;
+    array<MyUnion?>:5 a2;
     vector<MyUnion>:7 v;
 };
 

@@ -15,3 +15,7 @@ union ExplicitUnion {
     1: int32 Primitive;
     3: string StringNeedsConstructor;
 };
+
+struct NullableUnionStruct {
+    Union? the_union;
+};

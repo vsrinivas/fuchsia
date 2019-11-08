@@ -138,8 +138,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             return iter->second;
           }
           auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
-          auto struct_pointer_type = std::make_unique<coded::PointerType>(
-              NamePointer(coded_struct_type->coded_name, wire_format), coded_struct_type);
+          auto struct_pointer_type = std::make_unique<coded::StructPointerType>(
+              NamePointer(coded_struct_type->coded_name, wire_format), coded_struct_type,
+              identifier_type->typeshape(wire_format).inline_size);
           coded_struct_type->maybe_reference_type = struct_pointer_type.get();
           struct_type_map_[identifier_type] = struct_pointer_type.get();
           coded_types_.push_back(std::move(struct_pointer_type));
@@ -160,8 +161,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             return iter->second;
           }
           auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
-          auto union_pointer_type = std::make_unique<coded::PointerType>(
-              NamePointer(coded_union_type->coded_name, wire_format), coded_union_type);
+          auto union_pointer_type = std::make_unique<coded::UnionPointerType>(
+              NamePointer(coded_union_type->coded_name, wire_format), coded_union_type,
+              identifier_type->typeshape(wire_format).inline_size);
           coded_union_type->maybe_reference_type = union_pointer_type.get();
           union_type_map_[identifier_type] = union_pointer_type.get();
           coded_types_.push_back(std::move(union_pointer_type));
@@ -229,12 +231,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
             auto coded_parameter_type = CompileType(
                 parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
-              request_fields.emplace_back(coded_parameter_type,
-                                          parameter.typeshape(wire_format).InlineSize(),
-                                          parameter.fieldshape(wire_format).Offset(),
-                                          parameter.fieldshape(wire_format).Padding(),
-                                          coded_message.get(),
-                                          field_num);
+              request_fields.emplace_back(
+                  coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
+                  parameter.fieldshape(wire_format).Offset(),
+                  parameter.fieldshape(wire_format).Padding(), coded_message.get(), field_num);
             field_num++;
           }
           // We move the coded_message to coded_types_ so that we'll generate tables for the
@@ -272,16 +272,13 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           assert(!is_primitive && "No primitive in struct coding table!");
           struct_fields.emplace_back(coded_member_type, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding(),
-                                     coded_struct,
+                                     member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
         } else if (member.fieldshape(wire_format).Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr,
-                                     member.typeshape(wire_format).InlineSize(),
+          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding(),
-                                     coded_struct,
+                                     member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
         }
         field_num++;

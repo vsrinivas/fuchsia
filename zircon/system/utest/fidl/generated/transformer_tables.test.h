@@ -734,7 +734,7 @@ constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnul
 static const fidl_type_t v1_Vector4294967295nonnullable29v1_example_UnionSize8Aligned4Table = fidl_type_t(::fidl::FidlCodedVector(&v1_example_UnionSize8Aligned4Table, 4294967295u, 24u, ::fidl::kNonnullable, v1_Vector4294967295nonnullable29v1_example_UnionSize8Aligned4AltTypePointerTable()));
 
 constexpr static inline const ::fidl::FidlCodedVector* v1_Vector3nonnullable34v1_Pointer22v1_example_StringUnionAltTypePointerTable() __attribute__((unused));
-static const fidl_type_t v1_Vector3nonnullable34v1_Pointer22v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedVector(&v1_Pointer22v1_example_StringUnionTable, 3u, 8u, ::fidl::kNonnullable, v1_Vector3nonnullable34v1_Pointer22v1_example_StringUnionAltTypePointerTable()));
+static const fidl_type_t v1_Vector3nonnullable34v1_Pointer22v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedVector(&v1_Pointer22v1_example_StringUnionTable, 3u, 24u, ::fidl::kNonnullable, v1_Vector3nonnullable34v1_Pointer22v1_example_StringUnionAltTypePointerTable()));
 
 extern const fidl_type_t v1_example_StringUnionStructWrapperProtocolTheMethodRequestTable;
 constexpr static inline const ::fidl::FidlStructField* Fields59v1_example_StringUnionStructWrapperProtocolTheMethodRequest_field0_alt_field() __attribute__((unused));

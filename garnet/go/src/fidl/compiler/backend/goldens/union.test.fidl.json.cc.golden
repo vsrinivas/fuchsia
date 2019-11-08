@@ -194,6 +194,29 @@ void Union::set_StringNeedsConstructor(::std::string value) {
 void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
   value_.emplace<static_cast<size_t>(Tag::kVectorStringAlsoNeedsConstructor) + 1>(std::move(value));
 }
+extern "C" const fidl_type_t test_name_NullableUnionStructTable;
+const fidl_type_t* NullableUnionStruct::FidlType = &test_name_NullableUnionStructTable;
+extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
+const fidl_type_t* NullableUnionStruct::FidlTypeV1 = &v1_test_name_NullableUnionStructTable;
+
+void NullableUnionStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &the_union, _offset + 0);
+  } else {
+    ::fidl::Encode(_encoder, &the_union, _offset + 0);
+  }
+}
+
+void NullableUnionStruct::Decode(::fidl::Decoder* _decoder, NullableUnionStruct* value, size_t _offset) {
+  ::fidl::Decode(_decoder, &value->the_union, _offset + 0);
+}
+
+zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
+  zx_status_t _status = ::fidl::Clone(the_union, &_result->the_union);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
 FieldCollision::FieldCollision() : value_() {}
 
 FieldCollision::~FieldCollision() {

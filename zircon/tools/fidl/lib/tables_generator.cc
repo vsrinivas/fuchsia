@@ -325,26 +325,20 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, "));\n\n");
 }
 
-void TablesGenerator::Generate(const coded::PointerType& pointer) {
-  switch (pointer.element_type->kind) {
-    case coded::Type::Kind::kStruct:
-      Emit(&tables_file_, "static const fidl_type_t ");
-      Emit(&tables_file_, NameTable(pointer.coded_name));
-      Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(");
-      Generate(pointer.element_type);
-      Emit(&tables_file_, ".coded_struct));\n");
-      break;
-    case coded::Type::Kind::kUnion:
-      Emit(&tables_file_, "static const fidl_type_t ");
-      Emit(&tables_file_, NameTable(pointer.coded_name));
-      Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(");
-      Generate(pointer.element_type);
-      Emit(&tables_file_, ".coded_union));\n");
-      break;
-    default:
-      assert(false && "Invalid pointer element type.");
-      break;
-  }
+void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(pointer.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(");
+  Generate(pointer.element_type);
+  Emit(&tables_file_, ".coded_struct));\n");
+}
+
+void TablesGenerator::Generate(const coded::UnionPointerType& pointer) {
+  Emit(&tables_file_, "static const fidl_type_t ");
+  Emit(&tables_file_, NameTable(pointer.coded_name));
+  Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(");
+  Generate(pointer.element_type);
+  Emit(&tables_file_, ".coded_union));\n");
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
@@ -786,8 +780,8 @@ std::ostringstream TablesGenerator::Produce() {
 namespace {
 
 std::map<uint32_t, uint32_t> MapFieldNumToAltFieldIndexInCodedStruct(
-      const std::vector<coded::StructField>& fields,
-      const std::vector<coded::StructField>& alt_fields) {
+    const std::vector<coded::StructField>& fields,
+    const std::vector<coded::StructField>& alt_fields) {
   std::map<uint32_t, uint32_t> mapping;
   for (auto field : fields) {
     uint32_t alt_field_index_in_coded_struct = 0;
@@ -802,7 +796,7 @@ std::map<uint32_t, uint32_t> MapFieldNumToAltFieldIndexInCodedStruct(
   return mapping;
 }
 
-}
+}  // namespace
 
 // TODO(fxb/7704): Remove templatization when message_type can only be coded struct.
 template <typename T>
@@ -816,8 +810,8 @@ void TablesGenerator::ProduceStructFieldLinking(const T& old, const T& v1) {
       }
       uint32_t alt_field_index =
           field_num_to_alt_field_index_in_coded_struct.find(field.field_num)->second;
-      Emit(&tables_file_, AltStructFieldDefinition(struct_type, field,
-                                                   alt_struct_type, alt_field_index));
+      Emit(&tables_file_,
+           AltStructFieldDefinition(struct_type, field, alt_struct_type, alt_field_index));
     }
   };
   ProductLinksForFields(old, v1);

@@ -246,30 +246,32 @@ TEST(ForeignXUnions, CodingTable) {
 }
 
 TEST(AltTypes, CodingTable) {
-  // These extern definitions are not exposed by the C coding table headers, which expose the coding
-  // tables for method requests & responses only.
-  extern const fidl_type_t fidl_test_example_codingtables_MyUnionTable;
+  // There are extern declarations here, since those declarations are not exposed by the C coding
+  // table headers, which expose the coding tables for method requests & responses only.
   extern const fidl_type_t fidl_test_example_codingtables_MyUnionContainerTable;
-  extern const fidl_type_t v1_fidl_test_example_codingtables_MyUnionTable;
   extern const fidl_type_t v1_fidl_test_example_codingtables_MyUnionContainerTable;
+  extern const fidl_type_t fidl_test_example_codingtables_MyUnionTable;
+  extern const fidl_type_t v1_fidl_test_example_codingtables_MyUnionTable;
 
   const fidl::FidlCodedStruct& old_struct =
       fidl_test_example_codingtables_MyUnionContainerTable.coded_struct;
   ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnionContainer", old_struct.name);
-  ASSERT_EQ(3, old_struct.field_count);
+  ASSERT_EQ(4, old_struct.field_count);
   ASSERT_EQ(0, old_struct.fields[0].offset);
   ASSERT_EQ(8, old_struct.fields[1].offset);
   ASSERT_EQ(48, old_struct.fields[2].offset);
+  ASSERT_EQ(88, old_struct.fields[3].offset);
 
   ASSERT_EQ(&v1_fidl_test_example_codingtables_MyUnionContainerTable.coded_struct,
             old_struct.alt_type);
   const fidl::FidlCodedStruct& v1_struct = *(old_struct.alt_type);
   ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnionContainer", v1_struct.name);
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionContainerTable.coded_struct, v1_struct.alt_type);
-  ASSERT_EQ(3, v1_struct.field_count);
+  ASSERT_EQ(4, v1_struct.field_count);
   ASSERT_EQ(0, v1_struct.fields[0].offset);
   ASSERT_EQ(24, v1_struct.fields[1].offset);
   ASSERT_EQ(144, v1_struct.fields[2].offset);
+  ASSERT_EQ(264, v1_struct.fields[3].offset);
 
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionTable, old_struct.fields[0].type);
   const fidl::FidlCodedUnion& old_union = old_struct.fields[0].type->coded_union;
@@ -295,7 +297,22 @@ TEST(AltTypes, CodingTable) {
   ASSERT_EQ(120, v1_array.array_size);
   ASSERT_EQ(24, v1_array.element_size);
 
-  const fidl::FidlCodedVector& old_vector = old_struct.fields[2].type->coded_vector;
+  const fidl::FidlCodedArray& old_optional_array = old_struct.fields[2].type->coded_array;
+  ASSERT_EQ(fidl::kFidlTypeUnionPointer, old_optional_array.element->type_tag);
+  ASSERT_EQ(&fidl_test_example_codingtables_MyUnionTable.coded_union,
+            old_optional_array.element->coded_union_pointer.union_type);
+  ASSERT_EQ(40, old_optional_array.array_size);
+  ASSERT_EQ(8, old_optional_array.element_size);
+
+  const fidl::FidlCodedArray& v1_optional_array = *old_optional_array.alt_type;
+  ASSERT_EQ(fidl::kFidlTypeUnionPointer, v1_optional_array.element->type_tag);
+  ASSERT_EQ(&v1_fidl_test_example_codingtables_MyUnionTable.coded_union,
+            v1_optional_array.element->coded_union_pointer.union_type);
+  ASSERT_EQ(&old_optional_array, v1_optional_array.alt_type);
+  ASSERT_EQ(120, v1_optional_array.array_size);
+  ASSERT_EQ(24, v1_optional_array.element_size);
+
+  const fidl::FidlCodedVector& old_vector = old_struct.fields[3].type->coded_vector;
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionTable, old_vector.element);
   ASSERT_EQ(7, old_vector.max_count);
   ASSERT_EQ(8, old_vector.element_size);

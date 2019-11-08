@@ -70,8 +70,12 @@ struct StructType;
 struct StructField {
   StructField(const Type* type, uint32_t size, uint32_t offset, uint32_t padding,
               const Type* struct_type, uint32_t field_num)
-      : type(type), size(size), offset(offset), padding(padding),
-        struct_type(struct_type), field_num(field_num) {}
+      : type(type),
+        size(size),
+        offset(offset),
+        padding(padding),
+        struct_type(struct_type),
+        field_num(field_num) {}
 
   const Type* type;
   const uint32_t size;
@@ -203,12 +207,7 @@ struct RequestHandleType : public Type {
   const types::Nullability nullability;
 };
 
-struct PointerType : public Type {
-  PointerType(std::string name, const Type* type)
-      : Type(Kind::kPointer, std::move(name), 8u, CodingNeeded::kAlways), element_type(type) {}
-
-  const Type* element_type;
-};
+struct StructPointerType;
 
 struct StructType : public Type {
   StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
@@ -218,8 +217,20 @@ struct StructType : public Type {
 
   std::vector<StructField> fields;
   std::string qname;
-  PointerType* maybe_reference_type = nullptr;
+  StructPointerType* maybe_reference_type = nullptr;
 };
+
+struct StructPointerType : public Type {
+  StructPointerType(std::string name, const Type* type, const uint32_t pointer_size)
+      : Type(Kind::kPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+        element_type(static_cast<const StructType*>(type)) {
+    assert(type->kind == Type::Kind::kStruct);
+  }
+
+  const StructType* element_type;
+};
+
+struct UnionPointerType;
 
 struct UnionType : public Type {
   UnionType(std::string name, std::vector<UnionField> members, uint32_t data_offset, uint32_t size,
@@ -232,7 +243,17 @@ struct UnionType : public Type {
   std::vector<UnionField> members;
   const uint32_t data_offset;
   std::string qname;
-  PointerType* maybe_reference_type = nullptr;
+  UnionPointerType* maybe_reference_type = nullptr;
+};
+
+struct UnionPointerType : public Type {
+  UnionPointerType(std::string name, const Type* type, const uint32_t pointer_size)
+      : Type(Kind::kPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+        element_type(static_cast<const UnionType*>(type)) {
+    assert(type->kind == Type::Kind::kUnion);
+  }
+
+  const UnionType* element_type;
 };
 
 struct TableType : public Type {

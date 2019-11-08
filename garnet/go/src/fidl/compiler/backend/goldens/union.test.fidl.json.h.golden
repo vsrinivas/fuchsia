@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 class Union;
+class NullableUnionStruct;
 class FieldCollision;
 class ExplicitUnion;
 
@@ -108,6 +109,27 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 }
 
 using UnionPtr = ::std::unique_ptr<Union>;
+
+class NullableUnionStruct final {
+ public:
+  static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlTypeV1;
+  
+  ::std::unique_ptr<Union> the_union{};
+
+  static inline ::std::unique_ptr<NullableUnionStruct> New() { return ::std::make_unique<NullableUnionStruct>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, NullableUnionStruct* value, size_t _offset);
+  zx_status_t Clone(NullableUnionStruct* result) const;
+};
+
+inline zx_status_t Clone(const ::test::name::NullableUnionStruct& _value,
+                         ::test::name::NullableUnionStruct* _result) {
+  return _value.Clone(_result);
+}
+
+using NullableUnionStructPtr = ::std::unique_ptr<NullableUnionStruct>;
 
 class FieldCollision final {
  public:
@@ -291,6 +313,24 @@ struct Equality<::test::name::Union> {
       default:
 	return false;
     }
+  }
+};
+template <>
+struct CodingTraits<::test::name::NullableUnionStruct>
+    : public EncodableCodingTraits<::test::name::NullableUnionStruct, 8, 24> {};
+
+inline zx_status_t Clone(const ::test::name::NullableUnionStruct& value,
+                         ::test::name::NullableUnionStruct* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::NullableUnionStruct> {
+  static inline bool Equals(const ::test::name::NullableUnionStruct& _lhs, const ::test::name::NullableUnionStruct& _rhs) {
+    if (!::fidl::Equals(_lhs.the_union, _rhs.the_union)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>
