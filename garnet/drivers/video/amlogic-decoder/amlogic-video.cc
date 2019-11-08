@@ -184,15 +184,15 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
   }
 }
 
-zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
-                                               bool use_parser, bool is_secure) {
+zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size, bool use_parser,
+                                               bool is_secure) {
   // So far, is_secure can only be true if use_parser is also true.
   ZX_DEBUG_ASSERT(!is_secure || use_parser);
   // is_writable is always true because we either need to write into this buffer using the CPU, or
   // using the parser - either way we'll be writing.
-  auto create_result = InternalBuffer::Create(
-      "AMLStreamBuffer", &sysmem_sync_ptr_, zx::unowned_bti(bti_), size,
-      is_secure, /*is_writable=*/true, /*is_mapping_needed=*/!use_parser);
+  auto create_result =
+      InternalBuffer::Create("AMLStreamBuffer", &sysmem_sync_ptr_, zx::unowned_bti(bti_), size,
+                             is_secure, /*is_writable=*/true, /*is_mapping_needed=*/!use_parser);
   if (!create_result.is_ok()) {
     DECODE_ERROR("Failed to make video fifo: %d", create_result.error());
     return create_result.error();
@@ -207,8 +207,7 @@ zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t si
 
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
   uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
-  core_->InitializeStreamInput(use_parser, buffer_address,
-                               stream_buffer_->buffer().size());
+  core_->InitializeStreamInput(use_parser, buffer_address, stream_buffer_->buffer().size());
 }
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure) {
@@ -430,18 +429,15 @@ zx_status_t AmlogicVideo::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
       .set_command(ParserControl::kAutoSearch)
       .WriteTo(parser_.get());
 
-  ParserFetchAddr::Get()
-      .FromValue(truncate_to_32(paddr))
-      .WriteTo(parser_.get());
+  ParserFetchAddr::Get().FromValue(truncate_to_32(paddr)).WriteTo(parser_.get());
   ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(parser_.get());
 
   // The parser finished interrupt shouldn't be signalled until after
   // es_pack_size data has been read.  The parser cancellation bit should not
   // be set because that bit is never set while parser_running_ is false
   // (ignoring transients while under parser_running_lock_).
-  ZX_ASSERT(ZX_ERR_TIMED_OUT ==
-            parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
-                                            zx::time(), nullptr));
+  ZX_ASSERT(ZX_ERR_TIMED_OUT == parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
+                                                                zx::time(), nullptr));
 
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
@@ -589,8 +585,8 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   // restore.
   if (!current_instance_->input_context()) {
     current_instance_->InitializeInputContext();
-    if (core_->InitializeInputContext(
-        current_instance_->input_context(), current_instance_->decoder()->is_secure()) != ZX_OK) {
+    if (core_->InitializeInputContext(current_instance_->input_context(),
+                                      current_instance_->decoder()->is_secure()) != ZX_OK) {
       // TODO: exit cleanly
       exit(-1);
     }
@@ -661,8 +657,8 @@ void AmlogicVideo::SwapInCurrentInstance() {
     // that spot.
     // Generally data will only be added after this decoder is swapped in, so
     // RestoreInputContext will handle that state.
-    core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() +
-                              stream_buffer_->data_size() + stream_buffer_->padding_size());
+    core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + stream_buffer_->data_size() +
+                              stream_buffer_->padding_size());
   } else {
     core_->RestoreInputContext(current_instance_->input_context());
   }

@@ -29,12 +29,12 @@ class FakeDecoderCore : public DecoderCore {
 
 class FakeOwner : public VideoDecoder::Owner {
  public:
-  FakeOwner(DosRegisterIo* dosbus) : dosbus_(dosbus) {
+  FakeOwner(DosRegisterIo* dosbus, AmlogicVideo* video) : dosbus_(dosbus), video_(video) {
     blob_.LoadFakeFirmwareForTesting(FirmwareBlob::FirmwareType::kVp9Mmu, nullptr, 0);
   }
 
   DosRegisterIo* dosbus() override { return dosbus_; }
-  zx::unowned_bti bti() override { return zx::unowned_bti(); }
+  zx::unowned_bti bti() override { return video_->bti(); }
   DeviceType device_type() override { return DeviceType::kGXM; }
   FirmwareBlob* firmware_blob() override { return &blob_; }
   std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,
@@ -57,7 +57,9 @@ class FakeOwner : public VideoDecoder::Owner {
     }
     return ZX_OK;
   }
-  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override { return sysmem_sync_ptr_; }
+  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override {
+    return video_->SysmemAllocatorSyncPtr();
+  }
 
   bool IsDecoderCurrent(VideoDecoder* decoder) override { return true; }
   zx_status_t SetProtected(ProtectableHardwareUnit unit, bool protect) override {
@@ -69,10 +71,10 @@ class FakeOwner : public VideoDecoder::Owner {
 
  private:
   DosRegisterIo* dosbus_;
+  AmlogicVideo* video_;
   FakeDecoderCore core_;
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
   bool have_set_protected_ = false;
 };
 
@@ -82,12 +84,16 @@ constexpr uint32_t kDosbusMemorySize = 0x10000;
 class Vp9UnitTest {
  public:
   static void LoopFilter() {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+
     auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
     mmio_buffer_t dosbus_mmio = {
         .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
-    FakeOwner fake_owner(&dosbus);
+    FakeOwner fake_owner(&dosbus, video.get());
     auto decoder = std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream);
     decoder->InitLoopFilter();
     // This should be the 32nd value written to this register.
@@ -95,6 +101,10 @@ class Vp9UnitTest {
   }
 
   static void InitializeMemory() {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+
     auto zeroed_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(zeroed_memory.get(), 0, kDosbusMemorySize);
@@ -102,7 +112,7 @@ class Vp9UnitTest {
     mmio_buffer_t dosbus_mmio = {
         .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
-    FakeOwner fake_owner(&dosbus);
+    FakeOwner fake_owner(&dosbus, video.get());
     auto decoder = std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream);
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
     EXPECT_EQ(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));

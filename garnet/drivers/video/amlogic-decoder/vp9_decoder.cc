@@ -86,22 +86,24 @@ void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) { buffers_.pus
 
 zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* owner) {
   for (auto* buffer : buffers_) {
-    zx_status_t status =
-        owner->AllocateIoBuffer(&buffer->buffer(), buffer->size() + kBufferOverrunPaddingBytes, 0,
-                                IO_BUFFER_CONTIG | IO_BUFFER_RW, buffer->name());
-    if (status != ZX_OK) {
-      DECODE_ERROR("VP9 working buffer allocation failed: %d\n", status);
-      return status;
+    uint32_t rounded_up_size = fbl::round_up(buffer->size() + kBufferOverrunPaddingBytes,
+                                             static_cast<uint32_t>(PAGE_SIZE));
+    auto internal_buffer = InternalBuffer::Create(buffer->name(), &owner->SysmemAllocatorSyncPtr(),
+                                                  owner->bti(), rounded_up_size, false,
+                                                  /*is_writable=*/true, /*is_mapping_neede=*/true);
+    if (!internal_buffer.is_ok()) {
+      DECODE_ERROR("VP9 working buffer allocation failed: %d\n", internal_buffer.error());
+      return internal_buffer.error();
     }
+    buffer->SetBuffer(internal_buffer.take_value());
     if (kBufferOverrunPaddingBytes) {
-      uint32_t real_buffer_size = io_buffer_size(&buffer->buffer(), 0);
+      uint32_t real_buffer_size = buffer->buffer().size();
       for (uint32_t i = buffer->size(); i < real_buffer_size; i++) {
-        uint8_t* data = static_cast<uint8_t*>(io_buffer_virt(&buffer->buffer()));
+        uint8_t* data = buffer->buffer().virt_base();
         data[i] = i & 0xff;
       }
     }
-    io_buffer_cache_flush_invalidate(&buffer->buffer(), 0,
-                                     buffer->size() + kBufferOverrunPaddingBytes);
+    buffer->buffer().CacheFlushInvalidate(0, buffer->size() + kBufferOverrunPaddingBytes);
   }
   return ZX_OK;
 }
@@ -113,12 +115,12 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
   if (kBufferOverrunPaddingBytes) {
     for (uint32_t buf_number = 0; buf_number < buffers_.size(); buf_number++) {
       auto* buffer = buffers_[buf_number];
-      if (!io_buffer_is_valid(&buffer->buffer()))
+      if (!buffer->has_buffer())
         continue;
       uint32_t offset = buffer->size();
-      uint8_t* data = static_cast<uint8_t*>(io_buffer_virt(&buffer->buffer()));
-      uint32_t buffer_size = io_buffer_size(&buffer->buffer(), 0);
-      io_buffer_cache_flush_invalidate(&buffer->buffer(), offset, buffer_size - offset);
+      uint8_t* data = buffer->buffer().virt_base();
+      uint32_t buffer_size = buffer->buffer().size();
+      buffer->buffer().CacheFlushInvalidate(offset, buffer_size - offset);
       for (uint32_t i = offset; i < buffer_size; ++i) {
         if (data[i] != (i & 0xff)) {
           DECODE_ERROR("Data mismatch: %d != %d in buffer %d position %d\n", data[i], (i & 0xff),
@@ -126,7 +128,7 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
         }
         ZX_DEBUG_ASSERT(data[i] == (i & 0xff));
       }
-      io_buffer_cache_flush_invalidate(&buffer->buffer(), offset, buffer_size - offset);
+      buffer->buffer().CacheFlushInvalidate(offset, buffer_size - offset);
     }
   }
 }
@@ -136,9 +138,9 @@ Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator, size_t size
   allocator->Register(this);
 }
 
-Vp9Decoder::WorkingBuffer::~WorkingBuffer() { io_buffer_release(&buffer_); }
+Vp9Decoder::WorkingBuffer::~WorkingBuffer() {}
 
-uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(io_buffer_phys(&buffer_)); }
+uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->phys_base()); }
 
 Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type)
     : VideoDecoder(owner, /*is_secure=*/false), input_type_(input_type) {
@@ -554,20 +556,18 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 
     // TODO(dustingreen): (comment from jbauman@) We probably don't need to
     // invalidate the entire buffer, but good enough for now.
-    io_buffer_cache_flush_invalidate(
-        &working_buffers_.probability_buffer.buffer(), 0,
-        io_buffer_size(&working_buffers_.probability_buffer.buffer(), 0));
-    io_buffer_cache_flush_invalidate(&working_buffers_.count_buffer.buffer(), 0,
-                                     io_buffer_size(&working_buffers_.count_buffer.buffer(), 0));
+    working_buffers_.probability_buffer.buffer().CacheFlushInvalidate(
+        0, working_buffers_.probability_buffer.buffer().size());
+    working_buffers_.count_buffer.buffer().CacheFlushInvalidate(
+        0, working_buffers_.count_buffer.buffer().size());
 
     uint32_t frame_context_idx = adapt_prob_status >> 8;
-    uint8_t* previous_prob_buffer =
-        (uint8_t*)io_buffer_virt(&working_buffers_.probability_buffer.buffer()) +
-        frame_context_idx * kFrameContextSize;
-    uint8_t* current_prob_buffer =
-        (uint8_t*)io_buffer_virt(&working_buffers_.probability_buffer.buffer()) +
-        kVp9FrameContextCount * kFrameContextSize;
-    uint8_t* count_buffer = (uint8_t*)io_buffer_virt(&working_buffers_.count_buffer.buffer());
+    uint8_t* previous_prob_buffer = working_buffers_.probability_buffer.buffer().virt_base() +
+                                    frame_context_idx * kFrameContextSize;
+    uint8_t* current_prob_buffer = working_buffers_.probability_buffer.buffer().virt_base() +
+
+                                   kVp9FrameContextCount * kFrameContextSize;
+    uint8_t* count_buffer = working_buffers_.count_buffer.buffer().virt_base();
 
     adapt_coef_proc_cfg config{};
     config.pre_pr_buf = reinterpret_cast<unsigned int*>(previous_prob_buffer);
@@ -580,10 +580,10 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
     // TODO(dustingreen): (comment from jbauman@) We probably only need to flush
     // the portions of the probability buffer that were modified (and none of
     // the count buffer), but this should be fine for now.
-    io_buffer_cache_flush(&working_buffers_.probability_buffer.buffer(), 0,
-                          io_buffer_size(&working_buffers_.probability_buffer.buffer(), 0));
-    io_buffer_cache_flush(&working_buffers_.count_buffer.buffer(), 0,
-                          io_buffer_size(&working_buffers_.count_buffer.buffer(), 0));
+    working_buffers_.probability_buffer.buffer().CacheFlush(
+        0, working_buffers_.probability_buffer.buffer().size());
+    working_buffers_.count_buffer.buffer().CacheFlush(
+        0, working_buffers_.count_buffer.buffer().size());
     Vp9AdaptProbReg::Get().FromValue(0).WriteTo(owner_->dosbus());
   }
 }
@@ -665,7 +665,7 @@ void Vp9Decoder::ConfigureMcrcc() {
   HevcdMcrccCtl1::Get().FromValue(0xff0).WriteTo(owner_->dosbus());
 }
 
-Vp9Decoder::MpredBuffer::~MpredBuffer() { io_buffer_release(&mv_mpred_buffer); }
+Vp9Decoder::MpredBuffer::~MpredBuffer() {}
 
 void Vp9Decoder::ConfigureMotionPrediction() {
   // Intra frames and frames after intra frames can't use the previous
@@ -694,17 +694,17 @@ void Vp9Decoder::ConfigureMotionPrediction() {
       .set_use_prev_frame_mvs(last_frame_has_mv)
       .WriteTo(owner_->dosbus());
 
-  uint32_t mv_mpred_addr = truncate_to_32(io_buffer_phys(&current_mpred_buffer_->mv_mpred_buffer));
+  uint32_t mv_mpred_addr = truncate_to_32(current_mpred_buffer_->mv_mpred_buffer->phys_base());
   HevcMpredMvWrStartAddr::Get().FromValue(mv_mpred_addr).WriteTo(owner_->dosbus());
   HevcMpredMvWptr::Get().FromValue(mv_mpred_addr).WriteTo(owner_->dosbus());
   if (last_mpred_buffer_) {
-    uint32_t last_mv_mpred_addr =
-        truncate_to_32(io_buffer_phys(&last_mpred_buffer_->mv_mpred_buffer));
+    uint32_t last_mv_mpred_addr = truncate_to_32(last_mpred_buffer_->mv_mpred_buffer->phys_base());
     HevcMpredMvRdStartAddr::Get().FromValue(last_mv_mpred_addr).WriteTo(owner_->dosbus());
     HevcMpredMvRptr::Get().FromValue(last_mv_mpred_addr).WriteTo(owner_->dosbus());
 
-    uint32_t last_end_addr =
-        last_mv_mpred_addr + io_buffer_size(&last_mpred_buffer_->mv_mpred_buffer, 0);
+    // This is the maximum allowable size, which can be greater than the intended allocated size if
+    // the size was rounded up.
+    uint32_t last_end_addr = last_mv_mpred_addr + last_mpred_buffer_->mv_mpred_buffer->size();
     HevcMpredMvRdEndAddr::Get().FromValue(last_end_addr).WriteTo(owner_->dosbus());
   }
 }
@@ -738,9 +738,9 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
   HevcCmHeaderOffset::Get().FromValue(compressed_body_size).WriteTo(owner_->dosbus());
   HevcCmHeaderLength::Get().FromValue(compressed_header_size).WriteTo(owner_->dosbus());
   HevcCmHeaderStartAddr::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&current_frame_->compressed_header)))
+      .FromValue(truncate_to_32(current_frame_->compressed_header->phys_base()))
       .WriteTo(owner_->dosbus());
-  assert(compressed_header_size <= io_buffer_size(&current_frame_->compressed_header, 0));
+  assert(compressed_header_size <= current_frame_->compressed_header->size());
 
   uint32_t frame_buffer_size =
       fbl::round_up(compressed_body_size, static_cast<uint32_t>(PAGE_SIZE));
@@ -774,13 +774,13 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
   {
     uint32_t frame_count = frame_buffer_size / PAGE_SIZE;
     uint32_t* mmu_data =
-        static_cast<uint32_t*>(io_buffer_virt(&working_buffers_.frame_map_mmu.buffer()));
+        reinterpret_cast<uint32_t*>(working_buffers_.frame_map_mmu.buffer().virt_base());
     ZX_DEBUG_ASSERT(frame_count * 4 <= working_buffers_.frame_map_mmu.size());
     for (uint32_t i = 0; i < frame_count; i++) {
       ZX_DEBUG_ASSERT(current_frame_->compressed_data.phys_list[i] != 0);
       mmu_data[i] = current_frame_->compressed_data.phys_list[i] >> 12;
     }
-    io_buffer_cache_flush(&working_buffers_.frame_map_mmu.buffer(), 0, frame_count * 4);
+    working_buffers_.frame_map_mmu.buffer().CacheFlush(0, frame_count * 4);
     BarrierAfterFlush();
   }
 
@@ -898,8 +898,8 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
 
   HardwareRenderParams params;
   BarrierBeforeInvalidate();
-  io_buffer_cache_flush_invalidate(&working_buffers_.rpm.buffer(), 0, sizeof(HardwareRenderParams));
-  uint16_t* input_params = static_cast<uint16_t*>(io_buffer_virt(&working_buffers_.rpm.buffer()));
+  working_buffers_.rpm.buffer().CacheFlushInvalidate(0, sizeof(HardwareRenderParams));
+  uint16_t* input_params = reinterpret_cast<uint16_t*>(working_buffers_.rpm.buffer().virt_base());
 
   // Convert from middle-endian.
   for (uint32_t i = 0; i < fbl::count_of(params.data_words); i += 4) {
@@ -972,10 +972,7 @@ void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
   check_output_ready_ = std::move(check_output_ready);
 }
 
-Vp9Decoder::Frame::~Frame() {
-  io_buffer_release(&compressed_header);
-  io_buffer_release(&compressed_data);
-}
+Vp9Decoder::Frame::~Frame() { io_buffer_release(&compressed_data); }
 
 bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_checked_previously) {
   ZX_ASSERT(!current_frame_);
@@ -1166,16 +1163,17 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // The largest coding unit is assumed to be 64x32.
     constexpr uint32_t kLcuMvBytes = 0x240;
     constexpr uint32_t kLcuCount = 4096 * 2048 / (64 * 32);
-    zx_status_t status =
-        io_buffer_init_aligned(&current_mpred_buffer_->mv_mpred_buffer, owner_->bti()->get(),
-                               kLcuCount * kLcuMvBytes, 16, IO_BUFFER_CONTIG | IO_BUFFER_RW);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Alloc buffer error: %d\n", status);
+    uint64_t rounded_up_size =
+        fbl::round_up(kLcuCount * kLcuMvBytes, static_cast<uint64_t>(PAGE_SIZE));
+    auto internal_buffer = InternalBuffer::CreateAligned(
+        "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
+        (1 << 16), false, /*is_writable=*/true, /*is_mapping_neede=*/true);
+    if (!internal_buffer.is_ok()) {
+      DECODE_ERROR("Alloc buffer error: %d\n", internal_buffer.error());
       return false;
     }
-    SetIoBufferName(&current_mpred_buffer_->mv_mpred_buffer, "Vp9MpredData");
-    io_buffer_cache_flush_invalidate(&current_mpred_buffer_->mv_mpred_buffer, 0,
-                                     kLcuCount * kLcuMvBytes);
+    current_mpred_buffer_->mv_mpred_buffer.emplace(internal_buffer.take_value());
+    current_mpred_buffer_->mv_mpred_buffer->CacheFlushInvalidate(0, rounded_up_size);
     BarrierAfterFlush();
   }
 
@@ -1247,14 +1245,15 @@ zx_status_t Vp9Decoder::AllocateFrames() {
   for (uint32_t i = 0; i < 16; i++) {
     auto frame = std::make_unique<Frame>();
     constexpr uint32_t kCompressedHeaderSize = 0x48000;
-    zx_status_t status =
-        owner_->AllocateIoBuffer(&frame->compressed_header, kCompressedHeaderSize, 16,
-                                 IO_BUFFER_CONTIG | IO_BUFFER_RW, "Vp9CompressedFrameHeader");
-    if (status != ZX_OK) {
-      DECODE_ERROR("Alloc buffer error: %d\n", status);
-      return status;
+    auto internal_buffer = InternalBuffer::CreateAligned(
+        "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
+        kCompressedHeaderSize, 1 << 16, false, /*is_writable=*/true, /*is_mapping_neede=*/true);
+    if (!internal_buffer.is_ok()) {
+      DECODE_ERROR("Alloc buffer error: %d\n", internal_buffer.error());
+      return internal_buffer.error();
     }
-    io_buffer_cache_flush_invalidate(&frame->compressed_header, 0, kCompressedHeaderSize);
+    frame->compressed_header.emplace(internal_buffer.take_value());
+    frame->compressed_header->CacheFlushInvalidate(0, kCompressedHeaderSize);
     frame->index = i;
     frames_.push_back(std::move(frame));
   }
@@ -1270,7 +1269,7 @@ void Vp9Decoder::InitializeHardwarePictureList() {
   // pictures.
   for (auto& frame : frames_) {
     HevcdMppAnc2AxiTblData::Get()
-        .FromValue(truncate_to_32(io_buffer_phys(&frame->compressed_header) >> 5))
+        .FromValue(truncate_to_32(frame->compressed_header->phys_base()) >> 5)
         .WriteTo(owner_->dosbus());
   }
 

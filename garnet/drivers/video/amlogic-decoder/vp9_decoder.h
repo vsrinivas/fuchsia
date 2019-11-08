@@ -131,12 +131,15 @@ class Vp9Decoder : public VideoDecoder {
     uint32_t addr32();
     size_t size() const { return size_; }
     const char* name() const { return name_; }
-    io_buffer_t& buffer() { return buffer_; }
+    InternalBuffer& buffer() { return buffer_.value(); }
+    bool has_buffer() { return buffer_.has_value(); }
+
+    void SetBuffer(InternalBuffer buffer) { buffer_.emplace(std::move(buffer)); }
 
    private:
     size_t size_;
     const char* name_;
-    io_buffer_t buffer_ = {};
+    std::optional<InternalBuffer> buffer_;
   };
 
   struct WorkingBuffers : public BufferAllocator {
@@ -198,7 +201,7 @@ class Vp9Decoder : public VideoDecoder {
     // With the MMU enabled the compressed frame header is stored separately
     // from the data itself, allowing the data to be allocated in noncontiguous
     // memory.
-    io_buffer_t compressed_header = {};
+    std::optional<InternalBuffer> compressed_header;
 
     io_buffer_t compressed_data = {};
 
@@ -210,7 +213,7 @@ class Vp9Decoder : public VideoDecoder {
     ~MpredBuffer();
     // This stores the motion vectors used to decode a frame for use in
     // calculating motion vectors for the next frame.
-    io_buffer_t mv_mpred_buffer = {};
+    std::optional<InternalBuffer> mv_mpred_buffer;
   };
 
   struct PictureData {

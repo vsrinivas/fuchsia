@@ -372,8 +372,8 @@ class TestVP9 {
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
       StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
-      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(
-          buffer, PAGE_SIZE * 1024, /*use_parser=*/false, /*is_secure=*/false));
+      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/false,
+                                                   /*is_secure=*/false));
     }
 
     {
@@ -405,8 +405,7 @@ class TestVP9 {
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
-            DLOG("coded_width: %d, coded_height: %d\n",
-                 frame->coded_width, frame->coded_height);
+            DLOG("coded_width: %d, coded_height: %d\n", frame->coded_width, frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame.get(), "/tmp/bearmulti1.yuv");
 #endif

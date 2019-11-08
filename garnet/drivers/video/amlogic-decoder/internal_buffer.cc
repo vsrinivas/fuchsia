@@ -4,15 +4,23 @@
 
 #include "internal_buffer.h"
 
-#include "macros.h"
-#include "memory_barriers.h"
-
 #include <lib/fit/result.h>
 #include <threads.h>
+
+#include <fbl/algorithm.h>
+
+#include "macros.h"
+#include "memory_barriers.h"
 
 fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
     size_t size, bool is_secure, bool is_writable, bool is_mapping_needed) {
+  return CreateAligned(name, sysmem, bti, size, 0, is_secure, is_writable, is_mapping_needed);
+}
+
+fit::result<InternalBuffer, zx_status_t> InternalBuffer::CreateAligned(
+    const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
+    size_t size, size_t alignment, bool is_secure, bool is_writable, bool is_mapping_needed) {
   ZX_DEBUG_ASSERT(sysmem);
   ZX_DEBUG_ASSERT(*sysmem);
   ZX_DEBUG_ASSERT(*bti);
@@ -20,7 +28,7 @@ fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
   ZX_DEBUG_ASSERT(size % ZX_PAGE_SIZE == 0);
   ZX_DEBUG_ASSERT(!is_mapping_needed || !is_secure);
   InternalBuffer local_result(size, is_secure, is_writable, is_mapping_needed);
-  zx_status_t status = local_result.Init(name, sysmem, bti);
+  zx_status_t status = local_result.Init(name, sysmem, alignment, bti);
   if (status != ZX_OK) {
     LOG(ERROR, "Init() failed - status: %d", status);
     return fit::error(status);
@@ -28,20 +36,20 @@ fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
   return fit::ok(std::move(local_result));
 }
 
-InternalBuffer::~InternalBuffer() {
-  DeInit();
-}
+InternalBuffer::~InternalBuffer() { DeInit(); }
 
 InternalBuffer::InternalBuffer(InternalBuffer&& other)
-  : size_(other.size_),
-    is_secure_(other.is_secure_),
-    is_writable_(other.is_writable_),
-    is_mapping_needed_(other.is_mapping_needed_),
-    virt_base_(other.virt_base_),
-    pin_(std::move(other.pin_)),
-    phys_base_(other.phys_base_),
-    buffer_collection_(std::move(other.buffer_collection_)),
-    vmo_(std::move(other.vmo_)) {
+    : size_(other.size_),
+      is_secure_(other.is_secure_),
+      is_writable_(other.is_writable_),
+      is_mapping_needed_(other.is_mapping_needed_),
+      virt_base_(other.virt_base_),
+      real_size_(other.real_size_),
+      real_virt_base_(other.real_virt_base_),
+      pin_(std::move(other.pin_)),
+      phys_base_(other.phys_base_),
+      buffer_collection_(std::move(other.buffer_collection_)),
+      vmo_(std::move(other.vmo_)) {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   other.is_moved_out_ = true;
 }
@@ -61,6 +69,8 @@ InternalBuffer& InternalBuffer::operator=(InternalBuffer&& other) {
   ZX_DEBUG_ASSERT(other.pin_ && !other.is_moved_out_);
   pin_ = std::move(other.pin_);
   virt_base_ = other.virt_base_;
+  real_size_ = other.real_size_;
+  real_virt_base_ = other.real_virt_base_;
   phys_base_ = other.phys_base_;
   buffer_collection_ = std::move(other.buffer_collection_);
   vmo_ = std::move(other.vmo_);
@@ -87,6 +97,14 @@ size_t InternalBuffer::size() {
 }
 
 void InternalBuffer::CacheFlush(size_t offset, size_t length) {
+  CacheFlushPossibleInvalidate(offset, length, false);
+}
+
+void InternalBuffer::CacheFlushInvalidate(size_t offset, size_t length) {
+  CacheFlushPossibleInvalidate(offset, length, true);
+}
+
+void InternalBuffer::CacheFlushPossibleInvalidate(size_t offset, size_t length, bool invalidate) {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   ZX_DEBUG_ASSERT(offset <= size());
   ZX_DEBUG_ASSERT(offset + length >= offset);
@@ -98,16 +116,15 @@ void InternalBuffer::CacheFlush(size_t offset, size_t length) {
   }
   if (is_mapping_needed_) {
     ZX_DEBUG_ASSERT(virt_base_);
-    status = zx_cache_flush(virt_base_ + offset, length, ZX_CACHE_FLUSH_DATA);
+    status = zx_cache_flush(virt_base_ + offset, length,
+                            ZX_CACHE_FLUSH_DATA | (invalidate ? ZX_CACHE_FLUSH_INVALIDATE : 0));
     if (status != ZX_OK) {
-      ZX_PANIC("InternalBuffer::CacheFlush() zx_cache_flush() failed: %d\n",
-               status);
+      ZX_PANIC("InternalBuffer::CacheFlush() zx_cache_flush() failed: %d\n", status);
     }
   } else {
     status = vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, offset, length, nullptr, 0);
     if (status != ZX_OK) {
-      ZX_PANIC("InternalBuffer::CacheFlush() op_range(CACHE_CLEAN) failed: %d",
-               status);
+      ZX_PANIC("InternalBuffer::CacheFlush() op_range(CACHE_CLEAN) failed: %d", status);
     }
   }
   BarrierAfterFlush();
@@ -115,10 +132,10 @@ void InternalBuffer::CacheFlush(size_t offset, size_t length) {
 
 InternalBuffer::InternalBuffer(size_t size, bool is_secure, bool is_writable,
                                bool is_mapping_needed)
-  : size_(size),
-    is_secure_(is_secure),
-    is_writable_(is_writable),
-    is_mapping_needed_(is_mapping_needed) {
+    : size_(size),
+      is_secure_(is_secure),
+      is_writable_(is_writable),
+      is_mapping_needed_(is_mapping_needed) {
   ZX_DEBUG_ASSERT(size_);
   ZX_DEBUG_ASSERT(size_ % ZX_PAGE_SIZE == 0);
   ZX_DEBUG_ASSERT(!pin_);
@@ -127,7 +144,7 @@ InternalBuffer::InternalBuffer(size_t size, bool is_secure, bool is_writable,
 }
 
 zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem,
-                                 const zx::unowned_bti& bti) {
+                                 size_t alignment, const zx::unowned_bti& bti) {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   // Init() should only be called on newly-constructed instances using a constructor other than the
   // move constructor.
@@ -146,9 +163,11 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   ZX_DEBUG_ASSERT(constraints.min_buffer_count == 0);
   constraints.max_buffer_count = 1;
 
+  // Allocate enough so that some portion must be aligned and large enough.
+  real_size_ = size_ + alignment;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = size_;
-  constraints.buffer_memory_constraints.max_size_bytes = size_;
+  constraints.buffer_memory_constraints.min_size_bytes = real_size_;
+  constraints.buffer_memory_constraints.max_size_bytes = real_size_;
   // amlogic-video always requires contiguous; only contiguous is supported by InternalBuffer.
   constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.buffer_memory_constraints.secure_required = is_secure_;
@@ -188,8 +207,8 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   // quick.
   zx_status_t server_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 out_buffer_collection_info;
-  zx_status_t status = buffer_collection->WaitForBuffersAllocated(
-      &server_status, &out_buffer_collection_info);
+  zx_status_t status =
+      buffer_collection->WaitForBuffersAllocated(&server_status, &out_buffer_collection_info);
   if (status != ZX_OK) {
     LOG(ERROR, "WaitForBuffersAllocated() failed - status: %d", status);
     return status;
@@ -212,7 +231,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
     }
 
     status = zx::vmar::root_self()->map(
-        /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, size_, map_options, &virt_base);
+        /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, real_size_, map_options, &virt_base);
     if (status != ZX_OK) {
       LOG(ERROR, "zx::vmar::root_self()->map() failed - status: %d", status);
       return status;
@@ -226,15 +245,22 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
 
   zx_paddr_t phys_base;
   zx::pmt pin;
-  status = bti->pin(pin_options, vmo, out_buffer_collection_info.buffers[0].vmo_usable_start, size_,
-                    &phys_base, 1, &pin);
+  status = bti->pin(pin_options, vmo, out_buffer_collection_info.buffers[0].vmo_usable_start,
+                    real_size_, &phys_base, 1, &pin);
   if (status != ZX_OK) {
     LOG(ERROR, "BTI pin() failed - status: %d", status);
     return status;
   }
 
   virt_base_ = reinterpret_cast<uint8_t*>(virt_base);
+  real_virt_base_ = virt_base_;
   phys_base_ = phys_base;
+  if (alignment) {
+    // Shift the base addresses so the physical address is aligned correctly.
+    zx_paddr_t new_phys_base = fbl::round_up(phys_base, alignment);
+    virt_base += new_phys_base - phys_base;
+    phys_base = new_phys_base;
+  }
   pin_ = std::move(pin);
   // We keep the buffer_collection_ channel alive, but we don't listen for channel failure.  This
   // isn't ideal, since we should listen for channel failure so that sysmem can request that we
@@ -259,10 +285,11 @@ void InternalBuffer::DeInit() {
     pin_.reset();
   }
   if (virt_base_) {
-    zx_status_t status = zx::vmar::root_self()->unmap(
-        reinterpret_cast<uintptr_t>(virt_base_), size_);
+    zx_status_t status =
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(real_virt_base_), real_size_);
     // Unmap is expected to work unless there's a bug in how we're calling it.
     ZX_ASSERT(status == ZX_OK);
     virt_base_ = nullptr;
+    real_virt_base_ = nullptr;
   }
 }
