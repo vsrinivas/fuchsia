@@ -231,7 +231,7 @@ pub mod non_fuchsia_handles {
 
     /// Representation of a handle-like object
     #[repr(C)]
-    #[derive(PartialEq, Eq, Debug)]
+    #[derive(PartialEq, Eq, Debug, Ord, PartialOrd, Hash)]
     pub struct Handle(u32);
 
     impl Drop for Handle {
@@ -316,6 +316,7 @@ pub mod non_fuchsia_handles {
         };
     }
 
+    declare_unsupported_fidl_handle!(DebugLog);
     declare_unsupported_fidl_handle!(Event);
     declare_unsupported_fidl_handle!(EventPair);
     declare_unsupported_fidl_handle!(Vmo);

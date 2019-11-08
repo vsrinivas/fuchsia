@@ -57,6 +57,7 @@ fidl("fidl.rust.test.compilation.compose") {
 test_package("rust_fidl_tests") {
   deps = [
     ":fidl.rust.test.compilation-rustc",
+    ":fidl.rust.test.compilation-rustc($host_toolchain)",
     ":fidl_test",
     "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]

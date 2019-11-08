@@ -110,6 +110,10 @@ pub enum Error {
     #[fail(display = "Invalid response with txid 0.")]
     InvalidResponseTxid,
 
+    /// A handle which is invalid in the context of a host build of Fuchsia.
+    #[fail(display = "Invalid FIDL handle used on the host.")]
+    InvalidHostHandle,
+
     /// A FIDL server encountered an IO error writing a response to a channel.
     #[fail(
         display = "A server encountered an IO error writing a FIDL response to a channel: {}",

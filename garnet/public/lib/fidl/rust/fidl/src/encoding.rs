@@ -1465,14 +1465,35 @@ pub use zx_encoding::*;
 
 #[cfg(not(target_os = "fuchsia"))]
 mod fidl_handle_encoding {
+    use super::*;
 
     type FidlChannel = crate::handle::Channel;
+    type FidlDebugLog = crate::handle::DebugLog;
     type FidlEvent = crate::handle::Event;
     type FidlEventPair = crate::handle::EventPair;
     type FidlSocket = crate::handle::Socket;
     type FidlVmo = crate::handle::Vmo;
 
     handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlVmo,];
+
+    // Stub host serialization of the FidlDebugLog.
+    impl_layout!(FidlDebugLog, align: 1, size: 1);
+
+    impl Encodable for FidlDebugLog {
+        fn encode(&mut self, _: &mut Encoder) -> Result<()> {
+            Err(Error::InvalidHostHandle)
+        }
+    }
+
+    impl Decodable for FidlDebugLog {
+        fn new_empty() -> Self {
+            FidlDebugLog::from(Handle::invalid())
+        }
+
+        fn decode(&mut self, _: &mut Decoder) -> Result<()> {
+            Err(Error::InvalidHostHandle)
+        }
+    }
 }
 
 #[cfg(not(target_os = "fuchsia"))]

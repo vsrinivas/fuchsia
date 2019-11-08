@@ -31,3 +31,7 @@ union HasStructWithBigArray {
 struct Result {
   string ensure_that_type_named_result_compiles;
 };
+
+struct HasHostFidlHandleStubbing {
+  handle<debuglog> log;
+};
