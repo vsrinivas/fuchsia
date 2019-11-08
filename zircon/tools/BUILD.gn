@@ -44,6 +44,7 @@ foreach(host, standard_build_hosts) {
       "kernel-buildsig",
       "ktrace-dump",
       "loglistener",
+      "lz4",
       "merkleroot",
       "minfs",
       "netprotocol",

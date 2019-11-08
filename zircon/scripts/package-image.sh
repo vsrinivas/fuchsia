@@ -105,6 +105,7 @@ if [[ "${RAMDISK_TYPE}" != "none" ]] &&
 fi
 
 # Some tools we use
+LZ4="${BUILD_DIR}/tools/lz4"
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 MKKDTB="${BUILD_DIR}/tools/mkkdtb"
 ZBI="${BUILD_DIR}/tools/zbi"
@@ -152,7 +153,7 @@ if [[ ${USE_GZIP} == true ]]; then
     gzip -c "${SHIMMED_ZIRCON_BOOTIMAGE}" > "${COMPRESSED_BOOTIMAGE}"
 elif [[ ${USE_LZ4} == true ]]; then
     COMPRESSED_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.lz4"
-    lz4 -B4 -c "${SHIMMED_ZIRCON_BOOTIMAGE}" > "${COMPRESSED_BOOTIMAGE}"
+    "${LZ4}" -B4 -c "${SHIMMED_ZIRCON_BOOTIMAGE}" > "${COMPRESSED_BOOTIMAGE}"
 else
     COMPRESSED_BOOTIMAGE="${SHIMMED_ZIRCON_BOOTIMAGE}"
 fi

@@ -24,6 +24,7 @@ KEYBLOCK="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel.keybl
 PRIVATEKEY="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
 ITSSCRIPT_TEMPLATE="${DIR}/its_script"
 DUMMY_DEVICE_TREE="${ZIRCON_DIR}/kernel/target/arm64/dtb/dummy-device-tree.dtb"
+LZ4="${BUILD_DIR}/tools/lz4"
 
 function HELP {
     echo "help:"
@@ -70,7 +71,7 @@ FIT_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.fit"
 
 # shim and compress the ZBI
 cat "${BOOT_SHIM}" "${ZIRCON_BOOTIMAGE}" > "${SHIMMED_ZIRCON_BOOTIMAGE}"
-lz4 -q -B4 -f "${SHIMMED_ZIRCON_BOOTIMAGE}" "${COMPRESSED_BOOTIMAGE}"
+"${LZ4}" -q -B4 -f "${SHIMMED_ZIRCON_BOOTIMAGE}" "${COMPRESSED_BOOTIMAGE}"
 
 # wrap everything up the way depthcharge expects it to be
 mkimage -D "-q -I dts -O dtb"                                                \
