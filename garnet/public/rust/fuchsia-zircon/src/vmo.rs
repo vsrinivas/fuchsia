@@ -5,6 +5,7 @@
 //! Type-safe bindings for Zircon vmo objects.
 
 use crate::ok;
+use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
@@ -18,6 +19,30 @@ use std::ptr;
 #[repr(transparent)]
 pub struct Vmo(Handle);
 impl_handle_based!(Vmo);
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct VmoInfo {
+    pub flags: u32,
+}
+
+impl Default for VmoInfo {
+    fn default() -> VmoInfo {
+        VmoInfo { flags: 0 }
+    }
+}
+
+impl From<sys::zx_info_vmo_t> for VmoInfo {
+    fn from(vmo: sys::zx_info_vmo_t) -> VmoInfo {
+        VmoInfo { flags: vmo.flags }
+    }
+}
+
+struct VmoInfoQuery;
+unsafe impl ObjectQuery for VmoInfoQuery {
+    const TOPIC: Topic = Topic::VMO;
+    type InfoTy = sys::zx_info_vmo_t;
+}
 
 impl Vmo {
     /// Create a virtual memory object.
@@ -101,6 +126,14 @@ impl Vmo {
         ok(status)
     }
 
+    /// Wraps the [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_VMO topic.
+    pub fn info(&self) -> Result<VmoInfo, Status> {
+        let mut info = sys::zx_info_vmo_t::default();
+        object_get_info::<VmoInfoQuery>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| VmoInfo::from(info))
+    }
+
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
@@ -147,11 +180,22 @@ bitflags! {
 }
 
 bitflags! {
+    /// Flags that may be set when receiving info on a `Vmo`.
+    #[repr(transparent)]
+    pub struct VmoInfoFlags: u32 {
+        const RESIZABLE = sys::ZX_INFO_VMO_RESIZABLE;
+        const IS_COW_CLONE = sys::ZX_INFO_VMO_IS_COW_CLONE;
+        const PAGER_BACKED = sys::ZX_INFO_VMO_PAGER_BACKED;
+    }
+}
+
+bitflags! {
     /// Options that may be used when creating a `Vmo` child.
     #[repr(transparent)]
     pub struct VmoChildOptions: u32 {
         const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
         const RESIZABLE = sys::ZX_VMO_CHILD_RESIZABLE;
+        const PRIVATE_PAGER_COPY = sys::ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
     }
 }
 
@@ -202,6 +246,23 @@ mod tests {
         let new_size = 8192;
         assert!(vmo.set_size(new_size).is_ok());
         assert_eq!(new_size, vmo.get_size().unwrap());
+    }
+
+    #[test]
+    fn vmo_get_info_default() {
+        let size = 4096;
+        let vmo = Vmo::create(size).unwrap();
+        let info = vmo.info().unwrap();
+        assert_eq!(0, info.flags & VmoInfoFlags::PAGER_BACKED.bits());
+    }
+
+    #[test]
+    fn vmo_get_child_info() {
+        let size = 4096;
+        let vmo = Vmo::create(size).unwrap();
+        let child = vmo.create_child(VmoChildOptions::COPY_ON_WRITE, 0, 512).unwrap();
+        let info = child.info().unwrap();
+        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() != 0);
     }
 
     #[test]

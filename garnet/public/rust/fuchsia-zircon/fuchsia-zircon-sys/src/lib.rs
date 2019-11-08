@@ -96,6 +96,12 @@ multiconst!(u32, [
     ZX_VMO_RESIZABLE = 1 << 1;
 ]);
 
+multiconst!(u32, [
+    ZX_INFO_VMO_RESIZABLE = 1 << 1;
+    ZX_INFO_VMO_IS_COW_CLONE = 1 << 2;
+    ZX_INFO_VMO_PAGER_BACKED = 1 << 5;
+]);
+
 // TODO: add an alias for this type in the C headers.
 multiconst!(u32, [
     ZX_VMO_OP_COMMIT = 1;
@@ -366,6 +372,7 @@ pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
 // VM Object clone flags
 pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1;
 pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
+pub const ZX_VMO_CHILD_PRIVATE_PAGER_COPY: u32 = 1 << 4;
 
 // channel write size constants
 pub const ZX_CHANNEL_MAX_MSG_HANDLES: u32 = 64;
@@ -716,6 +723,23 @@ multiconst!(u32, [
     ZX_TIMER_SLACK_EARLY  = 1;
     ZX_TIMER_SLACK_LATE   = 2;
 ]);
+
+// Don't use struct_decl_macro, wrapper is different.
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_info_vmo_t {
+    pub koid: zx_koid_t,
+    pub name: [u8; ZX_MAX_NAME_LEN],
+    pub size: u64,
+    pub parent_koid: zx_koid_t,
+    pub num_children: usize,
+    pub num_mappings: usize,
+    pub share_count: usize,
+    pub flags: u32,
+    pub committed_bytes: u64,
+    pub handle_rights: zx_rights_t,
+    pub cache_policy: u32,
+}
 
 struct_decl_macro! {
     #[repr(C)]
