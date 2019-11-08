@@ -8,13 +8,13 @@ use {
         encoding::OutOfLine,
         endpoints::{self, ServerEnd},
     },
-    fidl_fuchsia_bluetooth::{Error as FidlError, ErrorCode},
+    fidl_fuchsia_bluetooth::{Appearance, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
         self as control, ControlControlHandle, DeviceClass, HostData, InputCapabilityType,
         LocalKey, OutputCapabilityType, PairingDelegateProxy,
     },
-    fidl_fuchsia_bluetooth_gatt::Server_Marker,
+    fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
@@ -26,14 +26,12 @@ use {
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
-    futures::{
-        FutureExt, TryFutureExt,
-    },
+    futures::{channel::mpsc, FutureExt, TryFutureExt},
     parking_lot::RwLock,
     slab::Slab,
     std::collections::HashMap,
-    std::future::Future,
     std::fs::File,
+    std::future::Future,
     std::marker::Unpin,
     std::path::Path,
     std::sync::{Arc, Weak},
@@ -41,6 +39,7 @@ use {
 };
 
 use crate::{
+    generic_access_service,
     host_device::{self, HostDevice, HostListener},
     services,
     store::stash::Stash,
@@ -141,11 +140,18 @@ struct HostDispatcherState {
 
     // GAP state
     name: String,
+    appearance: Appearance,
     discovery: Option<Weak<DiscoveryRequestToken>>,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapabilityType,
     pub output: OutputCapabilityType,
     peers: HashMap<DeviceId, Inspectable<Peer>>,
+
+    // Sender end of a futures::mpsc channel to send LocalServiceDelegateRequests
+    // to Generic Access Service. When a new host adapter is recognized, we create
+    // a new GasProxy, which takes GAS requests from the new host and forwards
+    // them along a clone of this channel to GAS
+    gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
 
     pub pairing_delegate: Option<PairingDelegateProxy>,
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
@@ -307,14 +313,26 @@ pub struct HostDispatcher {
 }
 
 impl HostDispatcher {
-    pub fn new(name: String, stash: Stash, inspect: inspect::Node) -> HostDispatcher {
+    /// The HostDispatcher will forward all Generic Access Service requests to the mpsc::Receiver
+    /// end of |gas_channel_sender|. It is the responsibility of this function's caller to ensure
+    /// that these requests are handled. This can be done by passing the mpsc::Receiver into a
+    /// GenericAccessService struct and ensuring its run method is scheduled.
+    pub fn new(
+        name: String,
+        appearance: Appearance,
+        stash: Stash,
+        inspect: inspect::Node,
+        gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
+    ) -> HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
             host_devices: HashMap::new(),
             name: name,
+            appearance: appearance,
             input: InputCapabilityType::None,
             output: OutputCapabilityType::None,
             peers: HashMap::new(),
+            gas_channel_sender,
             stash: stash,
             discovery: None,
             discoverable: None,
@@ -332,6 +350,14 @@ impl HostDispatcher {
 
     pub async fn when_hosts_found(&self) -> HostDispatcher {
         WhenHostsFound::new(self.clone()).await
+    }
+
+    pub fn get_name(&self) -> String {
+        self.state.read().name.clone()
+    }
+
+    pub fn get_appearance(&self) -> Appearance {
+        self.state.read().appearance
     }
 
     pub async fn set_name(&mut self, name: String) -> types::Result<()> {
@@ -575,6 +601,18 @@ impl HostDispatcher {
         self.state.read().peers.values().map(|p| (*p).clone()).collect()
     }
 
+    async fn spawn_gas_proxy(&self, gatt_server_proxy: Server_Proxy) -> Result<(), Error> {
+        let gas_channel = self.state.read().gas_channel_sender.clone();
+        let gas_proxy =
+            generic_access_service::GasProxy::new(gatt_server_proxy, gas_channel).await?;
+        fasync::spawn(gas_proxy.run().map(|r| {
+            r.unwrap_or_else(|err| {
+                fx_log_warn!("Error passing message through Generic Access proxy: {:?}", err);
+            })
+        }));
+        Ok(())
+    }
+
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
@@ -613,6 +651,10 @@ impl HostDispatcher {
             .set_name(self.state.read().name.clone())
             .await
             .map_err(|e| e.as_failure())?;
+
+        let (gatt_server_proxy, remote_gatt_server) = fidl::endpoints::create_proxy()?;
+        host_device.read().get_host().request_gatt_server_(remote_gatt_server)?;
+        self.spawn_gas_proxy(gatt_server_proxy).await?;
 
         // Enable privacy by default.
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
@@ -870,7 +912,14 @@ mod tests {
         let stash = Stash::stub().expect("Create stash stub");
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
-        let dispatcher = HostDispatcher::new("test".to_string(), stash, system_inspect);
+        let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
+        let dispatcher = HostDispatcher::new(
+            "test".to_string(),
+            Appearance::Display,
+            stash,
+            system_inspect,
+            gas_channel_sender,
+        );
         let peer_id = "id".to_string();
 
         // assert inspect tree is in clean state
@@ -902,5 +951,27 @@ mod tests {
                 peers: { }
             }
         });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_change_name_no_deadlock() {
+        let stash = Stash::stub().expect("Create stash stub");
+        let inspector = inspect::Inspector::new();
+        let system_inspect = inspector.root().create_child("system");
+        let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
+        let mut dispatcher = HostDispatcher::new(
+            "test".to_string(),
+            Appearance::Display,
+            stash,
+            system_inspect,
+            gas_channel_sender,
+        );
+        // Call a function that used to use the self.state.write().gas_channel_sender.send().await
+        // pattern, which caused a deadlock by yielding to the executor while holding onto a write
+        // lock to the mutable gas_channel. We expect an error here because there's no active host
+        // in the dispatcher - we don't need to go through the trouble of setting up an emulated
+        // host to test whether or not we can send messages to the GAS task. We just want to make
+        // sure that the function actually returns and doesn't deadlock.
+        dispatcher.set_name("test-change".to_string()).await.unwrap_err();
     }
 }

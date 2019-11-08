@@ -9,6 +9,7 @@ extern crate serde_derive;
 use {
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::ControlRequestStream,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
@@ -17,16 +18,18 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
-    futures::{try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc, future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     pin_utils::pin_mut,
 };
 
 use crate::{
     adapters::{AdapterEvent::*, *},
+    generic_access_service::GenericAccessService,
     host_dispatcher::{HostService::*, *},
 };
 
 mod adapters;
+mod generic_access_service;
 mod host_device;
 mod host_dispatcher;
 mod services;
@@ -66,7 +69,14 @@ async fn run() -> Result<(), Error> {
         .context("Error initializing Stash service")?;
 
     let local_name = get_host_name().await.unwrap_or(DEFAULT_DEVICE_NAME.to_string());
-    let hd = HostDispatcher::new(local_name, stash, inspect.root().create_child("system"));
+    let (gas_channel_sender, generic_access_req_stream) = mpsc::channel(0);
+    let hd = HostDispatcher::new(
+        local_name,
+        Appearance::Display,
+        stash,
+        inspect.root().create_child("system"),
+        gas_channel_sender,
+    );
     let watch_hd = hd.clone();
     let central_hd = hd.clone();
     let control_hd = hd.clone();
@@ -94,6 +104,9 @@ async fn run() -> Result<(), Error> {
         }
         Ok(())
     };
+
+    let generic_access_service_task =
+        GenericAccessService { hd: hd.clone(), generic_access_req_stream }.run().map(|()| Ok(()));
 
     let mut fs = ServiceFs::new();
     inspect.export(&mut fs);
@@ -129,7 +142,9 @@ async fn run() -> Result<(), Error> {
         });
     fs.take_and_serve_directory_handle()?;
     let svc_fs_task = fs.collect::<()>().map(Ok);
-    try_join!(svc_fs_task, host_watcher_task).map(|((), ())| ())
+    try_join3(svc_fs_task, host_watcher_task, generic_access_service_task)
+        .await
+        .map(|((), (), ())| ())
 }
 
 fn control_service(hd: HostDispatcher, stream: ControlRequestStream) {
