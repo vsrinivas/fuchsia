@@ -43,6 +43,15 @@ void ZeroPage(vm_page_t* p) {
   ZeroPage(pa);
 }
 
+bool IsZeroPage(vm_page_t* p) {
+  uint64_t* base = (uint64_t*)paddr_to_physmap(p->paddr());
+  for (int i = 0; i < PAGE_SIZE / (int)sizeof(uint64_t); i++) {
+    if (base[i] != 0)
+      return false;
+  }
+  return true;
+}
+
 void InitializeVmPage(vm_page_t* p) {
   DEBUG_ASSERT(p->state() == VM_PAGE_STATE_ALLOC);
   p->set_state(VM_PAGE_STATE_OBJECT);
@@ -184,6 +193,62 @@ VmObjectPaged::~VmObjectPaged() {
   }
 
   pmm_free(&list);
+}
+
+uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) TA_NO_THREAD_SAFETY_ANALYSIS {
+  list_node_t free_list;
+  list_initialize(&free_list);
+  Guard<Mutex> guard{lock()};
+
+  // Skip uncached VMOs as we cannot efficiently scan them.
+  if ((cache_policy_ & ZX_CACHE_POLICY_MASK) != ZX_CACHE_POLICY_CACHED) {
+    return 0;
+  }
+
+  // Skip any VMOs that have non user mappings as we cannot safely remove write permissions from
+  // them and indicates this VMO is actually in use by the kernel and we probably would not want to
+  // perform zero page de-duplication on it even if we could.
+  for (auto& m : mapping_list_) {
+    if (!m.aspace()->is_user()) {
+      return 0;
+    }
+    // Remove write from the mapping to ensure it's not being concurrently modified.
+    m.RemoveWriteVmoRangeLocked(0, size());
+  }
+
+  // Check if we have any slice children. Slice children may have writable mappings to our pages,
+  // and so we need to also remove any mappings from them. Non-slice children could only have
+  // read-only mappings, which is the state we already want, and so we don't need to touch them.
+  for (auto& child : children_list_) {
+    DEBUG_ASSERT(child.is_paged());
+    VmObjectPaged& typed_child = static_cast<VmObjectPaged&>(child);
+    if (typed_child.is_slice()) {
+      // Slices are strict subsets of their parents so we don't need to bother looking at parent
+      // limits etc and can just operate on the entire range.
+      typed_child.RangeChangeUpdateLocked(0, typed_child.size(), RangeChangeOp::RemoveWrite);
+    }
+  }
+
+  uint32_t count = 0;
+  page_list_.ForEveryPage(
+      [&count, &free_list, reclaim, this](auto& p, uint64_t off) TA_NO_THREAD_SAFETY_ANALYSIS {
+        // Pinned pages cannot be decommitted so do not consider them.
+        if (p.IsPage() && p.Page()->object.pin_count == 0 && IsZeroPage(p.Page())) {
+          count++;
+          if (reclaim) {
+            // Need to remove all mappings (include read) ones to this range before we remove the
+            // page.
+            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+            list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+            p = VmPageOrMarker::Marker();
+          }
+        }
+        return ZX_ERR_NEXT;
+      });
+  // Release the guard so we can free any pages.
+  guard.Release();
+  pmm_free(&free_list);
+  return count;
 }
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,

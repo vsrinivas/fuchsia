@@ -28,6 +28,7 @@
 #include <vm/bootalloc.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <vm/scanner.h>
 #include <vm/vm.h>
 
 #include "pmm_arena.h"
@@ -129,6 +130,10 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       printf("%s free                 : periodically dump free mem count\n", argv[0].str);
       printf("%s oom                  : leak memory until oom is triggered\n", argv[0].str);
       printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
+      printf(
+          "%s scan [reclaim]       : expensive scan that can optionally attempt to reclaim "
+          "memory\n",
+          argv[0].str);
     }
     return ZX_ERR_INTERNAL;
   }
@@ -176,6 +181,12 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     } else {
       goto usage;
     }
+  } else if (!strcmp(argv[1].str, "scan")) {
+    bool reclaim = false;
+    if (argc > 2 && !strcmp(argv[2].str, "reclaim")) {
+      reclaim = true;
+    }
+    scanner_trigger_scan(reclaim);
   } else {
     printf("unknown command\n");
     goto usage;

@@ -167,6 +167,8 @@ class VmObjectPaged final : public VmObject {
   static_assert(MAX_SIZE <= ROUNDDOWN(UINT64_MAX, PAGE_SIZE) - PAGE_SIZE);
   static_assert(MAX_SIZE % PAGE_SIZE == 0);
 
+  uint32_t ScanForZeroPages(bool reclaim) override;
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,

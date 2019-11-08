@@ -227,8 +227,8 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   virtual fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
   // Apply |op| to VMO mappings in the specified range of pages.
-  zx_status_t RangeOp(uint32_t op, size_t offset, size_t len,
-                      user_inout_ptr<void> buffer, size_t buffer_size);
+  zx_status_t RangeOp(uint32_t op, size_t offset, size_t len, user_inout_ptr<void> buffer,
+                      size_t buffer_size);
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to this region to allocate.  If a subregion is entirely in
@@ -430,12 +430,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   void Dump(uint depth, bool verbose) const override;
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override;
 
- protected:
-  ~VmMapping() override;
-  friend fbl::RefPtr<VmMapping>;
-
-  // private apis from VmObject land
-  friend class VmObject;
+  // Apis intended for use by VmObject
 
   // unmap any pages that map the passed in vmo range. May not intersect with this range
   zx_status_t UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
@@ -443,6 +438,10 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // if necessary.
   zx_status_t RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
       TA_REQ(object_->lock());
+
+ protected:
+  ~VmMapping() override;
+  friend fbl::RefPtr<VmMapping>;
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);

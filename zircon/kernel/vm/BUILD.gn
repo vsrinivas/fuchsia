@@ -14,6 +14,7 @@ zx_library("vm") {
     "pmm.cc",
     "pmm_arena.cc",
     "pmm_node.cc",
+    "scanner.cc",
     "vm.cc",
     "vm_address_region.cc",
     "vm_address_region_or_mapping.cc",
