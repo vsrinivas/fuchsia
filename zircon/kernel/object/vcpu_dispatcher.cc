@@ -61,17 +61,12 @@ void VcpuDispatcher::VirtualInterrupt(uint32_t vector) {
   vcpu_->VirtualInterrupt(vector);
 }
 
-zx_status_t VcpuDispatcher::ReadState(zx_vcpu_state_t* vcpu_state) const {
+zx_status_t VcpuDispatcher::ReadState(uint32_t kind, void* buffer, size_t len) const {
   canary_.Assert();
-  return vcpu_->ReadState(vcpu_state);
+  return vcpu_->ReadState(kind, buffer, len);
 }
 
-zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_state_t& vcpu_state) {
+zx_status_t VcpuDispatcher::WriteState(uint32_t kind, const void* buffer, size_t len) {
   canary_.Assert();
-  return vcpu_->WriteState(vcpu_state);
-}
-
-zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_io_t& io_state) {
-  canary_.Assert();
-  return vcpu_->WriteState(io_state);
+  return vcpu_->WriteState(kind, buffer, len);
 }

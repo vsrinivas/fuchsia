@@ -124,35 +124,19 @@ zx_status_t sys_vcpu_read_state(zx_handle_t handle, uint32_t kind, user_out_ptr<
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
   zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &vcpu);
-  if (status != ZX_OK) {
+  if (status != ZX_OK)
     return status;
-  }
-  if (kind != ZX_VCPU_STATE || buffer_size != sizeof(zx_vcpu_state_t)) {
+
+  alignas(alignof(zx_vcpu_state_t)) uint8_t buffer[sizeof(zx_vcpu_state_t)];
+  if (buffer_size > sizeof(buffer))
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_vcpu_state_t state{};
-  status = vcpu->ReadState(&state);
-  if (status != ZX_OK) {
+  status = vcpu->ReadState(kind, buffer, buffer_size);
+  if (status != ZX_OK)
     return status;
-  }
-
-  return user_buffer.reinterpret<zx_vcpu_state_t>().copy_to_user(state);
-}
-
-template <typename T>
-static zx_status_t WriteState(VcpuDispatcher* vcpu, user_in_ptr<const void> user_buffer,
-                              size_t buffer_size) {
-  if (buffer_size != sizeof(T)) {
+  status = user_buffer.copy_array_to_user(buffer, buffer_size);
+  if (status != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  T state{};
-  zx_status_t status = user_buffer.reinterpret<const T>().copy_from_user(&state);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return vcpu->WriteState(state);
+  return ZX_OK;
 }
 
 // zx_status_t zx_vcpu_write_state
@@ -162,16 +146,14 @@ zx_status_t sys_vcpu_write_state(zx_handle_t handle, uint32_t kind,
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
   zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &vcpu);
-  if (status != ZX_OK) {
+  if (status != ZX_OK)
     return status;
-  }
 
-  switch (kind) {
-    case ZX_VCPU_STATE:
-      return WriteState<zx_vcpu_state_t>(vcpu.get(), user_buffer, buffer_size);
-    case ZX_VCPU_IO:
-      return WriteState<zx_vcpu_io_t>(vcpu.get(), user_buffer, buffer_size);
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
+  alignas(alignof(zx_vcpu_state_t)) uint8_t buffer[sizeof(zx_vcpu_state_t)];
+  if (buffer_size > sizeof(buffer))
+    return ZX_ERR_INVALID_ARGS;
+  status = user_buffer.copy_array_from_user(buffer, buffer_size);
+  if (status != ZX_OK)
+    return ZX_ERR_INVALID_ARGS;
+  return vcpu->WriteState(kind, buffer, buffer_size);
 }

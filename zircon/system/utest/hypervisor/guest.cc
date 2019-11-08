@@ -681,24 +681,6 @@ static bool vcpu_fp_aarch32() {
   END_TEST;
 }
 
-static bool vcpu_write_state_io_aarch32() {
-  BEGIN_TEST;
-
-  test_t test;
-  ASSERT_TRUE(setup(&test, nullptr, nullptr));
-  if (!test.supported) {
-    // The hypervisor isn't supported, so don't run the test.
-    return true;
-  }
-
-  // ZX_VCPU_IO is not supported on arm64.
-  zx_vcpu_io_t io{};
-  io.access_size = 1;
-  ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
-
-  END_TEST;
-}
-
 #elif __x86_64__
 
 static bool vcpu_interrupt_priority() {
@@ -1065,7 +1047,6 @@ RUN_TEST(vcpu_wfi_pending_interrupt)
 RUN_TEST(vcpu_wfi_aarch32)
 RUN_TEST(vcpu_fp)
 RUN_TEST(vcpu_fp_aarch32)
-RUN_TEST(vcpu_write_state_io_aarch32)
 #elif __x86_64__
 RUN_TEST(vcpu_interrupt_priority)
 RUN_TEST(vcpu_nmi)

@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_
 
-#include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
 #include <arch/arm64/hypervisor/el2_state.h>
@@ -114,9 +113,8 @@ class Vcpu {
   zx_status_t Resume(zx_port_packet_t* packet);
   cpu_mask_t Interrupt(uint32_t vector, hypervisor::InterruptType type);
   void VirtualInterrupt(uint32_t vector);
-  zx_status_t ReadState(zx_vcpu_state_t* state) const;
-  zx_status_t WriteState(const zx_vcpu_state_t& state);
-  zx_status_t WriteState(const zx_vcpu_io_t& io_state) { return ZX_ERR_INVALID_ARGS; }
+  zx_status_t ReadState(uint32_t kind, void* buf, size_t len) const;
+  zx_status_t WriteState(uint32_t kind, const void* buf, size_t len);
 
  private:
   Guest* guest_;

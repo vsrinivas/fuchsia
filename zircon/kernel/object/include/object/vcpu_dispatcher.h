@@ -8,7 +8,6 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VCPU_DISPATCHER_H_
 
 #include <zircon/rights.h>
-#include <zircon/syscalls/hypervisor.h>
 
 #include <object/dispatcher.h>
 #include <object/handle.h>
@@ -33,9 +32,8 @@ class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VC
   // is running, this returns a CPU mask that can be used to interrupt it.
   cpu_mask_t PhysicalInterrupt(uint32_t vector);
   void VirtualInterrupt(uint32_t vector);
-  zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
-  zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
-  zx_status_t WriteState(const zx_vcpu_io_t& io_state);
+  zx_status_t ReadState(uint32_t kind, void* buffer, size_t len) const;
+  zx_status_t WriteState(uint32_t kind, const void* buffer, size_t len);
 
  private:
   fbl::RefPtr<GuestDispatcher> guest_;
