@@ -90,14 +90,6 @@ static void inline TriggerSoftwareBreakpoint() {
 #endif
 }
 
-#ifdef __Fuchsia__
-
-// Resume |thread| after it has executed a s/w breakpoint instruction.
-
-zx_status_t ResumeAfterSoftwareBreakpointInstruction(zx_handle_t thread, zx_handle_t eport);
-
-#endif
-
 }  // namespace debugger_utils
 
 #endif  // GARNET_LIB_DEBUGGER_UTILS_BREAKPOINTS_H_

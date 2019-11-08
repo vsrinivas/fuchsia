@@ -32,7 +32,6 @@ static_library("debugger_utils") {
 
   if (is_fuchsia) {
     sources += [
-      "breakpoints.cc",
       "dso_list.cc",
       "dso_list.h",
       "dump_thread.cc",
@@ -72,9 +71,9 @@ static_library("debugger_utils") {
     deps += [ "//zircon/public/lib/inspector" ]
     public_deps += [
       "//garnet/lib/process",
-      "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
     ]
   } else {
     deps += [ "//zircon/system/public" ]
