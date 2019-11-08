@@ -45,7 +45,7 @@ void Harvester::GatherDeviceProperties() {
   gather_cpu_.GatherDeviceProperties();
   // TODO(fxb/40872): re-enable once we need this data.
   // gather_inspectable_.GatherDeviceProperties();
-  gather_introspection_.GatherDeviceProperties();
+  // gather_introspection_.GatherDeviceProperties();
   gather_memory_.GatherDeviceProperties();
   gather_tasks_.GatherDeviceProperties();
 }
@@ -59,8 +59,9 @@ void Harvester::GatherFastData() {
 void Harvester::GatherSlowData() {
   zx::time now = async::Now(slow_dispatcher_);
 
-  gather_inspectable_.PostUpdate(slow_dispatcher_, now, zx::sec(3));
-  gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
+  // TODO(fxb/40872): re-enable once we need this data.
+  // gather_inspectable_.PostUpdate(slow_dispatcher_, now, zx::sec(3));
+  // gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
   gather_memory_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
   gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::sec(2));
 }

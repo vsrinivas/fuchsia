@@ -80,8 +80,9 @@ TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
   EXPECT_EQ(zx::msec(100), GetGatherCpuPeriod());
 
   test_harvester->GatherSlowData();
-  EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
-  EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
+  // TODO(fxb/40872): re-enable once we need this data.
+  // EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
+  // EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
   EXPECT_EQ(zx::msec(100), GetGatherMemoryPeriod());
   EXPECT_EQ(zx::sec(2), GetGatherTasksPeriod());
 }
