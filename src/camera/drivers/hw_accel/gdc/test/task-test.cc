@@ -518,11 +518,11 @@ TEST(TaskTest, NonContigVmoTest) {
   image_format_2_t format;
   EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
   zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
-      input_buffer_collection, format, bti_handle, kWidth, kHeight, 0);
+      input_buffer_collection, format, bti_handle, kWidth, kHeight, kNumberOfBuffers);
   ASSERT_OK(status);
 
-  status = camera::CreateContiguousBufferCollectionInfo2(output_buffer_collection, format,
-                                                         bti_handle, kWidth, kHeight, 0);
+  status = camera::CreateContiguousBufferCollectionInfo2(
+      output_buffer_collection, format, bti_handle, kWidth, kHeight, kNumberOfBuffers);
   ASSERT_OK(status);
 
   status = zx_vmo_create(kConfigSize, 0, &config_vmo);
@@ -535,9 +535,8 @@ TEST(TaskTest, NonContigVmoTest) {
                                     kWidth, kHeight));
   status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
                       image_format_table, 1, 0, &config_vmo, 1, &callback, zx::bti(bti_handle));
-  // Expecting Task setup to be returning an error when config vmo is not
-  // contig.
-  EXPECT_NE(ZX_OK, status);
+  // Expecting Task setup to convert the non-contig vmo to contig
+  EXPECT_EQ(ZX_OK, status);
 }
 
 TEST(TaskTest, InvalidBufferCollectionTest) {

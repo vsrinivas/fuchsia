@@ -26,7 +26,37 @@ zx_status_t GdcTask::PinConfigVmos(const zx_handle_t* config_vmo_list, size_t co
 
   for (uint32_t i = 0; i < config_vmo_count; i++) {
     zx::vmo vmo(config_vmo_list[i]);
-    auto status = pinned_config_vmos_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
+    uint64_t size;
+    auto status = vmo.get_size(&size);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "%s: Unable to get VMO size\n", __func__);
+      return status;
+    }
+
+    zx::vmo contig_vmo;
+    status = zx::vmo::create_contiguous(bti, size, 0, &contig_vmo);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "Unable to get create contiguous VMO\n", __func__);
+      return status;
+    }
+
+    fzl::VmoMapper mapped_buffer_vmo;
+    status = mapped_buffer_vmo.Map(vmo, 0, 0, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "Unable to get map VMO\n", __func__);
+      return status;
+    }
+
+    fzl::VmoMapper mapped_buffer_contig_vmo;
+    status = mapped_buffer_contig_vmo.Map(contig_vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "Unable to get map contig VMO\n", __func__);
+      return status;
+    }
+
+    memcpy(mapped_buffer_contig_vmo.start(), mapped_buffer_vmo.start(), size);
+
+    status = pinned_config_vmos_[i].Pin(contig_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       FX_LOG(ERROR, "%s: Failed to pin config VMO\n", __func__);
       return status;
@@ -35,6 +65,9 @@ zx_status_t GdcTask::PinConfigVmos(const zx_handle_t* config_vmo_list, size_t co
       FX_LOG(ERROR, "%s: buffer is not contiguous", __func__);
       return ZX_ERR_NO_MEMORY;
     }
+
+    config_contig_vmos_.push_back(std::move(contig_vmo));
+
     // Release the vmos so that the handle doesn't get closed
     __UNUSED zx_handle_t handle = vmo.release();
   }

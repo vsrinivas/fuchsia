@@ -5,6 +5,8 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_TASK_H_
 
+#include <vector>
+
 #include "../task/task.h"
 
 namespace gdc {
@@ -37,9 +39,10 @@ class GdcTask : public generictask::GenericTask {
                    const hw_accel_callback_t* callback, const zx::bti& bti);
 
  private:
-  fbl::Array<fzl::PinnedVmo> pinned_config_vmos_;
   zx_status_t PinConfigVmos(const zx_handle_t* config_vmo_list, size_t config_vmo_count,
                             const zx::bti& bti);
+  fbl::Array<fzl::PinnedVmo> pinned_config_vmos_;
+  std::vector<zx::vmo> config_contig_vmos_;
 };
 }  // namespace gdc
 
