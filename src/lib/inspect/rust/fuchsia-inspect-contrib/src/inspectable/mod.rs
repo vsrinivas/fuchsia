@@ -77,8 +77,8 @@ pub trait Watch<V> {
     fn watch(&mut self, value: &V);
 }
 
-#[must_use]
 /// Calls self.watcher.watch(self.value) when dropped.
+#[must_use]
 pub struct InspectableGuard<'a, V, W>
 where
     W: Watch<V>,

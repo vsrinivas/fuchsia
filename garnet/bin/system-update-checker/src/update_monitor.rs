@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect::{InspectableDebugString, InspectableVectorSize},
     failure::Error,
     fidl_fuchsia_update::ManagerState,
+    fuchsia_inspect_contrib::inspectable::{InspectableDebugString, InspectableVectorSize},
 };
 
 pub trait StateChangeCallback: Clone + Send + Sync + 'static {

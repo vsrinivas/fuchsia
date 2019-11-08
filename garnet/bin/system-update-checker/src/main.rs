@@ -8,7 +8,6 @@ mod check;
 mod config;
 mod connect;
 mod errors;
-mod inspect;
 mod last_update_storage;
 mod poller;
 mod provider_handler;
@@ -103,7 +102,7 @@ async fn main() -> Result<(), Error> {
                 update_manager.try_start_update(Initiator::Automatic, None);
             }
         }
-            .boxed(),
+        .boxed(),
     );
 
     futures.push(perform_fdr_if_necessary().boxed());
