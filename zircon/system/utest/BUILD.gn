@@ -44,6 +44,7 @@ if (current_cpu != "") {
       "$zx/system/dev/block/core:core-unittest",
       "$zx/system/dev/block/ftl/test",
       "$zx/system/dev/block/fvm/test",
+      "$zx/system/dev/block/gpt:gpt-device-test",
       "$zx/system/dev/block/mbr:mbr-test",
       "$zx/system/dev/block/mtk-sdmmc:mtk-sdmmc-test",
       "$zx/system/dev/block/sdhci:sdhci-test",
