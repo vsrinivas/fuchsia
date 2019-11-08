@@ -105,6 +105,7 @@ impl DeviceInfo {
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AudioSettingSource {
+    Default,
     User,
     System,
 }
