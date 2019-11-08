@@ -65,6 +65,12 @@ protocol FidlCodecTestInterface {
     I32EnumMessage(I32Enum ev);
     I64EnumMessage(I64Enum ev);
 
+    DefaultBitsMessage(DefaultBits v);
+    I8BitsMessage(I8Bits v);
+    I16BitsMessage(I16Bits v);
+    I32BitsMessage(I32Bits v);
+    I64BitsMessage(I64Bits v);
+
     Table(ValueTable table, int32 i);
 
     Handle(handle<channel> ch);
@@ -147,6 +153,41 @@ enum I32Enum : int32 {
 
 enum I64Enum : int64 {
     X = -23;
+};
+
+bits DefaultBits {
+    A = 1;
+    B = 2;
+    C = 4;
+    D = 8;
+};
+
+bits I8Bits : uint8 {
+    A = 1;
+    B = 2;
+    C = 4;
+    D = 8;
+};
+
+bits I16Bits : uint16 {
+    A = 0x100;
+    B = 0x200;
+    C = 0x400;
+    D = 0x800;
+};
+
+bits I32Bits : uint64 {
+    A = 0x10000;
+    B = 0x20000;
+    C = 0x40000;
+    D = 0x80000;
+};
+
+bits I64Bits : uint64 {
+    A = 0x100000000;
+    B = 0x200000000;
+    C = 0x400000000;
+    D = 0x800000000;
 };
 
 table ValueTable {

@@ -27,6 +27,7 @@ class Visitor {
   virtual void VisitArrayValue(const ArrayValue* node) { VisitValue(node); }
   virtual void VisitVectorValue(const VectorValue* node) { VisitNullableValue(node); }
   virtual void VisitEnumValue(const EnumValue* node) { VisitInlineValue(node); }
+  virtual void VisitBitsValue(const BitsValue* node) { VisitInlineValue(node); }
   virtual void VisitHandleValue(const HandleValue* node) { VisitValue(node); }
 
   virtual void VisitNumericValue(const InlineValue* node) { VisitInlineValue(node); }
@@ -57,6 +58,7 @@ class Visitor {
   friend class ArrayValue;
   friend class VectorValue;
   friend class EnumValue;
+  friend class BitsValue;
   friend class HandleValue;
 };
 

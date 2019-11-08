@@ -395,6 +395,26 @@ class EnumValue : public InlineValue {
   const Enum& enum_definition_;
 };
 
+// Bits.
+class BitsValue : public InlineValue {
+ public:
+  BitsValue(const Type* type, const uint8_t* data, const Bits& bits_definition)
+      : InlineValue(type, data), bits_definition_(bits_definition) {}
+
+  const Bits& bits_definition() const { return bits_definition_; };
+
+  int DisplaySize(int remaining_size) const override;
+
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override;
+
+  void Visit(Visitor* visitor) const override;
+
+ private:
+  const Bits& bits_definition_;
+};
+
 // A handle.
 class HandleValue : public Value {
  public:

@@ -21,6 +21,11 @@ bool Type::ValueEquals(const uint8_t* /*bytes*/, size_t /*length*/,
   return false;
 }
 
+bool Type::ValueHas(const uint8_t* /*bytes*/, const rapidjson::Value& /*value*/) const {
+  FXL_LOG(FATAL) << "ValueHas not implemented";
+  return false;
+}
+
 size_t Type::InlineSize() const {
   FXL_LOG(FATAL) << "Size for type not implemented";
   return 0;
@@ -129,6 +134,12 @@ EnumType::EnumType(const Enum& e) : enum_(e) {}
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return std::make_unique<EnumValue>(this, decoder->GetAddress(offset, enum_.size()), enum_);
+}
+
+BitsType::BitsType(const Bits& b) : bits_(b) {}
+
+std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  return std::make_unique<BitsValue>(this, decoder->GetAddress(offset, bits_.size()), bits_);
 }
 
 std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {

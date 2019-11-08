@@ -132,6 +132,15 @@ class JsonVisitor : public Visitor {
     }
   }
 
+  void VisitBitsValue(const BitsValue* node) override {
+    if (node->data() == nullptr) {
+      result_->SetString("(invalid)", *allocator_);
+    } else {
+      std::string name = node->bits_definition().GetNameFromBytes(node->data());
+      result_->SetString(name.c_str(), *allocator_);
+    }
+  }
+
  private:
   rapidjson::Value* result_;
   rapidjson::Document::AllocatorType* allocator_;
@@ -790,6 +799,26 @@ void EnumValue::PrettyPrint(std::ostream& os, const Colors& colors,
 }
 
 void EnumValue::Visit(Visitor* visitor) const { visitor->VisitEnumValue(this); }
+
+int BitsValue::DisplaySize(int /*remaining_size*/) const {
+  if (data() == nullptr) {
+    return strlen(kInvalid);
+  }
+  return bits_definition_.GetNameFromBytes(data()).size();
+}
+
+void BitsValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                            const fidl_message_header_t* /*header*/,
+                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
+                            int /*max_line_size*/) const {
+  if (data() == nullptr) {
+    os << colors.red << kInvalid << colors.reset;
+  } else {
+    os << colors.blue << bits_definition_.GetNameFromBytes(data()) << colors.reset;
+  }
+}
+
+void BitsValue::Visit(Visitor* visitor) const { visitor->VisitBitsValue(this); }
 
 int HandleValue::DisplaySize(int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();

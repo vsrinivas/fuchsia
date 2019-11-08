@@ -101,6 +101,32 @@ class Enum {
   std::unique_ptr<Type> type_;
 };
 
+class Bits {
+ public:
+  friend class Library;
+
+  ~Bits();
+
+  const std::string& name() const { return name_; }
+  uint64_t size() const { return size_; }
+  const Type* type() const { return type_.get(); }
+
+  std::string GetNameFromBytes(const uint8_t* bytes) const;
+
+ private:
+  Bits(Library* enclosing_library, const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
+  Library* enclosing_library_;
+  const rapidjson::Value& value_;
+  bool decoded_ = false;
+  std::string name_;
+  uint64_t size_;
+  std::unique_ptr<Type> type_;
+};
+
 // TODO: Consider whether this is duplicative of Struct / Table member.
 class UnionMember {
  public:
@@ -438,6 +464,7 @@ class Library {
   std::string name_;
   std::vector<std::unique_ptr<Interface>> interfaces_;
   std::map<std::string, std::unique_ptr<Enum>> enums_;
+  std::map<std::string, std::unique_ptr<Bits>> bits_;
   std::map<std::string, std::unique_ptr<Struct>> structs_;
   std::map<std::string, std::unique_ptr<Table>> tables_;
   std::map<std::string, std::unique_ptr<Union>> unions_;

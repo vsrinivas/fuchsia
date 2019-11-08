@@ -48,6 +48,48 @@ std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
   return "<unknown>";
 }
 
+Bits::Bits(Library* enclosing_library, const rapidjson::Value& value)
+    : enclosing_library_(enclosing_library), value_(value) {}
+
+Bits::~Bits() = default;
+
+void Bits::DecodeTypes() {
+  if (decoded_) {
+    return;
+  }
+  decoded_ = true;
+  name_ = enclosing_library_->ExtractString(value_, "bits", "<unknown>", "name");
+  type_ = enclosing_library_->ExtractType(value_, "bits", name_, "type", 0);
+
+  if (!value_.HasMember("members")) {
+    enclosing_library_->FieldNotFound("bits", name_, "members");
+  }
+
+  size_ = type_->InlineSize();
+}
+
+std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
+  std::string returned_value;
+  if (value_.HasMember("members")) {
+    for (auto& member : value_["members"].GetArray()) {
+      if (member.HasMember("value") && member["value"].HasMember("literal") &&
+          (type_->ValueHas(bytes, member["value"]["literal"]))) {
+        if (!returned_value.empty()) {
+          returned_value += "|";
+        }
+        if (!member.HasMember("name")) {
+          returned_value += "<unknown>";
+        }
+        returned_value += member["name"].GetString();
+      }
+    }
+  }
+  if (returned_value.empty()) {
+    return "<none>";
+  }
+  return returned_value;
+}
+
 UnionMember::UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion)
     : name_(enclosing_library->ExtractString(value, "union member", "<unknown>", "name")),
       offset_(enclosing_library->ExtractUint64(value, "union member", name_, "offset")),
@@ -316,6 +358,15 @@ void Library::DecodeTypes() {
     }
   }
 
+  if (!backing_document_.HasMember("bits_declarations")) {
+    FieldNotFound("library", name_, "bits_declarations");
+  } else {
+    for (auto& bits : backing_document_["bits_declarations"].GetArray()) {
+      bits_.emplace(std::piecewise_construct, std::forward_as_tuple(bits["name"].GetString()),
+                    std::forward_as_tuple(new Bits(this, bits)));
+    }
+  }
+
   if (!backing_document_.HasMember("struct_declarations")) {
     FieldNotFound("library", name_, "struct_declarations");
   } else {
@@ -361,6 +412,9 @@ bool Library::DecodeAll() {
   for (const auto& tmp : enums_) {
     tmp.second->DecodeTypes();
   }
+  for (const auto& tmp : bits_) {
+    tmp.second->DecodeTypes();
+  }
   for (const auto& tmp : tables_) {
     tmp.second->DecodeTypes();
   }
@@ -391,6 +445,11 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   if (enu != enums_.end()) {
     enu->second->DecodeTypes();
     return std::make_unique<EnumType>(std::ref(*enu->second));
+  }
+  auto bits = bits_.find(identifier);
+  if (bits != bits_.end()) {
+    bits->second->DecodeTypes();
+    return std::make_unique<BitsType>(std::ref(*bits->second));
   }
   auto tab = tables_.find(identifier);
   if (tab != tables_.end()) {

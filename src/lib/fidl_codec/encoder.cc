@@ -224,6 +224,10 @@ void Encoder::VisitEnumValue(const EnumValue* node) {
   WriteNodeData(*node, node->enum_definition().size());
 }
 
+void Encoder::VisitBitsValue(const BitsValue* node) {
+  WriteNodeData(*node, node->bits_definition().size());
+}
+
 void Encoder::VisitHandleValue(const HandleValue* node) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {
     Write<uint32_t>(FIDL_HANDLE_ABSENT);

@@ -875,6 +875,37 @@ TEST_DECODE_WIRE(I64Enum, I64EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I64Enum#rst# = #blu#X#rst# }",
                  test::fidlcodec::examples::I64Enum::X);
 
+// Bits Tests
+
+TEST_DECODE_WIRE(DefaultBits, DefaultBitsMessage, R"({"v":"A|C"})",
+                 "{ v: #gre#test.fidlcodec.examples/DefaultBits#rst# = #blu#A|C#rst# }",
+                 static_cast<test::fidlcodec::examples::DefaultBits>(
+                     static_cast<uint8_t>(test::fidlcodec::examples::DefaultBits::A) |
+                     static_cast<uint8_t>(test::fidlcodec::examples::DefaultBits::C)));
+TEST_DECODE_WIRE(I8Bits, I8BitsMessage, R"({"v":"A|D"})",
+                 "{ v: #gre#test.fidlcodec.examples/I8Bits#rst# = #blu#A|D#rst# }",
+                 static_cast<test::fidlcodec::examples::I8Bits>(
+                     static_cast<uint8_t>(test::fidlcodec::examples::I8Bits::A) |
+                     static_cast<uint8_t>(test::fidlcodec::examples::I8Bits::D)));
+TEST_DECODE_WIRE(I16Bits, I16BitsMessage, R"({"v":"B|C"})",
+                 "{ v: #gre#test.fidlcodec.examples/I16Bits#rst# = #blu#B|C#rst# }",
+                 static_cast<test::fidlcodec::examples::I16Bits>(
+                     static_cast<uint16_t>(test::fidlcodec::examples::I16Bits::B) |
+                     static_cast<uint16_t>(test::fidlcodec::examples::I16Bits::C)));
+TEST_DECODE_WIRE(I32Bits, I32BitsMessage, R"({"v":"B|D"})",
+                 "{ v: #gre#test.fidlcodec.examples/I32Bits#rst# = #blu#B|D#rst# }",
+                 static_cast<test::fidlcodec::examples::I32Bits>(
+                     static_cast<uint32_t>(test::fidlcodec::examples::I32Bits::B) |
+                     static_cast<uint32_t>(test::fidlcodec::examples::I32Bits::D)));
+TEST_DECODE_WIRE(I64Bits, I64BitsMessage, R"({"v":"C|D"})",
+                 "{ v: #gre#test.fidlcodec.examples/I64Bits#rst# = #blu#C|D#rst# }",
+                 static_cast<test::fidlcodec::examples::I64Bits>(
+                     static_cast<uint64_t>(test::fidlcodec::examples::I64Bits::C) |
+                     static_cast<uint64_t>(test::fidlcodec::examples::I64Bits::D)));
+TEST_DECODE_WIRE(EmptyDefaultBits, DefaultBitsMessage, R"({"v":"<none>"})",
+                 "{ v: #gre#test.fidlcodec.examples/DefaultBits#rst# = #blu#<none>#rst# }",
+                 static_cast<test::fidlcodec::examples::DefaultBits>(0));
+
 // Table Tests
 
 test::fidlcodec::examples::ValueTable GetTable(std::optional<int16_t> first_int16,

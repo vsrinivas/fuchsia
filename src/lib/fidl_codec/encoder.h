@@ -71,6 +71,7 @@ class Encoder : public Visitor {
   void VisitArrayValue(const ArrayValue* node) override;
   void VisitVectorValue(const VectorValue* node) override;
   void VisitEnumValue(const EnumValue* node) override;
+  void VisitBitsValue(const BitsValue* node) override;
   void VisitHandleValue(const HandleValue* node) override;
   void VisitObject(const Object* node) override;
   void VisitU8Value(const NumericValue<uint8_t>* node) override;
