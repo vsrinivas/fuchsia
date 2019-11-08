@@ -38,15 +38,15 @@ SessionContext SessionTest::CreateSessionContext() {
 
   SessionContext session_context{
       vk::Device(),
-      nullptr,              // escher::Escher*
-      nullptr,              // escher::ResourceRecycler
-      nullptr,              // escher::ImageFactory*
-      nullptr,              // escher::RoundedRectFactory*
-      nullptr,              // escher::ReleaseFenceSignaller*
-      frame_scheduler_,     // shared_ptr<FrameScheduler>
-      SceneGraphWeakPtr(),  // SceneGraphWeakPtr
-      nullptr,              // ResourceLinker*
-      nullptr               // ViewLinker*
+      nullptr,           // escher::Escher*
+      nullptr,           // escher::ResourceRecycler
+      nullptr,           // escher::ImageFactory*
+      nullptr,           // escher::RoundedRectFactory*
+      nullptr,           // escher::ReleaseFenceSignaller*
+      frame_scheduler_,  // shared_ptr<FrameScheduler>
+      nullptr,           // SceneGraphWeakPtr
+      nullptr,           // ResourceLinker*
+      nullptr            // ViewLinker*
   };
   return session_context;
 }
