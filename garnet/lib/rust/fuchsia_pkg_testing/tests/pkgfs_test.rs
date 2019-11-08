@@ -890,6 +890,42 @@ async fn test_pkgfs_install_update() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
+    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
+
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    let pkg = example_package().await;
+    install(&pkgfs, &pkg);
+
+    assert_eq!(ls(&pkgfs, "packages").unwrap(), ["example"]);
+    assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
+    verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("valid example package");
+
+    drop(d);
+    let pkgfs = pkgfs.restart().unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    // package is no longer accesible.
+    assert_eq!(ls(&pkgfs, "packages").unwrap(), Vec::<&str>::new());
+    assert_eq!(ls(&pkgfs, "versions").unwrap(), Vec::<&str>::new());
+    assert_error_kind!(
+        d.metadata("packages/example/0").map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index() {
     let pkg = example_package().await;
 
@@ -1074,6 +1110,61 @@ async fn test_pkgfs_shadowed_cache_package() {
         );
         assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
     }
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
+    let pkg = example_package().await;
+    let system_image_package =
+        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+
+    let blobfs = TestBlobFs::start().unwrap();
+    system_image_package.write_to_blobfs(&blobfs);
+    pkg.write_to_blobfs(&blobfs);
+    let pkgfs = TestPkgFs::start_with_blobfs(
+        blobfs,
+        Some(&system_image_package.meta_far_merkle_root().to_string()),
+    )
+    .expect("starting pkgfs");
+
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    let pkg2 = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world 2!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+    install(&pkgfs, &pkg2);
+
+    verify_contents(&pkg2, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("pkg2 replaced pkg");
+
+    // cache version is inaccessible
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    drop(d);
+    let pkgfs = pkgfs.restart().unwrap();
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    // cache version is accessible again.
+    verify_contents(&pkg, subdir_proxy(&d, "packages/example/0")).await.unwrap();
+    verify_contents(&pkg, subdir_proxy(&d, &format!("versions/{}", pkg.meta_far_merkle_root())))
+        .await
+        .unwrap();
+
+    // updated version is gone
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg2.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
 
     drop(d);
 

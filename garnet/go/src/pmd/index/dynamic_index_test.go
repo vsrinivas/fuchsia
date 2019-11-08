@@ -5,93 +5,16 @@
 package index
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"reflect"
-	"sort"
-	"strings"
-	"syscall/zx"
 	"testing"
 
 	"fuchsia.googlesource.com/pm/pkg"
 )
 
-func TestList(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pkgIndexPath := filepath.Join(d, "packages", "foo")
-	err = os.MkdirAll(pkgIndexPath, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(filepath.Join(pkgIndexPath, "0"), []byte{}, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	idx := NewDynamic(d, NewStatic())
-	pkgs, err := idx.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got, want := len(pkgs), 1; got != want {
-		t.Errorf("got %d, want %d", got, want)
-	}
-
-	if got, want := pkgs[0].Name, "foo"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-	if got, want := pkgs[0].Version, "0"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-
-	pkgIndexPath = filepath.Join(d, "packages", "bar")
-	err = os.MkdirAll(pkgIndexPath, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(filepath.Join(pkgIndexPath, "1"), []byte{}, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pkgs, err = idx.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got, want := len(pkgs), 2; got != want {
-		t.Errorf("got %d, want %d", got, want)
-	}
-
-	if got, want := pkgs[0].Name, "bar"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-	if got, want := pkgs[0].Version, "1"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-	if got, want := pkgs[1].Name, "foo"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-	if got, want := pkgs[1].Version, "0"; got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
 func TestAdd(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	idx := NewDynamic(NewStatic())
 
-	idx := NewDynamic(d, NewStatic())
-
-	err = idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
+	err := idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,33 +29,40 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, err := filepath.Glob(filepath.Join(d, "packages/*/*"))
-	if err != nil {
-		t.Fatal(err)
+	pkgs := idx.List()
+	wantPkgs := []pkg.Package{{Name: "foo", Version: "0"}, {Name: "foo", Version: "1"}, {Name: "bar", Version: "10"}}
+	if !reflect.DeepEqual(pkgs, wantPkgs) {
+		t.Errorf("got %q, want %q", pkgs, wantPkgs)
+	}
+}
+
+func TestList(t *testing.T) {
+	idx := NewDynamic(NewStatic())
+
+	pkgs := []pkg.Package{
+		{"foo", "0"},
+		{"bar", "1"},
+	}
+	roots := []string{"abc", "def"}
+	for i, pkg := range pkgs {
+		if err := idx.Add(pkg, roots[i]); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	sort.Strings(paths)
-
-	for i := range paths {
-		paths[i] = strings.TrimPrefix(paths[i], filepath.Join(d, "packages")+"/")
+	list := idx.List()
+	if got, want := len(list), len(pkgs); got != want {
+		t.Errorf("got %d, want %d", got, want)
 	}
-
-	wantPaths := []string{"bar/10", "foo/0", "foo/1"}
-
-	for i := range paths {
-		if got, want := paths[i], wantPaths[i]; got != want {
-			t.Errorf("got %q, want %q", got, want)
+	for i, pkg := range pkgs {
+		if !reflect.DeepEqual(list[i], pkg) {
+			t.Errorf("mismatched package at %d: %v, %v", i, list[i], pkg)
 		}
 	}
 }
 
 func TestFulfill(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	idx := NewDynamic(d, NewStatic())
+	idx := NewDynamic(NewStatic())
 
 	// New package, no blobs pre-installed.
 	{
@@ -193,20 +123,14 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("root1 was not deleted from installing")
 		}
 
-		paths, err := filepath.Glob(filepath.Join(d, "packages/*/*"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for i := range paths {
-			paths[i] = strings.TrimPrefix(paths[i], filepath.Join(d, "packages")+"/")
-		}
-		wantPaths := []string{"foo/1"}
-		if !reflect.DeepEqual(paths, wantPaths) {
-			t.Errorf("got %q, want %q", paths, wantPaths)
+		pkgs := idx.List()
+		wantPkgs := []pkg.Package{{Name: "foo", Version: "1"}}
+		if !reflect.DeepEqual(pkgs, wantPkgs) {
+			t.Errorf("got %q, want %q", pkgs, wantPkgs)
 		}
 	}
 
-	// New package, one blob fails and later succeeds.
+	// Second package only needs one blob.
 	{
 		// Start installing package.
 		neededBlobs := map[string]struct{}{
@@ -234,9 +158,6 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("got %v, want %v", gotInstalling, wantInstalling)
 		}
 
-		// Fail blob with error. Causes package failure to be signaled.
-		idx.InstallingFailedForBlob("blob4", zx.ErrNoSpace)
-
 		// Fulfill blob. Now the package should be marked finished.
 		idx.Fulfill("blob4")
 
@@ -250,17 +171,12 @@ func TestFulfill(t *testing.T) {
 		if _, ok := idx.installing["root2"]; ok {
 			t.Errorf("root2 was not deleted from installing")
 		}
+	}
 
-		paths, err := filepath.Glob(filepath.Join(d, "packages/*/*"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for i := range paths {
-			paths[i] = strings.TrimPrefix(paths[i], filepath.Join(d, "packages")+"/")
-		}
-		wantPaths := []string{"bar/2", "foo/1"}
-		if !reflect.DeepEqual(paths, wantPaths) {
-			t.Errorf("got %q, want %q", paths, wantPaths)
-		}
+	// This is getting out of hand; now there are two of them
+	pkgs := idx.List()
+	wantPkgs := []pkg.Package{{Name: "foo", Version: "1"}, {Name: "bar", Version: "2"}}
+	if !reflect.DeepEqual(pkgs, wantPkgs) {
+		t.Errorf("got %q, want %q", pkgs, wantPkgs)
 	}
 }

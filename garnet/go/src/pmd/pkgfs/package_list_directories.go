@@ -5,8 +5,6 @@
 package pkgfs
 
 import (
-	"log"
-	"os"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
@@ -58,12 +56,9 @@ func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 		}
 	}
 
-	dnames, err := filepath.Glob(pr.fs.index.PackagePath("*"))
-	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
-	for _, name := range dnames {
-		names[filepath.Base(name)] = struct{}{}
+	pkgs := pr.fs.index.List()
+	for _, p := range pkgs {
+		names[p.Name] = struct{}{}
 	}
 
 	dirents := make([]fs.Dirent, 0, len(names))
@@ -88,14 +83,17 @@ type packageListDir struct {
 
 func newPackageListDir(name string, f *Filesystem) (*packageListDir, error) {
 	if !f.static.HasName(name) {
-		_, err := os.Stat(f.index.PackagePath(name))
-		if os.IsNotExist(err) {
 
-			return nil, fs.ErrNotFound
+		pkgs := f.index.List()
+		found := false
+		for _, p := range pkgs {
+			if p.Name == name {
+				found = true
+				break
+			}
 		}
-		if err != nil {
-			log.Printf("pkgfs: error opening package: %q: %s", name, err)
-			return nil, err
+		if !found {
+			return nil, fs.ErrNotFound
 		}
 	}
 
@@ -145,14 +143,14 @@ func (pld *packageListDir) Read() ([]fs.Dirent, error) {
 		return dirents, nil
 	}
 
-	names, err := filepath.Glob(pld.fs.index.PackageVersionPath(pld.packageName, "*"))
-	if err != nil {
-		return nil, goErrToFSErr(err)
+	var dirents []fs.Dirent
+	pkgs := pld.fs.index.List()
+	for _, p := range pkgs {
+		if p.Name == pld.packageName {
+			dirents = append(dirents, dirDirEnt(p.Version))
+		}
 	}
-	dirents := make([]fs.Dirent, len(names))
-	for i := range names {
-		dirents[i] = dirDirEnt(filepath.Base(names[i]))
-	}
+
 	return dirents, nil
 }
 

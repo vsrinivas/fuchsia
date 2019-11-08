@@ -71,10 +71,6 @@ func tmain(m *testing.M) int {
 		panicerr(dst.Close())
 	}
 
-	indexPath, err := ioutil.TempDir("", "pkgfs-test-index")
-	panicerr(err)
-	defer os.RemoveAll(indexPath)
-
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
 	panicerr(err)
 	defer os.RemoveAll(d)
@@ -89,7 +85,7 @@ func tmain(m *testing.M) int {
 		runtime.KeepAlive(blobd)
 	}()
 
-	pkgfs, err := New(indexPath, syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory))
+	pkgfs, err := New(syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory))
 	panicerr(err)
 	pkgfs.static.LoadFrom(strings.NewReader(
 		fmt.Sprintf("static-package/0=%s\n", bi[0].Merkle.String())))
@@ -383,7 +379,8 @@ func TestVersions(t *testing.T) {
 
 	for _, name := range names {
 		if !merklePat.MatchString(filepath.Base(name)) {
-			t.Fatalf("got non-merkle version: %s", name)
+			t.Errorf("got non-merkle version: %q", name)
+			continue
 		}
 
 		b, err := pkgfsReadFile(filepath.Join("versions", name, "meta"))

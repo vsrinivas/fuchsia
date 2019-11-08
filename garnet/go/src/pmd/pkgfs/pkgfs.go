@@ -40,7 +40,7 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
+func New(blobDir *fdio.Directory) (*Filesystem, error) {
 	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
@@ -49,7 +49,7 @@ func New(indexDir string, blobDir *fdio.Directory) (*Filesystem, error) {
 	static := index.NewStatic()
 	f := &Filesystem{
 		static: static,
-		index:  index.NewDynamic(indexDir, static),
+		index:  index.NewDynamic(static),
 		blobfs: bm,
 		mountInfo: mountInfo{
 			parentFd: -1,

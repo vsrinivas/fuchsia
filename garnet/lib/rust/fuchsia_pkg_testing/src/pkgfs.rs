@@ -18,7 +18,6 @@ use {
         ffi::{CStr, CString},
         fs::File,
     },
-    tempfile::TempDir,
 };
 
 /// A running pkgfs server.
@@ -28,7 +27,6 @@ use {
 /// If dropped, only the ramdisk and dynamic index are deleted.
 pub struct TestPkgFs {
     blobfs: TestBlobFs,
-    index: TempDir,
     proxy: DirectoryProxy,
     process: ProcessKillGuard,
     system_image_merkle: Option<String>,
@@ -37,16 +35,8 @@ pub struct TestPkgFs {
 impl TestPkgFs {
     /// Start a pkgfs server.
     pub fn start() -> Result<Self, Error> {
-        Self::start_with_index(None)
-    }
-
-    /// Start a pkgfs server.
-    ///
-    /// If index is Some, uses that as a dynamic index, otherwise uses an empty tempdir.
-    pub fn start_with_index(index: impl Into<Option<TempDir>>) -> Result<Self, Error> {
         let blobfs = TestBlobFs::start()?;
-
-        TestPkgFs::start_with_blobfs_helper(index, blobfs, Option::<String>::None)
+        TestPkgFs::start_with_blobfs(blobfs, Option::<String>::None)
     }
 
     /// Starts a package server backed by the provided blobfs.
@@ -56,33 +46,16 @@ impl TestPkgFs {
         blobfs: TestBlobFs,
         system_image_merkle: Option<impl Into<String>>,
     ) -> Result<Self, Error> {
-        TestPkgFs::start_with_blobfs_helper(None, blobfs, system_image_merkle)
-    }
-
-    fn start_with_blobfs_helper(
-        index: impl Into<Option<TempDir>>,
-        blobfs: TestBlobFs,
-        system_image_merkle: Option<impl Into<String>>,
-    ) -> Result<Self, Error> {
-        let index = match index.into() {
-            Some(index) => index,
-            None => TempDir::new().context("creating tempdir to use as dynamic package index")?,
-        };
         let system_image_merkle = system_image_merkle.map(|m| m.into());
-
-        let (connection, server_end) = zx::Channel::create()?;
-        fdio::service_connect(index.path().to_str().expect("path is utf8"), server_end)
-            .context("connecting to tempdir")?;
 
         let pkgfs_root_handle_info = HandleInfo::new(HandleType::User0, 0);
         let (proxy, pkgfs_root_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
         let pkgsvr_bin = CString::new("/pkg/bin/pkgsvr").unwrap();
-        let index_flag = CString::new("-index=/i").unwrap();
         let system_image_flag =
             system_image_merkle.as_ref().map(|s| CString::new(s.clone()).unwrap());
 
-        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin, &index_flag];
+        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin];
         if let Some(system_image_flag) = system_image_flag.as_ref() {
             argv.push(system_image_flag)
         }
@@ -102,12 +75,11 @@ impl TestPkgFs {
                     &CString::new("/blob").unwrap(),
                     blobfs.root_dir_handle().context("getting blobfs root dir handle")?.into(),
                 ),
-                SpawnAction::add_namespace_entry(&CString::new("/i").unwrap(), connection.into()),
             ],
         )
         .map_err(|(status, _)| status)
         .context("spawning 'pkgsvr'")?;
-        Ok(TestPkgFs { blobfs, index, proxy, process: process.into(), system_image_merkle })
+        Ok(TestPkgFs { blobfs, proxy, process: process.into(), system_image_merkle })
     }
 
     /// Returns a new connection to the pkgfs root directory.
@@ -135,16 +107,16 @@ impl TestPkgFs {
         Ok(as_file(self.root_dir_client_end()?))
     }
 
-    /// Restarts PkgFs with the same backing blobfs and dynamic index.
+    /// Restarts PkgFs with the same backing blobfs.
     pub fn restart(self) -> Result<Self, Error> {
         self.process.kill().context("killing pkgfs")?;
         drop(self.proxy);
-        TestPkgFs::start_with_blobfs_helper(self.index, self.blobfs, self.system_image_merkle)
+        TestPkgFs::start_with_blobfs(self.blobfs, self.system_image_merkle)
     }
 
     /// Shuts down the pkgfs server and all the backing infrastructure.
     ///
-    /// This also shuts down blobfs and deletes the backing ramdisk and dynamic index.
+    /// This also shuts down blobfs and deletes the backing ramdisk.
     pub async fn stop(self) -> Result<(), Error> {
         self.process.kill().context("killing pkgfs")?;
         self.blobfs.stop().await
@@ -157,7 +129,6 @@ mod tests {
     use {
         crate::PackageBuilder,
         fuchsia_async as fasync,
-        std::fs::read_dir,
         std::io::{Read, Write},
     };
 
@@ -250,94 +221,6 @@ mod tests {
                 "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
                 "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
             ],
-        );
-
-        drop(d);
-
-        pkgfs.stop().await?;
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_pkgfs_with_index() -> Result<(), Error> {
-        let index = TempDir::new().expect("create tempdir");
-        let index_path = index.path().to_owned();
-        let pkgfs = TestPkgFs::start_with_index(index).context("starting pkgfs")?;
-        let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
-        let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
-
-        let pkg = PackageBuilder::new("example")
-            .add_resource_at("a/b", "Hello world!\n".as_bytes())
-            .build()
-            .await
-            .expect("build package");
-        assert_eq!(
-            pkg.meta_far_merkle_root(),
-            &"b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
-                .parse::<fuchsia_merkle::Hash>()
-                .unwrap()
-        );
-
-        let mut meta_far = pkg.meta_far().expect("meta.far");
-        {
-            let mut to_write = d
-                .new_file(
-                    "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
-                    0600,
-                )
-                .expect("create install file");
-            to_write.set_len(meta_far.metadata().unwrap().len()).expect("set_len meta.far");
-            std::io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
-        }
-        assert_eq!(
-            ls_simple(
-                d.list_dir(
-                    "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
-                )
-                .expect("list dir")
-            )
-            .expect("list dir contents"),
-            ["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"]
-        );
-
-        // Full blob write
-        {
-            let mut blob_install = d
-                .new_file(
-                    "install/blob/e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3",
-                    0600,
-                )
-                .expect("create blob install file");
-            let blob_contents = b"Hello world!\n";
-            blob_install.set_len(blob_contents.len() as u64).expect("truncate blob");
-            blob_install.write_all(blob_contents).expect("write blob");
-        }
-
-        let mut file_contents = String::new();
-        d.open_file(
-            "versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b",
-        )
-        .expect("read package file")
-        .read_to_string(&mut file_contents)
-        .expect("read package file");
-        assert_eq!(&file_contents, "Hello world!\n");
-
-        assert_eq!(
-            ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
-            [
-                "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
-                "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"
-            ],
-        );
-
-        // package exists in the dynamic index
-        assert_eq!(
-            read_dir(index_path.join("packages"))
-                .expect("read dynamic index")
-                .map(|dir_ent| dir_ent.expect("read dir ent").file_name())
-                .collect::<Vec<_>>(),
-            ["example"],
         );
 
         drop(d);

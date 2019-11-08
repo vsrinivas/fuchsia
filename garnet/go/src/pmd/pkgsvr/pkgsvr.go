@@ -19,8 +19,7 @@ import (
 // Main starts a package server program
 func Main() {
 	var (
-		blob  = flag.String("blob", "/blob", "Path at which to store blobs")
-		index = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
+		blob = flag.String("blob", "/blob", "Path at which to store blobs")
 	)
 
 	log.SetPrefix("pkgsvr: ")
@@ -34,8 +33,7 @@ func Main() {
 		log.Fatalf("pkgfs: failed to open %q: %s", *blob, err)
 	}
 
-	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
-	fs, err := pkgfs.New(*index, blobDir.(*fdio.Directory))
+	fs, err := pkgfs.New(blobDir.(*fdio.Directory))
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
@@ -63,7 +61,7 @@ func Main() {
 		log.Printf("system: no system package blob supplied")
 	}
 
-	log.Printf("pkgfs serving index %s from blobfs %s", *index, *blob)
+	log.Printf("pkgfs serving blobfs %s", *blob)
 	if err := fs.Serve(zx.Channel(h)); err != nil {
 		log.Fatalf("pkgfs: serve failed on startup handle: %s", err)
 	}

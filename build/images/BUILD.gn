@@ -254,16 +254,20 @@ if (!bootfs_only) {
     data_keys = [ "meta_far_merkle_index_entries" ]
     deps = [
       ":cache_packages",
-      ":update.meta",
     ]
   }
 
-  # preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
-  # that maps {name}/{version} to {merkleroot} for each preinstalled package.
-  action("preinstall.manifest") {
-    visibility = [ ":data.blk" ]
-    testonly = true
+  #
+  # The cache index is another manifest mapping `package_name/package_version` to
+  # the merkleroot of the package's meta.far file, only for cache packages
+  cache_index = "$target_out_dir/cache_index"
 
+  action("cache_index") {
+    visibility = [ ":system_image.manifest" ]
+    testonly = true
+    outputs = [
+      "$target_out_dir/$target_name",
+    ]
     deps = [
       ":preinstall_meta_far_merkle_index",
     ]
@@ -271,15 +275,8 @@ if (!bootfs_only) {
       preinstall_meta_far_merkle_index,
     ]
 
-    script = "manifest_add_dest_prefix.sh"
-    args = [ "pkgfs_index/packages/" ]
-    outputs = [
-      # The output is in the root build dir in order to avoid a complex rewrite
-      # of the source path. The minfs tool this is passed to interprets source
-      # locations relative to the manifest.
-      "$root_build_dir/$target_name",
-    ]
-    args += [
+    script = "//build/images/manifest_content_expand.sh"
+    args = [
       rebase_path(preinstall_meta_far_merkle_index, root_build_dir),
       rebase_path(outputs[0], root_build_dir),
     ]
@@ -350,6 +347,12 @@ generate_manifest("system_image.manifest") {
     sources += [ pkgsvr_index ]
     args += [ "--entry=data/static_packages=" +
               rebase_path(pkgsvr_index, root_build_dir) ]
+
+    # Add the cache packages index.
+    deps += [ ":cache_index" ]
+    sources += [ cache_index ]
+    args += [ "--entry=data/cache_packages=" +
+              rebase_path(cache_index, root_build_dir) ]
   }
 }
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
@@ -1139,10 +1142,9 @@ filesystem_sizes_args = []
 if (!bootfs_only) {
   data_image_path = "$target_out_dir/data.blk"
 
-  # data.blk creates minfs data partition containing the preinstall package
-  # index. The partition is included in fvm.blk and fvm.sparse.blk.
-  # To increase the size of the data partition, increase the total size of the
-  # fvm images using |fvm_image_size|.
+  # data.blk creates minfs data partition. The partition is included in fvm.blk
+  # and fvm.sparse.blk. To increase the size of the data partition, increase
+  # the total size of the fvm images using |fvm_image_size|.
   zircon_tool_action("data.blk") {
     testonly = true
 
@@ -1153,16 +1155,10 @@ if (!bootfs_only) {
       data_image_path,
     ]
     depfile = data_image_path + ".d"
-    deps = [
-      ":preinstall.manifest",
-    ]
-    preinstall_manifest = get_target_outputs(deps[0])
     args = [
       "--depfile",
       rebase_path(data_image_path, root_build_dir),
       "create",
-      "--manifest",
-      rebase_path(preinstall_manifest[0], root_build_dir),
     ]
     if (data_partition_manifest != "") {
       args += [

@@ -7,21 +7,15 @@
 package index
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
-	"sort"
 	"sync"
-	"syscall/zx"
 
 	"fuchsia.googlesource.com/pm/pkg"
 )
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata
 type DynamicIndex struct {
-	root string
-
 	static *StaticIndex
 
 	// mu protects all following fields
@@ -29,6 +23,14 @@ type DynamicIndex struct {
 
 	// roots is a map of merkleroot -> package name/version for active packages
 	roots map[string]pkg.Package
+
+	// index is a map of package name/version -> most recently activated merkleroot
+	index map[pkg.Package]string
+
+	// indexOrdered contains the list of keys in index in initial insertion order
+	//
+	// Used to make the List() order deterministic.
+	indexOrdered []pkg.Package
 
 	// installing is a map of merkleroot -> package name/version
 	installing map[string]pkg.Package
@@ -40,39 +42,36 @@ type DynamicIndex struct {
 	waiting map[string]map[string]struct{}
 }
 
-// NewDynamic initializes an DynamicIndex with the given root path.
-func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
-	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
-	_ = os.MkdirAll(root, os.ModePerm)
+// NewDynamic initializes a DynamicIndex
+func NewDynamic(static *StaticIndex) *DynamicIndex {
 	return &DynamicIndex{
-		root:       root,
-		static:     static,
-		roots:      make(map[string]pkg.Package),
-		installing: make(map[string]pkg.Package),
-		needs:      make(map[string]map[string]struct{}),
-		waiting:    make(map[string]map[string]struct{}),
+		static:       static,
+		roots:        make(map[string]pkg.Package),
+		index:        make(map[pkg.Package]string),
+		indexOrdered: nil,
+		installing:   make(map[string]pkg.Package),
+		needs:        make(map[string]map[string]struct{}),
+		waiting:      make(map[string]map[string]struct{}),
 	}
-}
-
-// List returns a list of all known packages in byte-lexical order.
-func (idx *DynamicIndex) List() ([]pkg.Package, error) {
-	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(paths)
-	pkgs := make([]pkg.Package, len(paths))
-	for i, path := range paths {
-		pkgs[i].Version = filepath.Base(path)
-		pkgs[i].Name = filepath.Base(filepath.Dir(path))
-	}
-	return pkgs, nil
 }
 
 // Get looks up a package in the dynamic index, returning it if found.
-func (idx *DynamicIndex) Get(p pkg.Package) (string, bool) {
-	bmerkle, err := ioutil.ReadFile(idx.PackageVersionPath(p.Name, p.Version))
-	return string(bmerkle), err == nil
+func (idx *DynamicIndex) Get(p pkg.Package) (result string, found bool) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	result, found = idx.index[p]
+	return
+}
+
+// List lists every package in the dynamic index in insertion order.
+func (idx *DynamicIndex) List() []pkg.Package {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	pkgs := make([]pkg.Package, len(idx.index))
+	copy(pkgs, idx.indexOrdered)
+	return pkgs
 }
 
 // Add adds a package to the index
@@ -107,36 +106,14 @@ func (idx *DynamicIndex) addLocked(p pkg.Package, root string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(idx.PackagePath(p.Name), os.ModePerm); err != nil {
-		return err
+	if oldRoot, ok := idx.index[p]; ok {
+		delete(idx.roots, oldRoot)
+	} else {
+		idx.indexOrdered = append(idx.indexOrdered, p)
 	}
-
-	path := idx.PackageVersionPath(p.Name, p.Version)
-	if bmerkle, err := ioutil.ReadFile(path); err == nil && string(bmerkle) == root {
-		return os.ErrExist
-	}
-
-	if err := ioutil.WriteFile(path, []byte(root), os.ModePerm); err != nil {
-		return err
-	}
-
+	idx.index[p] = root
+	idx.roots[root] = p
 	return nil
-}
-
-func (idx *DynamicIndex) PackagePath(name string) string {
-	return filepath.Join(idx.PackagesDir(), name)
-}
-
-func (idx *DynamicIndex) PackageVersionPath(name, version string) string {
-	return filepath.Join(idx.PackagesDir(), name, version)
-}
-
-func (idx *DynamicIndex) PackagesDir() string {
-	dir := filepath.Join(idx.root, "packages")
-	// TODO(PKG-14): refactor out the initialization logic so that we can do this
-	// once, at an appropriate point in the runtime.
-	_ = os.MkdirAll(dir, os.ModePerm)
-	return dir
 }
 
 // Installing marks the given package as being in the process of installing. The
@@ -157,20 +134,6 @@ func (idx *DynamicIndex) UpdateInstalling(root string, p pkg.Package) {
 	defer idx.mu.Unlock()
 
 	idx.installing[root] = p
-}
-
-// InstallingFailedForBlob notifies amber that blob install failed for a package.
-// It does not actually stop the package's installation for the other blobs; the choice
-// to retry the package installation is left up to amber.
-func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, status zx.Status) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	ps := idx.needs[blobRoot]
-	pkgRoots := make([]string, 0, len(ps))
-	for p := range ps {
-		pkgRoots = append(pkgRoots, p)
-	}
 }
 
 // InstallingFailedForPackage removes an entry from the package installation index,
@@ -301,71 +264,23 @@ func (idx *DynamicIndex) GetRoot(root string) (pkg.Package, bool) {
 	}
 
 	idx.mu.Lock()
+	defer idx.mu.Unlock()
 	p, found = idx.roots[root]
-	idx.mu.Unlock()
-	if found {
-		// We found a blob in the cached index, but, we can't trust that, because the
-		// source of consistency we keep is the filesystem, so next we check that:
-		b, err := ioutil.ReadFile(idx.PackageVersionPath(p.Name, p.Version))
-
-		// we're good
-		if err == nil && string(b) == root {
-			return p, found
-		}
-
-		// otherwise disk is ahead of us, and we need to take the slow path
-		idx.mu.Lock()
-		delete(idx.roots, root)
-		idx.mu.Unlock()
-	}
-
-	// slow path
-
-	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
-	if err != nil {
-		log.Printf("glob all extant dynamic packages: %s", err)
-		return p, false
-	}
-
-	for _, path := range paths {
-		merkle, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Printf("read dynamic package index %s: %s", path, err)
-			continue
-		}
-		if string(merkle) == root {
-			p.Name = filepath.Base(filepath.Dir(path))
-			p.Version = filepath.Base(path)
-
-			idx.mu.Lock()
-			idx.roots[root] = p
-			idx.mu.Unlock()
-
-			return p, true
-		}
-	}
-	return p, false
+	return p, found
 }
 
 // PackageBlobs returns the list of blobs which are meta FARs backing packages
 // in the dynamic and static indices.
 func (idx *DynamicIndex) PackageBlobs() []string {
 	packageBlobs := idx.static.PackageBlobs()
-	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
-	if err != nil {
-		log.Printf("glob all extant dynamic packages: %s", err)
-		return packageBlobs
+	idx.mu.Lock()
+	dynamicBlobs := make([]string, 0, len(idx.roots))
+	for merkle := range idx.roots {
+		dynamicBlobs = append(dynamicBlobs, string(merkle))
 	}
+	idx.mu.Unlock()
 
-	for _, path := range paths {
-		merkle, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Printf("read dynamic package index %s: %s", path, err)
-			continue
-		}
-		packageBlobs = append(packageBlobs, string(merkle))
-	}
-	return packageBlobs
+	return append(packageBlobs, dynamicBlobs...)
 }
 
 // AllPackageBlobs aggregates all installing, dynamic and static index package
