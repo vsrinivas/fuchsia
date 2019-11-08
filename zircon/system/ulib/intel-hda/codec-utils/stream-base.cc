@@ -28,26 +28,14 @@ fuchsia_hardware_audio_Device_ops_t IntelHDAStreamBase::AUDIO_FIDL_THUNKS{
     },
 };
 
-zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    .release = nullptr,
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend_new = nullptr,
-    .resume_new = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message =
-        [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-          return fuchsia_hardware_audio_Device_dispatch(ctx, txn, msg, &AUDIO_FIDL_THUNKS);
-        },
-};
+zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
+  zx_protocol_device_t sdt = {};
+  sdt.version = DEVICE_OPS_VERSION;
+  sdt.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_audio_Device_dispatch(ctx, txn, msg, &AUDIO_FIDL_THUNKS);
+  };
+  return sdt;
+}();
 
 IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input) : id_(id), is_input_(is_input) {
   snprintf(dev_name_, sizeof(dev_name_), "%s-stream-%03u", is_input_ ? "input" : "output", id_);

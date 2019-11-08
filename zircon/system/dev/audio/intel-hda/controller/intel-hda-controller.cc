@@ -351,6 +351,7 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .get_size = nullptr,
     .suspend_new = nullptr,
     .resume_new = nullptr,
+    .set_performance_state = nullptr,
     .suspend = nullptr,
     .resume = nullptr,
     .rxrpc = nullptr,

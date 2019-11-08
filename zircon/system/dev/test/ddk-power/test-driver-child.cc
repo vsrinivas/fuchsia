@@ -26,7 +26,7 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType = ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable,
-                               ddk::SuspendableNew, ddk::ResumableNew>;
+                               ddk::SuspendableNew, ddk::ResumableNew, ddk::PerformanceTunable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
@@ -50,6 +50,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
 
   void DdkRelease() { delete this; }
   zx_status_t DdkSuspendNew(uint8_t requested_state, bool enable_wake, uint8_t* out_state);
+  zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state);
   zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
 
  private:
@@ -60,6 +61,13 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
 zx_status_t TestPowerDriverChild::DdkSuspendNew(uint8_t requested_state, bool enable_wake,
                                                 uint8_t* out_state) {
   current_power_state_ = requested_state;
+  *out_state = requested_state;
+  return ZX_OK;
+}
+
+zx_status_t TestPowerDriverChild::DdkSetPerformanceState(uint32_t requested_state,
+                                                         uint32_t* out_state) {
+  current_performance_state_ = requested_state;
   *out_state = requested_state;
   return ZX_OK;
 }
@@ -94,17 +102,17 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
   }
 
   auto perf_state_info = perf_states.data();
-  auto performant_states =
+  auto performance_states =
       std::make_unique<device_performance_state_info_t[]>(perf_states.count());
   auto perf_state_count = static_cast<uint8_t>(perf_states.count());
   for (uint8_t i = 0; i < perf_state_count; i++) {
-    performant_states[i].state_id = perf_state_info[i].state_id;
-    performant_states[i].restore_latency = perf_state_info[i].restore_latency;
+    performance_states[i].state_id = perf_state_info[i].state_id;
+    performance_states[i].restore_latency = perf_state_info[i].restore_latency;
   }
 
   zx_status_t status =
       child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
-                     states.get(), count, performant_states.get(), perf_state_count);
+                     states.get(), count, performance_states.get(), perf_state_count);
   if (status != ZX_OK) {
     response.set_err(status);
   } else {

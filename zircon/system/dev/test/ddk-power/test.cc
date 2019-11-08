@@ -197,10 +197,10 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_MissingRequired) {
   perf_states[0].is_supported = true;
   perf_states[1].state_id = 2;
   perf_states[1].is_supported = true;
-  auto performant_states = ::fidl::VectorView(perf_states);
+  auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performant_states);
+                                                           power_states, performance_states);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -225,10 +225,10 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_Duplicate) {
   perf_states[1].is_supported = true;
   perf_states[2].state_id = 1;
   perf_states[2].is_supported = true;
-  auto performant_states = ::fidl::VectorView(perf_states);
+  auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performant_states);
+                                                           power_states, performance_states);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -251,9 +251,9 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_More) {
     perf_states[i].state_id = static_cast<int32_t>(i);
     perf_states[i].is_supported = true;
   }
-  auto performant_states = ::fidl::VectorView(perf_states);
+  auto performance_states = ::fidl::VectorView(perf_states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performant_states);
+                                                           power_states, performance_states);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -271,7 +271,7 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
   states[1].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
 
-  // This is the default case. By default, the devhost fills in the fully performant state.
+  // This is the default case. By default, the devhost fills in the fully performance state.
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
       zx::unowned(child_device_handle), power_states,
       ::fidl::VectorView<DevicePerformanceStateInfo>());
@@ -297,10 +297,10 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_Success) {
   perf_states[0].is_supported = true;
   perf_states[1].state_id = 1;
   perf_states[1].is_supported = true;
-  auto performant_states = ::fidl::VectorView(perf_states);
+  auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performant_states);
+                                                           power_states, performance_states);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -382,6 +382,79 @@ TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
   ASSERT_EQ(out_dpstates[1].restore_latency, 100);
   ASSERT_TRUE(out_dpstates[2].is_supported);
   ASSERT_EQ(out_dpstates[2].restore_latency, 1000);
+}
+
+TEST_F(PowerTestCase, SetPerformanceState_Success) {
+  // Add Capabilities
+  DevicePowerStateInfo states[2];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].is_supported = true;
+
+  DevicePerformanceStateInfo perf_states[3];
+  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].is_supported = true;
+  perf_states[0].restore_latency = 0;
+  perf_states[1].state_id = 1;
+  perf_states[1].is_supported = true;
+  perf_states[1].restore_latency = 100;
+  perf_states[2].state_id = 2;
+  perf_states[2].is_supported = true;
+  perf_states[2].restore_latency = 1000;
+
+  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+
+  auto perf_change_result =
+      Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 1);
+  ASSERT_OK(perf_change_result.status());
+  const auto &perf_change_response = perf_change_result.value();
+  ASSERT_OK(perf_change_response.status);
+  ASSERT_EQ(perf_change_response.out_state, 1);
+
+  auto response2 =
+      TestDevice::Call::GetCurrentDevicePerformanceState(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  zx_status_t call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().cur_state, 1);
+}
+
+TEST_F(PowerTestCase, SetPerformanceStateFail_HookNotPresent) {
+  // Parent does not support SetPerformanceState hook.
+  auto perf_change_result =
+      Controller::Call::SetPerformanceState(zx::unowned(parent_device_handle), 0);
+  ASSERT_OK(perf_change_result.status());
+  const auto &perf_change_response = perf_change_result.value();
+  ASSERT_EQ(perf_change_response.status, ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(PowerTestCase, SetPerformanceStateFail_UnsupportedState) {
+  // Add Capabilities
+  DevicePowerStateInfo states[2];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[1].is_supported = true;
+
+  DevicePerformanceStateInfo perf_states[2];
+  perf_states[0].state_id = DEVICE_PERFORMANCE_STATE_P0;
+  perf_states[0].is_supported = true;
+  perf_states[0].restore_latency = 0;
+  perf_states[1].state_id = 1;
+  perf_states[1].is_supported = true;
+  perf_states[1].restore_latency = 100;
+
+  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+
+  auto perf_change_result =
+      Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 2);
+  ASSERT_OK(perf_change_result.status());
+  const auto &perf_change_response = perf_change_result.value();
+  ASSERT_EQ(perf_change_response.status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PowerTestCase, Suspend_Success) {

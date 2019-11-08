@@ -725,6 +725,14 @@ static zx_status_t fidl_DeviceControllerDebugResume(void* ctx, fidl_txn_t* txn) 
   return fuchsia_device_ControllerDebugResume_reply(txn, conn->dev->ResumeOp(0));
 }
 
+static zx_status_t fidl_DeviceControllerSetPerformanceState(void* ctx, uint32_t requested_state,
+                                                            fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  uint32_t out_state;
+  zx_status_t status = devhost_device_set_performance_state(conn->dev, requested_state, &out_state);
+  return fuchsia_device_ControllerSetPerformanceState_reply(txn, status, out_state);
+}
+
 static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .Bind = fidl_DeviceControllerBind,
     .Rebind = fidl_DeviceControllerRebind,
@@ -744,6 +752,7 @@ static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .GetPowerStateMapping = fidl_DeviceControllerGetPowerStateMapping,
     .Suspend = fidl_DeviceControllerSuspend,
     .Resume = fidl_DeviceControllerResume,
+    .SetPerformanceState = fidl_DeviceControllerSetPerformanceState,
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {

@@ -16,7 +16,7 @@ const uint64 MAX_DRIVER_NAME_LEN = 32;
 /// Maximum length for a driver path
 const uint64 MAX_DRIVER_PATH_LEN = 1024;
 /// Maximum device power states. In future this should account
-/// for performant states.
+/// for performance states.
 const uint32 MAX_DEVICE_POWER_STATES = 5;
 const uint32 MIN_DEVICE_POWER_STATES = 2; // D0 & D3COLD
 const uint32 MAX_DEVICE_PERFORMANCE_STATES = 20;
@@ -83,7 +83,7 @@ enum DevicePowerState : uint8 {
     DEVICE_POWER_STATE_D3COLD = 4;
 };
 
-/// [MANDATORY] Default performant state when the device is in DEVICE_POWER_STATE_D0
+/// [MANDATORY] Default performance state when the device is in DEVICE_POWER_STATE_D0
 const uint32 DEVICE_PERFORMANCE_STATE_P0 = 0;
 
 // TODO(ravoorir): This should be table when the Controller protocol moves off of simple layout.
@@ -107,7 +107,7 @@ struct DevicePowerStateInfo {
 /// when the device is in non-sleeping working device power state.
 struct DevicePerformanceStateInfo {
     int32 state_id;
-    /// Restore time for coming out of this state to fully working performant state.
+    /// Restore time for coming out of this state to fully working performance state.
     int64 restore_latency;
     /// Is this state supported?
     bool is_supported;
@@ -199,8 +199,17 @@ protocol Controller {
     // after the current device is transitioned.
     // On success, the out_state has the actual state of the device. The out_state could be
     // different from the requested_state, if the device could not resume to the requested
-    // performant state, but the device could resume to a working state.
-    // Just because the device is not able to transition to a particular performant state,
+    // performance state, but the device could resume to a working state.
+    // Just because the device is not able to transition to a particular performance state,
     // we do not want to suspend the device back.
     Resume(DevicePowerState requested_state) -> (DevicePowerState out_state) error zx.status;
+    /// Set the performance state of this device to the requested performance state. This is only
+    /// called for the current device and none of the descendants are aware of the state
+    /// transition.
+    /// On success, the out_state and the requested_state is same. If the device is in a working
+    /// state, the performance state will be changed to requested_state immediately. If the device
+    /// is in non-working state, the performance state will be the requested_state whenever the
+    /// device transitions to working state.
+    /// On failure, the out_state will have the state that the device can go into.
+    SetPerformanceState(uint32 requested_state) -> (zx.status status, uint32 out_state);
 };

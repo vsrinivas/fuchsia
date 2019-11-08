@@ -164,6 +164,8 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
                                        fuchsia_device_DevicePowerState requested_state,
                                        fuchsia_device_DevicePowerState* out_state);
+zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device_t>& dev,
+                                                 uint32_t requested_state, uint32_t* out_state);
 zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
                                   uint32_t target_system_state) REQ_DM_LOCK;
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,

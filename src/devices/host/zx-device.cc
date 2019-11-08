@@ -128,8 +128,7 @@ zx_status_t zx_device::SetPerformanceStates(
     if (visited[info.state_id]) {
       return ZX_ERR_INVALID_ARGS;
     }
-    fuchsia_device_DevicePerformanceStateInfo* state =
-        &(performance_states_[info.state_id]);
+    fuchsia_device_DevicePerformanceStateInfo* state = &(performance_states_[info.state_id]);
     state->state_id = info.state_id;
     state->is_supported = true;
     state->restore_latency = info.restore_latency;
@@ -244,4 +243,11 @@ fbl::RefPtr<devmgr::CompositeDevice> zx_device::take_composite() { return std::m
 
 void zx_device::set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite) {
   composite_ = std::move(composite);
+}
+
+bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
+  if (requested_state >= fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES) {
+    return false;
+  }
+  return performance_states_[requested_state].is_supported;
 }

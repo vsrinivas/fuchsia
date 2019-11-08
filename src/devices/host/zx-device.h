@@ -71,6 +71,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return Dispatch(ops->resume, ZX_ERR_NOT_SUPPORTED, flags);
   }
 
+  zx_status_t ChangePerformanceOp(uint32_t requested_state, uint32_t* out_state) {
+    return Dispatch(ops->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
+  }
+
   zx_status_t ResumeNewOp(uint8_t requested_state, uint8_t* out_state) {
     return Dispatch(ops->resume_new, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
   }
@@ -187,7 +191,11 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   const std::array<fuchsia_device_SystemPowerStateInfo,
                    fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>&
   GetSystemPowerStateMapping() const;
-  fuchsia_device_DevicePowerState GetCurrentDevicePowerState() { return current_power_state_; }
+  bool IsPowerStateSupported(fuchsia_device_DevicePowerState requested_state) {
+    // requested_state is bounded by the enum.
+    return power_states_[requested_state].is_supported;
+  }
+  bool IsPerformanceStateSupported(uint32_t requested_state);
 
  private:
   zx_device() = default;
@@ -239,7 +247,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
       performance_states_;
   std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
       system_power_states_mapping_;
-  fuchsia_device_DevicePowerState current_power_state_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

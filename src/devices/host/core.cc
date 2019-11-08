@@ -12,6 +12,7 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -85,7 +86,10 @@ static zx_status_t default_suspend(void* ctx, uint32_t flags) { return ZX_ERR_NO
 static zx_status_t default_resume(void* ctx, uint32_t target_system_state) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-
+static zx_status_t default_set_performance_state(void* ctx, uint32_t requested_state,
+                                                 uint32_t* out_state) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) { return ZX_ERR_NOT_SUPPORTED; }
 
 static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -108,6 +112,7 @@ zx_protocol_device_t device_default_ops = []() {
   ops.resume = default_resume;
   ops.rxrpc = default_rxrpc;
   ops.message = default_message;
+  ops.set_performance_state = default_set_performance_state;
   return ops;
 }();
 
@@ -133,6 +138,10 @@ static zx_protocol_device_t device_invalid_ops = []() {
   ops.rxrpc = +[](void* ctx, zx_handle_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.message =
       +[](void* ctx, fidl_msg_t*, fidl_txn_t*) -> zx_status_t { device_invalid_fatal(ctx); };
+  ops.set_performance_state =
+      +[](void* ctx, uint32_t requested_state, uint32_t* out_state) -> zx_status_t {
+    device_invalid_fatal(ctx);
+  };
   return ops;
 }();
 
@@ -673,11 +682,25 @@ zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
                                        fuchsia_device_DevicePowerState requested_state,
                                        fuchsia_device_DevicePowerState* out_state) {
   zx_status_t status = ZX_OK;
+  if (!(dev->IsPowerStateSupported(requested_state))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   if (dev->ops->suspend_new) {
     status =
         dev->ops->suspend_new(dev->ctx, requested_state, false /* wake_configured */, out_state);
   }
   return status;
+}
+
+zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& dev,
+                                                 uint32_t requested_state, uint32_t* out_state) {
+  if (!(dev->IsPerformanceStateSupported(requested_state))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (dev->ops->set_performance_state) {
+    return dev->ops->set_performance_state(dev->ctx, requested_state, out_state);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev,

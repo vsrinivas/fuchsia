@@ -276,6 +276,21 @@ class SuspendableNew : public base_mixin {
 };
 
 template <typename D>
+class PerformanceTunable : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckPerformanceTunable<D>();
+    proto->set_performance_state = set_performance_state;
+  }
+
+ private:
+  static zx_status_t set_performance_state(void* ctx, uint32_t requested_state,
+                                           uint32_t* out_state) {
+    return static_cast<D*>(ctx)->DdkSetPerformanceState(requested_state, out_state);
+  }
+};
+
+template <typename D>
 class ResumableNew : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {

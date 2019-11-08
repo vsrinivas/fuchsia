@@ -614,6 +614,13 @@ constexpr uint64_t kController_Resume_GenOrdinal = 0x22c86261fd50a61elu;
 extern "C" const fidl_type_t fuchsia_device_ControllerResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerResumeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerResumeResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kController_SetPerformanceState_Ordinal = 0x37f0cb1600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_SetPerformanceState_GenOrdinal = 0x364c4698975d7f7clu;
+extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
 
 }  // namespace
 template <>
@@ -1733,6 +1740,68 @@ Controller::UnownedResultOf::Resume Controller::Call::Resume(zx::unowned_channel
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Controller::ResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(zx::unowned_channel _client_end, uint32_t requested_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPerformanceStateRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SetPerformanceStateRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetPerformanceStateRequest*>(_write_bytes);
+  _request.requested_state = std::move(requested_state);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPerformanceStateRequest));
+  ::fidl::DecodedMessage<SetPerformanceStateRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::SetPerformanceState(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Controller::ResultOf::SetPerformanceState Controller::SyncClient::SetPerformanceState(uint32_t requested_state) {
+  return ResultOf::SetPerformanceState(zx::unowned_channel(this->channel_), std::move(requested_state));
+}
+
+Controller::ResultOf::SetPerformanceState Controller::Call::SetPerformanceState(zx::unowned_channel _client_end, uint32_t requested_state) {
+  return ResultOf::SetPerformanceState(std::move(_client_end), std::move(requested_state));
+}
+
+template <>
+Controller::UnownedResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SetPerformanceStateRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SetPerformanceStateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SetPerformanceStateRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SetPerformanceStateRequest*>(_request_buffer.data());
+  _request.requested_state = std::move(requested_state);
+  _request_buffer.set_actual(sizeof(SetPerformanceStateRequest));
+  ::fidl::DecodedMessage<SetPerformanceStateRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::SetPerformanceState(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::SetPerformanceState Controller::SyncClient::SetPerformanceState(::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetPerformanceState(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::SetPerformanceState Controller::Call::SetPerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::SetPerformanceState(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::SetPerformanceStateResponse> Controller::InPlace::SetPerformanceState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer) {
+  Controller::SetTransactionHeaderFor::SetPerformanceStateRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::SetPerformanceStateResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<SetPerformanceStateRequest, SetPerformanceStateResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::SetPerformanceStateResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -1968,6 +2037,19 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       auto message = result.message.message();
       impl->Resume(std::move(message->requested_state),
           Interface::ResumeCompleter::Sync(txn));
+      return true;
+    }
+    case kController_SetPerformanceState_Ordinal:
+    case kController_SetPerformanceState_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SetPerformanceStateRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetPerformanceState(std::move(message->requested_state),
+          Interface::SetPerformanceStateCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -2732,6 +2814,44 @@ void Controller::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<Re
 }
 
 
+void Controller::Interface::SetPerformanceStateCompleterBase::Reply(int32_t status, uint32_t out_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPerformanceStateResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetPerformanceStateResponse*>(_write_bytes);
+  Controller::SetTransactionHeaderFor::SetPerformanceStateResponse(
+      ::fidl::DecodedMessage<SetPerformanceStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetPerformanceStateResponse::PrimarySize,
+              SetPerformanceStateResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.out_state = std::move(out_state);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPerformanceStateResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetPerformanceStateResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::SetPerformanceStateCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint32_t out_state) {
+  if (_buffer.capacity() < SetPerformanceStateResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetPerformanceStateResponse*>(_buffer.data());
+  Controller::SetTransactionHeaderFor::SetPerformanceStateResponse(
+      ::fidl::DecodedMessage<SetPerformanceStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetPerformanceStateResponse::PrimarySize,
+              SetPerformanceStateResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.out_state = std::move(out_state);
+  _buffer.set_actual(sizeof(SetPerformanceStateResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetPerformanceStateResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::SetPerformanceStateCompleterBase::Reply(::fidl::DecodedMessage<SetPerformanceStateResponse> params) {
+  Controller::SetTransactionHeaderFor::SetPerformanceStateResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void Controller::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<Controller::BindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Bind_Ordinal);
@@ -2857,6 +2977,13 @@ void Controller::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMes
 }
 void Controller::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<Controller::ResumeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Resume_Ordinal);
+}
+
+void Controller::SetTransactionHeaderFor::SetPerformanceStateRequest(const ::fidl::DecodedMessage<Controller::SetPerformanceStateRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetPerformanceState_Ordinal);
+}
+void Controller::SetTransactionHeaderFor::SetPerformanceStateResponse(const ::fidl::DecodedMessage<Controller::SetPerformanceStateResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetPerformanceState_Ordinal);
 }
 
 }  // namespace device

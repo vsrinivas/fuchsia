@@ -364,7 +364,7 @@ constexpr uint64_t MAX_DRIVER_PATH_LEN = 1024u;
 constexpr uint64_t MAX_DRIVER_NAME_LEN = 32u;
 
 // Maximum device power states. In future this should account
-// for performant states.
+// for performance states.
 constexpr uint32_t MAX_DEVICE_POWER_STATES = 5u;
 
 constexpr uint32_t MAX_DEVICE_PERFORMANCE_STATES = 20u;
@@ -796,7 +796,7 @@ struct DevicePerformanceStateInfo {
 
   int32_t state_id = {};
 
-  // Restore time for coming out of this state to fully working performant state.
+  // Restore time for coming out of this state to fully working performance state.
   int64_t restore_latency = {};
 
   // Is this state supported?
@@ -824,7 +824,7 @@ constexpr uint32_t DEVICE_SIGNAL_HANGUP = 268435456u;
 // This is primarily used by the PTY support.
 constexpr uint32_t DEVICE_SIGNAL_ERROR = 134217728u;
 
-// [MANDATORY] Default performant state when the device is in DEVICE_POWER_STATE_D0
+// [MANDATORY] Default performance state when the device is in DEVICE_POWER_STATE_D0
 constexpr uint32_t DEVICE_PERFORMANCE_STATE_P0 = 0u;
 
 // Maximum length of a device name (without a null byte), based on
@@ -1022,6 +1022,10 @@ extern "C" const fidl_type_t fuchsia_device_ControllerResumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerResumeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerResumeResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
 
 // Interface for manipulating a device in a devhost
 class Controller final {
@@ -1496,6 +1500,43 @@ class Controller final {
     using ResponseType = ResumeResponse;
   };
 
+  struct SetPerformanceStateResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+    uint32_t out_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetPerformanceStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct SetPerformanceStateRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t requested_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetPerformanceStateRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SetPerformanceStateResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -1789,6 +1830,22 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class SetPerformanceState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetPerformanceState_Impl(zx::unowned_channel _client_end, uint32_t requested_state);
+      ~SetPerformanceState_Impl() = default;
+      SetPerformanceState_Impl(SetPerformanceState_Impl&& other) = default;
+      SetPerformanceState_Impl& operator=(SetPerformanceState_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -1809,6 +1866,7 @@ class Controller final {
     using GetPowerStateMapping = GetPowerStateMapping_Impl<GetPowerStateMappingResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
+    using SetPerformanceState = SetPerformanceState_Impl<SetPerformanceStateResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -2104,6 +2162,22 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class SetPerformanceState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetPerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
+      ~SetPerformanceState_Impl() = default;
+      SetPerformanceState_Impl(SetPerformanceState_Impl&& other) = default;
+      SetPerformanceState_Impl& operator=(SetPerformanceState_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -2124,6 +2198,7 @@ class Controller final {
     using GetPowerStateMapping = GetPowerStateMapping_Impl<GetPowerStateMappingResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
+    using SetPerformanceState = SetPerformanceState_Impl<SetPerformanceStateResponse>;
   };
 
   class SyncClient final {
@@ -2307,6 +2382,28 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
+    // Set the performance state of this device to the requested performance state. This is only
+    // called for the current device and none of the descendants are aware of the state
+    // transition.
+    // On success, the out_state and the requested_state is same. If the device is in a working
+    // state, the performance state will be changed to requested_state immediately. If the device
+    // is in non-working state, the performance state will be the requested_state whenever the
+    // device transitions to working state.
+    // On failure, the out_state will have the state that the device can go into.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetPerformanceState SetPerformanceState(uint32_t requested_state);
+
+    // Set the performance state of this device to the requested performance state. This is only
+    // called for the current device and none of the descendants are aware of the state
+    // transition.
+    // On success, the out_state and the requested_state is same. If the device is in a working
+    // state, the performance state will be changed to requested_state immediately. If the device
+    // is in non-working state, the performance state will be the requested_state whenever the
+    // device transitions to working state.
+    // On failure, the out_state will have the state that the device can go into.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetPerformanceState SetPerformanceState(::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -2486,6 +2583,28 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
+    // Set the performance state of this device to the requested performance state. This is only
+    // called for the current device and none of the descendants are aware of the state
+    // transition.
+    // On success, the out_state and the requested_state is same. If the device is in a working
+    // state, the performance state will be changed to requested_state immediately. If the device
+    // is in non-working state, the performance state will be the requested_state whenever the
+    // device transitions to working state.
+    // On failure, the out_state will have the state that the device can go into.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetPerformanceState SetPerformanceState(zx::unowned_channel _client_end, uint32_t requested_state);
+
+    // Set the performance state of this device to the requested performance state. This is only
+    // called for the current device and none of the descendants are aware of the state
+    // transition.
+    // On success, the out_state and the requested_state is same. If the device is in a working
+    // state, the performance state will be changed to requested_state immediately. If the device
+    // is in non-working state, the performance state will be the requested_state whenever the
+    // device transitions to working state.
+    // On failure, the out_state will have the state that the device can go into.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetPerformanceState SetPerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -2560,6 +2679,16 @@ class Controller final {
 
     // Transition this device from a sleep state to a working state.
     static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
+
+    // Set the performance state of this device to the requested performance state. This is only
+    // called for the current device and none of the descendants are aware of the state
+    // transition.
+    // On success, the out_state and the requested_state is same. If the device is in a working
+    // state, the performance state will be changed to requested_state immediately. If the device
+    // is in non-working state, the performance state will be the requested_state whenever the
+    // device transitions to working state.
+    // On failure, the out_state will have the state that the device can go into.
+    static ::fidl::DecodeResult<SetPerformanceStateResponse> SetPerformanceState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2835,6 +2964,20 @@ class Controller final {
 
     virtual void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state, ResumeCompleter::Sync _completer) = 0;
 
+    class SetPerformanceStateCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, uint32_t out_state);
+      void Reply(::fidl::BytePart _buffer, int32_t status, uint32_t out_state);
+      void Reply(::fidl::DecodedMessage<SetPerformanceStateResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetPerformanceStateCompleter = ::fidl::Completer<SetPerformanceStateCompleterBase>;
+
+    virtual void SetPerformanceState(uint32_t requested_state, SetPerformanceStateCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -2896,6 +3039,8 @@ class Controller final {
     static void SuspendResponse(const ::fidl::DecodedMessage<Controller::SuspendResponse>& _msg);
     static void ResumeRequest(const ::fidl::DecodedMessage<Controller::ResumeRequest>& _msg);
     static void ResumeResponse(const ::fidl::DecodedMessage<Controller::ResumeResponse>& _msg);
+    static void SetPerformanceStateRequest(const ::fidl::DecodedMessage<Controller::SetPerformanceStateRequest>& _msg);
+    static void SetPerformanceStateResponse(const ::fidl::DecodedMessage<Controller::SetPerformanceStateResponse>& _msg);
   };
 };
 
@@ -3195,5 +3340,22 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ResumeResponse> : pub
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::ResumeResponse)
     == ::llcpp::fuchsia::device::Controller::ResumeResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::ResumeResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::SetPerformanceStateRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::SetPerformanceStateRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::SetPerformanceStateRequest)
+    == ::llcpp::fuchsia::device::Controller::SetPerformanceStateRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetPerformanceStateRequest, requested_state) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse)
+    == ::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse, out_state) == 20);
 
 }  // namespace fidl
