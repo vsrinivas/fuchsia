@@ -432,10 +432,11 @@ class TransformerBase {
       current_position.dst_inline_offset = dst_start_of_struct + dst_field.offset;
 
       // Transform field.
-      uint32_t src_next_field_offset =
-          current_position.src_inline_offset + AlignedInlineSize(src_field.type, From());
-      uint32_t dst_next_field_offset =
-          current_position.dst_inline_offset + AlignedInlineSize(dst_field.type, To());
+      uint32_t src_next_field_offset = current_position.src_inline_offset +
+                                       AlignedInlineSize(src_field.type, From()) +
+                                       src_field.padding;
+      uint32_t dst_next_field_offset = current_position.dst_inline_offset +
+                                       AlignedInlineSize(dst_field.type, To()) + dst_field.padding;
       uint32_t dst_field_size = dst_next_field_offset - dst_field.offset;
 
       TraversalResult field_traversal_result;

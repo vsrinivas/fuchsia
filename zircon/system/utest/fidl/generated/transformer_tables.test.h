@@ -53,6 +53,14 @@ static const fidl_type_t Pointer17example_Sandwich1Table = fidl_type_t(::fidl::F
 static const fidl_type_t Pointer19example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnionPointer(&example_StringUnionTable.coded_union));
 static const fidl_type_t Pointer19example_Regression2Table = fidl_type_t(::fidl::FidlCodedStructPointer(&example_Regression2Table.coded_struct));
 
+extern const fidl_type_t example_FakeProtocolWrapSandwich4RequestTable;
+constexpr static inline const ::fidl::FidlStructField* Fields40example_FakeProtocolWrapSandwich4Request_field0_alt_field() __attribute__((unused));
+static const ::fidl::FidlStructField Fields40example_FakeProtocolWrapSandwich4Request[] = {
+    ::fidl::FidlStructField(&example_Sandwich4Table, 16u, 4u, Fields40example_FakeProtocolWrapSandwich4Request_field0_alt_field())
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_FakeProtocolWrapSandwich4RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields40example_FakeProtocolWrapSandwich4Request, 1u, 64u, "example/FakeProtocolWrapSandwich4Request", example_FakeProtocolWrapSandwich4RequestAltTypePointerTable()));
+
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable5uint8AltTypePointerTable() __attribute__((unused));
 static const fidl_type_t Vector4294967295nonnullable5uint8Table = fidl_type_t(::fidl::FidlCodedVector(nullptr, 4294967295u, 1u, ::fidl::kNonnullable, Vector4294967295nonnullable5uint8AltTypePointerTable()));
 
@@ -433,6 +441,14 @@ static const fidl_type_t v1_Pointer20v1_example_Sandwich1Table = fidl_type_t(::f
 static const fidl_type_t v1_Pointer22v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnionPointer(&v1_example_StringUnionTable.coded_union));
 static const fidl_type_t v1_Pointer22v1_example_Regression2Table = fidl_type_t(::fidl::FidlCodedStructPointer(&v1_example_Regression2Table.coded_struct));
 
+extern const fidl_type_t v1_example_FakeProtocolWrapSandwich4RequestTable;
+constexpr static inline const ::fidl::FidlStructField* Fields43v1_example_FakeProtocolWrapSandwich4Request_field0_alt_field() __attribute__((unused));
+static const ::fidl::FidlStructField Fields43v1_example_FakeProtocolWrapSandwich4Request[] = {
+    ::fidl::FidlStructField(&v1_example_Sandwich4Table, 16u, 0u, Fields43v1_example_FakeProtocolWrapSandwich4Request_field0_alt_field())
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_FakeProtocolWrapSandwich4RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43v1_example_FakeProtocolWrapSandwich4Request, 1u, 56u, "example/FakeProtocolWrapSandwich4Request", v1_example_FakeProtocolWrapSandwich4RequestAltTypePointerTable()));
+
 constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable5uint8AltTypePointerTable() __attribute__((unused));
 static const fidl_type_t v1_Vector4294967295nonnullable5uint8Table = fidl_type_t(::fidl::FidlCodedVector(nullptr, 4294967295u, 1u, ::fidl::kNonnullable, v1_Vector4294967295nonnullable5uint8AltTypePointerTable()));
 
@@ -772,6 +788,21 @@ const fidl_type_t v1_example_Regression2Table = fidl_type_t(::fidl::FidlCodedStr
 
 // Old <-> V1 map.
 
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() {
+  return &v1_example_FakeProtocolWrapSandwich4RequestTable.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolWrapSandwich4RequestAltTypePointerTable() {
+  return &example_FakeProtocolWrapSandwich4RequestTable.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlStructField* Fields40example_FakeProtocolWrapSandwich4Request_field0_alt_field() __attribute__((unused));
+constexpr static inline const ::fidl::FidlStructField* Fields40example_FakeProtocolWrapSandwich4Request_field0_alt_field() { return &Fields43v1_example_FakeProtocolWrapSandwich4Request[0]; }
+constexpr static inline const ::fidl::FidlStructField* Fields43v1_example_FakeProtocolWrapSandwich4Request_field0_alt_field() __attribute__((unused));
+constexpr static inline const ::fidl::FidlStructField* Fields43v1_example_FakeProtocolWrapSandwich4Request_field0_alt_field() { return &Fields40example_FakeProtocolWrapSandwich4Request[0]; }
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable5uint8AltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable5uint8AltTypePointerTable() {
   return &v1_Vector4294967295nonnullable5uint8Table.coded_vector;

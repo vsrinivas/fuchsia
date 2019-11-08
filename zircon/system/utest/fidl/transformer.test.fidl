@@ -227,3 +227,7 @@ struct ArrayStruct {
 };
 
 // TODO(apang): Union containing a table (to test out-of-line sizing)
+
+protocol FakeProtocol {
+    WrapSandwich4(Sandwich4 sandwich);
+};

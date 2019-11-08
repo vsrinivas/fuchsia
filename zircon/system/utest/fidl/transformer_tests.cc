@@ -225,6 +225,58 @@ uint8_t sandwich4_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
+uint8_t sandwich4_with_hdr_case1_v1[] = {
+    0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+
+    0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x10
+    0x00, 0x00, 0x00, 0x00,  // Sandwich4.before (padding)
+
+    0x04, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
+    0x00, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag (padding)
+    0x20, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.env.num_bytes  0x20
+    0x00, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.env.num_handle
+    0xff, 0xff, 0xff, 0xff,  // UnionSize36Alignment4.env.presence
+    0xff, 0xff, 0xff, 0xff,  // UnionSize36Alignment4.env.presence [cont.]
+
+    0x05, 0x06, 0x07, 0x08,  // Sandwich4.after  0x30
+    0x00, 0x00, 0x00, 0x00,  // Sandwich4.after (padding)
+
+    0xa0, 0xa1, 0xa2, 0xa3,  // UnionSize36Alignment4.data, i.e. Sandwich4.the_union.data
+    0xa4, 0xa5, 0xa6, 0xa7,  // UnionSize36Alignment4.data [cont.]
+    0xa8, 0xa9, 0xaa, 0xab,  // UnionSize36Alignment4.data [cont.]  0x40
+    0xac, 0xad, 0xae, 0xaf,  // UnionSize36Alignment4.data [cont.]
+    0xb0, 0xb1, 0xb2, 0xb3,  // UnionSize36Alignment4.data [cont.]
+    0xb4, 0xb5, 0xb6, 0xb7,  // UnionSize36Alignment4.data [cont.]
+    0xb8, 0xb9, 0xba, 0xbb,  // UnionSize36Alignment4.data [cont.]  0x50
+    0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
+};
+
+uint8_t sandwich4_with_hdr_case1_old[] = {
+    0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+
+    0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x10
+
+    0x03, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
+    0xa0, 0xa1, 0xa2, 0xa3,  // UnionSize36Alignment4.data
+    0xa4, 0xa5, 0xa6, 0xa7,  // UnionSize36Alignment4.data [cont.]
+    0xa8, 0xa9, 0xaa, 0xab,  // UnionSize36Alignment4.data [cont.]  0x20
+    0xac, 0xad, 0xae, 0xaf,  // UnionSize36Alignment4.data [cont.]
+    0xb0, 0xb1, 0xb2, 0xb3,  // UnionSize36Alignment4.data [cont.]
+    0xb4, 0xb5, 0xb6, 0xb7,  // UnionSize36Alignment4.data [cont.]
+    0xb8, 0xb9, 0xba, 0xbb,  // UnionSize36Alignment4.data [cont.]  0x30
+    0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
+
+    0x05, 0x06, 0x07, 0x08,  // Sandwich4.after
+
+    0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
+};
+
 uint8_t sandwich5_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
@@ -1286,6 +1338,18 @@ bool sandwich4() {
   END_TEST;
 }
 
+bool sandwich4_with_hdr() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolWrapSandwich4RequestTable,
+                                 &example_FakeProtocolWrapSandwich4RequestTable,
+                                 sandwich4_with_hdr_case1_v1, sizeof(sandwich4_with_hdr_case1_v1),
+                                 sandwich4_with_hdr_case1_old,
+                                 sizeof(sandwich4_with_hdr_case1_old)));
+
+  END_TEST;
+}
+
 bool sandwich5_case1() {
   BEGIN_TEST;
 
@@ -1586,6 +1650,7 @@ RUN_TEST(sandwich1_with_opt_union_absent)
 RUN_TEST(sandwich2)
 RUN_TEST(sandwich3)
 RUN_TEST(sandwich4)
+RUN_TEST(sandwich4_with_hdr)
 RUN_TEST(sandwich5_case1)
 RUN_TEST(sandwich5_case2)
 RUN_TEST(sandwich6_case1)
