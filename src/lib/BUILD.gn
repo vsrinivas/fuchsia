@@ -63,5 +63,6 @@ group("tests") {
     "timekeeper:tests",
     "ui:tests",
     "waitgroup:tests",
+    "watch_handler:tests",
   ]
 }
