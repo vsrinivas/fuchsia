@@ -4,9 +4,14 @@
 
 import("//build/package.gni")
 
-source_set("lib") {
+source_set("image_writer") {
   sources = [
     "raw12_writer.cc",
+  ]
+
+  public = [
+    "image_writer.h",
+    "raw12_writer.h",
   ]
 
   public_deps = [
@@ -15,20 +20,4 @@ source_set("lib") {
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
-}
-
-executable("image_writer_bin") {
-  output_name = "image_writer"
-
-  deps = [
-    ":lib",
-  ]
-}
-
-package("image_writer") {
-  deps = [
-    ":image_writer_bin",
-  ]
-
-  binary = "image_writer"
 }

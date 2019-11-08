@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/image_writer/raw12_writer.h"
+
 #include <array>
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <src/camera/drivers/isp/modules/dma-format.h>
-#include <src/camera/image_writer/raw12_writer.h>
+
+#include "src/camera/drivers/isp/modules/dma-format.h"
 
 namespace camera {
 namespace {

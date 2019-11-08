@@ -5,12 +5,13 @@
 executable("blc_test") {
   testonly = true
   sources = [
-    "//src/camera/calibration/blc/blc.cc",
     "blc_test.cc",
   ]
+
   deps = [
+    "//src/camera/calibration/blc",
     "//src/camera/drivers/test_utils",
-    "//src/camera/image_writer:lib",
+    "//src/camera/image_writer",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

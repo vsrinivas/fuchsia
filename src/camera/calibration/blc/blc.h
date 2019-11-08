@@ -5,9 +5,9 @@
 #ifndef SRC_CAMERA_CALIBRATION_BLC_BLC_H_
 #define SRC_CAMERA_CALIBRATION_BLC_BLC_H_
 
-#include <vector>
+#include <lib/zx/vmo.h>
 
-#include <src/camera/image_writer/raw12_writer.h>
+#include <vector>
 
 namespace camera {
 

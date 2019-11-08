@@ -1,5 +1,11 @@
 {
     "program": {
         "binary": "test/blc_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
     }
 }

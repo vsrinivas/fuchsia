@@ -7,7 +7,7 @@
 
 #include <lib/fzl/vmo-pool.h>
 
-#include <src/camera/drivers/isp/modules/dma-format.h>
+#include "src/camera/drivers/isp/modules/dma-format.h"
 
 namespace camera {
 

@@ -4,22 +4,16 @@
 
 import("//build/package.gni")
 
-executable("blc_bin") {
-  output_name = "blc"
-
+source_set("blc") {
   sources = [
     "blc.cc",
   ]
 
-  deps = [
-    "//src/camera/image_writer:image_writer",
-  ]
-}
-
-package("blc") {
-  deps = [
-    ":blc_bin",
+  public = [
+    "blc.h",
   ]
 
-  binary = "blc"
+  deps = [
+    "//src/camera/image_writer",
+  ]
 }
