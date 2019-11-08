@@ -9,6 +9,7 @@
 #include <zircon/syscalls/clock.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/port.h>
@@ -58,7 +59,7 @@ struct is_on_copy_to_user_exception_list
                      zx_info_maps_t, zx_info_process_t, zx_info_socket_t, zx_info_thread_stats_t,
                      zx_info_timer_t, zx_info_vmo_t, zx_pci_bar_t, zx_pcie_device_info_t,
                      zx_port_packet_t, zx_thread_state_debug_regs_t, zx_thread_state_fp_regs_t,
-                     zx_thread_state_vector_regs_t> {};
+                     zx_thread_state_vector_regs_t, zx_vcpu_state_t> {};
 
 // Generates a type whose ::value is true if |T| is allowed to be copied out to usermode.
 //
