@@ -193,17 +193,24 @@ bool TestDevice::Rebind() {
   zxcrypt_.reset();
   fvm_part_.reset();
 
-  ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
   if (strlen(fvm_part_path_) != 0) {
     // We need to explicitly rebind FVM here, since now that we're not
     // relying on the system-wide block-watcher, the driver won't rebind by
     // itself.
-    ASSERT_TRUE(BindFvmDriver());
+    fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
+    ASSERT_NONNULL(io);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerRebind(fdio_unsafe_borrow_channel(io), kFvmDriver,
+                                                         strlen(kFvmDriver), &call_status);
+    fdio_unsafe_release(io);
+    ASSERT_OK(status);
+    ASSERT_OK(call_status);
     fbl::unique_fd dev_root = devfs_root();
     ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_),
               ZX_OK);
     parent_caller_.reset(fvm_part_.get());
   } else {
+    ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
   }
   ASSERT_TRUE(Connect());
