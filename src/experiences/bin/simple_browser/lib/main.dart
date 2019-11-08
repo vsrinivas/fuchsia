@@ -36,8 +36,15 @@ class RootIntentHandler extends modular.IntentHandler {
 void main() {
   setupLogger(name: 'Browser');
   final _context = ChromiumWebView.createContext();
-  final tabsBloc = TabsBloc(
-    tabFactory: () => WebPageBloc(context: _context),
+
+  // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
+  // constructor arguments.
+  TabsBloc<WebPageBloc> tabsBloc;
+  tabsBloc = TabsBloc(
+    tabFactory: () => WebPageBloc(
+        context: _context,
+        popupHandler: (tab) =>
+            tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab))),
     disposeTab: (tab) {
       tab.dispose();
     },

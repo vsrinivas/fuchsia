@@ -11,7 +11,7 @@ class TabsAction<T> {
 }
 
 // Operations allowed for tab management
-enum TabsActionType { newTab, removeTab, focusTab }
+enum TabsActionType { newTab, removeTab, focusTab, addTab }
 
 // Instructs to add a new tab to tab list.
 class NewTabAction<T> extends TabsAction<T> {
@@ -28,4 +28,10 @@ class RemoveTabAction<T> extends TabsAction<T> {
 class FocusTabAction<T> extends TabsAction<T> {
   final T tab;
   const FocusTabAction({@required this.tab}) : super(TabsActionType.focusTab);
+}
+
+// Instructs to add an existing tab to the tab list.
+class AddTabAction<T> extends TabsAction<T> {
+  final T tab;
+  const AddTabAction({@required this.tab}) : super(TabsActionType.addTab);
 }

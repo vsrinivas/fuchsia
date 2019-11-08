@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'package:fidl/fidl.dart' show InterfaceHandle;
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart'
@@ -33,6 +34,7 @@ PageType pageTypeForWebPageType(web.PageType pageType) {
 //   isLoadedState: bool indicating whether main document has fully loaded.
 class WebPageBloc extends web.NavigationEventListener {
   final ChromiumWebView _webView;
+  final _PopupListener _popupListener;
 
   ChildViewConnection get childViewConnection => _webView.childViewConnection;
 
@@ -65,12 +67,28 @@ class WebPageBloc extends web.NavigationEventListener {
   WebPageBloc({
     String homePage,
     web.ContextProxy context,
-  }) : _webView = ChromiumWebView.withContext(context: context) {
-    _webView.setNavigationEventListener(this);
+    void Function(WebPageBloc popup) popupHandler,
+  })  : _webView = ChromiumWebView.withContext(context: context),
+        _popupListener = _PopupListener(popupHandler) {
+    _webView
+      ..setNavigationEventListener(this)
+      ..setPopupFrameCreationListener(_popupListener);
 
     if (homePage != null) {
       _handleAction(NavigateToAction(url: homePage));
     }
+    _webPageActionController.stream.listen(_handleAction);
+  }
+
+  WebPageBloc.withFrame({
+    @required web.FrameProxy frame,
+    void Function(WebPageBloc popup) popupHandler,
+  })  : _webView = ChromiumWebView.withFrame(frame: frame),
+        _popupListener = _PopupListener(popupHandler) {
+    _webView
+      ..setNavigationEventListener(this)
+      ..setPopupFrameCreationListener(_popupListener);
+
     _webPageActionController.stream.listen(_handleAction);
   }
 
@@ -130,5 +148,20 @@ class WebPageBloc extends web.NavigationEventListener {
     } else {
       return 'https://www.google.com/search?q=${Uri.encodeQueryComponent(url)}';
     }
+  }
+}
+
+class _PopupListener extends web.PopupFrameCreationListener {
+  final void Function(WebPageBloc popup) _handler;
+
+  _PopupListener(handler) : _handler = handler;
+
+  @override
+  Future<void> onPopupFrameCreated(
+    InterfaceHandle<web.Frame> frame,
+    web.PopupFrameCreationInfo info,
+  ) async {
+    _handler(WebPageBloc.withFrame(
+        frame: web.FrameProxy()..ctrl.bind(frame), popupHandler: _handler));
   }
 }

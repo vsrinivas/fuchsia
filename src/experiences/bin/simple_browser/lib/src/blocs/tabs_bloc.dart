@@ -76,6 +76,12 @@ class TabsBloc<T> {
         _tabs.value = UnmodifiableListView<T>(_tabsList);
         disposeTab(tab);
         break;
+      case TabsActionType.addTab:
+        final AddTabAction<T> addTabAction = action;
+        _tabsList.add(addTabAction.tab);
+        _tabs.value = UnmodifiableListView<T>(_tabsList);
+        _currentTab.value = addTabAction.tab;
+        break;
     }
   }
 }
