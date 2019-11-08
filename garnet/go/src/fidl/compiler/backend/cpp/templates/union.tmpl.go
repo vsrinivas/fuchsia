@@ -204,11 +204,6 @@ void {{ .Name }}::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset)
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {

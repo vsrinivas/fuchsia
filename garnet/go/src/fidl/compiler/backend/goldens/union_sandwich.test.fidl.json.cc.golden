@@ -67,11 +67,6 @@ void UnionSize8Alignment4::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t
 }
 
 void UnionSize8Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -150,15 +145,9 @@ void SandwichUnionSize8Alignment4::Encode(::fidl::Encoder* _encoder, size_t _off
 }
 
 void SandwichUnionSize8Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize8Alignment4* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &value->after, _offset + 32);
-  } else {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-    ::fidl::Decode(_decoder, &value->after, _offset + 12);
-  }
+  ::fidl::Decode(_decoder, &value->before, _offset + 0);
+  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+  ::fidl::Decode(_decoder, &value->after, _offset + 12);
 }
 
 zx_status_t SandwichUnionSize8Alignment4::Clone(SandwichUnionSize8Alignment4* _result) const {
@@ -233,11 +222,6 @@ void UnionSize36Alignment4::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_
 }
 
 void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -316,15 +300,9 @@ void SandwichUnionSize36Alignment4::Encode(::fidl::Encoder* _encoder, size_t _of
 }
 
 void SandwichUnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize36Alignment4* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &value->after, _offset + 32);
-  } else {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-    ::fidl::Decode(_decoder, &value->after, _offset + 40);
-  }
+  ::fidl::Decode(_decoder, &value->before, _offset + 0);
+  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+  ::fidl::Decode(_decoder, &value->after, _offset + 40);
 }
 
 zx_status_t SandwichUnionSize36Alignment4::Clone(SandwichUnionSize36Alignment4* _result) const {
@@ -399,11 +377,6 @@ void UnionSize12Alignment4::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_
 }
 
 void UnionSize12Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -482,15 +455,9 @@ void SandwichUnionSize12Alignment4::Encode(::fidl::Encoder* _encoder, size_t _of
 }
 
 void SandwichUnionSize12Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize12Alignment4* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &value->after, _offset + 32);
-  } else {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-    ::fidl::Decode(_decoder, &value->after, _offset + 16);
-  }
+  ::fidl::Decode(_decoder, &value->before, _offset + 0);
+  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+  ::fidl::Decode(_decoder, &value->after, _offset + 16);
 }
 
 zx_status_t SandwichUnionSize12Alignment4::Clone(SandwichUnionSize12Alignment4* _result) const {
@@ -521,13 +488,8 @@ void StructSize16Alignment8::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void StructSize16Alignment8::Decode(::fidl::Decoder* _decoder, StructSize16Alignment8* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->f1, _offset + 0);
-    ::fidl::Decode(_decoder, &value->f2, _offset + 8);
-  } else {
-    ::fidl::Decode(_decoder, &value->f1, _offset + 0);
-    ::fidl::Decode(_decoder, &value->f2, _offset + 8);
-  }
+  ::fidl::Decode(_decoder, &value->f1, _offset + 0);
+  ::fidl::Decode(_decoder, &value->f2, _offset + 8);
 }
 
 zx_status_t StructSize16Alignment8::Clone(StructSize16Alignment8* _result) const {
@@ -599,11 +561,6 @@ void UnionSize24Alignment8::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_
 }
 
 void UnionSize24Alignment8::Decode(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -682,15 +639,9 @@ void SandwichUnionSize24Alignment8::Encode(::fidl::Encoder* _encoder, size_t _of
 }
 
 void SandwichUnionSize24Alignment8::Decode(::fidl::Decoder* _decoder, SandwichUnionSize24Alignment8* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &value->after, _offset + 32);
-  } else {
-    ::fidl::Decode(_decoder, &value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &value->after, _offset + 32);
-  }
+  ::fidl::Decode(_decoder, &value->before, _offset + 0);
+  ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+  ::fidl::Decode(_decoder, &value->after, _offset + 32);
 }
 
 zx_status_t SandwichUnionSize24Alignment8::Clone(SandwichUnionSize24Alignment8* _result) const {

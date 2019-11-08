@@ -393,7 +393,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 28,
-            "column": 11
+            "column": 14
           },
           "maybe_attributes": [
             {

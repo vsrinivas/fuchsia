@@ -88,15 +88,9 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    {{- range .Members }}
-    ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
-    {{- end }}
-  } else {
-    {{- range .Members }}
-    ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetOld }});
-    {{- end }}
-  }
+  {{- range .Members }}
+  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetOld }});
+  {{- end }}
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {

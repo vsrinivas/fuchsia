@@ -82,11 +82,6 @@ void Union::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -259,11 +254,6 @@ void FieldCollision::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offs
 }
 
 void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -392,11 +382,6 @@ void ExplicitUnion::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offse
 }
 
 void ExplicitUnion::Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {

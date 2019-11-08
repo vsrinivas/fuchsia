@@ -24,15 +24,9 @@ void WithErrorSyntax_ResponseAsStruct_Response::Encode(::fidl::Encoder* _encoder
 }
 
 void WithErrorSyntax_ResponseAsStruct_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Response* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->a, _offset + 0);
-    ::fidl::Decode(_decoder, &value->b, _offset + 8);
-    ::fidl::Decode(_decoder, &value->c, _offset + 16);
-  } else {
-    ::fidl::Decode(_decoder, &value->a, _offset + 0);
-    ::fidl::Decode(_decoder, &value->b, _offset + 8);
-    ::fidl::Decode(_decoder, &value->c, _offset + 16);
-  }
+  ::fidl::Decode(_decoder, &value->a, _offset + 0);
+  ::fidl::Decode(_decoder, &value->b, _offset + 8);
+  ::fidl::Decode(_decoder, &value->c, _offset + 16);
 }
 
 zx_status_t WithErrorSyntax_ResponseAsStruct_Response::Clone(WithErrorSyntax_ResponseAsStruct_Response* _result) const {
@@ -115,11 +109,6 @@ void WithErrorSyntax_ResponseAsStruct_Result::EncodeAsXUnionBytes(::fidl::Encode
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -220,11 +209,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(::fidl::Encoder* _encoder
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Response* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  } else {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  }
+  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
 }
 
 zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(WithErrorSyntax_ErrorAsPrimitive_Response* _result) const {
@@ -301,11 +286,6 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EncodeAsXUnionBytes(::fidl::Encode
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {
@@ -406,11 +386,7 @@ void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder, siz
 }
 
 void WithErrorSyntax_ErrorAsEnum_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  } else {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  }
+  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
 }
 
 zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(WithErrorSyntax_ErrorAsEnum_Response* _result) const {
@@ -1288,11 +1264,6 @@ void WithErrorSyntax_ErrorAsEnum_Result::EncodeAsXUnionBytes(::fidl::Encoder* _e
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    DecodeFromXUnionBytes(_decoder, _value, _offset);
-    return;
-  }
-
   fidl_union_tag_t _tag;
   ::fidl::Decode(_decoder, &_tag, _offset);
   switch (_tag) {

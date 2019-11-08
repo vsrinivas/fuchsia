@@ -70,61 +70,32 @@ void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void Handles::Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->plain_handle, _offset + 0);
-    ::fidl::Decode(_decoder, &value->bti_handle, _offset + 4);
-    ::fidl::Decode(_decoder, &value->channel_handle, _offset + 8);
-    ::fidl::Decode(_decoder, &value->debuglog_handle, _offset + 12);
-    ::fidl::Decode(_decoder, &value->event_handle, _offset + 16);
-    ::fidl::Decode(_decoder, &value->eventpair_handle, _offset + 20);
-    ::fidl::Decode(_decoder, &value->exception_handle, _offset + 24);
-    ::fidl::Decode(_decoder, &value->fifo_handle, _offset + 28);
-    ::fidl::Decode(_decoder, &value->guest_handle, _offset + 32);
-    ::fidl::Decode(_decoder, &value->interrupt_handle, _offset + 36);
-    ::fidl::Decode(_decoder, &value->iommu_handle, _offset + 40);
-    ::fidl::Decode(_decoder, &value->job_handle, _offset + 44);
-    ::fidl::Decode(_decoder, &value->pager_handle, _offset + 48);
-    ::fidl::Decode(_decoder, &value->pcidevice_handle, _offset + 52);
-    ::fidl::Decode(_decoder, &value->pmt_handle, _offset + 56);
-    ::fidl::Decode(_decoder, &value->port_handle, _offset + 60);
-    ::fidl::Decode(_decoder, &value->process_handle, _offset + 64);
-    ::fidl::Decode(_decoder, &value->profile_handle, _offset + 68);
-    ::fidl::Decode(_decoder, &value->resource_handle, _offset + 72);
-    ::fidl::Decode(_decoder, &value->socket_handle, _offset + 76);
-    ::fidl::Decode(_decoder, &value->suspendtoken_handle, _offset + 80);
-    ::fidl::Decode(_decoder, &value->thread_handle, _offset + 84);
-    ::fidl::Decode(_decoder, &value->timer_handle, _offset + 88);
-    ::fidl::Decode(_decoder, &value->vcpu_handle, _offset + 92);
-    ::fidl::Decode(_decoder, &value->vmar_handle, _offset + 96);
-    ::fidl::Decode(_decoder, &value->vmo_handle, _offset + 100);
-  } else {
-    ::fidl::Decode(_decoder, &value->plain_handle, _offset + 0);
-    ::fidl::Decode(_decoder, &value->bti_handle, _offset + 4);
-    ::fidl::Decode(_decoder, &value->channel_handle, _offset + 8);
-    ::fidl::Decode(_decoder, &value->debuglog_handle, _offset + 12);
-    ::fidl::Decode(_decoder, &value->event_handle, _offset + 16);
-    ::fidl::Decode(_decoder, &value->eventpair_handle, _offset + 20);
-    ::fidl::Decode(_decoder, &value->exception_handle, _offset + 24);
-    ::fidl::Decode(_decoder, &value->fifo_handle, _offset + 28);
-    ::fidl::Decode(_decoder, &value->guest_handle, _offset + 32);
-    ::fidl::Decode(_decoder, &value->interrupt_handle, _offset + 36);
-    ::fidl::Decode(_decoder, &value->iommu_handle, _offset + 40);
-    ::fidl::Decode(_decoder, &value->job_handle, _offset + 44);
-    ::fidl::Decode(_decoder, &value->pager_handle, _offset + 48);
-    ::fidl::Decode(_decoder, &value->pcidevice_handle, _offset + 52);
-    ::fidl::Decode(_decoder, &value->pmt_handle, _offset + 56);
-    ::fidl::Decode(_decoder, &value->port_handle, _offset + 60);
-    ::fidl::Decode(_decoder, &value->process_handle, _offset + 64);
-    ::fidl::Decode(_decoder, &value->profile_handle, _offset + 68);
-    ::fidl::Decode(_decoder, &value->resource_handle, _offset + 72);
-    ::fidl::Decode(_decoder, &value->socket_handle, _offset + 76);
-    ::fidl::Decode(_decoder, &value->suspendtoken_handle, _offset + 80);
-    ::fidl::Decode(_decoder, &value->thread_handle, _offset + 84);
-    ::fidl::Decode(_decoder, &value->timer_handle, _offset + 88);
-    ::fidl::Decode(_decoder, &value->vcpu_handle, _offset + 92);
-    ::fidl::Decode(_decoder, &value->vmar_handle, _offset + 96);
-    ::fidl::Decode(_decoder, &value->vmo_handle, _offset + 100);
-  }
+  ::fidl::Decode(_decoder, &value->plain_handle, _offset + 0);
+  ::fidl::Decode(_decoder, &value->bti_handle, _offset + 4);
+  ::fidl::Decode(_decoder, &value->channel_handle, _offset + 8);
+  ::fidl::Decode(_decoder, &value->debuglog_handle, _offset + 12);
+  ::fidl::Decode(_decoder, &value->event_handle, _offset + 16);
+  ::fidl::Decode(_decoder, &value->eventpair_handle, _offset + 20);
+  ::fidl::Decode(_decoder, &value->exception_handle, _offset + 24);
+  ::fidl::Decode(_decoder, &value->fifo_handle, _offset + 28);
+  ::fidl::Decode(_decoder, &value->guest_handle, _offset + 32);
+  ::fidl::Decode(_decoder, &value->interrupt_handle, _offset + 36);
+  ::fidl::Decode(_decoder, &value->iommu_handle, _offset + 40);
+  ::fidl::Decode(_decoder, &value->job_handle, _offset + 44);
+  ::fidl::Decode(_decoder, &value->pager_handle, _offset + 48);
+  ::fidl::Decode(_decoder, &value->pcidevice_handle, _offset + 52);
+  ::fidl::Decode(_decoder, &value->pmt_handle, _offset + 56);
+  ::fidl::Decode(_decoder, &value->port_handle, _offset + 60);
+  ::fidl::Decode(_decoder, &value->process_handle, _offset + 64);
+  ::fidl::Decode(_decoder, &value->profile_handle, _offset + 68);
+  ::fidl::Decode(_decoder, &value->resource_handle, _offset + 72);
+  ::fidl::Decode(_decoder, &value->socket_handle, _offset + 76);
+  ::fidl::Decode(_decoder, &value->suspendtoken_handle, _offset + 80);
+  ::fidl::Decode(_decoder, &value->thread_handle, _offset + 84);
+  ::fidl::Decode(_decoder, &value->timer_handle, _offset + 88);
+  ::fidl::Decode(_decoder, &value->vcpu_handle, _offset + 92);
+  ::fidl::Decode(_decoder, &value->vmar_handle, _offset + 96);
+  ::fidl::Decode(_decoder, &value->vmo_handle, _offset + 100);
 }
 
 zx_status_t Handles::Clone(Handles* _result) const {

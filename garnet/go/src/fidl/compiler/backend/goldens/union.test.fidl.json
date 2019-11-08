@@ -29,7 +29,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 4,
-            "column": 11
+            "column": 14
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -47,7 +47,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 5,
-            "column": 12
+            "column": 15
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -69,7 +69,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 6,
-            "column": 20
+            "column": 23
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -131,7 +131,7 @@
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 10,
-            "column": 11
+            "column": 14
           },
           "size": 4,
           "max_out_of_line": 0,

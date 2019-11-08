@@ -157,12 +157,7 @@ struct CodingTraits<::std::vector<T>> {
   static void Decode(DecoderImpl* decoder, ::std::vector<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
     value->resize(encoded->count);
-    size_t stride;
-    if (decoder->ShouldDecodeUnionFromXUnion()) {
-      stride = CodingTraits<T>::inline_size_v1_no_ee;
-    } else {
-      stride = CodingTraits<T>::inline_size_old;
-    }
+    size_t stride = CodingTraits<T>::inline_size_old;
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
     for (size_t i = 0; i < count; ++i)
@@ -187,12 +182,7 @@ struct CodingTraits<::std::array<T, N>> {
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, std::array<T, N>* value, size_t offset) {
-    size_t stride;
-    if (decoder->ShouldDecodeUnionFromXUnion()) {
-      stride = CodingTraits<T>::inline_size_v1_no_ee;
-    } else {
-      stride = CodingTraits<T>::inline_size_old;
-    }
+    size_t stride = CodingTraits<T>::inline_size_old;
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Decode(decoder, &value->at(i), offset + i * stride);
   }
@@ -222,9 +212,6 @@ size_t EncodingInlineSize(EncoderImpl* encoder) {
 
 template <typename T, class DecoderImpl = Decoder>
 size_t DecodingInlineSize(DecoderImpl* decoder) {
-  if (decoder->ShouldDecodeUnionFromXUnion()) {
-    return CodingTraits<T>::inline_size_v1_no_ee;
-  }
   return CodingTraits<T>::inline_size_old;
 }
 

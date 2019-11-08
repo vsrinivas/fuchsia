@@ -20,11 +20,7 @@ void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
 }
 
 void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {
-  if (_decoder->ShouldDecodeUnionFromXUnion()) {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  } else {
-    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
-  }
+  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
 }
 
 zx_status_t Empty::Clone(Empty* _result) const {
