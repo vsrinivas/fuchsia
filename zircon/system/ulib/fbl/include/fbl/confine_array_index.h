@@ -43,7 +43,6 @@ namespace fbl {
 
 #ifdef __aarch64__
 static inline size_t confine_array_index(size_t index, size_t size) {
-  ZX_DEBUG_ASSERT(size > 0);
   size_t safe_index;
 
   // Use a conditional select and a CSDB barrier to enforce validation of |index|.
@@ -64,14 +63,22 @@ static inline size_t confine_array_index(size_t index, size_t size) {
 
 #ifdef __x86_64__
 static inline size_t confine_array_index(size_t index, size_t size) {
-  ZX_DEBUG_ASSERT(size > 0);
+  size_t safe_index = 0;
 
-  // TODO(fxb/12540, fxb/33667): Convert to branchless sequence to reduce perfomance impact.
-  if (index >= size) {
-    return 0;
-  }
-  asm("lfence" : "+r"(index));
-  return index;
+  // Use a conditional move to enforce validation of |index|.
+  // The conditional move has a data dependency on the result of a comparison and cannot
+  // execute until the comparison is resolved.
+  // See "Software Techniques for Managing Speculation on AMD Processors", Mitigation V1-2.
+  // See "Analyzing potential bounds check bypass vulnerabilities", Revision 002,
+  //   Section 5.2 Bounds clipping
+  __asm__(
+    "cmp %1, %2\n"
+    "cmova %1, %0\n"  // Select between $0 and |index|
+  : "+r"(safe_index)
+  : "r"(index), "r"(size)
+  : "cc");
+
+  return safe_index;
 }
 #endif
 
