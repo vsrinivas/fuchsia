@@ -140,6 +140,8 @@ typedef struct zx_protocol_device {
   // The driver must continue to handle all device hooks until the **release** hook
   // is invoked.
   //
+  // **Note:** This hook will not be called for a **device instance**.
+  //
   // This is an optional hook. The default implementation will be a hook that replies
   // immediately with **device_unbind_reply()**.
   //
