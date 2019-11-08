@@ -140,6 +140,7 @@ class CGenerator {
 
   void GenerateStructDeclaration(std::string_view name, const std::vector<Member>& members,
                                  StructKind kind);
+  void GenerateTableDeclaration(std::string_view name);
   void GenerateTaggedUnionDeclaration(std::string_view name, const std::vector<Member>& members);
   void GenerateTaggedXUnionDeclaration(std::string_view name, const std::vector<Member>& members);
 
@@ -175,6 +176,7 @@ class CGenerator {
   void ProduceMessageDeclaration(const NamedMessage& named_message);
   void ProduceProtocolDeclaration(const NamedProtocol& named_protocol);
   void ProduceStructDeclaration(const NamedStruct& named_struct);
+  void ProduceTableDeclaration(const NamedTable& named_table);
   void ProduceUnionDeclaration(const NamedUnion& named_union);
   void ProduceXUnionDeclaration(const NamedXUnion& named_xunion);
 

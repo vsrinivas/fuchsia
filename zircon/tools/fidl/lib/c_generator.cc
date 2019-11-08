@@ -776,6 +776,12 @@ void CGenerator::GenerateStructDeclaration(std::string_view name,
   file_ << "};\n";
 }
 
+void CGenerator::GenerateTableDeclaration(std::string_view name) {
+  file_ << "struct " << name << " {\n";
+  file_ << kIndent << "fidl_table_t table_header;\n";
+  file_ << "};\n";
+}
+
 void CGenerator::GenerateTaggedUnionDeclaration(std::string_view name,
                                                 const std::vector<Member>& members) {
 #ifdef FIDLC_DEPRECATE_C_UNIONS
@@ -987,6 +993,11 @@ void CGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct
 
 void CGenerator::ProduceTableForwardDeclaration(const NamedTable& named_struct) {
   GenerateStructTypedef(named_struct.c_name);
+}
+
+void CGenerator::ProduceTableDeclaration(const NamedTable& named_table) {
+  GenerateTableDeclaration(named_table.c_name);
+  EmitBlank(&file_);
 }
 
 void CGenerator::ProduceUnionForwardDeclaration(const NamedUnion& named_union) {
@@ -1744,10 +1755,13 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kTable:
-        // Tables are entirely forward declared, and their body is defined only in
-        // implementation files.
+      case flat::Decl::Kind::kTable: {
+        auto iter = named_tables.find(decl);
+        if (iter != named_tables.end()) {
+          ProduceTableDeclaration(iter->second);
+        }
         break;
+      }
       case flat::Decl::Kind::kTypeAlias:
         // TODO(FIDL-483): Do more than nothing.
         break;
