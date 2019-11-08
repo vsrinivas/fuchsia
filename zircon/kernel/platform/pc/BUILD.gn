@@ -38,6 +38,7 @@ zx_library("pc") {
     "$zx/kernel/lib/topology",
     "$zx/kernel/lib/unittest",
     "$zx/kernel/lib/version",
+    "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/smbios",
     "$zx/third_party/lib/acpica",
