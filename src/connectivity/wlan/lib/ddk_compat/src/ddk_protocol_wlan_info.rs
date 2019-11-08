@@ -24,4 +24,23 @@ pub struct WlanChannel {
     pub cbw: WlanChannelBandwidth,
     pub secondary80: u8,
 }
+
+#[repr(u8)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum WlanBssType {
+    Infrastructure = 1,
+    /// Independent BSS
+    Ibss = 2,
+    Personal = 3,
+    Mesh = 4,
+    AnyBss = 5,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct WlanBssConfig {
+    pub bssid: [u8; 6],
+    pub bss_type: WlanBssType,
+    pub remote: bool,
+}
 // LINT.ThenChange(//zircon/system/banjo/ddk.protocol.wlan.info/info.banjo)

@@ -13,4 +13,10 @@ __EXPORT extern const wlan_channel_t test_wlan_channel = {
     .secondary80 = 3,
 };
 
+__EXPORT extern const wlan_bss_config_t test_wlan_bss_config = {
+    .bssid = {1, 2, 3, 4, 5, 6},
+    .bss_type = WLAN_BSS_TYPE_PERSONAL,
+    .remote = true,
+};
+
 }
