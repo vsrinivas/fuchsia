@@ -283,30 +283,7 @@ __NO_SAFESTACK NO_ASAN static inline void dso_set_prev(struct dso* p, struct dso
 // tell the assembler to rename references (the compiler generates) to memset
 // to __libc_memset.  That's a hidden symbol that won't cause a PLT entry to
 // be generated, so it's safe to use in calls here.
-//
-// Under ASan, the compiler generates calls to __asan_memset instead.
-// That is normally a PLT call to the ASan runtime DSO, before PLT
-// resolution it might not even have been mapped in yet.
-//
-// A further issue is that the __asan_memset implementation may use
-// ShadowCallStack, but some calls here are before stack ABI setup
-// necessary for that to work.  So redirecting to __libc_memset also
-// ensures those calls reach libc's own memset implementation, which is
-// always a leaf function that doesn't require the ShadowCallStack ABI.
-//
-// Note this also affects the explicit memset calls made in this source
-// file.  That's necessary for some of the instances: those made before PLT
-// resolution and/or stack ABI setup are complete.  It's superfluous for
-// the instances that can only happen later (e.g. via dl* calls), but
-// happens anyway since this symbol redirection is necessary to catch the
-// compiler-generated calls.  However, relying on this implicit redirection
-// rather than explicitly using __libc_memset in the early-startup calls
-// here means that the compiler gets to decide whether to inline each case
-// or generate the memset call.
 __asm__(".weakref memset,__libc_memset");
-#if __has_feature(address_sanitizer)
-__asm__(".weakref __asan_memset,__libc_memset");
-#endif
 
 __NO_SAFESTACK NO_ASAN static void decode_vec(ElfW(Dyn) * v, size_t* a, size_t cnt) {
   size_t i;
