@@ -9,6 +9,7 @@ pub enum FileMethod {
     MakeDir,
     ReadFile,
     WriteFile,
+    Stat,
 }
 
 impl std::str::FromStr for FileMethod {
@@ -20,6 +21,7 @@ impl std::str::FromStr for FileMethod {
             "MakeDir" => Ok(FileMethod::MakeDir),
             "ReadFile" => Ok(FileMethod::ReadFile),
             "WriteFile" => Ok(FileMethod::WriteFile),
+            "Stat" => Ok(FileMethod::Stat),
             _ => bail!("Invalid File Facade method: {}", method),
         }
     }
@@ -40,4 +42,48 @@ pub enum MakeDirResult {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum WriteFileResult {
     Success,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub enum StatResult {
+    NotFound,
+    Success(Metadata),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct Metadata {
+    pub kind: NodeKind,
+    pub size: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeKind {
+    Directory,
+    File,
+    Other,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{json, to_value};
+
+    #[test]
+    fn serialize_stat_result_not_found() {
+        assert_eq!(to_value(StatResult::NotFound).unwrap(), json!("NotFound"));
+    }
+
+    #[test]
+    fn serialize_stat_result_success() {
+        assert_eq!(
+            to_value(StatResult::Success(Metadata { kind: NodeKind::File, size: 42 })).unwrap(),
+            json!({
+                "Success": {
+                    "kind": "file",
+                    "size": 42,
+                },
+            })
+        );
+    }
 }

@@ -77,6 +77,28 @@ impl FileFacade {
         fs::write(destination, &contents)?;
         Ok(WriteFileResult::Success)
     }
+
+    /// Returns metadata for the given path. Returns Ok(NotFound) if the path does not exist.
+    pub async fn stat(&self, args: Value) -> Result<StatResult, Error> {
+        let path = args.get("path").ok_or(format_err!("Stat failed, no path"))?;
+        let path = path.as_str().ok_or(format_err!("Stat failed, path not string"))?;
+
+        let metadata = match fs::metadata(path) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(StatResult::NotFound),
+            res => res,
+        }?;
+
+        Ok(StatResult::Success(Metadata {
+            kind: if metadata.is_dir() {
+                NodeKind::Directory
+            } else if metadata.is_file() {
+                NodeKind::File
+            } else {
+                NodeKind::Other
+            },
+            size: metadata.len(),
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -178,6 +200,34 @@ mod tests {
                 .write_file(json!({ "data": FILE_CONTENTS_AS_BASE64, "dst": "/pkg/is/readonly" }))
                 .await,
             Err(_)
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn stat_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("test.txt");
+        fs::write(&path, "hello world!".as_bytes()).unwrap();
+
+        assert_matches!(
+            FileFacade.stat(json!({ "path": path })).await,
+            Ok(StatResult::Success(Metadata { kind: NodeKind::File, size: 12 }))
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn stat_dir() {
+        assert_matches!(
+            FileFacade.stat(json!({ "path": "/pkg" })).await,
+            Ok(StatResult::Success(Metadata { kind: NodeKind::Directory, size: 0 }))
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn stat_not_found() {
+        assert_matches!(
+            FileFacade.stat(json!({ "path": "/the/ultimate/question" })).await,
+            Ok(StatResult::NotFound)
         );
     }
 }

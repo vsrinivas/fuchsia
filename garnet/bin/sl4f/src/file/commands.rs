@@ -30,5 +30,9 @@ pub async fn file_method_to_fidl(
             let result = facade.write_file(args).await?;
             Ok(to_value(result)?)
         }
+        FileMethod::Stat => {
+            let result = facade.stat(args).await?;
+            Ok(to_value(result)?)
+        }
     }
 }
