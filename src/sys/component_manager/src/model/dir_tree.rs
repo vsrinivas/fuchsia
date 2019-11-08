@@ -10,7 +10,6 @@ use {
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     fuchsia_vfs_pseudo_fs::directory,
-    log::*,
     std::collections::HashMap,
 };
 
@@ -44,13 +43,10 @@ impl<'entries> CapabilityUsageTree<'entries> {
         let node = DirectoryBroker::new(routing_fn);
 
         // Adding a node to the Hub can fail
-        tree.dir.add_node(&basename, node, abs_moniker).await.or_else(|error| {
+        tree.dir.add_node(&basename, node, abs_moniker).await.or_else(|_| {
             // TODO(xbhatnag): The error received is not granular enough to know if the node
-            // already exists, so just log all errors. Ideally, pseudo_vfs should have an exists()
-            // operation.
-            log!(Level::Warn, "Could not add {} to the used dir of the hub -> {}", basename, error);
-
-            // Treat this as a success for now.
+            // already exists, so treat this as a success for now. Ideally, pseudo_vfs should
+            // have an exists() operation.
             Ok(())
         })
     }
