@@ -19,6 +19,7 @@ ffmpeg_prebuilts = [
   "debug",
   "release",
   "asan",
+  "asan-ubsan",
   "lto",
   "profile",
   "thinlto",
