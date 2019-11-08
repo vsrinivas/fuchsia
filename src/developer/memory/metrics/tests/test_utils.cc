@@ -117,9 +117,13 @@ zx_status_t TestUtils::GetCapture(Capture* capture, CaptureLevel level, const Os
   return Capture::GetCapture(capture, state, level, &os);
 }
 
-zx_status_t CaptureSupplier::GetCapture(Capture* capture, CaptureLevel level) {
+zx_status_t CaptureSupplier::GetCapture(Capture* capture, CaptureLevel level,
+                                        bool use_capture_supplier_time) {
   auto& t = templates_.at(index_);
-  t.time = index_++;
+  if (!use_capture_supplier_time) {
+    t.time = index_;
+  }
+  index_++;
   TestUtils::CreateCapture(capture, t, level);
   return ZX_OK;
 }

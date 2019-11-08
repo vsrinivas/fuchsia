@@ -23,6 +23,12 @@ class Metrics {
 
  private:
   void CollectMetrics();
+  void AddKmemEvents(const zx_info_kmem_stats_t& kmem,
+                     std::vector<fuchsia::cobalt::CobaltEvent>* events);
+  void AddKmemEventsWithUptime(const zx_info_kmem_stats_t& kmem, zx_time_t capture_time,
+                               std::vector<fuchsia::cobalt::CobaltEvent>* events);
+  cobalt_registry::MemoryLeakMetricDimensionTimeSinceBoot GetUpTimeEventCode(
+      const zx_time_t current);
 
   zx::duration poll_frequency_;
   async_dispatcher_t* dispatcher_;

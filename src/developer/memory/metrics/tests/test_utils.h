@@ -59,7 +59,8 @@ class CaptureSupplier {
   explicit CaptureSupplier(std::vector<CaptureTemplate> templates)
       : templates_(std::move(templates)), index_(0) {}
 
-  zx_status_t GetCapture(Capture* capture, CaptureLevel level);
+  zx_status_t GetCapture(Capture* capture, CaptureLevel level,
+                         bool use_capture_supplier_time = false);
   bool empty() const { return index_ == templates_.size(); }
 
  private:
