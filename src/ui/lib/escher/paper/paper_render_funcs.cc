@@ -150,12 +150,6 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   frame->cmds()->KeepAlive(mesh);
   frame->cmds()->KeepAlive(texture.get());
 
-  // TODO(ES-206): avoid checking every buffer of every mesh by obtaining a
-  // single wait semaphore from PaperRenderer's per-frame BatchGpuUploader.
-  // Once this is done, should probably DCHECK here that none of the buffers
-  // have wait semaphores.
-  mesh->TransferWaitSemaphores(frame->cmds(), vk::PipelineStageFlagBits::eVertexInput);
-
   auto* obj = frame->Allocate<MeshData>();
 
   obj->index_binding.index_buffer = mesh->vk_index_buffer();

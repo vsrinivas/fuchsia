@@ -70,7 +70,7 @@ class BatchGpuUploader {
     BufferPtr buffer_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
-  };
+  };  // class BatchGpuUploader::Writer
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy into
   // this memory from Images and Buffers on the GPU.
@@ -103,7 +103,7 @@ class BatchGpuUploader {
     BufferPtr buffer_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
-  };
+  };  // class BatchGpuUploader::Reader
 
   // Obtain a Writer that has the specified amount of write space.
   //
@@ -130,9 +130,12 @@ class BatchGpuUploader {
   // writes have completed (null if there were none).
   SemaphorePtr Submit(fit::function<void()> callback = nullptr);
 
- private:
-  static void SemaphoreAssignmentHelper(WaitableResource* resource, CommandBuffer* command_buffer);
+  // Submit() will wait on all semaphores added by AddWaitSemaphore().
+  void AddWaitSemaphore(SemaphorePtr sema, vk::PipelineStageFlags flags) {
+    wait_semaphores_.push_back({std::move(sema), flags});
+  }
 
+ private:
   void Initialize();
 
   int32_t writer_count_ = 0;
@@ -147,6 +150,7 @@ class BatchGpuUploader {
   FramePtr frame_;
 
   std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>> read_callbacks_;
+  std::vector<std::pair<SemaphorePtr, vk::PipelineStageFlags>> wait_semaphores_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);
 };

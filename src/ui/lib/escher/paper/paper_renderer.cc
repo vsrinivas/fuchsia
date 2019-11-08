@@ -178,10 +178,6 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
       std::make_unique<FrameData>(frame, std::move(uploader), scene, output_image,
                                   ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
 
-  frame->cmds()->TakeWaitSemaphore(
-      output_image,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer);
-
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(), frame->frame_number());
 
   {
@@ -203,8 +199,9 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
     // third column of the transform.
     vec3 camera_dir = -vec3(glm::column(camera_transform, 2));
 
-    draw_call_factory_.BeginFrame(frame, scene.get(), &transform_stack_, &render_queue_,
-                                  &shape_cache_, camera_pos, camera_dir);
+    draw_call_factory_.BeginFrame(frame, frame_data_->gpu_uploader.get(), scene.get(),
+                                  &transform_stack_, &render_queue_, &shape_cache_, camera_pos,
+                                  camera_dir);
   }
 }
 
@@ -253,8 +250,10 @@ void PaperRenderer::EndFrame(SemaphorePtr upload_wait_semaphore) {
 
   if (upload_wait_semaphore) {
     frame_data_->frame->cmds()->AddWaitSemaphore(
-        std::move(upload_wait_semaphore),
-        vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader);
+        std::move(upload_wait_semaphore), vk::PipelineStageFlagBits::eVertexInput |
+                                              vk::PipelineStageFlagBits::eFragmentShader |
+                                              vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                                              vk::PipelineStageFlagBits::eTransfer);
   }
 
   // Generate the Vulkan commands to render the frame.

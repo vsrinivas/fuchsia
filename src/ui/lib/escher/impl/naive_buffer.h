@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_IMPL_NAIVE_BUFFER_H_
 
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/resources/waitable_resource.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 

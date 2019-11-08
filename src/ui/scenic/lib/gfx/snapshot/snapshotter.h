@@ -74,6 +74,10 @@ class Snapshotter : public ResourceVisitor {
   void ReadImage(escher::ImagePtr image, fit::function<void(escher::BufferPtr buffer)> callback);
   void ReadBuffer(escher::BufferPtr buffer, fit::function<void(escher::BufferPtr buffer)> callback);
 
+  // Create a replacement image for cases when when can't read protected memory.
+  escher::ImagePtr CreateReplacementImage(uint32_t width, uint32_t height);
+  std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_for_replacements_;
+
   std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_;
   const escher::EscherWeakPtr escher_;
 

@@ -181,9 +181,10 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   EXPECT_TRUE(render_pass_info.Validate());
 
   // TODO(ES-83): move into ShaderProgramTest.
-  auto noise_image = escher->NewNoiseImage(512, 512);
+  BatchGpuUploader gpu_uploader(escher->GetWeakPtr(), 0);
+  auto noise_image = image_utils::NewNoiseImage(escher->image_cache(), &gpu_uploader, 512, 512);
+  cb->AddWaitSemaphore(gpu_uploader.Submit(), vk::PipelineStageFlagBits::eFragmentShader);
   auto noise_texture = escher->NewTexture(noise_image, vk::Filter::eLinear);
-  cb->TakeWaitSemaphore(noise_image, vk::PipelineStageFlagBits::eFragmentShader);
 
   cb->BeginRenderPass(render_pass_info);
 

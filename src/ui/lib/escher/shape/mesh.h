@@ -65,9 +65,6 @@ class Mesh : public Resource {
 
   const AttributeBufferArray& attribute_buffers() const { return attribute_buffers_; }
 
-  // Transfer wait semaphores from all buffers to the specified CommandBuffer.
-  void TransferWaitSemaphores(CommandBuffer* cb, vk::PipelineStageFlags stages);
-
  private:
   Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bounding_box,
        uint32_t num_vertices, uint32_t num_indices,

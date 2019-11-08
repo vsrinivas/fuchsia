@@ -133,17 +133,10 @@ VK_TEST_F(BatchGpuUploaderTest, MultipleReaderSameBuffer) {
                                                          vk::BufferUsageFlagBits::eTransferSrc |
                                                          vk::BufferUsageFlagBits::eTransferDst,
                                                      vk::MemoryPropertyFlagBits::eHostVisible);
-
-  // Buffer should not have wait semaphore.
-  EXPECT_FALSE(vertex_buffer->HasWaitSemaphore());
-
   // Create a reader and read the vertex buffer.
   auto reader = uploader->AcquireReader(vertex_buffer->size());
   reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
   uploader->PostReader(std::move(reader), [](BufferPtr) {});
-
-  // Buffer now has a wait semaphore.
-  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   // Create a second reader and read the *same* vertex buffer.
   auto reader2 = uploader->AcquireReader(vertex_buffer->size());
@@ -185,8 +178,6 @@ VK_TEST_F(BatchGpuUploaderTest, WriteBuffer) {
   writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
   // Posting and submitting should succeed.
   uploader->PostWriter(std::move(writer));
-  // Verify that the "upload done" Semaphore was set on the buffer.
-  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   // Submit the work.
   uploader->Submit();
@@ -220,12 +211,9 @@ VK_TEST_F(BatchGpuUploaderTest, WriteImage) {
   pixels[1] = 88;
   pixels[2] = 121;
   pixels[3] = 255;
-  EXPECT_FALSE(image->HasWaitSemaphore());
   writer->WriteImage(image, region);
   // Posting and submitting should succeed.
   uploader->PostWriter(std::move(writer));
-  // Verify that the "upload done" Semaphore was set on the image.
-  EXPECT_TRUE(image->HasWaitSemaphore());
 
   // Submit the work.
   uploader->Submit();
@@ -281,7 +269,6 @@ VK_TEST_F(BatchGpuUploaderTest, DISABLED_ReadAWriteSucceeds) {
                                                          vk::BufferUsageFlagBits::eTransferSrc |
                                                          vk::BufferUsageFlagBits::eTransferDst,
                                                      vk::MemoryPropertyFlagBits::eDeviceLocal);
-  EXPECT_FALSE(vertex_buffer->HasWaitSemaphore());
 
   // Do write.
   void* host_ptr = writer->host_ptr();
@@ -292,13 +279,10 @@ VK_TEST_F(BatchGpuUploaderTest, DISABLED_ReadAWriteSucceeds) {
   writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
   // Posting and submitting should succeed.
   uploader->PostWriter(std::move(writer));
-  // Verify that the "upload done" Semaphore was set on the buffer.
-  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   // Create reader to read from the buffer pending a write.
   auto reader = uploader->AcquireReader(buffer_size);
   reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   bool read_buffer_done = false;
   uploader->PostReader(std::move(reader), [&read_buffer_done, &write_verts](BufferPtr buffer) {
@@ -320,8 +304,17 @@ VK_TEST_F(BatchGpuUploaderTest, DISABLED_ReadAWriteSucceeds) {
 
 VK_TEST_F(BatchGpuUploaderTest, ReadImageTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  auto image = escher->NewNoiseImage(512, 512);
 
+  // Upload an image to read back.
+  constexpr uint32_t kWidth = 512;
+  constexpr uint32_t kHeight = 256;
+  auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
+  BatchGpuUploader uploader(escher, 0);
+  image_utils::WritePixelsToImage(&uploader, pixels.get(), image, vk::ImageLayout::eTransferSrcOptimal);
+  auto sema = uploader.Submit();
+
+  // Read back the uploaded pixels.
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;
@@ -332,17 +325,20 @@ VK_TEST_F(BatchGpuUploaderTest, ReadImageTest) {
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  BatchGpuUploader uploader(escher, 0);
-  auto reader = uploader.AcquireReader(image->size());
+  BatchGpuUploader downloader(escher, 0);
+  downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
+  auto reader = downloader.AcquireReader(image->size());
   reader->ReadImage(image, region);
-  // Verify that the "upload done" Semaphore was set on the image.
-  EXPECT_TRUE(image->HasWaitSemaphore());
 
   bool read_image_done = false;
-  uploader.PostReader(std::move(reader),
-                      [&read_image_done](BufferPtr buffer) { read_image_done = true; });
+  downloader.PostReader(std::move(reader), [&read_image_done, original = std::move(pixels),
+                                            num_bytes = kWidth * kHeight](BufferPtr buffer) {
+    bool pixels_match = !memcmp(original.get(), buffer->host_ptr(), num_bytes);
+    EXPECT_TRUE(pixels_match);
+    read_image_done = true;
+  });
 
-  uploader.Submit([]() {});
+  downloader.Submit([]() {});
 
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());
@@ -369,8 +365,6 @@ VK_TEST_F(BatchGpuUploaderTest, ReadBufferTest) {
   std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher, 0);
   auto reader = uploader->AcquireReader(buffer_size);
   reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  // Verify that the "upload done" Semaphore was set on the buffer.
-  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   bool read_buffer_done = false;
   uploader->PostReader(std::move(reader), [&read_buffer_done](BufferPtr buffer) {

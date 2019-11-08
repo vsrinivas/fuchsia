@@ -323,8 +323,6 @@ source_set("escher") {
     "resources/resource_recycler.cc",
     "resources/resource_recycler.h",
     "resources/resource_type_info.h",
-    "resources/waitable_resource.cc",
-    "resources/waitable_resource.h",
     "scene/ambient_light.cc",
     "scene/ambient_light.h",
     "scene/binding.h",

@@ -7,7 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/renderer/semaphore.h"
-#include "src/ui/lib/escher/resources/waitable_resource.h"
+#include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/util/debug_print.h"
 
 namespace escher {
@@ -43,8 +43,8 @@ struct ImageInfo {
 };
 #pragma pack(pop)
 
-// An Image is a WaitableResource that encapsulates a vk::Image.
-class Image : public WaitableResource {
+// An Image is a Resource that encapsulates a vk::Image.
+class Image : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }

@@ -27,11 +27,11 @@ namespace {
 
 // Default 1x1 texture for Materials that have no texture.  See header file
 // |white_texture_| comment.
-TexturePtr CreateWhiteTexture(Escher* escher) {
+TexturePtr CreateWhiteTexture(Escher* escher, BatchGpuUploader* gpu_uploader) {
   FXL_DCHECK(escher);
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
-  auto image = escher->NewRgbaImage(1, 1, channels);
+  auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
   return escher->NewTexture(std::move(image), vk::Filter::eNearest);
 }
 
@@ -65,8 +65,7 @@ PaperRenderQueueFlagBits GetRenderQueueFlagBits(const Material& mat) {
 }  // anonymous namespace
 
 PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
-                                           const PaperRendererConfig& config)
-    : white_texture_(CreateWhiteTexture(weak_escher.get())) {}
+                                           const PaperRendererConfig& config) {}
 
 PaperDrawCallFactory::~PaperDrawCallFactory() { FXL_DCHECK(!frame_); }
 
@@ -219,11 +218,11 @@ void PaperDrawCallFactory::SetConfig(const PaperRendererConfig& config) {
   // add other shadow techniques.
 }
 
-void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, PaperScene* scene,
-                                      PaperTransformStack* transform_stack,
+void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, BatchGpuUploader* gpu_uploader,
+                                      PaperScene* scene, PaperTransformStack* transform_stack,
                                       PaperRenderQueue* render_queue, PaperShapeCache* shape_cache,
                                       vec3 camera_pos, vec3 camera_dir) {
-  FXL_DCHECK(!frame_ && frame && transform_stack && render_queue && shape_cache);
+  FXL_DCHECK(!frame_ && frame && gpu_uploader && transform_stack && render_queue && shape_cache);
   frame_ = frame;
   transform_stack_ = transform_stack;
   render_queue_ = render_queue;
@@ -231,6 +230,10 @@ void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, PaperScene* scene,
   camera_pos_ = camera_pos;
   camera_dir_ = camera_dir;
   tracked_cache_entries_.clear();
+
+  if (!white_texture_) {
+    white_texture_ = CreateWhiteTexture(frame->escher(), gpu_uploader);
+  }
 }
 
 void PaperDrawCallFactory::EndFrame() {

@@ -97,9 +97,9 @@ class PaperDrawCallFactory final {
   //
   // |camera| and |transform_stack| could be used to obtain LOD-appropriate
   // meshes from |shape_cache|, but this is not currently implemented.
-  void BeginFrame(const FramePtr& frame, PaperScene* scene, PaperTransformStack* transform_stack,
-                  PaperRenderQueue* render_queue, PaperShapeCache* shape_cache, vec3 camera_pos,
-                  vec3 camera_dir);
+  void BeginFrame(const FramePtr& frame, BatchGpuUploader* uploader, PaperScene* scene,
+                  PaperTransformStack* transform_stack, PaperRenderQueue* render_queue,
+                  PaperShapeCache* shape_cache, vec3 camera_pos, vec3 camera_dir);
   // Cleanup.
   void EndFrame();
 

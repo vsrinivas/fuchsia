@@ -180,9 +180,10 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
             const HardwareLayerAssignment::Item hla_item,
             const escher::SemaphorePtr& acquire_semaphore,
             const escher::SemaphorePtr& frame_done_semaphore) {
-          output_image->SetWaitSemaphore(acquire_semaphore);
-          engine_renderer->RenderLayers(frame, target_presentation_time, output_image,
-                                        hla_item.layers);
+          engine_renderer->RenderLayers(
+              frame, target_presentation_time,
+              {.output_image = output_image, .output_image_acquire_semaphore = acquire_semaphore},
+              hla_item.layers);
 
           // Create a flow event that ends in the magma system driver.
           zx::event semaphore_event = GetEventForSemaphore(escher->device(), frame_done_semaphore);

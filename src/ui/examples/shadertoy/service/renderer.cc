@@ -182,7 +182,6 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
   // Draw full-screen mesh.
   {
     frame->cmds()->KeepAlive(full_screen_);
-    full_screen_->TransferWaitSemaphores(frame->cmds(), vk::PipelineStageFlagBits::eVertexInput);
 
     const uint32_t vbo_binding = escher::impl::MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
     auto& attribute_buffer = full_screen_->attribute_buffer(vbo_binding);

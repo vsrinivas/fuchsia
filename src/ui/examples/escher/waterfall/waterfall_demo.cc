@@ -307,8 +307,12 @@ double WaterfallDemo::ComputeFps() {
   return (frame_count_ - 2) * 1000000.0 / (microseconds - first_frame_microseconds_);
 }
 
-void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_image) {
+void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_image,
+                              const escher::SemaphorePtr& framebuffer_acquired) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
+
+  frame->cmds()->AddWaitSemaphore(framebuffer_acquired,
+                                  vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
   std::vector<Camera> cameras =
       GenerateCameras(camera_projection_mode_, ViewingVolume(paper_scene_->bounding_box), frame);

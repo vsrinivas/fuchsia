@@ -80,16 +80,22 @@ bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_
   return true;
 }
 
-escher::ImagePtr CreateReplacementImage(escher::EscherWeakPtr escher, uint32_t width,
-                                        uint32_t height) {
+}  // namespace
+
+escher::ImagePtr Snapshotter::CreateReplacementImage(uint32_t width, uint32_t height) {
+  // Lazy creation.
+  if (!gpu_uploader_for_replacements_) {
+    gpu_uploader_for_replacements_ = escher::BatchGpuUploader::New(escher_);
+  }
+
   // Fuchsia colors
+  // TODO(41024): data for a single pixel is provided, but there should be data for width * height
+  // pixels.
   uint8_t channels[4];
   channels[1] = 119;
   channels[0] = channels[2] = channels[3] = 255;
-  return escher->NewRgbaImage(width, height, channels);
+  return escher_->NewRgbaImage(gpu_uploader_for_replacements_.get(), width, height, channels);
 }
-
-}  // namespace
 
 Snapshotter::Snapshotter(escher::EscherWeakPtr escher)
     : gpu_uploader_(escher::BatchGpuUploader::New(escher)), escher_(escher) {}
@@ -116,6 +122,16 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
     }
   };
 
+  // If we needed to upload any replacement images for protected memory, do that first,
+  // and make the "downloading uploader" wait on this upload.
+  // TODO(before-41029): would be more efficient to just serialize fake data directly, but
+  // that would require significant changes to snapshotter.
+  if (gpu_uploader_for_replacements_) {
+    auto replacement_semaphore = gpu_uploader_for_replacements_->Submit();
+    gpu_uploader_->AddWaitSemaphore(std::move(replacement_semaphore),
+                                    vk::PipelineStageFlagBits::eTransfer);
+  }
+
   // If there are no GPU operations, call the callback directly
   // as the BatchGPUUploader will not call it unless it has work
   // on the GPU to do. This is necessary as there are some scenes
@@ -124,7 +140,6 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
     content_ready_callback();
   } else {
     // Submit all images/buffers to be read from GPU.
-    FXL_DCHECK(gpu_uploader_);
     gpu_uploader_->Submit(std::move(content_ready_callback));
   }
 }
@@ -292,10 +307,7 @@ void Snapshotter::VisitImage(escher::ImagePtr image) {
   }
   if (image->use_protected_memory()) {
     // We are not allowed to readback protected memory.
-    image = CreateReplacementImage(escher_, image->width(), image->height());
-    if (!image) {
-      return;
-    }
+    image = CreateReplacementImage(image->width(), image->height());
   }
 
   auto format = (int32_t)image->format();

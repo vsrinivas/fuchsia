@@ -38,6 +38,7 @@ void ReadbackTest::SetUp() {
     black_ = image_utils::NewRgbaImage(&image_factory, uploader.get(), 1, 1, kBlack,
                                        vk::ImageLayout::eTransferSrcOptimal);
     uploader->Submit();
+    escher_->vk_device().waitIdle();
   }
 
   // |readback_buffer_| contains the data that is read back from
@@ -59,10 +60,6 @@ void ReadbackTest::TearDown() {
 ReadbackTest::FrameData ReadbackTest::NewFrame(vk::ImageLayout framebuffer_layout) {
   auto frame = escher_->NewFrame("ReadbackTest", ++frame_number_);
   CommandBuffer* cb = frame->cmds();
-
-  // Unless the client does something weird, this will only happen the first
-  // time NewFrame() is called after SetUp().
-  cb->TakeWaitSemaphore(black_, vk::PipelineStageFlagBits::eTransfer);
 
   // Wait for all previous commands to finish before clearing the image to
   // black.  We do this by blitting, because clearing a color attachment can

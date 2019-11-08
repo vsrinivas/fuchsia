@@ -42,13 +42,13 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
                                 size_t max_vertex_count, size_t max_index_count) override;
 
   // Return new Image containing the provided pixels.
-  ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
+  ImagePtr NewRgbaImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height, uint8_t* bytes);
   // Returns RGBA image.
-  ImagePtr NewCheckerboardImage(uint32_t width, uint32_t height);
+  ImagePtr NewCheckerboardImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height);
   // Returns RGBA image.
-  ImagePtr NewGradientImage(uint32_t width, uint32_t height);
+  ImagePtr NewGradientImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height);
   // Returns single-channel luminance image.
-  ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
+  ImagePtr NewNoiseImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height);
   // Return a new Frame, which is passed to Renderers to obtain and submit
   // command buffers, to add timestamps for GPU profiling, etc.  If
   // |enable_gpu_logging| is true, GPU profiling timestamps will be logged via

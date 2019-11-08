@@ -50,14 +50,14 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher, vk::Format dep
 EngineRenderer::~EngineRenderer() = default;
 
 void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target_presentation_time,
-                                  const escher::ImagePtr& output_image,
+                                  const RenderTarget& render_target,
                                   const std::vector<Layer*>& layers) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
   // Check that we are working with a protected framebuffer.
-  FXL_DCHECK(output_image->use_protected_memory() == frame->use_protected_memory());
+  FXL_DCHECK(render_target.output_image->use_protected_memory() == frame->use_protected_memory());
 
   // Render each layer, except the bottom one. Create an escher::Object for
   // each layer, which will be composited as part of rendering the final
@@ -66,11 +66,11 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
   // improved on tile-based GPUs by generating each layer in a subpass and
   // compositing it into |output_image| in another subpass.
   std::vector<escher::Object> overlay_objects;
+
   if (layers.size() > 1) {
     overlay_objects.reserve(layers.size() - 1);
-    auto it = layers.begin();
-    while (++it != layers.end()) {
-      auto layer = *it;
+    for (size_t i = 1; i < layers.size(); ++i) {
+      auto layer = layers[i];
       auto texture = escher::Texture::New(
           escher_->resource_recycler(),
           GetLayerFramebufferImage(layer->width(), layer->height(), frame->use_protected_memory()),
@@ -78,13 +78,20 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
           // 1-1 pixel mapping.  Verify when re-enabling multi-layer support.
           vk::Filter::eLinear);
 
-      DrawLayer(frame, target_presentation_time, layer, texture->image(), {});
+      DrawLayer(frame, target_presentation_time, layer, {.output_image = texture->image()}, {});
 
       // TODO(SCN-1093): it would be preferable to insert barriers instead of
       // using semaphores.
-      auto semaphore = escher::Semaphore::New(escher_->vk_device());
-      frame->SubmitPartialFrame(semaphore);
-      texture->image()->SetWaitSemaphore(std::move(semaphore));
+      if (i == layers.size() - 1) {
+        // After rendering the "final" (non-bottom) layer, we wait for them all to complete before
+        // doing any more work.
+        auto overlay_semaphore = escher::Semaphore::New(escher_->vk_device());
+        frame->SubmitPartialFrame(overlay_semaphore);
+        frame->cmds()->AddWaitSemaphore(overlay_semaphore,
+                                        vk::PipelineStageFlagBits::eFragmentShader);
+      } else {
+        frame->SubmitPartialFrame(escher::SemaphorePtr());
+      }
 
       auto material = escher::Material::New(layer->color(), std::move(texture));
       material->set_type(layer->opaque() ? escher::Material::Type::kOpaque
@@ -102,7 +109,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
   }
 
   // Draw the bottom layer with all of the overlay layers above it.
-  DrawLayer(frame, target_presentation_time, layers[0], output_image,
+  DrawLayer(frame, target_presentation_time, layers[0], render_target,
             escher::Model(std::move(overlay_objects)));
 }
 
@@ -127,11 +134,11 @@ static escher::PaperRendererShadowType GetPaperRendererShadowType(
 }
 
 void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_presentation_time,
-                               Layer* layer, const escher::ImagePtr& output_image,
+                               Layer* layer, const RenderTarget& render_target,
                                const escher::Model& overlay_model) {
   FXL_DCHECK(layer->IsDrawable());
-  float stage_width = static_cast<float>(output_image->width());
-  float stage_height = static_cast<float>(output_image->height());
+  float stage_width = static_cast<float>(render_target.output_image->width());
+  float stage_height = static_cast<float>(render_target.output_image->height());
 
   if (layer->size().x != stage_width || layer->size().y != stage_height) {
     // TODO(SCN-248): Should be able to render into a viewport of the
@@ -157,7 +164,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame, zx::time target_pr
       shadow_type = escher::PaperRendererShadowType::kNone;
   }
 
-  DrawLayerWithPaperRenderer(frame, target_presentation_time, layer, shadow_type, output_image,
+  DrawLayerWithPaperRenderer(frame, target_presentation_time, layer, shadow_type, render_target,
                              overlay_model);
 }
 
@@ -195,11 +202,14 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
 void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
                                                 zx::time target_presentation_time, Layer* layer,
                                                 const escher::PaperRendererShadowType shadow_type,
-                                                const escher::ImagePtr& output_image,
+                                                const RenderTarget& render_target,
                                                 const escher::Model& overlay_model) {
   TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");
 
-  frame->cmds()->impl()->TransitionImageLayout(output_image, vk::ImageLayout::eUndefined,
+  frame->cmds()->AddWaitSemaphore(render_target.output_image_acquire_semaphore,
+                                  vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  frame->cmds()->impl()->TransitionImageLayout(render_target.output_image,
+                                               vk::ImageLayout::eUndefined,
                                                vk::ImageLayout::eColorAttachmentOptimal);
 
   auto& renderer = layer->renderer();
@@ -242,7 +252,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
       frame, gpu_uploader, paper_scene,
       GenerateEscherCamerasForPaperRenderer(frame, camera, layer->GetViewingVolume(),
                                             target_presentation_time),
-      output_image);
+      render_target.output_image);
 
   // TODO(SCN-1256): scene-visitation should generate cameras, collect
   // lights, etc.
@@ -251,8 +261,9 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   // In order to avoid breaking access rules, we should replace them with non-protected materials
   // when using a non-protected |frame|.
   const bool hide_protected_memory = !frame->use_protected_memory();
-  EngineRendererVisitor visitor(paper_renderer_.get(), gpu_uploader.get(), hide_protected_memory,
-                                hide_protected_memory ? GetReplacementMaterial() : nullptr);
+  EngineRendererVisitor visitor(
+      paper_renderer_.get(), gpu_uploader.get(), hide_protected_memory,
+      hide_protected_memory ? GetReplacementMaterial(gpu_uploader.get()) : nullptr);
   visitor.Visit(camera->scene().get());
 
   // TODO(SCN-1270): support for multiple layers.
@@ -277,7 +288,7 @@ escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32
   return escher_->image_cache()->NewImage(info);
 }
 
-escher::MaterialPtr EngineRenderer::GetReplacementMaterial() {
+escher::MaterialPtr EngineRenderer::GetReplacementMaterial(escher::BatchGpuUploader* gpu_uploader) {
   if (!replacement_material_) {
     FXL_DCHECK(escher_);
     // Fuchsia color.
@@ -287,7 +298,7 @@ escher::MaterialPtr EngineRenderer::GetReplacementMaterial() {
     glm::vec4 color;
     color.x = color.z = color.a = 255;
     color.y = 0;
-    auto image = escher_->NewRgbaImage(1, 1, channels);
+    auto image = escher_->NewRgbaImage(gpu_uploader, 1, 1, channels);
     replacement_material_ =
         escher::Material::New(color, escher_->NewTexture(std::move(image), vk::Filter::eNearest));
   }

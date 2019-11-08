@@ -116,8 +116,9 @@ bool Demo::MaybeDrawFrame() {
     OnFrameCreated();
 
     swapchain_helper_.DrawFrame([&, this](const escher::ImagePtr& output_image,
+                                          const escher::SemaphorePtr& framebuffer_acquired,
                                           const escher::SemaphorePtr& render_finished) {
-      this->DrawFrame(frame, output_image);
+      this->DrawFrame(frame, output_image, framebuffer_acquired);
       frame->EndFrame(render_finished, [this]() { OnFrameDestroyed(); });
     });
   }
@@ -150,7 +151,7 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width, uint32_t framebuffe
 
       auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number);
       OnFrameCreated();
-      this->DrawFrame(frame, images[i]);
+      this->DrawFrame(frame, images[i], escher::SemaphorePtr());
       frame->EndFrame(semaphores[i], [this]() { OnFrameDestroyed(); });
     }
 
@@ -170,6 +171,8 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width, uint32_t framebuffe
       escher()->Cleanup();
     }
 
+    // As described above, even the first semaphore is guaranteed to have been signaled.
+    size_t acquire_semaphore_index = (current_frame - 1) % kSwapchainSize;
     size_t image_index = current_frame % kSwapchainSize;
 
     auto frame =
@@ -177,7 +180,7 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width, uint32_t framebuffe
     OnFrameCreated();
     frame->cmds()->AddWaitSemaphore(semaphores[image_index],
                                               vk::PipelineStageFlagBits::eBottomOfPipe);
-    this->DrawFrame(frame, images[image_index]);
+    this->DrawFrame(frame, images[image_index], semaphores[acquire_semaphore_index]);
     frame->EndFrame(semaphores[image_index], [this]() { OnFrameDestroyed(); });
 
     escher()->Cleanup();

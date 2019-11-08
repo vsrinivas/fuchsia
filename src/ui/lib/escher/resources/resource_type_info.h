@@ -13,7 +13,6 @@ namespace escher {
 enum class ResourceType {
   // Abstract base classes.
   kResource = 1,
-  kWaitableResource = 1 << 1,
 
   // Concrete subclasses.
   kImage = 1 << 2,

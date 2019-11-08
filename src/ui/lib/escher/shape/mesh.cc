@@ -83,14 +83,4 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bound
 
 Mesh::~Mesh() {}
 
-void Mesh::TransferWaitSemaphores(CommandBuffer* cb, vk::PipelineStageFlags stages) {
-  // TODO(ES-104): Replace TakeWaitSemaphore() with something better.
-  cb->TakeWaitSemaphore(index_buffer_, stages);
-  for (auto& attr : attribute_buffers_) {
-    if (attr.buffer) {
-      cb->TakeWaitSemaphore(attr.buffer, stages);
-    }
-  }
-}
-
 }  // namespace escher

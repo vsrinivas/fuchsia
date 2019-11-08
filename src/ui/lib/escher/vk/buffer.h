@@ -6,7 +6,7 @@
 #define SRC_UI_LIB_ESCHER_VK_BUFFER_H_
 
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/resources/waitable_resource.h"
+#include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace escher {
@@ -17,7 +17,7 @@ typedef fxl::RefPtr<Buffer> BufferPtr;
 // Escher's standard interface to Vulkan buffer objects. Other than subclassing
 // Resource, this class only holds onto the various pieces of state. Particular
 // subclasses may have custom deletion logic.
-class Buffer : public WaitableResource {
+class Buffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }

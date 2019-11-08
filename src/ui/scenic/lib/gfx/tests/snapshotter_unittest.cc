@@ -111,7 +111,11 @@ class DummyProtectedImage : public Image {
                       bool use_protected_memory)
       : Image(session, id, Image::kTypeInfo) {
     uint8_t kColors[] = {kRedValue, kGreenValue, kBlueValue, kAlphaValue};
-    image_ = escher->NewRgbaImage(1, 1, kColors);
+    escher::BatchGpuUploader uploader(escher);
+    image_ = escher->NewRgbaImage(&uploader, 1, 1, kColors);
+    uploader.Submit();
+    escher->vk_device().waitIdle();
+
     if (use_protected_memory) {
       auto image_info = image_->info();
       image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;

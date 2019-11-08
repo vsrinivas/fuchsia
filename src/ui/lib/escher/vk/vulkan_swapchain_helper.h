@@ -15,7 +15,8 @@ namespace escher {
 class VulkanSwapchainHelper {
  public:
   using DrawFrameCallback =
-      fit::function<void(const ImagePtr& output_image, const SemaphorePtr& render_finished)>;
+      fit::function<void(const ImagePtr& output_image, const SemaphorePtr& framebuffer_acquired,
+                         const SemaphorePtr& render_finished)>;
 
   VulkanSwapchainHelper(VulkanSwapchain swapchain, vk::Device device, vk::Queue queue);
   ~VulkanSwapchainHelper();

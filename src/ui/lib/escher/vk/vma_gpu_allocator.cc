@@ -46,12 +46,12 @@ class VmaBuffer : public escher::Buffer {
 // offset, and size parameters.
 class VmaMappedGpuMem : public escher::GpuMem {
  public:
-  VmaMappedGpuMem(VmaAllocationInfo info, const fxl::RefPtr<escher::WaitableResource>& keep_alive)
+  VmaMappedGpuMem(VmaAllocationInfo info, const fxl::RefPtr<escher::Resource>& keep_alive)
       : GpuMem(info.deviceMemory, info.size, info.offset, static_cast<uint8_t*>(info.pMappedData)),
         keep_alive_(keep_alive) {}
 
  private:
-  const fxl::RefPtr<escher::WaitableResource> keep_alive_;
+  const fxl::RefPtr<escher::Resource> keep_alive_;
 };
 
 class VmaImage : public escher::Image {

@@ -71,8 +71,7 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
   // Render the scene.  The Renderer will wait for acquireNextImageKHR() to
   // signal the semaphore.
   auto& color_image_out = swapchain_.images[swapchain_index];
-  color_image_out->SetWaitSemaphore(image_available_semaphore);
-  draw_callback(color_image_out, render_finished_semaphore);
+  draw_callback(color_image_out, image_available_semaphore, render_finished_semaphore);
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "escher::VulkanSwapchain::Present");

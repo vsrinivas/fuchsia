@@ -35,7 +35,8 @@ class Demo {
   // BeginTouch().
   virtual void EndTouch(uint64_t touch_id, double x_position, double y_position) {}
 
-  virtual void DrawFrame(const escher::FramePtr& frame, const escher::ImagePtr& output_image) = 0;
+  virtual void DrawFrame(const escher::FramePtr& frame, const escher::ImagePtr& output_image,
+                         const escher::SemaphorePtr& framebuffer_acquired) = 0;
 
   DemoHarness* harness() const { return harness_; }
   const char* name() const { return name_; }

@@ -109,13 +109,6 @@ class CommandBuffer : public Reffable {
     impl_->AddWaitSemaphore(semaphore, stage);
   }
 
-  // For convenience, calls TakeWaitSemaphore() on the resource, and passes the
-  // result to AddWaitSemaphore().
-  template <typename ResourcePtrT>
-  void TakeWaitSemaphore(const ResourcePtrT& resource, vk::PipelineStageFlags stage) {
-    impl_->TakeWaitSemaphore(resource, stage);
-  }
-
   // During Submit(), these semaphores will be added to the vk::SubmitInfo.
   // No-op if semaphore is null.
   void AddSignalSemaphore(SemaphorePtr semaphore) { impl_->AddSignalSemaphore(semaphore); }
