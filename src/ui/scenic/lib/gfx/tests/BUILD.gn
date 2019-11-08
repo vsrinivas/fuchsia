@@ -8,9 +8,17 @@ group("tests") {
   testonly = true
   public_deps = [
     ":apptests",
+    ":fuzztests",
     ":pixeltests",
     ":unittests",
     ":viewstate_apptests",
+  ]
+}
+
+group("fuzztests") {
+  testonly = true
+  public_deps = [
+    "//src/ui/scenic/lib/gfx/tests/fuzzers:gfx_fuzzers",
   ]
 }
 
