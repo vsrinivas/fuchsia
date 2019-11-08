@@ -411,7 +411,10 @@ class FutexContext {
   // these cases, the pool lock must be acquired *after* the individual
   // FutexState lock.  Sadly, I don't know a good way to express this with
   // static analysis.
-  DECLARE_SPINLOCK(FutexContext) pool_lock_;
+  //
+  // Note that lockdep tracking is disabled on this lock because it is acquired
+  // while holding the thread lock.
+  DECLARE_SPINLOCK(FutexContext, lockdep::LockFlagsTrackingDisabled) pool_lock_;
 
   // Hash table for FutexStates currently in use (eg; futexes with waiters).
   fbl::HashTable<uintptr_t, ktl::unique_ptr<FutexState>,
