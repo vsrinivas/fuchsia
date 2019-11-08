@@ -78,12 +78,11 @@ impl TestPkgFs {
         let (proxy, pkgfs_root_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
         let pkgsvr_bin = CString::new("/pkg/bin/pkgsvr").unwrap();
-        let blob_flag = CString::new("-blob=/b").unwrap();
         let index_flag = CString::new("-index=/i").unwrap();
         let system_image_flag =
             system_image_merkle.as_ref().map(|s| CString::new(s.clone()).unwrap());
 
-        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin, &blob_flag, &index_flag];
+        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin, &index_flag];
         if let Some(system_image_flag) = system_image_flag.as_ref() {
             argv.push(system_image_flag)
         }
@@ -100,7 +99,7 @@ impl TestPkgFs {
                     pkgfs_root_server_end.into_channel().into(),
                 ),
                 SpawnAction::add_namespace_entry(
-                    &CString::new("/b").unwrap(),
+                    &CString::new("/blob").unwrap(),
                     blobfs.root_dir_handle().context("getting blobfs root dir handle")?.into(),
                 ),
                 SpawnAction::add_namespace_entry(&CString::new("/i").unwrap(), connection.into()),

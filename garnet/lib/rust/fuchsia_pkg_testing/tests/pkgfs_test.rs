@@ -9,6 +9,7 @@ use {
         blobfs::TestBlobFs, pkgfs::TestPkgFs, Package, PackageBuilder, VerificationError,
     },
     matches::assert_matches,
+    std::collections::HashSet,
     std::fmt::Debug,
     std::future::Future,
     std::io::{self, Read, Write},
@@ -55,6 +56,59 @@ fn subdir_proxy(d: &openat::Dir, path: &str) -> fidl_fuchsia_io::DirectoryProxy 
     fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(handle.into()).unwrap(),
     )
+}
+
+fn copy_file_with_len(
+    d: &openat::Dir,
+    path: &std::path::Path,
+    source: &mut std::fs::File,
+) -> Result<(), failure::Error> {
+    use std::convert::TryInto;
+    let mut bytes = vec![];
+    source.read_to_end(&mut bytes)?;
+    let mut file = d.write_file(path, 0777)?;
+    file.set_len(bytes.len().try_into().unwrap())?;
+    file.write_all(&bytes)?;
+    Ok(())
+}
+
+fn install(pkgfs: &TestPkgFs, pkg: &Package) {
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    copy_file_with_len(
+        &d,
+        &std::path::Path::new(&format!("install/pkg/{}", pkg.meta_far_merkle_root())),
+        &mut pkg.meta_far().unwrap(),
+    )
+    .unwrap();
+
+    let mut needs: HashSet<String> =
+        ls_simple(d.list_dir(format!("needs/packages/{}", pkg.meta_far_merkle_root())).unwrap())
+            .unwrap()
+            .into_iter()
+            .collect();
+
+    for mut content in pkg.content_blob_files() {
+        let merkle = content.merkle.to_string();
+        if needs.contains(&merkle) {
+            copy_file_with_len(
+                &d,
+                &std::path::Path::new("install/blob").join(&merkle),
+                &mut content.file,
+            )
+            .unwrap_or_else(|e| panic!("error writing {}: {:?}", merkle, e));
+            needs.remove(&merkle);
+        }
+    }
+
+    // Quick sanity check that we actually installed the package.
+    let mut file_contents = String::new();
+    d.open_file(format!("versions/{}/meta", pkg.meta_far_merkle_root()))
+        .unwrap()
+        .read_to_string(&mut file_contents)
+        .unwrap();
+
+    assert_eq!(file_contents, format!("{}", pkg.meta_far_merkle_root()))
 }
 
 /// Helper function implementing the logic for the asser_error_kind! macro
@@ -751,44 +805,22 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_install_update() {
-    fn copy_file_with_len(
-        d: &openat::Dir,
-        path: &std::path::Path,
-        source: &mut std::fs::File,
-    ) -> Result<(), failure::Error> {
-        use std::convert::TryInto;
-        let mut bytes = vec![];
-        source.read_to_end(&mut bytes)?;
-        let mut file = d.write_file(path, 0777)?;
-        file.set_len(bytes.len().try_into().unwrap())?;
-        file.write_all(&bytes)?;
-        Ok(())
-    }
+    // GC doesn't work without a working system image
+    let system_image_package =
+        SystemImageBuilder { static_packages: &[], cache_packages: None }.build().await;
 
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
+    let blobfs = TestBlobFs::start().unwrap();
+    system_image_package.write_to_blobfs(&blobfs);
+    let pkgfs = TestPkgFs::start_with_blobfs(
+        blobfs,
+        Some(&system_image_package.meta_far_merkle_root().to_string()),
+    )
+    .expect("starting pkgfs");
+
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let pkg = example_package().await;
-    copy_file_with_len(
-        &d,
-        &std::path::Path::new(&format!("install/pkg/{}", pkg.meta_far_merkle_root())),
-        &mut pkg.meta_far().unwrap(),
-    )
-    .unwrap();
-
-    let needs =
-        ls_simple(d.list_dir(format!("needs/packages/{}", pkg.meta_far_merkle_root())).unwrap())
-            .unwrap();
-
-    assert_eq!(needs, ["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"]);
-    copy_file_with_len(
-        &d,
-        &std::path::Path::new(
-            "install/blob/e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3",
-        ),
-        &mut pkg.content_blob_files().next().unwrap().file,
-    )
-    .unwrap();
+    install(&pkgfs, &pkg);
 
     assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
     verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
@@ -800,31 +832,57 @@ async fn test_pkgfs_install_update() {
         .build()
         .await
         .expect("build package");
-    copy_file_with_len(
-        &d,
-        &std::path::Path::new(&format!("install/pkg/{}", pkg2.meta_far_merkle_root())),
-        &mut pkg2.meta_far().unwrap(),
-    )
-    .unwrap();
+    install(&pkgfs, &pkg2);
 
-    let needs =
-        ls_simple(d.list_dir(format!("needs/packages/{}", pkg2.meta_far_merkle_root())).unwrap())
-            .unwrap();
-
-    assert_eq!(needs, ["c575064c3168bb6eb56f435efe2635594ed02d161927ac3a5a7842c3cb748f03"]);
-    copy_file_with_len(
-        &d,
-        &std::path::Path::new(
-            "install/blob/c575064c3168bb6eb56f435efe2635594ed02d161927ac3a5a7842c3cb748f03",
-        ),
-        &mut pkg2.content_blob_files().next().unwrap().file,
-    )
-    .unwrap();
-
+    assert_eq!(sorted(ls(&pkgfs, "packages").unwrap()), ["example", "system_image"]);
     assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
     verify_contents(&pkg2, subdir_proxy(&d, "packages/example/0"))
         .await
         .expect("pkg2 replaced pkg");
+
+    assert_eq!(
+        sorted(ls(&pkgfs, "versions").unwrap()),
+        sorted(vec![
+            pkg2.meta_far_merkle_root().to_string(),
+            system_image_package.meta_far_merkle_root().to_string()
+        ])
+    );
+
+    // old version is no longer accesible.
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    {
+        let blobfs_dir = pkgfs.blobfs().as_dir().unwrap();
+
+        // Old blobs still in blobfs.
+        let expected_blobs = sorted(
+            pkg.list_blobs()
+                .unwrap()
+                .into_iter()
+                .chain(pkg2.list_blobs().unwrap())
+                .chain(system_image_package.list_blobs().unwrap())
+                .map(|m| m.to_string())
+                .collect(),
+        );
+        assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
+
+        // Trigger GC
+        d.remove_dir("ctl/garbage").unwrap();
+
+        // pkg blobs are in blobfs no longer
+        let expected_blobs = sorted(
+            pkg2.list_blobs()
+                .unwrap()
+                .into_iter()
+                .chain(system_image_package.list_blobs().unwrap())
+                .map(|m| m.to_string())
+                .collect(),
+        );
+        assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
+    }
 
     drop(d);
 
@@ -932,6 +990,90 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     );
 
     assert_eq!(ls_simple(d.list_dir("needs/packages").unwrap()).unwrap(), Vec::<&str>::new());
+
+    drop(d);
+
+    pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_shadowed_cache_package() {
+    let pkg = example_package().await;
+    let system_image_package =
+        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+
+    let blobfs = TestBlobFs::start().unwrap();
+    system_image_package.write_to_blobfs(&blobfs);
+    pkg.write_to_blobfs(&blobfs);
+    let pkgfs = TestPkgFs::start_with_blobfs(
+        blobfs,
+        Some(&system_image_package.meta_far_merkle_root().to_string()),
+    )
+    .expect("starting pkgfs");
+
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
+    verify_contents(&pkg, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("valid example package");
+
+    let pkg2 = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world 2!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+    install(&pkgfs, &pkg2);
+
+    assert_eq!(sorted(ls(&pkgfs, "packages").unwrap()), ["example", "system_image"]);
+    assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
+    verify_contents(&pkg2, subdir_proxy(&d, "packages/example/0"))
+        .await
+        .expect("pkg2 replaced pkg");
+
+    assert_eq!(
+        sorted(ls(&pkgfs, "versions").unwrap()),
+        sorted(vec![
+            pkg2.meta_far_merkle_root().to_string(),
+            system_image_package.meta_far_merkle_root().to_string()
+        ])
+    );
+
+    // cached version is no longer accesible.
+    assert_error_kind!(
+        d.metadata(&format!("versions/{}", pkg.meta_far_merkle_root())).map(|m| m.is_dir()),
+        io::ErrorKind::NotFound
+    );
+
+    {
+        let blobfs_dir = pkgfs.blobfs().as_dir().unwrap();
+
+        // Old blobs still in blobfs.
+        let expected_blobs = sorted(
+            pkg.list_blobs()
+                .unwrap()
+                .into_iter()
+                .chain(pkg2.list_blobs().unwrap())
+                .chain(system_image_package.list_blobs().unwrap())
+                .map(|m| m.to_string())
+                .collect(),
+        );
+        assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
+
+        // Trigger GC
+        d.remove_dir("ctl/garbage").unwrap();
+
+        // cached pkg blobs are in blobfs no longer
+        let expected_blobs = sorted(
+            pkg2.list_blobs()
+                .unwrap()
+                .into_iter()
+                .chain(system_image_package.list_blobs().unwrap())
+                .map(|m| m.to_string())
+                .collect(),
+        );
+        assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
+    }
 
     drop(d);
 
