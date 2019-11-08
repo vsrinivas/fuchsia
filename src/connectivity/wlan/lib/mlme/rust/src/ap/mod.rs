@@ -299,11 +299,47 @@ impl InfraBss {
             .handle_eth_frame(ctx, dst_addr, src_addr, ether_type, body)
             .map_err(|e| Rejection::Client(client.addr, e))
     }
+
+    // Timed event functions
+
+    /// Handles timed events.
+    fn handle_timed_event(
+        &mut self,
+        ctx: &mut Context,
+        event_id: EventId,
+        event: TimedEvent,
+    ) -> Result<(), Rejection> {
+        match event {
+            TimedEvent::Beacon => {
+                // TODO(37891): Handle this.
+                Ok(())
+            }
+            TimedEvent::ClientEvent(addr, event) => {
+                let client = self.clients.get_mut(&addr).ok_or(Rejection::NoSuchClient(addr))?;
+
+                client
+                    .handle_event(ctx, event_id, event)
+                    .map_err(|e| Rejection::Client(client.addr, e))
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ClientEvent {
+    /// This is the timeout that fires after dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13
+    /// and Annex C.3) elapses and no activity was detected, at which point the client is
+    /// disassociated.
+    BssIdleTimeout,
 }
 
 #[derive(Debug)]
 pub enum TimedEvent {
+    /// Event to send a beacon frame.
     Beacon,
+
+    /// Events that are destined for a client to handle.
+    ClientEvent(MacAddr, ClientEvent),
 }
 
 pub struct Context {
@@ -324,8 +360,8 @@ impl Context {
         Self { device, timer, buf_provider, seq_mgr: SequenceManager::new(), bssid }
     }
 
-    pub fn schedule_at(&mut self, deadline: zx::Time, event: TimedEvent) -> EventId {
-        self.timer.schedule_event(deadline, event)
+    pub fn schedule_after(&mut self, duration: zx::Duration, event: TimedEvent) -> EventId {
+        self.timer.schedule_event(self.timer.now() + duration, event)
     }
 
     pub fn cancel_event(&mut self, event_id: EventId) {
@@ -506,12 +542,12 @@ impl Context {
         &mut self,
         dst_addr: MacAddr,
         src_addr: MacAddr,
-        is_protected: bool,
-        is_qos: bool,
+        protected: bool,
+        qos_ctrl: bool,
         ether_type: u16,
         payload: &[u8],
     ) -> Result<(), Error> {
-        let qos_presence = Presence::from_bool(is_qos);
+        let qos_presence = Presence::from_bool(qos_ctrl);
         let data_hdr_len =
             mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
         let frame_len = data_hdr_len + std::mem::size_of::<mac::LlcHdr>() + payload.len();
@@ -523,8 +559,8 @@ impl Context {
             dst_addr,
             self.bssid.clone(),
             src_addr,
-            is_protected,
-            is_qos,
+            protected,
+            qos_ctrl,
             ether_type,
             payload,
         )?;
@@ -600,8 +636,26 @@ impl Ap {
     }
 
     // Timer handler functions.
-    pub fn handle_timed_event(&mut self, _event_id: EventId) {
-        // TODO(37891): Handle these.
+    pub fn handle_timed_event(&mut self, event_id: EventId) {
+        let bss = match self.bss.as_mut() {
+            Some(bss) => bss,
+            None => {
+                error!("received timed event but BSS was not started yet");
+                return;
+            }
+        };
+
+        let event = match self.ctx.timer.triggered(&event_id) {
+            Some(event) => event,
+            None => {
+                error!("received unknown timed event");
+                return;
+            }
+        };
+
+        if let Err(e) = bss.handle_timed_event(&mut self.ctx, event_id, event) {
+            error!("failed to handle timed event frame: {}", e)
+        }
     }
 
     // MLME handler functions.
@@ -826,11 +880,11 @@ mod tests {
     }
 
     #[test]
-    fn ctx_schedule_at() {
+    fn ctx_schedule_after() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let event_id = ctx.schedule_at(zx::Time::from_nanos(0), TimedEvent::Beacon);
+        let event_id = ctx.schedule_after(zx::Duration::from_seconds(5), TimedEvent::Beacon);
         assert_variant!(ctx.timer.triggered(&event_id), Some(TimedEvent::Beacon));
         assert_variant!(ctx.timer.triggered(&event_id), None);
     }
@@ -840,7 +894,7 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let event_id = ctx.schedule_at(zx::Time::from_nanos(0), TimedEvent::Beacon);
+        let event_id = ctx.schedule_after(zx::Duration::from_seconds(5), TimedEvent::Beacon);
         ctx.cancel_event(event_id);
         assert_variant!(ctx.timer.triggered(&event_id), None);
     }
@@ -1460,6 +1514,67 @@ mod tests {
         );
 
         assert_eq!(fake_device.eth_queue.len(), 0);
+    }
+
+    #[test]
+    fn bss_handle_client_event() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+
+        // Move the client to associated so it can handle data frames.
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[][..],
+            )
+            .expect("expected OK");
+
+        fake_device.wlan_queue.clear();
+
+        bss.handle_timed_event(
+            &mut ctx,
+            fake_scheduler.next_id.into(),
+            TimedEvent::ClientEvent(CLIENT_ADDR, ClientEvent::BssIdleTimeout),
+        )
+        .expect("expected OK");
+
+        // Check that we received a disassociation frame.
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Mgmt header
+            0b10100000, 0, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0x30, 0, // Sequence Control
+            // Disassoc header:
+            4, 0, // reason code
+        ][..]);
+
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::DisassociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::DisassociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+            },
+        );
     }
 
     #[test]

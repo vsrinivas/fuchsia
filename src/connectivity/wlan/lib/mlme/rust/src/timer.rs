@@ -8,6 +8,13 @@ use {fuchsia_zircon as zx, std::collections::HashMap, std::ffi::c_void};
 #[repr(C)]
 pub struct EventId(u64);
 
+#[cfg(test)]
+impl From<u64> for EventId {
+    fn from(id: u64) -> Self {
+        Self(id)
+    }
+}
+
 /// A scheduler to schedule and cancel timeouts.
 #[repr(C)]
 pub struct Scheduler {
@@ -68,7 +75,7 @@ impl<E> Timer<E> {
 
 #[cfg(test)]
 pub struct FakeScheduler {
-    next_id: u64,
+    pub next_id: u64,
     now: i64,
 }
 

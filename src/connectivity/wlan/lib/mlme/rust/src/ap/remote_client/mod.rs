@@ -3,17 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    crate::{ap::Context, error::Error},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    wlan_common::mac::{
-        self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode,
+    crate::{
+        ap::{ClientEvent, Context, TimedEvent},
+        error::Error,
+        timer::EventId,
     },
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon::{self as zx, DurationNum},
+    wlan_common::{
+        mac::{self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode},
+        TimeUnit,
+    },
+    wlan_statemachine::StateMachine,
     zerocopy::ByteSlice,
 };
 
+/// dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3): This attribute indicates
+/// that the number of 1000 TUs that pass before an AP disassociates an inactive non-AP STA. This
+/// value is transmitted in the Association Response and Reassociation Response frames.
+const BSS_MAX_IDLE_PERIOD: u16 = 90;
+
 /// The MLME state machine. The actual state machine transitions are managed and validated in the
 /// SME: we only use these states to determine when packets can be sent and received.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum State {
     /// An unknown client is initially placed in the |Authenticating| state. A client may remain in
     /// this state until an MLME-AUTHENTICATE.indication is received, at which point it may either
@@ -33,6 +45,9 @@ enum State {
         /// - None: There is no EAPoL authentication required, i.e. the network is not an RSN. All
         ///   frames can be sent, and will NOT be protected.
         eapol_controlled_port: Option<fidl_mlme::ControlledPortState>,
+
+        /// The current active timeout. Should never be None, except during initialization.
+        active_timeout_event_id: Option<EventId>,
     },
 
     /// This is a terminal state indicating the client cannot progress any further, and should be
@@ -56,7 +71,7 @@ impl State {
 #[allow(dead_code)]
 pub struct RemoteClient {
     pub addr: MacAddr,
-    state: State,
+    state: StateMachine<State>,
 }
 
 #[derive(Debug)]
@@ -107,24 +122,124 @@ impl ClientRejection {
 // TODO(37891): Use this code.
 //
 // TODO(37891): Implement capability negotiation in MLME-ASSOCIATE.response.
-// TODO(37891): Implement power management.
-// TODO(37891): Implement PS-Poll support.
 // TODO(37891): Implement inactivity timeout.
 // TODO(37891): Implement action frame handling.
 #[allow(dead_code)]
 impl RemoteClient {
     pub fn new(addr: MacAddr) -> Self {
-        Self { addr, state: State::Authenticating }
+        Self { addr, state: StateMachine::new(State::Authenticating) }
     }
 
     /// Returns if the client is deauthenticated. The caller should use this to check if the client
     /// needs to be forgotten from its state.
     pub fn deauthenticated(&self) -> bool {
-        self.state == State::Deauthenticated
+        match self.state.as_ref() {
+            State::Deauthenticated => true,
+            _ => false,
+        }
+    }
+
+    fn change_state(&mut self, ctx: &mut Context, next_state: State) {
+        self.state.replace_state(|state| {
+            match state {
+                State::Associated { active_timeout_event_id: Some(event_id), .. } => {
+                    ctx.cancel_event(event_id);
+                }
+                _ => (),
+            }
+            next_state
+        });
+    }
+
+    fn schedule_after(
+        &self,
+        ctx: &mut Context,
+        duration: zx::Duration,
+        event: ClientEvent,
+    ) -> EventId {
+        ctx.schedule_after(duration, TimedEvent::ClientEvent(self.addr, event))
+    }
+
+    fn schedule_bss_idle_timeout(&self, ctx: &mut Context) -> EventId {
+        self.schedule_after(
+            ctx,
+            zx::Duration::from(
+                // dot11BssMaxIdlePeriod is measured in increments of 1000 TUs.
+                (BSS_MAX_IDLE_PERIOD as i64 * i64::from(TimeUnit::from(1000))).micros(),
+            ),
+            ClientEvent::BssIdleTimeout,
+        )
+    }
+
+    fn handle_bss_idle_timeout(
+        &mut self,
+        ctx: &mut Context,
+        event_id: EventId,
+    ) -> Result<(), ClientRejection> {
+        match self.state.as_ref() {
+            State::Associated { active_timeout_event_id, .. } => {
+                if *active_timeout_event_id != Some(event_id) {
+                    // This is not the right timeout.
+                    return Ok(());
+                }
+            }
+            _ => {
+                // This is not the right state.
+                return Ok(());
+            }
+        }
+
+        self.change_state(ctx, State::Authenticated);
+
+        // On BSS idle timeout, we need to tell the client that they've been disassociated, and the
+        // SME to transition the client to Authenticated.
+        ctx.send_disassoc_frame(self.addr.clone(), ReasonCode::REASON_INACTIVITY)
+            .map_err(ClientRejection::WlanSendError)?;
+        ctx.send_mlme_disassoc_ind(self.addr.clone(), ReasonCode::REASON_INACTIVITY.0)
+            .map_err(ClientRejection::SmeSendError)?;
+        Ok(())
+    }
+
+    /// Resets the BSS max idle timeout.
+    ///
+    /// If we receive a WLAN frame, we need to reset the clock on disassociating the client after
+    /// timeout.
+    fn reset_bss_max_idle_timeout(&mut self, ctx: &mut Context) {
+        // TODO(37891): IEEE Std 802.11-2016, 9.4.2.79 specifies a "Protected Keep-Alive Required"
+        // option that indicates that only a protected frame indicates activity. It is unclear how
+        // this interacts with open networks.
+
+        // We need to do this in two parts: we can't schedule the timeout while also borrowing the
+        // state, because it results in two simultaneous mutable borrows.
+        let new_active_timeout_event_id = match self.state.as_ref() {
+            State::Associated { .. } => Some(self.schedule_bss_idle_timeout(ctx)),
+            _ => None,
+        };
+
+        match self.state.as_mut() {
+            State::Associated { active_timeout_event_id, .. } => {
+                if let Some(event_id) = active_timeout_event_id {
+                    ctx.cancel_event(*event_id);
+                }
+                *active_timeout_event_id = new_active_timeout_event_id;
+            }
+            _ => (),
+        }
     }
 
     fn is_frame_class_permitted(&self, frame_class: FrameClass) -> bool {
-        frame_class <= self.state.max_frame_class()
+        frame_class <= self.state.as_ref().max_frame_class()
+    }
+
+    pub fn handle_event(
+        &mut self,
+        ctx: &mut Context,
+        event_id: EventId,
+        event: ClientEvent,
+    ) -> Result<(), ClientRejection> {
+        match event {
+            ClientEvent::BssIdleTimeout => self.handle_bss_idle_timeout(ctx, event_id),
+        }
     }
 
     // MLME SAP handlers.
@@ -139,11 +254,14 @@ impl RemoteClient {
         ctx: &mut Context,
         result_code: fidl_mlme::AuthenticateResultCodes,
     ) -> Result<(), ClientRejection> {
-        self.state = if result_code == fidl_mlme::AuthenticateResultCodes::Success {
-            State::Authenticated
-        } else {
-            State::Deauthenticated
-        };
+        self.change_state(
+            ctx,
+            if result_code == fidl_mlme::AuthenticateResultCodes::Success {
+                State::Authenticated
+            } else {
+                State::Deauthenticated
+            },
+        );
 
         // We only support open system auth in the SME.
         // IEEE Std 802.11-2016, 12.3.3.2.3 & Table 9-36: Sequence number 2 indicates the response
@@ -182,7 +300,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: fidl_mlme::ReasonCode,
     ) -> Result<(), ClientRejection> {
-        self.state = State::Deauthenticated;
+        self.change_state(ctx, State::Deauthenticated);
 
         // IEEE Std 802.11-2016, 6.3.6.3.3 states that we should send MLME-DEAUTHENTICATE.confirm
         // to the SME on success. However, our SME only sends MLME-DEAUTHENTICATE.request when it
@@ -208,17 +326,25 @@ impl RemoteClient {
         aid: Aid,
         ies: &[u8],
     ) -> Result<(), ClientRejection> {
-        self.state = if result_code == fidl_mlme::AssociateResultCodes::Success {
-            State::Associated {
-                eapol_controlled_port: if is_rsn {
-                    Some(fidl_mlme::ControlledPortState::Closed)
-                } else {
-                    None
-                },
-            }
-        } else {
-            State::Authenticated
-        };
+        self.change_state(
+            ctx,
+            if result_code == fidl_mlme::AssociateResultCodes::Success {
+                State::Associated {
+                    eapol_controlled_port: if is_rsn {
+                        Some(fidl_mlme::ControlledPortState::Closed)
+                    } else {
+                        None
+                    },
+                    active_timeout_event_id: None,
+                }
+            } else {
+                State::Authenticated
+            },
+        );
+
+        // Reset the client's activeness as soon as it is associated, kicking off the BSS max idle
+        // timer.
+        self.reset_bss_max_idle_timeout(ctx);
 
         ctx.send_assoc_resp_frame(
             self.addr.clone(),
@@ -267,7 +393,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: u16,
     ) -> Result<(), ClientRejection> {
-        self.state = State::Authenticated;
+        self.change_state(ctx, State::Authenticated);
 
         // IEEE Std 802.11-2016, 6.3.9.2.3 states that we should send MLME-DISASSOCIATE.confirm
         // to the SME on success. Like MLME-DEAUTHENTICATE.confirm, our SME has already forgotten
@@ -283,7 +409,7 @@ impl RemoteClient {
         &mut self,
         state: fidl_mlme::ControlledPortState,
     ) -> Result<(), ClientRejection> {
-        match &mut self.state {
+        match self.state.as_mut() {
             State::Associated {
                 eapol_controlled_port: eapol_controlled_port @ Some(_), ..
             } => {
@@ -322,7 +448,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
-        self.state = State::Authenticated;
+        self.change_state(ctx, State::Authenticated);
         ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0)
             .map_err(ClientRejection::SmeSendError)
     }
@@ -358,7 +484,7 @@ impl RemoteClient {
                 }
                 AuthAlgorithmNumber::SAE => fidl_mlme::AuthenticationTypes::Sae,
                 _ => {
-                    self.state = State::Deauthenticated;
+                    self.change_state(ctx, State::Deauthenticated);
 
                     // Don't even bother sending this to the SME if we don't understand the auth
                     // algorithm.
@@ -384,7 +510,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
-        self.state = State::Deauthenticated;
+        self.change_state(ctx, State::Deauthenticated);
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
             fidl_mlme::ReasonCode::from_primitive(reason_code.0)
@@ -400,9 +526,9 @@ impl RemoteClient {
     }
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
-    fn handle_ps_poll(&self, _ctx: &mut Context) -> Result<(), ClientRejection> {
+    fn handle_ps_poll(&mut self, _ctx: &mut Context) -> Result<(), ClientRejection> {
         // TODO(37891): Implement me!
-        unimplemented!()
+        Ok(())
     }
 
     /// Handles EAPoL requests (IEEE Std 802.1X-2010, 11.3) from PHY data frames.
@@ -449,7 +575,7 @@ impl RemoteClient {
             FrameClass::Class3 => ReasonCode::INVALID_CLASS3FRAME,
         };
 
-        match self.state {
+        match self.state.as_ref() {
             State::Deauthenticated | State::Authenticating => {
                 ctx.send_deauth_frame(self.addr, reason_code)
             }
@@ -477,6 +603,8 @@ impl RemoteClient {
 
         self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ mgmt_hdr.frame_ctrl }))?;
 
+        self.reset_bss_max_idle_timeout(ctx);
+
         match mac::MgmtBody::parse(mgmt_subtype, body).ok_or(ClientRejection::ParseFailed)? {
             mac::MgmtBody::Authentication { auth_hdr, .. } => {
                 self.handle_auth_frame(ctx, auth_hdr.auth_alg_num)
@@ -502,14 +630,19 @@ impl RemoteClient {
     /// individual frames will be passed to |handle_msdu| and we don't need to care what format
     /// they're in.
     pub fn handle_data_frame<B: ByteSlice>(
-        &self,
+        &mut self,
         ctx: &mut Context,
         fixed_data_fields: mac::FixedDataHdrFields,
         addr4: Option<mac::Addr4>,
         qos_ctrl: Option<mac::QosControl>,
         body: B,
     ) -> Result<(), ClientRejection> {
-        self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ fixed_data_fields.frame_ctrl }))?;
+        self.reject_frame_class_if_not_permitted(
+            ctx,
+            mac::frame_class(&{ fixed_data_fields.frame_ctrl }),
+        )?;
+
+        self.reset_bss_max_idle_timeout(ctx);
 
         for msdu in
             mac::MsduIterator::from_data_frame_parts(fixed_data_fields, addr4, qos_ctrl, body)
@@ -521,7 +654,7 @@ impl RemoteClient {
                 }
                 // Disallow handling LLC frames if the controlled port is closed. If there is no
                 // controlled port, sending frames is OK.
-                _ if match self.state {
+                _ if match self.state.as_ref() {
                     State::Associated {
                         eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
                         ..
@@ -546,14 +679,14 @@ impl RemoteClient {
 
     /// Handles Ethernet II frames from the netstack.
     pub fn handle_eth_frame(
-        &self,
+        &mut self,
         ctx: &mut Context,
         dst_addr: MacAddr,
         src_addr: MacAddr,
         ether_type: u16,
         body: &[u8],
     ) -> Result<(), ClientRejection> {
-        let eapol_controlled_port = match self.state {
+        let eapol_controlled_port = match self.state.as_ref() {
             State::Associated { eapol_controlled_port, .. } => eapol_controlled_port,
             _ => {
                 return Err(ClientRejection::NotAssociated);
@@ -620,7 +753,7 @@ mod tests {
         r_sta
             .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
             .expect("expected OK");
-        assert_eq!(r_sta.state, State::Authenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -650,7 +783,7 @@ mod tests {
                 fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
             )
             .expect("expected OK");
-        assert_eq!(r_sta.state, State::Deauthenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -677,7 +810,7 @@ mod tests {
         r_sta
             .handle_mlme_deauth_req(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
             .expect("expected OK");
-        assert_eq!(r_sta.state, State::Deauthenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -709,8 +842,10 @@ mod tests {
                 &[0, 4, 1, 2, 3, 4][..],
             )
             .expect("expected OK");
-        assert_variant!(r_sta.state, State::Associated {
-            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed), ..
+        assert_variant!(r_sta.state.as_ref(), State::Associated {
+            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
+            active_timeout_event_id: Some(_),
+            ..
         });
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -746,8 +881,10 @@ mod tests {
                 &[0, 4, 1, 2, 3, 4][..],
             )
             .expect("expected OK");
-        assert_variant!(r_sta.state, State::Associated {
-            eapol_controlled_port: None, ..
+        assert_variant!(r_sta.state.as_ref(), State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: Some(_),
+            ..
         });
     }
 
@@ -767,7 +904,7 @@ mod tests {
                 &[0, 4, 1, 2, 3, 4][..],
             )
             .expect("expected OK");
-        assert_eq!(r_sta.state, State::Authenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -798,7 +935,7 @@ mod tests {
                 fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
             )
             .expect("expected OK");
-        assert_eq!(r_sta.state, State::Authenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -817,13 +954,14 @@ mod tests {
     #[test]
     fn handle_mlme_set_controlled_port_req() {
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Associated {
+        r_sta.state = StateMachine::new(State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-        };
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
             .expect("expected OK");
-        assert_variant!(r_sta.state, State::Associated {
+        assert_variant!(r_sta.state.as_ref(), State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open),
             ..
         });
@@ -832,12 +970,14 @@ mod tests {
     #[test]
     fn handle_mlme_set_controlled_port_req_closed() {
         let mut r_sta = make_remote_client();
-        r_sta.state =
-            State::Associated { eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open) };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open),
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Closed)
             .expect("expected OK");
-        assert_variant!(r_sta.state, State::Associated {
+        assert_variant!(r_sta.state.as_ref(), State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
             ..
         });
@@ -846,14 +986,17 @@ mod tests {
     #[test]
     fn handle_mlme_set_controlled_port_req_no_rsn() {
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         assert_variant!(
             r_sta
                 .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
                 .expect_err("expected err"),
             ClientRejection::NotRSN
         );
-        assert_variant!(r_sta.state, State::Associated {
+        assert_variant!(r_sta.state.as_ref(), State::Associated {
             eapol_controlled_port: None,
             ..
         });
@@ -862,7 +1005,7 @@ mod tests {
     #[test]
     fn handle_mlme_set_controlled_port_req_wrong_state() {
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Authenticating;
+        r_sta.state = StateMachine::new(State::Authenticating);
         assert_variant!(
             r_sta
                 .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
@@ -924,7 +1067,7 @@ mod tests {
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
             },
         );
-        assert_eq!(r_sta.state, State::Authenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
     }
 
     #[test]
@@ -994,7 +1137,7 @@ mod tests {
             2, 0, // auth txn seq num
             13, 0, // status code
         ][..]);
-        assert_eq!(r_sta.state, State::Deauthenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
     }
 
     #[test]
@@ -1020,7 +1163,7 @@ mod tests {
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
             }
         );
-        assert_eq!(r_sta.state, State::Deauthenticated);
+        assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
     }
 
     #[test]
@@ -1040,7 +1183,10 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_eapol_llc_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -1064,7 +1210,10 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_llc_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -1086,7 +1235,10 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -1115,7 +1267,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state = State::Authenticated;
+        r_sta.state = StateMachine::new(State::Authenticated);
         assert_variant!(
             r_sta
                 .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
@@ -1131,9 +1283,10 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state = State::Associated {
+        r_sta.state = StateMachine::new(State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-        };
+            active_timeout_event_id: None,
+        });
         assert_variant!(
             r_sta
                 .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
@@ -1149,8 +1302,10 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
-        r_sta.state =
-            State::Associated { eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open) };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Open),
+            active_timeout_event_id: None,
+        });
         r_sta
             .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -1176,7 +1331,7 @@ mod tests {
     fn handle_data_frame_not_permitted() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Authenticating;
+        r_sta.state = StateMachine::new(State::Authenticating);
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1227,7 +1382,10 @@ mod tests {
     fn handle_data_frame_single_llc() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1255,13 +1413,23 @@ mod tests {
             .expect("expected OK");
 
         assert_eq!(fake_device.eth_queue.len(), 1);
+        assert_ne!(
+            match r_sta.state.as_ref() {
+                State::Associated { active_timeout_event_id, .. } => *active_timeout_event_id,
+                _ => panic!("expected Associated"),
+            },
+            None
+        )
     }
 
     #[test]
     fn handle_data_frame_amsdu() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1302,13 +1470,20 @@ mod tests {
             .expect("expected OK");
 
         assert_eq!(fake_device.eth_queue.len(), 2);
+        assert_ne!(
+            match r_sta.state.as_ref() {
+                State::Associated { active_timeout_event_id, .. } => *active_timeout_event_id,
+                _ => panic!("expected Associated"),
+            },
+            None
+        )
     }
 
     #[test]
     fn handle_mgmt_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Authenticating;
+        r_sta.state = StateMachine::new(State::Authenticating);
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1337,7 +1512,7 @@ mod tests {
     fn handle_mgmt_frame_not_permitted() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Authenticating;
+        r_sta.state = StateMachine::new(State::Authenticating);
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1384,7 +1559,10 @@ mod tests {
     fn handle_mgmt_frame_not_handled() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
-        r_sta.state = State::Associated { eapol_controlled_port: None };
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
 
@@ -1409,6 +1587,84 @@ mod tests {
                 )
                 .expect_err("expected error"),
             ClientRejection::Unsupported
+        );
+    }
+
+    #[test]
+    fn handle_mgmt_frame_resets_active_timer() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                None,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    0, 0, // Capability info
+                    10, 0, // Listen interval
+                ][..],
+            )
+            .expect("expected OK");
+        assert_ne!(
+            match r_sta.state.as_ref() {
+                State::Associated { active_timeout_event_id, .. } => *active_timeout_event_id,
+                _ => panic!("expected Associated"),
+            },
+            None
+        )
+    }
+
+    #[test]
+    fn handle_bss_idle_timeout() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        let event_id = r_sta.schedule_bss_idle_timeout(&mut ctx);
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: Some(event_id),
+        });
+
+        r_sta.handle_bss_idle_timeout(&mut ctx, event_id).expect("expected OK");
+        assert_variant!(r_sta.state.as_ref(), State::Authenticated);
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Mgmt header
+            0b10100000, 0, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0x10, 0, // Sequence Control
+            // Disassoc header:
+            4, 0, // reason code
+        ][..]);
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::DisassociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::DisassociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+            },
         );
     }
 }
