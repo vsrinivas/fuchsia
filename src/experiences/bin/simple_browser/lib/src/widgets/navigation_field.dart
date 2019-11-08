@@ -80,6 +80,7 @@ class _NavigationFieldState extends State<NavigationField> {
         cursorWidth: 8,
         cursorRadius: Radius.zero,
         cursorColor: Colors.black,
+        enableInteractiveSelection: true,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.url,
         decoration: InputDecoration(

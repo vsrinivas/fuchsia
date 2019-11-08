@@ -13,6 +13,7 @@ import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:zircon/zircon.dart';
 
 import '../models/webpage_action.dart';
+import '../utils/sanitize_url.dart';
 
 enum PageType { empty, normal, error }
 PageType pageTypeForWebPageType(web.PageType pageType) {
@@ -158,7 +159,7 @@ class WebPageBloc extends web.NavigationEventListener {
       case WebPageActionType.navigateTo:
         final NavigateToAction navigate = action;
         await _navigationController.loadUrl(
-          _sanitizeUrl(navigate.url),
+          sanitizeUrl(navigate.url),
           web.LoadUrlParams(type: web.LoadUrlReason.typed),
         );
         break;
@@ -170,16 +171,6 @@ class WebPageBloc extends web.NavigationEventListener {
         break;
       case WebPageActionType.refresh:
         await _navigationController.reload(web.ReloadType.partialCache);
-    }
-  }
-
-  String _sanitizeUrl(String url) {
-    if (url.startsWith('http')) {
-      return url;
-    } else if (url.endsWith('.com')) {
-      return 'https://$url';
-    } else {
-      return 'https://www.google.com/search?q=${Uri.encodeQueryComponent(url)}';
     }
   }
 }

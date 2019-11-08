@@ -45,7 +45,9 @@ flutter_app("simple_browser") {
 # fx run-host-tests simple_browser_unittests
 flutter_test("simple_browser_unittests") {
   sources = [
+    "sanitize_url_test.dart",
     "simple_browser_test.dart",
+    "tld_checker_test.dart",
   ]
 
   deps = [
