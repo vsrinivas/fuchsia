@@ -90,12 +90,6 @@ void InterceptingThreadObserver::OnThreadStopped(
       return;
     }
   }
-  if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
-    FXL_LOG(INFO) << "Internal error: Thread " << thread->GetKoid()
-                  << " stopped on exception with no breakpoint set";
-    threads_in_error_.emplace(thread->GetKoid());
-    return;
-  }
   thread->Continue();
 }
 
