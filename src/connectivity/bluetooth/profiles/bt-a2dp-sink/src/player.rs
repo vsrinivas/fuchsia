@@ -126,22 +126,26 @@ impl SbcHeader {
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    pub async fn new(codec: String) -> Result<Player, Error> {
+    pub async fn new(codec: String, sample_freq: u32) -> Result<Player, Error> {
         let player = fuchsia_component::client::connect_to_service::<PlayerMarker>()
             .context("Failed to connect to media player")?;
-        Self::from_proxy(codec, player).await
+        Self::from_proxy(codec, sample_freq, player).await
     }
 
     /// Build a Player given a PlayerProxy.
     /// Used in tests.
-    async fn from_proxy(codec: String, player: PlayerProxy) -> Result<Player, Error> {
+    async fn from_proxy(
+        codec: String,
+        sample_freq: u32,
+        player: PlayerProxy,
+    ) -> Result<Player, Error> {
         let (source_proxy, source) = fidl::endpoints::create_proxy()?;
         player.create_elementary_source(0, false, false, None, source)?;
 
         let audio_stream_type = AudioStreamType {
             sample_format: AudioSampleFormat::Signed16,
-            channels: 2,              // Stereo
-            frames_per_second: 44100, // 44.1kHz
+            channels: 2, // Stereo
+            frames_per_second: sample_freq,
         };
 
         let mut stream_type = StreamType {
@@ -151,7 +155,7 @@ impl Player {
         };
 
         let (stream_source, stream_source_server) = fidl::endpoints::create_proxy()?;
-        source_proxy.add_stream(&mut stream_type, 44100, 1, stream_source_server)?;
+        source_proxy.add_stream(&mut stream_type, sample_freq, 1, stream_source_server)?;
 
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
 
@@ -347,9 +351,12 @@ mod tests {
     fn setup_player(
         exec: &mut fasync::Executor,
     ) -> (Player, SimpleStreamSinkRequestStream, PlayerRequestStream, zx::Vmo) {
+        const TEST_SAMPLE_FREQ: u32 = 48000;
+
         let (player_proxy, mut player_request_stream) =
             create_proxy_and_stream::<PlayerMarker>().expect("proxy pair creation");
-        let mut player_new_fut = Box::pin(Player::from_proxy("test".to_string(), player_proxy));
+        let mut player_new_fut =
+            Box::pin(Player::from_proxy("test".to_string(), TEST_SAMPLE_FREQ, player_proxy));
 
         assert!(exec.run_until_stalled(&mut player_new_fut).is_pending());
 
@@ -368,12 +375,17 @@ mod tests {
             .run_singlethreaded(source_request_stream.select_next_some())
             .expect("a source request");
 
-        let mut sink_request_stream = match source_req {
-            ElementarySourceRequest::AddStream { sink_request, .. } => sink_request,
+        let (sink_request, sample_freq) = match source_req {
+            ElementarySourceRequest::AddStream {
+                sink_request, ticks_per_second_numerator, ..
+            } => (sink_request, ticks_per_second_numerator),
             _ => panic!("should be AddStream"),
-        }
-        .into_stream()
-        .expect("a sink request stream to be created from the request");
+        };
+        let mut sink_request_stream = sink_request
+            .into_stream()
+            .expect("a sink request stream to be created from the request");
+
+        assert_eq!(sample_freq, TEST_SAMPLE_FREQ);
 
         let sink_req =
             exec.run_singlethreaded(sink_request_stream.select_next_some()).expect("sink request");

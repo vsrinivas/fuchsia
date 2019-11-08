@@ -109,7 +109,10 @@ const AUDIO_CODEC_SBC: u8 = 0;
 // Arbitrarily chosen ID for the SBC stream endpoint.
 const SBC_SEID: u8 = 6;
 
+const DEFAULT_SAMPLE_RATE: u32 = 48000;
+
 /// Controls a stream endpoint and the media decoding task which is associated with it.
+#[derive(Debug)]
 struct Stream {
     /// The AVDTP endpoint that this stream is associated with.
     endpoint: avdtp::StreamEndpoint,
@@ -127,6 +130,54 @@ impl Stream {
         Stream { endpoint, encoding, suspend_sender: None }
     }
 
+    /// Extract sampling freqency from SBC codec extra data field
+    /// (A2DP Sec. 4.3.2)
+    fn parse_sbc_sampling_frequency(codec_extra: &[u8]) -> u32 {
+        if codec_extra.len() != 4 {
+            fx_log_warn!("Invalid SBC codec extra length: {:?}", codec_extra.len());
+            return DEFAULT_SAMPLE_RATE;
+        }
+
+        let mut codec_info_bytes = [0_u8; 4];
+        codec_info_bytes.copy_from_slice(&codec_extra);
+
+        let codec_info = SbcCodecInfo(u32::from_be_bytes(codec_info_bytes));
+        let sample_freq = SbcSamplingFrequency::from_bits_truncate(codec_info.sampling_frequency());
+
+        match sample_freq {
+            SbcSamplingFrequency::FREQ48000HZ => 48000,
+            SbcSamplingFrequency::FREQ44100HZ => 44100,
+            _ => {
+                fx_log_warn!("Invalid sample_freq set in configuration {:?}", sample_freq);
+                DEFAULT_SAMPLE_RATE
+            }
+        }
+    }
+
+    /// Get the currently configured sampling frequency for this stream or return a default value
+    /// if none is configured.
+    ///
+    /// TODO: This should be removed once we have a structured way of accessing stream
+    /// capabilities.
+    fn sample_freq(&self) -> u32 {
+        self.endpoint
+            .get_configuration()
+            .map(|caps| {
+                for c in caps {
+                    if let avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                        codec_extra,
+                    } = c
+                    {
+                        return Self::parse_sbc_sampling_frequency(&codec_extra);
+                    }
+                }
+                DEFAULT_SAMPLE_RATE
+            })
+            .unwrap_or(DEFAULT_SAMPLE_RATE)
+    }
+
     /// Attempt to start the media decoding task.
     fn start(&mut self, inspect: StreamingInspectData) -> avdtp::Result<()> {
         let start_res = self.endpoint.start();
@@ -140,6 +191,7 @@ impl Stream {
         fuchsia_async::spawn_local(decode_media_stream(
             self.endpoint.take_transport()?,
             self.encoding.clone(),
+            self.sample_freq(),
             receive,
             inspect,
         ));
@@ -190,10 +242,13 @@ impl Streams {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
         // SBC is required
-        if let Err(e) = player::Player::new(AUDIO_ENCODING_SBC.to_string()).await {
+        if let Err(e) =
+            player::Player::new(AUDIO_ENCODING_SBC.to_string(), DEFAULT_SAMPLE_RATE).await
+        {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
+
         let sbc_media_codec_info: SbcCodecInfo = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
             SbcChannelMode::MANDATORY_SNK,
@@ -202,8 +257,7 @@ impl Streams {
             SbcAllocation::MANDATORY_SNK,
             SbcCodecInfo::BITPOOL_MIN,
             SbcCodecInfo::BITPOOL_MAX,
-        )
-        .expect("Couldn't create sbc media codec info.");
+        )?;
         fx_log_info!("Supported codec parameters: {:?}.", sbc_media_codec_info);
 
         let sbc_stream = avdtp::StreamEndpoint::new(
@@ -601,10 +655,11 @@ fn control_service(
 async fn decode_media_stream(
     mut stream: avdtp::MediaStream,
     encoding: String,
+    sample_rate: u32,
     mut end_signal: Receiver<()>,
     mut inspect: StreamingInspectData,
 ) -> () {
-    let mut player = match player::Player::new(encoding.clone()).await {
+    let mut player = match player::Player::new(encoding.clone(), sample_rate).await {
         Ok(v) => v,
         Err(e) => {
             fx_log_info!("Can't setup stream source for Media: {:?}", e);
@@ -645,7 +700,7 @@ async fn decode_media_stream(
                 if evt.is_none() {
                     fx_log_info!("Rebuilding Player: {:?}", evt);
                     // The player died somehow? Attempt to rebuild the player.
-                    player = match player::Player::new(encoding.clone()).await {
+                    player = match player::Player::new(encoding.clone(), sample_rate).await {
                         Ok(v) => v,
                         Err(e) => {
                             fx_log_info!("Can't rebuild player: {:?}", e);
@@ -810,6 +865,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     #[test]
     /// Test that the Streams specialized hashmap works as expected, storing
@@ -817,26 +873,34 @@ mod tests {
     /// the accessors.
     fn test_streams() {
         let mut streams = Streams::new();
+        const LOCAL_ID: u8 = 1;
 
         // An endpoint for testing
         let s = avdtp::StreamEndpoint::new(
-            1,
+            LOCAL_ID,
             avdtp::MediaType::Audio,
             avdtp::EndpointType::Sink,
-            vec![avdtp::ServiceCapability::MediaTransport],
+            vec![
+                avdtp::ServiceCapability::MediaTransport,
+                avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                    codec_extra: vec![41, 245, 2, 53],
+                },
+            ],
         )
-        .unwrap();
+        .expect("Failed to create endpoint");
 
         let id = s.local_id().clone();
         let information = s.information();
         let encoding = AUDIO_ENCODING_SBC.to_string();
+        let sample_freq = 44100;
 
-        assert!(streams.get_endpoint(&id).is_none());
+        assert_matches!(streams.get_endpoint(&id), None);
 
         let res = streams.get_mut(&id);
 
-        assert!(res.is_err());
-        assert_eq!(avdtp::ErrorCode::BadAcpSeid, res.err().unwrap());
+        assert_matches!(res, Err(avdtp::ErrorCode::BadAcpSeid));
 
         streams.insert(s, encoding.clone());
 
@@ -845,9 +909,27 @@ mod tests {
 
         assert_eq!([information], streams.information().as_slice());
 
+        streams
+            .get_endpoint(&id)
+            .unwrap()
+            .configure(
+                &id,
+                vec![
+                    avdtp::ServiceCapability::MediaTransport,
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                        codec_extra: vec![41, 245, 2, 53],
+                    },
+                ],
+            )
+            .expect("Failed to configure endpoint");
+
+        assert_eq!(sample_freq, streams.get_mut(&id).unwrap().sample_freq());
+
         let res = streams.get_mut(&id);
 
-        assert!(res.as_ref().unwrap().suspend_sender.is_none());
+        assert_matches!(res.as_ref().unwrap().suspend_sender, None);
         assert_eq!(encoding, res.as_ref().unwrap().encoding);
     }
 

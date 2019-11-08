@@ -116,7 +116,7 @@ bitfield! {
     subbands, set_sub_bands: 19, 18;
     block_count, set_block_count: 23, 20;
     channel_mode, set_channel_mode: 27, 24;
-    sampling_frequency, set_sampling_frequency: 31, 28;
+    pub sampling_frequency, set_sampling_frequency: 31, 28;
 }
 
 impl SbcCodecInfo {
