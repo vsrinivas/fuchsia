@@ -19,6 +19,7 @@ group("tests") {
     "hub:hub_integration_test",
     "routing:tests",
     "storage:storage_integration_test",
+    "work_scheduler:work_scheduler_integration_test",
   ]
 }
 

@@ -35,6 +35,7 @@ use {
     std::{convert::TryInto, sync::Arc},
 };
 
+// If you change this block, please update test `work_scheduler_capability_paths`.
 lazy_static! {
     pub static ref WORKER_CAPABILITY_PATH: CapabilityPath =
         "/svc/fuchsia.sys2.Worker".try_into().unwrap();
@@ -276,6 +277,7 @@ impl WorkScheduler {
         let mut state = self.inner.state.lock().await;
         let now = Time::now().into_nanos();
         let work_items = &mut state.work_items;
+        let mut to_dispatch = Vec::new();
 
         work_items.retain(|item| {
             // Retain future work items.
@@ -283,10 +285,18 @@ impl WorkScheduler {
                 return true;
             }
 
-            // TODO(markdittmer): Dispatch work item.
+            to_dispatch.push(item.clone());
 
             // Only dispatched/past items to retain: periodic items that will recur.
             item.period.is_some()
+        });
+
+        // Dispatch work items that are due.
+        fasync::spawn(async move {
+            for item in to_dispatch.into_iter() {
+                let dispatcher = item.dispatcher.clone();
+                let _ = dispatcher.dispatch(item).await;
+            }
         });
 
         // Update deadlines on dispatched periodic items.
@@ -605,8 +615,11 @@ impl ComponentManagerCapabilityProvider for WorkSchedulerCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{AbsoluteMoniker, ChildMoniker, ResolverRegistry},
-        fidl::endpoints::ClientEnd,
+        crate::{
+            model::{AbsoluteMoniker, ChildMoniker, ResolverRegistry},
+            work_scheduler::dispatcher as dspr,
+        },
+        fidl::endpoints::{ClientEnd, ServiceMarker},
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async::{Executor, Time, WaitState},
         futures::{future::BoxFuture, Future},
@@ -623,8 +636,8 @@ mod tests {
         fn abs_moniker(&self) -> &AbsoluteMoniker {
             &self
         }
-        fn dispatch(&self, _work_item: WorkItem) -> BoxFuture<Result<(), fsys::Error>> {
-            Box::pin(async move { Err(fsys::Error::InvalidArguments) })
+        fn dispatch(&self, _work_item: WorkItem) -> BoxFuture<Result<(), dspr::Error>> {
+            Box::pin(async move { Err(dspr::Error::ComponentNotRunning) })
         }
     }
 
@@ -674,6 +687,22 @@ mod tests {
 
     fn child(parent: &AbsoluteMoniker, name: &str) -> AbsoluteMoniker {
         parent.child(ChildMoniker::new(name.to_string(), None, 0))
+    }
+
+    #[test]
+    fn work_scheduler_capability_paths() {
+        assert_eq!(
+            format!("/svc/{}", fsys::WorkerMarker::NAME),
+            WORKER_CAPABILITY_PATH.to_string()
+        );
+        assert_eq!(
+            format!("/svc/{}", fsys::WorkSchedulerMarker::NAME),
+            WORK_SCHEDULER_CAPABILITY_PATH.to_string()
+        );
+        assert_eq!(
+            format!("/svc/{}", fsys::WorkSchedulerControlMarker::NAME),
+            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.to_string()
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -954,10 +983,6 @@ mod tests {
                 for test_work_unit in test_work_units.iter() {
                     let work_item = &test_work_unit.work_item;
                     let deadline = work_item.next_deadline_monotonic;
-                    println!(
-                        "Now: {}\nDeadline: {}\nStart: {}",
-                        now, deadline, test_work_unit.start
-                    );
                     // Either:
                     // 1. This is a check for initial state, in which case allow now=deadline=0, or
                     // 2. All deadlines should be in the future.
@@ -968,7 +993,6 @@ mod tests {
                             2. All deadlines should be in the future."
                     );
                     if let Some(period) = work_item.period {
-                        println!("Period: {}", period);
                         // All periodic deadlines should be either:
                         // 1. Waiting to be dispatched for the first time, or
                         // 2. At most one period into the future (for otherwise, a period would be

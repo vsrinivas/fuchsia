@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/work_scheduler_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys2.WorkSchedulerControl"
+        ]
+    }
+}

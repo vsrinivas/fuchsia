@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "bin/work_scheduler_client",
+    },
+    "expose": [
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
+        },
+    ],
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.sys2.WorkSchedulerControl",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.sys2.WorkScheduler", "from": "framework",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter", "from": "framework",
+        },
+    ],
+}
