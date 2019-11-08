@@ -84,20 +84,20 @@ int main(int argc, char** argv) {
   //       It's just a matter of what we choose to run on them.
   // Create a separate loop for quick calls (don't run long running functions on
   // this loop).
-  async::Loop fast_calls_thread(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop fast_calls_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // The loop that runs quick calls is in a separate thread.
-  fast_calls_thread.StartThread();
+  fast_calls_loop.StartThread("fast-calls-thread");
   // The "slow" loop is used for potentially long running calls.
-  async::Loop slow_calls_thread(&kAsyncLoopConfigAttachToCurrentThread);
-  harvester::Harvester harvester(root_resource, fast_calls_thread.dispatcher(),
-                                 slow_calls_thread.dispatcher(),
+  async::Loop slow_calls_loop(&kAsyncLoopConfigAttachToCurrentThread);
+  harvester::Harvester harvester(root_resource, fast_calls_loop.dispatcher(),
+                                 slow_calls_loop.dispatcher(),
                                  std::move(dockyard_proxy));
   harvester.GatherDeviceProperties();
   harvester.GatherFastData();
   harvester.GatherSlowData();
   // The slow_calls_thread that runs heavier calls takes over this thread.
-  slow_calls_thread.Run();
-  fast_calls_thread.Quit();
+  slow_calls_loop.Run();
+  fast_calls_loop.Quit();
 
   FXL_LOG(INFO) << "System Monitor Harvester - exiting";
   return 0;
