@@ -45,7 +45,7 @@ fn output(results: Vec<IqueryResult>, options: &Options) {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let options = Options::read(Box::new(env::args().into_iter())).unwrap_or_else(|error| {
+    let options = Options::read(Box::new(env::args().into_iter())).await.unwrap_or_else(|error| {
         eprintln!("Failed to parse options: {}", error);
         eprintln!("{}", usage());
         std::process::exit(1);

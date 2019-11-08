@@ -99,8 +99,6 @@ impl GoldenTest {
         for (golden_line, output_line) in self.golden.lines.iter().zip(reader.lines()) {
             // Replace paths containing ids with /*/ to remove process or realm ids.
             let output = re.replace_all(output_line.as_ref().unwrap(), "/*/");
-            // TODO: remove when renaming
-            let output = output.replace("iquery", "iquery");
             assert_diff!(golden_line, &output, "", 0);
         }
         Ok(())
