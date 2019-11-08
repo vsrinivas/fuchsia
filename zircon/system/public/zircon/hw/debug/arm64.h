@@ -1,16 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SYSROOT_ZIRCON_HW_DEBUG_ARM_H_
-#define SYSROOT_ZIRCON_HW_DEBUG_ARM_H_
+#ifndef SYSROOT_ZIRCON_HW_DEBUG_ARM64_H_
+#define SYSROOT_ZIRCON_HW_DEBUG_ARM64_H_
 
 #include <stdint.h>
 
 // ARM64 Hardware Debug Resources
-// ================================================================================================
+// =================================================================================================
 
-// Hardware Breakpoints ---------------------------------------------------------------------------
-
+// Hardware Breakpoints ----------------------------------------------------------------------------
+//
 // Hardware breakpoints permits to stop a thread when it executes an address setup in one of the
 // hw breakpoints registers. They will work independent whether the address in question is
 // read-only or not.
@@ -25,8 +25,13 @@
 //
 // uint64_t ARM64_<REG>_<FIELD>_GET(uint64_t reg)
 // void ARM64_<REG>_<FIELD>_SET(uint64_t* reg, uint64_t value)
+//
+// Examples:
+// uint64_t bas = ARM64_DBGBCR_BAS_GET(dbgbcr);
+// ARM64_DBGBCR_BAS_SET(&dbgbcr, modified_bas);
 
-// DBGBCR<n>
+// DBGBCR<n>: Debug Control Register for HW Breakpoint #n.
+//
 // Control register for HW breakpoints. There is one foreach HW breakpoint present within the
 // system. They go numbering by DBGBCR0, DBGBCR1, ... until the value defined in ID_AADFR0_EL1.
 //
@@ -52,8 +57,9 @@
 #define ARM64_DBGBCR_E_MASK (ARM64_DBGBCR_E << ARM64_DBGBCR_E_SHIFT)
 #define ARM64_DBGBCR_E_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_E_MASK, ARM64_DBGBCR_E_SHIFT)
-#define ARM64_DBGBCR_E_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_E_MASK, ARM64_DBGBCR_E_SHIFT)
+#define ARM64_DBGBCR_E_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_E_MASK, \
+                                          ARM64_DBGBCR_E_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
 #define ARM64_DBGBCR_PMC 0b11u  // Bits 1-2.
@@ -61,8 +67,9 @@
 #define ARM64_DBGBCR_PMC_MASK (ARM64_DBGBCR_PMC << ARM64_DBGBCR_PMC_SHIFT)
 #define ARM64_DBGBCR_PMC_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_PMC_MASK, ARM64_DBGBCR_PMC_SHIFT)
-#define ARM64_DBGBCR_PMC_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_PMC_MASK, ARM64_DBGBCR_PMC_SHIFT)
+#define ARM64_DBGBCR_PMC_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_PMC_MASK, \
+                                          ARM64_DBGBCR_PMC_SHIFT)
 
 // Byte Address Select. Defines which half-words triggers the breakpoint.
 // In AArch64 implementations (which zircon targets), is res1.
@@ -71,8 +78,9 @@
 #define ARM64_DBGBCR_BAS_MASK (ARM64_DBGBCR_BAS << ARM64_DBGBCR_BAS_SHIFT)
 #define ARM64_DBGBCR_BAS_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_BAS_MASK, ARM64_DBGBCR_BAS_SHIFT)
-#define ARM64_DBGBCR_BAS_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_BAS_MASK, ARM64_DBGBCR_BAS_SHIFT)
+#define ARM64_DBGBCR_BAS_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_BAS_MASK, \
+                                          ARM64_DBGBCR_BAS_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
 #define ARM64_DBGBCR_HMC 0b1u  // Bit 13.
@@ -80,8 +88,9 @@
 #define ARM64_DBGBCR_HMC_MASK (ARM64_DBGBCR_HMC << ARM64_DBGBCR_HMC_SHIFT)
 #define ARM64_DBGBCR_HMC_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_HMC_MASK, ARM64_DBGBCR_HMC_SHIFT)
-#define ARM64_DBGBCR_HMC_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_HMC_MASK, ARM64_DBGBCR_HMC_SHIFT)
+#define ARM64_DBGBCR_HMC_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_HMC_MASK, \
+                                          ARM64_DBGBCR_HMC_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
 #define ARM64_DBGBCR_SSC 0b111u  // Bits 14-15.
@@ -89,8 +98,9 @@
 #define ARM64_DBGBCR_SSC_MASK (ARM64_DBGBCR_SSC << ARM64_DBGBCR_SSC_SHIFT)
 #define ARM64_DBGBCR_SSC_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_SSC_MASK, ARM64_DBGBCR_SSC_SHIFT)
-#define ARM64_DBGBCR_SSC_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_SSC_MASK, ARM64_DBGBCR_SSC_SHIFT)
+#define ARM64_DBGBCR_SSC_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_SSC_MASK, \
+                                          ARM64_DBGBCR_SSC_SHIFT)
 
 // Linked Breakpoint Number. Zircon doesn't use this feature. Always zero.
 #define ARM64_DBGBCR_LBN 0b1111u  // Bits 16-19.
@@ -98,8 +108,9 @@
 #define ARM64_DBGBCR_LBN_MASK (ARM64_DBGBCR_LBN << ARM64_DBGBCR_LBN_SHIFT)
 #define ARM64_DBGBCR_LBN_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_LBN_MASK, ARM64_DBGBCR_LBN_SHIFT)
-#define ARM64_DBGBCR_LBN_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_LBN_MASK, ARM64_DBGBCR_LBN_SHIFT)
+#define ARM64_DBGBCR_LBN_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_LBN_MASK, \
+                                          ARM64_DBGBCR_LBN_SHIFT)
 
 // Breakpoint Type. Zircon only uses unlinked address match (zero).
 #define ARM64_DBGBCR_BT 0b1111u  // Bits 20-23.
@@ -107,8 +118,9 @@
 #define ARM64_DBGBCR_BT_MASK (ARM64_DBGBCR_BT << ARM64_DBGBCR_BT_SHIFT)
 #define ARM64_DBGBCR_BT_GET(dbgbcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgbcr), ARM64_DBGBCR_BT_MASK, ARM64_DBGBCR_BT_SHIFT)
-#define ARM64_DBGBCR_BT_SET(dbgbcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_BT_MASK, ARM64_DBGBCR_BT_SHIFT)
+#define ARM64_DBGBCR_BT_SET(dbgbcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgbcr), (value), ARM64_DBGBCR_BT_MASK, \
+                                          ARM64_DBGBCR_BT_SHIFT)
 
 // Watchpoints ------------------------------------------------------------------------------------
 
@@ -119,7 +131,8 @@
 #define ARM64_MIN_HW_WATCHPOINTS 2
 #define ARM64_MAX_HW_WATCHPOINTS 16
 
-// DBGWCR<n>
+// DBGWCR<n>: Watchpoint Control Register.
+//
 // Control register for watchpoints. There is one for each watchpoint present within the system.
 // They go numbering by DBGWCR0, DBGWCR1, ... until the value defined ID_AAFR0_EL1.
 // For each control register, there is an equivalent DBGWCR<n> that holds the address the thread
@@ -147,8 +160,9 @@
 #define ARM64_DBGWCR_E_MASK (ARM64_DBGWCR_E << ARM64_DBGWCR_E_SHIFT)
 #define ARM64_DBGWCR_E_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_E_MASK, ARM64_DBGWCR_E_SHIFT)
-#define ARM64_DBGWCR_E_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_E_MASK, ARM64_DBGWCR_E_SHIFT)
+#define ARM64_DBGWCR_E_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_E_MASK, \
+                                          ARM64_DBGWCR_E_SHIFT)
 
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
 #define ARM64_DBGWCR_PAC 0b11lu  // Bits 1-2.
@@ -156,8 +170,9 @@
 #define ARM64_DBGWCR_PAC_MASK (ARM64_DBGWCR_PAC << ARM64_DBGWCR_PAC_SHIFT)
 #define ARM64_DBGWCR_PAC_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_PAC_MASK, ARM64_DBGWCR_PAC_SHIFT)
-#define ARM64_DBGWCR_PAC_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_PAC_MASK, ARM64_DBGWCR_PAC_SHIFT)
+#define ARM64_DBGWCR_PAC_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_PAC_MASK, \
+                                          ARM64_DBGWCR_PAC_SHIFT)
 
 // Load/Store Control.
 //
@@ -170,8 +185,9 @@
 #define ARM64_DBGWCR_LSC_MASK (ARM64_DBGWCR_LSC << ARM64_DBGWCR_LSC_SHIFT)
 #define ARM64_DBGWCR_LSC_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_LSC_MASK, ARM64_DBGWCR_LSC_SHIFT)
-#define ARM64_DBGWCR_LSC_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_LSC_MASK, ARM64_DBGWCR_LSC_SHIFT)
+#define ARM64_DBGWCR_LSC_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_LSC_MASK, \
+                                          ARM64_DBGWCR_LSC_SHIFT)
 
 // Byte Address Select.
 //
@@ -189,8 +205,9 @@
 #define ARM64_DBGWCR_BAS_MASK (ARM64_DBGWCR_BAS << ARM64_DBGWCR_BAS_SHIFT)
 #define ARM64_DBGWCR_BAS_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_BAS_MASK, ARM64_DBGWCR_BAS_SHIFT)
-#define ARM64_DBGWCR_BAS_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_BAS_MASK, ARM64_DBGWCR_BAS_SHIFT)
+#define ARM64_DBGWCR_BAS_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_BAS_MASK, \
+                                          ARM64_DBGWCR_BAS_SHIFT)
 
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
 #define ARM64_DBGWCR_HMC 1lu  // Bit 13.
@@ -198,8 +215,9 @@
 #define ARM64_DBGWCR_HMC_MASK (ARM64_DBGWCR_HMC << ARM64_DBGWCR_HMC_SHIFT)
 #define ARM64_DBGWCR_HMC_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_HMC_MASK, ARM64_DBGWCR_HMC_SHIFT)
-#define ARM64_DBGWCR_HMC_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_HMC_MASK, ARM64_DBGWCR_HMC_SHIFT)
+#define ARM64_DBGWCR_HMC_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_HMC_MASK, \
+                                          ARM64_DBGWCR_HMC_SHIFT)
 
 // PAC, SSC, HMC define the environment where the watchpoint will trigger.
 #define ARM64_DBGWCR_SSC 0b11lu  // Bits 14-15.
@@ -207,8 +225,9 @@
 #define ARM64_DBGWCR_SSC_MASK (ARM64_DBGWCR_SSC << ARM64_DBGWCR_SSC_SHIFT)
 #define ARM64_DBGWCR_SSC_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_SSC_MASK, ARM64_DBGWCR_SSC_SHIFT)
-#define ARM64_DBGWCR_SSC_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_SSC_MASK, ARM64_DBGWCR_SSC_SHIFT)
+#define ARM64_DBGWCR_SSC_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_SSC_MASK, \
+                                          ARM64_DBGWCR_SSC_SHIFT)
 
 // Linked Breakpoint Number. Zircon doesn't use this feature. Always zero.
 #define ARM64_DBGWCR_LBN 0b1111lu  // Bits 16-19.
@@ -216,8 +235,9 @@
 #define ARM64_DBGWCR_LBN_MASK (ARM64_DBGWCR_LBN << ARM64_DBGWCR_LBN_SHIFT)
 #define ARM64_DBGWCR_LBN_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_LBN_MASK, ARM64_DBGWCR_LBN_SHIFT)
-#define ARM64_DBGWCR_LBN_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_LBN_MASK, ARM64_DBGWCR_LBN_SHIFT)
+#define ARM64_DBGWCR_LBN_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_LBN_MASK, \
+                                          ARM64_DBGWCR_LBN_SHIFT)
 
 // Watchpoint Type. Zircon always use unlinked (0).
 #define ARM64_DBGWCR_WT 1lu  // Bit 20.
@@ -225,8 +245,9 @@
 #define ARM64_DBGWCR_WT_MASK (ARM64_DBGWCR_WT << ARM64_DBGWCR_WT_SHIFT)
 #define ARM64_DBGWCR_WT_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_WT_MASK, ARM64_DBGWCR_WT_SHIFT)
-#define ARM64_DBGWCR_WT_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_WT_MASK, ARM64_DBGWCR_WT_SHIFT)
+#define ARM64_DBGWCR_WT_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_WT_MASK, \
+                                          ARM64_DBGWCR_WT_SHIFT)
 
 // Mask. How many address bits to mask.
 // This permits the watchpoint to track up to 2G worth of addresses.
@@ -237,8 +258,9 @@
 #define ARM64_DBGWCR_MSK_MASK (ARM64_DBGWCR_MSK << ARM64_DBGWCR_MSK_SHIFT)
 #define ARM64_DBGWCR_MSK_GET(dbgwcr) \
   __arm64_internal_hw_debug_get_reg_value((dbgwcr), ARM64_DBGWCR_MSK_MASK, ARM64_DBGWCR_MSK_SHIFT)
-#define ARM64_DBGWCR_MSK_SET(dbgwcr, value) \
-  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_MSK_MASK, ARM64_DBGWCR_MSK_SHIFT)
+#define ARM64_DBGWCR_MSK_SET(dbgwcr, value)                                         \
+  __arm64_internal_hw_debug_set_reg_value((dbgwcr), (value), ARM64_DBGWCR_MSK_MASK, \
+                                          ARM64_DBGWCR_MSK_SHIFT)
 
 // Helper functions ================================================================================
 
@@ -253,4 +275,4 @@ inline void __arm64_internal_hw_debug_set_reg_value(uint32_t* reg, uint32_t valu
   *reg |= (value << shift) & mask;
 }
 
-#endif  // SYSROOT_ZIRCON_HW_DEBUG_ARM_H_
+#endif  // SYSROOT_ZIRCON_HW_DEBUG_ARM64_H_
