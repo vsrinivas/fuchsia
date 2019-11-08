@@ -736,6 +736,7 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
 }
 
 enum {
+  kCommandNone = 0,
   kCommandInitializeStream = 1,
   kCommandNewFrames = 2,
   kCommandSwitchStreams = 3,
@@ -771,6 +772,11 @@ void H264Decoder::HandleInterrupt() {
   DLOG("Got command: %x", scratch0.reg_value());
   uint32_t cpu_command = scratch0.reg_value() & 0xff;
   switch (cpu_command) {
+    case kCommandNone:
+      // It is possible that the interrupt will fire with no command. This could happen if there is
+      // an SEI message that should be acknowledged. This should not be treated as an error.
+      break;
+
     case kCommandInitializeStream: {
       // For now, this can block for a while until buffers are allocated, or
       // until it fails. One of the ways it can fail is if the Codec client
@@ -807,7 +813,6 @@ void H264Decoder::HandleInterrupt() {
 
     default:
       DECODE_ERROR("Got unknown command: %d\n", cpu_command);
-      return;
   }
 
   auto sei_itu35_flags = AvScratchJ::Get().ReadFrom(owner_->dosbus()).reg_value();

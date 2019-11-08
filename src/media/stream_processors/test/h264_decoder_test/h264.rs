@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use byteorder::{BigEndian, WriteBytesExt};
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media::FormatDetails;
-use std::{fs, path::Path};
+use std::{convert::TryFrom, fs, mem, path::Path};
 use stream_processor_test::*;
 
 pub const BEAR_TEST_FILE: &str = "/pkg/data/bear.h264";
+const NAL_START_CODE: u32 = 1;
 
 /// Represents an H264 elementary stream.
 pub struct H264Stream {
@@ -17,12 +19,18 @@ pub struct H264Stream {
 impl H264Stream {
     /// Constructs an H264 elementary stream from a file with raw elementary stream data.
     pub fn from_file(filename: impl AsRef<Path>) -> Result<Self> {
-        Ok(Self { data: fs::read(filename)? })
+        Ok(H264Stream::from(fs::read(filename)?))
     }
 
     /// Returns an iterator over H264 NALs that does not copy.
     fn nal_iter(&self) -> impl Iterator<Item = H264Nal> {
         H264NalIter { data: &self.data, pos: 0 }
+    }
+}
+
+impl From<Vec<u8>> for H264Stream {
+    fn from(data: Vec<u8>) -> Self {
+        Self { data }
     }
 }
 
@@ -53,6 +61,34 @@ impl ElementaryStream for H264Stream {
     }
 }
 
+pub struct H264SeiItuT35 {
+    pub country_code: u8,
+    pub country_code_extension: u8,
+    pub payload: Vec<u8>,
+}
+
+impl H264SeiItuT35 {
+    pub const COUNTRY_CODE_UNITED_STATES: u8 = 0xb5;
+
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+        const ITU_T35_PAYLOAD_TYPE: u8 = 4;
+
+        let mut bytes = vec![];
+        bytes.write_u32::<BigEndian>(NAL_START_CODE)?;
+        bytes.write_u8(H264NalKind::SEI_CODE)?;
+        bytes.write_u8(ITU_T35_PAYLOAD_TYPE)?;
+        bytes.write_u8(u8::try_from(self.payload_size())?)?;
+        bytes.write_u8(self.country_code)?;
+        bytes.write_u8(self.country_code_extension)?;
+        bytes.append(&mut self.payload.clone());
+        Ok(bytes)
+    }
+
+    fn payload_size(&self) -> usize {
+        mem::size_of::<u8>() + mem::size_of::<u8>() + self.payload.len()
+    }
+}
+
 pub struct H264Nal<'a> {
     pub kind: H264NalKind,
     pub data: &'a [u8],
@@ -66,6 +102,7 @@ pub enum H264NalKind {
 impl H264NalKind {
     const NON_IDR_PICTURE_CODE: u8 = 1;
     const IDR_PICTURE_CODE: u8 = 5;
+    const SEI_CODE: u8 = 6;
 
     fn from_header(header: u8) -> Self {
         let kind = header & 0xf;

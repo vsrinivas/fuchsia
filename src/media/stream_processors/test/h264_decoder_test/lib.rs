@@ -9,7 +9,7 @@ mod h264;
 use crate::h264::*;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use std::{rc::Rc, sync::Arc};
+use std::{fs::File, io::Read, rc::Rc, result::Result, sync::Arc};
 use stream_processor_decoder_factory::*;
 use stream_processor_test::*;
 use video_frame_hasher::*;
@@ -81,6 +81,49 @@ async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error
                 }),
             },
         ],
+        relation: CaseRelation::Serial,
+        stream_processor_factory: Rc::new(DecoderFactory),
+    };
+
+    spec.run().await
+}
+
+#[fuchsia_async::run_singlethreaded]
+#[test]
+async fn bear_with_sei_itu_t35() -> Result<(), failure::Error> {
+    let _lock = TEST_LOCK.lock();
+    *LOGGER;
+
+    let mut nal_stream = H264SeiItuT35 {
+        country_code: H264SeiItuT35::COUNTRY_CODE_UNITED_STATES,
+        country_code_extension: 0,
+        payload: vec![0xde, 0xad, 0xbe, 0xef],
+    }
+    .as_bytes()?;
+    File::open(BEAR_TEST_FILE)?.read_to_end(&mut nal_stream)?;
+
+    let stream =
+        Rc::new(TimestampedStream { source: H264Stream::from(nal_stream), timestamps: 0.. });
+
+    let frame_count_validator = Rc::new(OutputPacketCountValidator {
+        expected_output_packet_count: stream.video_frame_count(),
+    });
+
+    let hash_validator = Rc::new(VideoFrameHasher { expected_digest: *BEAR_DIGEST });
+
+    let spec = TestSpec {
+        cases: vec![TestCase {
+            name: "Modified Bear with SEI ITU-T T.35 data test run",
+            stream: stream,
+            validators: vec![
+                Rc::new(TerminatesWithValidator {
+                    expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
+                }),
+                frame_count_validator,
+                hash_validator,
+            ],
+            stream_options: None,
+        }],
         relation: CaseRelation::Serial,
         stream_processor_factory: Rc::new(DecoderFactory),
     };
