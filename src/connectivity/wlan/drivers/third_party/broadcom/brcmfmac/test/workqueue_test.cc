@@ -90,6 +90,15 @@ TEST(Workqueue, DefaultQueueWorks) {
   WorkQueue::FlushDefault();
 }
 
+// Ensure that canceling an unqueued job works.
+TEST(Workqueue, CancelUnqueued) {
+  TestWork work1;
+  work1.work = WorkItem(handler);
+  work1.state = 1;
+  work1.work.Cancel();
+  EXPECT_EQ(work1.state, 1);
+}
+
 // Upon canceling a job that has not started yet, it should never run, and the cancel should
 // return without blocking.
 TEST(Workqueue, CancelPending) {

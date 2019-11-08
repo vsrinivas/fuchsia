@@ -20,7 +20,7 @@
 
 #define WORKQUEUE_SIGNAL ZX_USER_SIGNAL_0
 
-WorkQueue::WorkQueue(const char* name) {
+WorkQueue::WorkQueue(const char* name) : list_{}, current_(nullptr), work_ready_{}, thread_{} {
   if (name == nullptr) {
     strlcpy(this->name_, "nameless", sizeof(name_));
   } else {
@@ -114,14 +114,14 @@ int WorkQueue::Runner() {
 void WorkQueue::StartWorkQueue() {
   work_ready_ = {};
   list_initialize(&list_);
-  auto thread_func = [](void* arg) {
-    return reinterpret_cast<WorkQueue*>(arg)->Runner();
-  };
+  auto thread_func = [](void* arg) { return reinterpret_cast<WorkQueue*>(arg)->Runner(); };
   thrd_create_with_name(&thread_, thread_func, this, name_);
 }
 
+WorkItem::WorkItem() : WorkItem(nullptr) {}
+
 WorkItem::WorkItem(void (*handler)(WorkItem* work))
-    : handler(handler), signaler(ZX_HANDLE_INVALID) {
+    : handler(handler), signaler(ZX_HANDLE_INVALID), workqueue(nullptr) {
   list_initialize(&item);
 }
 

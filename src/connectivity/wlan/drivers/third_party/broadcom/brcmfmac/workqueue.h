@@ -35,22 +35,24 @@ typedef void (*work_handler_t)(WorkItem* work);
 
 class WorkItem {
  public:
+  WorkItem();
   explicit WorkItem(void (*handler)(WorkItem* work));
-  // Default constructor for structs which contain it, might be removed after all the things get
-  // into C++.
-  WorkItem() {}
-  // If work isn't started, deletes it. If it was started, waits for it to finish. Thus, this may
-  // block. Either way, the work is guaranteed not to be running after workqueue_cancel_work
-  // returns.
+
+  // Attempt to cancel this work item, if it is currently scheduled to run.  The work item may run
+  // even if Cancel() is called, if it has already been dequeued and is in execution.  In any case,
+  // the work item is guaranteed not to be running after this call returns.
   void Cancel();
 
-  // The callback function.
+  // The work function to execute.
   void (*handler)(WorkItem*);
-  // signaler: If not ZX_HANDLE_INVALID, will be signaled WORKQUEUE_SIGNAL on completion of work.
+
+  // A handle to an event use to signal work completion or cancellation.
   zx_handle_t signaler;
-  // item: If work is queued, item is the link to the work list.
+
+  // Link to the work list, valid if this item is queued.
   list_node_t item;
-  // workqueue: The work queue currently queued or executing on.
+
+  // The work queue currently queued or executing on.
   WorkQueue* workqueue;
 };
 
