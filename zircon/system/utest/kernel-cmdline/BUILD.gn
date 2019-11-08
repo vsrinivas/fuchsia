@@ -2,6 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":kernel-cmdline",
+    ":kernel-cmdline-fuzzer",
+  ]
+}
+
 zx_test("kernel-cmdline") {
   sources = [
     "kernel_cmdline_test.cc",
@@ -10,5 +20,14 @@ zx_test("kernel-cmdline") {
     "$zx/kernel/lib/cmdline",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("kernel-cmdline-fuzzer") {
+  sources = [
+    "kernel_cmdline_fuzztest.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/cmdline",
   ]
 }

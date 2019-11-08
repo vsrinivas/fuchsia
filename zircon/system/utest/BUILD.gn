@@ -256,7 +256,7 @@ if (current_cpu != "") {
       "int-types",
       "kcounter",
       "kernel-clocks",
-      "kernel-cmdline",
+      "kernel-cmdline:test",
       "kernel-unittests",
       "loader-service",
       "log",

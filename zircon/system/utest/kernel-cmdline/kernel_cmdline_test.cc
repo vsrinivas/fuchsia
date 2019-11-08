@@ -271,4 +271,19 @@ TEST(KernelCmdLineTest, Short) {
   EXPECT_EQ(c->GetUInt32("a", 0), 1);
 }
 
+TEST(KernelCmdLineTest, MaximumExpansion) {
+  auto c = std::make_unique<Cmdline>();
+
+  static_assert(Cmdline::kCmdlineMax == 4096, "1365 below needs to be updated");
+
+  // Appending "a " turns into "a=\0" in the buffer, for 4095 bytes, leaving one
+  // byte for the additional terminator.
+  for (size_t i = 0; i < 1365; ++i) {
+    c->Append("a ");
+  }
+
+  // One more should panic though.
+  ASSERT_DEATH(([&c]() { c->Append("a "); }));
+}
+
 }  // namespace
