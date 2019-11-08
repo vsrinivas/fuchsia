@@ -22,40 +22,6 @@ const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* i
   return nullptr;
 }
 
-// Temporary code to convert into buffercollectioninfo
-static zx_status_t ConvertToBufferCollectionInfo(
-    fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection,
-    fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection) {
-  old_buffer_collection->buffer_count = buffer_collection->buffer_count;
-  old_buffer_collection->format.image.width =
-      buffer_collection->settings.image_format_constraints.max_coded_width;
-  old_buffer_collection->format.image.height =
-      buffer_collection->settings.image_format_constraints.max_coded_height;
-  old_buffer_collection->format.image.layers =
-      buffer_collection->settings.image_format_constraints.layers;
-  old_buffer_collection->format.image.pixel_format =
-      *reinterpret_cast<const fuchsia_sysmem_PixelFormat*>(
-          &buffer_collection->settings.image_format_constraints.pixel_format);
-  old_buffer_collection->format.image.color_space =
-      *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
-          &buffer_collection->settings.image_format_constraints.color_space);
-  old_buffer_collection->format.image.planes[0].bytes_per_row =
-      buffer_collection->settings.image_format_constraints.max_bytes_per_row;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    // We duplicate the handles since we need to new version
-    // as well to send it to GDC
-    zx::vmo vmo;
-    auto status = buffer_collection->buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to dup VMO";
-      return status;
-    }
-    old_buffer_collection->vmos[i] = vmo.release();
-  }
-  old_buffer_collection->vmo_size = buffer_collection->settings.buffer_settings.size_bytes;
-  return ZX_OK;
-}
-
 // NOTE: This API currently supports only debug config
 // At a later point it will also need to take care of scenarios where same source stream
 // provides multiple output streams.

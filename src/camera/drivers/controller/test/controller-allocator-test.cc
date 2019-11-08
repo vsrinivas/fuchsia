@@ -9,8 +9,11 @@
 
 #include <fbl/auto_call.h>
 
+#include "fake_gdc.h"
+#include "fake_isp.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring-config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
+#include "src/camera/drivers/controller/pipeline_manager.h"
 
 // NOTE: In this test, we are actually just unit testing
 // the sysmem allocation using different constraints.
@@ -24,6 +27,8 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
     controller_memory_allocator_ =
         std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator_));
+    pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, isp_, gdc_,
+                                                          std::move(sysmem_allocator1_));
   }
 
   void TearDown() override {
@@ -34,6 +39,10 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<ControllerMemoryAllocator> controller_memory_allocator_;
+  std::unique_ptr<camera::PipelineManager> pipeline_manager_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
+  ddk::IspProtocolClient isp_;
+  ddk::GdcProtocolClient gdc_;
 };
 
 // Validate FR --> GDC1 --> OutputStreamMLDS
@@ -93,6 +102,114 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   }
   EXPECT_FALSE(
       buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+}
+
+TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
+  fuchsia::sysmem::BufferCollectionInfo_2 hlcpp_buffer;
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(MonitorConfigFullResConstraints());
+  constraints.push_back(Gdc1Constraints());
+  // Allocating some buffer collection
+  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints, &hlcpp_buffer));
+  EXPECT_EQ(hlcpp_buffer.buffer_count, kOutputStreamMlDSMinBufferForCamping);
+
+  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer =
+      pipeline_manager_->ConvertHlcppBufferCollection2toCType(&hlcpp_buffer);
+  EXPECT_EQ(c_buffer.buffer_count, hlcpp_buffer.buffer_count);
+  auto& c_buffer_settings = c_buffer.settings.buffer_settings;
+  auto& hlcpp_buffer_settings = hlcpp_buffer.settings.buffer_settings;
+
+  EXPECT_EQ(c_buffer_settings.size_bytes, hlcpp_buffer_settings.size_bytes);
+  EXPECT_EQ(c_buffer_settings.is_physically_contiguous,
+            hlcpp_buffer_settings.is_physically_contiguous);
+  EXPECT_EQ(c_buffer_settings.is_secure, hlcpp_buffer_settings.is_secure);
+  EXPECT_EQ(c_buffer_settings.coherency_domain,
+            *reinterpret_cast<const fuchsia_sysmem_CoherencyDomain*>(
+                &hlcpp_buffer_settings.coherency_domain));
+  EXPECT_EQ(c_buffer_settings.heap,
+            *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap));
+  EXPECT_EQ(c_buffer.settings.has_image_format_constraints,
+            hlcpp_buffer.settings.has_image_format_constraints);
+
+  auto& c_image_format_constraints = c_buffer.settings.image_format_constraints;
+  auto& hlcpp_image_format_constraints = hlcpp_buffer.settings.image_format_constraints;
+
+  EXPECT_EQ(c_image_format_constraints.pixel_format.type,
+            *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+                &hlcpp_image_format_constraints.pixel_format.type));
+  EXPECT_EQ(c_image_format_constraints.pixel_format.has_format_modifier,
+            hlcpp_image_format_constraints.pixel_format.has_format_modifier);
+  EXPECT_EQ(c_image_format_constraints.pixel_format.format_modifier.value,
+            hlcpp_image_format_constraints.pixel_format.format_modifier.value);
+  EXPECT_EQ(c_image_format_constraints.color_spaces_count,
+            hlcpp_image_format_constraints.color_spaces_count);
+
+  EXPECT_EQ(c_image_format_constraints.min_coded_width,
+            hlcpp_image_format_constraints.min_coded_width);
+  EXPECT_EQ(c_image_format_constraints.max_coded_width,
+            hlcpp_image_format_constraints.max_coded_width);
+  EXPECT_EQ(c_image_format_constraints.min_coded_height,
+            hlcpp_image_format_constraints.min_coded_height);
+  EXPECT_EQ(c_image_format_constraints.max_coded_height,
+            hlcpp_image_format_constraints.max_coded_height);
+  EXPECT_EQ(c_image_format_constraints.min_bytes_per_row,
+            hlcpp_image_format_constraints.min_bytes_per_row);
+  EXPECT_EQ(c_image_format_constraints.max_bytes_per_row,
+            hlcpp_image_format_constraints.max_bytes_per_row);
+
+  EXPECT_EQ(c_image_format_constraints.max_coded_width_times_coded_height,
+            hlcpp_image_format_constraints.max_coded_width_times_coded_height);
+  EXPECT_EQ(c_image_format_constraints.layers, hlcpp_image_format_constraints.layers);
+  EXPECT_EQ(c_image_format_constraints.coded_width_divisor,
+            hlcpp_image_format_constraints.coded_width_divisor);
+  EXPECT_EQ(c_image_format_constraints.coded_height_divisor,
+            hlcpp_image_format_constraints.coded_height_divisor);
+  EXPECT_EQ(c_image_format_constraints.bytes_per_row_divisor,
+            hlcpp_image_format_constraints.bytes_per_row_divisor);
+  EXPECT_EQ(c_image_format_constraints.start_offset_divisor,
+            hlcpp_image_format_constraints.start_offset_divisor);
+  EXPECT_EQ(c_image_format_constraints.display_width_divisor,
+            hlcpp_image_format_constraints.display_width_divisor);
+  EXPECT_EQ(c_image_format_constraints.display_height_divisor,
+            hlcpp_image_format_constraints.display_height_divisor);
+  EXPECT_EQ(c_image_format_constraints.required_min_coded_width,
+            hlcpp_image_format_constraints.required_min_coded_width);
+  EXPECT_EQ(c_image_format_constraints.required_max_coded_width,
+            hlcpp_image_format_constraints.required_max_coded_width);
+  EXPECT_EQ(c_image_format_constraints.required_min_coded_height,
+            hlcpp_image_format_constraints.required_min_coded_height);
+  EXPECT_EQ(c_image_format_constraints.required_max_coded_height,
+            hlcpp_image_format_constraints.required_max_coded_height);
+  EXPECT_EQ(c_image_format_constraints.required_min_bytes_per_row,
+            hlcpp_image_format_constraints.required_min_bytes_per_row);
+  EXPECT_EQ(c_image_format_constraints.required_max_bytes_per_row,
+            hlcpp_image_format_constraints.required_max_bytes_per_row);
+}
+
+TEST_F(ControllerMemoryAllocatorTest, ConvertImageFormat2TypeTest) {
+  auto vector_image_formats = OutputStreamMLFRImageFormats();
+  fuchsia::sysmem::ImageFormat_2 hlcpp_image_format = vector_image_formats[0];
+
+  fuchsia_sysmem_ImageFormat_2 c_image_format =
+      pipeline_manager_->ConvertHlcppImageFormat2toCType(&hlcpp_image_format);
+
+  EXPECT_EQ(c_image_format.pixel_format.type,
+            *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
+                &hlcpp_image_format.pixel_format.type));
+  EXPECT_EQ(c_image_format.pixel_format.has_format_modifier,
+            hlcpp_image_format.pixel_format.has_format_modifier);
+  EXPECT_EQ(c_image_format.pixel_format.format_modifier.value,
+            hlcpp_image_format.pixel_format.format_modifier.value);
+
+  EXPECT_EQ(c_image_format.coded_width, hlcpp_image_format.coded_width);
+  EXPECT_EQ(c_image_format.coded_height, hlcpp_image_format.coded_height);
+  EXPECT_EQ(c_image_format.bytes_per_row, hlcpp_image_format.bytes_per_row);
+  EXPECT_EQ(c_image_format.display_width, hlcpp_image_format.display_width);
+  EXPECT_EQ(c_image_format.display_height, hlcpp_image_format.display_height);
+  EXPECT_EQ(c_image_format.layers, hlcpp_image_format.layers);
+  EXPECT_EQ(c_image_format.has_pixel_aspect_ratio, hlcpp_image_format.has_pixel_aspect_ratio);
+  EXPECT_EQ(c_image_format.pixel_aspect_ratio_width, hlcpp_image_format.pixel_aspect_ratio_width);
+  EXPECT_EQ(c_image_format.pixel_aspect_ratio_height, hlcpp_image_format.pixel_aspect_ratio_height);
 }
 
 }  // namespace camera

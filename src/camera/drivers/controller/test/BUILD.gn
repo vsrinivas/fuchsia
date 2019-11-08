@@ -88,16 +88,18 @@ executable("controller-protocol-test") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
   if (internal_access) {
-    defines = [
-      "INTERNAL_ACCESS"
-    ]
+    defines = [ "INTERNAL_ACCESS" ]
   }
 }
 
 executable("controller-allocator-test") {
   testonly = true
   sources = [
+    "../format-conversion.cc",
     "../memory_allocation.cc",
+    "../pipeline_manager.cc",
+    "../processing_node.cc",
+    "../stream_protocol.cc",
     "controller-allocator-test.cc",
   ]
   deps = [
@@ -109,6 +111,7 @@ executable("controller-allocator-test") {
     "//src/camera/drivers/test_utils",
     "//src/devices:driver",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
