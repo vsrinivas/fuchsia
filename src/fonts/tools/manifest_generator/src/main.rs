@@ -14,7 +14,7 @@ mod serde_ext;
 
 pub(crate) use crate::font_catalog::FontCatalog;
 pub(crate) use crate::font_pkgs::FontPackageListing;
-pub(crate) use crate::font_sets::FontSets;
+pub(crate) use crate::font_sets::{FontSet, FontSets};
 
 use std::io::Write;
 use {

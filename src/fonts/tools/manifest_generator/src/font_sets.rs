@@ -8,13 +8,22 @@
 
 use {
     crate::serde_ext::{self, LoadError},
-    manifest::v2::PackageSet,
     serde_derive::Deserialize,
     std::{
         collections::{btree_map::Iter as BTreeMapIter, BTreeMap},
         path::Path,
     },
 };
+
+/// Describes which set a font belongs to, local or downloadable.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum FontSet {
+    /// Font files in the local set. Bundled directly in the font server's `/config/data`.
+    Local,
+    /// Available to download as a Fuchsia package (`fuchsia-pkg://fuchsia.com/font-package-...`).
+    Download,
+}
 
 /// Possible versions of [FontSets].
 #[derive(Debug, Deserialize)]
@@ -24,33 +33,32 @@ enum FontSetsWrapper {
     Version1(FontSetsInternal),
 }
 
-/// Classification of font files into "base" and "universe", indicating whether they are included
-/// in the base OTA image or only fetched on demand.
+/// Classification of font files into "local" and "downloadable", indicating whether they are
+/// built directly into the font server package in the OTA image or only fetched on demand.
 #[derive(Debug, Deserialize)]
 struct FontSetsInternal {
-    /// Font file names in the "base" set. These are included in the base OTA image.
+    /// See ['FontSet::Local`]
+    local: Vec<String>,
+    /// See [`FontSet::Download`]
     #[serde(default)]
-    base: Vec<String>,
-    /// Font file names in the "universe" set. These are fetched on demand from an update server.
-    #[serde(default)]
-    universe: Vec<String>,
+    download: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub(crate) struct FontSets {
-    map: BTreeMap<String, PackageSet>,
+    map: BTreeMap<String, FontSet>,
 }
 
 impl From<FontSetsInternal> for FontSets {
     fn from(source: FontSetsInternal) -> Self {
         let mut map = BTreeMap::new();
-        let FontSetsInternal { base, universe } = source;
-        for file_name in universe {
-            map.insert(file_name, PackageSet::Universe);
+        let FontSetsInternal { local, download } = source;
+        for file_name in download {
+            map.insert(file_name, FontSet::Download);
         }
-        // If a file name appears in both Base and Universe, the Base set takes precedence.
-        for file_name in base {
-            map.insert(file_name, PackageSet::Base);
+        // If a file name appears in both Local and Download, the Local set takes precedence.
+        for file_name in local {
+            map.insert(file_name, FontSet::Local);
         }
         FontSets { map }
     }
@@ -64,18 +72,18 @@ impl FontSets {
         }
     }
 
-    pub fn get_package_set(&self, file_name: &str) -> Option<&PackageSet> {
+    pub fn get_font_set(&self, file_name: &str) -> Option<&FontSet> {
         self.map.get(file_name)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &PackageSet)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &FontSet)> {
         self.into_iter()
     }
 }
 
 impl<'a> IntoIterator for &'a FontSets {
-    type Item = (&'a String, &'a PackageSet);
-    type IntoIter = BTreeMapIter<'a, String, PackageSet>;
+    type Item = (&'a String, &'a FontSet);
+    type IntoIter = BTreeMapIter<'a, String, FontSet>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.map.iter()
@@ -94,12 +102,12 @@ mod tests {
         let contents = json!(
         {
             "version": "1",
-            "base": [
+            "local": [
                 "a.ttf",
                 "b.ttf",
                 "c.ttf"
             ],
-            "universe": [
+            "download": [
                 "c.ttf",
                 "d.ttf",
                 "e.ttf",
@@ -114,13 +122,13 @@ mod tests {
 
         let font_sets = FontSets::load_from_path(file.path())?;
 
-        assert_eq!(font_sets.get_package_set("a.ttf"), Some(&PackageSet::Base));
-        assert_eq!(font_sets.get_package_set("b.ttf"), Some(&PackageSet::Base));
-        assert_eq!(font_sets.get_package_set("c.ttf"), Some(&PackageSet::Base));
-        assert_eq!(font_sets.get_package_set("d.ttf"), Some(&PackageSet::Universe));
-        assert_eq!(font_sets.get_package_set("e.ttf"), Some(&PackageSet::Universe));
-        assert_eq!(font_sets.get_package_set("f.ttf"), Some(&PackageSet::Universe));
-        assert_eq!(font_sets.get_package_set("404.ttf"), None);
+        assert_eq!(font_sets.get_font_set("a.ttf"), Some(&FontSet::Local));
+        assert_eq!(font_sets.get_font_set("b.ttf"), Some(&FontSet::Local));
+        assert_eq!(font_sets.get_font_set("c.ttf"), Some(&FontSet::Local));
+        assert_eq!(font_sets.get_font_set("d.ttf"), Some(&FontSet::Download));
+        assert_eq!(font_sets.get_font_set("e.ttf"), Some(&FontSet::Download));
+        assert_eq!(font_sets.get_font_set("f.ttf"), Some(&FontSet::Download));
+        assert_eq!(font_sets.get_font_set("404.ttf"), None);
 
         Ok(())
     }

@@ -4,10 +4,10 @@
 
 use {
     crate::{
-        constants::PKG_URL_PREFIX,
+        constants::{LOCAL_ASSET_DIRECTORY, PKG_URL_PREFIX},
         font_catalog as fi,
         font_catalog::{AssetInFamilyIndex, FamilyIndex, TypefaceInAssetIndex},
-        FontCatalog, FontPackageListing, FontSets,
+        FontCatalog, FontPackageListing, FontSet, FontSets,
     },
     char_set::CharSet,
     failure::{format_err, Error, Fail},
@@ -67,7 +67,7 @@ impl FontDb {
                     continue;
                 }
 
-                if font_sets.get_package_set(&asset.file_name).is_some() {
+                if font_sets.get_font_set(&asset.file_name).is_some() {
                     let safe_name = font_pkgs.get_safe_name(&asset_name);
                     if safe_name.is_none() {
                         errors.push(FontDbError::FontPkgsMissingEntry { asset_name });
@@ -163,10 +163,14 @@ impl FontDb {
 
     /// The asset must be in the `FontDb` or this method will panic.
     pub fn get_asset_location(&self, asset: &fi::Asset) -> v2::AssetLocation {
-        v2::AssetLocation::Package(v2::PackageLocator {
-            url: self.asset_name_to_pkg_url.get(&*asset.file_name).unwrap().clone(),
-            set: self.font_sets.get_package_set(&*asset.file_name).unwrap().clone(),
-        })
+        match self.font_sets.get_font_set(&*asset.file_name).unwrap() {
+            FontSet::Local => v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                directory: PathBuf::from(LOCAL_ASSET_DIRECTORY),
+            }),
+            FontSet::Download => v2::AssetLocation::Package(v2::PackageLocator {
+                url: self.asset_name_to_pkg_url.get(&*asset.file_name).unwrap().clone(),
+            }),
+        }
     }
 
     /// Iterates over all the _included_ font families in the `FontDb`.

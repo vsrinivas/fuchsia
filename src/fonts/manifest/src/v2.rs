@@ -262,20 +262,6 @@ pub struct LocalFileLocator {
 pub struct PackageLocator {
     /// URL of just the package (not including the file name)
     pub url: PkgUrl,
-    /// Type of package
-    pub set: PackageSet,
-}
-
-/// Describes which set of dependencies a font package belongs to.
-///
-/// See https://fuchsia.dev/fuchsia-src/development/build/boards_and_products#dependency_sets.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
-#[serde(rename_all = "lowercase")]
-pub enum PackageSet {
-    /// Package is in the device's base image (the "base set" of packages)
-    Base,
-    /// Package is available ephemerally (the "universe set" of packages)
-    Universe,
 }
 
 /// Describes a single typeface within a font file

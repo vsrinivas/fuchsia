@@ -18,8 +18,7 @@
           "file_name": "AlphaAndBeta-Thin.ttc",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphanadbeta-thin-ttc",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphanadbeta-thin-ttc"
             }
           },
           "typefaces": [
@@ -36,8 +35,7 @@
           "file_name": "AlphaSans-Bold.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bold-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bold-ttf"
             }
           },
           "typefaces": [
@@ -57,8 +55,7 @@
           "file_name": "AlphaSans-BoldItalic.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bolditalic-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-bolditalic-ttf"
             }
           },
           "typefaces": [
@@ -78,8 +75,7 @@
           "file_name": "AlphaSans-Italic.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-italic-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-italic-ttf"
             }
           },
           "typefaces": [
@@ -98,9 +94,8 @@
         {
           "file_name": "AlphaSans-Regular.ttf",
           "location": {
-            "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-regular-ttf",
-              "set": "base"
+            "local": {
+              "directory": "/config/data/assets"
             }
           },
           "typefaces": [
@@ -142,8 +137,7 @@
           "file_name": "AlphaAndBeta-Thin.ttc",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-alphanadbeta-thin-ttc",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphanadbeta-thin-ttc"
             }
           },
           "typefaces": [
@@ -160,8 +154,7 @@
           "file_name": "BetaSans-Bold.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bold-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bold-ttf"
             }
           },
           "typefaces": [
@@ -181,8 +174,7 @@
           "file_name": "BetaSans-BoldItalic.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bolditalic-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-bolditalic-ttf"
             }
           },
           "typefaces": [
@@ -202,8 +194,7 @@
           "file_name": "BetaSans-Condensed.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-condensed-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-condensed-ttf"
             }
           },
           "typefaces": [
@@ -233,8 +224,7 @@
           "file_name": "BetaSans-Italic.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-italic-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-italic-ttf"
             }
           },
           "typefaces": [
@@ -253,9 +243,8 @@
         {
           "file_name": "BetaSans-Regular.ttf",
           "location": {
-            "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-betasans-regular-ttf",
-              "set": "base"
+            "local": {
+              "directory": "/config/data/assets"
             }
           },
           "typefaces": [
@@ -302,8 +291,7 @@
           "file_name": "GammaCJK-Regular.ttc",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-gammacjk-regular-ttc",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-gammacjk-regular-ttc"
             }
           },
           "typefaces": [

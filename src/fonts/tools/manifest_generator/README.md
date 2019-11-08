@@ -29,7 +29,7 @@ a recipe and checked out as a prebuilt, along with font files.
 
 ### 3. `*.font_sets.json`
 
-Contains a listing of `base` and `universe` font asset names, indicating which
+Contains a listing of `local` and `download` font asset names, indicating which
 font packages are part of the OTA image and which are ephemeral packages.
 
 This file determines which font assets from the catalogs actually end up in the
