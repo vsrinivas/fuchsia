@@ -10,7 +10,7 @@
 //! let mut rng = StdRng::seed_from_u64(seed);
 //! let dist = EntryDistribution::new(depth);
 //! let tree: DirectoryEntry = rng.sample(&dist);
-//! tree.write_tree(root).expect("failed to write tree");
+//! tree.write_tree_at(root).expect("failed to write tree");
 //! ```
 
 use {
@@ -82,7 +82,7 @@ impl distributions::Distribution<FileEntry> for distributions::Standard {
 }
 
 impl FileEntry {
-    fn write_file(self, root: &str) -> Result<(), Error> {
+    fn write_file_at(self, root: &str) -> Result<(), Error> {
         let file_path = format!("{}/{}", root, self.name);
         let mut file = File::create(&file_path)?;
         file.write_all(&self.contents)?;
@@ -114,14 +114,19 @@ impl distributions::Distribution<DirectoryEntry> for EntryDistribution {
 }
 
 impl DirectoryEntry {
+    /// get the path the directory entry will be written to relative to a given root.
+    pub fn get_name(&self) -> String {
+        self.name.to_string()
+    }
+
     /// Take the entire randomly generated tree and commit it to disk.
-    pub fn write_tree(self, root: &str) -> Result<(), Error> {
-        let path = format!("{}/{}", root, self.name);
+    pub fn write_tree_at(self, root: &str) -> Result<(), Error> {
+        let path = format!("{}/{}", root, self.get_name());
         std::fs::create_dir_all(&path)?;
         for entry in self.entries {
             match entry {
-                Entry::File(file_entry) => file_entry.write_file(&path)?,
-                Entry::Directory(dir_entry) => dir_entry.write_tree(&path)?,
+                Entry::File(file_entry) => file_entry.write_file_at(&path)?,
+                Entry::Directory(dir_entry) => dir_entry.write_tree_at(&path)?,
             }
         }
         Ok(())
@@ -234,7 +239,7 @@ mod tests {
         minfs.format().expect("failed to format minfs");
         minfs.mount(root).expect("failed to mount minfs");
 
-        tree.write_tree(root).expect("failed to write tree");
+        tree.write_tree_at(root).expect("failed to write tree");
 
         let fixture = get_fixture(seed, depth);
         let path = std::path::PathBuf::from(format!("{}/{}", root, fixture.name));

@@ -43,10 +43,17 @@ fn test(mut minfs: Filesystem<Minfs>, seed: u64) -> Result<(), Error> {
         let dist = EntryDistribution::new(6);
         let tree: DirectoryEntry = rng.sample(&dist);
         println!("generated tree: {:?}", tree);
+        let tree_name = tree.get_name();
+        let tree_path = format!("{}/{}", root, tree_name);
         println!("writing tree");
-        tree.write_tree(&root).context("failed to write directory tree")?;
-        // it's entirely possible that we generate a tree small enough that we manage to write the
-        // whole thing before the test is stopped. if that happens, write another tree!
+        tree.write_tree_at(&root).context("failed to write directory tree")?;
+        // now try renaming the tree root
+        let tree_path2 = format!("{}/{}-renamed", root, tree_name);
+        println!("moving tree");
+        std::fs::rename(&tree_path, &tree_path2).context("failed to move directory tree")?;
+        // then try deleting the entire thing.
+        println!("deleting tree");
+        std::fs::remove_dir_all(&tree_path2).context("failed to delete directory tree")?;
     }
 }
 

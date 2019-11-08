@@ -5,7 +5,8 @@
     "sandbox": {
         "dev": [
             "class/block",
-            "sys/pci"
+            "sys/pci",
+            "sys/platform"
         ],
         "services": [
             "fuchsia.process.Launcher",
