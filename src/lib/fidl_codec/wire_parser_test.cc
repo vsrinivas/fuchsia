@@ -865,6 +865,12 @@ TEST_DECODE_WIRE(I8Enum, I8EnumMessage, R"({"ev":"X"})",
 TEST_DECODE_WIRE(I16Enum, I16EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I16Enum#rst# = #blu#X#rst# }",
                  test::fidlcodec::examples::I16Enum::X);
+TEST_DECODE_WIRE(I32Enum, I32EnumMessage, R"({"ev":"X"})",
+                 "{ ev: #gre#test.fidlcodec.examples/I32Enum#rst# = #blu#X#rst# }",
+                 test::fidlcodec::examples::I32Enum::X);
+TEST_DECODE_WIRE(I64Enum, I64EnumMessage, R"({"ev":"X"})",
+                 "{ ev: #gre#test.fidlcodec.examples/I64Enum#rst# = #blu#X#rst# }",
+                 test::fidlcodec::examples::I64Enum::X);
 
 // Table Tests
 

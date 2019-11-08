@@ -220,7 +220,9 @@ void Encoder::VisitVectorValue(const VectorValue* node) {
   }
 }
 
-void Encoder::VisitEnumValue(const EnumValue* node) { WriteNodeData(*node, sizeof(uint32_t)); }
+void Encoder::VisitEnumValue(const EnumValue* node) {
+  WriteNodeData(*node, node->enum_definition().size());
+}
 
 void Encoder::VisitHandleValue(const HandleValue* node) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {

@@ -62,6 +62,8 @@ protocol FidlCodecTestInterface {
     DefaultEnumMessage(DefaultEnum ev);
     I8EnumMessage(I8Enum ev);
     I16EnumMessage(I16Enum ev);
+    I32EnumMessage(I32Enum ev);
+    I64EnumMessage(I64Enum ev);
 
     Table(ValueTable table, int32 i);
 
@@ -136,6 +138,14 @@ enum I8Enum : int8 {
 };
 
 enum I16Enum : int16 {
+    X = -23;
+};
+
+enum I32Enum : int32 {
+    X = -23;
+};
+
+enum I64Enum : int64 {
     X = -23;
 };
 
