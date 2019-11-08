@@ -338,7 +338,10 @@ static InternalConfigNode Gdc1() {
                   OutputStreamMLDS(),
               },
           },
-      .gdc_info.config_type = GdcConfig::MONITORING_ML,
+      .gdc_info.config_type =
+          {
+              GdcConfig::MONITORING_ML,
+          },
       .constraints = Gdc1Constraints(),
       .image_formats = OutputStreamMLDSImageFormats(),
   };
@@ -437,7 +440,12 @@ static InternalConfigNode Gdc2() {
                   OutputStreamMonitoring(),
               },
           },
-      .gdc_info.config_type = GdcConfig::MONITORING_720p,
+      .gdc_info.config_type =
+          {
+              GdcConfig::MONITORING_360p,
+              GdcConfig::MONITORING_480p,
+              GdcConfig::MONITORING_720p,
+          },
       .constraints = Gdc2Constraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
   };

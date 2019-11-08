@@ -97,6 +97,14 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(info->streams_info[1].supported_streams.size(), 1u);
     EXPECT_EQ(info->streams_info[1].supported_streams[0],
               fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].type, kGdc);
+    ASSERT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type.size(), 3u);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[0],
+              GdcConfig::MONITORING_360p);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[1],
+              GdcConfig::MONITORING_480p);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[2],
+              GdcConfig::MONITORING_720p);
   }
 
   void TestDebugStreamConfigNode() {

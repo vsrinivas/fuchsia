@@ -32,7 +32,7 @@ enum Ge2DConfig {
   GE2D_COUNT = 2,
 };
 struct GdcInfo {
-  GdcConfig config_type;
+  std::vector<GdcConfig> config_type;
 };
 struct Ge2DInfo {
   Ge2DConfig config_type;
