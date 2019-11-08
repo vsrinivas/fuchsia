@@ -24,21 +24,20 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
+#include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
+#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
-#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
+#include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
 
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/string_cast.hpp>
-
-// The test setup here is sufficiently different from hittest_unittest.cc to
-// merit its own file.  We access the global hit test through the compositor,
-// instead of through a session.
 
 namespace scenic_impl {
 namespace gfx {
@@ -53,6 +52,14 @@ escher::ray4 HitRay(float x, float y) {
   return {
       .origin = {x, y, 1, 1},
       .direction = {0, 0, -1, 0},
+  };
+}
+
+// Creates a hit ray in world space. This is an input hit ray after being transformed by the layer.
+escher::ray4 WorldSpaceHitRay(float x, float y) {
+  return {
+      .origin = {x, y, -1000, 1},
+      .direction = {0, 0, 1000, 0},
   };
 }
 
@@ -77,11 +84,33 @@ class CustomSession {
   std::unique_ptr<Session> session_;
 };
 
+// Accumulator that just accumulates all hits.
+template <typename T>
+class TestHitAccumulator : public HitAccumulator<T> {
+ public:
+  const std::vector<T>& hits() const { return hits_; }
+
+  // |HitAccumulator<T>|
+  void Add(const T& hit) override { hits_.push_back(hit); }
+
+  // |HitAccumulator<T>|
+  bool EndLayer() override { return true; }
+
+ private:
+  std::vector<T> hits_;
+};
+
 // Loop fixture provides dispatcher for Engine's EventTimestamper.
 class HitTestTest : public gtest::TestLoopFixture {
  public:
-  static constexpr uint32_t kSceneId = 20004;
-  static constexpr uint32_t kViewNodeId = 0;
+  enum : uint32_t {
+    kCompositorId = 20001,
+    kLayerStackId,
+    kLayerId,
+    kSceneId,
+    kCameraId,
+    kRendererId,
+  };
 
   HitTestTest()
       : engine_(context_provider_.context(),
@@ -100,7 +129,6 @@ class HitTestTest : public gtest::TestLoopFixture {
     layer_height_ = layer_height;
     CustomSession session = CreateSession(0);
 
-    static constexpr uint32_t kCompositorId = 20001, kLayerStackId = 20002, kLayerId = 20003;
     session.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
     session.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
     session.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
@@ -108,7 +136,6 @@ class HitTestTest : public gtest::TestLoopFixture {
     session.Apply(scenic::NewSetSizeCmd(kLayerId, (float[]){layer_width, layer_height}));
     session.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
 
-    static constexpr uint32_t kCameraId = 20005, kRendererId = 20006;
     session.Apply(scenic::NewCreateSceneCmd(kSceneId));
     session.Apply(scenic::NewCreateCameraCmd(kCameraId, kSceneId));
     session.Apply(scenic::NewCreateRendererCmd(kRendererId));
@@ -118,9 +145,20 @@ class HitTestTest : public gtest::TestLoopFixture {
     return session;
   }
 
+  // Direct scene access for more focused hit tester unit testing.
+  Scene* scene() {
+    const auto& layers = layer_stack()->layers();
+    FXL_CHECK(layers.size() == 1);
+    const Layer* layer = layers.begin()->get();
+    FXL_CHECK(layer->renderer());
+    FXL_CHECK(layer->renderer()->camera());
+    FXL_CHECK(layer->renderer()->camera()->scene());
+    return layer->renderer()->camera()->scene().get();
+  }
+
+  // Models input subsystem's access to Engine internals.
+  // For simplicity, we use the first (and only) compositor and layer stack.
   LayerStackPtr layer_stack() {
-    // Models input subsystem's access to Engine internals.
-    // For simplicity, we use the first (and only) compositor and layer stack.
     const CompositorWeakPtr& compositor = engine_.scene_graph()->first_compositor();
     FXL_CHECK(compositor);
     LayerStackPtr layer_stack = compositor->layer_stack();
@@ -139,7 +177,7 @@ class HitTestTest : public gtest::TestLoopFixture {
 using SingleSessionHitTestTest = HitTestTest;
 using MultiSessionHitTestTest = HitTestTest;
 
-// Makes sure hit coordinates are correct.
+// Makes sure basic hit coordinates are correct.
 //
 // This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume.
 TEST_F(SingleSessionHitTestTest, HitCoordinates) {
@@ -178,7 +216,7 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
   }
 
   {
-    // Hit from (1, 1.5) should be at (-7, -3, 0) local.
+    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates.
     // Depth should be 1.999:
     // * hit ray originates in device space (clip space with -z)
     // * geometry is at z = -1 in global space
@@ -190,23 +228,26 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     // view volume depth (though the relative scale isn't used for anything user facing so it
     // doesn't actually matter).
     HitTester hit_tester;
-    const std::vector<Hit> hits = layer_stack()->HitTest(HitRay(1, 1.5f), &hit_tester);
-    ASSERT_FALSE(hits.empty());
+    TestHitAccumulator<ViewHit> accumulator;
+    const escher::ray4 ray = HitRay(1, 1.5f);
+    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    ASSERT_FALSE(accumulator.hits().empty());
 
-    const Hit& hit = hits.front();
-    EXPECT_EQ(hit.node->global_id(), GlobalId(0, kShapeId));
+    const ViewHit& hit = accumulator.hits().front();
+    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
     // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 local = hit.ray.At(hit.distance);
-    static const glm::vec4 expected = {-7, -3, 0, 1};
-    EXPECT_TRUE(
-        glm::all(glm::epsilonEqual(local, expected, std::numeric_limits<float>::epsilon() * 1999)))
-        << "Local hit coordinates " << glm::to_string(local) << " should be approximately "
+    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    static const glm::vec4 expected = {1, 1.5f, -1, 1};
+    // We need to use 1000 * epsilon as the projection transform scales by 1000.
+    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
+    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
+        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
         << glm::to_string(expected);
   }
 }
 
-// Makes sure that scaling does not affect hit depth incorrectly.
+// Makes sure that content scaling does not affect hit depth incorrectly.
 //
 // This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume. The
 // rectangle is scaled to 2x.
@@ -247,21 +288,160 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
   }
 
   {
-    // Hit from (1, 1.5) should be at (-7, -3, 0) local and depth should be 1.999 (z = -1 in
-    // 1000-space, + 1 due to the ray origin).
+    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should be 1.999 (z
+    // = -1 in 1000-space, + 1 due to the ray origin). Although the rectangle is scaled, the view is
+    // not.
     HitTester hit_tester;
-    const std::vector<Hit> hits = layer_stack()->HitTest(HitRay(1, 1.5f), &hit_tester);
-    ASSERT_FALSE(hits.empty());
+    TestHitAccumulator<ViewHit> accumulator;
+    const escher::ray4 ray = HitRay(1, 1.5f);
+    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    ASSERT_FALSE(accumulator.hits().empty());
 
-    const Hit& hit = hits.front();
-    EXPECT_EQ(hit.node->global_id(), GlobalId(0, kShapeId));
+    const ViewHit& hit = accumulator.hits().front();
+    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
     // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
-    const glm::vec4 local = hit.ray.At(hit.distance);
-    static const glm::vec4 expected = {-3.5f, -1.5f, 0, 1};
-    EXPECT_TRUE(
-        glm::all(glm::epsilonEqual(local, expected, std::numeric_limits<float>::epsilon() * 1999)))
-        << "Local hit coordinates " << glm::to_string(local) << " should be approximately "
+    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    static const glm::vec4 expected = {1, 1.5f, -1, 1};
+    // We need to use 1000 * epsilon as the projection transform scales by 1000.
+    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
+    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
+        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
+        << glm::to_string(expected);
+  }
+}
+
+// Makes sure view-space hit coordinates are correct under view transformation.
+//
+// This scene includes a centered 5 x 3 rectangle at z = -1 in a 16 x 9 x 1000 viewing volume where
+// the view is translated by (3, 2, 1) and scaled by 3x. So, the resulting rectangle is from (3, 2,
+// -2) to (18, 11, -2) global.
+TEST_F(SingleSessionHitTestTest, ViewTransform) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  enum : uint32_t {
+    kViewHolderId = 10,
+    kViewId,
+    kShapeId,
+    kRectId,
+    kMaterialId,
+  };
+
+  CustomSession sess = CreateRootSession(16, 9);
+  {
+    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
+                                              "MyViewHolder"));
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
+                                               {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
+
+    // Rectangle (half scale) and material
+    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
+    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
+    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 5, 3));
+
+    // Shape
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
+    sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){2.5, 1.5f, -1}));
+
+    // Graph
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
+    sess.Apply(scenic::NewSetTranslationCmd(kViewHolderId, (float[]){3, 2, 1}));
+    sess.Apply(scenic::NewSetScaleCmd(kViewHolderId, (float[]){3, 3, 3}));
+  }
+
+  {
+    // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should be 1.998 (z
+    // = -2 in 1000-space, + 1 due to the ray origin).
+    HitTester hit_tester;
+    TestHitAccumulator<ViewHit> accumulator;
+    const escher::ray4 ray = HitRay(5, 6);
+    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    ASSERT_FALSE(accumulator.hits().empty());
+
+    const ViewHit& hit = accumulator.hits().front();
+    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    // TODO(38389): .998f (ray origin is currently 1 length behind the camera)
+    EXPECT_NEAR(hit.distance, 1.998f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    static const glm::vec4 expected = {2.f / 3, 4.f / 3, -1, 1};
+    // We need to use 1000 * epsilon as the projection transform scales by 1000.
+    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
+    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
+        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
+        << glm::to_string(expected);
+  }
+}
+
+// Makes sure view-space hit coordinates are correct under camera transformation.
+//
+// This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume. The
+// camera clip space is translated (.25, 2/3) and scaled by 3x. In terms of the viewing volume, this
+// is a 2 x 3 translation.
+TEST_F(SingleSessionHitTestTest, CameraTransform) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  enum : uint32_t {
+    kViewHolderId = 10,
+    kViewId,
+    kShapeId,
+    kRectId,
+    kMaterialId,
+  };
+
+  CustomSession sess = CreateRootSession(16, 9);
+  {
+    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
+                                              "MyViewHolder"));
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
+                                               {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
+
+    // Rectangle (full screen) and material
+    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
+    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
+    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 16, 9));
+
+    // Shape
+    sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
+    sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
+    sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
+
+    // Graph
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
+
+    // Camera
+    sess.Apply(scenic::NewSetCameraClipSpaceTransformCmd(kCameraId, .25f, 2.f / 3, 3));
+    // After this, the original (-1, -1) x (1, 1) NDC is mapped to (-2.75, -2 1/3) x (3.25, 3 2/3),
+    // i.e. the original (0, 0) x (16, 9) input space is mapped to (-14, -6) x (34, 21) as it scales
+    // to (-16, -9) x (32, 18) + the 2 x 3 translation.
+  }
+
+  {
+    // Hit from (1, 1.5) should be at (5, 7.5 / 3, -1) in view coordinates (i.e. (15, 7.5) in the
+    // effective input space, scaled down 3x to view space).
+    // Depth should still be 1.999 (the clip-space scaling is not applied to Z).
+    HitTester hit_tester;
+    TestHitAccumulator<ViewHit> accumulator;
+    const escher::ray4 ray = HitRay(1, 1.5f);
+    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    ASSERT_FALSE(accumulator.hits().empty());
+
+    const ViewHit& hit = accumulator.hits().front();
+    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
+    EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
+    const glm::vec4 view = hit.transform * ray.At(hit.distance);
+    static const glm::vec4 expected = {5, 7.5f / 3, -1, 1};
+    // We need to use 1000 * epsilon as the projection transform scales by 1000.
+    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
+    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
+        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
         << glm::to_string(expected);
   }
 }
@@ -286,22 +466,22 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
 //
 // Where "V" represents the view boundary and "r" is the extent
 // of the rectangle.
-TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
+TEST_F(SingleSessionHitTestTest, ViewClipping) {
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  const uint32_t kShapeNodeId = 50;
   CustomSession sess = CreateRootSession(1024, 768);
   {
-    const uint32_t kViewId = 15;
-    const uint32_t kViewHolderId = 30;
-    const uint32_t kRectId = 70;
-    const uint32_t kRootNodeId = 20007;
+    enum : uint32_t {
+      kViewId = 15,
+      kViewHolderId,
+      kShapeNodeId,
+      kRectId,
+    };
 
     const int32_t pane_width = layer_width();
     const int32_t pane_height = 0.25 * layer_height();
 
-    sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
     sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
                                               "MyViewHolder"));
     sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
@@ -321,25 +501,26 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
     sess.Apply(scenic::NewSetTranslationCmd(
         kShapeNodeId, (float[3]){0.5f * pane_width, 0.5f * layer_height(), 0.f}));
 
-    sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
-    sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeNodeId));
   }
 
   // Perform two hit tests on either side of the display.
-  std::vector<Hit> hits, hits2;
   {
     // First hit test should intersect the view's bounding box.
     HitTester hit_tester;
-    hits = layer_stack()->HitTest(HitRay(5, layer_height() / 2), &hit_tester);
-    ASSERT_EQ(hits.size(), 1u) << "Should see a single hit on the rectangle";
-    EXPECT_EQ(hits[0].node->id(), kShapeNodeId);
-
+    TestHitAccumulator<ViewHit> accumulator;
+    layer_stack()->HitTest(HitRay(5, layer_height() / 2), &hit_tester, &accumulator);
+    EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
+  }
+  {
     // Second hit test should completely miss the view's bounding box.
-    HitTester hit_tester2;
-    hits2 =
-        layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &hit_tester2);
-    EXPECT_EQ(hits2.size(), 0u) << "Should see no hits since its outside the view bounds";
+    HitTester hit_tester;
+    TestHitAccumulator<ViewHit> accumulator;
+    layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &hit_tester,
+                           &accumulator);
+    EXPECT_EQ(accumulator.hits().size(), 0u)
+        << "Should see no hits since its outside the view bounds";
   }
 }
 
@@ -360,11 +541,6 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
 // Where v represents a view, r represents a hittable rectangle inside that view, and (r) represents
 // a second rectangle inside a subtree topped with a hit-suppressed EntityNode.
 TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
-  sys::testing::ComponentContextProvider context_provider;
-  std::unique_ptr<Engine> engine =
-      std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
-                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
-
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -421,14 +597,15 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
         kHittableShapeNodeId, (float[3]){layer_width() / 2.f, layer_height() / 2.f, -2.5f}));
   }
 
-  std::vector<Hit> hits;
   {
     HitTester hit_tester;
-    hits = layer_stack()->HitTest(HitRay(layer_width() / 2, layer_height() / 2), &hit_tester);
-  }
+    TestHitAccumulator<NodeHit> accumulator;
+    hit_tester.HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2),
+                       &accumulator);
 
-  ASSERT_EQ(hits.size(), 1u);
-  EXPECT_EQ(hits[0].node->id(), kHittableShapeNodeId);
+    ASSERT_EQ(accumulator.hits().size(), 1u);
+    EXPECT_EQ(accumulator.hits().front().node->id(), kHittableShapeNodeId);
+  }
 }
 
 // TODO(40161): This is fragile but we don't want this to regress if we can help it before
@@ -482,50 +659,17 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShape2Id));
   }
 
+  HitTester hit_tester;
   {
-    HitTester hit_tester;
-    EXPECT_FALSE(layer_stack()->HitTest(HitRay(4, 4.5f), &hit_tester).empty());
-    EXPECT_FALSE(layer_stack()->HitTest(HitRay(12, 4.5f), &hit_tester).empty());
+    TestHitAccumulator<ViewHit> accumulator;
+    layer_stack()->HitTest(HitRay(4, 4.5f), &hit_tester, &accumulator);
+    EXPECT_FALSE(accumulator.hits().empty());
   }
-}
-
-// Test to ensure the collision debug messages are correct.
-TEST(HitTestTest, CollisionsWarningTest) {
-  // Empty list should have no collisions.
-  EXPECT_EQ(GetDistanceCollisionsWarning({}), "");
-
-  // Set up fake nodes.
-  std::vector<fxl::RefPtr<ShapeNode>> nodes;
-  const size_t num_nodes = 6;
-  for (size_t i = 0; i < num_nodes; ++i) {
-    nodes.push_back(fxl::MakeRefCounted<ShapeNode>(/*session=*/nullptr,
-                                                   /*session_id=*/num_nodes - i, /*node_id=*/i));
+  {
+    TestHitAccumulator<ViewHit> accumulator;
+    layer_stack()->HitTest(HitRay(12, 4.5f), &hit_tester, &accumulator);
+    EXPECT_FALSE(accumulator.hits().empty());
   }
-
-  // Nodes at same distance should collide.
-  const float distance1 = 100.0f;
-  const float distance2 = 200.0f;
-  const float distance3 = 300.0f;
-  std::vector<Hit> collisions_list{
-      {.node = nodes[0].get(), .distance = distance1},
-      {.node = nodes[1].get(), .distance = distance1},
-      {.node = nodes[2].get(), .distance = distance1},
-      {.node = nodes[3].get(), .distance = distance2},
-      {.node = nodes[4].get(), .distance = distance3},
-      {.node = nodes[5].get(), .distance = distance3},
-  };
-
-  EXPECT_EQ(GetDistanceCollisionsWarning(collisions_list),
-            "Input-hittable nodes with ids [ 6-0 5-1 4-2 ] [ 2-4 1-5 ] are at equal distance and "
-            "overlapping. See https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions");
-
-  // Nodes at different distances should have no collisions.
-  std::vector<Hit> no_collisions_list;
-  for (size_t i = 0; i < num_nodes; ++i) {
-    no_collisions_list.push_back(Hit{.node = nodes[i].get(), .distance = distance1 + i * 1.0f});
-  }
-
-  EXPECT_EQ(GetDistanceCollisionsWarning(no_collisions_list), "");
 }
 
 // A unit test to see what happens when a child view is bigger than its parent view, but still
@@ -544,25 +688,20 @@ TEST(HitTestTest, CollisionsWarningTest) {
 // c         pppppppp        c
 // c                         c
 // ccccccccccccccccccccccccccc
-TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
+TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
 
   CustomSession sess = CreateRootSession(1024, 768);
   {
-    const uint32_t kRootNodeId = 20007;
     const uint32_t kViewHolderId = 35;
-    // Create root node and middle node.
-    sess.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-
     sess.Apply(
         scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
 
-    // Add the first view holder as a child of the root node, and the second
-    // view holder as a child of the first view holder.
-    sess.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
-    sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
+    // Add the first view holder under the scene root, and the second view holder as a child of the
+    // first view holder.
+    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
 
     // Set view_holder 1's bounding box. It is a small box centered in the display.
     const float width = 100, height = 100;
@@ -626,12 +765,14 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kInnerShapeNodeId));
   }
 
-  std::vector<Hit> hits;
   {
     HitTester hit_tester;
-    hits = layer_stack()->HitTest(HitRay(layer_width() / 2, layer_height() / 2), &hit_tester);
-    ASSERT_EQ(hits.size(), 1u) << "Should only hit the shape encompassed by both views.";
-    EXPECT_EQ(hits[0].node->id(), kInnerShapeNodeId);
+    TestHitAccumulator<NodeHit> accumulator;
+    hit_tester.HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2),
+                       &accumulator);
+    EXPECT_EQ(accumulator.hits().size(), 1u)
+        << "Should only hit the shape encompassed by both views.";
+    EXPECT_EQ(accumulator.hits().front().node->id(), kInnerShapeNodeId);
   }
 }
 
@@ -720,20 +861,18 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kShapeNodeId));
   }
 
-  // Perform two hit tests on either side of the display.
-  std::vector<Hit> hits;
   {
-    // First hit test should intersect the view's bounding box.
     HitTester hit_tester;
-    hits =
-        layer_stack()->HitTest(HitRay(3 * layer_width() / 4, 3 * layer_height() / 4), &hit_tester);
-    EXPECT_EQ(hits.size(), 0u) << "Should not hit anything at all";
+    TestHitAccumulator<ViewHit> accumulator;
+    layer_stack()->HitTest(HitRay(3 * layer_width() / 4, 3 * layer_height() / 4), &hit_tester,
+                           &accumulator);
+    EXPECT_TRUE(accumulator.hits().empty());
   }
 }
 
-// A comprehensive test that sets up three independent sessions, with View/ViewHolder pairs and a
-// ShapeNode in each View, and checks if global hit testing has access to hittable nodes across all
-// sessions.
+// A comprehensive test that sets up a root session and two view sessions, with a ShapeNode in the
+// root scene and in each View, and checks if both view hits are produced by the
+// |SessionHitAccumulator|.
 TEST_F(MultiSessionHitTestTest, GlobalHits) {
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();
@@ -745,8 +884,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   const float inset_min[3] = {0, 0, 0};
   const float inset_max[3] = {0, 0, 0};
 
-  // Root session sets up the scene and two view holders.
-  const uint32_t kShapeNodeId1 = 1001;
+  // Root session sets up the scene with two view holders and some geometry.
   CustomSession s_r = CreateRootSession(9, 9);
   {
     const uint32_t kRootNodeId = 1007;
@@ -769,68 +907,70 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_r.Apply(
         scenic::NewSetViewPropertiesCmd(kViewHolder2Id, bbox_min, bbox_max, inset_min, inset_max));
 
-    s_r.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId1));
-    s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId1));
-    s_r.Apply(scenic::NewSetTranslationCmd(kShapeNodeId1, (float[3]){4.f, 4.f, /*z*/ -1.f}));
+    const uint32_t kShapeNodeId = 1001;
+    s_r.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+    s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
+    s_r.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -1.f}));
 
     const uint32_t kShapeId = 2004;
     s_r.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
                                             /*px-height*/ 9.f));
-    s_r.Apply(scenic::NewSetShapeCmd(kShapeNodeId1, kShapeId));
+    s_r.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
   }
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
-  const uint32_t kShapeNodeId2 = 2003;
+  const uint32_t kViewId1 = 2001;
   CustomSession s_1(1, engine()->session_context());
   {
-    const uint32_t kViewId = 2001;
-    s_1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_1), "view_1"));
+    s_1.Apply(scenic::NewCreateViewCmd(kViewId1, std::move(view_token_1), "view_1"));
 
     const uint32_t kRootNodeId = 2002;
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    s_1.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
+    s_1.Apply(scenic::NewAddChildCmd(kViewId1, kRootNodeId));
 
-    s_1.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId2));
-    s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId2));
-    s_1.Apply(scenic::NewSetTranslationCmd(kShapeNodeId2, (float[3]){4.f, 4.f, /*z*/ -2.f}));
+    const uint32_t kShapeNodeId = 2003;
+    s_1.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+    s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
+    s_1.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -2.f}));
 
-    const uint32_t kShapeId = 2004;
+    const uint32_t kShapeId = 2004;  // Hit
     s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
                                             /*px-height*/ 9.f));
-    s_1.Apply(scenic::NewSetShapeCmd(kShapeNodeId2, kShapeId));
+    s_1.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
   }
 
-  const uint32_t kShapeNodeId3 = 3003;
+  const uint32_t kViewId2 = 3001;
   CustomSession s_2(2, engine()->session_context());
   {
-    const uint32_t kViewId = 3001;
-    s_2.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_2), "view_2"));
+    s_2.Apply(scenic::NewCreateViewCmd(kViewId2, std::move(view_token_2), "view_2"));
 
     const uint32_t kRootNodeId = 3002;
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
-    s_2.Apply(scenic::NewAddChildCmd(kViewId, kRootNodeId));
+    s_2.Apply(scenic::NewAddChildCmd(kViewId2, kRootNodeId));
 
-    s_2.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId3));
-    s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId3));
-    s_2.Apply(scenic::NewSetTranslationCmd(kShapeNodeId3, (float[3]){4.f, 4.f, /*z*/ -3.f}));
+    const uint32_t kShapeNodeId = 3003;
+    s_2.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+    s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
+    s_2.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -3.f}));
 
-    const uint32_t kShapeId = 3004;
+    const uint32_t kShapeId = 3004;  // Hit
     s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
                                             /*px-height*/ 9.f));
-    s_2.Apply(scenic::NewSetShapeCmd(kShapeNodeId3, kShapeId));
+    s_2.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
   }
 
-  std::vector<Hit> hits;
   {
     HitTester hit_tester;
-    hits = layer_stack()->HitTest(HitRay(4, 4), &hit_tester);
-  }
+    SessionHitAccumulator accumulator;
+    layer_stack()->HitTest(HitRay(4, 4), &hit_tester, &accumulator);
 
-  // All that for this!
-  ASSERT_EQ(hits.size(), 3u) << "Should see three hits across three sessions.";
-  EXPECT_EQ(hits[0].node->id(), kShapeNodeId3);
-  EXPECT_EQ(hits[1].node->id(), kShapeNodeId2);
-  EXPECT_EQ(hits[2].node->id(), kShapeNodeId1);
+    const auto& hits = accumulator.hits();
+
+    // All that for this!
+    ASSERT_EQ(hits.size(), 2u) << "Should see two hits across two view sessions.";
+    EXPECT_EQ(hits[0].view->id(), kViewId2);
+    EXPECT_EQ(hits[1].view->id(), kViewId1);
+  }
 }
 
 }  // namespace

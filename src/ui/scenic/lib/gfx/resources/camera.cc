@@ -72,7 +72,7 @@ escher::hmd::PoseBuffer Camera::GetEscherPoseBuffer() const {
                       : escher::hmd::PoseBuffer();  // NOTE: has operator bool
 }
 
-std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(
+std::pair<escher::ray4, escher::mat4> Camera::ProjectRay(
     const escher::ray4& ray, const escher::ViewingVolume& viewing_volume) const {
   auto camera = GetEscherCamera(viewing_volume);
 
@@ -95,9 +95,8 @@ std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(
   // http://www.codinglabs.net/article_world_view_projection_matrix.aspx
   // https://stackoverflow.com/questions/2093096/implementing-ray-picking
   auto inverse_vp = glm::inverse(device_transform * camera.projection() * camera.transform());
-  auto inverse_scene_transform = glm::inverse(static_cast<escher::mat4>(scene()->transform()));
 
-  return {inverse_scene_transform * inverse_vp * ray, inverse_scene_transform * inverse_vp};
+  return {inverse_vp * ray, inverse_vp};
 }
 
 }  // namespace gfx

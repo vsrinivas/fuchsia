@@ -158,6 +158,7 @@ executable("unittests") {
     "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
+    "hittest_accumulator_unittest.cc",
     "hittest_global_unittest.cc",
     "host_image_unittest.cc",
     "image_pipe2_unittest.cc",

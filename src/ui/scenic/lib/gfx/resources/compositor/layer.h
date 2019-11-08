@@ -5,11 +5,13 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_RESOURCES_COMPOSITOR_LAYER_H_
 #define SRC_UI_SCENIC_LIB_GFX_RESOURCES_COMPOSITOR_LAYER_H_
 
+#include <memory>
 #include <set>
 
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 
@@ -67,8 +69,10 @@ class Layer : public Resource {
   // Performs a hit test into the scene of renderer, along the provided ray in
   // the layer's coordinate system.
   //
-  // The hit collection behavior depends on the hit tester.
-  std::vector<Hit> HitTest(const escher::ray4& ray, HitTester* hit_tester) const;
+  // The hit collection behavior depends on the hit tester and accumulator. These hits include
+  // transforms into view space.
+  void HitTest(const escher::ray4& ray, HitTester* hit_tester,
+               HitAccumulator<ViewHit>* hit_accumulator) const;
 
   // Returns the current viewing volume of the layer. Used by the compositor
   // when initializing the stage, as well as for hit testing.

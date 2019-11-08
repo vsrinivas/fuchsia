@@ -480,8 +480,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   // Process the event.
   if (dispatch_event) {
     if (event.is_pointer()) {
-      // TODO(fxr/323814): const (for now, we transform coordinates at the end)
-      fuchsia::ui::input::PointerEvent& pointer = event.pointer();
+      const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
 
       // TODO(SCN-1278): Use proper trace_id for tracing flow.
       trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
@@ -544,15 +543,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
           (*listener)->OnPointerEvent(std::move(clone));
         }
       }
-
-      // Scenic's input system accounts for scene rotation (part of scene graph) in both hit testing
-      // and coordinate mapping, but does not account for the camera transform during coordinate
-      // mapping. The following is an attempt to cover the latter, but it is ultimately flawed as
-      // a11y gestures actually require rotated but otherwise untransformed coordinates.
-      //
-      // TODO(fxr/323814): This will be fixed in the input system.
-      pointer.x = transformed_point.x;
-      pointer.y = transformed_point.y;
 
       fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
       pointer_cmd.pointer_event = std::move(pointer);

@@ -4,15 +4,39 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 
+#include <optional>
+
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
 namespace scenic_impl {
 namespace gfx {
+
+namespace {
+
+std::optional<ViewHit> CreateViewHit(const NodeHit& hit, const escher::mat4& layer_transform) {
+  FXL_DCHECK(hit.node);
+  ViewPtr view = hit.node->FindOwningView();
+
+  if (!view) {
+    return std::nullopt;
+  }
+
+  FXL_DCHECK(view->GetViewNode());
+
+  return ViewHit{
+      .view = view,
+      .transform = glm::inverse(view->GetViewNode()->GetGlobalTransform()) * layer_transform,
+      .distance = hit.distance,
+  };
+}
+
+}  // namespace
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
@@ -68,38 +92,34 @@ bool Layer::IsDrawable() const {
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
 }
 
-std::vector<Hit> Layer::HitTest(const escher::ray4& ray, HitTester* hit_tester) const {
+void Layer::HitTest(const escher::ray4& ray, HitTester* hit_tester,
+                    HitAccumulator<ViewHit>* hit_accumulator) const {
   FXL_CHECK(hit_tester);
 
-  Camera* camera = renderer()->camera();
-
   if (width() == 0.f || height() == 0.f) {
-    return std::vector<Hit>();
+    return;
   }
+
+  const Camera* const camera = renderer_->camera();
 
   // Normalize the origin of the ray with respect to the width and height of the
   // layer before passing it to the camera.
-  escher::mat4 layer_normalization = glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
+  const escher::mat4 layer_normalization =
+      glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
 
-  auto local_ray = layer_normalization * ray;
+  const auto local_ray = layer_normalization * ray;
 
   // Transform the normalized ray by the camera's transformation.
-  std::pair<escher::ray4, escher::mat4> camera_projection_pair =
-      camera->ProjectRayIntoScene(local_ray, GetViewingVolume());
+  const auto [camera_ray, camera_transform] = camera->ProjectRay(local_ray, GetViewingVolume());
 
-  std::vector<Hit> hits = hit_tester->HitTest(camera->scene().get(), camera_projection_pair.first);
+  // CreateViewHit needs this to compose the transform from layer space to view space.
+  const escher::mat4 layer_transform = camera_transform * layer_normalization;
 
-  escher::mat4 inverse_layer_transform =
-      glm::inverse(camera_projection_pair.second * layer_normalization);
+  MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
+      hit_accumulator,
+      [&layer_transform](const NodeHit& hit) { return CreateViewHit(hit, layer_transform); });
 
-  // Take the camera's transformation into account; after this the hit's
-  // inverse_transform goes from the passed in ray's coordinate system to the
-  // hit nodes' coordinate system.
-  for (auto& hit : hits) {
-    hit.inverse_transform = inverse_layer_transform * glm::inverse(hit.inverse_transform);
-  }
-
-  return hits;
+  hit_tester->HitTest(camera->scene().get(), camera_ray, &transforming_accumulator);
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {

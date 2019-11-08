@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
@@ -17,16 +18,17 @@ LayerStack::LayerStack(Session* session, SessionId session_id, ResourceId id)
 
 LayerStack::~LayerStack() = default;
 
-std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray, HitTester* hit_tester) const {
+void LayerStack::HitTest(const escher::ray4& ray, HitTester* hit_tester,
+                         HitAccumulator<ViewHit>* hit_accumulator) const {
   FXL_CHECK(hit_tester);
+  FXL_CHECK(hit_accumulator);
 
-  std::vector<Hit> hits;
-  for (auto layer : layers_) {
-    std::vector<Hit> layer_hits = layer->HitTest(ray, hit_tester);
-    // N.B. We specifically want sort-first-by-layer-then-by-depth ordering.
-    hits.insert(hits.end(), layer_hits.begin(), layer_hits.end());
+  for (auto& layer : layers_) {
+    layer->HitTest(ray, hit_tester, hit_accumulator);
+    if (!hit_accumulator->EndLayer()) {
+      break;
+    }
   }
-  return hits;
 }
 
 bool LayerStack::AddLayer(LayerPtr layer, ErrorReporter* reporter) {

@@ -9,8 +9,7 @@ namespace scenic_impl::input {
 using escher::operator<<;
 
 std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value) {
-  return os << "Entry: [" << value.session_id << ", GlobalTransform=\n"
-            << value.global_transform << "\n]";
+  return os << "Entry: [" << value.session_id << ", Transform=\n" << value.transform << "\n]";
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewStack& value) {

@@ -47,12 +47,11 @@ class Camera : public Resource {
 
   escher::hmd::PoseBuffer GetEscherPoseBuffer() const;
 
-  // Projects the provided |ray| into the coordinate space of this camera's
-  // scene.
+  // Projects the provided |ray| into global coordinates.
   //
   // The first entry in the pair is the projected ray, and the second entry
   // is the transformation that was applied to the passed in ray.
-  std::pair<escher::ray4, escher::mat4> ProjectRayIntoScene(
+  std::pair<escher::ray4, escher::mat4> ProjectRay(
       const escher::ray4& ray, const escher::ViewingVolume& viewing_volume) const;
 
  protected:

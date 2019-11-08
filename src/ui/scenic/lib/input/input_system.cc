@@ -21,6 +21,7 @@
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
@@ -96,23 +97,15 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
 
 // Helper for Dispatch[Touch|Mouse]Command.
 escher::vec2 TransformPointerEvent(const escher::ray4& ray, const escher::mat4& transform) {
-  escher::ray4 local_ray = glm::inverse(transform) * ray;
+  const escher::ray4 local_ray = transform * ray;
 
   // We treat distance as 0 to simplify; otherwise the formula is:
   // hit = homogenize(local_ray.origin + distance * local_ray.direction);
   escher::vec2 hit(escher::homogenize(local_ray.origin));
 
-  FXL_VLOG(2) << "Coordinate transform (device->view): (" << ray.origin.x << ", " << ray.origin.x
+  FXL_VLOG(2) << "Coordinate transform (device->view): (" << ray.origin.x << ", " << ray.origin.y
               << ")->(" << hit.x << ", " << hit.y << ")";
   return hit;
-}
-
-// Helper for Dispatch[Touch|Mouse]Command.
-glm::mat4 FindGlobalTransform(gfx::ViewPtr view) {
-  if (!view || !view->GetViewNode()) {
-    return glm::mat4(1.f);  // Default is identity transform.
-  }
-  return view->GetViewNode()->GetGlobalTransform();
 }
 
 // The x and y values are in device (screen) coordinates.
@@ -126,8 +119,8 @@ glm::mat4 FindGlobalTransform(gfx::ViewPtr view) {
 // This invariant means this dispatcher context's session, handling an input
 // command, also originally created the compositor.
 //
-std::vector<gfx::Hit> PerformGlobalHitTest(gfx::Engine* engine, GlobalId compositor_id, float x,
-                                           float y) {
+void PerformGlobalHitTest(gfx::Engine* engine, GlobalId compositor_id, float x, float y,
+                          gfx::HitAccumulator<gfx::ViewHit>* accumulator) {
   FXL_DCHECK(engine);
 
   escher::ray4 ray = CreateScreenPerpendicularRay(x, y);
@@ -139,18 +132,8 @@ std::vector<gfx::Hit> PerformGlobalHitTest(gfx::Engine* engine, GlobalId composi
   gfx::LayerStackPtr layer_stack = compositor->layer_stack();
   FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
 
-  auto hit_tester = std::make_unique<gfx::HitTester>();
-  std::vector<gfx::Hit> hits = layer_stack->HitTest(ray, hit_tester.get());
-
-  FXL_VLOG(1) << "Hits acquired, count: " << hits.size();
-
-  if (FXL_VLOG_IS_ON(2)) {
-    for (size_t i = 0; i < hits.size(); ++i) {
-      FXL_VLOG(2) << "\tHit[" << i << "]: " << hits[i].node->global_id();
-    }
-  }
-
-  return hits;
+  gfx::HitTester hit_tester;
+  layer_stack->HitTest(ray, &hit_tester, accumulator);
 }
 
 // Helper for DispatchCommand.
@@ -164,29 +147,10 @@ PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x, float y)
 
 // Helper for EnqueueEventToView.
 // Builds a pointer event with local view coordinates.
-PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event,
-                                    const glm::mat4& global_transform) {
-  const float global_x = pointer_event.x;
-  const float global_y = pointer_event.y;
-  escher::ray4 screen_ray = CreateScreenPerpendicularRay(global_x, global_y);
-  escher::vec2 hit = TransformPointerEvent(screen_ray, global_transform);
+PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event, const glm::mat4& transform) {
+  const escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer_event.x, pointer_event.y);
+  const escher::vec2 hit = TransformPointerEvent(screen_ray, transform);
   return ClonePointerWithCoords(pointer_event, hit.x, hit.y);
-}
-
-// Helper for DispatchTouchCommand.
-// Ensure sessions get each event just once: stamp out duplicate
-// sessions in the rest of the hits. This assumes:
-// - each session has at most one View
-// - each session receives at most one hit per View
-// TODO(SCN-935): Return full set of hits to each client.
-void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
-                               std::vector<gfx::ViewPtr>* views) {
-  FXL_DCHECK(views);
-  for (size_t k = start_idx; k < views->size(); ++k) {
-    if ((*views)[k] && ((*views)[k]->session_id() == session_id)) {
-      (*views)[k] = nullptr;
-    }
-  }
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.
@@ -328,39 +292,31 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
 
   if (pointer_phase == Phase::ADD) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
-    const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
+
+    gfx::SessionHitAccumulator accumulator;
+    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &accumulator);
+    const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
     ViewStack hit_views;
     bool is_focus_change = true;
     {
-      // Find the View for each hit. Don't hold on to these RefPtrs!
-      std::vector<gfx::ViewPtr> views;
-      views.reserve(hits.size());
-      for (const gfx::Hit& hit : hits) {
-        FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-        views.push_back(hit.node->FindOwningView());
-      }
-      FXL_DCHECK(hits.size() == views.size());
-
-      // Find the global transform for each hit, fill out hit_views.
-      for (size_t i = 0; i < hits.size(); ++i) {
-        if (gfx::ViewPtr view = views[i]) {
-          hit_views.stack.push_back({view->view_ref_koid(), view->session_id(),
-                                     view->event_reporter()->GetWeakPtr(),
-                                     FindGlobalTransform(view)});
-          if (/*TODO(SCN-919): view_id may mask input */ false) {
-            break;
-          }
-          // Don't do this. Refer to comment on RemoveHitsFromSameSession.
-          RemoveHitsFromSameSession(view->session_id(), i + 1, &views);
+      // Find the transform (input -> view coordinates) for each hit and fill out hit_views.
+      for (const gfx::ViewHit& hit : hits) {
+        hit_views.stack.push_back({
+            hit.view->view_ref_koid(),
+            hit.view->session_id(),
+            hit.view->event_reporter()->GetWeakPtr(),
+            hit.transform,
+        });
+        if (/*TODO(SCN-919): view_id may mask input */ false) {
+          break;
         }
       }
 
       // Determine focusability of top-level view.
-      if (views.size() > 0 && views[0]) {
-        is_focus_change = IsFocusChange(views[0]);
+      if (!hits.empty()) {
+        is_focus_change = IsFocusChange(hits.front().view);
         hit_views.focus_change = is_focus_change;
       }
     }
@@ -407,26 +363,25 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
     // NOTE: Do not rely on the latched view stack for "top hit" information; elevation can change
     // dynamically (it's only guaranteed correct for DOWN). Instead, perform an independent query
     // for "top hit".
-    glm::mat4 view_global_transform(1.f);
+    glm::mat4 view_transform(1.f);
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
     {
       GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
-      const std::vector<gfx::Hit> hits =
-          PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
+
       // Find top-hit target and send it to accessibility.
-      // NOTE: We may hit various mouse cursors (owned by root presenter), so keep going until we
-      // find a hit with a valid owning View.
-      for (const gfx::Hit& hit : hits) {
-        FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-        if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-          view_global_transform = FindGlobalTransform(view);
-          view_ref_koid = view->view_ref_koid();
-          break;  // Just need the first one.
-        }
+      // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
+      // will keep going until we find a hit with a valid owning View.
+      gfx::TopHitAccumulator top_hit;
+      PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+
+      if (top_hit.hit()) {
+        const gfx::ViewHit& hit = *top_hit.hit();
+
+        view_transform = hit.transform;
+        view_ref_koid = hit.view->view_ref_koid();
       }
     }
-    const auto& top_hit_view_local =
-        BuildLocalPointerEvent(/*pointer_event=*/command.pointer_event, view_global_transform);
+    const auto top_hit_view_local = BuildLocalPointerEvent(command.pointer_event, view_transform);
     AccessibilityPointerEvent packet =
         BuildAccessibilityPointerEvent(command.pointer_event, top_hit_view_local, view_ref_koid);
     pointer_event_buffer_->AddEvents(pointer_id, std::move(deferred_events), std::move(packet));
@@ -466,21 +421,25 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
 
   if (pointer_phase == Phase::DOWN) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
-    const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
 
     // Find top-hit target and associated properties.
-    // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
-    // going until we find a hit with a valid owning View.
+    // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
+    // will keep going until we find a hit with a valid owning View.
+    gfx::TopHitAccumulator top_hit;
+    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+
     ViewStack hit_view;
-    for (gfx::Hit hit : hits) {
-      FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-        hit_view.stack.push_back({view->view_ref_koid(), view->session_id(),
-                                  view->event_reporter()->GetWeakPtr(), FindGlobalTransform(view)});
-        hit_view.focus_change = IsFocusChange(view);
-        break;  // Just need the first one.
-      }
+
+    if (top_hit.hit()) {
+      const gfx::ViewHit& hit = *top_hit.hit();
+
+      hit_view.stack.push_back({
+          hit.view->view_ref_koid(),
+          hit.view->session_id(),
+          hit.view->event_reporter()->GetWeakPtr(),
+          hit.transform,
+      });
+      hit_view.focus_change = IsFocusChange(hit.view);
     }
     FXL_VLOG(1) << "View hit: " << hit_view;
 
@@ -509,26 +468,23 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
   // Deal with unassociated MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
-    const std::vector<gfx::Hit> hits =
-        PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y);
-    // Find top-hit target and send it this move event.
-    // NOTE: We may hit various mouse cursors (owned by root presenter), so keep
-    // going until we find a hit with a valid owning View.
-    GlobalId view_id;
-    for (gfx::Hit hit : hits) {
-      FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-        ViewStack::Entry view_info;
-        view_info.reporter = view->event_reporter()->GetWeakPtr();
-        view_info.global_transform = FindGlobalTransform(view);
-        PointerEvent clone;
-        fidl::Clone(command.pointer_event, &clone);
-        ReportPointerEvent(view_info, std::move(clone));
-        break;  // Just need the first one.
-      }
-    }
 
-    FXL_VLOG(2) << "View hit: " << view_id;
+    // Find top-hit target and send it this move event.
+    // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
+    // will keep going until we find a hit with a valid owning View.
+    gfx::TopHitAccumulator top_hit;
+    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+
+    if (top_hit.hit()) {
+      const gfx::ViewHit& hit = *top_hit.hit();
+
+      ViewStack::Entry view_info;
+      view_info.reporter = hit.view->event_reporter()->GetWeakPtr();
+      view_info.transform = hit.transform;
+      PointerEvent clone;
+      fidl::Clone(command.pointer_event, &clone);
+      ReportPointerEvent(view_info, std::move(clone));
+    }
   }
 }
 
@@ -593,9 +549,8 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
 
   FXL_VLOG(2) << "Sending pointer event to session " << view_info.session_id;
 
-  auto local_pointer_event = BuildLocalPointerEvent(pointer, view_info.global_transform);
   InputEvent event;
-  event.set_pointer(std::move(local_pointer_event));
+  event.set_pointer(BuildLocalPointerEvent(pointer, view_info.transform));
 
   view_info.reporter->EnqueueEvent(std::move(event));
 }
@@ -632,18 +587,19 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
             /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED,
             /*focus_change=*/false);
       }
-      // Registers an event handler for this listener.
-      auto event_handler = [buffer = pointer_event_buffer_.get()](
-                               uint32_t device_id, uint32_t pointer_id,
-                               fuchsia::ui::input::accessibility::EventHandling handled) {
-        buffer->UpdateStream(pointer_id, handled);
-      };
+      // Registers an event handler for this listener. This callback captures a pointer to the event
+      // buffer that we own, so we need to clear it before we destroy it (see below).
       input_system_->accessibility_pointer_event_listener().events().OnStreamHandled =
-          std::move(event_handler);
+          [buffer = pointer_event_buffer_.get()](
+              uint32_t device_id, uint32_t pointer_id,
+              fuchsia::ui::input::accessibility::EventHandling handled) {
+            buffer->UpdateStream(pointer_id, handled);
+          };
     }
     return true;
   } else if (pointer_event_buffer_) {
     // The listener disconnected. Release held events, delete the buffer.
+    input_system_->accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
     pointer_event_buffer_.reset();
   }
   return false;

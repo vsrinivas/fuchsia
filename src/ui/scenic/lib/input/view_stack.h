@@ -26,8 +26,10 @@ struct ViewStack {
     // the client closing it or due to the server responding to an error) this pointer should go out
     // of scope.
     EventReporterWeakPtr reporter;
-    // The model-to-global transform for the UX element associated with this endpoint.
-    glm::mat4 global_transform = glm::mat4(1.f);
+    // The transform from input device coordinates to the local coordinate space of the UX element
+    // associated with this endpoint. This, as opposed to hit testing every time, allows us to latch
+    // move events to an element that was hit on down (in addition to saving on the hit test).
+    glm::mat4 transform = glm::mat4(1.f);
   };
   std::vector<Entry> stack;
 

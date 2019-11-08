@@ -81,6 +81,8 @@ source_set("gfx") {
     "engine/hardware_layer_assignment.cc",
     "engine/hardware_layer_assignment.h",
     "engine/hit.h",
+    "engine/hit_accumulator.cc",
+    "engine/hit_accumulator.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
     "engine/image_pipe_updater.cc",

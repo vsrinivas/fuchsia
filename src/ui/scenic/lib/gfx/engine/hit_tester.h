@@ -5,9 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_TESTER_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_TESTER_H_
 
-#include <vector>
-
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -21,23 +20,12 @@ class HitTester {
   HitTester() = default;
   virtual ~HitTester() = default;
 
-  // Performs a hit test along the specified ray. Returns a list of hits sorted by increasing
-  // distance. For hits of equal distance, the returned vector does not impose additional sorting
-  // based on tree depth or sibling order.
-  std::vector<Hit> HitTest(Node* node, const escher::ray4& ray);
+  // Performs a hit test along the specified ray, adding hit candidates to the given accumulator.
+  // The accumulator determines which hits are kept and how they are handled. The ray and the node
+  // should be in the same coordinate system (before applying the node's own transform).
+  void HitTest(Node* node, const escher::ray4& ray, HitAccumulator<NodeHit>* accumulator);
 
  private:
-  // Describes a ray and its accumulated transform.
-  struct RayInfo {
-    // The ray to test in the object's coordinate system.
-    escher::ray4 ray;
-
-    // The accumulated inverse transformation matrix which maps the coordinate
-    // system of the node at which the hit test was initiated into the
-    // coordinate system of the object.
-    escher::mat4 inverse_transform;
-  };
-
   // Accumulates hit test results from the node, as seen by its parent.
   // Applies the node's transform to the ray stack.
   // |ray_info_| must be in the parent's local coordinate system.
@@ -47,22 +35,18 @@ class HitTester {
   // |ray_info_| must be in the node's local coordinate system.
   void AccumulateHitsInner(Node* node);
 
-  // The vector which accumulates hits.
-  std::vector<Hit> hits_;
+  CollisionAccumulator collision_reporter_;
+  HitAccumulator<NodeHit>* accumulator_ = nullptr;
 
-  // The current ray information.
+  // The current ray.
   // Null if there is no hit test currently in progress.
   // TODO(SCN-909): Refactor out.
-  RayInfo* ray_info_ = nullptr;
+  const escher::ray4* ray_ = nullptr;
 
   // The current intersection information.
   // NULL if we haven't intersected anything yet.
   Node::IntersectionInfo* intersection_info_ = nullptr;
 };
-
-// Takes a distance-sorted list of hits, and if there are distance collisions in the list returns a
-// warning message to be piped to FXL_LOG. If there are no collision, returns an empty string.
-std::string GetDistanceCollisionsWarning(const std::vector<Hit>& hits);
 
 }  // namespace gfx
 }  // namespace scenic_impl
