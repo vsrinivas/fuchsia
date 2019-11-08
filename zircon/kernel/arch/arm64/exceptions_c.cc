@@ -26,8 +26,6 @@
 
 #define LOCAL_TRACE 0
 
-#define DFSC_ALIGNMENT_FAULT 0b100001
-
 static void dump_iframe(const arm64_iframe_t* iframe) {
   printf("iframe %p:\n", iframe);
   printf("x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
@@ -195,27 +193,50 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
 }
 
 static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
-  /* read the FAR register */
+  // read the FAR register
   uint64_t far = __arm_rsr64("far_el1");
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
   uint32_t iss = BITS(esr, 24, 0);
   bool is_user = !BIT(ec, 0);
   bool WnR = BIT(iss, 6);  // Write not Read
   bool CM = BIT(iss, 8);   // cache maintenance op
-
-  uint pf_flags = 0;
-  // if it was marked Write but the cache maintenance bit was set, treat it as read
-  pf_flags |= (WnR && !CM) ? VMM_PF_FLAG_WRITE : 0;
-  pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
-  /* Check if this was not permission fault */
-  if ((iss & 0b111100) != 0b001100) {
-    pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
-  }
+  uint32_t dfsc = BITS(iss, 5, 0);
+  uint pf_flags;
+  uint64_t dfr;
 
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
           iframe->elr, is_user, far, esr, iss);
 
-  uint64_t dfr = get_current_thread()->arch.data_fault_resume;
+  // there are 4 main types of data aborts
+  // translation: standard page faults such as page not present, permission, etc
+  // synchronous external: something unrecoverable in the memory subsystem
+  // alignment faults: unaligned operations where alignment is needed
+  // other: currently other bad user initiated operations
+#define DFSC_TYPE_MASK 0b110000
+#define DFSC_TYPE_TRANSLATE 0b000000
+#define DFSC_TYPE_SYNC 0b010000
+#define DFSC_TYPE_ALIGN 0b100000
+#define DFSC_TYPE_OTHER 0b110000
+#define DFSC_ALIGNMENT_FAULT 0b100001
+
+  // Synchronous external exceptions we cannot handle, exit here
+  if (unlikely((dfsc & DFSC_TYPE_MASK) == DFSC_TYPE_SYNC)) {
+    goto fatal;
+  }
+
+  // compute the kernel generic page fault flags from some other bits in the ISS
+  pf_flags = 0;
+  // if it was marked Write but the cache maintenance bit was set, treat it as read
+  pf_flags |= (WnR && !CM) ? VMM_PF_FLAG_WRITE : 0;
+  pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
+
+  // Check if this was not permission fault
+  if ((iss & 0b111100) != 0b001100) {
+    pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+  }
+
+  // TODO: do we need to specially handle alignment faults here?
+  dfr = get_current_thread()->arch.data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -227,13 +248,18 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
     return;
   }
 
-  uint32_t dfsc = BITS(iss, 5, 0);
-  if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
+  // translation errors the higher level VMM code is prepared to deal with
+  if (likely((dfsc & DFSC_TYPE_MASK) == DFSC_TYPE_TRANSLATE)) {
     arch_enable_ints();
+
     kcounter_add(exceptions_page, 1);
+    CPU_STATS_INC(page_faults);
+
     zx_status_t err = vmm_page_fault_handler(far, pf_flags);
+
     arch_disable_ints();
-    if (err >= 0) {
+    // if we've successfully handled it, exit here
+    if (likely(err >= 0)) {
       return;
     }
   }
@@ -261,15 +287,13 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
     }
   }
 
-  /* decode the iss */
-  if (BIT(iss, 24)) { /* ISV bit */
-    exception_die(iframe, esr,
-                  "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
-                  iframe->elr, far, iss, BITS(iss, 5, 0));
-  } else {
-    exception_die(iframe, esr, "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss 0x%x\n",
-                  iframe->elr, far, iss);
-  }
+  // we did something we cannot handle from kernel space, fall through to fatal case
+
+fatal:
+  // decode the iss
+  exception_die(iframe, esr,
+                "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
+                iframe->elr, far, iss, dfsc);
 }
 
 static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
