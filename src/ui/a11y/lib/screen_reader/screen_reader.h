@@ -31,13 +31,13 @@ class ScreenReader {
   // Pointers to Semantics Manager, TTS Manager and Gesture Manager must outlive
   // screen reader. A11y App is responsible for creating these pointers along
   // with Screen Reader object.
-  explicit ScreenReader(a11y::SemanticsManager* semantics_manager_impl,
-                        a11y::TtsManager* tts_manager, a11y::GestureManager* gesture_manager);
+  ScreenReader(a11y::SemanticsManager* semantics_manager_impl, a11y::TtsManager* tts_manager,
+               a11y::GestureManager* gesture_manager);
   ~ScreenReader() = default;
 
  private:
   // Initializes services TTS Engine and binds actions to gesture manager.
-  void InitalizeServicesAndAction();
+  void InitializeServicesAndAction();
 
   // Helps finding the appropriate Action based on Action Name and calls Run()
   // for the matched Action.

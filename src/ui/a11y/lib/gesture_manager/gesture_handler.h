@@ -9,12 +9,17 @@
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
+#include <unordered_map>
+
+#include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 
 namespace a11y {
 
-// A GestureHandler binds gestures to actions, and offers a way to call the actions bound to an
-// action later.
+// A GestureHandler binds gestures to actions, and allows gestures to call these
+// actions when necessary.
 class GestureHandler {
  public:
   // The high-level gestures identified by this class.
@@ -34,23 +39,27 @@ class GestureHandler {
     // finger tap is implemented, so this is enough here.
     std::optional<fuchsia::math::PointF> coordinates;
   };
-  // TODO(lucasradaelli): Decide whether to implement a single callback for all gestures or a
-  // per-gesture callback.
-  using OneFingerTapCallback = fit::function<void(zx_koid_t, fuchsia::math::PointF)>;
+  // Callback invoked when the gesture it is bound to is detected.
+  using OnGestureCallback = fit::function<void(zx_koid_t, fuchsia::math::PointF)>;
 
-  GestureHandler() = default;
+  explicit GestureHandler(GestureArena* arena);
   ~GestureHandler() = default;
 
   // Binds the action defined in |callback| with the gesture |kOneFingerTap|.
-  void BindOneFingerTapAction(OneFingerTapCallback callback) {
-    one_finger_tap_callback_ = std::move(callback);
-  }
+  void BindOneFingerTapAction(OnGestureCallback callback);
 
+ private:
   // Calls an action bound to |gesture_type| if it exists and returns true, false otherwise.
   bool OnGesture(GestureType gesture_type, GestureArguments args);
 
- private:
-  OneFingerTapCallback one_finger_tap_callback_;
+  GestureArena* arena_ = nullptr;
+  // Action of kOneFingerTap.
+  OnGestureCallback one_finger_tap_callback_;
+
+  // As callbacks are added to the handler to be invoked when a gesture is
+  // performed, the recognizers capable of identifying them are instantiated and
+  // stored here.
+  std::unordered_map<GestureType, std::unique_ptr<GestureRecognizer>> gesture_recognizers_;
 };
 
 }  // namespace a11y

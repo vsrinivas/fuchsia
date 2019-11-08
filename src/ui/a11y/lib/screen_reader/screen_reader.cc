@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
 #include "src/lib/syslog/cpp/logger.h"
+
 namespace a11y {
 
 ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager, a11y::TtsManager* tts_manager,
@@ -13,10 +14,10 @@ ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager, a11y::TtsM
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_manager = semantics_manager;
 
-  InitalizeServicesAndAction();
+  InitializeServicesAndAction();
 }
 
-void ScreenReader::InitalizeServicesAndAction() {
+void ScreenReader::InitializeServicesAndAction() {
   // Initialize TTS Engine which will be used for Speaking using TTS.
   // TTS engine is stored in action_context_.
   tts_manager_->OpenEngine(action_context_->tts_engine_ptr.NewRequest(),

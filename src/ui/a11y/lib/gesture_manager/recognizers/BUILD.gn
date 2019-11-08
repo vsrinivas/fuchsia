@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("gesture_recognizers") {
+source_set("recognizers") {
   sources = [
     "one_finger_tap_recognizer.cc",
     "one_finger_tap_recognizer.h",

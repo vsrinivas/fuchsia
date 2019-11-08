@@ -61,14 +61,11 @@ TEST_F(GestureManagerTest, CallsActionOnTouch) {
     actual_handled = handled;
   };
   listener.events().OnStreamHandled = std::move(listener_callback);
-  RunLoopUntilIdle();
 
   {
-    // Sends an ADD event. Expects the callback from this event to be called
-    // (consuming the pointer stream).
+    // Sends an ADD event.
     auto event = GetDefaultPointerEvent();
     listener->OnEvent(std::move(event));
-    RunLoopUntilIdle();
   }
 
   {
@@ -76,7 +73,6 @@ TEST_F(GestureManagerTest, CallsActionOnTouch) {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::DOWN);
     listener->OnEvent(std::move(event));
-    RunLoopUntilIdle();
   }
 
   {
@@ -84,7 +80,6 @@ TEST_F(GestureManagerTest, CallsActionOnTouch) {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::UP);
     listener->OnEvent(std::move(event));
-    RunLoopUntilIdle();
   }
 
   {
@@ -92,8 +87,9 @@ TEST_F(GestureManagerTest, CallsActionOnTouch) {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
     listener->OnEvent(std::move(event));
-    RunLoopUntilIdle();
   }
+
+  RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid, 100u);
   EXPECT_EQ(actual_point.x, 2);

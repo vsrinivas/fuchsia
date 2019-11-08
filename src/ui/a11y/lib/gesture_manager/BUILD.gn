@@ -8,18 +8,14 @@ source_set("gesture_manager") {
     "gesture_handler.h",
     "gesture_manager.cc",
     "gesture_manager.h",
-    "interaction.cc",
-    "interaction.h",
-    "interaction_context.cc",
-    "interaction_context.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//src/lib/ui/input:gesture",
     "//src/ui/a11y/lib/gesture_manager/arena",
+    "//src/ui/a11y/lib/gesture_manager/recognizers",
   ]
 
   deps = [

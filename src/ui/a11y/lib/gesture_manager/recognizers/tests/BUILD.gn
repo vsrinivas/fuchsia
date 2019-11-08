@@ -22,6 +22,6 @@ executable("gesture_recognizers_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
-    "//src/ui/a11y/lib/gesture_manager/recognizers:gesture_recognizers",
+    "//src/ui/a11y/lib/gesture_manager/recognizers",
   ]
 }

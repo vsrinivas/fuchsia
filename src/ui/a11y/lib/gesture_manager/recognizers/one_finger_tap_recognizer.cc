@@ -19,11 +19,6 @@ OneFingerTapRecognizer::OneFingerTapRecognizer(OnOneFingerTap callback, zx::dura
       abandon_task_(this),
       tap_timeout_(tap_timeout) {}
 
-void OneFingerTapRecognizer::AddArenaMember(ArenaMember* new_arena_member) {
-  FXL_CHECK(new_arena_member);
-  arena_member_ = new_arena_member;
-}
-
 void OneFingerTapRecognizer::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   if (!pointer_event.has_phase()) {

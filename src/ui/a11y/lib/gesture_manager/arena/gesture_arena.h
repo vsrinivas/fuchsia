@@ -105,11 +105,11 @@ class PointerEventRouter {
  public:
   // Callback signature used to indicate when and how an pointer event sent to the arena was
   // processed.
-  using OnEventCallback =
+  using OnStreamHandledCallback =
       fit::function<void(uint32_t device_id, uint32_t pointer_id,
                          fuchsia::ui::input::accessibility::EventHandling handled)>;
 
-  PointerEventRouter() = default;
+  explicit PointerEventRouter(OnStreamHandledCallback on_stream_handled_callback);
   ~PointerEventRouter() = default;
 
   // Rejects all pointer event streams received by the router, causing it to become inactive.
@@ -123,8 +123,7 @@ class PointerEventRouter {
   // Dispatches the pointer event to all active arena members. For new contest (ADD pointer
   // events), also caches the callback from the input system to notify it later whether the pointer
   // events were consumed / rejected.
-  void RouteEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-                  OnEventCallback callback,
+  void RouteEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
                   const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
 
   // Returns true if it has any ongoing pointer event streams which are not
@@ -138,14 +137,19 @@ class PointerEventRouter {
   using StreamID = std::pair</*device_id=*/uint32_t, /*pointer_id=*/uint32_t>;
   void InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling handled);
 
-  // Holds callbacks associated with pointer event streams in order to notify the input system
-  // whether they were consumed / rejected. A pointer event stream is a sequence of pointer events
-  // that must start with an ADD phase event and end with an REMOVE phase event. Since only one
-  // callback is needed to notify the input system per stream, the ADD event callback is stored.
+  // Callback used to notify how each stream was handled.
+  OnStreamHandledCallback on_stream_handled_callback_;
+
+  // Holds how many times the |on_stream_handled_callback_| should be invoked
+  // per pointer event streams in order to notify the input system whether they
+  // were consumed / rejected. A pointer event stream is a sequence of pointer
+  // events that must start with an ADD phase event and end with an REMOVE phase
+  // event. Since only one callback call is needed to notify the input system
+  // per stream, on an ADD event the count is increased.
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
   // https://chromium.googlesource.com/chromium/src/+/master/base/containers/README.md#map-and-set-selection
-  std::map<StreamID, std::vector<OnEventCallback>> pointer_event_callbacks_;
+  std::map<StreamID, uint32_t> pointer_event_callbacks_;
 
   // Holds the streams in progress tracked by the router. A stream of pointer events is considered
   // to be active when an event with phase ADD was seen, but not an event with phase REMOVE yet.
@@ -213,7 +217,11 @@ class GestureArena {
     kRejectEvents,   // All events will be rejected by this arena when it becomes empty.
   };
 
-  GestureArena(EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kConsumeEvents);
+  // This arena takes |on_stream_handled_callback|, which is called whenever a
+  // stream of pointer events is handled (e.g., is consumed or rejected).
+  explicit GestureArena(
+      PointerEventRouter::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {},
+      EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kConsumeEvents);
   ~GestureArena() = default;
 
   // Adds a new recognizer to participate in the arena. The arena returns a
@@ -226,8 +234,7 @@ class GestureArena {
 
   // Dispatches a new pointer event to this arena. This event gets sent to all
   // arena members which are active at the moment.
-  void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-               PointerEventRouter::OnEventCallback callback);
+  void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Tries to resolve the arena if it is not resolved already.
   // It follows two rules:

@@ -53,9 +53,6 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // arena.
   OneFingerTapRecognizer(OnOneFingerTap callback, zx::duration tap_timeout = kOneFingerTapTimeout);
 
-  // Initializes pointer to Arena Member.
-  void AddArenaMember(ArenaMember* new_arena_member);
-
   // Processes incoming pointer events to detect single tap gesture.
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
 
@@ -97,9 +94,6 @@ class OneFingerTapRecognizer : public GestureRecognizer {
 
   // Stores the current state of the Gesture State Machine.
   TapGestureState gesture_state_ = TapGestureState::kNotStarted;
-
-  // Stores the pointer to Arena Member.
-  ArenaMember* arena_member_ = nullptr;
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;

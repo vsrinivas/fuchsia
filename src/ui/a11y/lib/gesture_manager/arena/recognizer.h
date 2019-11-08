@@ -11,6 +11,8 @@
 
 namespace a11y {
 
+class ArenaMember;
+
 // A Gesture Recognizer interface for accessibility services.
 //
 // Gesture Recognizers provide semantic meaning to a sequence of raw pointer
@@ -33,6 +35,12 @@ namespace a11y {
 class GestureRecognizer {
  public:
   virtual ~GestureRecognizer();
+
+  // Adds |arena_member| to the recognizer. This is normally obtained by adding
+  // the recognizer to the arena via GestureArena::Add(). For testing purposes,
+  // this method can take a MockArenaMember, which simplifies writing unit tests
+  // for concrete implementations of this class.
+  void AddArenaMember(ArenaMember* arena_member);
 
   // This method gets called when the recognizer has won the arena. The default implementation does
   // nothing.
@@ -59,6 +67,9 @@ class GestureRecognizer {
 
   // A human-readable string name for the recognizer to be used in logs only, e.g. OneTapRecognizer.
   virtual std::string DebugName() const = 0;
+
+ protected:
+  ArenaMember* arena_member_ = nullptr;
 };
 
 }  // namespace a11y

@@ -10,17 +10,14 @@
 #include <memory>
 
 #include "lib/fidl/cpp/binding.h"
-#include "src/lib/ui/input/gesture_detector.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
-#include "src/ui/a11y/lib/gesture_manager/interaction.h"
-#include "src/ui/a11y/lib/gesture_manager/interaction_context.h"
 
 namespace a11y {
 
 // A Gesture manager to listen for incoming pointer events and call actions
 // associated with detected gestures.
-class GestureManager : public fuchsia::ui::input::accessibility::PointerEventListener,
-                       private input::GestureDetector::Delegate {
+class GestureManager : public fuchsia::ui::input::accessibility::PointerEventListener {
  public:
   GestureManager();
 
@@ -45,21 +42,12 @@ class GestureManager : public fuchsia::ui::input::accessibility::PointerEventLis
   GestureHandler* gesture_handler() { return &gesture_handler_; }
 
  private:
-  // |input::GestureDetector::Delegate|
-  // Called by the gesture detector library when a new interaction starts. This method creates a new
-  // |Interaction| which has access to |context_|.
-  std::unique_ptr<input::GestureDetector::Interaction> BeginInteraction(
-      const input::Gesture* gesture) override;
-
   // Binding to the listener implemented by this class. This object is owned
   // here instead in an external BindingSet so that FIDL events can be called.
   fidl::Binding<fuchsia::ui::input::accessibility::PointerEventListener> binding_;
 
-  // Used to detect gestures and build a new Interaction.
-  input::GestureDetector gesture_detector_;
-
-  // Holds information needed by an Interaction to classify a gesture.
-  InteractionContext context_;
+  // An arena to manage contending of pointer events across multiple gesture recognizers.
+  GestureArena arena_;
 
   // Manages bound actions and gestures.
   GestureHandler gesture_handler_;

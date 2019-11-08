@@ -27,7 +27,6 @@ class MockArenaMember : public a11y::ArenaMember {
   bool reject_called_ = false;
   bool on_win_called_ = false;
   a11y::GestureArena arena_;
-  a11y::PointerEventRouter router_;
   a11y::GestureRecognizer* recognizer_;
 };
 

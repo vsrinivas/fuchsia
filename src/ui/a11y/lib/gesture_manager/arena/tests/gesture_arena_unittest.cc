@@ -73,23 +73,23 @@ AccessibilityPointerEvent GetDefaultPointerEvent() {
 }
 
 TEST_F(GestureArenaTest, SingleContenderWins) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer;
   auto* member = arena.Add(&recognizer);
   auto event = GetDefaultPointerEvent();
-  arena.OnEvent(std::move(event), [](auto...) {});
+  arena.OnEvent(event);
   EXPECT_EQ(member->status(), ArenaMember::Status::kWinner);
 }
 
 TEST_F(GestureArenaTest, AllMembersAreContendingOnAddEvent) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   MockGestureRecognizer recognizer_3;
   auto* member_1 = arena.Add(&recognizer_1);
   auto* member_2 = arena.Add(&recognizer_2);
   auto* member_3 = arena.Add(&recognizer_3);
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_EQ(member_1->status(), ArenaMember::Status::kContending);
   EXPECT_EQ(member_2->status(), ArenaMember::Status::kContending);
@@ -97,14 +97,14 @@ TEST_F(GestureArenaTest, AllMembersAreContendingOnAddEvent) {
 }
 
 TEST_F(GestureArenaTest, FirstContenderClaimVictoryWins) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   auto* member_1 = arena.Add(&recognizer_1);
   auto* member_2 = arena.Add(&recognizer_2);
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
   EXPECT_TRUE(member_1->Accept());
   EXPECT_TRUE(recognizer_1.OnWinWasCalled());
   EXPECT_TRUE(recognizer_2.OnDefeatWasCalled());
@@ -113,13 +113,13 @@ TEST_F(GestureArenaTest, FirstContenderClaimVictoryWins) {
 }
 
 TEST_F(GestureArenaTest, SecondContenderClaimVictoryFails) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   auto* member_1 = arena.Add(&recognizer_1);
   auto* member_2 = arena.Add(&recognizer_2);
 
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_TRUE(member_1->Accept());
   EXPECT_FALSE(member_2->Accept());
@@ -130,7 +130,7 @@ TEST_F(GestureArenaTest, SecondContenderClaimVictoryFails) {
 }
 
 TEST_F(GestureArenaTest, LastStandingWins) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   MockGestureRecognizer recognizer_3;
@@ -138,7 +138,7 @@ TEST_F(GestureArenaTest, LastStandingWins) {
   auto* member_2 = arena.Add(&recognizer_2);
   auto* member_3 = arena.Add(&recognizer_3);
 
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_EQ(member_3->status(), ArenaMember::Status::kContending);
 
@@ -159,27 +159,26 @@ TEST_F(GestureArenaTest, LastStandingWins) {
 TEST_F(GestureArenaTest, RoutePointerEvents) {
   // This test makes sure that pointer events are sent to all active arena
   // members, either because they are still contending or they haven't called Reject() yet.
-  GestureArena arena;
-  MockGestureRecognizer recognizer_1;
-  MockGestureRecognizer recognizer_2;
-  auto* member_1 = arena.Add(&recognizer_1);
-  auto* member_2 = arena.Add(&recognizer_2);
-
   uint32_t actual_device_id = 0;
   uint32_t actual_pointer_id = 0;
   fuchsia::ui::input::accessibility::EventHandling actual_handled_1 =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+  GestureArena arena([&actual_device_id, &actual_pointer_id, &actual_handled_1](
+                         uint32_t device_id, uint32_t pointer_id,
+                         fuchsia::ui::input::accessibility::EventHandling handled) {
+    actual_device_id = device_id;
+    actual_pointer_id = pointer_id;
+    actual_handled_1 = handled;
+  });
+  MockGestureRecognizer recognizer_1;
+  MockGestureRecognizer recognizer_2;
+  auto* member_1 = arena.Add(&recognizer_1);
+  auto* member_2 = arena.Add(&recognizer_2);
   {
     // ADD event, will have a callback later indicating weather the pointer event stream was
     // consumed or rejected.
     auto event = GetDefaultPointerEvent();
-    arena.OnEvent(std::move(event), [&actual_device_id, &actual_pointer_id, &actual_handled_1](
-                                        uint32_t device_id, uint32_t pointer_id,
-                                        fuchsia::ui::input::accessibility::EventHandling handled) {
-      actual_device_id = device_id;
-      actual_pointer_id = pointer_id;
-      actual_handled_1 = handled;
-    });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 1u);
@@ -189,7 +188,7 @@ TEST_F(GestureArenaTest, RoutePointerEvents) {
     // DOWN event, will  not have the callback invoked.
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::DOWN);
-    arena.OnEvent(std::move(event), [](auto...) { FAIL() << "unexpected callback"; });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 2u);
@@ -204,7 +203,7 @@ TEST_F(GestureArenaTest, RoutePointerEvents) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::UP);
-    arena.OnEvent(std::move(event), [](auto...) { FAIL() << "unexpected callback"; });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 3u);
@@ -216,7 +215,7 @@ TEST_F(GestureArenaTest, RoutePointerEvents) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    arena.OnEvent(std::move(event), [](auto...) { FAIL() << "unexpected callback"; });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 4u);
@@ -232,25 +231,27 @@ TEST_F(GestureArenaTest, RoutePointerEvents) {
 TEST_F(GestureArenaTest, EmptyArenaConsumesPointerEvents) {
   // This test makes sure that when the arena is empty and configured to consume pointer events, the
   // input system gets the appropriate callback.
-  GestureArena arena(GestureArena::EventHandlingPolicy::kConsumeEvents);
-  MockGestureRecognizer recognizer_1;
-  auto* member_1 = arena.Add(&recognizer_1);
-
   uint32_t actual_device_id = 0;
   uint32_t actual_pointer_id = 0;
   fuchsia::ui::input::accessibility::EventHandling actual_handled_1 =
       fuchsia::ui::input::accessibility::EventHandling::REJECTED;
+  GestureArena arena(
+      [&actual_device_id, &actual_pointer_id, &actual_handled_1](
+          uint32_t device_id, uint32_t pointer_id,
+          fuchsia::ui::input::accessibility::EventHandling handled) {
+        actual_device_id = device_id;
+        actual_pointer_id = pointer_id;
+        actual_handled_1 = handled;
+      },
+      GestureArena::EventHandlingPolicy::kConsumeEvents);
+  MockGestureRecognizer recognizer_1;
+  auto* member_1 = arena.Add(&recognizer_1);
+
   {
     // ADD event, will have a callback later indicating weather the pointer event stream was
     // consumed or rejected.
     auto event = GetDefaultPointerEvent();
-    arena.OnEvent(std::move(event), [&actual_device_id, &actual_pointer_id, &actual_handled_1](
-                                        uint32_t device_id, uint32_t pointer_id,
-                                        fuchsia::ui::input::accessibility::EventHandling handled) {
-      actual_device_id = device_id;
-      actual_pointer_id = pointer_id;
-      actual_handled_1 = handled;
-    });
+    arena.OnEvent(event);
   }
 
   // Single contender always wins.
@@ -271,7 +272,7 @@ TEST_F(GestureArenaTest, EmptyArenaConsumesPointerEvents) {
     // DOWN event, will  not have the callback invoked.
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::DOWN);
-    arena.OnEvent(std::move(event), [](auto...) { FAIL() << "unexpected callback"; });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 1u);
@@ -279,7 +280,7 @@ TEST_F(GestureArenaTest, EmptyArenaConsumesPointerEvents) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    arena.OnEvent(std::move(event), [](auto...) { FAIL() << "unexpected callback"; });
+    arena.OnEvent(event);
   }
 
   EXPECT_EQ(recognizer_1.num_events(), 1u);
@@ -288,21 +289,22 @@ TEST_F(GestureArenaTest, EmptyArenaConsumesPointerEvents) {
 TEST_F(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
   // This test makes sure that when the arena is empty and configured to reject pointer events, the
   // input system gets the appropriate callback.
-  GestureArena arena(GestureArena::EventHandlingPolicy::kRejectEvents);
+  fuchsia::ui::input::accessibility::EventHandling actual_handled_1 =
+      fuchsia::ui::input::accessibility::EventHandling::CONSUMED;
+  GestureArena arena(
+      [&actual_handled_1](uint32_t device_id, uint32_t pointer_id,
+                          fuchsia::ui::input::accessibility::EventHandling handled) {
+        actual_handled_1 = handled;
+      },
+      GestureArena::EventHandlingPolicy::kRejectEvents);
   MockGestureRecognizer recognizer_1;
   auto* member_1 = arena.Add(&recognizer_1);
 
-  fuchsia::ui::input::accessibility::EventHandling actual_handled_1 =
-      fuchsia::ui::input::accessibility::EventHandling::CONSUMED;
   {
     // ADD event, will have a callback later indicating weather the pointer event stream was
     // consumed or rejected.
     auto event = GetDefaultPointerEvent();
-    arena.OnEvent(std::move(event),
-                  [&actual_handled_1](uint32_t device_id, uint32_t pointer_id,
-                                      fuchsia::ui::input::accessibility::EventHandling handled) {
-                    actual_handled_1 = handled;
-                  });
+    arena.OnEvent(event);
   }
 
   // Single contender always wins.
@@ -320,12 +322,12 @@ TEST_F(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
 }
 
 TEST_F(GestureArenaTest, ContendersAreNotifiedWhenContendingStarts) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   arena.Add(&recognizer_1);
   arena.Add(&recognizer_2);
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_TRUE(recognizer_1.OnContestStartedWasCalled());
   EXPECT_TRUE(recognizer_2.OnContestStartedWasCalled());
@@ -333,23 +335,23 @@ TEST_F(GestureArenaTest, ContendersAreNotifiedWhenContendingStarts) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    arena.OnEvent(std::move(event), [](auto...) {});
+    arena.OnEvent(event);
   }
 
   recognizer_1.Reset();
   recognizer_2.Reset();
 
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_TRUE(recognizer_1.OnContestStartedWasCalled());
   EXPECT_TRUE(recognizer_2.OnContestStartedWasCalled());
 }
 
 TEST_F(GestureArenaTest, DoNotCallOnContendingStartedWhenArenaIsHeld) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer;
   auto* member = arena.Add(&recognizer);
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   EXPECT_TRUE(recognizer.OnContestStartedWasCalled());
   // Hold the arena to wait for another interaction.
@@ -358,23 +360,23 @@ TEST_F(GestureArenaTest, DoNotCallOnContendingStartedWhenArenaIsHeld) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    arena.OnEvent(std::move(event), [](auto...) {});
+    arena.OnEvent(event);
   }
 
   recognizer.Reset();
 
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
   // Arena is held, so the contending is not finished yet.
   EXPECT_FALSE(recognizer.OnContestStartedWasCalled());
 }
 
 TEST_F(GestureArenaTest, ArenaSweeps) {
-  GestureArena arena;
+  GestureArena arena([](auto...) {});
   MockGestureRecognizer recognizer_1;
   MockGestureRecognizer recognizer_2;
   arena.Add(&recognizer_1);
   arena.Add(&recognizer_2);
-  arena.OnEvent(GetDefaultPointerEvent(), [](auto...) {});
+  arena.OnEvent(GetDefaultPointerEvent());
 
   // Both are still contending at this point.
   EXPECT_FALSE(recognizer_1.OnWinWasCalled());
@@ -383,7 +385,7 @@ TEST_F(GestureArenaTest, ArenaSweeps) {
   {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::REMOVE);
-    arena.OnEvent(std::move(event), [](auto...) {});
+    arena.OnEvent(event);
   }
 
   // The interaction has ended and there is no winner. Sweeps the arena.

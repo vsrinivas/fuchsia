@@ -45,6 +45,11 @@ ClassifiedArenaMembers ClassifyArenaMembers(
 
 }  // namespace
 
+PointerEventRouter::PointerEventRouter(OnStreamHandledCallback on_stream_handled_callback)
+    : on_stream_handled_callback_(std::move(on_stream_handled_callback)) {
+  FX_DCHECK(on_stream_handled_callback_);
+}
+
 void PointerEventRouter::RejectPointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::REJECTED);
   // it is also necessary to clear the active streams, because as they were rejected, the input
@@ -60,31 +65,30 @@ void PointerEventRouter::InvokePointerEventCallbacks(
     fuchsia::ui::input::accessibility::EventHandling handled) {
   for (const auto& kv : pointer_event_callbacks_) {
     const auto [device_id, pointer_id] = kv.first;
-    for (const auto& callback : kv.second) {
-      callback(device_id, pointer_id, handled);
+    for (uint32_t times = 1; times <= kv.second; ++times) {
+      on_stream_handled_callback_(device_id, pointer_id, handled);
     }
   }
   pointer_event_callbacks_.clear();
 }
 
 void PointerEventRouter::RouteEvent(
-    AccessibilityPointerEvent pointer_event, OnEventCallback callback,
+    const AccessibilityPointerEvent& pointer_event,
     const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
   // Note that at some point we must answer whether the pointer event stream was
   // consumed / rejected. For this reason, for each ADD event we store the
   // callback that will be responsible for signaling how the events were
-  // handled. This happens in the future, once the gesture recognizer that wins
-  // the arena finishes handling the gesture, it decides what to do. It is
-  // important also to mention that for now, is all or nothing: consume or
-  // reject all pointer events that were sent to the arena, and not per a
-  // pointer event ID basis. Although this can be implemented, there is no use
-  // case for this right now.
+  // handled. It is important also to mention that for now, is all or nothing:
+  // consume or reject all pointer events that were sent to the arena, and not
+  // per a pointer event ID basis. Although this can be implemented, there is no
+  // use case for this right now.
   const StreamID stream_id(pointer_event.device_id(), pointer_event.pointer_id());
   switch (pointer_event.phase()) {
-    case Phase::ADD:
-      pointer_event_callbacks_[stream_id].push_back(std::move(callback));
+    case Phase::ADD: {
+      pointer_event_callbacks_[stream_id]++;
       active_streams_.insert(stream_id);
       break;
+    }
     case Phase::REMOVE:
       active_streams_.erase(stream_id);
       break;
@@ -146,8 +150,10 @@ void ArenaMember::Reset() {
   is_holding_ = false;
 }
 
-GestureArena::GestureArena(EventHandlingPolicy event_handling_policy)
-    : event_handling_policy_(event_handling_policy) {}
+GestureArena::GestureArena(PointerEventRouter::OnStreamHandledCallback on_stream_handled_callback,
+                           EventHandlingPolicy event_handling_policy)
+    : router_(std::move(on_stream_handled_callback)),
+      event_handling_policy_(event_handling_policy) {}
 
 ArenaMember* GestureArena::Add(GestureRecognizer* recognizer) {
   FX_CHECK(!router_.is_active())
@@ -156,8 +162,7 @@ ArenaMember* GestureArena::Add(GestureRecognizer* recognizer) {
   return arena_members_.back().get();
 }
 
-void GestureArena::OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event,
-                           PointerEventRouter::OnEventCallback callback) {
+void GestureArena::OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   FX_CHECK(!arena_members_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                        "but has no added gesture recognizer.";
   if (IsIdle()) {
@@ -165,7 +170,7 @@ void GestureArena::OnEvent(fuchsia::ui::input::accessibility::PointerEvent point
     StartNewContest();
   }
 
-  router_.RouteEvent(std::move(pointer_event), std::move(callback), arena_members_);
+  router_.RouteEvent(pointer_event, arena_members_);
   TryToResolve();
   switch (state_) {
     case State::kContendingInProgress:

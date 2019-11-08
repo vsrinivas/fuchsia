@@ -65,15 +65,22 @@ AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() {
 
 void ScreenReaderTest::CreateOnOneFingerTapAction() {
   {
-    // Down event.
+    auto event = GetDefaultPointerEvent();
+    gesture_manager_.OnEvent(std::move(event));
+  }
+  {
     auto event = GetDefaultPointerEvent();
     event.set_phase(PointerEventPhase::DOWN);
     gesture_manager_.OnEvent(std::move(event));
   }
   {
-    // Send UP event.
     auto event = GetDefaultPointerEvent();
     event.set_phase(PointerEventPhase::UP);
+    gesture_manager_.OnEvent(std::move(event));
+  }
+  {
+    auto event = GetDefaultPointerEvent();
+    event.set_phase(PointerEventPhase::REMOVE);
     gesture_manager_.OnEvent(std::move(event));
   }
 }
@@ -94,7 +101,7 @@ Node CreateTestNode(uint32_t node_id, std::string label) {
 }
 
 TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
-  // Intiailize Mock TTS Engine.
+  // Initialize Mock TTS Engine.
   accessibility_test::MockTtsEngine mock_tts_engine;
   fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
       mock_tts_engine.GetHandle();

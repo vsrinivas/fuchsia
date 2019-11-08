@@ -4,9 +4,12 @@
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_tap_recognizer.h"
 
 namespace a11y {
+
+GestureHandler::GestureHandler(GestureArena* arena) : arena_(arena) {}
 
 bool GestureHandler::OnGesture(GestureType gesture_type, GestureArguments args) {
   switch (gesture_type) {
@@ -23,6 +26,21 @@ bool GestureHandler::OnGesture(GestureType gesture_type, GestureArguments args) 
   }
 
   return false;
+}
+
+void GestureHandler::BindOneFingerTapAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kOneFingerTap) == gesture_recognizers_.end()) {
+    one_finger_tap_callback_ = std::move(callback);
+    gesture_recognizers_[kOneFingerTap] =
+        std::make_unique<OneFingerTapRecognizer>([this](GestureContext context) {
+          OnGesture(kOneFingerTap,
+                    {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+        });
+    // (TODO:fxb/40879): Solve circular outlive dependency in a11y gesture arena
+    auto* recognizer = gesture_recognizers_[kOneFingerTap].get();
+    auto* member = arena_->Add(recognizer);
+    recognizer->AddArenaMember(member);
+  }
 }
 
 }  // namespace a11y
