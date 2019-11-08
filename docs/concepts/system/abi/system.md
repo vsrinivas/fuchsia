@@ -197,20 +197,20 @@ Components that use the Vulkan API for hardware accelerated graphics link
 against `libvulkan.so` and specify the `vulkan` feature in their manifests. This
 library is provided by the package that contains the component and therefore is
 not part of the system ABI. However, `libvulkan.so` loads another shared
-library, called the *Installable Client Driver* (ICD). The Vulkan ICD is loaded
-using `fuchsia.vulkan.loader.Loader`, which means the library is provided by the
-system itself rather than the package that contains the component. For this
-reason, the Vulkan ICD is part of the system ABI.
+library, called the *Vulkan Installable Client Driver* (Vulkan ICD). The Vulkan
+ICD is loaded using `fuchsia.vulkan.loader.Loader`, which means the library is
+provided by the system itself rather than the package that contains the
+component. For this reason, the Vulkan ICD is part of the system ABI.
 
-The Vulkan ICD is an ELF shared library that exports exactly two symbols:
+The Vulkan ICD is an ELF shared library that exports exactly two symbols. These
+symbols are reserved for use by the Vulkan ICD and should not be used directly.
 
  * `vk_icdGetInstanceProcAddr`
  * `vk_icdNegotiateLoaderICDInterfaceVersion`
 
-These symbols are reserved for use by the Vulkan ICD and should not be used
-directly. In addition, the Vulkan ICD has a `NEEDED` section that lists several
-shared libraries upon which the Vulkan ICD depends. The package containing the
-component is required to provide these shared libraries.
+In addition, the Vulkan ICD shared library has a `NEEDED` section that lists
+several shared libraries upon which the Vulkan ICD depends. The package
+containing the component is required to provide these shared libraries.
 
 The Vulkan ICD also imports a number of symbols. The conventions around these
 imported symbols, for example their parameters and semantics, are part of the
