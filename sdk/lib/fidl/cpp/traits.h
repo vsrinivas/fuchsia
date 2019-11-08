@@ -31,6 +31,9 @@ template <> struct IsPrimitive<double> : public std::true_type {};
 // clang-format on
 
 template <typename T>
+struct IsFidlUnion : public std::false_type {};
+
+template <typename T>
 struct IsStdArray : public std::false_type {};
 
 template <typename T, size_t N>

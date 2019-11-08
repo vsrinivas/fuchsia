@@ -1377,6 +1377,9 @@ struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
   }
 };
 template <>
+struct IsFidlUnion<::test::name::WithErrorSyntax_ResponseAsStruct_Result> : public std::true_type {};
+
+template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Result>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ResponseAsStruct_Result, 32, 24> {};
 
@@ -1421,6 +1424,9 @@ struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> {
     return true;
   }
 };
+template <>
+struct IsFidlUnion<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> : public std::true_type {};
+
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, 8, 24> {};
@@ -1492,6 +1498,9 @@ struct Equality<::test::name::ErrorEnun> {
   }
 };
 
+
+template <>
+struct IsFidlUnion<::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result>

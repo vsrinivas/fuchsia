@@ -68,8 +68,8 @@ struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, 
 };
 #endif
 
-template <typename T>
-struct CodingTraits<std::unique_ptr<T>> {
+template<typename T>
+struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsFidlUnion<T>::value>::type> {
   static constexpr size_t inline_size_old = sizeof(uintptr_t);
   static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   template <class EncoderImpl>
@@ -94,6 +94,41 @@ struct CodingTraits<std::unique_ptr<T>> {
       return value->reset();
     *value = std::make_unique<T>();
     CodingTraits<T>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
+  }
+};
+
+template<typename T>
+struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<IsFidlUnion<T>::value>::type> {
+  static constexpr size_t inline_size_old = sizeof(uintptr_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_xunion_t);
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder_, std::unique_ptr<T>* value, size_t offset) {
+    if (encoder_->ShouldEncodeUnionAsXUnion()) {
+      EncodeAsXUnionBytes(encoder_, value, offset);
+      return;
+    }
+    if (value->get()) {
+      *encoder_->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
+      size_t size = CodingTraits<T>::inline_size_old;
+      CodingTraits<T>::Encode(encoder_, value->get(), encoder_->Alloc(size));
+    } else {
+      *encoder_->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
+    }
+  }
+  template <class EncoderImpl>
+  static void EncodeAsXUnionBytes(EncoderImpl* encoder_, std::unique_ptr<T>* value, size_t offset) {
+    auto&& p_union = *value;
+    if (p_union) {
+      p_union->EncodeAsXUnionBytes(encoder_, offset);
+    }
+  }
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder_, std::unique_ptr<T>* value, size_t offset) {
+    uintptr_t ptr = *decoder_->template GetPtr<uintptr_t>(offset);
+    if (!ptr)
+      return value->reset();
+    *value = std::make_unique<T>();
+    CodingTraits<T>::Decode(decoder_, value->get(), decoder_->GetOffset(ptr));
   }
 };
 

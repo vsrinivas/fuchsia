@@ -1505,6 +1505,7 @@ success("Regression1") {
 }
 
 success("Regression2") {
+    bindings_denylist = [cpp],
     value = Regression2 {
         head: Regression1 {
             f1: 0x01,
@@ -1570,6 +1571,7 @@ success("Regression3Absent") {
 }
 
 success("Regression3Present") {
+    bindings_denylist = [cpp],
     value = Regression3 {
         opt_value: Regression2 {
             head: Regression1 {

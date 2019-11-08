@@ -262,6 +262,9 @@ using ExplicitUnionPtr = ::std::unique_ptr<ExplicitUnion>;
 namespace fidl {
 
 template <>
+struct IsFidlUnion<::test::name::Union> : public std::true_type {};
+
+template <>
 struct CodingTraits<::test::name::Union>
     : public EncodableCodingTraits<::test::name::Union, 24, 24> {};
 
@@ -291,6 +294,9 @@ struct Equality<::test::name::Union> {
   }
 };
 template <>
+struct IsFidlUnion<::test::name::FieldCollision> : public std::true_type {};
+
+template <>
 struct CodingTraits<::test::name::FieldCollision>
     : public EncodableCodingTraits<::test::name::FieldCollision, 8, 24> {};
 
@@ -315,6 +321,9 @@ struct Equality<::test::name::FieldCollision> {
     }
   }
 };
+template <>
+struct IsFidlUnion<::test::name::ExplicitUnion> : public std::true_type {};
+
 template <>
 struct CodingTraits<::test::name::ExplicitUnion>
     : public EncodableCodingTraits<::test::name::ExplicitUnion, 24, 24> {};

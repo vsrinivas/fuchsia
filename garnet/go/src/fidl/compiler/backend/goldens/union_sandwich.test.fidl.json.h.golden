@@ -415,6 +415,9 @@ using SandwichUnionSize24Alignment8Ptr = ::std::unique_ptr<SandwichUnionSize24Al
 namespace fidl {
 
 template <>
+struct IsFidlUnion<::test::fidl::unionsandwich::UnionSize8Alignment4> : public std::true_type {};
+
+template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize8Alignment4>
     : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize8Alignment4, 8, 24> {};
 
@@ -464,6 +467,9 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4> {
   }
 };
 template <>
+struct IsFidlUnion<::test::fidl::unionsandwich::UnionSize36Alignment4> : public std::true_type {};
+
+template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize36Alignment4>
     : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize36Alignment4, 36, 24> {};
 
@@ -512,6 +518,9 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4> {
     return true;
   }
 };
+template <>
+struct IsFidlUnion<::test::fidl::unionsandwich::UnionSize12Alignment4> : public std::true_type {};
+
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize12Alignment4>
     : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize12Alignment4, 12, 24> {};
@@ -582,6 +591,9 @@ struct Equality<::test::fidl::unionsandwich::StructSize16Alignment8> {
     return true;
   }
 };
+template <>
+struct IsFidlUnion<::test::fidl::unionsandwich::UnionSize24Alignment8> : public std::true_type {};
+
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize24Alignment8>
     : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize24Alignment8, 24, 24> {};

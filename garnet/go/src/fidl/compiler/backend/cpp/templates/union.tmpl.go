@@ -279,6 +279,9 @@ void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
 
 {{- define "UnionTraits" }}
 template <>
+struct IsFidlUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+
+template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
 
