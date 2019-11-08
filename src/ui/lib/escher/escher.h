@@ -167,7 +167,6 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::CommandBufferPool> protected_command_buffer_pool_;
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
   std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
-  std::unique_ptr<impl::PipelineCache> pipeline_cache_;
   // Everything below this point requires |weak_factory_| to be initialized
   // before they can be constructed.
 

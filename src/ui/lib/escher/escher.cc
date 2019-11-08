@@ -10,7 +10,6 @@
 #include "src/ui/lib/escher/impl/glsl_compiler.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/impl/mesh_manager.h"
-#include "src/ui/lib/escher/impl/vk/pipeline_cache.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/profiling/timestamp_profiler.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
@@ -81,7 +80,6 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
           vulkan_context_, command_buffer_sequencer_.get(), /*use_protected_memory=*/false)),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
-      pipeline_cache_(std::make_unique<impl::PipelineCache>()),
       weak_factory_(this) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);

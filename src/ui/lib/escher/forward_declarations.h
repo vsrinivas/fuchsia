@@ -111,7 +111,6 @@ class ModelPipelineCache;
 class ModelRenderer;
 class ModelRenderPass;
 class Pipeline;
-class PipelineCache;
 class SsdoAccelerator;
 class SsdoSampler;
 class UniformBufferPool;
