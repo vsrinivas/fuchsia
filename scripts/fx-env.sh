@@ -80,12 +80,15 @@ function __fx_env_main() {
     local fuchsia_tools_dir="$(fx-config-read 2>/dev/null; echo "${FUCHSIA_BUILD_DIR}/tools")"
     local zircon_tools_dir="$(fx-config-read 2>/dev/null; echo "${ZIRCON_TOOLS_DIR}")"
 
-    local tools_dirs="${zircon_tools_dir}:${fuchsia_tools_dir}"
-    if [[ "${tools_dirs}" != ":" ]]; then
+    if [[ -n "${fuchsia_tools_dir}" ]]; then
       export PATH="$(__patched_path \
         "${FUCHSIA_OUT_DIR}/[^/]*/tools" \
-        "${tools_dirs}"
-    )"
+        "${fuchsia_tools_dir}")"
+    fi
+    if [[ -n "${zircon_tools_dir}" ]]; then
+      export PATH="$(__patched_path \
+        "${FUCHSIA_OUT_DIR}/[^/]*/tools" \
+        "${zircon_tools_dir}")"
     fi
   }
 
