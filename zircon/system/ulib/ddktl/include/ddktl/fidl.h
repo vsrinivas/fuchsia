@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_FIDL_H_
-#define DDK_FIDL_H_
+#ifndef DDKTL_FIDL_H_
+#define DDKTL_FIDL_H_
 
 #include <lib/fidl/llcpp/transaction.h>
 
@@ -51,4 +51,4 @@ class DdkTransaction : public fidl::Transaction {
   bool status_called_ = false;
 };
 
-#endif  // DDK_FIDL_H_
+#endif  // DDKTL_FIDL_H_

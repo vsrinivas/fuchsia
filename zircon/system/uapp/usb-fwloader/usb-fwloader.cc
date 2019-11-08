@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
@@ -74,10 +75,19 @@ zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool
   if (io == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  zx_status_t call_status;
+  zx_status_t call_status = ZX_OK;
   size_t path_len;
-  zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-      fdio_unsafe_borrow_channel(io), &call_status, path, sizeof(path) - 1, &path_len);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
+  zx_status_t status = resp.status();
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    path_len = resp->result.response().path.size();
+    auto r = resp->result.response();
+    memcpy(path, r.path.data(), r.path.size());
+  }
+
   fdio_unsafe_release(io);
   if (status != ZX_OK || call_status != ZX_OK) {
     return ZX_ERR_IO;

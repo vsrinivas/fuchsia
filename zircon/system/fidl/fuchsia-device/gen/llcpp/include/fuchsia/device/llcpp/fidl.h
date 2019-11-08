@@ -48,6 +48,14 @@ struct Controller_Resume_Result;
 struct DevicePerformanceStateInfo;
 struct Controller_UpdatePowerStateMapping_Response;
 struct Controller_UpdatePowerStateMapping_Result;
+struct Controller_ScheduleUnbind_Response;
+struct Controller_ScheduleUnbind_Result;
+struct Controller_Rebind_Response;
+struct Controller_Rebind_Result;
+struct Controller_GetTopologicalPathNew_Response;
+struct Controller_GetTopologicalPathNew_Result;
+struct Controller_Bind_Response;
+struct Controller_Bind_Result;
 class Controller;
 
 extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
@@ -950,6 +958,474 @@ struct Controller_UpdatePowerStateMapping_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+
+struct Controller_ScheduleUnbind_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+
+struct Controller_ScheduleUnbind_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_ScheduleUnbind_Result();
+  ~Controller_ScheduleUnbind_Result();
+
+  Controller_ScheduleUnbind_Result(Controller_ScheduleUnbind_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_ScheduleUnbind_Result& operator=(Controller_ScheduleUnbind_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_ScheduleUnbind_Result WithResponse(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response&& val) {
+    Controller_ScheduleUnbind_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_ScheduleUnbind_Result WithErr(int32_t&& val) {
+    Controller_ScheduleUnbind_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_ScheduleUnbind_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Rebind_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResponseTable;
+
+struct Controller_Rebind_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Rebind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Rebind_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Rebind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResultTable;
+
+struct Controller_Rebind_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_Rebind_Result();
+  ~Controller_Rebind_Result();
+
+  Controller_Rebind_Result(Controller_Rebind_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_Rebind_Result& operator=(Controller_Rebind_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_Rebind_Result WithResponse(::llcpp::fuchsia::device::Controller_Rebind_Response&& val) {
+    Controller_Rebind_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::Controller_Rebind_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Rebind_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Rebind_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::Controller_Rebind_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_Rebind_Result WithErr(int32_t&& val) {
+    Controller_Rebind_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Rebind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Rebind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_Rebind_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::Controller_Rebind_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
+
+struct Controller_GetTopologicalPathNew_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1024;
+
+  ::fidl::StringView path = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
+
+struct Controller_GetTopologicalPathNew_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_GetTopologicalPathNew_Result();
+  ~Controller_GetTopologicalPathNew_Result();
+
+  Controller_GetTopologicalPathNew_Result(Controller_GetTopologicalPathNew_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_GetTopologicalPathNew_Result& operator=(Controller_GetTopologicalPathNew_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_GetTopologicalPathNew_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response&& val) {
+    Controller_GetTopologicalPathNew_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_GetTopologicalPathNew_Result WithErr(int32_t&& val) {
+    Controller_GetTopologicalPathNew_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1040;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_GetTopologicalPathNew_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResponseTable;
+
+struct Controller_Bind_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Bind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Bind_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResultTable;
+
+struct Controller_Bind_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_Bind_Result();
+  ~Controller_Bind_Result();
+
+  Controller_Bind_Result(Controller_Bind_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_Bind_Result& operator=(Controller_Bind_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_Bind_Result WithResponse(::llcpp::fuchsia::device::Controller_Bind_Response&& val) {
+    Controller_Bind_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::Controller_Bind_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Bind_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Bind_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::Controller_Bind_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_Bind_Result WithErr(int32_t&& val) {
+    Controller_Bind_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Bind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Bind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_Bind_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::Controller_Bind_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
@@ -974,6 +1450,10 @@ extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathRequestT
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathNewRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathNewRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
@@ -1035,17 +1515,17 @@ class Controller final {
   struct BindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t status;
+    ::llcpp::fuchsia::device::Controller_Bind_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerBindResponseTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerBindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
+    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1071,17 +1551,17 @@ class Controller final {
   struct RebindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t status;
+    ::llcpp::fuchsia::device::Controller_Rebind_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRebindResponseTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerRebindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
+    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1107,17 +1587,17 @@ class Controller final {
   struct ScheduleUnbindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t status;
+    ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerScheduleUnbindResponseTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerScheduleUnbindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
+    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -1181,6 +1661,25 @@ class Controller final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using GetTopologicalPathRequest = ::fidl::AnyZeroArgMessage;
+
+  struct GetTopologicalPathNewResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 1040;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetTopologicalPathNewRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetEventHandleResponse final {
     FIDL_ALIGNDECL
@@ -1639,6 +2138,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetTopologicalPathNew_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetTopologicalPathNew_Impl(zx::unowned_channel _client_end);
+      ~GetTopologicalPathNew_Impl() = default;
+      GetTopologicalPathNew_Impl(GetTopologicalPathNew_Impl&& other) = default;
+      GetTopologicalPathNew_Impl& operator=(GetTopologicalPathNew_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class GetEventHandle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1854,6 +2369,7 @@ class Controller final {
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
+    using GetTopologicalPathNew = GetTopologicalPathNew_Impl<GetTopologicalPathNewResponse>;
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
@@ -1962,6 +2478,22 @@ class Controller final {
       ~GetTopologicalPath_Impl() = default;
       GetTopologicalPath_Impl(GetTopologicalPath_Impl&& other) = default;
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetTopologicalPathNew_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetTopologicalPathNew_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetTopologicalPathNew_Impl() = default;
+      GetTopologicalPathNew_Impl(GetTopologicalPathNew_Impl&& other) = default;
+      GetTopologicalPathNew_Impl& operator=(GetTopologicalPathNew_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -2186,6 +2718,7 @@ class Controller final {
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
+    using GetTopologicalPathNew = GetTopologicalPathNew_Impl<GetTopologicalPathNewResponse>;
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
@@ -2265,6 +2798,14 @@ class Controller final {
     // Return the topological path for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetTopologicalPath GetTopologicalPath(::fidl::BytePart _response_buffer);
+
+    // Return the topological path for this device
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::GetTopologicalPathNew GetTopologicalPathNew();
+
+    // Return the topological path for this device
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetTopologicalPathNew GetTopologicalPathNew(::fidl::BytePart _response_buffer);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -2467,6 +3008,14 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Return the topological path for this device
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::GetTopologicalPathNew GetTopologicalPathNew(zx::unowned_channel _client_end);
+
+    // Return the topological path for this device
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetTopologicalPathNew GetTopologicalPathNew(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end);
@@ -2634,6 +3183,9 @@ class Controller final {
     // Return the topological path for this device
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Return the topological path for this device
+    static ::fidl::DecodeResult<GetTopologicalPathNewResponse> GetTopologicalPathNew(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
@@ -2702,8 +3254,11 @@ class Controller final {
 
     class BindCompleterBase : public _Base {
      public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::llcpp::fuchsia::device::Controller_Bind_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Bind_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<BindResponse> params);
 
      protected:
@@ -2716,8 +3271,11 @@ class Controller final {
 
     class RebindCompleterBase : public _Base {
      public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::llcpp::fuchsia::device::Controller_Rebind_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Rebind_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<RebindResponse> params);
 
      protected:
@@ -2730,8 +3288,11 @@ class Controller final {
 
     class ScheduleUnbindCompleterBase : public _Base {
      public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
       void Reply(::fidl::DecodedMessage<ScheduleUnbindResponse> params);
 
      protected:
@@ -2783,6 +3344,23 @@ class Controller final {
     using GetTopologicalPathCompleter = ::fidl::Completer<GetTopologicalPathCompleterBase>;
 
     virtual void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) = 0;
+
+    class GetTopologicalPathNewCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result);
+      void ReplySuccess(::fidl::StringView path);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path);
+      void Reply(::fidl::DecodedMessage<GetTopologicalPathNewResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetTopologicalPathNewCompleter = ::fidl::Completer<GetTopologicalPathNewCompleterBase>;
+
+    virtual void GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync _completer) = 0;
 
     class GetEventHandleCompleterBase : public _Base {
      public:
@@ -3015,6 +3593,8 @@ class Controller final {
     static void GetDeviceNameResponse(const ::fidl::DecodedMessage<Controller::GetDeviceNameResponse>& _msg);
     static void GetTopologicalPathRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathRequest>& _msg);
     static void GetTopologicalPathResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathResponse>& _msg);
+    static void GetTopologicalPathNewRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathNewRequest>& _msg);
+    static void GetTopologicalPathNewResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathNewResponse>& _msg);
     static void GetEventHandleRequest(const ::fidl::DecodedMessage<Controller::GetEventHandleRequest>& _msg);
     static void GetEventHandleResponse(const ::fidl::DecodedMessage<Controller::GetEventHandleResponse>& _msg);
     static void GetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsRequest>& _msg);
@@ -3135,6 +3715,46 @@ struct IsFidlType<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_R
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response) == ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Rebind_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Rebind_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_Rebind_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_Rebind_Response) == ::llcpp::fuchsia::device::Controller_Rebind_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Rebind_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Rebind_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response, path) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response) == ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Bind_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Bind_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_Bind_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_Bind_Response) == ::llcpp::fuchsia::device::Controller_Bind_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Bind_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Bind_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::BindRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::Controller::BindRequest> : public std::true_type {};
@@ -3148,7 +3768,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::Controller::BindResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::BindResponse)
     == ::llcpp::fuchsia::device::Controller::BindResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::BindResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::BindResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::RebindRequest> : public std::true_type {};
@@ -3164,7 +3784,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::Controller::RebindResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::RebindResponse)
     == ::llcpp::fuchsia::device::Controller::RebindResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::RebindResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::RebindResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse> : public std::true_type {};
@@ -3172,7 +3792,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse)
     == ::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::GetDriverNameResponse> : public std::true_type {};
@@ -3199,6 +3819,14 @@ static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetTopologicalPathRes
     == ::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, path) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse)
+    == ::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::GetEventHandleResponse> : public std::true_type {};

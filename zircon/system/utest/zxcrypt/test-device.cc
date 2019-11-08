@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/unsafe.h>
@@ -174,12 +175,13 @@ bool TestDevice::BindFvmDriver() {
   // Binds the FVM driver to the active ramdisk_.
   fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
   ASSERT_NONNULL(io);
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kFvmDriver,
-                                                     strlen(kFvmDriver), &call_status);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+      ::fidl::StringView(kFvmDriver, strlen(kFvmDriver)));
+  zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(call_status, ZX_OK);
+  ASSERT_TRUE(resp->result.is_response());
   END_HELPER;
 }
 
@@ -199,9 +201,14 @@ bool TestDevice::Rebind() {
     // itself.
     fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
     ASSERT_NONNULL(io);
-    zx_status_t call_status;
-    zx_status_t status = fuchsia_device_ControllerRebind(fdio_unsafe_borrow_channel(io), kFvmDriver,
-                                                         strlen(kFvmDriver), &call_status);
+    zx_status_t call_status = ZX_OK;;
+    auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+        zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+        ::fidl::StringView(kFvmDriver, strlen(kFvmDriver)));
+    zx_status_t status = resp.status();
+    if (resp->result.is_err()) {
+      call_status = resp->result.err();
+    }
     fdio_unsafe_release(io);
     ASSERT_OK(status);
     ASSERT_OK(call_status);
@@ -412,8 +419,19 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   size_t out_len;
   zx_status_t status;
   zx_status_t call_status;
-  status = fuchsia_device_ControllerGetTopologicalPath(
-      parent_channel()->get(), &call_status, fvm_part_path_, sizeof(fvm_part_path_) - 1, &out_len);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+      zx::unowned_channel(parent_channel()->get()));
+  status = resp.status();
+
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    call_status = ZX_OK;
+    auto r = resp->result.response();
+    out_len = r.path.size();
+    memcpy(fvm_part_path_, r.path.data(), r.path.size());
+  }
+
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(call_status, ZX_OK);
   // Strip off the leading /dev/; because we use an isolated devmgr, we need

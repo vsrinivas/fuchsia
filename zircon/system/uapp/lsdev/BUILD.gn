@@ -4,10 +4,10 @@
 
 zx_executable("lsdev") {
   sources = [
-    "lsdev.c",
+    "lsdev.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]

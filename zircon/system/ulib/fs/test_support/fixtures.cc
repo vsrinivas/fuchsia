@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/fdio.h>
@@ -128,9 +129,15 @@ void FilesystemTestWithFvm::BindFvm() {
 
   fzl::FdioCaller caller(std::move(fd));
   zx_status_t status;
-  zx_status_t io_status = fuchsia_device_ControllerBind(caller.borrow_channel(), kFvmDriverLib,
-                                                        sizeof(kFvmDriverLib) - 1, &status);
-  ASSERT_OK(io_status, "Could not send bind to FVM driver");
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(caller.borrow_channel()),
+      ::fidl::StringView(kFvmDriverLib, strlen(kFvmDriverLib)));
+  status = resp.status();
+
+  ASSERT_OK(status, "Could not send bind to FVM driver");
+  if (resp->result.is_err()) {
+    status = resp->result.err();
+  }
   // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
   if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
     ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <zircon/status.h>
@@ -28,11 +29,25 @@ std::string GetTopologicalPath(zx_handle_t channel) {
   zx_status_t status;
   size_t path_len;
   char disk_path[PATH_MAX];
-  zx_status_t io_status = fuchsia_device_ControllerGetTopologicalPath(
-      channel, &status, disk_path, sizeof(disk_path) - 1, &path_len);
+  auto resp =
+      ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(zx::unowned_channel(channel));
+  zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     status = io_status;
   }
+
+  if (resp->result.is_err()) {
+    status = resp->result.err();
+  } else {
+    status = ZX_OK;
+    auto r = resp->result.response();
+    path_len = r.path.size();
+    if (path_len > PATH_MAX) {
+      return std::string("");
+    }
+    memcpy(disk_path, r.path.data(), r.path.size());
+  }
+
   if (status != ZX_OK || path_len > sizeof(disk_path) - 1) {
     printf("Could not acquire topological path of block device: %s\n",
            zx_status_get_string(status));

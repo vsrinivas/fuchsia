@@ -23,9 +23,9 @@ const RIL_URL: &str = fuchsia_single_component_package_url!("ril-qmi");
 fn unbind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let status = interface.schedule_unbind(fuchsia_zircon::Time::INFINITE)?;
-    zx::Status::ok(status)?;
-    Ok(())
+    interface
+        .schedule_unbind(fuchsia_zircon::Time::INFINITE)?
+        .map_err(|e| zx::Status::from_raw(e).into())
 }
 
 // Tests that creating and destroying a fake QMI device binds and unbinds the qmi-host driver.

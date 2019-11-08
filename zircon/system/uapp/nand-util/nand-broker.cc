@@ -5,22 +5,23 @@
 #include "nand-broker.h"
 
 #include <fcntl.h>
-#include <stdio.h>
-
-#include <new>
-
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
-#include <pretty/hexdump.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <new>
+
+#include <pretty/hexdump.h>
 
 namespace {
 
@@ -200,10 +201,16 @@ bool NandBroker::LoadBroker() {
     printf("Could not convert fd to io\n");
     return false;
   }
-  zx_status_t call_status;
+  zx_status_t call_status = ZX_OK;
   const char kBroker[] = "/boot/driver/nand-broker.so";
-  zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kBroker,
-                                                     sizeof(kBroker) - 1, &call_status);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
+      ::fidl::StringView(kBroker, sizeof(kBroker) - 1));
+  auto status = resp.status();
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+
   fdio_unsafe_release(io);
   if (status != ZX_OK || call_status != ZX_OK) {
     fprintf(stderr, "Failed to issue bind command\n");

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_HOST_DEVHOST_H_
 #define SRC_DEVICES_HOST_DEVHOST_H_
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -162,15 +163,15 @@ zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr
 zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
-                                       fuchsia_device_DevicePowerState requested_state,
-                                       fuchsia_device_DevicePowerState* out_state);
+                                       ::llcpp::fuchsia::device::DevicePowerState requested_state,
+                                       ::llcpp::fuchsia::device::DevicePowerState* out_state);
 zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device_t>& dev,
                                                  uint32_t requested_state, uint32_t* out_state);
 zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
                                   uint32_t target_system_state) REQ_DM_LOCK;
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
-                                      fuchsia_device_DevicePowerState requested_state,
-                                      fuchsia_device_DevicePowerState* out_state);
+                                      ::llcpp::fuchsia::device::DevicePowerState requested_state,
+                                      ::llcpp::fuchsia::device::DevicePowerState* out_state);
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
@@ -217,7 +218,9 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
                         CreateDeviceStubCompleter::Sync completer) override;
 };
 
-struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {
+class DevfsConnection : public AsyncLoopOwnedRpcHandler<DevfsConnection>,
+                        public llcpp::fuchsia::device::Controller::Interface {
+ public:
   DevfsConnection() = default;
 
   static void HandleRpc(std::unique_ptr<DevfsConnection> conn, async_dispatcher_t* dispatcher,
@@ -227,6 +230,35 @@ struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {
   fbl::RefPtr<zx_device_t> dev;
   size_t io_off = 0;
   uint32_t flags = 0;
+
+ private:
+  void Bind(::fidl::StringView driver, BindCompleter::Sync _completer) override;
+  void Rebind(::fidl::StringView driver, RebindCompleter::Sync _completer) override;
+  void ScheduleUnbind(ScheduleUnbindCompleter::Sync _completer) override;
+  void GetDriverName(GetDriverNameCompleter::Sync _completer) override;
+  void GetDeviceName(GetDeviceNameCompleter::Sync _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
+  void GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync _completer) override;
+  void GetEventHandle(GetEventHandleCompleter::Sync _completer) override;
+  void GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync _completer) override;
+  void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync completer) override;
+  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
+                         SetDriverLogFlagsCompleter::Sync _completer) override;
+  void DebugSuspend(DebugSuspendCompleter::Sync _completer) override;
+  void DebugResume(DebugResumeCompleter::Sync _completer) override;
+  void RunCompatibilityTests(int64_t hook_wait_time,
+                             RunCompatibilityTestsCompleter::Sync _completer) override;
+  void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) override;
+  void SetPerformanceState(uint32_t requested_state, SetPerformanceStateCompleter::Sync _completer) override;
+
+  void UpdatePowerStateMapping(
+      ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping,
+      UpdatePowerStateMappingCompleter::Sync _completer) override;
+  void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync _completer) override;
+  void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
+               SuspendCompleter::Sync _completer) override;
+  void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
+              ResumeCompleter::Sync _complete) override;
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);

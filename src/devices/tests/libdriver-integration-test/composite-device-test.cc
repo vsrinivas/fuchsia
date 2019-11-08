@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/cpp/fidl.h>
+#include <fuchsia/device/test/cpp/fidl.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
 #include <memory>
 
 #include <ddk/platform-defs.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/device/cpp/fidl.h>
-#include <fuchsia/device/test/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include "integration-test.h"
 
@@ -143,8 +144,9 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
 
             fit::bridge<void, Error> bridge;
             child1_controller->ScheduleUnbind(
-                [completer = std::move(bridge.completer)](zx_status_t status) mutable {
-                  if (status == ZX_OK) {
+                [completer = std::move(bridge.completer)](
+                    fuchsia::device::Controller_ScheduleUnbind_Result result) mutable {
+                  if (result.is_response()) {
                     completer.complete_ok();
                   } else {
                     completer.complete_error(std::string("unbind failed"));

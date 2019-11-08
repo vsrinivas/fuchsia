@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <inttypes.h>
@@ -130,11 +131,16 @@ zx_status_t BlockDevice::GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_
 zx_status_t BlockDevice::AttachDriver(const fbl::StringPiece& driver) {
   printf("fshost: Binding: %.*s\n", static_cast<int>(driver.length()), driver.data());
   fzl::UnownedFdioCaller connection(fd_.get());
-  zx_status_t io_status, call_status;
-  io_status = fuchsia_device_ControllerBind(connection.borrow_channel(), driver.data(),
-                                            driver.length(), &call_status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+      zx::unowned_channel(connection.borrow_channel()),
+      ::fidl::StringView(driver.data(), driver.length()));
+  zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;
+  }
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
   }
   return call_status;
 }
@@ -171,11 +177,26 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
   // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
   // determine which it actually is. We do this by looking up the topological
   // path.
-  if (fuchsia_device_ControllerGetTopologicalPath(disk_connection.borrow_channel(), &call_status,
-                                                  path.data(), path.capacity(),
-                                                  &path_len) != ZX_OK) {
+
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+      zx::unowned_channel(disk_connection.borrow_channel()));
+  zx_status_t status = resp.status();
+
+  if (status != ZX_OK) {
     return ZX_ERR_NOT_FOUND;
   }
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    call_status = ZX_OK;
+    auto r = resp->result.response();
+    path_len = r.path.size();
+    if (path_len > PATH_MAX) {
+      return ZX_ERR_INTERNAL;
+    }
+    memcpy(path.data(), r.path.data(), r.path.size());
+  }
+
   if (call_status != ZX_OK) {
     return call_status;
   }

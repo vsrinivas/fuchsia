@@ -18,7 +18,7 @@ zx_library("ramdevice-client") {
     "$zx/system/ulib/driver-integration-test:headers",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",

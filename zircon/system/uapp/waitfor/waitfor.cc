@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
@@ -109,10 +109,19 @@ zx_status_t expr_topo(const char* arg, int fd) {
   if (io == NULL) {
     return ZX_ERR_NEXT;
   }
-  zx_status_t call_status;
+  zx_status_t call_status = ZX_OK;
   size_t path_len;
-  zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-      fdio_unsafe_borrow_channel(io), &call_status, topo, sizeof(topo) - 1, &path_len);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
+  zx_status_t status = resp.status();
+
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  } else {
+    path_len = resp->result.response().path.size();
+    auto r = resp->result.response();
+    memcpy(topo, r.path.data(), r.path.size());
+  }
   fdio_unsafe_release(io);
   if (status != ZX_OK || call_status != ZX_OK) {
     fprintf(stderr, "waitfor: warning: cannot read topo path\n");
@@ -210,7 +219,7 @@ zx_status_t expr_part_name(const char* arg, int fd) {
 }
 
 void new_rule(const char* arg, zx_status_t (*func)(const char* arg, int fd)) {
-  rule_t* r = malloc(sizeof(rule_t));
+  rule_t* r = (rule_t*)malloc(sizeof(rule_t));
   if (r == NULL) {
     fprintf(stderr, "waitfor: error: out of memory\n");
     exit(1);

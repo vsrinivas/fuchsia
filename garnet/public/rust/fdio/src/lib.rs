@@ -210,15 +210,10 @@ pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
 pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let channel = clone_channel(dev)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let (status, topo) = interface
-        .get_topological_path(fuchsia_zircon::Time::INFINITE)
-        .map_err(|_| zx::Status::IO)?;
-    fuchsia_zircon::Status::ok(status)?;
-
-    match topo {
-        Some(topo) => Ok(topo),
-        None => Err(zx::Status::BAD_STATE),
-    }
+    interface
+        .get_topological_path_new(fuchsia_zircon::Time::INFINITE)
+        .map_err(|_| zx::Status::IO)?
+        .map_err(|e| zx::Status::from_raw(e))
 }
 
 /// Creates a named pipe and returns one end as a zx::Socket.
