@@ -65,8 +65,8 @@ class PipelineManager {
                                                   const InternalConfigNode& node);
 
   // Gets the right buffercollection for the producer-consumer combination
-  zx_status_t GetBuffers(const InternalConfigNode& producer, PipelineInfo* info,
-                         fuchsia::sysmem::BufferCollectionInfo_2* out_buffers);
+  fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
+      const InternalConfigNode& producer, PipelineInfo* info);
 
   zx_status_t LoadGdcConfiguration(const camera::GdcConfig& config_type, zx_handle_t* handle);
 

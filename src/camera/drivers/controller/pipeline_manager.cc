@@ -59,21 +59,34 @@ static zx_status_t ConvertToBufferCollectionInfo(
 // NOTE: This API currently supports only debug config
 // At a later point it will also need to take care of scenarios where same source stream
 // provides multiple output streams.
-zx_status_t PipelineManager::GetBuffers(const InternalConfigNode& producer, PipelineInfo* info,
-                                        fuchsia::sysmem::BufferCollectionInfo_2* out_buffers) {
+fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
+    const InternalConfigNode& producer, PipelineInfo* info) {
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info, producer);
   if (!consumer) {
     FX_LOGS(ERROR) << "Failed to get next node";
-    return ZX_ERR_INTERNAL;
+    return fit::error(ZX_ERR_INTERNAL);
   }
+
   // If the consumer is the client, we use the client buffers
   if (consumer->type == kOutputStream) {
-    *out_buffers = std::move(info->output_buffers);
-    return ZX_OK;
+    buffers = std::move(info->output_buffers);
+  } else {
+    // We need to allocate memory using sysmem
+    // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
+    // video conferencing config.
+    std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+    constraints.push_back(producer.constraints);
+    constraints.push_back(consumer->constraints);
+
+    auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to allocate shared memory";
+      return fit::error(status);
+    }
   }
-  // Otherwise we allocate the buffers.
-  // TODO(braval): Not needed at the moment so returning ZX_ERR_NOT_SUPPORTED;
-  return ZX_ERR_NOT_SUPPORTED;
+
+  return fit::ok(std::move(buffers));
 }
 
 fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateInputNode(
@@ -85,12 +98,12 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
     isp_stream_type = STREAM_TYPE_DOWNSCALED;
   }
 
-  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-  auto status = GetBuffers(info->node, info, &buffers);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to get buffers";
-    return fit::error(status);
+  auto result = GetBuffers(info->node, info);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Failed to get buffers";
+    return fit::error(result.error());
   }
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers = std::move(result.value());
 
   // Temporary conversion since ISP protocol
   // accepts only old bufferCollectionInfo
@@ -113,7 +126,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
   }
 
   // TODO(braval): create FR or DS depending on what stream is requested
-  status = isp_.CreateOutputStream(
+  auto status = isp_.CreateOutputStream(
       &old_buffer_collection, reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate),
       STREAM_TYPE_FULL_RESOLUTION, processing_node->callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
