@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.ui.shortcut.Manager": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx",
+                "fuchsia.ui.shortcut.Registry": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/shortcut_test_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.shortcut.Manager",
+            "fuchsia.ui.shortcut.Registry"
+        ]
+    }
+}
