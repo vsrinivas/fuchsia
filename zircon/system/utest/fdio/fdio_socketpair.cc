@@ -5,15 +5,19 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/thread.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include <future>
 
@@ -296,11 +300,34 @@ int send_thread(void* arg) {
   return 0;
 }
 
-/* TODO(fxb/37892): Fix flakiness and re-enable.
+constexpr zx::duration kStateCheckIntervals = zx::usec(5);
+
+// Wait until |thread| has entered |state|.
+zx_status_t WaitForState(const zx::thread& thread, zx_thread_state_t desired_state) {
+  while (true) {
+    zx_info_thread_t info;
+    zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if (info.state == desired_state) {
+      return ZX_OK;
+    }
+
+    zx::nanosleep(zx::deadline_after(kStateCheckIntervals));
+  }
+}
+
 TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
-  int fds[2];
+  int fds[2] = {-1, -1};
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed errno: %d", errno);
+
+  fbl::unique_fd cleanup_fds[] = {
+      fbl::unique_fd(fds[0]),
+      fbl::unique_fd(fds[1]),
+  };
 
   // First, fill up the socket so the next send() will block.
   char buf[BUF_SIZE] = {};
@@ -318,6 +345,10 @@ TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
   int thrd_create_result = thrd_create(&t, send_thread, &send_args);
   ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
 
+  // Wait for the thread to sleep in send.
+  ASSERT_OK(
+      WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t))), ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+
   shutdown(fds[0], SHUT_WR);
 
   ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
@@ -325,13 +356,49 @@ TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
   EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
   EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
 }
-*/
 
-/* TODO(fxb/37892): Fix flakiness and re-enable.
-TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
-  int fds[2];
+TEST(SocketpairTest, ShutdownSelfWriteBeforeSend) {
+  int fds[2] = {-1, -1};
   int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
-  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed errno: %d", errno);
+  fbl::unique_fd cleanup_fds[] = {
+      fbl::unique_fd(fds[0]),
+      fbl::unique_fd(fds[1]),
+  };
+
+  // First, fill up the socket so the next send() will block.
+  char buf[BUF_SIZE] = {};
+  while (true) {
+    ssize_t status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
+    if (status < 0) {
+      ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
+      break;
+    }
+  }
+  send_args_t send_args = {};
+  send_args.fd = fds[0];
+  thrd_t t;
+
+  shutdown(fds[0], SHUT_WR);
+
+  // Then start a thread blocking on a send().
+  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
+  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+
+  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
+
+  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
+  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+}
+
+TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
+  int fds[2] = {-1, -1};
+  int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed errno: %d", errno);
+  fbl::unique_fd cleanup_fds[] = {
+      fbl::unique_fd(fds[0]),
+      fbl::unique_fd(fds[1]),
+  };
 
   // First, fill up the socket so the next send() will block.
   char buf[BUF_SIZE] = {};
@@ -348,6 +415,10 @@ TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
   int thrd_create_result = thrd_create(&t, send_thread, &send_args);
   ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
 
+  // Wait for the thread to sleep in send.
+  ASSERT_OK(
+      WaitForState(*(zx::unowned_thread(thrd_get_zx_handle(t))), ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+
   shutdown(fds[1], SHUT_RD);
 
   ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
@@ -355,7 +426,39 @@ TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
   EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
   EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
 }
-*/
+
+TEST(SocketpairTest, ShutdownPeerReadBeforeSend) {
+  int fds[2] = {-1, -1};
+  int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+  ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed errno: %d", errno);
+  fbl::unique_fd cleanup_fds[] = {
+      fbl::unique_fd(fds[0]),
+      fbl::unique_fd(fds[1]),
+  };
+
+  // First, fill up the socket so the next send() will block.
+  char buf[BUF_SIZE] = {};
+  while (true) {
+    ssize_t status = send(fds[0], buf, sizeof(buf), MSG_DONTWAIT);
+    if (status < 0) {
+      ASSERT_EQ(errno, EAGAIN, "send should eventually return EAGAIN when full");
+      break;
+    }
+  }
+
+  shutdown(fds[1], SHUT_RD);
+
+  send_args_t send_args = {};
+  send_args.fd = fds[0];
+  thrd_t t;
+  int thrd_create_result = thrd_create(&t, send_thread, &send_args);
+  ASSERT_EQ(thrd_create_result, thrd_success, "create blocking send thread");
+
+  ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
+
+  EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
+  EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
+}
 
 TEST(SocketpairTest, CloneOrUnwrapAndWrap) {
   int fds[2];

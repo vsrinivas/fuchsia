@@ -2264,7 +2264,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (signals & ZX_SOCKET_WRITE_DISABLED) {
-            status = ZX_ERR_CONNECTION_RESET;
+            status = ZX_ERR_PEER_CLOSED;
             break;
           }
           __FALLTHROUGH;
