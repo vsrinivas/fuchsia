@@ -55,7 +55,7 @@ default = [%(features_array_items)s]
 
 # Returns the package name and Cargo.toml dependency data for a dependency,
 # or `None` on failure.
-def add_dep(third_party_json, data_path):
+def add_dep(args, third_party_json, data_path):
     if not os.path.isfile(data_path):
         print TERM_COLOR_RED
         print "Missing Rust target data for dependency " + data_path
@@ -151,14 +151,14 @@ def main():
     deps = {}
     if args.dep_data:
         for data_path in args.dep_data:
-            data = add_dep(third_party_json, data_path)
+            data = add_dep(args, third_party_json, data_path)
             if data is None:
                 return -1
             deps[data[0]] = data[1]
     test_only_deps = {}
     if args.test_only_dep_data:
         for data_path in args.test_only_dep_data:
-            data = add_dep(third_party_json, data_path)
+            data = add_dep(args, third_party_json, data_path)
             if data is None:
                 return -1
             test_only_deps[data[0]] = data[1]
