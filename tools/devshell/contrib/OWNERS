@@ -31,3 +31,4 @@ per-file set-relay=tamird@google.com
 per-file setup-usb-ethernet=cjn@google.com
 per-file sniff=porce@google.com
 per-file update-rustc-third-party=cramertj@google.com
+per-file bt-snoop-from-bugreport=belgum@google.com
