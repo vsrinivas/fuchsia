@@ -15,15 +15,14 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expec
 class EncoderFactoryOld {
   public:
   static Encoder makeEncoder() {
-    return Encoder(0xfefefefe);
+    return Encoder(0xfefefefe, /* should_encode_union_as_xunion */ false);
   }
 };
 
 class EncoderFactoryV1 {
   public:
   static Encoder makeEncoder() {
-    Encoder enc(0xfefefefe);
-    enc.SetShouldEncodeUnionAsXUnion(true);
+    Encoder enc(0xfefefefe, /* should_encode_union_as_xunion */ true);
     return enc;
   }
 };

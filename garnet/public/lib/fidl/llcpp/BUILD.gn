@@ -65,21 +65,6 @@ fidl("llcpptest.transitional.test") {
   ]
 }
 
-fidl("example") {
-  sources = [
-    "transformer_integration_example_lib.test.fidl",
-  ]
-}
-
-fidl("llcpptest.transformerintegration.test") {
-  sources = [
-    "transformer_integration.test.fidl",
-  ]
-  public_deps = [
-    ":example",
-  ]
-}
-
 executable("fidl_llcpp_types_test_bin") {
   testonly = true
 
@@ -101,7 +86,7 @@ executable("fidl_llcpp_types_test_bin") {
     ":llcpptest.flexible.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
     ":llcpptest.transitional.test_llcpp",
-    ":llcpptest.transformerintegration.test_llcpp",
+    "//sdk/lib/fidl/cpp:transformerintegration.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

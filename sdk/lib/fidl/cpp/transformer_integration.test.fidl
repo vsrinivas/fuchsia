@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library llcpptest.transformerintegration.test;
+library transformerintegration.test;
 
 using example;
 
@@ -17,4 +17,10 @@ protocol ReceiveXunionsForUnions {
 
     // This response contains a union. However, it will be a xunion on the wire.
     ReceiveUnion() -> (example.Sandwich4 sandwich);
+};
+
+/// Tests handling differing argument offsets caused by size differences between
+/// unions to xunions.
+protocol MultiArgReceiveXunions {
+    TwoUnion() -> (example.Sandwich4 one, example.Sandwich4 two);
 };

@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_ENCODER_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/runtime_flag.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
@@ -21,8 +22,15 @@ class Encoder final {
  public:
   enum NoHeader { NO_HEADER };
 
-  explicit Encoder(uint64_t ordinal);
-  explicit Encoder(NoHeader) {}
+  // As part of the union to xunion migration, we will encode unions
+  // as xunion bytes rather than union bytes when a flag is set.
+  // The second argument allows that behavior to be overridden locally for this encoder.
+  explicit Encoder(uint64_t ordinal,
+                   bool should_encode_union_as_xunion = fidl_global_get_should_write_union_as_xunion());
+  explicit Encoder(NoHeader marker,
+                   bool should_encode_union_as_xunion = fidl_global_get_should_write_union_as_xunion())
+      : should_encode_union_as_xunion_(should_encode_union_as_xunion) {}
+
   ~Encoder();
 
   size_t Alloc(size_t size);
@@ -48,18 +56,12 @@ class Encoder final {
 
   // As part of the union to xunion migration, we will encode unions
   // as xunion bytes rather than union bytes when a flag is set.
-  bool ShouldEncodeUnionAsXUnion() { return should_encode_union_as_xunion; }
-
-  // As part of the union to xunion migration, we will encode unions
-  // as xunion bytes rather than union bytes when a flag is set.
-  void SetShouldEncodeUnionAsXUnion(bool val) {
-    should_encode_union_as_xunion = val;
-  }
+  bool ShouldEncodeUnionAsXUnion() { return should_encode_union_as_xunion_; }
 
  private:
   void EncodeMessageHeader(uint64_t ordinal);
 
-  bool should_encode_union_as_xunion = false;
+  const bool should_encode_union_as_xunion_;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
 };

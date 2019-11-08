@@ -5,10 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
-#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/cpp/test/test_util.h>
 #include <lib/fidl/runtime_flag.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/errors.h>
@@ -16,16 +15,17 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <atomic>
 #include <thread>
 #include <vector>
+#include <memory>
 
-#include <example/llcpp/fidl.h>
-#include <transformerintegration/test/llcpp/fidl.h>
+#include <example/cpp/fidl.h>
+#include <transformerintegration/test/cpp/fidl.h>
 
-#include "garnet/public/lib/fidl/llcpp/test_utils.h"
 #include "gtest/gtest.h"
 
-namespace test = ::llcpp::transformerintegration::test;
+namespace test = ::transformerintegration::test;
 
 namespace {
 
@@ -75,94 +75,119 @@ constexpr uint8_t sandwich4_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
+/// V1 wire-format for two |example.Sandwich4| fields. See |MultiArgReceiveXunions.TwoUnion|.
+/// Their inline parts will be next to each other, then followed by the out-of-line parts.
+constexpr uint8_t two_sandwich4_case1_v1[] = {
+    0x01, 0x02, 0x03, 0x04,  // (1st) Sandwich4.before
+    0x00, 0x00, 0x00, 0x00,  // (1st) Sandwich4.before (padding)
+
+    0x04, 0x00, 0x00, 0x00,  // (1st) UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
+    0x00, 0x00, 0x00, 0x00,  // (1st) UnionSize36Alignment4.tag (padding)
+    0x20, 0x00, 0x00, 0x00,  // (1st) UnionSize36Alignment4.env.num_bytes
+    0x00, 0x00, 0x00, 0x00,  // (1st) UnionSize36Alignment4.env.num_handle
+    0xff, 0xff, 0xff, 0xff,  // (1st) UnionSize36Alignment4.env.presence
+    0xff, 0xff, 0xff, 0xff,  // (1st) UnionSize36Alignment4.env.presence [cont.]
+
+    0x05, 0x06, 0x07, 0x08,  // (1st) Sandwich4.after
+    0x00, 0x00, 0x00, 0x00,  // (1st) Sandwich4.after (padding)
+
+    0x01, 0x02, 0x03, 0x04,  // (2nd) Sandwich4.before
+    0x00, 0x00, 0x00, 0x00,  // (2nd) Sandwich4.before (padding)
+
+    0x04, 0x00, 0x00, 0x00,  // (2nd) UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
+    0x00, 0x00, 0x00, 0x00,  // (2nd) UnionSize36Alignment4.tag (padding)
+    0x20, 0x00, 0x00, 0x00,  // (2nd) UnionSize36Alignment4.env.num_bytes
+    0x00, 0x00, 0x00, 0x00,  // (2nd) UnionSize36Alignment4.env.num_handle
+    0xff, 0xff, 0xff, 0xff,  // (2nd) UnionSize36Alignment4.env.presence
+    0xff, 0xff, 0xff, 0xff,  // (2nd) UnionSize36Alignment4.env.presence [cont.]
+
+    0x05, 0x06, 0x07, 0x08,  // (2nd) Sandwich4.after
+    0x00, 0x00, 0x00, 0x00,  // (2nd) Sandwich4.after (padding)
+
+    0xa0, 0xa1, 0xa2, 0xa3,  // (1st) UnionSize36Alignment4.data, i.e. Sandwich4.the_union.data
+    0xa4, 0xa5, 0xa6, 0xa7,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xa8, 0xa9, 0xaa, 0xab,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xac, 0xad, 0xae, 0xaf,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xb0, 0xb1, 0xb2, 0xb3,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xb4, 0xb5, 0xb6, 0xb7,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xb8, 0xb9, 0xba, 0xbb,  // (1st) UnionSize36Alignment4.data [cont.]
+    0xbc, 0xbd, 0xbe, 0xbf,  // (1st) UnionSize36Alignment4.data [cont.]
+
+    0xa0, 0xa1, 0xa2, 0xa3,  // (2nd) UnionSize36Alignment4.data, i.e. Sandwich4.the_union.data
+    0xa4, 0xa5, 0xa6, 0xa7,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xa8, 0xa9, 0xaa, 0xab,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xac, 0xad, 0xae, 0xaf,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xb0, 0xb1, 0xb2, 0xb3,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xb4, 0xb5, 0xb6, 0xb7,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xb8, 0xb9, 0xba, 0xbb,  // (2nd) UnionSize36Alignment4.data [cont.]
+    0xbc, 0xbd, 0xbe, 0xbf,  // (2nd) UnionSize36Alignment4.data [cont.]
+};
+
 class TransformerIntegrationTest : public ::testing::Test {
  protected:
   virtual void SetUp() override {
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end_), ZX_OK);
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
   virtual void TearDown() override {
-  }
-
-  test::ReceiveXunionsForUnions::SyncClient TakeClient() {
-    EXPECT_TRUE(client_end_.is_valid());
-    return test::ReceiveXunionsForUnions::SyncClient(std::move(client_end_));
+    loop_->Shutdown();
   }
 
   zx::channel& client_end() { return client_end_; }
   zx::channel& server_end() { return server_end_; }
 
-  static void InitSandwich(::llcpp::example::Sandwich4* sandwich) {
+  static void InitSandwich(::example::Sandwich4* sandwich) {
     sandwich->before = 0x04030201u;
     sandwich->after = 0x08070605;
-    fidl::Array<uint8_t, 32> array;
+    std::array<uint8_t, 32> array;
     for (size_t i = 0; i < array.size(); i++) {
       array[i] = static_cast<uint8_t>(0xa0 + i);
     }
     sandwich->the_union.set_variant(array);
   }
 
+  async::Loop* loop() const { return loop_.get(); }
+
  private:
   zx::channel client_end_;
   zx::channel server_end_;
+  std::unique_ptr<async::Loop> loop_;
 };
 
 TEST_F(TransformerIntegrationTest, ReadPathUnionEvent) {
-  auto client = TakeClient();
-
-  // Send the event from the server end
   std::vector<uint8_t> response(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
   auto response_hdr = reinterpret_cast<fidl_message_header_t*>(&response[0]);
-  fidl::DecodedMessage<test::ReceiveXunionsForUnions::UnionEventResponse> msg(
-      fidl::BytePart(&response[0], response.size(), response.size()));
-  test::ReceiveXunionsForUnions::SetTransactionHeaderFor::UnionEventResponse(msg);
-  msg.Release();
-  // Set the flag indicating unions are encoded as xunions.
+  fidl_init_txn_header(response_hdr, 0,
+                       test::internal::kReceiveXunionsForUnions_UnionEvent_Ordinal);
   response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
   memcpy(&response[sizeof(fidl_message_header_t)], sandwich4_case1_v1, sizeof(sandwich4_case1_v1));
   ASSERT_EQ(ZX_OK, server_end().write(0, &response[0], response.size(), nullptr, 0));
 
-  // Test reading it from the client end
-  zx_status_t status = client.HandleEvents({
-      .union_event = [&](llcpp::example::Sandwich4 sandwich) {
-        EXPECT_EQ(llcpp::example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.which());
-        EXPECT_EQ(0x04030201u, sandwich.before);
-        EXPECT_EQ(0x08070605u, sandwich.after);
-        return ZX_OK;
-      },
-      .unknown = [&] {
-        return ZX_ERR_NOT_SUPPORTED;
-      },
-  });
-  EXPECT_EQ(ZX_OK, status);
+  test::ReceiveXunionsForUnionsPtr client;
+  client.Bind(std::move(client_end()), loop()->dispatcher());
+  client.events().UnionEvent = [this](::example::Sandwich4 sandwich) {
+    EXPECT_EQ(example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.Which());
+    EXPECT_EQ(0x04030201u, sandwich.before);
+    EXPECT_EQ(0x08070605u, sandwich.after);
+    loop()->Quit();
+  };
+  ASSERT_EQ(ZX_ERR_CANCELED, loop()->Run());
 }
 
 TEST_F(TransformerIntegrationTest, ReadPathSendUnion) {
-  class TestServer : public test::ReceiveXunionsForUnions::Interface {
+  class TestServer : public test::ReceiveXunionsForUnions {
    public:
-    void SendUnion(llcpp::example::Sandwich4 sandwich, SendUnionCompleter::Sync completer) final {
-      EXPECT_EQ(llcpp::example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.which());
+    void SendUnion(::example::Sandwich4 sandwich, SendUnionCallback callback) override {
+      reply_called_ += 1;
+      EXPECT_EQ(example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.Which());
       EXPECT_EQ(0x04030201u, sandwich.before);
       EXPECT_EQ(0x08070605u, sandwich.after);
-      completer.Reply(true);
+      callback(true);
     }
 
-    void ReceiveUnion(ReceiveUnionCompleter::Sync completer) final {
-      completer.Close(ZX_ERR_INVALID_ARGS);
-      FAIL() << "Never used in this test";
-    }
-  };
-
-  class TestTransaction : public fidl::Transaction {
-   public:
-    std::unique_ptr<Transaction> TakeOwnership() final { ZX_PANIC("Never used in this test"); }
-    void Close(zx_status_t) final { FAIL() << "Never used in this test"; }
-
-    void Reply(fidl::Message message) final {
-      auto response = reinterpret_cast<test::ReceiveXunionsForUnions::SendUnionResponse*>(
-          message.bytes().begin());
-      EXPECT_TRUE(response->success);
-      reply_called_ += 1;
+    void ReceiveUnion(ReceiveUnionCallback callback) override {
+      FAIL() << "Never used in the test";
     }
 
     int reply_called() const { return reply_called_; }
@@ -170,34 +195,25 @@ TEST_F(TransformerIntegrationTest, ReadPathSendUnion) {
    private:
     int reply_called_ = 0;
   };
-
-  TestServer server;
-  TestTransaction txn;
-  std::vector<uint8_t> fake_request(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
-  auto fake_request_hdr = reinterpret_cast<fidl_message_header_t*>(&fake_request[0]);
-  fidl::DecodedMessage<test::ReceiveXunionsForUnions::SendUnionRequest> decoded_msg(
-      fidl::BytePart(&fake_request[0], fake_request.size(), fake_request.size()));
-  test::ReceiveXunionsForUnions::SetTransactionHeaderFor::SendUnionRequest(decoded_msg);
-  decoded_msg.Release();
-  // Set the flag indicating unions are encoded as xunions.
-  fake_request_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  fake_request_hdr->txid = 1;
-  memcpy(&fake_request[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
+  std::vector<uint8_t> request(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
+  auto request_hdr = reinterpret_cast<fidl_message_header_t*>(&request[0]);
+  fidl_init_txn_header(request_hdr, 1,
+                       test::internal::kReceiveXunionsForUnions_SendUnion_Ordinal);
+  request_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+  memcpy(&request[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
          sizeof(sandwich4_case1_v1));
-  zx_handle_t handles[1] = {};
-  fidl_msg_t msg = {
-      .bytes = &fake_request[0],
-      .handles = handles,
-      .num_bytes = static_cast<uint32_t>(fake_request.size()),
-      .num_handles = 0,
-  };
-  bool handled = test::ReceiveXunionsForUnions::TryDispatch(&server, &msg, &txn);
-  EXPECT_TRUE(handled);
-  EXPECT_EQ(1, txn.reply_called());
+  ASSERT_EQ(ZX_OK, client_end().write(0, &request[0], request.size(), nullptr, 0));
+
+  TestServer server_impl;
+  fidl::Binding<test::ReceiveXunionsForUnions> binding(&server_impl, std::move(server_end()),
+                                                       loop()->dispatcher());
+  loop()->RunUntilIdle();
+  ASSERT_EQ(1, server_impl.reply_called());
 }
 
 TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
-  auto client = TakeClient();
+  test::ReceiveXunionsForUnionsPtr client;
+  client.Bind(std::move(client_end()), loop()->dispatcher());
 
   // Send the method response from the server end, on another thread
   std::thread server_thread([&, this] {
@@ -222,10 +238,8 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
     // Send response with xunion
     std::vector<uint8_t> response(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
     auto response_hdr = reinterpret_cast<fidl_message_header_t*>(&response[0]);
-    fidl::DecodedMessage<test::ReceiveXunionsForUnions::ReceiveUnionResponse> msg(
-        fidl::BytePart(&response[0], response.size(), response.size()));
-    test::ReceiveXunionsForUnions::SetTransactionHeaderFor::ReceiveUnionResponse(msg);
-    msg.Release();
+    fidl_init_txn_header(response_hdr, 1,
+                         test::internal::kReceiveXunionsForUnions_ReceiveUnion_Ordinal);
     // Set the flag indicating unions are encoded as xunions.
     response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
     response_hdr->txid = request_hdr->txid;
@@ -234,14 +248,18 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
     ASSERT_EQ(ZX_OK, server_end().write(0, &response[0], response.size(), nullptr, 0));
   });
 
-  auto result = client.ReceiveUnion();
-  ASSERT_EQ(ZX_OK, result.status());
-  auto& sandwich = result.value().sandwich;
-  EXPECT_EQ(llcpp::example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.which());
-  EXPECT_EQ(0x04030201u, sandwich.before);
-  EXPECT_EQ(0x08070605u, sandwich.after);
+  std::atomic<bool> response_received = false;
+  client->ReceiveUnion([this, &response_received] (::example::Sandwich4 sandwich) {
+    EXPECT_EQ(example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.Which());
+    EXPECT_EQ(0x04030201u, sandwich.before);
+    EXPECT_EQ(0x08070605u, sandwich.after);
+    response_received.store(true);
+    loop()->Quit();
+  });
 
+  loop()->Run();
   server_thread.join();
+  ASSERT_TRUE(response_received.load());
 }
 
 class ScopedToggleWriteXunion {
@@ -264,20 +282,34 @@ class ScopedToggleWriteXunion {
 };
 
 TEST_F(TransformerIntegrationTest, WritePathUnionEvent) {
+  loop()->StartThread();
+  class TestServer : public test::ReceiveXunionsForUnions {
+   public:
+    void SendUnion(::example::Sandwich4 sandwich, SendUnionCallback callback) override {
+      FAIL() << "Never used in the test";
+    }
+    void ReceiveUnion(ReceiveUnionCallback callback) override {
+      FAIL() << "Never used in the test";
+    }
+  };
+
+  TestServer server_impl;
+  fidl::Binding<test::ReceiveXunionsForUnions> binding(&server_impl, std::move(server_end()),
+                                                        loop()->dispatcher());
+
   // Send the event from the server end; we expect to read out an event in v1 wire-format.
   {
     ScopedToggleWriteXunion toggle(true);
-    ::llcpp::example::Sandwich4 sandwich;
+    ::example::Sandwich4 sandwich;
     InitSandwich(&sandwich);
-    test::ReceiveXunionsForUnions::SendUnionEventEvent(zx::unowned_channel(server_end()),
-                                                       std::move(sandwich));
-    std::vector<uint8_t> response_buf(512);
+    binding.events().UnionEvent(std::move(sandwich));
+    std::vector<uint8_t> response_buf(ZX_CHANNEL_MAX_MSG_BYTES);
     uint32_t actual_bytes = 0;
     ASSERT_EQ(ZX_OK, client_end().read(0, &response_buf[0], nullptr, response_buf.size(), 0,
                                        &actual_bytes, nullptr));
 
     ASSERT_GE(actual_bytes, sizeof(fidl_message_header_t));
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(
+    EXPECT_TRUE(fidl::test::util::cmp_payload(
         &response_buf[sizeof(fidl_message_header_t)], actual_bytes - sizeof(fidl_message_header_t),
         sandwich4_case1_v1, sizeof(sandwich4_case1_v1)));
     EXPECT_TRUE(fidl_should_decode_union_from_xunion(
@@ -287,17 +319,16 @@ TEST_F(TransformerIntegrationTest, WritePathUnionEvent) {
   // Send the event from the server end; we expect to read out an event in the old wire-format.
   {
     ScopedToggleWriteXunion toggle(false);
-    ::llcpp::example::Sandwich4 sandwich;
+    ::example::Sandwich4 sandwich;
     InitSandwich(&sandwich);
-    test::ReceiveXunionsForUnions::SendUnionEventEvent(zx::unowned_channel(server_end()),
-                                                       std::move(sandwich));
-    std::vector<uint8_t> response_buf(512);
+    binding.events().UnionEvent(std::move(sandwich));
+    std::vector<uint8_t> response_buf(ZX_CHANNEL_MAX_MSG_BYTES);
     uint32_t actual_bytes = 0;
     ASSERT_EQ(ZX_OK, client_end().read(0, &response_buf[0], nullptr, response_buf.size(), 0,
                                        &actual_bytes, nullptr));
 
     ASSERT_GE(actual_bytes, sizeof(fidl_message_header_t));
-    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(
+    EXPECT_TRUE(fidl::test::util::cmp_payload(
         &response_buf[sizeof(fidl_message_header_t)], actual_bytes - sizeof(fidl_message_header_t),
         sandwich4_case1_old, sizeof(sandwich4_case1_old)));
     EXPECT_FALSE(fidl_should_decode_union_from_xunion(
@@ -306,7 +337,8 @@ TEST_F(TransformerIntegrationTest, WritePathUnionEvent) {
 }
 
 TEST_F(TransformerIntegrationTest, WritePathSendUnion) {
-  auto client = TakeClient();
+  test::ReceiveXunionsForUnionsPtr client;
+  client.Bind(std::move(client_end()), loop()->dispatcher());
 
   auto with_common_test_body = [&, this](auto&& run_asserts) {
     std::thread server_thread([&, this] {
@@ -331,27 +363,29 @@ TEST_F(TransformerIntegrationTest, WritePathSendUnion) {
       run_asserts(request_buffer, actual_bytes);
 
       auto request_hdr = reinterpret_cast<fidl_message_header_t*>(&request_buffer[0]);
-      fidl::Buffer<test::ReceiveXunionsForUnions::SendUnionResponse> response_buffer;
-      fidl::BytePart bytes = response_buffer.view();
-      bytes.set_actual(bytes.capacity());
-      memset(bytes.begin(), 0, bytes.capacity());
-      uint8_t* response = bytes.data();
+      // |SendUnionResponse| is a header plus a boolean.
+      uint8_t response[sizeof(fidl_message_header_t) + FIDL_ALIGN(1)] = {};
       auto response_hdr = reinterpret_cast<fidl_message_header_t*>(response);
-      fidl::DecodedMessage<test::ReceiveXunionsForUnions::SendUnionResponse> msg(std::move(bytes));
-      test::ReceiveXunionsForUnions::SetTransactionHeaderFor::SendUnionResponse(msg);
-      msg.message()->success = true;
-      bytes = msg.Release();
-      response_hdr->txid = request_hdr->txid;
-      ASSERT_EQ(ZX_OK, server_end().write(0, bytes.data(), bytes.size(), nullptr, 0));
+      // Set the |success| field to true.
+      response[sizeof(fidl_message_header_t)] = 1;
+      fidl_init_txn_header(response_hdr, request_hdr->txid,
+                           test::internal::kReceiveXunionsForUnions_SendUnion_Ordinal);
+      ASSERT_EQ(ZX_OK, server_end().write(0, response, sizeof(response), nullptr, 0));
     });
 
-    ::llcpp::example::Sandwich4 sandwich;
+    std::atomic<bool> response_received = false;
+    ::example::Sandwich4 sandwich;
     TransformerIntegrationTest::InitSandwich(&sandwich);
-    auto result = client.SendUnion(std::move(sandwich));
-    ASSERT_EQ(ZX_OK, result.status());
-    ASSERT_TRUE(result->success);
+    client->SendUnion(std::move(sandwich), [this, &response_received] (bool success) {
+      EXPECT_TRUE(success);
+      response_received.store(true);
+      loop()->Quit();
+    });
 
+    loop()->Run();
     server_thread.join();
+    loop()->ResetQuit();
+    EXPECT_TRUE(response_received.load());
   };
 
   // Send the request from the client end; we expect to read out the request in v1 wire-format.
@@ -359,10 +393,9 @@ TEST_F(TransformerIntegrationTest, WritePathSendUnion) {
     ScopedToggleWriteXunion toggle(true);
 
     with_common_test_body([&](const std::vector<uint8_t>& request_buffer, uint32_t actual_bytes) {
-      ASSERT_TRUE(
-          llcpp_conformance_utils::ComparePayload(&request_buffer[sizeof(fidl_message_header_t)],
-                                                  actual_bytes - sizeof(fidl_message_header_t),
-                                                  sandwich4_case1_v1, sizeof(sandwich4_case1_v1)));
+      ASSERT_TRUE(fidl::test::util::cmp_payload(&request_buffer[sizeof(fidl_message_header_t)],
+                                                actual_bytes - sizeof(fidl_message_header_t),
+                                                sandwich4_case1_v1, sizeof(sandwich4_case1_v1)));
       ASSERT_TRUE(fidl_should_decode_union_from_xunion(
           reinterpret_cast<const fidl_message_header_t*>(&request_buffer[0])));
     });
@@ -373,10 +406,9 @@ TEST_F(TransformerIntegrationTest, WritePathSendUnion) {
     ScopedToggleWriteXunion toggle(false);
 
     with_common_test_body([&](const std::vector<uint8_t>& request_buffer, uint32_t actual_bytes) {
-      ASSERT_TRUE(llcpp_conformance_utils::ComparePayload(
-          &request_buffer[sizeof(fidl_message_header_t)],
-          actual_bytes - sizeof(fidl_message_header_t), sandwich4_case1_old,
-          sizeof(sandwich4_case1_old)));
+      ASSERT_TRUE(fidl::test::util::cmp_payload(&request_buffer[sizeof(fidl_message_header_t)],
+                                                actual_bytes - sizeof(fidl_message_header_t),
+                                                sandwich4_case1_old, sizeof(sandwich4_case1_old)));
       ASSERT_FALSE(fidl_should_decode_union_from_xunion(
           reinterpret_cast<const fidl_message_header_t*>(&request_buffer[0])));
     });
@@ -384,35 +416,31 @@ TEST_F(TransformerIntegrationTest, WritePathSendUnion) {
 }
 
 TEST_F(TransformerIntegrationTest, WritePathReceiveUnion) {
-  class Server : public test::ReceiveXunionsForUnions::Interface {
+  class Server : public test::ReceiveXunionsForUnions {
    public:
-    void SendUnion(::llcpp::example::Sandwich4 sandwich,
-                   SendUnionCompleter::Sync completer) override {
-      ZX_PANIC("Never called");
+    void SendUnion(::example::Sandwich4 sandwich, SendUnionCallback callback) override {
+      FAIL() << "Never used in the test";
     }
-    void ReceiveUnion(ReceiveUnionCompleter::Sync completer) override {
-      ::llcpp::example::Sandwich4 sandwich;
+    void ReceiveUnion(ReceiveUnionCallback callback) override {
+      ::example::Sandwich4 sandwich;
       TransformerIntegrationTest::InitSandwich(&sandwich);
-      completer.Reply(std::move(sandwich));
+      callback(std::move(sandwich));
     }
   };
 
+  loop()->StartThread("transformer-integration-test-server-thread");
   Server server;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(ZX_OK, fidl::Bind(loop.dispatcher(), std::move(server_end()), &server));
-  loop.StartThread("transformer-integration-test-server-thread");
+  fidl::Binding<test::ReceiveXunionsForUnions> binding(&server, std::move(server_end()),
+                                                       loop()->dispatcher());
 
   auto with_common_test_body = [&](auto&& run_asserts) {
     // Manually craft the request, since we need to manually validate the response bytes.
-    fidl::Buffer<test::ReceiveXunionsForUnions::ReceiveUnionRequest> request_buffer;
-    fidl::BytePart bytes = request_buffer.view();
-    bytes.set_actual(bytes.capacity());
-    memset(bytes.begin(), 0, bytes.capacity());
-    fidl::DecodedMessage<test::ReceiveXunionsForUnions::ReceiveUnionRequest> msg(std::move(bytes));
-    test::ReceiveXunionsForUnions::SetTransactionHeaderFor::ReceiveUnionRequest(msg);
-    msg.message()->_hdr.txid = 1;
-    bytes = msg.Release();
-    ASSERT_EQ(ZX_OK, client_end().write(0, bytes.data(), bytes.size(), nullptr, 0));
+    // |ReceiveUnionRequest| has no arguments.
+    uint8_t request[sizeof(fidl_message_header_t)] = {};
+    auto request_hdr = reinterpret_cast<fidl_message_header_t*>(request);
+    fidl_init_txn_header(request_hdr, 1,
+                         test::internal::kReceiveXunionsForUnions_ReceiveUnion_Ordinal);
+    ASSERT_EQ(ZX_OK, client_end().write(0, request, sizeof(request), nullptr, 0));
 
     zx_signals_t observed;
     ASSERT_EQ(ZX_OK, client_end().wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -436,10 +464,9 @@ TEST_F(TransformerIntegrationTest, WritePathReceiveUnion) {
     ScopedToggleWriteXunion toggle(true);
 
     with_common_test_body([&](const std::vector<uint8_t>& response_buffer, uint32_t actual_bytes) {
-      ASSERT_TRUE(
-          llcpp_conformance_utils::ComparePayload(&response_buffer[sizeof(fidl_message_header_t)],
-                                                  actual_bytes - sizeof(fidl_message_header_t),
-                                                  sandwich4_case1_v1, sizeof(sandwich4_case1_v1)));
+      ASSERT_TRUE(fidl::test::util::cmp_payload(&response_buffer[sizeof(fidl_message_header_t)],
+                                                actual_bytes - sizeof(fidl_message_header_t),
+                                                sandwich4_case1_v1, sizeof(sandwich4_case1_v1)));
       ASSERT_TRUE(fidl_should_decode_union_from_xunion(
           reinterpret_cast<const fidl_message_header_t*>(&response_buffer[0])));
     });
@@ -449,14 +476,58 @@ TEST_F(TransformerIntegrationTest, WritePathReceiveUnion) {
     ScopedToggleWriteXunion toggle(false);
 
     with_common_test_body([&](const std::vector<uint8_t>& response_buffer, uint32_t actual_bytes) {
-      ASSERT_TRUE(llcpp_conformance_utils::ComparePayload(
-          &response_buffer[sizeof(fidl_message_header_t)],
-          actual_bytes - sizeof(fidl_message_header_t), sandwich4_case1_old,
-          sizeof(sandwich4_case1_old)));
+      ASSERT_TRUE(fidl::test::util::cmp_payload(&response_buffer[sizeof(fidl_message_header_t)],
+                                                actual_bytes - sizeof(fidl_message_header_t),
+                                                sandwich4_case1_old, sizeof(sandwich4_case1_old)));
       ASSERT_FALSE(fidl_should_decode_union_from_xunion(
           reinterpret_cast<const fidl_message_header_t*>(&response_buffer[0])));
     });
   }
+}
+
+TEST_F(TransformerIntegrationTest, MultiArgXunion) {
+  ScopedToggleWriteXunion toggle(true);
+
+  class TestServer : public test::MultiArgReceiveXunions {
+   public:
+    void TwoUnion(TwoUnionCallback callback) override {
+      reply_called_ += 1;
+      ::example::Sandwich4 sandwichA;
+      InitSandwich(&sandwichA);
+      ::example::Sandwich4 sandwichB;
+      InitSandwich(&sandwichB);
+      callback(std::move(sandwichA), std::move(sandwichB));
+    }
+
+    int reply_called() const { return reply_called_; }
+
+   private:
+    int reply_called_ = 0;
+  };
+
+  std::vector<uint8_t> request(sizeof(fidl_message_header_t));
+  auto request_hdr = reinterpret_cast<fidl_message_header_t*>(&request[0]);
+  fidl_init_txn_header(request_hdr, 1,
+                       test::internal::kMultiArgReceiveXunions_TwoUnion_Ordinal);
+  ASSERT_EQ(ZX_OK, client_end().write(0, &request[0], request.size(), nullptr, 0));
+
+  TestServer server_impl;
+  fidl::Binding<test::MultiArgReceiveXunions> binding(&server_impl, std::move(server_end()),
+                                                      loop()->dispatcher());
+  loop()->RunUntilIdle();
+  ASSERT_EQ(1, server_impl.reply_called());
+
+  // Read out the encoded response, which should be 2 |example.Sandwich4|s.
+  std::vector<uint8_t> response_buf(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t actual_bytes = 0;
+  ASSERT_EQ(ZX_OK, client_end().read(0, &response_buf[0], nullptr, response_buf.size(), 0,
+                                     &actual_bytes, nullptr));
+  ASSERT_GE(actual_bytes, sizeof(fidl_message_header_t));
+  EXPECT_TRUE(fidl::test::util::cmp_payload(
+      &response_buf[sizeof(fidl_message_header_t)], actual_bytes - sizeof(fidl_message_header_t),
+      two_sandwich4_case1_v1, sizeof(two_sandwich4_case1_v1)));
+  EXPECT_TRUE(fidl_should_decode_union_from_xunion(
+      reinterpret_cast<fidl_message_header_t*>(&response_buf[0])));
 }
 
 }  // namespace

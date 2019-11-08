@@ -26,12 +26,15 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
                                    const fidl_type_t* response_type, Message request,
                                    Message* response) {
   const char* error_msg = nullptr;
-  zx_status_t status = request.Validate(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
-    return status;
+  auto header = request.header();
+  if (!fidl_should_decode_union_from_xunion(&header)) {
+    zx_status_t status = request.Validate(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
   }
-  status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, response);
+  zx_status_t status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, response);
   if (status != ZX_OK)
     return status;
   status = response->Decode(response_type, &error_msg);
