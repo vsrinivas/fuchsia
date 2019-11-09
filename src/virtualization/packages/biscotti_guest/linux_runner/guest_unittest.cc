@@ -146,7 +146,19 @@ TEST_F(LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
   ASSERT_EQ(st.st_size, kStatefulImageSizeForTest);
 }
 
-TEST_F(LinuxRunnerGuestTest, ReuseExistingStatefulParition) {
+// TODO(40751): With ShadowCallStack enabled and SafeStack disabled, we can
+// trigger a segfault in `ReuseExistingStatefulParition` all the way in
+// pthread_mutex_lock. We believe the underlying cause of this is some race
+// condition internal to gRPC. The segfault seems nondeterministic in that there
+// are many ways to hide the segfault, including:
+// - Disabling at least one of the other tests
+// - Avoid reading the `handle` at the end of `ConnectToStartupListener`
+// - Adding a log right after declaring the handle in
+//   `ConnectToStartupListener`
+// - Moving the SetUp and TearDown logic to the start and end of each test
+//   function
+// - Probably others to be discovered...
+TEST_F(LinuxRunnerGuestTest, DISABLED_ReuseExistingStatefulParition) {
   // Use a different size here to verify we don't go though the partition create
   // logic, which will create a full-size image.
   static constexpr auto image_size = 1024;
