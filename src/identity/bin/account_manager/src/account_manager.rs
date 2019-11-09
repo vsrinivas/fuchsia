@@ -502,12 +502,13 @@ mod tests {
                     assert_eq!(proxy.get_account_auth_states().await?, Ok(vec![]));
                     assert_inspect_tree!(inspector, root: contains {
                         accounts: {
-                            active: 0u64,
-                            total: 0u64,
+                            active: 0 as u64,
+                            total: 0 as u64,
                         },
                         listeners: {
-                            active: 0u64,
-                            events: 0u64,
+                            active: 0 as u64,
+                            events: 0 as u64,
+                            total_opened: 0 as u64,
                         },
                     });
                     Ok(())
@@ -533,8 +534,8 @@ mod tests {
                 );
                 assert_inspect_tree!(inspector, root: contains {
                     accounts: {
-                        total: 1u64,
-                        active: 0u64,
+                        total: 1 as u64,
+                        active: 0 as u64,
                     },
                 });
                 Ok(())

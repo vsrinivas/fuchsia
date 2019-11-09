@@ -35,7 +35,11 @@ impl Accounts {
 pub struct Listeners {
     /// The underlying inspect node.
     _node: Node,
+    /// The total number of listeners that have been registered (including active).
+    pub total_opened: UintProperty,
     /// The number of listeners currently registered to receive events.
+    /// NOTE: The active count does not decrement automatically when a client disconnects, but it
+    /// will eventually decrement. Inspect clients should assume eventual consistency.
     pub active: UintProperty,
     /// The total number of listen-able events that have occurred.
     pub events: UintProperty,
@@ -48,8 +52,9 @@ impl Listeners {
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("listeners");
         let active = (&node).create_uint("active", 0);
+        let total_opened = (&node).create_uint("total_opened", 0);
         let events = (&node).create_uint("events", 0);
-        Listeners { _node: node, active, events }
+        Listeners { _node: node, active, total_opened, events }
     }
 }
 

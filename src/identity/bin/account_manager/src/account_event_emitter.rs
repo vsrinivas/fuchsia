@@ -125,6 +125,7 @@ impl AccountEventEmitter {
             FutureObj::new(Box::pin(ok(())))
         };
         clients_lock.push(Client::new(listener, options));
+        self.inspect.total_opened.add(1 as u64);
         self.inspect.active.set(clients_lock.len() as u64);
         std::mem::drop(clients_lock);
         future.await
@@ -137,7 +138,7 @@ mod tests {
     use fidl::endpoints::*;
     use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
-    use fuchsia_inspect::Inspector;
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use futures::prelude::*;
     use lazy_static::lazy_static;
 
@@ -152,12 +153,6 @@ mod tests {
         static ref AUTH_STATE: AccountAuthState =
             AccountAuthState { account_id: LocalAccountId::new(6) };
         static ref AUTH_STATES: Vec<AccountAuthState> = vec![AUTH_STATE.clone()];
-    }
-
-    /// Creates a new AccountEventEmitter whose inspect interface is not exported
-    fn create_account_event_emitter() -> AccountEventEmitter {
-        let inspector = Inspector::new();
-        AccountEventEmitter::new(inspector.root())
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -258,7 +253,8 @@ mod tests {
             create_request_stream::<AccountListenerMarker>().unwrap();
         let listener_1 = client_end_1.into_proxy().unwrap();
         let listener_2 = client_end_2.into_proxy().unwrap();
-        let account_event_emitter = create_account_event_emitter();
+        let inspector = Inspector::new();
+        let account_event_emitter = AccountEventEmitter::new(inspector.root());
 
         let serve_fut_1 = async move {
             let request = stream_1.try_next().await.unwrap();
@@ -299,23 +295,32 @@ mod tests {
         };
 
         let request_fut = async move {
-            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
+            assert_inspect_tree!(inspector, root : { listeners: contains {
+                active: 0 as u64,
+                total_opened: 0 as u64,
+            }});
             assert!(account_event_emitter
                 .add_listener(listener_1, options_1, &AUTH_STATES)
                 .await
                 .is_ok());
-            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1);
+            assert_inspect_tree!(inspector, root : { listeners: contains {
+                active: 1 as u64,
+                total_opened: 1 as u64,
+            }});
             assert!(account_event_emitter
                 .add_listener(listener_2, options_2, &AUTH_STATES)
                 .await
                 .is_ok());
-            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 2);
+            assert_inspect_tree!(inspector, root : { listeners: {
+                active: 2 as u64,
+                total_opened: 2 as u64,
+                events: 0 as u64,
+            }});
 
-            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 0);
             account_event_emitter.publish(&EVENT_ADDED).await;
-            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 1);
+            assert_inspect_tree!(inspector, root : { listeners: contains { events: 1 as u64 }});
             account_event_emitter.publish(&EVENT_REMOVED).await;
-            assert_eq!(account_event_emitter.inspect.events.get().unwrap(), 2);
+            assert_inspect_tree!(inspector, root : { listeners: contains { events: 2 as u64 }});
         };
         join3(serve_fut_1, serve_fut_2, request_fut).await;
     }
@@ -331,7 +336,8 @@ mod tests {
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();
-        let account_event_emitter = create_account_event_emitter();
+        let inspector = Inspector::new();
+        let account_event_emitter = AccountEventEmitter::new(inspector.root());
         assert!(account_event_emitter.add_listener(listener, options, &AUTH_STATES).await.is_ok());
 
         let serve_fut = async move {
@@ -346,13 +352,21 @@ mod tests {
 
         let request_fut = async move {
             account_event_emitter.publish(&EVENT_ADDED).await; // Normal event
-            assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 1); // Listener remains
-            account_event_emitter
+            assert_inspect_tree!(inspector, root : { listeners: {
+                active: 1 as u64, // Listener remains
+                total_opened: 1 as u64,
+                events: 1 as u64,
+            }});
+            (account_event_emitter, inspector)
         };
-        let (_, account_event_emitter) = join(serve_fut, request_fut).await;
+        let (_, (account_event_emitter, inspector)) = join(serve_fut, request_fut).await;
 
         // Now the server is dropped, so the new publish should trigger a drop of the client
         account_event_emitter.publish(&EVENT_REMOVED).await;
-        assert_eq!(account_event_emitter.inspect.active.get().unwrap(), 0);
+        assert_inspect_tree!(inspector, root : { listeners: {
+            active: 0 as u64, // Listener dropped
+            total_opened: 1 as u64,
+            events: 2 as u64,
+        }});
     }
 }
