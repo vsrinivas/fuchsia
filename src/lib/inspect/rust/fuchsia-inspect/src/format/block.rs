@@ -297,12 +297,15 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Ensures the type of the array is the expected one.
     fn check_array_entry_type(&self, expected: BlockType) -> Result<(), Error> {
-        let actual = self.array_entry_type()?;
-        if actual == expected {
-            Ok(())
-        } else {
-            bail!("Invalid array entry type. Expected: {}, got: {}", expected, actual);
+        if cfg!(debug_assertions) {
+            let actual = self.array_entry_type()?;
+            if actual == expected {
+                return Ok(());
+            } else {
+                bail!("Invalid array entry type. Expected: {}, got: {}", expected, actual);
+            }
         }
+        Ok(())
     }
 
     /// Ensure that the index is within the array bounds.
@@ -360,16 +363,20 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
-        self.check_type_eq(self.read_header().block_type(), block_type)
+        if cfg!(debug_assertions) {
+            return self.check_type_eq(self.read_header().block_type(), block_type);
+        }
+        Ok(())
     }
 
     fn check_type_eq(&self, actual: u8, expected: BlockType) -> Result<(), Error> {
-        let actual = BlockType::from_u8(actual).ok_or(format_err!("Invalid block type"))?;
-        if actual != expected {
-            bail!("Expected type {}, got type {}", expected, actual);
-        } else {
-            Ok(())
+        if cfg!(debug_assertions) {
+            let actual = BlockType::from_u8(actual).ok_or(format_err!("Invalid block type"))?;
+            if actual != expected {
+                bail!("Expected type {}, got type {}", expected, actual);
+            }
         }
+        Ok(())
     }
 
     /// Get the block header.
@@ -407,18 +414,24 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Check if the block is NODE or TOMBSTONE.
     fn check_node_or_tombstone(&self) -> Result<(), Error> {
-        if self.block_type().is_node_or_tombstone() {
-            return Ok(());
+        if cfg!(debug_assertions) {
+            if self.block_type().is_node_or_tombstone() {
+                return Ok(());
+            }
+            bail!("Expected NODE|TOMBSTONE, got: {}", self.block_type())
         }
-        bail!("Expected NODE|TOMBSTONE, got: {}", self.block_type())
+        Ok(())
     }
 
     /// Check if the block is of *_VALUE.
     fn check_any_value(&self) -> Result<(), Error> {
-        if self.block_type().is_any_value() {
-            return Ok(());
+        if cfg!(debug_assertions) {
+            if self.block_type().is_any_value() {
+                return Ok(());
+            }
+            bail!("Block type {} is not *_VALUE", self.block_type())
         }
-        bail!("Block type {} is not *_VALUE", self.block_type())
+        Ok(())
     }
 }
 
@@ -865,14 +878,16 @@ mod tests {
         f: fn(&Block<&[u8]>) -> Result<T, Error>,
         error_types: &BTreeSet<BlockType>,
     ) {
-        let container = [0u8; constants::MIN_ORDER_SIZE * 3];
-        for block_type in BlockType::all().iter() {
-            let block = create_with_type(&container[..], 0, block_type.clone());
-            let result = f(&block);
-            if error_types.contains(&block_type) {
-                assert!(result.is_err());
-            } else {
-                assert!(result.is_ok());
+        if cfg!(debug_assertions) {
+            let container = [0u8; constants::MIN_ORDER_SIZE * 3];
+            for block_type in BlockType::all().iter() {
+                let block = create_with_type(&container[..], 0, block_type.clone());
+                let result = f(&block);
+                if error_types.contains(&block_type) {
+                    assert!(result.is_err());
+                } else {
+                    assert!(result.is_ok());
+                }
             }
         }
     }
@@ -881,14 +896,16 @@ mod tests {
         f: fn(&mut Block<&[u8]>) -> Result<T, Error>,
         ok_types: &BTreeSet<BlockType>,
     ) {
-        let container = [0u8; constants::MIN_ORDER_SIZE * 3];
-        for block_type in BlockType::all().iter() {
-            let mut block = create_with_type(&container[..], 0, block_type.clone());
-            let result = f(&mut block);
-            if ok_types.contains(&block_type) {
-                assert!(result.is_ok());
-            } else {
-                assert!(result.is_err());
+        if cfg!(debug_assertions) {
+            let container = [0u8; constants::MIN_ORDER_SIZE * 3];
+            for block_type in BlockType::all().iter() {
+                let mut block = create_with_type(&container[..], 0, block_type.clone());
+                let result = f(&mut block);
+                if ok_types.contains(&block_type) {
+                    assert!(result.is_ok());
+                } else {
+                    assert!(result.is_err());
+                }
             }
         }
     }
@@ -938,7 +955,9 @@ mod tests {
         assert_eq!(block1.index(), 1);
         assert_eq!(block1.order(), 1);
         assert_eq!(block1.block_type(), BlockType::Reserved);
-        assert!(block1.free_next_index().is_err());
+        if cfg!(debug_assertions) {
+            assert!(block1.free_next_index().is_err());
+        }
         assert_eq!(block2.index(), 0);
         assert_eq!(block2.order(), 1);
         assert_eq!(block2.block_type(), BlockType::Free);
