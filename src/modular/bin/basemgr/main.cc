@@ -12,9 +12,8 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <iostream>
-#include <memory>
-
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
@@ -142,10 +141,10 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
 
 // Configures Basemgr by passing in connected services.
 std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
-    fuchsia::modular::session::BasemgrConfig& config, sys::ComponentContext* component_context,
+    fuchsia::modular::session::ModularConfig& config, sys::ComponentContext* component_context,
     async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup =
-      SetupCobalt(config.enable_cobalt(), loop->dispatcher(), component_context);
+      SetupCobalt(config.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   fuchsia::ui::policy::PresenterPtr presenter;
   component_context->svc()->Connect(presenter.NewRequest());
@@ -196,17 +195,20 @@ class LifecycleImpl : public fuchsia::modular::Lifecycle {
 };
 
 int main(int argc, const char** argv) {
-  fuchsia::modular::session::BasemgrConfig config;
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  fuchsia::modular::session::ModularConfig modular_config;
 
   if (argc == 1) {
     // Read configurations from file if no command line arguments are passed in.
     // This sets default values for any configurations that aren't specified in
     // the configuration file.
     auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
-    config = config_reader.GetBasemgrConfig();
+    modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
+    modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
 
-    config.mutable_sessionmgr()->set_url(modular_config::kSessionmgrUrl);
-    config.mutable_sessionmgr()->set_args({});
+    modular_config.mutable_basemgr_config()->mutable_sessionmgr()->set_url(
+        modular_config::kSessionmgrUrl);
+    modular_config.mutable_basemgr_config()->mutable_sessionmgr()->set_args({});
   } else {
     // Read command line arguments
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -215,10 +217,9 @@ int main(int argc, const char** argv) {
       return 0;
     }
 
-    config = CreateBasemgrConfigFromCommandLine(command_line);
+    modular_config.set_basemgr_config(CreateBasemgrConfigFromCommandLine(command_line));
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context(sys::ComponentContext::Create());
 
@@ -226,18 +227,20 @@ int main(int argc, const char** argv) {
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
   LifecycleImpl lifecycle_impl(&loop, component_context.get());
   bool ran = false;
-  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl, &lifecycle_impl,
-                             &setui, &ran](fuchsia::setui::SettingsObject settings_obj) mutable {
+  auto initialize_basemgr = [&modular_config, &loop, &component_context, &basemgr_impl,
+                             &lifecycle_impl, &setui,
+                             &ran](fuchsia::setui::SettingsObject settings_obj) mutable {
     if (ran) {
       return;
     }
 
     ran = true;
 
-    ConfigureLoginOverride(config, settings_obj, setui.get());
+    ConfigureLoginOverride(*modular_config.mutable_basemgr_config(), settings_obj, setui.get());
 
     std::unique_ptr<modular::BasemgrImpl> basemgr =
-        ConfigureBasemgr(config, component_context.get(), &loop);
+        ConfigureBasemgr(modular_config, component_context.get(), &loop);
+
     basemgr_impl = std::move(basemgr);
     lifecycle_impl.set_sink(basemgr_impl.get());
 

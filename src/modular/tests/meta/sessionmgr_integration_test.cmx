@@ -3,6 +3,9 @@
         "binary": "test/sessionmgr_integration_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.device.manager.Administrator",
             "fuchsia.sys.Environment",

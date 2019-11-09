@@ -4,15 +4,21 @@
 
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
+#include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/logging.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
+
+constexpr char kBasemgrGlobPath[] = "/hub/r/mth_*_test/*/c/basemgr.cmx/*/out/debug/basemgr";
 
 class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {};
 
@@ -135,6 +141,39 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
 
   RunLoopUntil([&] { return mock_admin.suspend_called(); });
   EXPECT_TRUE(mock_admin.suspend_called());
+}
+
+TEST_F(SessionmgrIntegrationTest, RestartSession) {
+  // Setup environment with a suffix to enable globbing for basemgr's debug service
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.set_environment_suffix("test");
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+
+  // Setup a MockAdmin to check if sessionmgr restarts too many times. If the MockAdmin calls
+  // suspend, then sessionmgr has reached its retry limit and we've failed to succesfully restart
+  // the session.
+  MockAdmin mock_admin;
+  fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
+
+  // Use a session shell to determine if a session has been started.
+  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
+  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+  builder.AddService(admin_bindings.GetHandler(&mock_admin));
+  builder.BuildAndRun(test_harness());
+  RunLoopUntil([&] { return session_shell->is_running(); });
+
+  // Connect to basemgr to call RestartSession
+  files::Glob glob(kBasemgrGlobPath);
+  ASSERT_EQ(1u, glob.size());
+  const std::string path = *glob.begin();
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
+  fdio_service_connect(path.c_str(), basemgr.NewRequest().TakeChannel().release());
+
+  bool session_restarted = false;
+  basemgr->RestartSession([&] { session_restarted = true; });
+  RunLoopUntil([&] { return !session_shell->is_running(); });
+  RunLoopUntil([&] { return session_restarted && session_shell->is_running(); });
+  EXPECT_FALSE(mock_admin.suspend_called());
 }
 
 }  // namespace

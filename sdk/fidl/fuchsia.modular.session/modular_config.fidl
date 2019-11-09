@@ -166,3 +166,10 @@ enum CloudProvider {
 
     NONE = 3;
 };
+
+/// Contains the configurations for the modular framework components.
+table ModularConfig {
+    1: BasemgrConfig basemgr_config;
+
+    2: SessionmgrConfig sessionmgr_config;
+};
