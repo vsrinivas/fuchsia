@@ -40,6 +40,7 @@ protocol FidlCodecTestInterface {
     BoolStruct(BoolStructType s);
     NullableStruct(PrimitiveTypes? p);
     NullableStructAndInt(PrimitiveTypes? p, int32 i);
+    ArrayNullableStruct(array<TwoStringStruct?>:3 a);
 
     SmallStructAfterByte(uint8 u, SmallStruct s1, SmallStruct s2);
 
@@ -49,6 +50,7 @@ protocol FidlCodecTestInterface {
     Union(IntStructUnion isu, int32 i);
     NullableUnion(IntStructUnion? isu, int32 i);
     NullableUnionIntFirst(int32 i, IntStructUnion? isu);
+    ArrayNullableUnion(array<IntStructUnion?>:3 a);
 
     XUnion(IntStructXunion isu, int32 i);
     NullableXUnion(IntStructXunion? isu, int32 i);

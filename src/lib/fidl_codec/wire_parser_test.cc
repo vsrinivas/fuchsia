@@ -587,6 +587,37 @@ TEST_DECODE_WIRE(NullableStructAndInt, NullableStructAndInt, R"({"p":null, "i":"
 
 namespace {
 
+std::array<std::unique_ptr<test::fidlcodec::examples::TwoStringStruct>, 3> GetArrayNullableStruct(
+    const std::string& v1, const std::string& v2, const std::string& v3, const std::string& v4) {
+  std::array<std::unique_ptr<test::fidlcodec::examples::TwoStringStruct>, 3> a;
+  a[0] = std::make_unique<test::fidlcodec::examples::TwoStringStruct>();
+  a[0]->value1 = v1;
+  a[0]->value2 = v2;
+  a[1] = nullptr;
+  a[2] = std::make_unique<test::fidlcodec::examples::TwoStringStruct>();
+  a[2]->value1 = v3;
+  a[2]->value2 = v4;
+  return a;
+}
+
+}  // namespace
+
+TEST_DECODE_WIRE(
+    ArrayNullableStruct, ArrayNullableStruct,
+    R"({"a":[{"value1":"harpo","value2":"chico"},null,{"value1":"groucho","value2":"zeppo"}]})",
+    "{\n"
+    "  a: #gre#array<test.fidlcodec.examples/TwoStringStruct>#rst# = [\n"
+    "    { value1: #gre#string#rst# = #red#\"harpo\"#rst#, "
+    "value2: #gre#string#rst# = #red#\"chico\"#rst# }\n"
+    "    #blu#null#rst#\n"
+    "    { value1: #gre#string#rst# = #red#\"groucho\"#rst#, "
+    "value2: #gre#string#rst# = #red#\"zeppo\"#rst# }\n"
+    "  ]\n"
+    "}",
+    GetArrayNullableStruct("harpo", "chico", "groucho", "zeppo"))
+
+namespace {
+
 test::fidlcodec::examples::SmallStruct SmallStructFromVals(uint8_t a, uint8_t b, uint8_t c) {
   test::fidlcodec::examples::SmallStruct ss;
   ss.a = a;
@@ -798,6 +829,38 @@ TEST_DECODE_WIRE(NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
                  R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
                  IntStructUnionPretty("IntStructXunion", 1, "harpo", "chico"), 1,
                  GetStructUnionPtr<xisu>("harpo", "chico"));
+
+namespace {
+
+std::array<std::unique_ptr<test::fidlcodec::examples::IntStructUnion>, 3> GetArrayNullableUnion(
+    int32_t i, const std::string& v1, const std::string& v2) {
+  std::array<std::unique_ptr<test::fidlcodec::examples::IntStructUnion>, 3> a;
+  a[0] = std::make_unique<test::fidlcodec::examples::IntStructUnion>();
+  a[0]->set_variant_i(i);
+  test::fidlcodec::examples::TwoStringStruct tss = TwoStringStructFromVals(v1, v2);
+  a[2] = std::make_unique<test::fidlcodec::examples::IntStructUnion>();
+  a[2]->set_variant_tss(tss);
+  return a;
+}
+
+}  // namespace
+
+TEST_DECODE_WIRE(
+    ArrayNullableUnion, ArrayNullableUnion,
+    R"({"a":[{"variant_i":"1234"},null,{"variant_tss":{"value1":"harpo","value2":"chico"}}]})",
+    "{\n"
+    "  a: #gre#array<test.fidlcodec.examples/IntStructUnion>#rst# = [\n"
+    "    v0!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }\n"
+    "    v0!#blu#null#rst#\n"
+    "    v0!{\n"
+    "      variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n"
+    "        value1: #gre#string#rst# = #red#\"harpo\"#rst#\n"
+    "        value2: #gre#string#rst# = #red#\"chico\"#rst#\n"
+    "      }\n"
+    "    }\n"
+    "  ]\n"
+    "}",
+    GetArrayNullableUnion(1234, "harpo", "chico"))
 
 TEST_F(WireParserTest, BadU8U16UnionStruct) {
   TEST_DECODE_WIRE_BODY_BAD(U8U16UnionStruct, "{\"s\":{\"u\":{\"variant_u8\":\"invalid\"}}}",

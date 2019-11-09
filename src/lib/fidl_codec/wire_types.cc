@@ -57,7 +57,7 @@ std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset
   return std::make_unique<BoolValue>(this, decoder->GetAddress(offset, sizeof(uint8_t)));
 }
 
-size_t StructType::InlineSize() const { return struct_.size(); }
+size_t StructType::InlineSize() const { return nullable_ ? sizeof(uintptr_t) : struct_.size(); }
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return struct_.DecodeObject(decoder, this, offset, nullable_);
@@ -82,7 +82,7 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
 UnionType::UnionType(const Union& uni, bool nullable) : union_(uni), nullable_(nullable) {}
 
-size_t UnionType::InlineSize() const { return union_.size(); }
+size_t UnionType::InlineSize() const { return nullable_ ? sizeof(uintptr_t) : union_.size(); }
 
 std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return decoder->unions_are_xunions() ? union_.DecodeXUnion(decoder, this, offset, nullable_)
