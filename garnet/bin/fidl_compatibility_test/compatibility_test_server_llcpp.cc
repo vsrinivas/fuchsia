@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/compatibility/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,6 +16,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+
+#include <fidl/test/compatibility/llcpp/fidl.h>
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
@@ -37,6 +38,12 @@ class EchoClientApp {
     return client_.EchoStruct(std::move(value), forward_to_server);
   }
 
+  Echo::ResultOf::EchoStructWithError EchoStructWithError(Struct value, default_enum err,
+                                                          ::fidl::StringView forward_to_server,
+                                                          RespondWith result_variant) {
+    return client_.EchoStructWithError(std::move(value), err, forward_to_server, result_variant);
+  }
+
   zx_status_t EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
                                  Echo::EventHandlers event_handlers) {
     auto result = client_.EchoStructNoRetVal(std::move(value), forward_to_server);
@@ -53,9 +60,21 @@ class EchoClientApp {
                               std::move(response_buffer));
   }
 
+  Echo::ResultOf::EchoArraysWithError EchoArraysWithError(ArraysStruct value, default_enum err,
+                                                          ::fidl::StringView forward_to_server,
+                                                          RespondWith result_variant) {
+    return client_.EchoArraysWithError(std::move(value), err, forward_to_server, result_variant);
+  }
+
   Echo::ResultOf::EchoVectors EchoVectors(VectorsStruct value,
                                           ::fidl::StringView forward_to_server) {
     return client_.EchoVectors(std::move(value), forward_to_server);
+  }
+
+  Echo::ResultOf::EchoVectorsWithError EchoVectorsWithError(VectorsStruct value, default_enum err,
+                                                            ::fidl::StringView forward_to_server,
+                                                            RespondWith result_variant) {
+    return client_.EchoVectorsWithError(std::move(value), err, forward_to_server, result_variant);
   }
 
   Echo::UnownedResultOf::EchoTable EchoTable(::fidl::BytePart request_buffer, AllTypesTable value,
@@ -65,9 +84,26 @@ class EchoClientApp {
                              std::move(response_buffer));
   }
 
+  Echo::UnownedResultOf::EchoTableWithError EchoTableWithError(::fidl::BytePart request_buffer,
+                                                               AllTypesTable value,
+                                                               default_enum err,
+                                                               ::fidl::StringView forward_to_server,
+                                                               RespondWith result_variant,
+                                                               ::fidl::BytePart response_buffer) {
+    return client_.EchoTableWithError(std::move(request_buffer), std::move(value), err,
+                                      forward_to_server, result_variant,
+                                      std::move(response_buffer));
+  }
+
   Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<AllTypesXunion> value,
                                           ::fidl::StringView forward_to_server) {
     return client_.EchoXunions(std::move(value), forward_to_server);
+  }
+
+  Echo::ResultOf::EchoXunionsWithError EchoXunionsWithError(
+      ::fidl::VectorView<AllTypesXunion> value, default_enum err,
+      ::fidl::StringView forward_to_server, RespondWith result_variant) {
+    return client_.EchoXunionsWithError(std::move(value), err, forward_to_server, result_variant);
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -113,6 +149,24 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
+  void EchoStructWithError(Struct value, default_enum err, ::fidl::StringView forward_to_server,
+                           RespondWith result_variant,
+                           EchoStructWithErrorCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      if (result_variant == RespondWith::ERR) {
+        completer.ReplyError(err);
+      } else {
+        completer.ReplySuccess(std::move(value));
+      }
+    } else {
+      EchoClientApp app(forward_to_server);
+      auto result =
+          app.EchoStructWithError(std::move(value), err, ::fidl::StringView{""}, result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
   void EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
                           EchoStructNoRetValCompleter::Sync) override {
     if (forward_to_server.empty()) {
@@ -155,6 +209,24 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
+  void EchoArraysWithError(ArraysStruct value, default_enum err,
+                           ::fidl::StringView forward_to_server, RespondWith result_variant,
+                           EchoArraysWithErrorCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      if (result_variant == RespondWith::ERR) {
+        completer.ReplyError(err);
+      } else {
+        completer.ReplySuccess(std::move(value));
+      }
+    } else {
+      EchoClientApp app(forward_to_server);
+      auto result =
+          app.EchoArraysWithError(std::move(value), err, ::fidl::StringView{""}, result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
   void EchoVectors(VectorsStruct value, ::fidl::StringView forward_to_server,
                    EchoVectorsCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
@@ -165,6 +237,24 @@ class EchoConnection final : public Echo::Interface {
       auto result = app.EchoVectors(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
+    }
+  }
+
+  void EchoVectorsWithError(VectorsStruct value, default_enum err,
+                            ::fidl::StringView forward_to_server, RespondWith result_variant,
+                            EchoVectorsWithErrorCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      if (result_variant == RespondWith::ERR) {
+        completer.ReplyError(err);
+      } else {
+        completer.ReplySuccess(std::move(value));
+      }
+    } else {
+      EchoClientApp app(forward_to_server);
+      auto result =
+          app.EchoVectorsWithError(std::move(value), err, ::fidl::StringView{""}, result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
+      completer.Reply(std::move(result->result));
     }
   }
 
@@ -185,6 +275,28 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
+  void EchoTableWithError(AllTypesTable value, default_enum err,
+                          ::fidl::StringView forward_to_server, RespondWith result_variant,
+                          EchoTableWithErrorCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      if (result_variant == RespondWith::ERR) {
+        completer.ReplyError(err);
+      } else {
+        completer.ReplySuccess(std::move(value));
+      }
+    } else {
+      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      EchoClientApp app(forward_to_server);
+      auto result = app.EchoTableWithError(
+          ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
+          std::move(value), err, ::fidl::StringView{""}, result_variant,
+          ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
   void EchoXunions(::fidl::VectorView<AllTypesXunion> value, ::fidl::StringView forward_to_server,
                    EchoXunionsCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
@@ -194,6 +306,24 @@ class EchoConnection final : public Echo::Interface {
       auto result = app.EchoXunions(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
+    }
+  }
+
+  void EchoXunionsWithError(::fidl::VectorView<AllTypesXunion> value, default_enum err,
+                            ::fidl::StringView forward_to_server, RespondWith result_variant,
+                            EchoXunionsWithErrorCompleter::Sync completer) override {
+    if (forward_to_server.empty()) {
+      if (result_variant == RespondWith::ERR) {
+        completer.ReplyError(err);
+      } else {
+        completer.ReplySuccess(std::move(value));
+      }
+    } else {
+      EchoClientApp app(forward_to_server);
+      auto result =
+          app.EchoXunionsWithError(std::move(value), err, ::fidl::StringView{""}, result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
+      completer.Reply(std::move(result->result));
     }
   }
 

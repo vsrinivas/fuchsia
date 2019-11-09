@@ -5,7 +5,9 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fidl_test_compatibility::{
-        EchoEvent, EchoMarker, EchoProxy, EchoRequest, EchoRequestStream,
+        EchoEchoArraysWithErrorResult, EchoEchoStructWithErrorResult,
+        EchoEchoVectorsWithErrorResult, EchoEvent, EchoMarker, EchoProxy, EchoRequest,
+        EchoRequestStream, RespondWith,
     },
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
@@ -33,11 +35,38 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_struct(&mut value, "").await
+                        value = echo
+                            .echo_struct(&mut value, "")
+                            .await
                             .context("Error calling echo_struct on proxy")?;
                         drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
+                }
+                EchoRequest::EchoStructWithError {
+                    mut value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_struct_with_error(&mut value, result_err, "", result_variant)
+                            .await
+                            .context("Error calling echo_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoStructWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoStructWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
                 }
                 EchoRequest::EchoStructNoRetVal {
                     mut value,
@@ -50,10 +79,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         echo.echo_struct_no_ret_val(&mut value, "")
                             .context("Error sending echo_struct_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
-                        let EchoEvent::EchoEvent { value: response_val } =
-                            event_stream.try_next().await
-                                .context("Error getting event response from proxy")?
-                                .ok_or_else(|| format_err!("Proxy sent no events"))?;
+                        let EchoEvent::EchoEvent { value: response_val } = event_stream
+                            .try_next()
+                            .await
+                            .context("Error getting event response from proxy")?
+                            .ok_or_else(|| format_err!("Proxy sent no events"))?;
                         value = response_val;
                         drop(app);
                     }
@@ -65,51 +95,110 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_arrays(&mut value, "").await
+                        value = echo
+                            .echo_arrays(&mut value, "")
+                            .await
                             .context("Error calling echo_arrays on proxy")?;
                         drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
+                EchoRequest::EchoArraysWithError {
+                    mut value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_arrays_with_error(&mut value, result_err, "", result_variant)
+                            .await
+                            .context("Error calling echo_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoArraysWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoArraysWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
                 EchoRequest::EchoVectors { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_vectors(&mut value, "").await
+                        value = echo
+                            .echo_vectors(&mut value, "")
+                            .await
                             .context("Error calling echo_vectors on proxy")?;
                         drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
+                EchoRequest::EchoVectorsWithError {
+                    mut value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_vectors_with_error(&mut value, result_err, "", result_variant)
+                            .await
+                            .context("Error calling echo_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoVectorsWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoVectorsWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
                 EchoRequest::EchoTable { .. } => {
+                    // Enabling this blows the stack.
+                }
+                EchoRequest::EchoTableWithError { .. } => {
                     // Enabling this blows the stack.
                 }
                 EchoRequest::EchoXunions { .. } => {
                     // Enabling this blows the stack.
                 }
-                /*
-                EchoRequest::EchoTable { mut value, forward_to_server, responder } => {
-                    if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
-                        value = echo.echo_table(value, "").await
-                            .context("Error calling echo_table on proxy")?;
-                        drop(app);
-                    }
-                    responder.send(value)
-                        .context("Error responding")?;
-                }
-                EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
-                    if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
-                        value = echo.echo_xunions(&mut value.iter_mut(), "").await
-                            .context("Error calling echo_xunions on proxy")?;
-                        drop(app);
-                    }
-                    responder.send(&mut value.iter_mut()).context("Error responding")?;
-                }
-                */
+                EchoRequest::EchoXunionsWithError { .. } => {
+                    // Enabling this blows the stack.
+                } /*
+                  EchoRequest::EchoTable { mut value, forward_to_server, responder } => {
+                      if !forward_to_server.is_empty() {
+                          let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                              .context("Error connecting to proxy")?;
+                          value = echo.echo_table(value, "").await
+                              .context("Error calling echo_table on proxy")?;
+                          drop(app);
+                      }
+                      responder.send(value)
+                          .context("Error responding")?;
+                  }
+                  EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
+                      if !forward_to_server.is_empty() {
+                          let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                              .context("Error connecting to proxy")?;
+                          value = echo.echo_xunions(&mut value.iter_mut(), "").await
+                              .context("Error calling echo_xunions on proxy")?;
+                          drop(app);
+                      }
+                      responder.send(&mut value.iter_mut()).context("Error responding")?;
+                  }
+                  */
             }
             Ok(())
         })

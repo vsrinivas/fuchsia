@@ -57,6 +57,41 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoStructWithError(Struct value, default_enum err, std::string forward_to_server,
+                           RespondWith result_variant,
+                           EchoStructWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoStructWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoStructWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoStructWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(Echo_EchoStructWithError_Response(std::move(value)));
+      }
+      callback(std::move(result));
+    }
+  }
+
   void EchoStructNoRetVal(Struct value, std::string forward_to_server) override {
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
@@ -106,6 +141,41 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoArraysWithError(ArraysStruct value, default_enum err, std::string forward_to_server,
+                           RespondWith result_variant,
+                           EchoArraysWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoArraysWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoArraysWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoArraysWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(Echo_EchoArraysWithError_Response(std::move(value)));
+      }
+      callback(std::move(result));
+    }
+  }
+
   void EchoVectors(VectorsStruct value, std::string forward_to_server,
                    EchoVectorsCallback callback) override {
     if (!forward_to_server.empty()) {
@@ -130,6 +200,41 @@ class EchoServerApp : public Echo {
       loop_->ResetQuit();
     } else {
       callback(std::move(value));
+    }
+  }
+
+  void EchoVectorsWithError(VectorsStruct value, default_enum err, std::string forward_to_server,
+                            RespondWith result_variant,
+                            EchoVectorsWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoVectorsWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoVectorsWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoVectorsWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(Echo_EchoVectorsWithError_Response(std::move(value)));
+      }
+      callback(std::move(result));
     }
   }
 
@@ -160,6 +265,41 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoTableWithError(AllTypesTable value, default_enum err, std::string forward_to_server,
+                          RespondWith result_variant,
+                          EchoTableWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoTableWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoTableWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoTableWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(Echo_EchoTableWithError_Response(std::move(value)));
+      }
+      callback(std::move(result));
+    }
+  }
+
   void EchoXunions(std::vector<AllTypesXunion> value, std::string forward_to_server,
                    EchoXunionsCallback callback) override {
     if (!forward_to_server.empty()) {
@@ -184,6 +324,41 @@ class EchoServerApp : public Echo {
       loop_->ResetQuit();
     } else {
       callback(std::move(value));
+    }
+  }
+
+  void EchoXunionsWithError(std::vector<AllTypesXunion> value, default_enum err,
+                            std::string forward_to_server, RespondWith result_variant,
+                            EchoXunionsWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoXunionsWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoXunionsWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoXunionsWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(Echo_EchoXunionsWithError_Response(std::move(value)));
+      }
+      callback(std::move(result));
     }
   }
 
