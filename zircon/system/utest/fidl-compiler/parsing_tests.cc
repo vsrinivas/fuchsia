@@ -154,34 +154,34 @@ struct struct {
 };
 
 union InUnion {
-    struct foo;
+    1:  struct foo;
 
-    bool as;
-    bool library;
-    bool using;
+    2:  bool as;
+    3:  bool library;
+    4:  bool using;
 
-    bool array;
-    bool handle;
-    bool request;
-    bool string;
-    bool vector;
+    5:  bool array;
+    6:  bool handle;
+    7:  bool request;
+    8:  bool string;
+    9:  bool vector;
 
-    bool bool;
-    bool int8;
-    bool int16;
-    bool int32;
-    bool int64;
-    bool uint8;
-    bool uint16;
-    bool uint32;
-    bool uint64;
-    bool float32;
-    bool float64;
+    10: bool bool;
+    11: bool int8;
+    12: bool int16;
+    13: bool int32;
+    14: bool int64;
+    15: bool uint8;
+    16: bool uint16;
+    17: bool uint32;
+    18: bool uint64;
+    19: bool float32;
+    20: bool float64;
 
-    bool true;
-    bool false;
+    21: bool true;
+    22: bool false;
 
-    bool reserved;
+    23: bool reserved;
 };
 )FIDL");
   EXPECT_TRUE(library.Compile());

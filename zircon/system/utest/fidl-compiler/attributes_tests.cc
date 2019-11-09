@@ -76,7 +76,7 @@ using ExampleTypeAlias = uint32;
 [OnUnion]
 union ExampleUnion {
     [OnUnionMember]
-    uint32 variant;
+    1: uint32 variant;
 };
 
 [OnXUnion]
@@ -419,7 +419,7 @@ struct MyStruct {
 [Layout = "Simple"]
 union MyUnion {
     [Layout = "Simple"]
-    int32 MyMember;
+    1: int32 MyMember;
 };
 
 [Layout = "Simple"]
@@ -579,9 +579,9 @@ library fidl.test;
 
 [MaxHandles = "2"]
 union MyUnion {
-  uint8 hello;
-  array<uint8>:8 world;
-  vector<handle>:6 foo;
+  1: uint8 hello;
+  2: array<uint8>:8 world;
+  3: vector<handle>:6 foo;
 };
 
 )FIDL");
@@ -601,7 +601,7 @@ library fidl.test;
 
 [Selector = "Nonsense"]
 union MyUnion {
-  uint8 hello;
+  1: uint8 hello;
 };
 
 )FIDL");

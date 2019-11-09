@@ -277,8 +277,8 @@ struct MyStruct {
 };
 
 union MyUnion {
-  bool foo;
-  int32 bar;
+  1: bool foo;
+  2: int32 bar;
 };
 
 xunion MyXUnion {

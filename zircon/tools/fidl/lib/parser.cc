@@ -1070,7 +1070,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto maybe_ordinal = MaybeParseOrdinal32();
+  auto ordinal = ParseOrdinal32();
   if (!Ok())
     return Fail();
 
@@ -1079,9 +1079,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
       return Fail();
     if (attributes)
       return Fail("Cannot attach attributes to reserved ordinals");
-    if (!maybe_ordinal)
-      return Fail("Reserved members must have an explicit ordinal specified");
-    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal));
+    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
   auto type_ctor = ParseTypeConstructor();
@@ -1091,14 +1089,9 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   if (!Ok())
     return Fail();
 
-  if (!maybe_ordinal) {
-    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(type_ctor),
-                                              std::move(identifier), std::move(attributes));
-  } else {
-    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal),
-                                              std::move(type_ctor), std::move(identifier),
-                                              std::move(attributes));
-  }
+  return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal),
+                                            std::move(type_ctor), std::move(identifier),
+                                            std::move(attributes));
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(

@@ -13,7 +13,7 @@
 
 namespace {
 
-bool valid_union() {
+bool must_have_explicit_ordinals() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
@@ -25,15 +25,9 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
-
-  auto fidl_union = library.LookupUnion("Foo");
-  ASSERT_NONNULL(fidl_union);
-
-  ASSERT_EQ(fidl_union->members.size(), 2);
-  // check that the xunion ordinals are implicitly numbered from 1
-  EXPECT_EQ(fidl_union->members[0].xunion_ordinal->value, 1);
-  EXPECT_EQ(fidl_union->members[1].xunion_ordinal->value, 2);
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_STR_STR(library.errors().at(0).c_str(), "expecting NumericLiteral");
 
   END_TEST;
 }
@@ -163,30 +157,18 @@ union Foo {
 bool cannot_mix_explicit_and_hashed_ordinals() {
   BEGIN_TEST;
 
-  TestLibrary start_hashed(R"FIDL(
+  TestLibrary library(R"FIDL(
 library test;
 
 union Foo {
-  int64 foo;
-  1: uint32 oops;
+    1: int64 foo;
+    vector<uint32>:10 bar;
 };
-)FIDL");
-  ASSERT_FALSE(start_hashed.Compile());
-  ASSERT_EQ(start_hashed.errors().size(), 1u);
-  ASSERT_STR_STR(start_hashed.errors().at(0).c_str(), "cannot mix explicit and implicit ordinals");
 
-  TestLibrary start_explicit(R"FIDL(
-library test;
-
-union Foo {
-  24: int32 oops;
-  int64 foo;
-};
 )FIDL");
-  ASSERT_FALSE(start_explicit.Compile());
-  ASSERT_EQ(start_explicit.errors().size(), 1u);
-  ASSERT_STR_STR(start_explicit.errors().at(0).c_str(),
-                 "cannot mix explicit and implicit ordinals");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 1u);
+  ASSERT_STR_STR(library.errors().at(0).c_str(), "expecting NumericLiteral");
 
   END_TEST;
 }
@@ -266,10 +248,30 @@ union Foo {
   END_TEST;
 }
 
+
+bool no_nullable_members_in_unions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Foo {
+  1: string? bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "Union members cannot be nullable");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(union_tests)
-RUN_TEST(valid_union)
+RUN_TEST(must_have_explicit_ordinals)
 RUN_TEST(explicit_ordinals)
 RUN_TEST(explicit_ordinals_with_reserved)
 RUN_TEST(explicit_ordinals_out_of_order)
@@ -278,4 +280,5 @@ RUN_TEST(cannot_mix_explicit_and_hashed_ordinals)
 RUN_TEST(cannot_start_at_zero)
 RUN_TEST(default_not_allowed)
 RUN_TEST(must_be_dense)
+RUN_TEST(no_nullable_members_in_unions)
 END_TEST_CASE(union_tests)

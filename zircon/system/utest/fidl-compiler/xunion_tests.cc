@@ -223,41 +223,6 @@ xunion Foo {};
   END_TEST;
 }
 
-bool union_xunion_same_ordinals_implicit() {
-  BEGIN_TEST;
-
-  TestLibrary xunion_library(R"FIDL(
-library example;
-
-xunion Foo {
-  1: int8 bar;
-};
-
-)FIDL");
-  ASSERT_TRUE(xunion_library.Compile());
-
-  TestLibrary union_library(R"FIDL(
-library example;
-
-union Foo {
-  int8 bar;
-};
-
-)FIDL");
-  ASSERT_TRUE(union_library.Compile());
-
-  const fidl::flat::XUnion* ex_xunion = xunion_library.LookupXUnion("Foo");
-  const fidl::flat::Union* ex_union = union_library.LookupUnion("Foo");
-
-  ASSERT_NOT_NULL(ex_xunion);
-  ASSERT_NOT_NULL(ex_union);
-
-  ASSERT_EQ(ex_union->members.front().xunion_ordinal->value,
-            ex_xunion->members.front().ordinal->value);
-
-  END_TEST;
-}
-
 bool union_xunion_same_ordinals_explicit() {
   BEGIN_TEST;
 
@@ -309,24 +274,6 @@ protocol Example {
   END_TEST;
 }
 
-bool no_nullable_members_in_unions() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-union Foo {
-  string? bar;
-};
-
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "Union members cannot be nullable");
-
-  END_TEST;
-}
 
 bool no_nullable_members_in_xunions() {
   BEGIN_TEST;
@@ -354,8 +301,6 @@ RUN_TEST(compiling)
 RUN_TEST(no_directly_recursive_xunions)
 RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals_explicit)
-RUN_TEST(union_xunion_same_ordinals_implicit)
 RUN_TEST(error_syntax_explicit_ordinals)
-RUN_TEST(no_nullable_members_in_unions)
 RUN_TEST(no_nullable_members_in_xunions)
 END_TEST_CASE(xunion_tests)

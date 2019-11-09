@@ -909,8 +909,8 @@ struct Pasta {
 };
 
 union PizzaOrPasta {
-    Pizza pizza;
-    Pasta pasta;
+    1: Pizza pizza;
+    2: Pasta pasta;
 };
 
 union ExplicitPizzaOrPasta {
@@ -1111,7 +1111,7 @@ union ExplicitPizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 13,
-            "column": 11
+            "column": 14
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -1130,7 +1130,7 @@ union ExplicitPizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 14,
-            "column": 11
+            "column": 14
           },
           "size": 16,
           "max_out_of_line": 16,
@@ -5046,13 +5046,13 @@ using TypeAlias = uint32;
 [OnUnion]
 union ExampleUnion {
     [OnUnionMember]
-    uint32 variant;
+    1: uint32 variant;
 };
 
 [OnXUnion]
 xunion ExampleXUnion {
     [OnXUnionMember]
-    uint32 variant;
+    1: uint32 variant;
 };
 
 )FIDL",
@@ -5493,7 +5493,7 @@ xunion ExampleXUnion {
           "location": {
             "filename": "example.fidl",
             "line": 47,
-            "column": 12
+            "column": 15
           },
           "maybe_attributes": [
             {
@@ -5559,7 +5559,7 @@ xunion ExampleXUnion {
       ],
       "members": [
         {
-          "ordinal": 1300389554,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -5569,7 +5569,7 @@ xunion ExampleXUnion {
           "location": {
             "filename": "example.fidl",
             "line": 53,
-            "column": 12
+            "column": 15
           },
           "maybe_attributes": [
             {

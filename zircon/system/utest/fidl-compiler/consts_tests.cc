@@ -715,7 +715,7 @@ bool BadConstTestAssignTypeName() {
            "protocol Example {};",
            "bits Example { A = 1; };",
            "enum Example { A = 1; };",
-           "union Example { bool A; };",
+           "union Example { 1: bool A; };",
            "xunion Example { bool A; };",
            "using Example = string;",
        }) {

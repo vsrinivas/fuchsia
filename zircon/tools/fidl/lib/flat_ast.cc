@@ -1561,9 +1561,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
   auto xunion_decl = std::make_unique<Union>(std::move(result_attributelist),
-                                             std::move(result_name), std::move(result_members),
-                                             true  // are_ordinals_explicit
-  );
+                                             std::move(result_name), std::move(result_members));
   auto result_decl = xunion_decl.get();
   if (!RegisterDecl(std::move(xunion_decl)))
     return false;
@@ -1751,22 +1749,11 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   auto name = Name(this, union_declaration->identifier->location());
 
   assert(!union_declaration->members.empty() && "unions must have at least one member");
-  bool are_ordinals_explicit = union_declaration->members[0]->maybe_ordinal != nullptr;
   std::vector<Union::Member> members;
-  uint32_t current_xunion_ordinal = 1;
   for (auto& member : union_declaration->members) {
-    auto xunion_ordinal = std::move(member->maybe_ordinal);
-
-    bool is_member_ordinal_explicit = xunion_ordinal != nullptr;
-    if (are_ordinals_explicit != is_member_ordinal_explicit) {
-      return Fail(member->location(), "cannot mix explicit and implicit ordinals");
-    }
+    auto xunion_ordinal = std::move(member->ordinal);
 
     if (member->maybe_used) {
-      if (!xunion_ordinal) {
-        xunion_ordinal =
-            std::make_unique<raw::Ordinal32>(raw::Ordinal32(*member, current_xunion_ordinal++));
-      }
       auto location = member->maybe_used->identifier->location();
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
@@ -1788,7 +1775,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   auto attributes = std::move(union_declaration->attributes);
 
   return RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name),
-                                              std::move(members), are_ordinals_explicit));
+                                              std::move(members)));
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
@@ -3124,8 +3111,7 @@ bool Library::CompileUnion(Union* union_declaration) {
     }
   }
 
-  auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope);
-  if (union_declaration->are_ordinals_explicit && ordinal_and_loc) {
+  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, location] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;

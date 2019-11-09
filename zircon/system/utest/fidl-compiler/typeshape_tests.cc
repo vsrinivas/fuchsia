@@ -814,8 +814,8 @@ struct BoolAndU64 {
 };
 
 union UnionOfThings {
-  bool ob;
-  BoolAndU64 bu;
+  1: bool ob;
+  2: BoolAndU64 bu;
 };
 
 struct Bool {
@@ -827,7 +827,7 @@ struct OptBool {
 };
 
 union UnionWithOutOfLine {
-  OptBool opt_bool;
+  1: OptBool opt_bool;
 };
 
 struct OptionalUnion {
@@ -950,15 +950,15 @@ static bool unions_with_handles() {
 library example;
 
 union OneHandleUnion {
-  handle one_handle;
-  bool one_bool;
-  uint32 one_int;
+  1: handle one_handle;
+  2: bool one_bool;
+  3: uint32 one_int;
 };
 
 union ManyHandleUnion {
-  handle one_handle;
-  array<handle>:8 handle_array;
-  vector<handle>:8 handle_vector;
+  1: handle one_handle;
+  2: array<handle>:8 handle_array;
+  3: vector<handle>:8 handle_vector;
 };
 
     )FIDL");
@@ -2389,7 +2389,7 @@ bool union_size8alignment4_sandwich() {
 library example;
 
 union UnionSize8Alignment4 {
-    uint32 variant;
+    1: uint32 variant;
 };
 
 struct Sandwich {
@@ -2458,7 +2458,7 @@ bool union_size12alignment4_sandwich() {
 library example;
 
 union UnionSize12Alignment4 {
-    array<uint8>:6 variant;
+    1: array<uint8>:6 variant;
 };
 
 struct Sandwich {
@@ -2532,7 +2532,7 @@ struct StructSize16Alignment8 {
 };
 
 union UnionSize24Alignment8 {
-    StructSize16Alignment8 variant;
+    1: StructSize16Alignment8 variant;
 };
 
 struct Sandwich {
@@ -2601,7 +2601,7 @@ bool union_size36alignment4_sandwich() {
 library example;
 
 union UnionSize36Alignment4 {
-    array<uint8>:32 variant;
+    1: array<uint8>:32 variant;
 };
 
 struct Sandwich {
@@ -2670,7 +2670,7 @@ bool no_transitive_unions() {
 library example;
 
 union NotUsed {
-  int32 foo;
+  1: int32 foo;
 };
 
 struct ChildStruct {
@@ -2756,7 +2756,7 @@ bool transitive_union_nested() {
 library test;
 
 union DeepUnion {
-  int32 foo;
+  1: int32 foo;
 };
 
 struct Level1 {
@@ -2809,8 +2809,8 @@ table InsideUnion {
 };
 
 union InnerUnion {
-  int32 foo;
-  InsideUnion bar;
+  1: int32 foo;
+  2: InsideUnion bar;
 };
 
 struct ContainsUnion {
@@ -2849,8 +2849,8 @@ xunion InnerXUnion {
 };
 
 union MiddleUnion {
-  int32 foo;
-  InnerXUnion bar;
+  1: int32 foo;
+  2: InnerXUnion bar;
 };
 
 xunion OuterXUnion {

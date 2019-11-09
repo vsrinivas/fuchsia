@@ -1004,10 +1004,9 @@ struct Union final : public TypeDecl {
   using Member = UnionMember;
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
-        std::vector<Member> unparented_members, bool are_ordinals_explicit)
+        std::vector<Member> unparented_members)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
-        members(std::move(unparented_members)),
-        are_ordinals_explicit(are_ordinals_explicit) {
+        members(std::move(unparented_members)) {
     for (auto& member : members) {
       if (member.maybe_used) {
         member.maybe_used->parent = this;
@@ -1016,7 +1015,6 @@ struct Union final : public TypeDecl {
   }
 
   std::vector<Member> members;
-  const bool are_ordinals_explicit;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 

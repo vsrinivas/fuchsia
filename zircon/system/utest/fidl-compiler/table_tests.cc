@@ -204,7 +204,7 @@ table Foo {
 };
 
 union OptionalTableContainer {
-    Foo? foo;
+    1: Foo? foo;
 };
 
 )FIDL",
