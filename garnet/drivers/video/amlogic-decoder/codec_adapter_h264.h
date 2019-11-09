@@ -26,7 +26,8 @@ class CodecAdapterH264 : public CodecAdapter {
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
   zx::unowned_bti CoreCodecBti() override;
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
+                     bool is_secure_output) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::media::FormatDetails& per_stream_override_format_details) override;
@@ -91,6 +92,7 @@ class CodecAdapterH264 : public CodecAdapter {
   fuchsia::media::FormatDetails latest_input_format_details_;
 
   fuchsia::sysmem::SingleBufferSettings input_buffer_settings_;
+  bool is_secure_output_ = false;
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting

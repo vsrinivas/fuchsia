@@ -137,7 +137,8 @@ bool CodecAdapterH264::IsCoreCodecHwBased() { return true; }
 zx::unowned_bti CodecAdapterH264::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
 void CodecAdapterH264::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
+  is_secure_output_ = is_secure_output;
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterH264::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -169,7 +170,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<H264Decoder>(video_, /*is_secure=*/false);
+  auto decoder = std::make_unique<H264Decoder>(video_, /*is_secure=*/is_secure_output_);
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
     // at least for now.  We invalidate without skipping over stride-width
@@ -228,7 +229,8 @@ void CodecAdapterH264::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     video_->SetDefaultInstance(std::move(decoder), false);
-    status = video_->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE, /*is_secure=*/false);
+    status = video_->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
+                                            /*is_secure=*/is_secure_output_);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;
@@ -594,6 +596,15 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   result.buffer_memory_constraints.ram_domain_supported = port == kOutputPort;
 
   if (port == kOutputPort) {
+    if (is_secure_output_) {
+      result.buffer_memory_constraints.secure_required = true;
+      result.buffer_memory_constraints.cpu_domain_supported = false;
+      result.buffer_memory_constraints.ram_domain_supported = false;
+      result.buffer_memory_constraints.inaccessible_domain_supported = true;
+      result.buffer_memory_constraints.heap_permitted_count = 1;
+      result.buffer_memory_constraints.heap_permitted[0] =
+          fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
+    }
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints = result.image_format_constraints[0];
     image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;

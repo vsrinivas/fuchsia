@@ -59,7 +59,7 @@ bool FakeCodecAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) { return tr
 bool FakeCodecAdapter::IsCoreCodecHwBased() { return false; }
 
 void FakeCodecAdapter::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
   // nothing to do here
 }
 

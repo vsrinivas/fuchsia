@@ -286,7 +286,7 @@ zx_status_t H264Decoder::Initialize() {
   uint8_t* data;
   uint32_t firmware_size;
   zx_status_t status =
-      owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, false);
+      owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, is_secure_);
   if (status != ZX_OK)
     return status;
 
@@ -369,8 +369,10 @@ zx_status_t H264Decoder::Initialize() {
   // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
   // and rounding up here.
   constexpr uint32_t kSeiBufferSize = 8 * 1024 + kBufferAlign;
+  // Sei data buffer must be readable from CPU (though we don't actually use it
+  // yet).
   auto sei_create_result = InternalBuffer::Create(
-      "H264SeiData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kSeiBufferSize, is_secure_,
+      "H264SeiData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kSeiBufferSize, false,
       /*is_writable=*/true, /*is_mapping_neede=*/false);
   if (!sei_create_result.is_ok()) {
     LOG(ERROR, "Failed to make sei data buffer - status: %d", sei_create_result.error());

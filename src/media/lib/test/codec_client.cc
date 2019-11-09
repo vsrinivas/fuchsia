@@ -726,10 +726,14 @@ bool CodecClient::ConfigurePortBufferCollection(
   constraints.buffer_memory_constraints.max_size_bytes = std::numeric_limits<uint32_t>::max();
   constraints.buffer_memory_constraints.physically_contiguous_required = false;
   constraints.buffer_memory_constraints.secure_required = false;
+  if (is_output && is_output_secure_) {
+    constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+  } else {
+    ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.inaccessible_domain_supported);
+  }
 
   ZX_DEBUG_ASSERT(constraints.buffer_memory_constraints.cpu_domain_supported);
   ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.ram_domain_supported);
-  ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.inaccessible_domain_supported);
 
   // Despite being a consumer of output uncompressed video frames (when decoding
   // video and is_output), for now we intentionally don't constrain to the

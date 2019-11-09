@@ -113,6 +113,8 @@ class CodecClient {
 
   void Stop();
 
+  void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
+
   // On this thread, while the codec is being fed input data on
  private:
   friend class CodecStream;
@@ -287,6 +289,7 @@ class CodecClient {
   // Only odd values are allowed for buffer_lifetime_ordinal.
   uint64_t next_output_buffer_lifetime_ordinal_ = 1;
   uint64_t current_output_buffer_lifetime_ordinal_ = 0;
+  bool is_output_secure_ = false;
 
   // Invariant:
   // output_pending_ == (!emitted_output_.empty() ||

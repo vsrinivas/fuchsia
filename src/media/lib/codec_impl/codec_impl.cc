@@ -219,7 +219,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
   PostToStreamControl([this] {
     // This is allowed to take a little while if necessary, using the current
     // StreamControl thread, which is not shared with any other CodecImpl.
-    CoreCodecInit(*initial_input_format_details_);
+    CoreCodecInit(*initial_input_format_details_, IsSecureOutput());
     is_core_codec_init_called_ = true;
 
     // We touch FIDL stuff only from the fidl_thread().  While it would
@@ -1727,6 +1727,10 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   ZX_DEBUG_ASSERT(buffer_collection_info.buffers[buffer_count - 1].vmo.is_valid());
   ZX_DEBUG_ASSERT(buffer_count == buffer_collection_info.buffers.size() ||
                   !buffer_collection_info.buffers[buffer_count].vmo.is_valid());
+
+  if (port == kOutputPort && IsSecureOutput()) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_secure);
+  }
 
   // Let's move the VMO handles out first, so that the BufferCollectionInfo_2 we
   // send to the core codec doesn't have the VMO handles.  We want the core
@@ -3690,9 +3694,10 @@ bool CodecImpl::PortSettings::is_secure() {
 // methods instead of virtual methods.
 //
 
-void CodecImpl::CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) {
+void CodecImpl::CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
+                              bool is_secure_output) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecInit(initial_input_format_details);
+  codec_adapter_->CoreCodecInit(initial_input_format_details, is_secure_output);
 }
 
 fuchsia::sysmem::BufferCollectionConstraints CodecImpl::CoreCodecGetBufferCollectionConstraints(

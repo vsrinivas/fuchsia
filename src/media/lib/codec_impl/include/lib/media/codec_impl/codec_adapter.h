@@ -116,7 +116,8 @@ class CodecAdapter {
   //
   // TODO(dustingreen): Re-visit the lifetime rule and required copy here, once
   // more is nailed down re. exactly how the core codec relates to CodecImpl.
-  virtual void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) = 0;
+  virtual void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
+                             bool is_secure_output) = 0;
 
   // All codecs must implement this for both ports.  The returned structure will
   // be sent to sysmem in a SetConstraints() call.  This method can be called

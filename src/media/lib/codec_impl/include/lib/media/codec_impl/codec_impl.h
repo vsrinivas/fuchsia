@@ -949,7 +949,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   __WARN_UNUSED_RESULT zx::unowned_bti CoreCodecBti() override;
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
+                     bool is_secure_output) override;
 
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,

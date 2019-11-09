@@ -330,6 +330,7 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(fidl_loop, fidl_thread, std::move(sysmem));
   codec_client.SetMinOutputBufferSize(min_output_buffer_size);
+  codec_client.set_is_output_secure(is_secure_output);
 
   const char* mime_type;
   switch (format) {
@@ -409,6 +410,7 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
   // frame_sink activity started by out_thread).
   std::unique_ptr<std::thread> out_thread = std::make_unique<std::thread>([fidl_loop, &codec_client,
                                                                            frame_sink,
+                                                                           is_secure_output,
                                                                            &emit_frame]() {
     VLOGF("out_thread start");
     // We allow the server to send multiple output constraint updates if it
@@ -558,62 +560,64 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
         uint32_t uv_stride = i420_stride / 2;
         std::unique_ptr<uint8_t[]> i420_bytes = std::make_unique<uint8_t[]>(
             i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
-        switch (raw->fourcc) {
-          case make_fourcc('N', 'V', '1', '2'): {
-            // Y
-            uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
-            uint8_t* y_dst = i420_bytes.get();
-            for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
-              memcpy(y_dst, y_src, raw->primary_display_width_pixels);
-              y_src += raw->primary_line_stride_bytes;
-              y_dst += i420_stride;
-            }
-            // UV
-            uint8_t* uv_src = buffer.base() + packet.start_offset() + raw->secondary_start_offset;
-            uint8_t* u_dst_line = y_dst;
-            uint8_t* v_dst_line = u_dst_line + uv_stride * uv_height;
-            for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
-              uint8_t* u_dst = u_dst_line;
-              uint8_t* v_dst = v_dst_line;
-              for (uint32_t uv_line_iter = 0; uv_line_iter < uv_width; ++uv_line_iter) {
-                *u_dst++ = uv_src[uv_line_iter * 2];
-                *v_dst++ = uv_src[uv_line_iter * 2 + 1];
+        if (!is_secure_output) {
+          switch (raw->fourcc) {
+            case make_fourcc('N', 'V', '1', '2'): {
+              // Y
+              uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
+              uint8_t* y_dst = i420_bytes.get();
+              for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
+                memcpy(y_dst, y_src, raw->primary_display_width_pixels);
+                y_src += raw->primary_line_stride_bytes;
+                y_dst += i420_stride;
               }
-              uv_src += raw->primary_line_stride_bytes;
-              u_dst_line += uv_stride;
-              v_dst_line += uv_stride;
+              // UV
+              uint8_t* uv_src = buffer.base() + packet.start_offset() + raw->secondary_start_offset;
+              uint8_t* u_dst_line = y_dst;
+              uint8_t* v_dst_line = u_dst_line + uv_stride * uv_height;
+              for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
+                uint8_t* u_dst = u_dst_line;
+                uint8_t* v_dst = v_dst_line;
+                for (uint32_t uv_line_iter = 0; uv_line_iter < uv_width; ++uv_line_iter) {
+                  *u_dst++ = uv_src[uv_line_iter * 2];
+                  *v_dst++ = uv_src[uv_line_iter * 2 + 1];
+                }
+                uv_src += raw->primary_line_stride_bytes;
+                u_dst_line += uv_stride;
+                v_dst_line += uv_stride;
+              }
+              break;
             }
-            break;
+            case make_fourcc('Y', 'V', '1', '2'): {
+              // Y
+              uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
+              uint8_t* y_dst = i420_bytes.get();
+              for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
+                memcpy(y_dst, y_src, raw->primary_display_width_pixels);
+                y_src += raw->primary_line_stride_bytes;
+                y_dst += i420_stride;
+              }
+              // UV
+              uint8_t* v_src = buffer.base() + packet.start_offset() + raw->primary_start_offset +
+                               raw->primary_line_stride_bytes * raw->primary_height_pixels;
+              uint8_t* u_src =
+                  v_src + (raw->primary_line_stride_bytes / 2) * (raw->primary_height_pixels / 2);
+              uint8_t* u_dst = y_dst;
+              uint8_t* v_dst = u_dst + uv_stride * uv_height;
+              for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
+                memcpy(u_dst, u_src, uv_width);
+                memcpy(v_dst, v_src, uv_width);
+                u_dst += uv_stride;
+                v_dst += uv_stride;
+                u_src += raw->primary_line_stride_bytes / 2;
+                v_src += raw->primary_line_stride_bytes / 2;
+              }
+              break;
+            }
+            default:
+              Exit("Feeding EmitFrame not yet implemented for fourcc: %s",
+                   fourcc_to_string(raw->fourcc).c_str());
           }
-          case make_fourcc('Y', 'V', '1', '2'): {
-            // Y
-            uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
-            uint8_t* y_dst = i420_bytes.get();
-            for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
-              memcpy(y_dst, y_src, raw->primary_display_width_pixels);
-              y_src += raw->primary_line_stride_bytes;
-              y_dst += i420_stride;
-            }
-            // UV
-            uint8_t* v_src = buffer.base() + packet.start_offset() + raw->primary_start_offset +
-                             raw->primary_line_stride_bytes * raw->primary_height_pixels;
-            uint8_t* u_src =
-                v_src + (raw->primary_line_stride_bytes / 2) * (raw->primary_height_pixels / 2);
-            uint8_t* u_dst = y_dst;
-            uint8_t* v_dst = u_dst + uv_stride * uv_height;
-            for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
-              memcpy(u_dst, u_src, uv_width);
-              memcpy(v_dst, v_src, uv_width);
-              u_dst += uv_stride;
-              v_dst += uv_stride;
-              u_src += raw->primary_line_stride_bytes / 2;
-              v_src += raw->primary_line_stride_bytes / 2;
-            }
-            break;
-          }
-          default:
-            Exit("Feeding EmitFrame not yet implemented for fourcc: %s",
-                 fourcc_to_string(raw->fourcc).c_str());
         }
         emit_frame(i420_bytes.get(), raw->primary_display_width_pixels,
                    raw->primary_display_height_pixels, i420_stride, packet.has_timestamp_ish(),
