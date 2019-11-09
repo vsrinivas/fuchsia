@@ -382,30 +382,6 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
   }
 }
 
-static zx_status_t validate_cfg(uint32_t cfg, uint32_t vector, uint32_t options) {
-  uint32_t field = (vector % 16) * 2;
-  bool edge_triggered = bits_shift(cfg, field + 1, field) >> 1;
-  switch (options & ZX_INTERRUPT_MODE_MASK) {
-    case ZX_INTERRUPT_MODE_EDGE_HIGH:
-      if (edge_triggered) {
-        return ZX_OK;
-      }
-      FXL_LOG(ERROR) << "Mismatched mode for interrupt " << vector
-                     << ", host is edge-triggered, guest is level-sensitive";
-      return ZX_ERR_INVALID_ARGS;
-    case ZX_INTERRUPT_MODE_LEVEL_HIGH:
-      if (!edge_triggered) {
-        return ZX_OK;
-      }
-      FXL_LOG(ERROR) << "Mismatched mode for interrupt " << vector
-                     << ", host is level-sensitive, guest is edge-triggered";
-      return ZX_ERR_INVALID_ARGS;
-    default:
-      FXL_LOG(ERROR) << "Unsupported GIC distributor interrupt mode";
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
 zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   if (addr % 4 != 0 || value.access_size != gicd_register_size(addr)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
@@ -501,17 +477,6 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       std::lock_guard<std::mutex> lock(mutex_);
       size_t index = (addr - static_cast<uint64_t>(GicdRegister::ICFG1)) / value.access_size;
       cfg_[index] = value.u32;
-
-      // Check that the guest configuration matches the host configuration of
-      // physical interrupts in the modified range.
-      auto it = interrupts_.lower_bound((index + 1) * 16);
-      auto end = interrupts_.lower_bound((index + 2) * 16);
-      for (; it != end; ++it) {
-        zx_status_t status = validate_cfg(value.u32, it->first, it->second.options);
-        if (status != ZX_OK) {
-          return status;
-        }
-      }
       return ZX_OK;
     }
     case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
