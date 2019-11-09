@@ -221,6 +221,11 @@ itemDeletedFuture.then(() => item.delete());
 [dart-2]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/package-fuchsia_inspect_inspect-library.html
 [dart-3]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/Node/delete.html
 
+## Testing
+
+[Validator Architecture](/docs/development/inspect/validator/README.md)
+describes an integration test framework for Inspect language libraries.
+
 # Userspace Tools
 
 The primary userspace tool is [iquery](iquery.md), which has its own
