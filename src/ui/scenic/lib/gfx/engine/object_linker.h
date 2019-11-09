@@ -148,6 +148,7 @@ class ObjectLinker : public ObjectLinkerBase {
     using Obj = typename std::conditional<is_import, Import, Export>::type;
     using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
+    Link() = default;
     virtual ~Link() { Invalidate(); }
     Link(Link&& other) { *this = std::move(other); }
     Link& operator=(nullptr_t) { Invalidate(); }
@@ -171,7 +172,7 @@ class ObjectLinker : public ObjectLinkerBase {
 
     void Invalidate() override;
 
-    Obj object_;
+    std::optional<Obj> object_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
     fxl::WeakPtr<ObjectLinker> linker_;
     fit::function<void(PeerObj peer_link)> link_resolved_;
@@ -279,7 +280,8 @@ void ObjectLinker<Export, Import>::Link<is_import>::LinkResolved(
     ObjectLinkerBase::Link* peer_link) {
   if (link_resolved_) {
     auto* typed_peer_link = static_cast<Link<!is_import>*>(peer_link);
-    link_resolved_(std::move(typed_peer_link->object_));
+    FXL_DCHECK(typed_peer_link->object_.has_value());
+    link_resolved_(std::move(typed_peer_link->object_.value()));
   }
 }
 

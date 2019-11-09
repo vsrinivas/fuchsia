@@ -93,6 +93,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
     // This handles the case where the peer exists but Initialize() has not been
     // called on it yet (so no callbacks exist).
     peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
+    FXL_DCHECK(peer_endpoint.link);
     peer_endpoint.link->LinkFailed();
   }
 

@@ -39,6 +39,13 @@ TEST_F(ObjectLinkerTest, InitialState) {
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+
+  TestObjectLinker::ExportLink export_link;
+  TestObjectLinker::ImportLink import_link;
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_FALSE(export_link.initialized());
+  EXPECT_FALSE(import_link.initialized());
 }
 
 TEST_F(ObjectLinkerTest, AllowsExport) {
@@ -585,6 +592,103 @@ TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
   EXPECT_TRUE(export_disconnected);
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+}
+
+TEST_F(ObjectLinkerTest, MoveInitializedLink) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  TestImportObj import_obj;
+  TestExportObj export_obj;
+
+  uint64_t import_linked = 0;
+  uint64_t export_linked = 0;
+  uint64_t import_disconnected = 0;
+  uint64_t export_disconnected = 0;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  import_link.Initialize([&](TestExportObj obj) { ++export_linked; },
+                         [&]() { ++import_disconnected; });
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+  export_link.Initialize([&](TestImportObj obj) { ++import_linked; },
+                         [&]() { ++export_disconnected; });
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1u, import_linked);
+  EXPECT_EQ(1u, export_linked);
+  EXPECT_EQ(0u, import_disconnected);
+  EXPECT_EQ(0u, export_disconnected);
+
+  // Move the successful links into new objects.
+  TestObjectLinker::ImportLink saved_import = std::move(import_link);
+  TestObjectLinker::ExportLink saved_export = std::move(export_link);
+
+  EXPECT_EQ(1u, import_linked);
+  EXPECT_EQ(1u, export_linked);
+  EXPECT_EQ(0u, import_disconnected);
+  EXPECT_EQ(0u, export_disconnected);
+
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_FALSE(export_link.valid());
+
+  // Perform a second linking, re-using the stack variables that have been invalidated.
+  zx::eventpair export_token2, import_token2;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token2, &import_token2));
+  TestImportObj import_obj2;
+  TestExportObj export_obj2;
+
+  uint64_t import_linked2 = 0;
+  uint64_t export_linked2 = 0;
+  uint64_t import_disconnected2 = 0;
+  uint64_t export_disconnected2 = 0;
+
+  import_link = object_linker_.CreateImport(std::move(import_obj2), std::move(import_token2),
+                                            error_reporter());
+  import_link.Initialize([&](TestExportObj obj) { ++export_linked2; },
+                         [&]() { ++import_disconnected2; });
+
+  export_link = object_linker_.CreateExport(std::move(export_obj2), std::move(export_token2),
+                                            error_reporter());
+  export_link.Initialize([&](TestImportObj obj) { ++import_linked2; },
+                         [&]() { ++export_disconnected2; });
+
+  RunLoopUntilIdle();
+
+  // Confirm that linking has occurred.
+  EXPECT_EQ(1u, import_linked2);
+  EXPECT_EQ(1u, export_linked2);
+  EXPECT_EQ(0u, import_disconnected2);
+  EXPECT_EQ(0u, export_disconnected2);
+
+  // Invalidate the saved objects.
+  saved_import = TestObjectLinker::ImportLink();
+  saved_export = TestObjectLinker::ExportLink();
+
+  // Confirm that the saved objects have been invalidated.
+  EXPECT_FALSE(saved_import.valid());
+  EXPECT_FALSE(saved_export.valid());
+  // The import was invalidated first, so its disconnected callback is not fired. Its peer's
+  // callback, however, is.
+  EXPECT_EQ(0u, import_disconnected);
+  EXPECT_EQ(1u, export_disconnected);
+
+  // Confirm that the new links have been untouched.
+  EXPECT_TRUE(import_link.valid());
+  EXPECT_TRUE(export_link.valid());
+  EXPECT_EQ(0u, import_disconnected2);
+  EXPECT_EQ(0u, export_disconnected2);
+
+  // Invalidate in new links in the opposite order.
+  export_link = TestObjectLinker::ExportLink();
+  import_link = TestObjectLinker::ImportLink();
+  // The export was invalidated first, so its disconnected callback is not fired. Its peer's
+  // callback, however, is.
+  EXPECT_EQ(1u, import_disconnected2);
+  EXPECT_EQ(0u, export_disconnected2);
 }
 
 }  // namespace test
