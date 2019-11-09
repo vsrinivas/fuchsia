@@ -15,9 +15,8 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   FXL_DCHECK(benchmarks_runner);
 
   // Benchmark example, here for demonstration.
-  benchmarks_runner->AddTspecBenchmark(
-      "benchmark_example",
-      "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
+  benchmarks_runner->AddTspecBenchmark("benchmark_example",
+                                       "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
 
   // For the perfcompare CQ trybot, we run the libperftest-based processes
   // multiple times.  That is useful for tests that exhibit between-process
@@ -60,6 +59,10 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
         "zircon_benchmarks", "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
         extra_args);
   }
+
+  // Fuchsia inspect Rust benchmarks.
+  benchmarks_runner->AddTspecBenchmark(
+      "rust_inspect_bench", "/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec");
 
   // Run "local" Ledger benchmarks.  These don't need external services to
   // function properly.
@@ -148,8 +151,7 @@ int main(int argc, const char** argv) {
     --argc;
   }
 
-  auto maybe_benchmarks_runner =
-      benchmarking::BenchmarksRunner::Create(argc, argv);
+  auto maybe_benchmarks_runner = benchmarking::BenchmarksRunner::Create(argc, argv);
   if (!maybe_benchmarks_runner) {
     exit(1);
   }

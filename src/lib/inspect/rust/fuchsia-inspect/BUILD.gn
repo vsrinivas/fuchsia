@@ -49,3 +49,10 @@ group("tests") {
     ":fuchsia_inspect_tests",
   ]
 }
+
+group("benchmarks") {
+  testonly = true
+  deps = [
+    "bench:rust_inspect_benchmarks",
+  ]
+}

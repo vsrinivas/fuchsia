@@ -1,0 +1,111 @@
+{
+  "test_suite_name": "fuchsia.rust_inspect.benchmarks",
+  "app": "fuchsia-pkg://fuchsia.com/rust_inspect_benchmarks#meta/rust_inspect_benchmarks.cmx",
+  "args": ["--iterations", "50000"],
+  "categories": ["benchmark"],
+  "duration": 30,
+  "measure": [
+    {
+      "type": "duration",
+      "output_test_name": "Inspector/create",
+      "event_name": "Inspector::new",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "Inspector/get_root",
+      "event_name": "Inspector::root",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "Node/create_int_property",
+      "event_name": "Node::create_int_property",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "Node/create_double_property",
+      "event_name": "Node::create_double_property",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "Node/create_uint_property",
+      "event_name": "Node::create_uint_property",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "IntProperty/add",
+      "event_name": "IntProperty::add",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "IntProperty/set",
+      "event_name": "IntProperty::set",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "IntProperty/subtract",
+      "event_name": "IntProperty::subtract",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "IntProperty/drop",
+      "event_name": "IntProperty::drop",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "DoubleProperty/add",
+      "event_name": "DoubleProperty::add",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "DoubleProperty/set",
+      "event_name": "DoubleProperty::set",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "DoubleProperty/subtract",
+      "event_name": "DoubleProperty::subtract",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "DoubleProperty/drop",
+      "event_name": "DoubleProperty::drop",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "UintProperty/add",
+      "event_name": "UintProperty::add",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "UintProperty/set",
+      "event_name": "UintProperty::set",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "UintProperty/subtract",
+      "event_name": "UintProperty::subtract",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "UintProperty/drop",
+      "event_name": "UintProperty::drop",
+      "event_category": "benchmark"
+    }
+  ]
+}

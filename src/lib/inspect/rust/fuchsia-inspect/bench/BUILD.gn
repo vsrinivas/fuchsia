@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+test_package("rust_inspect_benchmarks") {
+  tests = [
+    {
+      name = "rust_inspect_benchmarks"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("benchmarks.tspec")
+      dest = "benchmarks.tspec"
+    },
+  ]
+
+  public_deps = [
+    ":bin",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "rust_inspect_benchmarks"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-trace",
+    "//garnet/public/rust/fuchsia-trace-provider",
+    "//src/lib/argh",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:paste",
+  ]
+}

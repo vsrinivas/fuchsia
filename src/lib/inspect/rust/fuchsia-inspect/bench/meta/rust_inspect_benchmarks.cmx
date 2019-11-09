@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/rust_inspect_benchmarks"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

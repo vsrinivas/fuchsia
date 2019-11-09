@@ -9,3 +9,10 @@ group("tests") {
     "fuchsia-inspect-contrib:tests",
   ]
 }
+
+group("benchmarks") {
+  testonly = true
+  deps = [
+    "fuchsia-inspect:benchmarks",
+  ]
+}
