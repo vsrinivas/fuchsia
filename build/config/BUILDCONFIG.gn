@@ -23,6 +23,9 @@ zx_build = "//build/unification/zn_build"
 declare_args() {
   # Debug build.
   is_debug = true
+
+  # Sets if we should output breakpad symbols for Fuchsia binaries.
+  output_breakpad_syms = false
 }
 
 if (target_os == "") {
@@ -306,6 +309,9 @@ if (toolchain_variant.with_shared) {
               if (current_os != "mac" && current_os != "win") {
                 elf_build_id =
                     rebase_path("$output_file.build-id.stamp", root_build_dir)
+              }
+              if (output_breakpad_syms && current_os == "fuchsia") {
+                breakpad = rebase_path("$output_file.sym", root_build_dir)
               }
             },
           ]
@@ -1030,6 +1036,9 @@ template("executable") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
           }
+          if (output_breakpad_syms && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_file.sym", root_build_dir)
+          }
         },
       ]
     }
@@ -1097,6 +1106,9 @@ template("loadable_module") {
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
+          }
+          if (output_breakpad_syms && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_file.sym", root_build_dir)
           }
         },
       ]

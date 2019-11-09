@@ -274,6 +274,9 @@ template("go_build") {
             elf_build_id =
                 rebase_path("$output_path.build-id.stamp", root_build_dir)
           }
+          if (output_breakpad_syms && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_path.sym", root_build_dir)
+          }
         },
       ]
     }

@@ -4,6 +4,11 @@
 
 import("$zx/public/gn/prebuilt.gni")
 
+declare_args() {
+  # "$output_breakpad_syms" gates whether or not breakpad symbols are produced.
+  output_breakpad_syms = false
+}
+
 # All the $current_cpu values that `current_os == "fuchsia"` supports.
 standard_fuchsia_cpus = [
   "arm64",
@@ -108,6 +113,7 @@ standard_environments = [
     # Ensure that host binaries have __zx_panic.
     implicit_deps = [ "$zx/system/ulib/zx-panic-libc" ]
     strip = true
+    breakpad_syms = false
   },
   {
     name = "user"
@@ -181,6 +187,11 @@ standard_environments = [
     ]
     shlib = true
     strip = "--strip-sections"
+    if (output_breakpad_syms) {
+      breakpad_syms = "-r -n \"<_>\" -o Fuchsia"
+    } else {
+      breakpad_syms = false
+    }
   },
 ]
 

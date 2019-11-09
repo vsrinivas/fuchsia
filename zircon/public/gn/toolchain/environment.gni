@@ -691,6 +691,7 @@ template("environment") {
                                      "label",
                                      "shlib",
                                      "strip",
+                                     "breakpad_syms",
                                      "variant",
                                      "variant_selectors",
                                    ])
@@ -708,6 +709,7 @@ template("environment") {
                                      "label",
                                      "shlib",
                                      "strip",
+                                     "breakpad_syms",
                                      "variant",
                                      "variant_selectors",
                                    ])
@@ -770,6 +772,8 @@ template("environment") {
           # GNU strip/objcopy doesn't support --strip-sections.
           strip = true
         }
+
+        forward_variables_from(invoker, [ "breakpad_syms" ])
 
         host = defined(g.is_host) && g.is_host
       }

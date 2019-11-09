@@ -22,6 +22,8 @@ _buildidtool =
     rebase_path("$prebuilt_dir/tools/buildidtool/$host_platform/buildidtool",
                 root_build_dir)
 _id_dir = rebase_path(build_id_dir, root_build_dir)
+_dump_syms = rebase_path(
+        "$prebuilt_dir/third_party/breakpad/$host_platform/dump_syms/dump_syms")
 
 # Define a toolchain for compiling C/C++ code.
 #
@@ -50,6 +52,13 @@ _id_dir = rebase_path(build_id_dir, root_build_dir)
 #     Optional: If not false, linked binaries will be stripped.
 #     If this is a string rather than true, it's a switch to the `objcopy`
 #     tool, e.g. "--strip-sections".
+#     Type: bool or string
+#     Default: false
+#
+#   breakpad_syms
+#     Optional: If not false, linked binaries will have breakpad symbol files
+#     of them made with a ".sym" extension added. If this is a string rather
+#     than true, it's a switch to the `dump_syms` tool, e.g. "-o Fuchsia".
 #     Type: bool or string
 #     Default: false
 #
@@ -133,6 +142,8 @@ template("c_toolchain") {
 
   use_gcc = defined(invoker.gcc) && invoker.gcc
   use_strip = defined(invoker.strip) && invoker.strip != false
+  use_breakpad_syms =
+      defined(invoker.breakpad_syms) && invoker.breakpad_syms != false
 
   # These are used in some, but not all, of the if branches below.
   if (clang_tool_dir == "") {
@@ -299,6 +310,11 @@ template("c_toolchain") {
           " -stamp \"$outfile.build-id.stamp\"" +
           " -entry \"=$outfile\" -entry \".debug=$unstripped_outfile\"" +
           " ;; esac"
+    }
+    if (use_breakpad_syms && current_os == "fuchsia") {
+      _breakpad_outfile = "$outfile.sym"
+      outputs += [ _breakpad_outfile ]
+      strip_command += "&& $_dump_syms ${invoker.breakpad_syms} \"$unstripped_outfile\" > \"_breakpad_outfile\""
     }
 
     rspfile = "${outfile}.rsp"
@@ -514,6 +530,12 @@ template("c_toolchain") {
           link_output_suffix = ".debug"
         } else {
           link_output_suffix = ""
+        }
+
+        if (use_breakpad_syms) {
+          breakpad_syms = invoker.breakpad_syms
+        } else {
+          breakpad_syms = false
         }
       }
     }

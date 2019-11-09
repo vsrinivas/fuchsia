@@ -233,6 +233,9 @@ template("shared_library") {
               elf_build_id =
                   rebase_path("$output_file.build-id.stamp", root_build_dir)
             }
+            if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
+              breakpad = rebase_path("$output_file.sym", root_build_dir)
+            }
           },
         ]
 
@@ -1367,6 +1370,9 @@ template("_basic_executable") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
           }
+          if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_file.sym", root_build_dir)
+          }
         },
       ]
     }
@@ -1749,6 +1755,9 @@ template("_loadable_module") {
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
+          }
+          if (toolchain.breakpad_syms != false && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_file.sym", root_build_dir)
           }
         },
       ]

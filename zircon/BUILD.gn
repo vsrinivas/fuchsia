@@ -131,6 +131,10 @@ build_api_module("buildargs") {
 #     an empty file.
 #     Type: path relative to $root_build_dir
 #
+#   breakpad
+#     Optional: Path to the breakpad symbol file for the debug binary.  This
+#     will only be present if $output_breakpad_syms was set.
+#     Type: path relative to $root_build_dir
 build_api_module("binaries") {
   testonly = true
   deps = [ ":everything" ] + default_deps

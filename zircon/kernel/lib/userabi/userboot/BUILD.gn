@@ -18,6 +18,12 @@ if (current_toolchain == default_toolchain) {
       cpu = cpu
       configs += standard_fuchsia_configs + [ ":userboot_config" ]
 
+      if (output_breakpad_syms) {
+        breakpad_syms = "-r -n \"<_>\" -o Fuchsia"
+      } else {
+        breakpad_syms = false
+      }
+
       # This doesn't get a separate shlib sub-toolchain, but the main one
       # can do loadable_module().
       solink = true

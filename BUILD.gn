@@ -213,6 +213,10 @@ group("binaries.zircon") {
             elf_build_id =
                 rebase_path(elf_build_id, root_build_dir, zircon_root_build_dir)
           }
+          if (defined(breakpad)) {
+            breakpad =
+                rebase_path(breakpad, root_build_dir, zircon_root_build_dir)
+          }
         },
       ]
     }
