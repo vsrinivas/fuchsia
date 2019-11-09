@@ -110,7 +110,7 @@ TEST(Mt8167Test, InitSoc) {
   dut.UpdateRegisters(std::move(mmio));
   EXPECT_EQ(0x0f0f'0f0f, regs[MT8167_SOC_INT_POL / 4]);
   EXPECT_EQ(0x803d'0f0f, regs[MT8167_SOC_INT_POL / 4 + 1]);
-  EXPECT_EQ(0x7dff'fbfd, regs[MT8167_SOC_INT_POL / 4 + 5]);
+  EXPECT_EQ(0x7fff'fbfd, regs[MT8167_SOC_INT_POL / 4 + 5]);
   EXPECT_EQ(0x004e'17fc, regs[MT8167_SOC_INT_POL / 4 + 6]);
 }
 

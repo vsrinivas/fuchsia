@@ -24,7 +24,8 @@ constexpr uint32_t GetRegister(size_t offset) {
   constexpr bool L = true;
   constexpr bool H = false;
   constexpr bool R = false;
-  // Start from interrupt 32 (first SPI after 32 PPIs)
+  // Start from interrupt 32 (first SPI after 32 PPIs). Interrupt 217 should be low-level triggered,
+  // despite what the datasheet says.
   constexpr std::array<bool, kNumberOfPolarityRegisters * 32> spi_polarities = {
       L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R,  // 32 (first interrupt in the line).
       L, L, L, L, R, R, R, R, L, L, L, L, R, R, R, R,  // 48.
@@ -37,7 +38,7 @@ constexpr uint32_t GetRegister(size_t offset) {
       L, L, L, L, L, H, H, L, L, L, L, L, L, L, L, L,  // 160.
       L, L, L, L, R, L, L, L, L, L, L, L, L, L, L, L,  // 176.
       L, R, L, L, L, L, L, L, L, L, R, L, L, L, L, L,  // 192.
-      L, L, L, L, L, L, L, L, L, H, L, L, L, L, L, R,  // 208.
+      L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, R,  // 208.
       R, R, L, L, L, L, L, L, L, L, L, R, L, H, H, H,  // 224.
       H, L, L, L, R, R, L, H, H, H, H                  // 240 (first is 240, last is 250).
   };
