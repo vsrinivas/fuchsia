@@ -153,34 +153,12 @@ impl LogProcessor {
     }
 }
 
-/// Runs the test component defined by `url` and reports `TestEvent` to sender for each test case.
-pub async fn run_test_component(
-    launcher: LauncherProxy,
-    url: String,
+/// Runs the test component using `suite` and collects logs and results.
+pub async fn run_and_collect_results(
+    suite: fidl_fuchsia_test::SuiteProxy,
     mut sender: mpsc::Sender<TestEvent>,
+    test_url: String,
 ) -> Result<(), failure::Error> {
-    let component_manager_for_test = "fuchsia-pkg://fuchsia.com/component_manager_for_test#\
-                                      meta/component_manager_for_test.cmx";
-
-    fx_vlog!(1, "connecting to test component {}", url);
-    let is_v2_component = url.ends_with(".cm");
-    let mut app;
-    if is_v2_component {
-        app = fuchsia_component::client::launch(
-            &launcher,
-            component_manager_for_test.to_string(),
-            Some(vec![url.clone()]),
-        )
-        .map_err(|e| format_err!("Not able to launch v2 test:{}: {}", url, e))?;
-    } else {
-        app = fuchsia_component::client::launch(&launcher, url.clone(), None)
-            .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", url, e))?;
-    }
-
-    fx_vlog!(1, "connecting to test service");
-    let suite = app
-        .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
-        .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
     fx_vlog!(1, "enumerating tests");
     let cases =
         suite.get_tests().await.map_err(|e| format_err!("Error getting test steps: {}", e))?;
@@ -199,7 +177,7 @@ pub async fn run_test_component(
             fidl_fuchsia_test::RunOptions {},
             run_listener_client,
         )
-        .map_err(|e| format_err!("Error running tests in '{}': {}", url, e))?;
+        .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))?;
 
     let mut log_processors = HashMap::new();
     while let Some(result_event) = run_listener
@@ -241,9 +219,41 @@ pub async fn run_test_component(
     join_all(log_processors.iter_mut().map(|(_, l)| l.await_logs()))
         .await
         .into_iter()
-        .fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+        .fold(Ok(()), |acc, r| acc.and_then(|_| r))
+}
 
-    app.kill().map_err(|e| format_err!("Error killing test '{}': {}", url, e))?;
+/// Runs the test component defined by `test_url` and reports `TestEvent` to sender for each test case.
+pub async fn run_test_component(
+    launcher: LauncherProxy,
+    test_url: String,
+    sender: mpsc::Sender<TestEvent>,
+) -> Result<(), failure::Error> {
+    let component_manager_for_test = "fuchsia-pkg://fuchsia.com/component_manager_for_test#\
+                                      meta/component_manager_for_test.cmx";
+
+    fx_vlog!(1, "connecting to test component {}", test_url);
+    let is_v2_component = test_url.ends_with(".cm");
+    let mut app;
+    if is_v2_component {
+        app = fuchsia_component::client::launch(
+            &launcher,
+            component_manager_for_test.to_string(),
+            Some(vec![test_url.clone()]),
+        )
+        .map_err(|e| format_err!("Not able to launch v2 test:{}: {}", test_url, e))?;
+    } else {
+        app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
+            .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
+    }
+
+    fx_vlog!(1, "connecting to test service");
+    let suite = app
+        .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
+        .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
+
+    run_and_collect_results(suite, sender, test_url.clone()).await?;
+
+    app.kill().map_err(|e| format_err!("Error killing test '{}': {}", test_url, e))?;
 
     Ok(())
 }
