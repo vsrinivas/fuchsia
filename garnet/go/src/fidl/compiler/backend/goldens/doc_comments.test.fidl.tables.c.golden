@@ -33,9 +33,11 @@ static const ::fidl::FidlTableField Fields15test_name_Table[] = {
 };
 const fidl_type_t test_name_TableTable = fidl_type_t(::fidl::FidlCodedTable(Fields15test_name_Table, 1u, "test.name/Table"));
 
-static const ::fidl::FidlStructField Fields16test_name_Struct[] = {};
+static const ::fidl::FidlStructField Fields16test_name_Struct[] = {
+    ::fidl::FidlStructField(nullptr, 4u, 0u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_StructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields16test_name_Struct, 0u, 4u, "test.name/Struct", test_name_StructAltTypePointerTable()));
+const fidl_type_t test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields16test_name_Struct, 1u, 4u, "test.name/Struct", test_name_StructAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -66,9 +68,11 @@ static const ::fidl::FidlTableField Fields18v1_test_name_Table[] = {
 };
 const fidl_type_t v1_test_name_TableTable = fidl_type_t(::fidl::FidlCodedTable(Fields18v1_test_name_Table, 1u, "test.name/Table"));
 
-static const ::fidl::FidlStructField Fields19v1_test_name_Struct[] = {};
+static const ::fidl::FidlStructField Fields19v1_test_name_Struct[] = {
+    ::fidl::FidlStructField(nullptr, 4u, 0u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_StructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields19v1_test_name_Struct, 0u, 4u, "test.name/Struct", v1_test_name_StructAltTypePointerTable()));
+const fidl_type_t v1_test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields19v1_test_name_Struct, 1u, 4u, "test.name/Struct", v1_test_name_StructAltTypePointerTable()));
 
 // Old <-> V1 map.
 

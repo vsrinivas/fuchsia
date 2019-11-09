@@ -62,59 +62,33 @@ static const fidl_type_t HandlevmarnonnullableTable = fidl_type_t(::fidl::FidlCo
 static const fidl_type_t HandlevmononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, ::fidl::kNonnullable));
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field1_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field2_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field3_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field4_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field5_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field6_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field7_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field8_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field9_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field10_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field11_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field12_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field13_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field14_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field15_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field16_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field17_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field18_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field19_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field20_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field21_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field22_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field23_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field24_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field25_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields17test_name_Handles[] = {
-    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0u, 0u, Fields17test_name_Handles_field0_alt_field()),
-    ::fidl::FidlStructField(&HandlebtinonnullableTable, 4u, 0u, Fields17test_name_Handles_field1_alt_field()),
-    ::fidl::FidlStructField(&HandlechannelnonnullableTable, 8u, 0u, Fields17test_name_Handles_field2_alt_field()),
-    ::fidl::FidlStructField(&HandledebuglognonnullableTable, 12u, 0u, Fields17test_name_Handles_field3_alt_field()),
-    ::fidl::FidlStructField(&HandleeventnonnullableTable, 16u, 0u, Fields17test_name_Handles_field4_alt_field()),
-    ::fidl::FidlStructField(&HandleeventpairnonnullableTable, 20u, 0u, Fields17test_name_Handles_field5_alt_field()),
-    ::fidl::FidlStructField(&HandleexceptionnonnullableTable, 24u, 0u, Fields17test_name_Handles_field6_alt_field()),
-    ::fidl::FidlStructField(&HandlefifononnullableTable, 28u, 0u, Fields17test_name_Handles_field7_alt_field()),
-    ::fidl::FidlStructField(&HandleguestnonnullableTable, 32u, 0u, Fields17test_name_Handles_field8_alt_field()),
-    ::fidl::FidlStructField(&HandleinterruptnonnullableTable, 36u, 0u, Fields17test_name_Handles_field9_alt_field()),
-    ::fidl::FidlStructField(&HandleiommunonnullableTable, 40u, 0u, Fields17test_name_Handles_field10_alt_field()),
-    ::fidl::FidlStructField(&HandlejobnonnullableTable, 44u, 0u, Fields17test_name_Handles_field11_alt_field()),
-    ::fidl::FidlStructField(&HandlepagernonnullableTable, 48u, 0u, Fields17test_name_Handles_field12_alt_field()),
-    ::fidl::FidlStructField(&HandlepcidevicenonnullableTable, 52u, 0u, Fields17test_name_Handles_field13_alt_field()),
-    ::fidl::FidlStructField(&HandlepmtnonnullableTable, 56u, 0u, Fields17test_name_Handles_field14_alt_field()),
-    ::fidl::FidlStructField(&HandleportnonnullableTable, 60u, 0u, Fields17test_name_Handles_field15_alt_field()),
-    ::fidl::FidlStructField(&HandleprocessnonnullableTable, 64u, 0u, Fields17test_name_Handles_field16_alt_field()),
-    ::fidl::FidlStructField(&HandleprofilenonnullableTable, 68u, 0u, Fields17test_name_Handles_field17_alt_field()),
-    ::fidl::FidlStructField(&HandleresourcenonnullableTable, 72u, 0u, Fields17test_name_Handles_field18_alt_field()),
-    ::fidl::FidlStructField(&HandlesocketnonnullableTable, 76u, 0u, Fields17test_name_Handles_field19_alt_field()),
-    ::fidl::FidlStructField(&HandlesuspendtokennonnullableTable, 80u, 0u, Fields17test_name_Handles_field20_alt_field()),
-    ::fidl::FidlStructField(&HandlethreadnonnullableTable, 84u, 0u, Fields17test_name_Handles_field21_alt_field()),
-    ::fidl::FidlStructField(&HandletimernonnullableTable, 88u, 0u, Fields17test_name_Handles_field22_alt_field()),
-    ::fidl::FidlStructField(&HandlevcpunonnullableTable, 92u, 0u, Fields17test_name_Handles_field23_alt_field()),
-    ::fidl::FidlStructField(&HandlevmarnonnullableTable, 96u, 0u, Fields17test_name_Handles_field24_alt_field()),
-    ::fidl::FidlStructField(&HandlevmononnullableTable, 100u, 0u, Fields17test_name_Handles_field25_alt_field())
+    ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0u, 0u),
+    ::fidl::FidlStructField(&HandlebtinonnullableTable, 4u, 0u),
+    ::fidl::FidlStructField(&HandlechannelnonnullableTable, 8u, 0u),
+    ::fidl::FidlStructField(&HandledebuglognonnullableTable, 12u, 0u),
+    ::fidl::FidlStructField(&HandleeventnonnullableTable, 16u, 0u),
+    ::fidl::FidlStructField(&HandleeventpairnonnullableTable, 20u, 0u),
+    ::fidl::FidlStructField(&HandleexceptionnonnullableTable, 24u, 0u),
+    ::fidl::FidlStructField(&HandlefifononnullableTable, 28u, 0u),
+    ::fidl::FidlStructField(&HandleguestnonnullableTable, 32u, 0u),
+    ::fidl::FidlStructField(&HandleinterruptnonnullableTable, 36u, 0u),
+    ::fidl::FidlStructField(&HandleiommunonnullableTable, 40u, 0u),
+    ::fidl::FidlStructField(&HandlejobnonnullableTable, 44u, 0u),
+    ::fidl::FidlStructField(&HandlepagernonnullableTable, 48u, 0u),
+    ::fidl::FidlStructField(&HandlepcidevicenonnullableTable, 52u, 0u),
+    ::fidl::FidlStructField(&HandlepmtnonnullableTable, 56u, 0u),
+    ::fidl::FidlStructField(&HandleportnonnullableTable, 60u, 0u),
+    ::fidl::FidlStructField(&HandleprocessnonnullableTable, 64u, 0u),
+    ::fidl::FidlStructField(&HandleprofilenonnullableTable, 68u, 0u),
+    ::fidl::FidlStructField(&HandleresourcenonnullableTable, 72u, 0u),
+    ::fidl::FidlStructField(&HandlesocketnonnullableTable, 76u, 0u),
+    ::fidl::FidlStructField(&HandlesuspendtokennonnullableTable, 80u, 0u),
+    ::fidl::FidlStructField(&HandlethreadnonnullableTable, 84u, 0u),
+    ::fidl::FidlStructField(&HandletimernonnullableTable, 88u, 0u),
+    ::fidl::FidlStructField(&HandlevcpunonnullableTable, 92u, 0u),
+    ::fidl::FidlStructField(&HandlevmarnonnullableTable, 96u, 0u),
+    ::fidl::FidlStructField(&HandlevmononnullableTable, 100u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_HandlesAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields17test_name_Handles, 26u, 104u, "test.name/Handles", test_name_HandlesAltTypePointerTable()));
@@ -177,59 +151,33 @@ static const fidl_type_t v1_HandlevmarnonnullableTable = fidl_type_t(::fidl::Fid
 static const fidl_type_t v1_HandlevmononnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_VMO, ::fidl::kNonnullable));
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field1_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field2_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field3_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field4_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field5_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field6_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field7_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field8_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field9_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field10_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field11_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field12_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field13_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field14_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field15_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field16_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field17_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field18_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field19_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field20_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field21_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field22_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field23_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field24_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field25_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields20v1_test_name_Handles[] = {
-    ::fidl::FidlStructField(&v1_HandlehandlenonnullableTable, 0u, 0u, Fields20v1_test_name_Handles_field0_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlebtinonnullableTable, 4u, 0u, Fields20v1_test_name_Handles_field1_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlechannelnonnullableTable, 8u, 0u, Fields20v1_test_name_Handles_field2_alt_field()),
-    ::fidl::FidlStructField(&v1_HandledebuglognonnullableTable, 12u, 0u, Fields20v1_test_name_Handles_field3_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleeventnonnullableTable, 16u, 0u, Fields20v1_test_name_Handles_field4_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleeventpairnonnullableTable, 20u, 0u, Fields20v1_test_name_Handles_field5_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleexceptionnonnullableTable, 24u, 0u, Fields20v1_test_name_Handles_field6_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlefifononnullableTable, 28u, 0u, Fields20v1_test_name_Handles_field7_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleguestnonnullableTable, 32u, 0u, Fields20v1_test_name_Handles_field8_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleinterruptnonnullableTable, 36u, 0u, Fields20v1_test_name_Handles_field9_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleiommunonnullableTable, 40u, 0u, Fields20v1_test_name_Handles_field10_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlejobnonnullableTable, 44u, 0u, Fields20v1_test_name_Handles_field11_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlepagernonnullableTable, 48u, 0u, Fields20v1_test_name_Handles_field12_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlepcidevicenonnullableTable, 52u, 0u, Fields20v1_test_name_Handles_field13_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlepmtnonnullableTable, 56u, 0u, Fields20v1_test_name_Handles_field14_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleportnonnullableTable, 60u, 0u, Fields20v1_test_name_Handles_field15_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleprocessnonnullableTable, 64u, 0u, Fields20v1_test_name_Handles_field16_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleprofilenonnullableTable, 68u, 0u, Fields20v1_test_name_Handles_field17_alt_field()),
-    ::fidl::FidlStructField(&v1_HandleresourcenonnullableTable, 72u, 0u, Fields20v1_test_name_Handles_field18_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlesocketnonnullableTable, 76u, 0u, Fields20v1_test_name_Handles_field19_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlesuspendtokennonnullableTable, 80u, 0u, Fields20v1_test_name_Handles_field20_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlethreadnonnullableTable, 84u, 0u, Fields20v1_test_name_Handles_field21_alt_field()),
-    ::fidl::FidlStructField(&v1_HandletimernonnullableTable, 88u, 0u, Fields20v1_test_name_Handles_field22_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlevcpunonnullableTable, 92u, 0u, Fields20v1_test_name_Handles_field23_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlevmarnonnullableTable, 96u, 0u, Fields20v1_test_name_Handles_field24_alt_field()),
-    ::fidl::FidlStructField(&v1_HandlevmononnullableTable, 100u, 0u, Fields20v1_test_name_Handles_field25_alt_field())
+    ::fidl::FidlStructField(&v1_HandlehandlenonnullableTable, 0u, 0u),
+    ::fidl::FidlStructField(&v1_HandlebtinonnullableTable, 4u, 0u),
+    ::fidl::FidlStructField(&v1_HandlechannelnonnullableTable, 8u, 0u),
+    ::fidl::FidlStructField(&v1_HandledebuglognonnullableTable, 12u, 0u),
+    ::fidl::FidlStructField(&v1_HandleeventnonnullableTable, 16u, 0u),
+    ::fidl::FidlStructField(&v1_HandleeventpairnonnullableTable, 20u, 0u),
+    ::fidl::FidlStructField(&v1_HandleexceptionnonnullableTable, 24u, 0u),
+    ::fidl::FidlStructField(&v1_HandlefifononnullableTable, 28u, 0u),
+    ::fidl::FidlStructField(&v1_HandleguestnonnullableTable, 32u, 0u),
+    ::fidl::FidlStructField(&v1_HandleinterruptnonnullableTable, 36u, 0u),
+    ::fidl::FidlStructField(&v1_HandleiommunonnullableTable, 40u, 0u),
+    ::fidl::FidlStructField(&v1_HandlejobnonnullableTable, 44u, 0u),
+    ::fidl::FidlStructField(&v1_HandlepagernonnullableTable, 48u, 0u),
+    ::fidl::FidlStructField(&v1_HandlepcidevicenonnullableTable, 52u, 0u),
+    ::fidl::FidlStructField(&v1_HandlepmtnonnullableTable, 56u, 0u),
+    ::fidl::FidlStructField(&v1_HandleportnonnullableTable, 60u, 0u),
+    ::fidl::FidlStructField(&v1_HandleprocessnonnullableTable, 64u, 0u),
+    ::fidl::FidlStructField(&v1_HandleprofilenonnullableTable, 68u, 0u),
+    ::fidl::FidlStructField(&v1_HandleresourcenonnullableTable, 72u, 0u),
+    ::fidl::FidlStructField(&v1_HandlesocketnonnullableTable, 76u, 0u),
+    ::fidl::FidlStructField(&v1_HandlesuspendtokennonnullableTable, 80u, 0u),
+    ::fidl::FidlStructField(&v1_HandlethreadnonnullableTable, 84u, 0u),
+    ::fidl::FidlStructField(&v1_HandletimernonnullableTable, 88u, 0u),
+    ::fidl::FidlStructField(&v1_HandlevcpunonnullableTable, 92u, 0u),
+    ::fidl::FidlStructField(&v1_HandlevmarnonnullableTable, 96u, 0u),
+    ::fidl::FidlStructField(&v1_HandlevmononnullableTable, 100u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_HandlesAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields20v1_test_name_Handles, 26u, 104u, "test.name/Handles", v1_test_name_HandlesAltTypePointerTable()));
@@ -247,108 +195,4 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_HandlesAltTy
 }
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field0_alt_field() { return &Fields20v1_test_name_Handles[0]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field1_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field1_alt_field() { return &Fields20v1_test_name_Handles[1]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field2_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field2_alt_field() { return &Fields20v1_test_name_Handles[2]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field3_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field3_alt_field() { return &Fields20v1_test_name_Handles[3]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field4_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field4_alt_field() { return &Fields20v1_test_name_Handles[4]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field5_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field5_alt_field() { return &Fields20v1_test_name_Handles[5]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field6_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field6_alt_field() { return &Fields20v1_test_name_Handles[6]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field7_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field7_alt_field() { return &Fields20v1_test_name_Handles[7]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field8_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field8_alt_field() { return &Fields20v1_test_name_Handles[8]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field9_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field9_alt_field() { return &Fields20v1_test_name_Handles[9]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field10_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field10_alt_field() { return &Fields20v1_test_name_Handles[10]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field11_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field11_alt_field() { return &Fields20v1_test_name_Handles[11]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field12_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field12_alt_field() { return &Fields20v1_test_name_Handles[12]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field13_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field13_alt_field() { return &Fields20v1_test_name_Handles[13]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field14_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field14_alt_field() { return &Fields20v1_test_name_Handles[14]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field15_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field15_alt_field() { return &Fields20v1_test_name_Handles[15]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field16_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field16_alt_field() { return &Fields20v1_test_name_Handles[16]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field17_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field17_alt_field() { return &Fields20v1_test_name_Handles[17]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field18_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field18_alt_field() { return &Fields20v1_test_name_Handles[18]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field19_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field19_alt_field() { return &Fields20v1_test_name_Handles[19]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field20_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field20_alt_field() { return &Fields20v1_test_name_Handles[20]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field21_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field21_alt_field() { return &Fields20v1_test_name_Handles[21]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field22_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field22_alt_field() { return &Fields20v1_test_name_Handles[22]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field23_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field23_alt_field() { return &Fields20v1_test_name_Handles[23]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field24_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field24_alt_field() { return &Fields20v1_test_name_Handles[24]; }
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field25_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields17test_name_Handles_field25_alt_field() { return &Fields20v1_test_name_Handles[25]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field0_alt_field() { return &Fields17test_name_Handles[0]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field1_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field1_alt_field() { return &Fields17test_name_Handles[1]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field2_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field2_alt_field() { return &Fields17test_name_Handles[2]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field3_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field3_alt_field() { return &Fields17test_name_Handles[3]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field4_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field4_alt_field() { return &Fields17test_name_Handles[4]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field5_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field5_alt_field() { return &Fields17test_name_Handles[5]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field6_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field6_alt_field() { return &Fields17test_name_Handles[6]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field7_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field7_alt_field() { return &Fields17test_name_Handles[7]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field8_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field8_alt_field() { return &Fields17test_name_Handles[8]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field9_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field9_alt_field() { return &Fields17test_name_Handles[9]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field10_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field10_alt_field() { return &Fields17test_name_Handles[10]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field11_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field11_alt_field() { return &Fields17test_name_Handles[11]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field12_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field12_alt_field() { return &Fields17test_name_Handles[12]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field13_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field13_alt_field() { return &Fields17test_name_Handles[13]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field14_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field14_alt_field() { return &Fields17test_name_Handles[14]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field15_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field15_alt_field() { return &Fields17test_name_Handles[15]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field16_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field16_alt_field() { return &Fields17test_name_Handles[16]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field17_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field17_alt_field() { return &Fields17test_name_Handles[17]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field18_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field18_alt_field() { return &Fields17test_name_Handles[18]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field19_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field19_alt_field() { return &Fields17test_name_Handles[19]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field20_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field20_alt_field() { return &Fields17test_name_Handles[20]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field21_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field21_alt_field() { return &Fields17test_name_Handles[21]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field22_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field22_alt_field() { return &Fields17test_name_Handles[22]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field23_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field23_alt_field() { return &Fields17test_name_Handles[23]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field24_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field24_alt_field() { return &Fields17test_name_Handles[24]; }
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field25_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields20v1_test_name_Handles_field25_alt_field() { return &Fields17test_name_Handles[25]; }
 } // extern "C"
