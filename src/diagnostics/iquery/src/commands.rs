@@ -14,13 +14,8 @@ use {
 
 /// Executes the FIND command.
 pub async fn find(paths: &[String], recursive: bool) -> Vec<IqueryResult> {
-    let futs = paths.iter().map(|path| all_locations(path));
-    let mut locations = join_all(futs)
-        .await
-        .into_iter()
-        .filter_map(|r| r.ok())
-        .flatten()
-        .collect::<Vec<InspectLocation>>();
+    let mut locations =
+        paths.iter().flat_map(|path| all_locations(path)).collect::<Vec<InspectLocation>>();
     locations.sort();
     let results = locations.into_iter().map(|location| IqueryResult::new(location));
     if recursive {

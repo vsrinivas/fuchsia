@@ -119,7 +119,7 @@ impl Options {
         }
     }
 
-    pub async fn read(mut args: Box<dyn Iterator<Item = String>>) -> Result<Self, Error> {
+    pub fn read(mut args: Box<dyn Iterator<Item = String>>) -> Result<Self, Error> {
         // ignore arg[0]
         let _ = args.next();
         let mut opts = Options::new();
@@ -159,7 +159,7 @@ impl Options {
         }
 
         if opts.mode == ModeCommand::Report {
-            Ok(opts.transform_for_report().await)
+            Ok(opts.transform_for_report())
         } else if opts.path.is_empty() {
             // Print usage if path is empty
             println!("{}", usage());
@@ -200,19 +200,13 @@ impl Options {
         }
     }
 
-    async fn transform_for_report(self) -> Self {
+    fn transform_for_report(self) -> Self {
         let mut path = self.path.clone();
-        match all_locations("/hub").await {
-            Ok(locations) => {
-                path.extend(
-                    locations
-                        .into_iter()
-                        .map(|loc| loc.path.to_string_lossy().to_string())
-                        .filter(|p| !p.contains("/system_objects")),
-                );
-            }
-            Err(_) => {}
-        }
+        path.extend(
+            all_locations("/hub")
+                .map(|loc| loc.path.to_string_lossy().to_string())
+                .filter(|p| !p.contains("/system_objects")),
+        );
         Self {
             mode: ModeCommand::Cat,
             global: GlobalOptions { dir: None },
@@ -229,16 +223,15 @@ impl Options {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use super::*;
 
-    #[fasync::run_singlethreaded(test)]
-    async fn parse_opts() {
+    #[test]
+    fn parse_opts() {
         let opts =
             "iquery --ls --recursive --sort --format=json --full_paths --dir=DIR PATH1 PATH2"
                 .split(" ")
                 .map(|s| s.to_string());
-        let options =
-            Options::read(Box::new(opts.into_iter())).await.expect("failed to read options");
+        let options = Options::read(Box::new(opts.into_iter())).expect("failed to read options");
         assert_eq!(options.mode, ModeCommand::Ls);
         assert_eq!(options.global.dir, Some("DIR".to_string()));
         assert_eq!(options.formatting.format, Format::Json);
@@ -248,11 +241,10 @@ mod tests {
         assert_eq!(options.path, vec!["PATH1", "PATH2"]);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn default_opts() {
+    #[test]
+    fn default_opts() {
         let opts = "iquery PATH".split(" ").map(|s| s.to_string());
-        let options =
-            Options::read(Box::new(opts.into_iter())).await.expect("failed to read options");
+        let options = Options::read(Box::new(opts.into_iter())).expect("failed to read options");
         assert_eq!(options.mode, ModeCommand::Cat);
         assert_eq!(options.global.dir, None);
         assert_eq!(options.formatting.format, Format::Text);
@@ -262,11 +254,10 @@ mod tests {
         assert_eq!(options.path, vec!["PATH"]);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn parse_report() {
+    #[test]
+    fn parse_report() {
         let opts = "iquery --report PATH".split(" ").map(|s| s.to_string());
-        let options =
-            Options::read(Box::new(opts.into_iter())).await.expect("failed to read options");
+        let options = Options::read(Box::new(opts.into_iter())).expect("failed to read options");
         assert_eq!(options.mode, ModeCommand::Cat);
         assert_eq!(options.global.dir, None);
         assert_eq!(options.formatting.format, Format::Text);

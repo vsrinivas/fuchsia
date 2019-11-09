@@ -6,42 +6,21 @@ use {
     failure::{bail, Error},
     fidl,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
-    files_async, io_util,
-    std::{convert::TryFrom, path::PathBuf, str::FromStr},
+    std::{
+        collections::VecDeque, convert::TryFrom, fs, iter::FromIterator, path::PathBuf,
+        str::FromStr,
+    },
 };
 
 /// Gets an iterator over all inspect files in a directory.
-pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
-    let mut path = std::env::current_dir()?;
-    path.push(root);
-    let dir_proxy = io_util::open_directory_in_namespace(
-        &path.to_string_lossy().to_string(),
-        io_util::OPEN_RIGHT_READABLE,
-    )?;
-    let locations = files_async::readdir_recursive(&dir_proxy)
-        .await?
-        .into_iter()
-        .filter_map(|entry| {
-            let mut path = PathBuf::from(&root);
-            path.push(&entry.name);
-            if entry.name.ends_with(<InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME) {
-                return Some(InspectLocation {
-                    inspect_type: InspectType::DeprecatedFidl,
-                    path,
-                    parts: vec![],
-                });
-            }
-            if entry.name.ends_with(".inspect") {
-                return Some(InspectLocation {
-                    inspect_type: InspectType::Vmo,
-                    path,
-                    parts: vec![],
-                });
-            }
-            None
-        })
-        .collect::<Vec<InspectLocation>>();
-    Ok(locations)
+pub fn all_locations(root: &str) -> Box<dyn Iterator<Item = InspectLocation>> {
+    match InspectLocationIterator::try_from(root) {
+        Ok(iterator) => Box::new(iterator),
+        Err(e) => {
+            eprintln!("Error while reading dir {}: {}", root, e);
+            Box::new(std::iter::empty::<InspectLocation>())
+        }
+    }
 }
 
 /// Type of the inspect file.
@@ -153,6 +132,44 @@ impl TryFrom<PathBuf> for InspectLocation {
                     Ok(InspectLocation { inspect_type: InspectType::Vmo, path, parts: vec![] })
                 } else {
                     bail!("Not an inspect file")
+                }
+            }
+        }
+    }
+}
+
+/// Iterates over a directory tree and returns all Inspect files.
+struct InspectLocationIterator {
+    pending: VecDeque<fs::DirEntry>,
+}
+
+impl TryFrom<&str> for InspectLocationIterator {
+    type Error = std::io::Error;
+
+    fn try_from(root: &str) -> Result<Self, Self::Error> {
+        let pending = VecDeque::from_iter(fs::read_dir(root)?.filter_map(|e| e.ok()));
+        Ok(Self { pending })
+    }
+}
+
+impl Iterator for InspectLocationIterator {
+    type Item = InspectLocation;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.pending.is_empty() {
+                return None;
+            }
+            let path = self.pending.pop_front()?.path();
+            if path.is_dir() {
+                match fs::read_dir(path) {
+                    Ok(entries) => self.pending.extend(entries.filter_map(|e| e.ok())),
+                    _ => {}
+                }
+            } else {
+                match InspectLocation::try_from(path) {
+                    Ok(location) => return Some(location),
+                    Err(_) => continue,
                 }
             }
         }
