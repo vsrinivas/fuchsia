@@ -13,7 +13,7 @@
 
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/event_aggregator.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/logger/logger_test_utils.h"
 
 namespace cobalt {
@@ -25,17 +25,19 @@ class LoggerImplTest : public ::testing::Test {
         local_aggregate_proto_store_("/tmp/a", std::make_unique<util::PosixFileSystem>()),
         obs_history_proto_store_("/tmp/b", std::make_unique<util::PosixFileSystem>()),
         observation_writer_(nullptr, nullptr, nullptr),
-        event_aggregator_(&encoder_, &observation_writer_, &local_aggregate_proto_store_,
-                          &obs_history_proto_store_),
+        event_aggregator_manager_(&encoder_, &observation_writer_, &local_aggregate_proto_store_,
+                                  &obs_history_proto_store_),
         validated_clock_(&system_clock_),
         undated_event_manager_(std::make_shared<logger::UndatedEventManager>(
-            &encoder_, &event_aggregator_, &observation_writer_, nullptr)),
-        logger_impl_(std::make_unique<logger::Logger>(
-                         std::make_unique<logger::ProjectContext>(
-                             1, "test", std::make_unique<cobalt::ProjectConfig>()),
-                         &encoder_, &event_aggregator_, &observation_writer_, nullptr,
-                         &validated_clock_, undated_event_manager_, &fake_logger_),
-                     nullptr),
+            &encoder_, event_aggregator_manager_.GetEventAggregator(), &observation_writer_,
+            nullptr)),
+        logger_impl_(
+            std::make_unique<logger::Logger>(
+                std::make_unique<logger::ProjectContext>(1, "test",
+                                                         std::make_unique<cobalt::ProjectConfig>()),
+                &encoder_, event_aggregator_manager_.GetEventAggregator(), &observation_writer_,
+                nullptr, &validated_clock_, undated_event_manager_, &fake_logger_),
+            nullptr),
         logger_(&logger_impl_) {}
 
  private:
@@ -43,7 +45,7 @@ class LoggerImplTest : public ::testing::Test {
   util::ConsistentProtoStore local_aggregate_proto_store_;
   util::ConsistentProtoStore obs_history_proto_store_;
   logger::ObservationWriter observation_writer_;
-  logger::EventAggregator event_aggregator_;
+  local_aggregation::EventAggregatorManager event_aggregator_manager_;
   util::IncrementingSystemClock system_clock_;
   util::FakeValidatedClock validated_clock_;
   std::shared_ptr<logger::UndatedEventManager> undated_event_manager_;

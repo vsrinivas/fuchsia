@@ -140,17 +140,19 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   observation_writer_ = std::make_unique<logger::ObservationWriter>(
       observation_store_.get(), shipping_manager_.get(), encrypt_to_analyzer_.get());
 
-  // Construct an EventAggregator using default values for the snapshot
+  // Construct an EventAggregatorManager using default values for the snapshot
   // intervals.
-  event_aggregator_ = std::make_unique<logger::EventAggregator>(
+  event_aggregator_manager_ = std::make_unique<local_aggregation::EventAggregatorManager>(
       &logger_encoder_, observation_writer_.get(), &local_aggregate_proto_store_,
       &obs_history_proto_store_, event_aggregator_backfill_days);
 
   controller_impl_ = std::make_unique<CobaltControllerImpl>(
-      dispatcher, shipping_manager_.get(), event_aggregator_.get(), observation_store_.get());
+      dispatcher, shipping_manager_.get(), event_aggregator_manager_->GetEventAggregator(),
+      observation_store_.get());
 
   undated_event_manager_ = std::make_shared<logger::UndatedEventManager>(
-      &logger_encoder_, event_aggregator_.get(), observation_writer_.get(), &system_data_);
+      &logger_encoder_, event_aggregator_manager_->GetEventAggregator(), observation_writer_.get(),
+      &system_data_);
 
   // Create internal Logger and pass a pointer to objects which use it.
   internal_logger_ = NewInternalLogger(global_project_context_factory, logger::kCustomerName,
@@ -175,7 +177,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
     // Now that the clock is accurate, start workers that need an accurate clock.
     if (start_event_aggregator_worker) {
-      event_aggregator_->Start(std::move(system_clock));
+      event_aggregator_manager_->Start(std::move(system_clock));
     }
   });
 
@@ -185,8 +187,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   // Create LoggerFactory.
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       std::move(global_project_context_factory), getClientSecret(), &timer_manager_,
-      &logger_encoder_, observation_writer_.get(), event_aggregator_.get(), &system_clock_,
-      undated_event_manager_, internal_logger_.get(), &system_data_));
+      &logger_encoder_, observation_writer_.get(), event_aggregator_manager_->GetEventAggregator(),
+      &system_clock_, undated_event_manager_, internal_logger_.get(), &system_data_));
 
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
@@ -217,8 +219,8 @@ std::unique_ptr<logger::Logger> CobaltApp::NewInternalLogger(
                       "Cobalt-measuring-Cobalt will be disabled.";
   }
   return std::make_unique<logger::Logger>(std::move(internal_project_context), &logger_encoder_,
-                                          event_aggregator_.get(), observation_writer_.get(),
-                                          &system_data_);
+                                          event_aggregator_manager_->GetEventAggregator(),
+                                          observation_writer_.get(), &system_data_);
 }
 
 }  // namespace cobalt

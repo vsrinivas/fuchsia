@@ -59,7 +59,8 @@ LoggerFactoryImpl::LoggerFactoryImpl(
     std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
     encoder::ClientSecret client_secret, TimerManager* timer_manager,
     logger::Encoder* logger_encoder, logger::ObservationWriter* observation_writer,
-    logger::EventAggregator* event_aggregator, util::ValidatedClockInterface* validated_clock,
+    local_aggregation::EventAggregator* event_aggregator,
+    util::ValidatedClockInterface* validated_clock,
     std::weak_ptr<logger::UndatedEventManager> undated_event_manager,
     logger::Logger* internal_logger, encoder::SystemDataInterface* system_data)
     : client_secret_(std::move(client_secret)),

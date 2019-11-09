@@ -13,8 +13,8 @@
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "third_party/cobalt/src/lib/util/clock.h"
 #include "third_party/cobalt/src/lib/util/encrypted_message_util.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator.h"
 #include "third_party/cobalt/src/logger/encoder.h"
-#include "third_party/cobalt/src/logger/event_aggregator.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/logger/undated_event_manager.h"
@@ -29,7 +29,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
       encoder::ClientSecret client_secret, TimerManager* timer_manager,
       logger::Encoder* logger_encoder, logger::ObservationWriter* observation_writer,
-      logger::EventAggregator* event_aggregator, util::ValidatedClockInterface* validated_clock,
+      local_aggregation::EventAggregator* event_aggregator,
+      util::ValidatedClockInterface* validated_clock,
       std::weak_ptr<logger::UndatedEventManager> undated_event_manager,
       logger::Logger* internal_logger, encoder::SystemDataInterface* system_data);
 
@@ -93,7 +94,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   TimerManager* timer_manager_;                                       // not owned
   logger::Encoder* logger_encoder_;                                   // not owned
   logger::ObservationWriter* observation_writer_;                     // not owned
-  logger::EventAggregator* event_aggregator_;                         // not owned
+  local_aggregation::EventAggregator* event_aggregator_;              // not owned
   util::ValidatedClockInterface* validated_clock_;                    // not owned
   std::weak_ptr<logger::UndatedEventManager> undated_event_manager_;  // not owned
   logger::Logger* internal_logger_;                                   // not owned

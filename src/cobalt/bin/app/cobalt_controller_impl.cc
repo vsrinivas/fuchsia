@@ -13,7 +13,7 @@ using encoder::ShippingManager;
 
 CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
                                            encoder::ShippingManager* shipping_manager,
-                                           logger::EventAggregator* event_aggregator,
+                                           local_aggregation::EventAggregator* event_aggregator,
                                            observation_store::ObservationStore* observation_store)
     : dispatcher_(dispatcher),
       shipping_manager_(shipping_manager),
