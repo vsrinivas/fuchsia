@@ -9,14 +9,18 @@ extern "C" {
 
 
 extern const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
-static const ::fidl::FidlStructField Fields34fidl_test_simple_SimpleEchoRequest[] = {};
+static const ::fidl::FidlStructField Fields34fidl_test_simple_SimpleEchoRequest[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_simple_SimpleEchoRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_simple_SimpleEchoRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34fidl_test_simple_SimpleEchoRequest, 0u, 24u, "fidl.test.simple/SimpleEchoRequest", fidl_test_simple_SimpleEchoRequestAltTypePointerTable()));
+const fidl_type_t fidl_test_simple_SimpleEchoRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34fidl_test_simple_SimpleEchoRequest, 1u, 24u, "fidl.test.simple/SimpleEchoRequest", fidl_test_simple_SimpleEchoRequestAltTypePointerTable()));
 
 extern const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
-static const ::fidl::FidlStructField Fields35fidl_test_simple_SimpleEchoResponse[] = {};
+static const ::fidl::FidlStructField Fields35fidl_test_simple_SimpleEchoResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_simple_SimpleEchoResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_simple_SimpleEchoResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_simple_SimpleEchoResponse, 0u, 24u, "fidl.test.simple/SimpleEchoResponse", fidl_test_simple_SimpleEchoResponseAltTypePointerTable()));
+const fidl_type_t fidl_test_simple_SimpleEchoResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_simple_SimpleEchoResponse, 1u, 24u, "fidl.test.simple/SimpleEchoResponse", fidl_test_simple_SimpleEchoResponseAltTypePointerTable()));
 
 extern const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 static const ::fidl::FidlStructField Fields35fidl_test_simple_SimpleCloseRequest[] = {};
@@ -24,9 +28,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_simple_SimpleCl
 const fidl_type_t fidl_test_simple_SimpleCloseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_simple_SimpleCloseRequest, 0u, 16u, "fidl.test.simple/SimpleCloseRequest", fidl_test_simple_SimpleCloseRequestAltTypePointerTable()));
 
 extern const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
-static const ::fidl::FidlStructField Fields36fidl_test_simple_SimpleCloseResponse[] = {};
+static const ::fidl::FidlStructField Fields36fidl_test_simple_SimpleCloseResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_simple_SimpleCloseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_simple_SimpleCloseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36fidl_test_simple_SimpleCloseResponse, 0u, 24u, "fidl.test.simple/SimpleCloseResponse", fidl_test_simple_SimpleCloseResponseAltTypePointerTable()));
+const fidl_type_t fidl_test_simple_SimpleCloseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36fidl_test_simple_SimpleCloseResponse, 1u, 24u, "fidl.test.simple/SimpleCloseResponse", fidl_test_simple_SimpleCloseResponseAltTypePointerTable()));
 
 
 // Coding tables for v1 wire format.
@@ -34,14 +40,18 @@ const fidl_type_t fidl_test_simple_SimpleCloseResponseTable = fidl_type_t(::fidl
 
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable;
-static const ::fidl::FidlStructField Fields37v1_fidl_test_simple_SimpleEchoRequest[] = {};
+static const ::fidl::FidlStructField Fields37v1_fidl_test_simple_SimpleEchoRequest[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_simple_SimpleEchoRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields37v1_fidl_test_simple_SimpleEchoRequest, 0u, 24u, "fidl.test.simple/SimpleEchoRequest", v1_fidl_test_simple_SimpleEchoRequestAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields37v1_fidl_test_simple_SimpleEchoRequest, 1u, 24u, "fidl.test.simple/SimpleEchoRequest", v1_fidl_test_simple_SimpleEchoRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable;
-static const ::fidl::FidlStructField Fields38v1_fidl_test_simple_SimpleEchoResponse[] = {};
+static const ::fidl::FidlStructField Fields38v1_fidl_test_simple_SimpleEchoResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_simple_SimpleEchoResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_simple_SimpleEchoResponse, 0u, 24u, "fidl.test.simple/SimpleEchoResponse", v1_fidl_test_simple_SimpleEchoResponseAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_simple_SimpleEchoResponse, 1u, 24u, "fidl.test.simple/SimpleEchoResponse", v1_fidl_test_simple_SimpleEchoResponseAltTypePointerTable()));
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleCloseRequestTable;
 static const ::fidl::FidlStructField Fields38v1_fidl_test_simple_SimpleCloseRequest[] = {};
@@ -49,9 +59,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_simple_Simpl
 const fidl_type_t v1_fidl_test_simple_SimpleCloseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_simple_SimpleCloseRequest, 0u, 16u, "fidl.test.simple/SimpleCloseRequest", v1_fidl_test_simple_SimpleCloseRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable;
-static const ::fidl::FidlStructField Fields39v1_fidl_test_simple_SimpleCloseResponse[] = {};
+static const ::fidl::FidlStructField Fields39v1_fidl_test_simple_SimpleCloseResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_simple_SimpleCloseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39v1_fidl_test_simple_SimpleCloseResponse, 0u, 24u, "fidl.test.simple/SimpleCloseResponse", v1_fidl_test_simple_SimpleCloseResponseAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39v1_fidl_test_simple_SimpleCloseResponse, 1u, 24u, "fidl.test.simple/SimpleCloseResponse", v1_fidl_test_simple_SimpleCloseResponseAltTypePointerTable()));
 
 
 // Old <-> V1 map.

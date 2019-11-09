@@ -343,8 +343,6 @@ struct EmptyStructUnionStruct {
 
 // TODO(apang): Union containing a table (to test out-of-line sizing)
 
-// Test cases with transaction headers
-
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);

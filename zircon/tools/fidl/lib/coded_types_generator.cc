@@ -230,11 +230,21 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                 coded_message->coded_name + "_" + std::string(parameter.name.data());
             auto coded_parameter_type = CompileType(
                 parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
-            if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
-              request_fields.emplace_back(
-                  coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
-                  parameter.fieldshape(wire_format).Offset(),
-                  parameter.fieldshape(wire_format).Padding(), coded_message.get(), field_num);
+            if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways) {
+              request_fields.emplace_back(coded_parameter_type,
+                                          parameter.typeshape(wire_format).InlineSize(),
+                                          parameter.fieldshape(wire_format).Offset(),
+                                          parameter.fieldshape(wire_format).Padding(),
+                                          coded_message.get(),
+                                          field_num);
+            } else {
+              request_fields.emplace_back(nullptr,
+                                        parameter.typeshape(wire_format).InlineSize(),
+                                        parameter.fieldshape(wire_format).Offset(),
+                                        parameter.fieldshape(wire_format).Padding(),
+                                        coded_message.get(),
+                                        field_num);
+            }
             field_num++;
           }
           // We move the coded_message to coded_types_ so that we'll generate tables for the
@@ -274,9 +284,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                                      member.fieldshape(wire_format).Offset(),
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
-        } else if (member.fieldshape(wire_format).Padding() > 0) {
-          // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
+        } else {
+          struct_fields.emplace_back(nullptr,
+                                     member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);

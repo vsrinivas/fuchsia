@@ -362,8 +362,10 @@ class TransformerBase {
   }
 
   zx_status_t TransformStruct(const fidl::FidlCodedStruct& src_coded_struct,
-                              const fidl::FidlCodedStruct&, const Position& position,
+                              const fidl::FidlCodedStruct& dst_coded_struct,
+                              const Position& position,
                               uint32_t dst_size, TraversalResult* out_traversal_result) {
+    assert(src_coded_struct.field_count == dst_coded_struct.field_count);
     // Note: we cannot use dst_coded_struct.size, and must instead rely on
     // the provided dst_size since this struct could be placed in an alignment
     // context that is larger than its inherent size.
@@ -376,96 +378,66 @@ class TransformerBase {
     }
 
     const uint32_t src_start_of_struct = position.src_inline_offset;
-    const uint32_t dst_start_of_struct = position.dst_inline_offset;
-    const uint32_t dst_end_of_struct = position.dst_inline_offset + dst_size;
+    // only used in assert statements
+    const uint32_t dst_start_of_struct __attribute__((unused)) = position.dst_inline_offset;
 
     auto current_position = position;
+    for (uint32_t field_index = 0; field_index < src_coded_struct.field_count; field_index++) {
+      const auto& src_field = src_coded_struct.fields[field_index];
+      const auto& dst_field = dst_coded_struct.fields[field_index];
 
-    // If the first field in the _coding table_ is non-primitive, there may be
-    // primitive fields in the FIDL struct that are not present in the coding
-    // table (which is an optimization, to save on coding table space). So,
-    // copy everything before the first field if it's non-primitive.
-    {
-      const auto& src_first_field = src_coded_struct.fields[0];
-      if (src_first_field.type != nullptr) {
-        src_dst->Copy(position, src_first_field.offset);
-
-        const auto& dst_first_field = *src_first_field.alt_field;
-        const uint32_t dst_padding = dst_first_field.offset - src_first_field.offset;
-        src_dst->Pad(position.IncreaseDstInlineOffset(src_first_field.offset), dst_padding);
-
-        current_position = position.IncreaseSrcInlineOffset(src_first_field.offset)
-                               .IncreaseDstInlineOffset(dst_first_field.offset);
-      }
-    }
-
-    for (uint32_t src_field_index = 0; src_field_index < src_coded_struct.field_count;
-         src_field_index++) {
-      const auto& src_field = src_coded_struct.fields[src_field_index];
-
-      // Copy fields without coding tables.
       if (!src_field.type) {
-        const uint32_t dst_field_size =
-            src_field.padding_offset + (src_start_of_struct - current_position.src_inline_offset);
+        const uint32_t dst_field_size = src_start_of_struct
+                                      + src_field.padding_offset
+                                      - current_position.src_inline_offset;
         src_dst->Copy(current_position, dst_field_size);
         current_position = current_position.IncreaseInlineOffset(dst_field_size);
+      } else {
+        // The only case where the amount we've written shouldn't match the specified offset is
+        // for request/response structs, where the txn header is not specified in the coding table.
+        if (current_position.src_inline_offset != src_start_of_struct + src_field.offset) {
+          // both of these offset should be equal to sizeof(fidl_message_header_t)
+          assert(src_field.offset == dst_field.offset);
+          src_dst->Copy(current_position, src_field.offset);
+          current_position = current_position.IncreaseInlineOffset(src_field.offset);
+        }
+        assert(current_position.src_inline_offset == src_start_of_struct + src_field.offset);
+        assert(current_position.dst_inline_offset == dst_start_of_struct + dst_field.offset);
 
-        continue;
+        // Transform field.
+        uint32_t src_next_field_offset =
+            current_position.src_inline_offset + AlignedInlineSize(src_field.type, From());
+        uint32_t dst_next_field_offset =
+            current_position.dst_inline_offset + AlignedInlineSize(dst_field.type, To());
+        uint32_t dst_field_size = dst_next_field_offset - dst_field.offset;
+
+        TraversalResult field_traversal_result;
+        const zx_status_t status =
+            Transform(src_field.type, current_position, dst_field_size, &field_traversal_result);
+        if (status != ZX_OK) {
+          return status;
+        }
+
+        *out_traversal_result += field_traversal_result;
+
+        // Update current position for next iteration.
+        current_position.src_inline_offset = src_next_field_offset;
+        current_position.dst_inline_offset = dst_next_field_offset;
+        current_position.src_out_of_line_offset += field_traversal_result.src_out_of_line_size;
+        current_position.dst_out_of_line_offset += field_traversal_result.dst_out_of_line_size;
       }
 
-      assert(src_field.alt_field);
-      const auto& dst_field = *src_field.alt_field;
-
-      // Pad between fields (if needed).
-      if (current_position.dst_inline_offset < dst_field.offset) {
-        uint32_t padding_size = dst_field.offset - current_position.dst_inline_offset;
-        src_dst->Pad(current_position, padding_size);
-        current_position = current_position.IncreaseInlineOffset(padding_size);
+      if (dst_field.padding) {
+        src_dst->Pad(current_position, dst_field.padding);
+        current_position = current_position.IncreaseDstInlineOffset(dst_field.padding);
       }
-
-      // Set current position before transforming field.
-      // Note: an alternative implementation could be to update the current
-      // position so as to avoid using the provided offset. However, one of the
-      // benefit and simplification of coding tables is offset based positioning
-      // and this therefore feels appropriate.
-      current_position.src_inline_offset = src_start_of_struct + src_field.offset;
-      current_position.dst_inline_offset = dst_start_of_struct + dst_field.offset;
-
-      // Transform field.
-      uint32_t src_next_field_offset = current_position.src_inline_offset +
-                                       AlignedInlineSize(src_field.type, From()) +
-                                       src_field.padding;
-      uint32_t dst_next_field_offset = current_position.dst_inline_offset +
-                                       AlignedInlineSize(dst_field.type, To()) + dst_field.padding;
-      uint32_t dst_field_size = dst_next_field_offset - dst_field.offset;
-
-      TraversalResult field_traversal_result;
-      const zx_status_t status =
-          Transform(src_field.type, current_position, dst_field_size, &field_traversal_result);
-      if (status != ZX_OK) {
-        return status;
+      if (src_field.padding) {
+        current_position = current_position.IncreaseSrcInlineOffset(src_field.padding);
       }
-
-      *out_traversal_result += field_traversal_result;
-
-      // Update current position for next iteration.
-      current_position.src_inline_offset = src_next_field_offset;
-      current_position.dst_inline_offset = dst_next_field_offset;
-      current_position.src_out_of_line_offset += field_traversal_result.src_out_of_line_size;
-      current_position.dst_out_of_line_offset += field_traversal_result.dst_out_of_line_size;
-    }
-
-    // Copy everything after the last non-primitive field.
-    // TODO(apang): Fix this
-    if (From() == WireFormat::kOld) {
-      uint32_t src_inline_remaining =
-          position.src_inline_offset + src_coded_struct.size - current_position.src_inline_offset;
-      src_dst->Copy(current_position, src_inline_remaining);
-      current_position = current_position.IncreaseSrcInlineOffset(src_inline_remaining)
-                             .IncreaseDstInlineOffset(src_inline_remaining);
     }
 
     // Pad end (if needed).
+    const uint32_t dst_end_of_struct = position.dst_inline_offset + dst_size;
     if (current_position.dst_inline_offset < dst_end_of_struct) {
       uint32_t size = dst_end_of_struct - current_position.dst_inline_offset;
       src_dst->Pad(current_position, size);

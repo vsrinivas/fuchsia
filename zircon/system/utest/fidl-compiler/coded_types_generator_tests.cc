@@ -359,23 +359,32 @@ struct Complex {
   ASSERT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
   auto type_bool_and_int32_struct =
       static_cast<const fidl::coded::StructType*>(type_bool_and_int32);
-  EXPECT_EQ(type_bool_and_int32_struct->fields.size(), 1);
+  EXPECT_EQ(type_bool_and_int32_struct->fields.size(), 2);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].type, nullptr);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].offset, 0);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].padding, 3);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[1].type, nullptr);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[1].offset, 4);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[1].padding, 0);
 
   auto name_complex = fidl::flat::Name(library.library(), "Complex");
   auto type_complex = gen.CodedTypeFor(&name_complex);
   ASSERT_NONNULL(type_complex);
   ASSERT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
-  EXPECT_EQ(type_complex_struct->fields.size(), 2);
+  EXPECT_EQ(type_complex_struct->fields.size(), 4);
   EXPECT_EQ(type_complex_struct->fields[0].type, nullptr);
-  EXPECT_EQ(type_complex_struct->fields[0].offset, 4);
-  EXPECT_EQ(type_complex_struct->fields[0].padding, 3);
+  EXPECT_EQ(type_complex_struct->fields[0].offset, 0);
+  EXPECT_EQ(type_complex_struct->fields[0].padding, 0);
   EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
-  EXPECT_EQ(type_complex_struct->fields[1].offset, 16);
-  EXPECT_EQ(type_complex_struct->fields[1].padding, 6);
+  EXPECT_EQ(type_complex_struct->fields[1].offset, 4);
+  EXPECT_EQ(type_complex_struct->fields[1].padding, 3);
+  EXPECT_EQ(type_complex_struct->fields[2].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[2].offset, 8);
+  EXPECT_EQ(type_complex_struct->fields[2].padding, 0);
+  EXPECT_EQ(type_complex_struct->fields[3].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[3].offset, 16);
+  EXPECT_EQ(type_complex_struct->fields[3].padding, 6);
 
   END_TEST;
 }
@@ -613,14 +622,14 @@ struct MyStruct {
     ASSERT_EQ(fidl::coded::Type::Kind::kStruct, coded_type->kind);
     auto coded_struct_type = static_cast<const fidl::coded::StructType*>(coded_type);
 
-    ASSERT_EQ(6, coded_struct_type->fields.size());
+    ASSERT_EQ(10, coded_struct_type->fields.size());
 
-    EXPECT_EQ(1, coded_struct_type->fields[0].field_num);
-    EXPECT_EQ(3, coded_struct_type->fields[1].field_num);
-    EXPECT_EQ(4, coded_struct_type->fields[2].field_num);
-    EXPECT_EQ(6, coded_struct_type->fields[3].field_num);
-    EXPECT_EQ(7, coded_struct_type->fields[4].field_num);
-    EXPECT_EQ(8, coded_struct_type->fields[5].field_num);
+    EXPECT_EQ(1, coded_struct_type->fields[1].field_num);
+    EXPECT_EQ(3, coded_struct_type->fields[3].field_num);
+    EXPECT_EQ(4, coded_struct_type->fields[4].field_num);
+    EXPECT_EQ(6, coded_struct_type->fields[6].field_num);
+    EXPECT_EQ(7, coded_struct_type->fields[7].field_num);
+    EXPECT_EQ(8, coded_struct_type->fields[8].field_num);
   }
 
   END_TEST;
@@ -681,25 +690,25 @@ protocol MyProtocol {
 
     const auto& request_message_type = coded_protocol_type->messages_after_compile[0];
     ASSERT_NONNULL(request_message_type);
-    ASSERT_EQ(6, request_message_type->fields.size());
+    ASSERT_EQ(10, request_message_type->fields.size());
 
-    EXPECT_EQ(1, request_message_type->fields[0].field_num);
-    EXPECT_EQ(3, request_message_type->fields[1].field_num);
-    EXPECT_EQ(4, request_message_type->fields[2].field_num);
-    EXPECT_EQ(6, request_message_type->fields[3].field_num);
-    EXPECT_EQ(7, request_message_type->fields[4].field_num);
-    EXPECT_EQ(8, request_message_type->fields[5].field_num);
+    EXPECT_EQ(1, request_message_type->fields[1].field_num);
+    EXPECT_EQ(3, request_message_type->fields[3].field_num);
+    EXPECT_EQ(4, request_message_type->fields[4].field_num);
+    EXPECT_EQ(6, request_message_type->fields[6].field_num);
+    EXPECT_EQ(7, request_message_type->fields[7].field_num);
+    EXPECT_EQ(8, request_message_type->fields[8].field_num);
 
     const auto& response_message_type = coded_protocol_type->messages_after_compile[1];
     ASSERT_NONNULL(response_message_type);
-    ASSERT_EQ(6, response_message_type->fields.size());
+    ASSERT_EQ(10, response_message_type->fields.size());
 
-    EXPECT_EQ(1, response_message_type->fields[0].field_num);
-    EXPECT_EQ(2, response_message_type->fields[1].field_num);
-    EXPECT_EQ(3, response_message_type->fields[2].field_num);
-    EXPECT_EQ(5, response_message_type->fields[3].field_num);
-    EXPECT_EQ(6, response_message_type->fields[4].field_num);
-    EXPECT_EQ(8, response_message_type->fields[5].field_num);
+    EXPECT_EQ(1, response_message_type->fields[1].field_num);
+    EXPECT_EQ(2, response_message_type->fields[2].field_num);
+    EXPECT_EQ(3, response_message_type->fields[3].field_num);
+    EXPECT_EQ(5, response_message_type->fields[5].field_num);
+    EXPECT_EQ(6, response_message_type->fields[6].field_num);
+    EXPECT_EQ(8, response_message_type->fields[8].field_num);
   }
 
   END_TEST;

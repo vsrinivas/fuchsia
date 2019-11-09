@@ -132,33 +132,6 @@ std::string AltTableDefinition(const T& type, const T& alt_type) {
          ";\n}\n";
 }
 
-// TODO(fxb/7704): Remove templatization when message_type can only be coded struct.
-template <typename T>
-std::string AltStructFieldDeclaration(const T& message_type, const coded::StructField& field) {
-  // We emit "__attribute__((unused))" here instead of [[maybe_unused]], since
-  // __attribute__((unused)) is a compiler extension that is widely supported and works with C++14.
-  // [[maybe_unused]] is C++17 and above only.
-  return "constexpr static inline const ::fidl::FidlStructField* " +
-         NameFieldsAltField(message_type.coded_name, field.field_num) + "()" +
-         " __attribute__((unused));\n";
-}
-
-// TODO(fxb/7704): Remove templatization when message_type can only be coded struct.
-template <typename T>
-std::string AltStructFieldDefinition(const T& message_type, const coded::StructField& field,
-                                     const T& alt_message_type, uint32_t alt_field_index) {
-  // We emit both the _declaration_ again, as well as the _definition_, since
-  // __attribute__((unused)) can only be applied to a declaration.
-  std::ostringstream decl;
-  decl << AltStructFieldDeclaration(message_type, field);
-  decl << "constexpr static inline const ::fidl::FidlStructField* ";
-  decl << NameFieldsAltField(message_type.coded_name, field.field_num) << "()";
-  decl << " { return &";
-  decl << NameFields(alt_message_type.coded_name) << "[" << alt_field_index << "]";
-  decl << "; }\n";
-  return decl.str();
-}
-
 }  // namespace
 
 void TablesGenerator::GenerateInclude(std::string_view filename) {
@@ -231,11 +204,6 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
-  for (const auto field : struct_type.fields) {
-    if (field.type)
-      Emit(&tables_file_, AltStructFieldDeclaration(struct_type, field));
-  }
-
   Emit(&tables_file_, "static const ::fidl::FidlStructField ");
   Emit(&tables_file_, NameFields(struct_type.coded_name));
   Emit(&tables_file_, "[] = ");
@@ -345,11 +313,6 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, "extern const fidl_type_t ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
   Emit(&tables_file_, ";\n");
-
-  for (const auto field : message_type.fields) {
-    if (field.type)
-      Emit(&tables_file_, AltStructFieldDeclaration(message_type, field));
-  }
 
   Emit(&tables_file_, "static const ::fidl::FidlStructField ");
   Emit(&tables_file_, NameFields(message_type.coded_name));
@@ -468,10 +431,6 @@ void TablesGenerator::Generate(const coded::StructField& field) {
   }
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, field.padding);
-  if (field.type) {
-    Emit(&tables_file_, ", ");
-    Emit(&tables_file_, NameFieldsAltField(field.struct_type->coded_name, field.field_num) + "()");
-  }
   Emit(&tables_file_, ")");
 }
 
@@ -742,9 +701,6 @@ std::ostringstream TablesGenerator::Produce() {
         Emit(&tables_file_, "\n");
         Emit(&tables_file_, AltTableDefinition(*v1, *old));
         Emit(&tables_file_, "\n\n");
-        auto old_struct_type = static_cast<const coded::StructType&>(*old);
-        auto v1_struct_type = static_cast<const coded::StructType&>(*v1);
-        ProduceStructFieldLinking(old_struct_type, v1_struct_type);
         break;
       }
       case Kind::kMessage: {
@@ -752,9 +708,6 @@ std::ostringstream TablesGenerator::Produce() {
         Emit(&tables_file_, "\n");
         Emit(&tables_file_, AltTableDefinition(*v1, *old));
         Emit(&tables_file_, "\n\n");
-        auto old_message_type = static_cast<const coded::MessageType&>(*old);
-        auto v1_message_type = static_cast<const coded::MessageType&>(*v1);
-        ProduceStructFieldLinking(old_message_type, v1_message_type);
         break;
       }
       case Kind::kPrimitive:
@@ -796,26 +749,6 @@ std::map<uint32_t, uint32_t> MapFieldNumToAltFieldIndexInCodedStruct(
   return mapping;
 }
 
-}  // namespace
+} // namespace
 
-// TODO(fxb/7704): Remove templatization when message_type can only be coded struct.
-template <typename T>
-void TablesGenerator::ProduceStructFieldLinking(const T& old, const T& v1) {
-  auto ProductLinksForFields = [&](const T& struct_type, const T& alt_struct_type) {
-    auto field_num_to_alt_field_index_in_coded_struct =
-        MapFieldNumToAltFieldIndexInCodedStruct(struct_type.fields, alt_struct_type.fields);
-    for (const auto field : struct_type.fields) {
-      if (!field.type) {
-        continue;
-      }
-      uint32_t alt_field_index =
-          field_num_to_alt_field_index_in_coded_struct.find(field.field_num)->second;
-      Emit(&tables_file_,
-           AltStructFieldDefinition(struct_type, field, alt_struct_type, alt_field_index));
-    }
-  };
-  ProductLinksForFields(old, v1);
-  ProductLinksForFields(v1, old);
-}
-
-}  // namespace fidl
+} // namespace fidl

@@ -540,7 +540,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         if (!field_type) {
           // Skip fields that do not contain codable types.
           // Such fields only serve to provide padding information.
-          ZX_DEBUG_ASSERT(field.padding > 0);
           continue;
         }
         if (!Push(Frame(field_type, field_position))) {

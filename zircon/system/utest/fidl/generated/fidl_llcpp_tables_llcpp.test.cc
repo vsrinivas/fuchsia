@@ -14,9 +14,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_LlcppAct
 const fidl_type_t fidl_test_coding_LlcppActionRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_coding_LlcppActionRequest, 0u, 16u, "fidl.test.coding/LlcppActionRequest", fidl_test_coding_LlcppActionRequestAltTypePointerTable()));
 
 extern const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
-static const ::fidl::FidlStructField Fields36fidl_test_coding_LlcppActionResponse[] = {};
+static const ::fidl::FidlStructField Fields36fidl_test_coding_LlcppActionResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_LlcppActionResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_LlcppActionResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36fidl_test_coding_LlcppActionResponse, 0u, 24u, "fidl.test.coding/LlcppActionResponse", fidl_test_coding_LlcppActionResponseAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_LlcppActionResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36fidl_test_coding_LlcppActionResponse, 1u, 24u, "fidl.test.coding/LlcppActionResponse", fidl_test_coding_LlcppActionResponseAltTypePointerTable()));
 
 
 // Coding tables for v1 wire format.
@@ -29,9 +31,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Llcpp
 const fidl_type_t v1_fidl_test_coding_LlcppActionRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_coding_LlcppActionRequest, 0u, 16u, "fidl.test.coding/LlcppActionRequest", v1_fidl_test_coding_LlcppActionRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
-static const ::fidl::FidlStructField Fields39v1_fidl_test_coding_LlcppActionResponse[] = {};
+static const ::fidl::FidlStructField Fields39v1_fidl_test_coding_LlcppActionResponse[] = {
+    ::fidl::FidlStructField(nullptr, 20u, 4u)
+};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_LlcppActionResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39v1_fidl_test_coding_LlcppActionResponse, 0u, 24u, "fidl.test.coding/LlcppActionResponse", v1_fidl_test_coding_LlcppActionResponseAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39v1_fidl_test_coding_LlcppActionResponse, 1u, 24u, "fidl.test.coding/LlcppActionResponse", v1_fidl_test_coding_LlcppActionResponseAltTypePointerTable()));
 
 
 // Old <-> V1 map.
