@@ -11,9 +11,6 @@ addition to the capabilities provided to all modular components via
 Agents must expose the `fuchsia::modular::Agent` service to receive new connections and provide
 services. An Agent component may implement the `fuchsia::modular::Lifecycle` service to receive termination signals and voluntarily exit.
 
-See [the simple directory](../simple/) for a complete implementation of
-the `fuchsia::modular::Agent` described here.
-
 ## SimpleAgent
 
 ### fuchsia::modular::Agent Initialization
@@ -104,4 +101,4 @@ and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 Then the client connects to the `Simple` protocol by invoking `ConnectToService` with
 a request for a new `SimplePtr`.
 
-See the [SimpleModule](how_to_write_a_mod.md) guide for a more in-depth example.
+See the [SimpleModule](how_to_write_a_module_cc.md) guide for a more in-depth example.

@@ -16,10 +16,11 @@ The first step to writing a `Module` is implementing the initializer.
 
 ```c++
 #include <lib/sys/cpp/component_context.h>
-#include "src/modular/lib/app_driver/cpp/module_driver.h"
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <ui/cpp/fidl.h>
+
+#include "src/modular/lib/app_driver/cpp/module_driver.h"
 
 namespace simple {
 

@@ -22,3 +22,7 @@ toc:
   path: /docs/concepts/modular/entity.md
 - title: "Entity provider"
   path: /docs/concepts/modular/guide/entity_provider.md
+- title: "How to Write a Module (C++)"
+  path: /docs/concepts/modular/guide/how_to_write_a_module_cc.md
+- title: "How to Write an Agent (C++)"
+  path: /docs/concepts/modular/guide/how_to_write_an_agent_cc.md
