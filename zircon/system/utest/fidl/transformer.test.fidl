@@ -344,6 +344,16 @@ struct EmptyStructUnionStruct {
 
 // TODO(apang): Union containing a table (to test out-of-line sizing)
 
+struct LauncherInfo {
+    string:200 url;
+    vector<string>? arguments;
+    EmptyStruct? out;
+    EmptyStruct? err;
+    handle<channel>? directory_request;
+    EmptyStruct? flat_namespace;
+    EmptyStruct? additional_services;
+};
+
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);
@@ -359,4 +369,6 @@ protocol FakeProtocol {
         uint64 middle_end,
         UnionSize8Aligned4 second_union,
         uint32 after);
+
+    SendFakeLauncherCreateComponentRequest(LauncherInfo info, handle h);
 };

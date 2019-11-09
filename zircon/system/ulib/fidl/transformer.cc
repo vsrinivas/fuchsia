@@ -80,7 +80,7 @@ uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
     case fidl::kFidlTypeXUnion:
       return 24;
     case fidl::kFidlTypeHandle:
-      return 8;
+      return 4;
     case fidl::kFidlTypeTable:
       return 16;
   }
