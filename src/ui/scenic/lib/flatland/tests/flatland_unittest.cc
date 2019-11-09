@@ -27,7 +27,7 @@ using fuchsia::ui::scenic::internal::LinkProperties;
   {                                                                                   \
     bool processed_callback = false;                                                  \
     flatland.Present([&](Flatland_Present_Result result) {                            \
-      ASSERT_EQ(!expect_success, result.is_err());                                    \
+      EXPECT_EQ(!expect_success, result.is_err());                                    \
       if (expect_success)                                                             \
         EXPECT_EQ(1u, result.response().num_presents_remaining);                      \
       else                                                                            \
@@ -711,4 +711,4 @@ TEST_F(FlatlandTestLoop, SetLinkPropertiesOnMultipleChildren) {
 #undef PRESENT
 
 }  // namespace test
-}  // namespace scenic_impl
+}  // namespace flatland

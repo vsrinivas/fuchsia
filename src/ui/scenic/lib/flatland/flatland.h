@@ -16,38 +16,9 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
+#include "src/ui/scenic/lib/flatland/transform_graph.h"
+#include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
-
-namespace flatland {
-
-// A globally scoped handle. The current constructor allows the calling code to specify the
-// internal ID. This class exists to get type-safety when comparing those integers to other IDs.
-class GlobalHandle {
- public:
-  GlobalHandle() = default;
-  explicit GlobalHandle(uint64_t id) : id_(id) {}
-
-  bool operator==(const GlobalHandle& rhs) const { return id_ == rhs.id_; }
-  bool operator<(const GlobalHandle& rhs) const { return id_ < rhs.id_; }
-
- private:
-  friend class std::hash<flatland::GlobalHandle>;
-  uint64_t id_ = 0;
-};
-
-}  // namespace flatland
-
-namespace std {
-
-// A hash specialization for GlobalHandles, so that they can be stored in maps and multimaps.
-template <>
-struct hash<flatland::GlobalHandle> {
-  size_t operator()(const flatland::GlobalHandle& h) const noexcept {
-    return hash<uint64_t>{}(h.id_);
-  }
-};
-
-}  // namespace std
 
 namespace flatland {
 
@@ -151,55 +122,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
  private:
   // Users are not allowed to use zero as a transform ID.
   static constexpr TransformId kInvalidId = 0;
-  // Because the user is never allowed to use the invalid ID as a key, we can use it as the key for
-  // the root in the Transform map.
-  static constexpr TransformId kRootId = kInvalidId;
+
   // This is the maximum number of pending Present() calls the user can have in flight. Since the
   // current implementation is synchronous, there can only be one call to Present() at a time.
   //
   // TODO(36161): Tune this number once we have a non-synchronous present flow.
   static constexpr uint32_t kMaxPresents = 1;
 
-  using TransformMap = std::map<TransformId, GlobalHandle>;
-  using ChildMap = std::multimap<GlobalHandle, GlobalHandle>;
-
-  class TopologicalData {
-   public:
-    using NodeSet = std::unordered_set<GlobalHandle>;
-
-    TopologicalData() = default;
-    // Generates a topologically sorted list of nodes in a graph, starting from an initial set of
-    // nodes, and a collection of directed edges (from parent to child).
-    //
-    // |initial_nodes| is passed as a TransformMap because it is easier for the client to pass the
-    // whole map in, than to extract the global handles into a separate container. However, this
-    // class doesn't make use of the TransformId mapping.
-    TopologicalData(const TransformMap& initial_nodes, const ChildMap& edges);
-
-    // A set of nodes that, when removed from the graph, breaks all existing cycles.
-    const NodeSet& cyclical_nodes() const { return cyclical_nodes_; }
-
-    // The set of all nodes that can be reached from the initial nodes, by traversing edges.
-    const NodeSet& live_nodes() const { return live_nodes_; }
-
-   private:
-    using TopologicalVector = std::vector<std::pair<GlobalHandle, /* parent index */ uint64_t>>;
-
-    void Traverse(GlobalHandle id, const ChildMap& edges);
-
-    // The topological vector consists of the topological sorted list of the GlobalHandles of all
-    // live nodes, along with the index of their parent in the sorted list. Because this is a
-    // topological sort, the parent index will always be an earlier element in the list. Because
-    // nodes can be visited through multiple paths, they may exist multiple times in the same sorted
-    // list, each time with a different parent index.
-    TopologicalVector sorted_nodes_;
-
-    // The set of all nodes that can be reached from the initial nodes, by traversing edges.
-    NodeSet live_nodes_;
-
-    // A set of nodes that, when removed from the graph, breaks all existing cycles.
-    NodeSet cyclical_nodes_;
-  };
+  using TransformMap = std::map<TransformId, TransformHandle>;
 
   // This is a strong reference to the GraphLink in the child Flatland instance. This makes it easy
   // for methods called on the ContentLink (e.g., SetLinkProperties()) to be transformed into output
@@ -230,31 +160,23 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // The number of pipelined Present() operations available to the client.
   uint32_t num_presents_remaining_ = kMaxPresents;
 
-  // The next "global" id. This ID is not actually global as implemented, but handles are not
-  // currently passed between instances. Once nodes are members of a global graph, this variable
-  // will move out of the Flatland class.
-  //
-  // TODO(36174): Externalize these global IDs (along with all topological data) into a globally
-  // scoped system.
-  uint64_t next_global_id_ = kRootId + 1;
-
   // A map from user-generated id to global handle. This map constitutes the set of transforms that
   // can be referenced by the user through method calls. Keep in mind that additional transforms may
   // be kept alive through child references.
   TransformMap transforms_;
 
-  // A multimap. Each key is a global handle. The set of values are the children for that handle.
-  ChildMap children_;
+  // A graph representing this flatland instance's local transforms and their relationships.
+  TransformGraph transform_graph_;
 
-  // The topological sorted list of handles, as computed from the TransformMap and ChildMap.
-  //
-  // TODO(36174): Externalize all topological data into a globally scoped system.
-  TopologicalData topological_data_;
+  // A unique transform for this instance, the link_origin_ is part of the transform_graph_, and
+  // will never be released or changed during the course of the instance's lifetime. This makes it a
+  // fixed attachment point for cross-instance Links.
+  TransformHandle link_origin_;
 
   // A mapping from user-generated id to ChildLink.
   LinkMap child_links_;
 
-  // The link from this Flatland instance to our parent.
+  // The Link protocol from this Flatland instance to our parent.
   //
   // TODO(36451): ParentLinks need to be a heap allocations, because Link objects are unsafe to move
   // once they have been initialized. Change this to a member variable once BUG 36451 is fixed.
