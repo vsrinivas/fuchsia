@@ -303,6 +303,7 @@ struct Size5Alignment4Array {
 
 union StringUnion {
     1: string s;
+    2: bool b;
 };
 
 struct ArrayStruct {

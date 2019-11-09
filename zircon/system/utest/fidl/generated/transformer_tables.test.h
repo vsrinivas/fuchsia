@@ -477,10 +477,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* example_StringUnionVector
 const fidl_type_t example_StringUnionVectorTable = fidl_type_t(::fidl::FidlCodedStruct(Fields25example_StringUnionVector, 1u, 16u, "example/StringUnionVector", example_StringUnionVectorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields19example_StringUnion[] = {
-    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u, 1u)
+    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u, 1u),
+    ::fidl::FidlUnionField(nullptr, 15u, 2u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* example_StringUnionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields19example_StringUnion, 1u, 8u, 24u, "example/StringUnion", example_StringUnionAltTypePointerTable()));
+const fidl_type_t example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields19example_StringUnion, 2u, 8u, 24u, "example/StringUnion", example_StringUnionAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields25example_StringUnionStruct[] = {
     ::fidl::FidlStructField(&example_StringUnionTable, 0u, 0u),
@@ -1100,10 +1101,11 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_StringUnionVec
 const fidl_type_t v1_example_StringUnionVectorTable = fidl_type_t(::fidl::FidlCodedStruct(Fields28v1_example_StringUnionVector, 1u, 16u, "example/StringUnionVector", v1_example_StringUnionVectorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields22v1_example_StringUnion[] = {
-    ::fidl::FidlUnionField(&v1_String4294967295nonnullableTable, 0u, 1u)
+    ::fidl::FidlUnionField(&v1_String4294967295nonnullableTable, 0u, 1u),
+    ::fidl::FidlUnionField(nullptr, 7u, 2u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_StringUnionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields22v1_example_StringUnion, 1u, 8u, 24u, "example/StringUnion", v1_example_StringUnionAltTypePointerTable()));
+const fidl_type_t v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields22v1_example_StringUnion, 2u, 8u, 24u, "example/StringUnion", v1_example_StringUnionAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28v1_example_StringUnionStruct[] = {
     ::fidl::FidlStructField(&v1_example_StringUnionTable, 0u, 0u),
