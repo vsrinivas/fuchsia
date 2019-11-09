@@ -14,6 +14,7 @@
 #include <poll.h>
 #include <sys/uio.h>
 
+#include <array>
 #include <future>
 #include <thread>
 
@@ -2129,4 +2130,73 @@ TEST_P(NetSocketTest, SocketPeekTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
+
+TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
+  const char* msg = "hello";
+  char addrbuf[INET_ADDRSTRLEN];
+  std::array<int, 5> sampleAddrOctets = {0, 1, 100, 200, 255};
+  for (auto i : sampleAddrOctets) {
+    for (auto j : sampleAddrOctets) {
+      for (auto k : sampleAddrOctets) {
+        // Skip the subnet and broadcast addresses.
+        if ((i == 0 && j == 0 && k == 0) || (i == 255 && j == 255 && k == 255)) {
+          continue;
+        }
+        // loopback_addr = 127.i.j.k
+        struct in_addr loopback_sin_addr = {};
+        loopback_sin_addr.s_addr = htonl((127 << 24) + (i << 16) + (j << 8) + k);
+        const char* loopback_addrstr =
+            inet_ntop(AF_INET, &loopback_sin_addr, addrbuf, sizeof(addrbuf));
+        ASSERT_NE(nullptr, loopback_addrstr);
+
+        fbl::unique_fd recvfd;
+        ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+        struct sockaddr_in rcv_addr = {};
+        rcv_addr.sin_family = AF_INET;
+        rcv_addr.sin_addr = loopback_sin_addr;
+        ASSERT_EQ(bind(recvfd.get(),
+                       reinterpret_cast<const struct sockaddr*>(&rcv_addr), sizeof(rcv_addr)), 0)
+            << "recvaddr=" << loopback_addrstr << ": " << strerror(errno);
+
+        socklen_t rcv_addrlen = sizeof(rcv_addr);
+        ASSERT_EQ(getsockname(recvfd.get(),
+                              reinterpret_cast<struct sockaddr*>(&rcv_addr), &rcv_addrlen), 0)
+            << strerror(errno);
+        ASSERT_EQ(sizeof(rcv_addr), rcv_addrlen);
+
+        int tmpfd[2];
+        ASSERT_EQ(0, pipe(tmpfd)) << strerror(errno);
+        fbl::unique_fd ntfyfd[2] = {fbl::unique_fd(tmpfd[0]), fbl::unique_fd(tmpfd[1])};
+
+        struct sockaddr_in src_addr = {};
+        socklen_t src_addrlen = sizeof(src_addr);
+        std::string out;
+        std::thread thrd(DatagramRead, recvfd.get(), &out, &src_addr, &src_addrlen,
+          ntfyfd[1].get(), kTimeout);
+
+        fbl::unique_fd sendfd;
+        ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+        struct sockaddr_in sendto_addr = {};
+        sendto_addr.sin_family = AF_INET;
+        sendto_addr.sin_addr = loopback_sin_addr;
+        sendto_addr.sin_port = rcv_addr.sin_port;
+        ASSERT_EQ(sendto(sendfd.get(), msg, strlen(msg), 0, (struct sockaddr*)&sendto_addr,
+                         sizeof(sendto_addr)),
+                  (ssize_t)strlen(msg))
+            << "sendtoaddr=" << loopback_addrstr << ": " << strerror(errno);
+        EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
+
+        ASSERT_EQ(true, WaitSuccess(ntfyfd[0].get(), kTimeout));
+        thrd.join();
+
+        EXPECT_STREQ(msg, out.c_str());
+
+        EXPECT_EQ(close(ntfyfd[0].release()), 0) << strerror(errno);
+        EXPECT_EQ(close(ntfyfd[1].release()), 0) << strerror(errno);
+        EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
+      }
+    }
+  }
+}
+
 }  // namespace

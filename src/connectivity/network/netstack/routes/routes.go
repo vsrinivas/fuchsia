@@ -6,6 +6,7 @@ package routes
 
 import (
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -312,6 +313,13 @@ func (rt *RouteTable) sortRouteTableLocked() {
 func Less(ei, ej *ExtendedRoute) bool {
 	ri, rj := ei.Route, ej.Route
 	riDest, rjDest := ri.Destination.ID(), rj.Destination.ID()
+
+	// Loopback routes before non-loopback ones.
+	// (as a workaround for github.com/google/gvisor/issues/1169).
+	if riIsLoop, rjIsLoop := net.IP(riDest).IsLoopback(), net.IP(rjDest).IsLoopback(); riIsLoop != rjIsLoop {
+		return riIsLoop
+	}
+
 	// Non-default before default one.
 	if riAny, rjAny := util.IsAny(riDest), util.IsAny(rjDest); riAny != rjAny {
 		return !riAny

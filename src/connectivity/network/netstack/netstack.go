@@ -556,19 +556,31 @@ func (ns *Netstack) addLoopback() error {
 	nicid := ifs.nicid
 	ifs.mu.Unlock()
 
-	if err := ns.mu.stack.AddAddress(nicid, ipv4.ProtocolNumber, ipv4Loopback); err != nil {
-		return fmt.Errorf("loopback: adding ipv4 address failed: %v", err)
+	ipv4LoopbackPrefix := tcpip.AddressMask(net.IP(ipv4Loopback).DefaultMask()).Prefix()
+	ipv4LoopbackAddressWithPrefix := tcpip.AddressWithPrefix{
+		Address:   ipv4Loopback,
+		PrefixLen: ipv4LoopbackPrefix,
 	}
+	ipv4LoopbackRoute := addressWithPrefixRoute(nicid, ipv4LoopbackAddressWithPrefix)
+
+	if err := ns.mu.stack.AddProtocolAddress(nicid, tcpip.ProtocolAddress{
+		Protocol:          ipv4.ProtocolNumber,
+		AddressWithPrefix: ipv4LoopbackAddressWithPrefix,
+	}); err != nil {
+		return fmt.Errorf("error adding address %s to NIC ID %d: %s", ipv4LoopbackAddressWithPrefix, nicid, err)
+	}
+
+	if err := ns.mu.stack.AddAddressRange(nicid, ipv4.ProtocolNumber, ipv4LoopbackRoute.Destination); err != nil {
+		return fmt.Errorf("loopback: adding ipv4 subnet failed: %s", err)
+	}
+
 	if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, ipv6Loopback); err != nil {
-		return fmt.Errorf("loopback: adding ipv6 address failed: %v", err)
+		return fmt.Errorf("loopback: adding ipv6 address failed: %s", err)
 	}
 
 	if err := ns.AddRoutesLocked(
 		[]tcpip.Route{
-			{
-				Destination: util.PointSubnet(ipv4Loopback),
-				NIC:         nicid,
-			},
+			ipv4LoopbackRoute,
 			{
 				Destination: util.PointSubnet(ipv6Loopback),
 				NIC:         nicid,

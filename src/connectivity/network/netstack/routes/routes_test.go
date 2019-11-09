@@ -17,11 +17,11 @@ import (
 var testRouteTable = routes.ExtendedRouteTable{
 	// nic, subnet, gateway, metric, tracksInterface, dynamic, enabled
 	createExtendedRoute(1, "127.0.0.1/32", "", 100, true, false, true),                 // loopback
+	createExtendedRoute(1, "::1/128", "", 100, true, false, true),                      // loopback
 	createExtendedRoute(4, "192.168.1.0/24", "", 100, true, true, true),                // DHCP IP (eth)
 	createExtendedRoute(2, "192.168.100.0/24", "", 200, true, true, true),              // DHCP IP (wlan)
 	createExtendedRoute(3, "10.1.2.0/23", "", 100, true, false, true),                  // static IP
 	createExtendedRoute(2, "110.34.0.0/16", "192.168.100.10", 500, false, false, true), // static route
-	createExtendedRoute(1, "::1/128", "", 100, true, false, true),                      // loopback
 	// static route (eth)
 	createExtendedRoute(4, "2610:1:22:123:34:faed::/96", "fe80::250:a8ff:9:79", 100, false, false, true),
 	createExtendedRoute(4, "2622:0:2200:10::/64", "", 100, true, true, true),           // RA (eth)
@@ -142,7 +142,7 @@ func TestSortingLess(t *testing.T) {
 		// longer prefix wins
 		{"100.99.24.12/32", 100, 2, "100.99.24.12/31", 100, 1, true},
 		{"100.99.24.12/32", 100, 1, "10.144.0.0/12", 100, 1, true},
-		{"100.99.24.128/25", 100, 5, "127.0.0.1/24", 100, 3, true},
+		{"100.99.24.128/25", 100, 5, "128.0.0.1/24", 100, 3, true},
 		{"2511:5f32:4:6:124::2:12/128", 100, 1, "2511:5f32:4:6:124::2:12/126", 100, 1, true},
 		{"2511:5f32:4:6:124::2:12/128", 100, 1, "2605:32::12/127", 100, 1, true},
 		{"fe80:ffff:0:1234:5:6::/96", 100, 2, "2511:5f32:4:6:124::/90", 100, 1, true},
