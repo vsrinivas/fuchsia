@@ -79,7 +79,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   sys::ComponentContext* app_context() const { return app_context_; }
   inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
-  void Quit() { quit_callback_(); }
 
   size_t num_sessions();
 

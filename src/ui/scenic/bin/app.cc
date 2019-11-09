@@ -84,7 +84,16 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
-      scenic_(app_context_.get(), std::move(inspect_node), std::move(quit_callback)) {
+      // TODO(40997): subsystems requiring graceful shutdown *on a loop* should register themselves.
+      // It is preferable to cleanly shutdown using destructors only, if possible.
+      shutdown_manager_(async_get_default_dispatcher(), std::move(quit_callback)),
+      scenic_(app_context_.get(), std::move(inspect_node),
+              [weak = shutdown_manager_.GetWeakPtr()] {
+                if (weak) {
+                  weak->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
+                };
+              }),
+      lifecycle_controller_impl_(app_context_.get(), shutdown_manager_.GetWeakPtr()) {
   FXL_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
@@ -115,13 +124,13 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
 void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display) {
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
-    scenic_.Quit();
+    shutdown_manager_.Shutdown(LifecycleControllerImpl::kShutdownTimeout);
     return;
   }
 
   if (!escher || !escher->device()) {
     FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
-    scenic_.Quit();
+    shutdown_manager_.Shutdown(LifecycleControllerImpl::kShutdownTimeout);
     return;
   }
 

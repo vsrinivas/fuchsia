@@ -26,6 +26,8 @@ executable("bin") {
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/inspect_deprecated",
     "//src/ui/scenic/lib/gfx:frame_metrics_registry",
+    "//src/ui/scenic/lib/shutdown",
+    "//src/ui/scenic/lib/shutdown:lifecycle_controller",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

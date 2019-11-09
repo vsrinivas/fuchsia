@@ -39,6 +39,7 @@ int main(int argc, const char** argv) {
                        [&loop] { loop.Quit(); });
 
   loop.Run();
+  FXL_LOG(INFO) << "Quit main Scenic loop.";
 
   return 0;
 }

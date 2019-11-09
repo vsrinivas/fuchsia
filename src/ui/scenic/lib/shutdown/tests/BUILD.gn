@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Included as part of //src/ui/scenic/lib/scenic/tests:unittests, rather than packaging as a
+# separate executable.
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "shutdown_unittest.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/ui/scenic/lib/shutdown",
+  ]
+}

@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# When told to shutdown, the manager notifies all registered subsystems and waits for
+# them to complete shutting down.
+source_set("shutdown") {
+  sources = [
+    "shutdown_manager.cc",
+    "shutdown_manager.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+# Implements fuchsia.ui.lifecycle.LifecycleController, which uses ShutdownManager to
+# gracefully tear down the components registered with the manager.
+source_set("lifecycle_controller") {
+  sources = [
+    "lifecycle_controller_impl.cc",
+    "lifecycle_controller_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.lifecycle",
+  ]
+
+  deps = [
+    ":shutdown",
+    "//sdk/lib/sys/cpp",
+  ]
+}

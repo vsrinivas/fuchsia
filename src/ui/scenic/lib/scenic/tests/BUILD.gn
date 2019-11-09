@@ -58,5 +58,6 @@ executable("unittests") {
     ":testing_deps",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
+    "//src/ui/scenic/lib/shutdown/tests:unittests",
   ]
 }

@@ -16,6 +16,8 @@
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
+#include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 
 namespace scenic_impl {
 
@@ -43,15 +45,20 @@ class App {
   void InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display);
 
   async::Executor executor_;
+  std::unique_ptr<sys::ComponentContext> app_context_;
+  ShutdownManager shutdown_manager_;
+
   gfx::Sysmem sysmem_;
   gfx::DisplayManager display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
-  std::unique_ptr<sys::ComponentContext> app_context_;
+
   std::optional<gfx::Engine> engine_;
   Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
+
+  LifecycleControllerImpl lifecycle_controller_impl_;
 };
 
 }  // namespace scenic_impl
