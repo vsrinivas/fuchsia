@@ -30,9 +30,9 @@ union UnionSize24Align8 {
 };
 
 struct Sandwich1 {
-   uint32 before;
-   UnionSize8Align4 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize8Align4 the_union;
+    uint32 after;
 };
 
 struct Sandwich1WithOptUnion {
@@ -42,15 +42,15 @@ struct Sandwich1WithOptUnion {
 };
 
 struct Sandwich2 {
-   uint32 before;
-   UnionSize12Align4 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize12Align4 the_union;
+    uint32 after;
 };
 
 struct Sandwich3 {
-   uint32 before;
-   UnionSize24Align8 the_union;
-   uint32 after;
+    uint32 before;
+    UnionSize24Align8 the_union;
+    uint32 after;
 };
 
 union UnionSize36Align4 {
@@ -68,7 +68,7 @@ struct Sandwich4 {
 
 union UnionOfUnion {
     1: uint8 unused1;
-    2: UnionSize8Align4 size8align4; // used in Sandwich5Case1
+    2: UnionSize8Align4 size8align4; // used in Sandwich5Case1, Sandwich8Case1
     3: UnionSize12Align4 size12align4;
     4: uint8 unused2;
     5: UnionSize24Align8 size24align8; // used in Sandwich5Case2
@@ -238,9 +238,99 @@ struct Size5Alignment4Array {
 union StringUnion {
     1: uint8 unused;
     2: string s;
+    3: uint8 u8;
 };
 
 struct ArrayStruct {
     array<StringUnion>:3 unions;
     array<StringUnion?>:3 optional_unions;
+};
+
+struct TransformerEmptyStruct {
+};
+
+union EmptyStructUnion {
+    1: uint8 unused; // force the union tag to be non-zero
+    2: TransformerEmptyStruct es;
+};
+
+struct EmptyStructUnionStruct {
+    EmptyStructUnion u;
+};
+
+struct Size8Align8 {
+    uint64 data;
+};
+
+struct NoCodingTablesStressor {
+    uint64 f1;
+    uint64 f2;
+    UnionSize36Align4 u1;
+    uint64 f3;
+    uint64 f4;
+    UnionSize36Align4 u2;
+    uint64 f5;
+    uint64 f6;
+    UnionSize36Align4 u3;
+    uint64 f7;
+    Size8Align8? p1;
+    uint64 f8;
+    Size8Align8? p2;
+    uint64 f9;
+};
+
+struct OutOfLineSandwich1 {
+    string before;
+    vector<Sandwich1>:1 v;
+    string after;
+};
+
+struct OutOfLineSandwich1WithOptUnion {
+    string before;
+    vector<Sandwich1WithOptUnion>:1 v;
+    string after;
+};
+
+// Regression1, but has at least one non primitive field
+struct Regression4 {
+    uint8 f1;
+    uint32 f2;
+    StructSize3Align1 s1;
+    uint8 f3;
+    uint16 f4;
+    uint64 f5;
+    uint8 f6;
+};
+
+struct Sandwich4Align8 {
+    Sandwich4 sandwich4;
+    uint64 alignment8_enforcement;
+};
+
+struct Sandwich4Align8WithPointer {
+    Sandwich4 sandwich4;
+    Size8Align8? alignment8_enforcement;
+};
+
+// This is designed to test out-of-line handling.
+union UnionWithVectorOfVectors {
+    1: vector<vector<StructSize3Align1?>> v;
+};
+
+struct Sandwich9 {
+    uint16 before;
+    UnionWithVectorOfVectors the_union;
+    uint16 after;
+};
+
+table TransformerSimpleTable {
+    1: uint32 value;
+};
+
+struct SimpleTableArrayStruct {
+    array<TransformerSimpleTable>:2 the_array;
+};
+
+struct StringUnionVector {
+    vector<StringUnion?>:3 the_vector;
 };

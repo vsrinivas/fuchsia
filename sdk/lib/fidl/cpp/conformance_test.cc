@@ -1599,6 +1599,108 @@ TEST(Conformance, Sandwich1Case1_v1_Encode) {
   EXPECT_TRUE(result);
 }
 
+TEST(Conformance, Sandwich1WithOptUnionPresent_Encode) {
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v3 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v4 = 202050057ull;
+  v3->set_variant(std::move(v4));
+  v1.opt_union = std::move(v3);
+
+  uint32_t v5 = 134678021ull;
+  v1.after = std::move(v5);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich1WithOptUnionPresent_v1_Encode) {
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v3 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v4 = 202050057ull;
+  v3->set_variant(std::move(v4));
+  v1.opt_union = std::move(v3);
+
+  uint32_t v5 = 134678021ull;
+  v1.after = std::move(v5);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich1WithOptUnionAbsent_Encode) {
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 134678021ull;
+  v1.after = std::move(v3);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich1WithOptUnionAbsent_v1_Encode) {
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 134678021ull;
+  v1.after = std::move(v3);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
 TEST(Conformance, Sandwich2Case1_Encode) {
   conformance::Sandwich2 v1;
 
@@ -2744,6 +2846,718 @@ TEST(Conformance, Sandwich6Case8_v1_Encode) {
   EXPECT_TRUE(result);
 }
 
+TEST(Conformance, Sandwich7Case1_Encode) {
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::Sandwich1> v3 = std::make_unique<conformance::Sandwich1>();
+
+  uint32_t v4 = 67305985ull;
+  v3->before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3->the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3->after = std::move(v7);
+  v1.opt_sandwich1 = std::move(v3);
+
+  uint32_t v8 = 606282273ull;
+  v1.after = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
+      0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich7Case1_v1_Encode) {
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::Sandwich1> v3 = std::make_unique<conformance::Sandwich1>();
+
+  uint32_t v4 = 67305985ull;
+  v3->before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3->the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3->after = std::move(v7);
+  v1.opt_sandwich1 = std::move(v3);
+
+  uint32_t v8 = 606282273ull;
+  v1.after = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich7Case2_Encode) {
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 606282273ull;
+  v1.after = std::move(v3);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich7Case2_v1_Encode) {
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 606282273ull;
+  v1.after = std::move(v3);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression1_Encode) {
+  conformance::Regression1 v1;
+
+  uint8_t v2 = 1ull;
+  v1.f1 = std::move(v2);
+
+  uint32_t v3 = 2ull;
+  v1.f2 = std::move(v3);
+
+  uint8_t v4 = 3ull;
+  v1.f3 = std::move(v4);
+
+  uint16_t v5 = 4ull;
+  v1.f4 = std::move(v5);
+
+  uint64_t v6 = 5ull;
+  v1.f5 = std::move(v6);
+
+  uint8_t v7 = 6ull;
+  v1.f6 = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression1_v1_Encode) {
+  conformance::Regression1 v1;
+
+  uint8_t v2 = 1ull;
+  v1.f1 = std::move(v2);
+
+  uint32_t v3 = 2ull;
+  v1.f2 = std::move(v3);
+
+  uint8_t v4 = 3ull;
+  v1.f3 = std::move(v4);
+
+  uint16_t v5 = 4ull;
+  v1.f4 = std::move(v5);
+
+  uint64_t v6 = 5ull;
+  v1.f5 = std::move(v6);
+
+  uint8_t v7 = 6ull;
+  v1.f6 = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression2_Encode) {
+  conformance::Regression2 v1;
+
+  conformance::Regression1 v2;
+
+  uint8_t v3 = 1ull;
+  v2.f1 = std::move(v3);
+
+  uint32_t v4 = 2ull;
+  v2.f2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.f3 = std::move(v5);
+
+  uint16_t v6 = 4ull;
+  v2.f4 = std::move(v6);
+
+  uint64_t v7 = 5ull;
+  v2.f5 = std::move(v7);
+
+  uint8_t v8 = 6ull;
+  v2.f6 = std::move(v8);
+  v1.head = std::move(v2);
+
+  uint8_t v9 = 7ull;
+  v1.f7 = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression2_v1_Encode) {
+  conformance::Regression2 v1;
+
+  conformance::Regression1 v2;
+
+  uint8_t v3 = 1ull;
+  v2.f1 = std::move(v3);
+
+  uint32_t v4 = 2ull;
+  v2.f2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.f3 = std::move(v5);
+
+  uint16_t v6 = 4ull;
+  v2.f4 = std::move(v6);
+
+  uint64_t v7 = 5ull;
+  v2.f5 = std::move(v7);
+
+  uint8_t v8 = 6ull;
+  v2.f6 = std::move(v8);
+  v1.head = std::move(v2);
+
+  uint8_t v9 = 7ull;
+  v1.f7 = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression3Absent_Encode) {
+  conformance::Regression3 v1;
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression3Absent_v1_Encode) {
+  conformance::Regression3 v1;
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression3Present_Encode) {
+  conformance::Regression3 v1;
+
+  std::unique_ptr<conformance::Regression2> v2 = std::make_unique<conformance::Regression2>();
+
+  conformance::Regression1 v3;
+
+  uint8_t v4 = 1ull;
+  v3.f1 = std::move(v4);
+
+  uint32_t v5 = 2ull;
+  v3.f2 = std::move(v5);
+
+  uint8_t v6 = 3ull;
+  v3.f3 = std::move(v6);
+
+  uint16_t v7 = 4ull;
+  v3.f4 = std::move(v7);
+
+  uint64_t v8 = 5ull;
+  v3.f5 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v3.f6 = std::move(v9);
+  v2->head = std::move(v3);
+
+  uint8_t v10 = 7ull;
+  v2->f7 = std::move(v10);
+  v1.opt_value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression3Present_v1_Encode) {
+  conformance::Regression3 v1;
+
+  std::unique_ptr<conformance::Regression2> v2 = std::make_unique<conformance::Regression2>();
+
+  conformance::Regression1 v3;
+
+  uint8_t v4 = 1ull;
+  v3.f1 = std::move(v4);
+
+  uint32_t v5 = 2ull;
+  v3.f2 = std::move(v5);
+
+  uint8_t v6 = 3ull;
+  v3.f3 = std::move(v6);
+
+  uint16_t v7 = 4ull;
+  v3.f4 = std::move(v7);
+
+  uint64_t v8 = 5ull;
+  v3.f5 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v3.f6 = std::move(v9);
+  v2->head = std::move(v3);
+
+  uint8_t v10 = 7ull;
+  v2->f7 = std::move(v10);
+  v1.opt_value = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment1Array_Encode) {
+  conformance::Size5Alignment1Array v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  conformance::Size5Alignment1 v16;
+
+  uint8_t v17 = 11ull;
+  uint8_t v18 = 12ull;
+  uint8_t v19 = 13ull;
+  uint8_t v20 = 14ull;
+  uint8_t v21 = 15ull;
+  auto v22 = std::array<uint8_t, 5>{std::move(v17), std::move(v18), std::move(v19), std::move(v20),
+                                    std::move(v21)};
+  v16.data = std::move(v22);
+  auto v23 =
+      std::array<conformance::Size5Alignment1, 3>{std::move(v2), std::move(v9), std::move(v16)};
+  v1.a = std::move(v23);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment1Array_v1_Encode) {
+  conformance::Size5Alignment1Array v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  conformance::Size5Alignment1 v16;
+
+  uint8_t v17 = 11ull;
+  uint8_t v18 = 12ull;
+  uint8_t v19 = 13ull;
+  uint8_t v20 = 14ull;
+  uint8_t v21 = 15ull;
+  auto v22 = std::array<uint8_t, 5>{std::move(v17), std::move(v18), std::move(v19), std::move(v20),
+                                    std::move(v21)};
+  v16.data = std::move(v22);
+  auto v23 =
+      std::array<conformance::Size5Alignment1, 3>{std::move(v2), std::move(v9), std::move(v16)};
+  v1.a = std::move(v23);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment4Array_Encode) {
+  conformance::Size5Alignment4Array v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  conformance::Size5Alignment4 v8;
+
+  uint32_t v9 = 235736075ull;
+  v8.four = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.one = std::move(v10);
+  auto v11 =
+      std::array<conformance::Size5Alignment4, 3>{std::move(v2), std::move(v5), std::move(v8)};
+  v1.a = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+      0x0a, 0x00, 0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment4Array_v1_Encode) {
+  conformance::Size5Alignment4Array v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  conformance::Size5Alignment4 v8;
+
+  uint32_t v9 = 235736075ull;
+  v8.four = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.one = std::move(v10);
+  auto v11 =
+      std::array<conformance::Size5Alignment4, 3>{std::move(v2), std::move(v5), std::move(v8)};
+  v1.a = std::move(v11);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+      0x0a, 0x00, 0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment1Vector_Encode) {
+  conformance::Size5Alignment1Vector v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  std::vector<conformance::Size5Alignment1> v16;
+  v16.push_back(std::move(v2));
+  v16.push_back(std::move(v9));
+  v1.v = std::move(v16);
+
+  auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment1Vector_v1_Encode) {
+  conformance::Size5Alignment1Vector v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  std::vector<conformance::Size5Alignment1> v16;
+  v16.push_back(std::move(v2));
+  v16.push_back(std::move(v9));
+  v1.v = std::move(v16);
+
+  auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment4Vector_Encode) {
+  conformance::Size5Alignment4Vector v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  std::vector<conformance::Size5Alignment4> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v5));
+  v1.v = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00,
+      0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Size5Alignment4Vector_v1_Encode) {
+  conformance::Size5Alignment4Vector v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  std::vector<conformance::Size5Alignment4> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v5));
+  v1.v = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00,
+      0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
 TEST(Conformance, Table_StructWithReservedSandwich_Encode) {
   conformance::Table_StructWithReservedSandwichStruct v1;
 
@@ -3253,8 +4067,747 @@ TEST(Conformance, ArrayStruct_v1_Encode) {
   EXPECT_TRUE(result);
 }
 
-TEST(Conformance, Regression1_Encode) {
-  conformance::Regression1 v1;
+TEST(Conformance, TransformerEmptyStruct_Encode) {
+  conformance::TransformerEmptyStruct v1;
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, TransformerEmptyStruct_v1_Encode) {
+  conformance::TransformerEmptyStruct v1;
+
+  auto expected = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, EmptyStructUnion_Encode) {
+  conformance::EmptyStructUnionStruct v1;
+
+  conformance::EmptyStructUnion v2;
+
+  conformance::TransformerEmptyStruct v3;
+  v2.set_es(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, EmptyStructUnion_v1_Encode) {
+  conformance::EmptyStructUnionStruct v1;
+
+  conformance::EmptyStructUnion v2;
+
+  conformance::TransformerEmptyStruct v3;
+  v2.set_es(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, NoCodingTablesStressor_Encode) {
+  conformance::NoCodingTablesStressor v1;
+
+  uint64_t v2 = 1229782938247303441ull;
+  v1.f1 = std::move(v2);
+
+  uint64_t v3 = 2459565876494606882ull;
+  v1.f2 = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 51ull;
+  uint8_t v6 = 51ull;
+  uint8_t v7 = 51ull;
+  uint8_t v8 = 51ull;
+  uint8_t v9 = 51ull;
+  uint8_t v10 = 51ull;
+  uint8_t v11 = 51ull;
+  uint8_t v12 = 51ull;
+  uint8_t v13 = 51ull;
+  uint8_t v14 = 51ull;
+  uint8_t v15 = 51ull;
+  uint8_t v16 = 51ull;
+  uint8_t v17 = 51ull;
+  uint8_t v18 = 51ull;
+  uint8_t v19 = 51ull;
+  uint8_t v20 = 51ull;
+  uint8_t v21 = 51ull;
+  uint8_t v22 = 51ull;
+  uint8_t v23 = 51ull;
+  uint8_t v24 = 51ull;
+  uint8_t v25 = 51ull;
+  uint8_t v26 = 51ull;
+  uint8_t v27 = 51ull;
+  uint8_t v28 = 51ull;
+  uint8_t v29 = 51ull;
+  uint8_t v30 = 51ull;
+  uint8_t v31 = 51ull;
+  uint8_t v32 = 51ull;
+  uint8_t v33 = 51ull;
+  uint8_t v34 = 51ull;
+  uint8_t v35 = 51ull;
+  uint8_t v36 = 51ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v1.u1 = std::move(v4);
+
+  uint64_t v38 = 4919131752989213764ull;
+  v1.f3 = std::move(v38);
+
+  uint64_t v39 = 6148914691236517205ull;
+  v1.f4 = std::move(v39);
+
+  conformance::UnionSize36Align4 v40;
+
+  uint8_t v41 = 102ull;
+  uint8_t v42 = 102ull;
+  uint8_t v43 = 102ull;
+  uint8_t v44 = 102ull;
+  uint8_t v45 = 102ull;
+  uint8_t v46 = 102ull;
+  uint8_t v47 = 102ull;
+  uint8_t v48 = 102ull;
+  uint8_t v49 = 102ull;
+  uint8_t v50 = 102ull;
+  uint8_t v51 = 102ull;
+  uint8_t v52 = 102ull;
+  uint8_t v53 = 102ull;
+  uint8_t v54 = 102ull;
+  uint8_t v55 = 102ull;
+  uint8_t v56 = 102ull;
+  uint8_t v57 = 102ull;
+  uint8_t v58 = 102ull;
+  uint8_t v59 = 102ull;
+  uint8_t v60 = 102ull;
+  uint8_t v61 = 102ull;
+  uint8_t v62 = 102ull;
+  uint8_t v63 = 102ull;
+  uint8_t v64 = 102ull;
+  uint8_t v65 = 102ull;
+  uint8_t v66 = 102ull;
+  uint8_t v67 = 102ull;
+  uint8_t v68 = 102ull;
+  uint8_t v69 = 102ull;
+  uint8_t v70 = 102ull;
+  uint8_t v71 = 102ull;
+  uint8_t v72 = 102ull;
+  auto v73 = std::array<uint8_t, 32>{
+      std::move(v41), std::move(v42), std::move(v43), std::move(v44), std::move(v45),
+      std::move(v46), std::move(v47), std::move(v48), std::move(v49), std::move(v50),
+      std::move(v51), std::move(v52), std::move(v53), std::move(v54), std::move(v55),
+      std::move(v56), std::move(v57), std::move(v58), std::move(v59), std::move(v60),
+      std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
+      std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
+      std::move(v71), std::move(v72)};
+  v40.set_variant(std::move(v73));
+  v1.u2 = std::move(v40);
+
+  uint64_t v74 = 8608480567731124087ull;
+  v1.f5 = std::move(v74);
+
+  uint64_t v75 = 9838263505978427528ull;
+  v1.f6 = std::move(v75);
+
+  conformance::UnionSize36Align4 v76;
+
+  uint8_t v77 = 153ull;
+  uint8_t v78 = 153ull;
+  uint8_t v79 = 153ull;
+  uint8_t v80 = 153ull;
+  uint8_t v81 = 153ull;
+  uint8_t v82 = 153ull;
+  uint8_t v83 = 153ull;
+  uint8_t v84 = 153ull;
+  uint8_t v85 = 153ull;
+  uint8_t v86 = 153ull;
+  uint8_t v87 = 153ull;
+  uint8_t v88 = 153ull;
+  uint8_t v89 = 153ull;
+  uint8_t v90 = 153ull;
+  uint8_t v91 = 153ull;
+  uint8_t v92 = 153ull;
+  uint8_t v93 = 153ull;
+  uint8_t v94 = 153ull;
+  uint8_t v95 = 153ull;
+  uint8_t v96 = 153ull;
+  uint8_t v97 = 153ull;
+  uint8_t v98 = 153ull;
+  uint8_t v99 = 153ull;
+  uint8_t v100 = 153ull;
+  uint8_t v101 = 153ull;
+  uint8_t v102 = 153ull;
+  uint8_t v103 = 153ull;
+  uint8_t v104 = 153ull;
+  uint8_t v105 = 153ull;
+  uint8_t v106 = 153ull;
+  uint8_t v107 = 153ull;
+  uint8_t v108 = 153ull;
+  auto v109 = std::array<uint8_t, 32>{
+      std::move(v77),  std::move(v78),  std::move(v79),  std::move(v80),  std::move(v81),
+      std::move(v82),  std::move(v83),  std::move(v84),  std::move(v85),  std::move(v86),
+      std::move(v87),  std::move(v88),  std::move(v89),  std::move(v90),  std::move(v91),
+      std::move(v92),  std::move(v93),  std::move(v94),  std::move(v95),  std::move(v96),
+      std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
+      std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
+      std::move(v107), std::move(v108)};
+  v76.set_variant(std::move(v109));
+  v1.u3 = std::move(v76);
+
+  uint64_t v110 = 12297829382473034410ull;
+  v1.f7 = std::move(v110);
+
+  std::unique_ptr<conformance::Size8Align8> v111 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v112 = 17216961135462248174ull;
+  v111->data = std::move(v112);
+  v1.p1 = std::move(v111);
+
+  uint64_t v113 = 13527612320720337851ull;
+  v1.f8 = std::move(v113);
+
+  std::unique_ptr<conformance::Size8Align8> v114 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v115 = 17216961135462248174ull;
+  v114->data = std::move(v115);
+  v1.p2 = std::move(v114);
+
+  uint64_t v116 = 15987178197214944733ull;
+  v1.f9 = std::move(v116);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+      0x22, 0x03, 0x00, 0x00, 0x00, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x00, 0x00, 0x00, 0x00, 0x44, 0x44, 0x44, 0x44,
+      0x44, 0x44, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x03, 0x00, 0x00,
+      0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x00, 0x00, 0x00, 0x00, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
+      0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x03, 0x00, 0x00, 0x00, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x00,
+      0x00, 0x00, 0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xee, 0xee,
+      0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, NoCodingTablesStressor_v1_Encode) {
+  conformance::NoCodingTablesStressor v1;
+
+  uint64_t v2 = 1229782938247303441ull;
+  v1.f1 = std::move(v2);
+
+  uint64_t v3 = 2459565876494606882ull;
+  v1.f2 = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 51ull;
+  uint8_t v6 = 51ull;
+  uint8_t v7 = 51ull;
+  uint8_t v8 = 51ull;
+  uint8_t v9 = 51ull;
+  uint8_t v10 = 51ull;
+  uint8_t v11 = 51ull;
+  uint8_t v12 = 51ull;
+  uint8_t v13 = 51ull;
+  uint8_t v14 = 51ull;
+  uint8_t v15 = 51ull;
+  uint8_t v16 = 51ull;
+  uint8_t v17 = 51ull;
+  uint8_t v18 = 51ull;
+  uint8_t v19 = 51ull;
+  uint8_t v20 = 51ull;
+  uint8_t v21 = 51ull;
+  uint8_t v22 = 51ull;
+  uint8_t v23 = 51ull;
+  uint8_t v24 = 51ull;
+  uint8_t v25 = 51ull;
+  uint8_t v26 = 51ull;
+  uint8_t v27 = 51ull;
+  uint8_t v28 = 51ull;
+  uint8_t v29 = 51ull;
+  uint8_t v30 = 51ull;
+  uint8_t v31 = 51ull;
+  uint8_t v32 = 51ull;
+  uint8_t v33 = 51ull;
+  uint8_t v34 = 51ull;
+  uint8_t v35 = 51ull;
+  uint8_t v36 = 51ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v1.u1 = std::move(v4);
+
+  uint64_t v38 = 4919131752989213764ull;
+  v1.f3 = std::move(v38);
+
+  uint64_t v39 = 6148914691236517205ull;
+  v1.f4 = std::move(v39);
+
+  conformance::UnionSize36Align4 v40;
+
+  uint8_t v41 = 102ull;
+  uint8_t v42 = 102ull;
+  uint8_t v43 = 102ull;
+  uint8_t v44 = 102ull;
+  uint8_t v45 = 102ull;
+  uint8_t v46 = 102ull;
+  uint8_t v47 = 102ull;
+  uint8_t v48 = 102ull;
+  uint8_t v49 = 102ull;
+  uint8_t v50 = 102ull;
+  uint8_t v51 = 102ull;
+  uint8_t v52 = 102ull;
+  uint8_t v53 = 102ull;
+  uint8_t v54 = 102ull;
+  uint8_t v55 = 102ull;
+  uint8_t v56 = 102ull;
+  uint8_t v57 = 102ull;
+  uint8_t v58 = 102ull;
+  uint8_t v59 = 102ull;
+  uint8_t v60 = 102ull;
+  uint8_t v61 = 102ull;
+  uint8_t v62 = 102ull;
+  uint8_t v63 = 102ull;
+  uint8_t v64 = 102ull;
+  uint8_t v65 = 102ull;
+  uint8_t v66 = 102ull;
+  uint8_t v67 = 102ull;
+  uint8_t v68 = 102ull;
+  uint8_t v69 = 102ull;
+  uint8_t v70 = 102ull;
+  uint8_t v71 = 102ull;
+  uint8_t v72 = 102ull;
+  auto v73 = std::array<uint8_t, 32>{
+      std::move(v41), std::move(v42), std::move(v43), std::move(v44), std::move(v45),
+      std::move(v46), std::move(v47), std::move(v48), std::move(v49), std::move(v50),
+      std::move(v51), std::move(v52), std::move(v53), std::move(v54), std::move(v55),
+      std::move(v56), std::move(v57), std::move(v58), std::move(v59), std::move(v60),
+      std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
+      std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
+      std::move(v71), std::move(v72)};
+  v40.set_variant(std::move(v73));
+  v1.u2 = std::move(v40);
+
+  uint64_t v74 = 8608480567731124087ull;
+  v1.f5 = std::move(v74);
+
+  uint64_t v75 = 9838263505978427528ull;
+  v1.f6 = std::move(v75);
+
+  conformance::UnionSize36Align4 v76;
+
+  uint8_t v77 = 153ull;
+  uint8_t v78 = 153ull;
+  uint8_t v79 = 153ull;
+  uint8_t v80 = 153ull;
+  uint8_t v81 = 153ull;
+  uint8_t v82 = 153ull;
+  uint8_t v83 = 153ull;
+  uint8_t v84 = 153ull;
+  uint8_t v85 = 153ull;
+  uint8_t v86 = 153ull;
+  uint8_t v87 = 153ull;
+  uint8_t v88 = 153ull;
+  uint8_t v89 = 153ull;
+  uint8_t v90 = 153ull;
+  uint8_t v91 = 153ull;
+  uint8_t v92 = 153ull;
+  uint8_t v93 = 153ull;
+  uint8_t v94 = 153ull;
+  uint8_t v95 = 153ull;
+  uint8_t v96 = 153ull;
+  uint8_t v97 = 153ull;
+  uint8_t v98 = 153ull;
+  uint8_t v99 = 153ull;
+  uint8_t v100 = 153ull;
+  uint8_t v101 = 153ull;
+  uint8_t v102 = 153ull;
+  uint8_t v103 = 153ull;
+  uint8_t v104 = 153ull;
+  uint8_t v105 = 153ull;
+  uint8_t v106 = 153ull;
+  uint8_t v107 = 153ull;
+  uint8_t v108 = 153ull;
+  auto v109 = std::array<uint8_t, 32>{
+      std::move(v77),  std::move(v78),  std::move(v79),  std::move(v80),  std::move(v81),
+      std::move(v82),  std::move(v83),  std::move(v84),  std::move(v85),  std::move(v86),
+      std::move(v87),  std::move(v88),  std::move(v89),  std::move(v90),  std::move(v91),
+      std::move(v92),  std::move(v93),  std::move(v94),  std::move(v95),  std::move(v96),
+      std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
+      std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
+      std::move(v107), std::move(v108)};
+  v76.set_variant(std::move(v109));
+  v1.u3 = std::move(v76);
+
+  uint64_t v110 = 12297829382473034410ull;
+  v1.f7 = std::move(v110);
+
+  std::unique_ptr<conformance::Size8Align8> v111 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v112 = 17216961135462248174ull;
+  v111->data = std::move(v112);
+  v1.p1 = std::move(v111);
+
+  uint64_t v113 = 13527612320720337851ull;
+  v1.f8 = std::move(v113);
+
+  std::unique_ptr<conformance::Size8Align8> v114 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v115 = 17216961135462248174ull;
+  v114->data = std::move(v115);
+  v1.p2 = std::move(v114);
+
+  uint64_t v116 = 15987178197214944733ull;
+  v1.f9 = std::move(v116);
+
+  auto expected = std::vector<uint8_t>{
+      0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+      0x22, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x44, 0x44, 0x44, 0x44, 0x44,
+      0x44, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x04, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x88, 0x88,
+      0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+      0xee, 0xee,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1Case1_Encode) {
+  conformance::OutOfLineSandwich1 v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1 v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3.the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67,
+      0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,
+      0x05, 0x06, 0x07, 0x08, 0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73,
+      0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1Case1_v1_Encode) {
+  conformance::OutOfLineSandwich1 v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1 v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3.the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74, 0x69,
+      0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
+      0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05,
+      0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+      0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+      0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_Encode) {
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v5 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v6 = 202050057ull;
+  v5->set_variant(std::move(v6));
+  v3.opt_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1WithOptUnion> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74, 0x69,
+      0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
+      0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06,
+      0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x68,
+      0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+      0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_v1_Encode) {
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v5 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v6 = 202050057ull;
+  v5->set_variant(std::move(v6));
+  v3.opt_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1WithOptUnion> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74, 0x69,
+      0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
+      0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05,
+      0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+      0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+      0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionAbsent_Encode) {
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  uint32_t v5 = 134678021ull;
+  v3.after = std::move(v5);
+  std::vector<conformance::Sandwich1WithOptUnion> v6;
+  v6.push_back(std::move(v3));
+  v1.v = std::move(v6);
+
+  std::string v7("hard transitions suck!");
+  v1.after = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74, 0x69,
+      0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
+      0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x06,
+      0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e,
+      0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionAbsent_v1_Encode) {
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  uint32_t v5 = 134678021ull;
+  v3.after = std::move(v5);
+  std::vector<conformance::Sandwich1WithOptUnion> v6;
+  v6.push_back(std::move(v3));
+  v1.v = std::move(v6);
+
+  std::string v7("hard transitions suck!");
+  v1.after = std::move(v7);
+
+  auto expected = std::vector<uint8_t>{
+      0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67,
+      0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+      0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f,
+      0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Regression4_Encode) {
+  conformance::Regression4 v1;
 
   uint8_t v2 = 1ull;
   v1.f1 = std::move(v2);
@@ -3262,21 +4815,30 @@ TEST(Conformance, Regression1_Encode) {
   uint32_t v3 = 2ull;
   v1.f2 = std::move(v3);
 
-  uint8_t v4 = 3ull;
-  v1.f3 = std::move(v4);
+  conformance::StructSize3Align1 v4;
 
-  uint16_t v5 = 4ull;
-  v1.f4 = std::move(v5);
+  uint8_t v5 = 9ull;
+  uint8_t v6 = 10ull;
+  uint8_t v7 = 11ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4.three_bytes = std::move(v8);
+  v1.s1 = std::move(v4);
 
-  uint64_t v6 = 5ull;
-  v1.f5 = std::move(v6);
+  uint8_t v9 = 3ull;
+  v1.f3 = std::move(v9);
 
-  uint8_t v7 = 6ull;
-  v1.f6 = std::move(v7);
+  uint16_t v10 = 4ull;
+  v1.f4 = std::move(v10);
+
+  uint64_t v11 = 5ull;
+  v1.f5 = std::move(v11);
+
+  uint8_t v12 = 6ull;
+  v1.f6 = std::move(v12);
 
   auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b,
+      0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -3287,8 +4849,8 @@ TEST(Conformance, Regression1_Encode) {
   EXPECT_TRUE(result);
 }
 
-TEST(Conformance, Regression1_v1_Encode) {
-  conformance::Regression1 v1;
+TEST(Conformance, Regression4_v1_Encode) {
+  conformance::Regression4 v1;
 
   uint8_t v2 = 1ull;
   v1.f1 = std::move(v2);
@@ -3296,21 +4858,30 @@ TEST(Conformance, Regression1_v1_Encode) {
   uint32_t v3 = 2ull;
   v1.f2 = std::move(v3);
 
-  uint8_t v4 = 3ull;
-  v1.f3 = std::move(v4);
+  conformance::StructSize3Align1 v4;
 
-  uint16_t v5 = 4ull;
-  v1.f4 = std::move(v5);
+  uint8_t v5 = 9ull;
+  uint8_t v6 = 10ull;
+  uint8_t v7 = 11ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4.three_bytes = std::move(v8);
+  v1.s1 = std::move(v4);
 
-  uint64_t v6 = 5ull;
-  v1.f5 = std::move(v6);
+  uint8_t v9 = 3ull;
+  v1.f3 = std::move(v9);
 
-  uint8_t v7 = 6ull;
-  v1.f6 = std::move(v7);
+  uint16_t v10 = 4ull;
+  v1.f4 = std::move(v10);
+
+  uint64_t v11 = 5ull;
+  v1.f5 = std::move(v11);
+
+  uint8_t v12 = 6ull;
+  v1.f6 = std::move(v12);
 
   auto expected = std::vector<uint8_t>{
-      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b,
+      0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
@@ -3321,11 +4892,71 @@ TEST(Conformance, Regression1_v1_Encode) {
   EXPECT_TRUE(result);
 }
 
-TEST(Conformance, Regression3Absent_Encode) {
-  conformance::Regression3 v1;
+TEST(Conformance, Sandwich4Align8_Encode) {
+  conformance::Sandwich4Align8 v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  uint64_t v39 = 1157159078456920585ull;
+  v1.alignment8_enforcement = std::move(v39);
 
   auto expected = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5,
+      0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3,
+      0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0x05, 0x06,
+      0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
 
   };
 
@@ -3335,11 +4966,537 @@ TEST(Conformance, Regression3Absent_Encode) {
   EXPECT_TRUE(result);
 }
 
-TEST(Conformance, Regression3Absent_v1_Encode) {
-  conformance::Regression3 v1;
+TEST(Conformance, Sandwich4Align8_v1_Encode) {
+  conformance::Sandwich4Align8 v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  uint64_t v39 = 1157159078456920585ull;
+  v1.alignment8_enforcement = std::move(v39);
 
   auto expected = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a,
+      0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,
+      0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5,
+      0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich4Align8WithPointer_Encode) {
+  conformance::Sandwich4Align8WithPointer v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  std::unique_ptr<conformance::Size8Align8> v39 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v40 = 1157159078456920585ull;
+  v39->data = std::move(v40);
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4,
+      0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1,
+      0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe,
+      0xbf, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich4Align8WithPointer_v1_Encode) {
+  conformance::Sandwich4Align8WithPointer v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  std::unique_ptr<conformance::Size8Align8> v39 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v40 = 1157159078456920585ull;
+  v39->data = std::move(v40);
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab,
+      0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba,
+      0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich8Case1_Encode) {
+  conformance::Sandwich8 v1;
+
+  uint64_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionOfUnion v3;
+
+  conformance::UnionSize8Align4 v4;
+
+  uint32_t v5 = 202050057ull;
+  v4.set_variant(std::move(v5));
+  v3.set_size8align4(std::move(v4));
+  v1.union_of_union = std::move(v3);
+
+  uint32_t v6 = 134678021ull;
+  v1.after = std::move(v6);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich8Case1_v1_Encode) {
+  conformance::Sandwich8 v1;
+
+  uint64_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionOfUnion v3;
+
+  conformance::UnionSize8Align4 v4;
+
+  uint32_t v5 = 202050057ull;
+  v4.set_variant(std::move(v5));
+  v3.set_size8align4(std::move(v4));
+  v1.union_of_union = std::move(v3);
+
+  uint32_t v6 = 134678021ull;
+  v1.after = std::move(v6);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich9Case1_Encode) {
+  conformance::Sandwich9 v1;
+
+  uint16_t v2 = 513ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionWithVectorOfVectors v3;
+
+  std::unique_ptr<conformance::StructSize3Align1> v4 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v5 = 16ull;
+  uint8_t v6 = 17ull;
+  uint8_t v7 = 18ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4->three_bytes = std::move(v8);
+  std::unique_ptr<conformance::StructSize3Align1> v9 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v10 = 19ull;
+  uint8_t v11 = 20ull;
+  uint8_t v12 = 21ull;
+  auto v13 = std::array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
+  v9->three_bytes = std::move(v13);
+  std::vector<std::unique_ptr<conformance::StructSize3Align1>> v14;
+  v14.push_back(std::move(v4));
+  v14.push_back(std::move(v9));
+  std::vector<std::vector<std::unique_ptr<conformance::StructSize3Align1>>> v15;
+  v15.push_back(std::move(v14));
+  v3.set_v(std::move(v15));
+  v1.the_union = std::move(v3);
+
+  uint16_t v16 = 4625ull;
+  v1.after = std::move(v16);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x11, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x10, 0x11, 0x12,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, Sandwich9Case1_v1_Encode) {
+  conformance::Sandwich9 v1;
+
+  uint16_t v2 = 513ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionWithVectorOfVectors v3;
+
+  std::unique_ptr<conformance::StructSize3Align1> v4 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v5 = 16ull;
+  uint8_t v6 = 17ull;
+  uint8_t v7 = 18ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4->three_bytes = std::move(v8);
+  std::unique_ptr<conformance::StructSize3Align1> v9 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v10 = 19ull;
+  uint8_t v11 = 20ull;
+  uint8_t v12 = 21ull;
+  auto v13 = std::array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
+  v9->three_bytes = std::move(v13);
+  std::vector<std::unique_ptr<conformance::StructSize3Align1>> v14;
+  v14.push_back(std::move(v4));
+  v14.push_back(std::move(v9));
+  std::vector<std::vector<std::unique_ptr<conformance::StructSize3Align1>>> v15;
+  v15.push_back(std::move(v14));
+  v3.set_v(std::move(v15));
+  v1.the_union = std::move(v3);
+
+  uint16_t v16 = 4625ull;
+  v1.after = std::move(v16);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x11, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x10, 0x11,
+      0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, SimpleTableArrayStruct_Encode) {
+  conformance::SimpleTableArrayStruct v1;
+
+  conformance::TransformerSimpleTable v2;
+
+  uint32_t v3 = 2745344416ull;
+  v2.set_value(std::move(v3));
+  conformance::TransformerSimpleTable v4;
+
+  uint32_t v5 = 3014832560ull;
+  v4.set_value(std::move(v5));
+  auto v6 = std::array<conformance::TransformerSimpleTable, 2>{std::move(v2), std::move(v4)};
+  v1.the_array = std::move(v6);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, SimpleTableArrayStruct_v1_Encode) {
+  conformance::SimpleTableArrayStruct v1;
+
+  conformance::TransformerSimpleTable v2;
+
+  uint32_t v3 = 2745344416ull;
+  v2.set_value(std::move(v3));
+  conformance::TransformerSimpleTable v4;
+
+  uint32_t v5 = 3014832560ull;
+  v4.set_value(std::move(v5));
+  auto v6 = std::array<conformance::TransformerSimpleTable, 2>{std::move(v2), std::move(v4)};
+  v1.the_array = std::move(v6);
+
+  auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, StringUnionVector_Encode) {
+  conformance::StringUnionVector v1;
+
+  std::unique_ptr<conformance::StringUnion> v2 = std::make_unique<conformance::StringUnion>();
+
+  std::string v3("hello");
+  v2->set_s(std::move(v3));
+  std::unique_ptr<conformance::StringUnion> v4 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v5 = 170ull;
+  v4->set_u8(std::move(v5));
+  std::unique_ptr<conformance::StringUnion> v6 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v7 = 187ull;
+  v6->set_u8(std::move(v7));
+  std::vector<std::unique_ptr<conformance::StringUnion>> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v4));
+  v8.push_back(std::move(v6));
+  v1.the_vector = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbb,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  auto result =
+      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
+          v1, expected);
+  EXPECT_TRUE(result);
+}
+
+TEST(Conformance, StringUnionVector_v1_Encode) {
+  conformance::StringUnionVector v1;
+
+  std::unique_ptr<conformance::StringUnion> v2 = std::make_unique<conformance::StringUnion>();
+
+  std::string v3("hello");
+  v2->set_s(std::move(v3));
+  std::unique_ptr<conformance::StringUnion> v4 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v5 = 170ull;
+  v4->set_u8(std::move(v5));
+  std::unique_ptr<conformance::StringUnion> v6 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v7 = 187ull;
+  v6->set_u8(std::move(v7));
+  std::vector<std::unique_ptr<conformance::StringUnion>> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v4));
+  v8.push_back(std::move(v6));
+  v1.the_vector = std::move(v8);
+
+  auto expected = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x68,
+      0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
 
@@ -3404,338 +5561,6 @@ TEST(Conformance, UnionMigration_SingleVariant_v1_Encode) {
       0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize8Alignment4_Encode) {
-  conformance::SandwichUnionSize8Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize8Alignment4 v3;
-
-  uint32_t v4 = 4ull;
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v5 = 20ull;
-  v1.after = std::move(v5);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-      0x04, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize8Alignment4_v1_Encode) {
-  conformance::SandwichUnionSize8Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize8Alignment4 v3;
-
-  uint32_t v4 = 4ull;
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v5 = 20ull;
-  v1.after = std::move(v5);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize12Alignment4_Encode) {
-  conformance::SandwichUnionSize12Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize12Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
-                                    std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
-  v1.value = std::move(v3);
-
-  uint32_t v11 = 20ull;
-  v1.after = std::move(v11);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
-      0x05, 0x06, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize12Alignment4_v1_Encode) {
-  conformance::SandwichUnionSize12Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize12Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
-                                    std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
-  v1.value = std::move(v3);
-
-  uint32_t v11 = 20ull;
-  v1.after = std::move(v11);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize24Alignment8_Encode) {
-  conformance::SandwichUnionSize24Alignment8 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize24Alignment8 v3;
-
-  conformance::StructSize16Alignment8 v4;
-
-  uint64_t v5 = 1ull;
-  v4.f1 = std::move(v5);
-
-  uint64_t v6 = 2ull;
-  v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v7 = 20ull;
-  v1.after = std::move(v7);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize24Alignment8_v1_Encode) {
-  conformance::SandwichUnionSize24Alignment8 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize24Alignment8 v3;
-
-  conformance::StructSize16Alignment8 v4;
-
-  uint64_t v5 = 1ull;
-  v4.f1 = std::move(v5);
-
-  uint64_t v6 = 2ull;
-  v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v7 = 20ull;
-  v1.after = std::move(v7);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryV1>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize36Alignment4_Encode) {
-  conformance::SandwichUnionSize36Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize36Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  uint8_t v10 = 7ull;
-  uint8_t v11 = 8ull;
-  uint8_t v12 = 9ull;
-  uint8_t v13 = 10ull;
-  uint8_t v14 = 11ull;
-  uint8_t v15 = 12ull;
-  uint8_t v16 = 13ull;
-  uint8_t v17 = 14ull;
-  uint8_t v18 = 15ull;
-  uint8_t v19 = 16ull;
-  uint8_t v20 = 17ull;
-  uint8_t v21 = 18ull;
-  uint8_t v22 = 19ull;
-  uint8_t v23 = 20ull;
-  uint8_t v24 = 21ull;
-  uint8_t v25 = 22ull;
-  uint8_t v26 = 23ull;
-  uint8_t v27 = 24ull;
-  uint8_t v28 = 25ull;
-  uint8_t v29 = 26ull;
-  uint8_t v30 = 27ull;
-  uint8_t v31 = 28ull;
-  uint8_t v32 = 29ull;
-  uint8_t v33 = 30ull;
-  uint8_t v34 = 31ull;
-  uint8_t v35 = 32ull;
-  auto v36 = std::array<uint8_t, 32>{
-      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
-      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
-      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
-      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
-      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
-      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
-      std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
-  v1.value = std::move(v3);
-
-  uint32_t v37 = 20ull;
-  v1.after = std::move(v37);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
-      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-      0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
-      0x1d, 0x1e, 0x1f, 0x20, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  auto result =
-      ::fidl::test::util::ValueToBytes<decltype(v1), ::fidl::test::util::EncoderFactoryOld>(
-          v1, expected);
-  EXPECT_TRUE(result);
-}
-
-TEST(Conformance, UnionSize36Alignment4_v1_Encode) {
-  conformance::SandwichUnionSize36Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize36Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  uint8_t v10 = 7ull;
-  uint8_t v11 = 8ull;
-  uint8_t v12 = 9ull;
-  uint8_t v13 = 10ull;
-  uint8_t v14 = 11ull;
-  uint8_t v15 = 12ull;
-  uint8_t v16 = 13ull;
-  uint8_t v17 = 14ull;
-  uint8_t v18 = 15ull;
-  uint8_t v19 = 16ull;
-  uint8_t v20 = 17ull;
-  uint8_t v21 = 18ull;
-  uint8_t v22 = 19ull;
-  uint8_t v23 = 20ull;
-  uint8_t v24 = 21ull;
-  uint8_t v25 = 22ull;
-  uint8_t v26 = 23ull;
-  uint8_t v27 = 24ull;
-  uint8_t v28 = 25ull;
-  uint8_t v29 = 26ull;
-  uint8_t v30 = 27ull;
-  uint8_t v31 = 28ull;
-  uint8_t v32 = 29ull;
-  uint8_t v33 = 30ull;
-  uint8_t v34 = 31ull;
-  uint8_t v35 = 32ull;
-  auto v36 = std::array<uint8_t, 32>{
-      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
-      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
-      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
-      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
-      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
-      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
-      std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
-  v1.value = std::move(v3);
-
-  uint32_t v37 = 20ull;
-  v1.after = std::move(v37);
-
-  auto expected = std::vector<uint8_t>{
-      0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
-      0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
-      0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
 
   };
 
@@ -5277,6 +7102,104 @@ TEST(Conformance, Sandwich1Case1_v1_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
+TEST(Conformance, Sandwich1WithOptUnionPresent_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,
+
+  };
+
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v3 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v4 = 202050057ull;
+  v3->set_variant(std::move(v4));
+  v1.opt_union = std::move(v3);
+
+  uint32_t v5 = 134678021ull;
+  v1.after = std::move(v5);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich1WithOptUnionPresent_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v3 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v4 = 202050057ull;
+  v3->set_variant(std::move(v4));
+  v1.opt_union = std::move(v3);
+
+  uint32_t v5 = 134678021ull;
+  v1.after = std::move(v5);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich1WithOptUnionAbsent_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 134678021ull;
+  v1.after = std::move(v3);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich1WithOptUnionAbsent_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich1WithOptUnion v1;
+
+  uint32_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 134678021ull;
+  v1.after = std::move(v3);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, Sandwich2Case1_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -6394,6 +8317,698 @@ TEST(Conformance, Sandwich6Case8_v1_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
+TEST(Conformance, Sandwich7Case1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,
+
+  };
+
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::Sandwich1> v3 = std::make_unique<conformance::Sandwich1>();
+
+  uint32_t v4 = 67305985ull;
+  v3->before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3->the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3->after = std::move(v7);
+  v1.opt_sandwich1 = std::move(v3);
+
+  uint32_t v8 = 606282273ull;
+  v1.after = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich7Case1_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00,
+      0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  std::unique_ptr<conformance::Sandwich1> v3 = std::make_unique<conformance::Sandwich1>();
+
+  uint32_t v4 = 67305985ull;
+  v3->before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3->the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3->after = std::move(v7);
+  v1.opt_sandwich1 = std::move(v3);
+
+  uint32_t v8 = 606282273ull;
+  v1.after = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich7Case2_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 606282273ull;
+  v1.after = std::move(v3);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich7Case2_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich7 v1;
+
+  uint32_t v2 = 336794129ull;
+  v1.before = std::move(v2);
+
+  uint32_t v3 = 606282273ull;
+  v1.after = std::move(v3);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression1 v1;
+
+  uint8_t v2 = 1ull;
+  v1.f1 = std::move(v2);
+
+  uint32_t v3 = 2ull;
+  v1.f2 = std::move(v3);
+
+  uint8_t v4 = 3ull;
+  v1.f3 = std::move(v4);
+
+  uint16_t v5 = 4ull;
+  v1.f4 = std::move(v5);
+
+  uint64_t v6 = 5ull;
+  v1.f5 = std::move(v6);
+
+  uint8_t v7 = 6ull;
+  v1.f6 = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression1_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression1 v1;
+
+  uint8_t v2 = 1ull;
+  v1.f1 = std::move(v2);
+
+  uint32_t v3 = 2ull;
+  v1.f2 = std::move(v3);
+
+  uint8_t v4 = 3ull;
+  v1.f3 = std::move(v4);
+
+  uint16_t v5 = 4ull;
+  v1.f4 = std::move(v5);
+
+  uint64_t v6 = 5ull;
+  v1.f5 = std::move(v6);
+
+  uint8_t v7 = 6ull;
+  v1.f6 = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression2_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression2 v1;
+
+  conformance::Regression1 v2;
+
+  uint8_t v3 = 1ull;
+  v2.f1 = std::move(v3);
+
+  uint32_t v4 = 2ull;
+  v2.f2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.f3 = std::move(v5);
+
+  uint16_t v6 = 4ull;
+  v2.f4 = std::move(v6);
+
+  uint64_t v7 = 5ull;
+  v2.f5 = std::move(v7);
+
+  uint8_t v8 = 6ull;
+  v2.f6 = std::move(v8);
+  v1.head = std::move(v2);
+
+  uint8_t v9 = 7ull;
+  v1.f7 = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression2_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression2 v1;
+
+  conformance::Regression1 v2;
+
+  uint8_t v3 = 1ull;
+  v2.f1 = std::move(v3);
+
+  uint32_t v4 = 2ull;
+  v2.f2 = std::move(v4);
+
+  uint8_t v5 = 3ull;
+  v2.f3 = std::move(v5);
+
+  uint16_t v6 = 4ull;
+  v2.f4 = std::move(v6);
+
+  uint64_t v7 = 5ull;
+  v2.f5 = std::move(v7);
+
+  uint8_t v8 = 6ull;
+  v2.f6 = std::move(v8);
+  v1.head = std::move(v2);
+
+  uint8_t v9 = 7ull;
+  v1.f7 = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression3Absent_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression3 v1;
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression3Absent_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression3 v1;
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression3Present_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression3 v1;
+
+  std::unique_ptr<conformance::Regression2> v2 = std::make_unique<conformance::Regression2>();
+
+  conformance::Regression1 v3;
+
+  uint8_t v4 = 1ull;
+  v3.f1 = std::move(v4);
+
+  uint32_t v5 = 2ull;
+  v3.f2 = std::move(v5);
+
+  uint8_t v6 = 3ull;
+  v3.f3 = std::move(v6);
+
+  uint16_t v7 = 4ull;
+  v3.f4 = std::move(v7);
+
+  uint64_t v8 = 5ull;
+  v3.f5 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v3.f6 = std::move(v9);
+  v2->head = std::move(v3);
+
+  uint8_t v10 = 7ull;
+  v2->f7 = std::move(v10);
+  v1.opt_value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression3Present_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Regression3 v1;
+
+  std::unique_ptr<conformance::Regression2> v2 = std::make_unique<conformance::Regression2>();
+
+  conformance::Regression1 v3;
+
+  uint8_t v4 = 1ull;
+  v3.f1 = std::move(v4);
+
+  uint32_t v5 = 2ull;
+  v3.f2 = std::move(v5);
+
+  uint8_t v6 = 3ull;
+  v3.f3 = std::move(v6);
+
+  uint16_t v7 = 4ull;
+  v3.f4 = std::move(v7);
+
+  uint64_t v8 = 5ull;
+  v3.f5 = std::move(v8);
+
+  uint8_t v9 = 6ull;
+  v3.f6 = std::move(v9);
+  v2->head = std::move(v3);
+
+  uint8_t v10 = 7ull;
+  v2->f7 = std::move(v10);
+  v1.opt_value = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment1Array_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,
+
+  };
+
+  conformance::Size5Alignment1Array v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  conformance::Size5Alignment1 v16;
+
+  uint8_t v17 = 11ull;
+  uint8_t v18 = 12ull;
+  uint8_t v19 = 13ull;
+  uint8_t v20 = 14ull;
+  uint8_t v21 = 15ull;
+  auto v22 = std::array<uint8_t, 5>{std::move(v17), std::move(v18), std::move(v19), std::move(v20),
+                                    std::move(v21)};
+  v16.data = std::move(v22);
+  auto v23 =
+      std::array<conformance::Size5Alignment1, 3>{std::move(v2), std::move(v9), std::move(v16)};
+  v1.a = std::move(v23);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment1Array_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+      0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,
+
+  };
+
+  conformance::Size5Alignment1Array v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  conformance::Size5Alignment1 v16;
+
+  uint8_t v17 = 11ull;
+  uint8_t v18 = 12ull;
+  uint8_t v19 = 13ull;
+  uint8_t v20 = 14ull;
+  uint8_t v21 = 15ull;
+  auto v22 = std::array<uint8_t, 5>{std::move(v17), std::move(v18), std::move(v19), std::move(v20),
+                                    std::move(v21)};
+  v16.data = std::move(v22);
+  auto v23 =
+      std::array<conformance::Size5Alignment1, 3>{std::move(v2), std::move(v9), std::move(v16)};
+  v1.a = std::move(v23);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment4Array_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+      0x0a, 0x00, 0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment4Array v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  conformance::Size5Alignment4 v8;
+
+  uint32_t v9 = 235736075ull;
+  v8.four = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.one = std::move(v10);
+  auto v11 =
+      std::array<conformance::Size5Alignment4, 3>{std::move(v2), std::move(v5), std::move(v8)};
+  v1.a = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment4Array_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09,
+      0x0a, 0x00, 0x00, 0x00, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment4Array v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  conformance::Size5Alignment4 v8;
+
+  uint32_t v9 = 235736075ull;
+  v8.four = std::move(v9);
+
+  uint8_t v10 = 15ull;
+  v8.one = std::move(v10);
+  auto v11 =
+      std::array<conformance::Size5Alignment4, 3>{std::move(v2), std::move(v5), std::move(v8)};
+  v1.a = std::move(v11);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment1Vector_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment1Vector v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  std::vector<conformance::Size5Alignment1> v16;
+  v16.push_back(std::move(v2));
+  v16.push_back(std::move(v9));
+  v1.v = std::move(v16);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment1Vector_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment1Vector v1;
+
+  conformance::Size5Alignment1 v2;
+
+  uint8_t v3 = 1ull;
+  uint8_t v4 = 2ull;
+  uint8_t v5 = 3ull;
+  uint8_t v6 = 4ull;
+  uint8_t v7 = 5ull;
+  auto v8 = std::array<uint8_t, 5>{std::move(v3), std::move(v4), std::move(v5), std::move(v6),
+                                   std::move(v7)};
+  v2.data = std::move(v8);
+  conformance::Size5Alignment1 v9;
+
+  uint8_t v10 = 6ull;
+  uint8_t v11 = 7ull;
+  uint8_t v12 = 8ull;
+  uint8_t v13 = 9ull;
+  uint8_t v14 = 10ull;
+  auto v15 = std::array<uint8_t, 5>{std::move(v10), std::move(v11), std::move(v12), std::move(v13),
+                                    std::move(v14)};
+  v9.data = std::move(v15);
+  std::vector<conformance::Size5Alignment1> v16;
+  v16.push_back(std::move(v2));
+  v16.push_back(std::move(v9));
+  v1.v = std::move(v16);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment4Vector_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment4Vector v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  std::vector<conformance::Size5Alignment4> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v5));
+  v1.v = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Size5Alignment4Vector_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04,
+      0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Size5Alignment4Vector v1;
+
+  conformance::Size5Alignment4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.four = std::move(v3);
+
+  uint8_t v4 = 5ull;
+  v2.one = std::move(v4);
+  conformance::Size5Alignment4 v5;
+
+  uint32_t v6 = 151521030ull;
+  v5.four = std::move(v6);
+
+  uint8_t v7 = 10ull;
+  v5.one = std::move(v7);
+  std::vector<conformance::Size5Alignment4> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v5));
+  v1.v = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
 TEST(Conformance, Table_StructWithReservedSandwich_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -6891,16 +9506,744 @@ TEST(Conformance, ArrayStruct_v1_Decode) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Regression1_Decode) {
+TEST(Conformance, TransformerEmptyStruct_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::TransformerEmptyStruct v1;
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, TransformerEmptyStruct_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::TransformerEmptyStruct v1;
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, EmptyStructUnion_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::EmptyStructUnionStruct v1;
+
+  conformance::EmptyStructUnion v2;
+
+  conformance::TransformerEmptyStruct v3;
+  v2.set_es(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, EmptyStructUnion_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::EmptyStructUnionStruct v1;
+
+  conformance::EmptyStructUnion v2;
+
+  conformance::TransformerEmptyStruct v3;
+  v2.set_es(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, NoCodingTablesStressor_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+      0x22, 0x22, 0x03, 0x00, 0x00, 0x00, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x00, 0x00, 0x00, 0x00, 0x44, 0x44, 0x44,
+      0x44, 0x44, 0x44, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x03, 0x00,
+      0x00, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x00, 0x00, 0x00, 0x00, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77,
+      0x77, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x03, 0x00, 0x00, 0x00, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x00, 0x00, 0x00, 0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xee,
+      0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+
+  };
+
+  conformance::NoCodingTablesStressor v1;
+
+  uint64_t v2 = 1229782938247303441ull;
+  v1.f1 = std::move(v2);
+
+  uint64_t v3 = 2459565876494606882ull;
+  v1.f2 = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 51ull;
+  uint8_t v6 = 51ull;
+  uint8_t v7 = 51ull;
+  uint8_t v8 = 51ull;
+  uint8_t v9 = 51ull;
+  uint8_t v10 = 51ull;
+  uint8_t v11 = 51ull;
+  uint8_t v12 = 51ull;
+  uint8_t v13 = 51ull;
+  uint8_t v14 = 51ull;
+  uint8_t v15 = 51ull;
+  uint8_t v16 = 51ull;
+  uint8_t v17 = 51ull;
+  uint8_t v18 = 51ull;
+  uint8_t v19 = 51ull;
+  uint8_t v20 = 51ull;
+  uint8_t v21 = 51ull;
+  uint8_t v22 = 51ull;
+  uint8_t v23 = 51ull;
+  uint8_t v24 = 51ull;
+  uint8_t v25 = 51ull;
+  uint8_t v26 = 51ull;
+  uint8_t v27 = 51ull;
+  uint8_t v28 = 51ull;
+  uint8_t v29 = 51ull;
+  uint8_t v30 = 51ull;
+  uint8_t v31 = 51ull;
+  uint8_t v32 = 51ull;
+  uint8_t v33 = 51ull;
+  uint8_t v34 = 51ull;
+  uint8_t v35 = 51ull;
+  uint8_t v36 = 51ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v1.u1 = std::move(v4);
+
+  uint64_t v38 = 4919131752989213764ull;
+  v1.f3 = std::move(v38);
+
+  uint64_t v39 = 6148914691236517205ull;
+  v1.f4 = std::move(v39);
+
+  conformance::UnionSize36Align4 v40;
+
+  uint8_t v41 = 102ull;
+  uint8_t v42 = 102ull;
+  uint8_t v43 = 102ull;
+  uint8_t v44 = 102ull;
+  uint8_t v45 = 102ull;
+  uint8_t v46 = 102ull;
+  uint8_t v47 = 102ull;
+  uint8_t v48 = 102ull;
+  uint8_t v49 = 102ull;
+  uint8_t v50 = 102ull;
+  uint8_t v51 = 102ull;
+  uint8_t v52 = 102ull;
+  uint8_t v53 = 102ull;
+  uint8_t v54 = 102ull;
+  uint8_t v55 = 102ull;
+  uint8_t v56 = 102ull;
+  uint8_t v57 = 102ull;
+  uint8_t v58 = 102ull;
+  uint8_t v59 = 102ull;
+  uint8_t v60 = 102ull;
+  uint8_t v61 = 102ull;
+  uint8_t v62 = 102ull;
+  uint8_t v63 = 102ull;
+  uint8_t v64 = 102ull;
+  uint8_t v65 = 102ull;
+  uint8_t v66 = 102ull;
+  uint8_t v67 = 102ull;
+  uint8_t v68 = 102ull;
+  uint8_t v69 = 102ull;
+  uint8_t v70 = 102ull;
+  uint8_t v71 = 102ull;
+  uint8_t v72 = 102ull;
+  auto v73 = std::array<uint8_t, 32>{
+      std::move(v41), std::move(v42), std::move(v43), std::move(v44), std::move(v45),
+      std::move(v46), std::move(v47), std::move(v48), std::move(v49), std::move(v50),
+      std::move(v51), std::move(v52), std::move(v53), std::move(v54), std::move(v55),
+      std::move(v56), std::move(v57), std::move(v58), std::move(v59), std::move(v60),
+      std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
+      std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
+      std::move(v71), std::move(v72)};
+  v40.set_variant(std::move(v73));
+  v1.u2 = std::move(v40);
+
+  uint64_t v74 = 8608480567731124087ull;
+  v1.f5 = std::move(v74);
+
+  uint64_t v75 = 9838263505978427528ull;
+  v1.f6 = std::move(v75);
+
+  conformance::UnionSize36Align4 v76;
+
+  uint8_t v77 = 153ull;
+  uint8_t v78 = 153ull;
+  uint8_t v79 = 153ull;
+  uint8_t v80 = 153ull;
+  uint8_t v81 = 153ull;
+  uint8_t v82 = 153ull;
+  uint8_t v83 = 153ull;
+  uint8_t v84 = 153ull;
+  uint8_t v85 = 153ull;
+  uint8_t v86 = 153ull;
+  uint8_t v87 = 153ull;
+  uint8_t v88 = 153ull;
+  uint8_t v89 = 153ull;
+  uint8_t v90 = 153ull;
+  uint8_t v91 = 153ull;
+  uint8_t v92 = 153ull;
+  uint8_t v93 = 153ull;
+  uint8_t v94 = 153ull;
+  uint8_t v95 = 153ull;
+  uint8_t v96 = 153ull;
+  uint8_t v97 = 153ull;
+  uint8_t v98 = 153ull;
+  uint8_t v99 = 153ull;
+  uint8_t v100 = 153ull;
+  uint8_t v101 = 153ull;
+  uint8_t v102 = 153ull;
+  uint8_t v103 = 153ull;
+  uint8_t v104 = 153ull;
+  uint8_t v105 = 153ull;
+  uint8_t v106 = 153ull;
+  uint8_t v107 = 153ull;
+  uint8_t v108 = 153ull;
+  auto v109 = std::array<uint8_t, 32>{
+      std::move(v77),  std::move(v78),  std::move(v79),  std::move(v80),  std::move(v81),
+      std::move(v82),  std::move(v83),  std::move(v84),  std::move(v85),  std::move(v86),
+      std::move(v87),  std::move(v88),  std::move(v89),  std::move(v90),  std::move(v91),
+      std::move(v92),  std::move(v93),  std::move(v94),  std::move(v95),  std::move(v96),
+      std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
+      std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
+      std::move(v107), std::move(v108)};
+  v76.set_variant(std::move(v109));
+  v1.u3 = std::move(v76);
+
+  uint64_t v110 = 12297829382473034410ull;
+  v1.f7 = std::move(v110);
+
+  std::unique_ptr<conformance::Size8Align8> v111 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v112 = 17216961135462248174ull;
+  v111->data = std::move(v112);
+  v1.p1 = std::move(v111);
+
+  uint64_t v113 = 13527612320720337851ull;
+  v1.f8 = std::move(v113);
+
+  std::unique_ptr<conformance::Size8Align8> v114 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v115 = 17216961135462248174ull;
+  v114->data = std::move(v115);
+  v1.p2 = std::move(v114);
+
+  uint64_t v116 = 15987178197214944733ull;
+  v1.f9 = std::move(v116);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, NoCodingTablesStressor_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+      0x22, 0x22, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x44, 0x44, 0x44, 0x44,
+      0x44, 0x44, 0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x88,
+      0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
+      0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99,
+      0x99, 0x99, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+      0xee, 0xee, 0xee,
+
+  };
+
+  conformance::NoCodingTablesStressor v1;
+
+  uint64_t v2 = 1229782938247303441ull;
+  v1.f1 = std::move(v2);
+
+  uint64_t v3 = 2459565876494606882ull;
+  v1.f2 = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 51ull;
+  uint8_t v6 = 51ull;
+  uint8_t v7 = 51ull;
+  uint8_t v8 = 51ull;
+  uint8_t v9 = 51ull;
+  uint8_t v10 = 51ull;
+  uint8_t v11 = 51ull;
+  uint8_t v12 = 51ull;
+  uint8_t v13 = 51ull;
+  uint8_t v14 = 51ull;
+  uint8_t v15 = 51ull;
+  uint8_t v16 = 51ull;
+  uint8_t v17 = 51ull;
+  uint8_t v18 = 51ull;
+  uint8_t v19 = 51ull;
+  uint8_t v20 = 51ull;
+  uint8_t v21 = 51ull;
+  uint8_t v22 = 51ull;
+  uint8_t v23 = 51ull;
+  uint8_t v24 = 51ull;
+  uint8_t v25 = 51ull;
+  uint8_t v26 = 51ull;
+  uint8_t v27 = 51ull;
+  uint8_t v28 = 51ull;
+  uint8_t v29 = 51ull;
+  uint8_t v30 = 51ull;
+  uint8_t v31 = 51ull;
+  uint8_t v32 = 51ull;
+  uint8_t v33 = 51ull;
+  uint8_t v34 = 51ull;
+  uint8_t v35 = 51ull;
+  uint8_t v36 = 51ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v1.u1 = std::move(v4);
+
+  uint64_t v38 = 4919131752989213764ull;
+  v1.f3 = std::move(v38);
+
+  uint64_t v39 = 6148914691236517205ull;
+  v1.f4 = std::move(v39);
+
+  conformance::UnionSize36Align4 v40;
+
+  uint8_t v41 = 102ull;
+  uint8_t v42 = 102ull;
+  uint8_t v43 = 102ull;
+  uint8_t v44 = 102ull;
+  uint8_t v45 = 102ull;
+  uint8_t v46 = 102ull;
+  uint8_t v47 = 102ull;
+  uint8_t v48 = 102ull;
+  uint8_t v49 = 102ull;
+  uint8_t v50 = 102ull;
+  uint8_t v51 = 102ull;
+  uint8_t v52 = 102ull;
+  uint8_t v53 = 102ull;
+  uint8_t v54 = 102ull;
+  uint8_t v55 = 102ull;
+  uint8_t v56 = 102ull;
+  uint8_t v57 = 102ull;
+  uint8_t v58 = 102ull;
+  uint8_t v59 = 102ull;
+  uint8_t v60 = 102ull;
+  uint8_t v61 = 102ull;
+  uint8_t v62 = 102ull;
+  uint8_t v63 = 102ull;
+  uint8_t v64 = 102ull;
+  uint8_t v65 = 102ull;
+  uint8_t v66 = 102ull;
+  uint8_t v67 = 102ull;
+  uint8_t v68 = 102ull;
+  uint8_t v69 = 102ull;
+  uint8_t v70 = 102ull;
+  uint8_t v71 = 102ull;
+  uint8_t v72 = 102ull;
+  auto v73 = std::array<uint8_t, 32>{
+      std::move(v41), std::move(v42), std::move(v43), std::move(v44), std::move(v45),
+      std::move(v46), std::move(v47), std::move(v48), std::move(v49), std::move(v50),
+      std::move(v51), std::move(v52), std::move(v53), std::move(v54), std::move(v55),
+      std::move(v56), std::move(v57), std::move(v58), std::move(v59), std::move(v60),
+      std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
+      std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
+      std::move(v71), std::move(v72)};
+  v40.set_variant(std::move(v73));
+  v1.u2 = std::move(v40);
+
+  uint64_t v74 = 8608480567731124087ull;
+  v1.f5 = std::move(v74);
+
+  uint64_t v75 = 9838263505978427528ull;
+  v1.f6 = std::move(v75);
+
+  conformance::UnionSize36Align4 v76;
+
+  uint8_t v77 = 153ull;
+  uint8_t v78 = 153ull;
+  uint8_t v79 = 153ull;
+  uint8_t v80 = 153ull;
+  uint8_t v81 = 153ull;
+  uint8_t v82 = 153ull;
+  uint8_t v83 = 153ull;
+  uint8_t v84 = 153ull;
+  uint8_t v85 = 153ull;
+  uint8_t v86 = 153ull;
+  uint8_t v87 = 153ull;
+  uint8_t v88 = 153ull;
+  uint8_t v89 = 153ull;
+  uint8_t v90 = 153ull;
+  uint8_t v91 = 153ull;
+  uint8_t v92 = 153ull;
+  uint8_t v93 = 153ull;
+  uint8_t v94 = 153ull;
+  uint8_t v95 = 153ull;
+  uint8_t v96 = 153ull;
+  uint8_t v97 = 153ull;
+  uint8_t v98 = 153ull;
+  uint8_t v99 = 153ull;
+  uint8_t v100 = 153ull;
+  uint8_t v101 = 153ull;
+  uint8_t v102 = 153ull;
+  uint8_t v103 = 153ull;
+  uint8_t v104 = 153ull;
+  uint8_t v105 = 153ull;
+  uint8_t v106 = 153ull;
+  uint8_t v107 = 153ull;
+  uint8_t v108 = 153ull;
+  auto v109 = std::array<uint8_t, 32>{
+      std::move(v77),  std::move(v78),  std::move(v79),  std::move(v80),  std::move(v81),
+      std::move(v82),  std::move(v83),  std::move(v84),  std::move(v85),  std::move(v86),
+      std::move(v87),  std::move(v88),  std::move(v89),  std::move(v90),  std::move(v91),
+      std::move(v92),  std::move(v93),  std::move(v94),  std::move(v95),  std::move(v96),
+      std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
+      std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
+      std::move(v107), std::move(v108)};
+  v76.set_variant(std::move(v109));
+  v1.u3 = std::move(v76);
+
+  uint64_t v110 = 12297829382473034410ull;
+  v1.f7 = std::move(v110);
+
+  std::unique_ptr<conformance::Size8Align8> v111 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v112 = 17216961135462248174ull;
+  v111->data = std::move(v112);
+  v1.p1 = std::move(v111);
+
+  uint64_t v113 = 13527612320720337851ull;
+  v1.f8 = std::move(v113);
+
+  std::unique_ptr<conformance::Size8Align8> v114 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v115 = 17216961135462248174ull;
+  v114->data = std::move(v115);
+  v1.p2 = std::move(v114);
+
+  uint64_t v116 = 15987178197214944733ull;
+  v1.f9 = std::move(v116);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1Case1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74,
+      0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08, 0x68,
+      0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+      0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1 v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1 v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3.the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1Case1_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74,
+      0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00,
+      0x00, 0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f,
+      0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1 v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1 v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  conformance::UnionSize8Align4 v5;
+
+  uint32_t v6 = 202050057ull;
+  v5.set_variant(std::move(v6));
+  v3.the_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74,
+      0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05,
+      0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,
+      0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e,
+      0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v5 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v6 = 202050057ull;
+  v5->set_variant(std::move(v6));
+  v3.opt_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1WithOptUnion> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d, 0x69, 0x67, 0x72, 0x61, 0x74,
+      0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00, 0x01, 0x02,
+      0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00,
+      0x00, 0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f,
+      0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  std::unique_ptr<conformance::UnionSize8Align4> v5 =
+      std::make_unique<conformance::UnionSize8Align4>();
+
+  uint32_t v6 = 202050057ull;
+  v5->set_variant(std::move(v6));
+  v3.opt_union = std::move(v5);
+
+  uint32_t v7 = 134678021ull;
+  v3.after = std::move(v7);
+  std::vector<conformance::Sandwich1WithOptUnion> v8;
+  v8.push_back(std::move(v3));
+  v1.v = std::move(v8);
+
+  std::string v9("hard transitions suck!");
+  v1.after = std::move(v9);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionAbsent_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d,
+      0x69, 0x67, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b,
+      0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+      0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f,
+      0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  uint32_t v5 = 134678021ull;
+  v3.after = std::move(v5);
+  std::vector<conformance::Sandwich1WithOptUnion> v6;
+  v6.push_back(std::move(v3));
+  v1.v = std::move(v6);
+
+  std::string v7("hard transitions suck!");
+  v1.after = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, OutOfLineSandwich1WithOptUnionAbsent_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x6d,
+      0x69, 0x67, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x72, 0x6f, 0x63, 0x6b,
+      0x21, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00,
+      0x00, 0x00, 0x68, 0x61, 0x72, 0x64, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74,
+      0x69, 0x6f, 0x6e, 0x73, 0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,
+
+  };
+
+  conformance::OutOfLineSandwich1WithOptUnion v1;
+
+  std::string v2("soft migrations rock!");
+  v1.before = std::move(v2);
+
+  conformance::Sandwich1WithOptUnion v3;
+
+  uint32_t v4 = 67305985ull;
+  v3.before = std::move(v4);
+
+  uint32_t v5 = 134678021ull;
+  v3.after = std::move(v5);
+  std::vector<conformance::Sandwich1WithOptUnion> v6;
+  v6.push_back(std::move(v3));
+  v1.v = std::move(v6);
+
+  std::string v7("hard transitions suck!");
+  v1.after = std::move(v7);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Regression4_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-      0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+      0x09, 0x0a, 0x0b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
 
-  conformance::Regression1 v1;
+  conformance::Regression4 v1;
 
   uint8_t v2 = 1ull;
   v1.f1 = std::move(v2);
@@ -6908,32 +10251,41 @@ TEST(Conformance, Regression1_Decode) {
   uint32_t v3 = 2ull;
   v1.f2 = std::move(v3);
 
-  uint8_t v4 = 3ull;
-  v1.f3 = std::move(v4);
+  conformance::StructSize3Align1 v4;
 
-  uint16_t v5 = 4ull;
-  v1.f4 = std::move(v5);
+  uint8_t v5 = 9ull;
+  uint8_t v6 = 10ull;
+  uint8_t v7 = 11ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4.three_bytes = std::move(v8);
+  v1.s1 = std::move(v4);
 
-  uint64_t v6 = 5ull;
-  v1.f5 = std::move(v6);
+  uint8_t v9 = 3ull;
+  v1.f3 = std::move(v9);
 
-  uint8_t v7 = 6ull;
-  v1.f6 = std::move(v7);
+  uint16_t v10 = 4ull;
+  v1.f4 = std::move(v10);
+
+  uint64_t v11 = 5ull;
+  v1.f5 = std::move(v11);
+
+  uint8_t v12 = 6ull;
+  v1.f6 = std::move(v12);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Regression1_v1_Decode) {
+TEST(Conformance, Regression4_v1_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-      0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+      0x09, 0x0a, 0x0b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
 
-  conformance::Regression1 v1;
+  conformance::Regression4 v1;
 
   uint8_t v2 = 1ull;
   v1.f1 = std::move(v2);
@@ -6941,43 +10293,629 @@ TEST(Conformance, Regression1_v1_Decode) {
   uint32_t v3 = 2ull;
   v1.f2 = std::move(v3);
 
-  uint8_t v4 = 3ull;
-  v1.f3 = std::move(v4);
+  conformance::StructSize3Align1 v4;
 
-  uint16_t v5 = 4ull;
-  v1.f4 = std::move(v5);
+  uint8_t v5 = 9ull;
+  uint8_t v6 = 10ull;
+  uint8_t v7 = 11ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4.three_bytes = std::move(v8);
+  v1.s1 = std::move(v4);
 
-  uint64_t v6 = 5ull;
-  v1.f5 = std::move(v6);
+  uint8_t v9 = 3ull;
+  v1.f3 = std::move(v9);
 
-  uint8_t v7 = 6ull;
-  v1.f6 = std::move(v7);
+  uint16_t v10 = 4ull;
+  v1.f4 = std::move(v10);
 
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
+  uint64_t v11 = 5ull;
+  v1.f5 = std::move(v11);
 
-TEST(Conformance, Regression3Absent_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::Regression3 v1;
+  uint8_t v12 = 6ull;
+  v1.f6 = std::move(v12);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Regression3Absent_v1_Decode) {
+TEST(Conformance, Sandwich4Align8_Decode) {
   auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5,
+      0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4,
+      0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0x05, 0x06, 0x07, 0x08,
+      0x00, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
 
   };
 
-  conformance::Regression3 v1;
+  conformance::Sandwich4Align8 v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  uint64_t v39 = 1157159078456920585ull;
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich4Align8_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5,
+      0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3,
+      0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+
+  };
+
+  conformance::Sandwich4Align8 v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  uint64_t v39 = 1157159078456920585ull;
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich4Align8WithPointer_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3,
+      0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1,
+      0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+      0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+
+  };
+
+  conformance::Sandwich4Align8WithPointer v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  std::unique_ptr<conformance::Size8Align8> v39 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v40 = 1157159078456920585ull;
+  v39->data = std::move(v40);
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich4Align8WithPointer_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa,
+      0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9,
+      0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+
+  };
+
+  conformance::Sandwich4Align8WithPointer v1;
+
+  conformance::Sandwich4 v2;
+
+  uint32_t v3 = 67305985ull;
+  v2.before = std::move(v3);
+
+  conformance::UnionSize36Align4 v4;
+
+  uint8_t v5 = 160ull;
+  uint8_t v6 = 161ull;
+  uint8_t v7 = 162ull;
+  uint8_t v8 = 163ull;
+  uint8_t v9 = 164ull;
+  uint8_t v10 = 165ull;
+  uint8_t v11 = 166ull;
+  uint8_t v12 = 167ull;
+  uint8_t v13 = 168ull;
+  uint8_t v14 = 169ull;
+  uint8_t v15 = 170ull;
+  uint8_t v16 = 171ull;
+  uint8_t v17 = 172ull;
+  uint8_t v18 = 173ull;
+  uint8_t v19 = 174ull;
+  uint8_t v20 = 175ull;
+  uint8_t v21 = 176ull;
+  uint8_t v22 = 177ull;
+  uint8_t v23 = 178ull;
+  uint8_t v24 = 179ull;
+  uint8_t v25 = 180ull;
+  uint8_t v26 = 181ull;
+  uint8_t v27 = 182ull;
+  uint8_t v28 = 183ull;
+  uint8_t v29 = 184ull;
+  uint8_t v30 = 185ull;
+  uint8_t v31 = 186ull;
+  uint8_t v32 = 187ull;
+  uint8_t v33 = 188ull;
+  uint8_t v34 = 189ull;
+  uint8_t v35 = 190ull;
+  uint8_t v36 = 191ull;
+  auto v37 = std::array<uint8_t, 32>{
+      std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),  std::move(v9),
+      std::move(v10), std::move(v11), std::move(v12), std::move(v13), std::move(v14),
+      std::move(v15), std::move(v16), std::move(v17), std::move(v18), std::move(v19),
+      std::move(v20), std::move(v21), std::move(v22), std::move(v23), std::move(v24),
+      std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
+      std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
+      std::move(v35), std::move(v36)};
+  v4.set_variant(std::move(v37));
+  v2.the_union = std::move(v4);
+
+  uint32_t v38 = 134678021ull;
+  v2.after = std::move(v38);
+  v1.sandwich4 = std::move(v2);
+
+  std::unique_ptr<conformance::Size8Align8> v39 = std::make_unique<conformance::Size8Align8>();
+
+  uint64_t v40 = 1157159078456920585ull;
+  v39->data = std::move(v40);
+  v1.alignment8_enforcement = std::move(v39);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich8Case1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b,
+      0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich8 v1;
+
+  uint64_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionOfUnion v3;
+
+  conformance::UnionSize8Align4 v4;
+
+  uint32_t v5 = 202050057ull;
+  v4.set_variant(std::move(v5));
+  v3.set_size8align4(std::move(v4));
+  v1.union_of_union = std::move(v3);
+
+  uint32_t v6 = 134678021ull;
+  v1.after = std::move(v6);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich8Case1_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich8 v1;
+
+  uint64_t v2 = 67305985ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionOfUnion v3;
+
+  conformance::UnionSize8Align4 v4;
+
+  uint32_t v5 = 202050057ull;
+  v4.set_variant(std::move(v5));
+  v3.set_size8align4(std::move(v4));
+  v1.union_of_union = std::move(v3);
+
+  uint32_t v6 = 134678021ull;
+  v1.after = std::move(v6);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich9Case1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x11, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x10, 0x11,
+      0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich9 v1;
+
+  uint16_t v2 = 513ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionWithVectorOfVectors v3;
+
+  std::unique_ptr<conformance::StructSize3Align1> v4 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v5 = 16ull;
+  uint8_t v6 = 17ull;
+  uint8_t v7 = 18ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4->three_bytes = std::move(v8);
+  std::unique_ptr<conformance::StructSize3Align1> v9 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v10 = 19ull;
+  uint8_t v11 = 20ull;
+  uint8_t v12 = 21ull;
+  auto v13 = std::array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
+  v9->three_bytes = std::move(v13);
+  std::vector<std::unique_ptr<conformance::StructSize3Align1>> v14;
+  v14.push_back(std::move(v4));
+  v14.push_back(std::move(v9));
+  std::vector<std::vector<std::unique_ptr<conformance::StructSize3Align1>>> v15;
+  v15.push_back(std::move(v14));
+  v3.set_v(std::move(v15));
+  v1.the_union = std::move(v3);
+
+  uint16_t v16 = 4625ull;
+  v1.after = std::move(v16);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, Sandwich9Case1_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0x11, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x10,
+      0x11, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::Sandwich9 v1;
+
+  uint16_t v2 = 513ull;
+  v1.before = std::move(v2);
+
+  conformance::UnionWithVectorOfVectors v3;
+
+  std::unique_ptr<conformance::StructSize3Align1> v4 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v5 = 16ull;
+  uint8_t v6 = 17ull;
+  uint8_t v7 = 18ull;
+  auto v8 = std::array<uint8_t, 3>{std::move(v5), std::move(v6), std::move(v7)};
+  v4->three_bytes = std::move(v8);
+  std::unique_ptr<conformance::StructSize3Align1> v9 =
+      std::make_unique<conformance::StructSize3Align1>();
+
+  uint8_t v10 = 19ull;
+  uint8_t v11 = 20ull;
+  uint8_t v12 = 21ull;
+  auto v13 = std::array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
+  v9->three_bytes = std::move(v13);
+  std::vector<std::unique_ptr<conformance::StructSize3Align1>> v14;
+  v14.push_back(std::move(v4));
+  v14.push_back(std::move(v9));
+  std::vector<std::vector<std::unique_ptr<conformance::StructSize3Align1>>> v15;
+  v15.push_back(std::move(v14));
+  v3.set_v(std::move(v15));
+  v1.the_union = std::move(v3);
+
+  uint16_t v16 = 4625ull;
+  v1.after = std::move(v16);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, SimpleTableArrayStruct_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0x00, 0x00,
+      0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SimpleTableArrayStruct v1;
+
+  conformance::TransformerSimpleTable v2;
+
+  uint32_t v3 = 2745344416ull;
+  v2.set_value(std::move(v3));
+  conformance::TransformerSimpleTable v4;
+
+  uint32_t v5 = 3014832560ull;
+  v4.set_value(std::move(v5));
+  auto v6 = std::array<conformance::TransformerSimpleTable, 2>{std::move(v2), std::move(v4)};
+  v1.the_array = std::move(v6);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, SimpleTableArrayStruct_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xa0, 0xa1, 0xa2, 0xa3, 0x00, 0x00,
+      0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::SimpleTableArrayStruct v1;
+
+  conformance::TransformerSimpleTable v2;
+
+  uint32_t v3 = 2745344416ull;
+  v2.set_value(std::move(v3));
+  conformance::TransformerSimpleTable v4;
+
+  uint32_t v5 = 3014832560ull;
+  v4.set_value(std::move(v5));
+  auto v6 = std::array<conformance::TransformerSimpleTable, 2>{std::move(v2), std::move(v4)};
+  v1.the_array = std::move(v6);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, StringUnionVector_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x68, 0x65, 0x6c, 0x6c,
+      0x6f, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xaa, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::StringUnionVector v1;
+
+  std::unique_ptr<conformance::StringUnion> v2 = std::make_unique<conformance::StringUnion>();
+
+  std::string v3("hello");
+  v2->set_s(std::move(v3));
+  std::unique_ptr<conformance::StringUnion> v4 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v5 = 170ull;
+  v4->set_u8(std::move(v5));
+  std::unique_ptr<conformance::StringUnion> v6 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v7 = 187ull;
+  v6->set_u8(std::move(v7));
+  std::vector<std::unique_ptr<conformance::StringUnion>> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v4));
+  v8.push_back(std::move(v6));
+  v1.the_vector = std::move(v8);
+
+  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
+  EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, StringUnionVector_v1_Decode) {
+  auto input = std::vector<uint8_t>{
+      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x05,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+
+  conformance::StringUnionVector v1;
+
+  std::unique_ptr<conformance::StringUnion> v2 = std::make_unique<conformance::StringUnion>();
+
+  std::string v3("hello");
+  v2->set_s(std::move(v3));
+  std::unique_ptr<conformance::StringUnion> v4 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v5 = 170ull;
+  v4->set_u8(std::move(v5));
+  std::unique_ptr<conformance::StringUnion> v6 = std::make_unique<conformance::StringUnion>();
+
+  uint8_t v7 = 187ull;
+  v6->set_u8(std::move(v7));
+  std::vector<std::unique_ptr<conformance::StringUnion>> v8;
+  v8.push_back(std::move(v2));
+  v8.push_back(std::move(v4));
+  v8.push_back(std::move(v6));
+  v1.the_vector = std::move(v8);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
@@ -7039,330 +10977,6 @@ TEST(Conformance, UnionMigration_SingleVariant_v1_Decode) {
   uint32_t v3 = 42ull;
   v2.set_x(std::move(v3));
   v1.u = std::move(v2);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize8Alignment4_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x02, 0x00,
-      0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize8Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize8Alignment4 v3;
-
-  uint32_t v4 = 4ull;
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v5 = 20ull;
-  v1.after = std::move(v5);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize8Alignment4_v1_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize8Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize8Alignment4 v3;
-
-  uint32_t v4 = 4ull;
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v5 = 20ull;
-  v1.after = std::move(v5);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize12Alignment4_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
-      0x05, 0x06, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize12Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize12Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
-                                    std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
-  v1.value = std::move(v3);
-
-  uint32_t v11 = 20ull;
-  v1.after = std::move(v11);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize12Alignment4_v1_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize12Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize12Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  auto v10 = std::array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
-                                    std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
-  v1.value = std::move(v3);
-
-  uint32_t v11 = 20ull;
-  v1.after = std::move(v11);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize24Alignment8_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize24Alignment8 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize24Alignment8 v3;
-
-  conformance::StructSize16Alignment8 v4;
-
-  uint64_t v5 = 1ull;
-  v4.f1 = std::move(v5);
-
-  uint64_t v6 = 2ull;
-  v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v7 = 20ull;
-  v1.after = std::move(v7);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize24Alignment8_v1_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize24Alignment8 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize24Alignment8 v3;
-
-  conformance::StructSize16Alignment8 v4;
-
-  uint64_t v5 = 1ull;
-  v4.f1 = std::move(v5);
-
-  uint64_t v6 = 2ull;
-  v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
-  v1.value = std::move(v3);
-
-  uint32_t v7 = 20ull;
-  v1.after = std::move(v7);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize36Alignment4_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02,
-      0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
-      0x1d, 0x1e, 0x1f, 0x20, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-  };
-
-  conformance::SandwichUnionSize36Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize36Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  uint8_t v10 = 7ull;
-  uint8_t v11 = 8ull;
-  uint8_t v12 = 9ull;
-  uint8_t v13 = 10ull;
-  uint8_t v14 = 11ull;
-  uint8_t v15 = 12ull;
-  uint8_t v16 = 13ull;
-  uint8_t v17 = 14ull;
-  uint8_t v18 = 15ull;
-  uint8_t v19 = 16ull;
-  uint8_t v20 = 17ull;
-  uint8_t v21 = 18ull;
-  uint8_t v22 = 19ull;
-  uint8_t v23 = 20ull;
-  uint8_t v24 = 21ull;
-  uint8_t v25 = 22ull;
-  uint8_t v26 = 23ull;
-  uint8_t v27 = 24ull;
-  uint8_t v28 = 25ull;
-  uint8_t v29 = 26ull;
-  uint8_t v30 = 27ull;
-  uint8_t v31 = 28ull;
-  uint8_t v32 = 29ull;
-  uint8_t v33 = 30ull;
-  uint8_t v34 = 31ull;
-  uint8_t v35 = 32ull;
-  auto v36 = std::array<uint8_t, 32>{
-      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
-      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
-      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
-      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
-      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
-      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
-      std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
-  v1.value = std::move(v3);
-
-  uint32_t v37 = 20ull;
-  v1.after = std::move(v37);
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
-  EXPECT_TRUE(::fidl::Equals(v1, expected));
-}
-
-TEST(Conformance, UnionSize36Alignment4_v1_Decode) {
-  auto input = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04,
-      0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13,
-      0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-
-  };
-
-  conformance::SandwichUnionSize36Alignment4 v1;
-
-  uint32_t v2 = 10ull;
-  v1.before = std::move(v2);
-
-  conformance::UnionSize36Alignment4 v3;
-
-  uint8_t v4 = 1ull;
-  uint8_t v5 = 2ull;
-  uint8_t v6 = 3ull;
-  uint8_t v7 = 4ull;
-  uint8_t v8 = 5ull;
-  uint8_t v9 = 6ull;
-  uint8_t v10 = 7ull;
-  uint8_t v11 = 8ull;
-  uint8_t v12 = 9ull;
-  uint8_t v13 = 10ull;
-  uint8_t v14 = 11ull;
-  uint8_t v15 = 12ull;
-  uint8_t v16 = 13ull;
-  uint8_t v17 = 14ull;
-  uint8_t v18 = 15ull;
-  uint8_t v19 = 16ull;
-  uint8_t v20 = 17ull;
-  uint8_t v21 = 18ull;
-  uint8_t v22 = 19ull;
-  uint8_t v23 = 20ull;
-  uint8_t v24 = 21ull;
-  uint8_t v25 = 22ull;
-  uint8_t v26 = 23ull;
-  uint8_t v27 = 24ull;
-  uint8_t v28 = 25ull;
-  uint8_t v29 = 26ull;
-  uint8_t v30 = 27ull;
-  uint8_t v31 = 28ull;
-  uint8_t v32 = 29ull;
-  uint8_t v33 = 30ull;
-  uint8_t v34 = 31ull;
-  uint8_t v35 = 32ull;
-  auto v36 = std::array<uint8_t, 32>{
-      std::move(v4),  std::move(v5),  std::move(v6),  std::move(v7),  std::move(v8),
-      std::move(v9),  std::move(v10), std::move(v11), std::move(v12), std::move(v13),
-      std::move(v14), std::move(v15), std::move(v16), std::move(v17), std::move(v18),
-      std::move(v19), std::move(v20), std::move(v21), std::move(v22), std::move(v23),
-      std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
-      std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
-      std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
-  v1.value = std::move(v3);
-
-  uint32_t v37 = 20ull;
-  v1.after = std::move(v37);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
