@@ -802,7 +802,9 @@ void CGenerator::GenerateTaggedUnionDeclaration(std::string_view name,
 
 void CGenerator::GenerateTaggedXUnionDeclaration(std::string_view name,
                                                  const std::vector<Member>& members) {
-  // XUnions are (intentionally) unimplemented for C bindings.
+  file_ << "struct " << name << " {\n";
+  file_ << kIndent << "fidl_xunion_t xunion_header;\n";
+  file_ << "};\n";
 }
 
 std::map<const flat::Decl*, CGenerator::NamedBits> CGenerator::NameBits(
