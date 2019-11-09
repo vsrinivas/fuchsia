@@ -274,6 +274,8 @@ func (i *Instance) CheckForLogMessage(msg string) error {
 		if err != nil {
 			panic(err)
 		}
+		// Save the QEMU output for test logging of stdout
+		fmt.Print(line)
 		if strings.Contains(line, msg) {
 			return nil
 		}
