@@ -24,6 +24,7 @@ rustc_binary("bin") {
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
+    "//src/identity/lib/identity_key_manager",
     "//src/identity/lib/token_manager",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:failure",

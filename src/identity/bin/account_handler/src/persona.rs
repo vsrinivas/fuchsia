@@ -19,6 +19,7 @@ use fidl_fuchsia_identity_keys::KeyManagerMarker;
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
+use identity_key_manager::{KeyManager, KeyManagerContext};
 use log::{error, warn};
 use std::sync::Arc;
 use token_manager::TokenManagerContext;
@@ -52,6 +53,9 @@ pub struct Persona {
     /// The token manager to be used for authentication token requests.
     token_manager: Arc<TokenManager>,
 
+    /// The key manager to be used for synchronized key requests.
+    key_manager: Arc<KeyManager>,
+
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
 
@@ -71,6 +75,7 @@ impl Persona {
         account_id: LocalAccountId,
         lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
+        key_manager: Arc<KeyManager>,
         task_group: TaskGroup,
         inspect_parent: &Node,
     ) -> Persona {
@@ -80,6 +85,7 @@ impl Persona {
             _account_id: account_id,
             lifetime,
             token_manager,
+            key_manager,
             task_group,
             inspect: persona_inspect,
         }
@@ -141,8 +147,7 @@ impl Persona {
                 responder.send(&mut response)?;
             }
             PersonaRequest::GetKeyManager { application_url, key_manager, responder } => {
-                let mut response =
-                    self.get_key_manager(context, application_url, key_manager).await;
+                let mut response = self.get_key_manager(application_url, key_manager).await;
                 responder.send(&mut response)?;
             }
         }
@@ -201,12 +206,28 @@ impl Persona {
 
     async fn get_key_manager<'a>(
         &'a self,
-        _context: &'a PersonaContext,
-        _application_url: String,
-        _key_manager_server_end: ServerEnd<KeyManagerMarker>,
+        application_url: String,
+        key_manager_server_end: ServerEnd<KeyManagerMarker>,
     ) -> Result<(), ApiError> {
-        // TODO(satsukiu): Implement KeyManager API
-        Err(ApiError::UnsupportedOperation)
+        let key_manager_clone = Arc::clone(&self.key_manager);
+        let key_manager_context = KeyManagerContext::new(application_url);
+        let stream = key_manager_server_end.into_stream().map_err(|err| {
+            error!("Error opening KeyManager channel {:?}", err);
+            ApiError::Resource
+        })?;
+        self.key_manager
+            .task_group()
+            .spawn(|cancel| {
+                async move {
+                    key_manager_clone
+                        .handle_requests_from_stream(&key_manager_context, stream, cancel)
+                        .await
+                        .unwrap_or_else(|e| error!("Error handling KeyManager channel {:?}", e))
+                }
+            })
+            .await
+            .map_err(|_| ApiError::RemovalInProgress)?;
+        Ok(())
     }
 }
 
@@ -215,7 +236,7 @@ mod tests {
     use super::*;
     use crate::auth_provider_supplier::AuthProviderSupplier;
     use crate::test_util::*;
-    use fidl::endpoints::create_endpoints;
+    use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
@@ -228,24 +249,24 @@ mod tests {
     struct Test {
         _location: TempLocation,
         token_manager: Arc<TokenManager>,
+        key_manager: Arc<KeyManager>,
     }
 
     impl Test {
         fn new() -> Test {
             let location = TempLocation::new();
-            let (account_handler_context_client_end, _) =
-                create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            let (account_handler_context_proxy, _) =
+                create_proxy::<AccountHandlerContextMarker>().unwrap();
             let token_manager = Arc::new(
                 TokenManager::new(
                     &location.test_path(),
-                    AuthProviderSupplier::new(
-                        account_handler_context_client_end.into_proxy().unwrap(),
-                    ),
+                    AuthProviderSupplier::new(account_handler_context_proxy),
                     TaskGroup::new(),
                 )
                 .unwrap(),
             );
-            Test { _location: location, token_manager }
+            let key_manager = Arc::new(KeyManager::new(TaskGroup::new()));
+            Test { _location: location, token_manager, key_manager }
         }
 
         fn create_persona(&self) -> Persona {
@@ -255,6 +276,7 @@ mod tests {
                 TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
                 Arc::clone(&self.token_manager),
+                Arc::clone(&self.key_manager),
                 TaskGroup::new(),
                 inspector.root(),
             )
@@ -267,6 +289,7 @@ mod tests {
                 TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Ephemeral),
                 Arc::clone(&self.token_manager),
+                Arc::clone(&self.key_manager),
                 TaskGroup::new(),
                 inspector.root(),
             )
@@ -277,16 +300,12 @@ mod tests {
             TestFn: FnOnce(PersonaProxy) -> Fut,
             Fut: Future<Output = Result<(), Error>>,
         {
-            let (persona_client_end, persona_server_end) =
-                create_endpoints::<PersonaMarker>().unwrap();
-            let persona_proxy = persona_client_end.into_proxy().unwrap();
-            let request_stream = persona_server_end.into_stream().unwrap();
+            let (persona_proxy, request_stream) =
+                create_proxy_and_stream::<PersonaMarker>().unwrap();
 
-            let (ui_context_provider_client_end, _) =
-                create_endpoints::<AuthenticationContextProviderMarker>().unwrap();
-            let persona_context = PersonaContext {
-                auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
-            };
+            let (auth_ui_context_provider, _) =
+                create_proxy::<AuthenticationContextProviderMarker>().unwrap();
+            let persona_context = PersonaContext { auth_ui_context_provider };
 
             let task_group = TaskGroup::new();
             task_group
@@ -363,8 +382,7 @@ mod tests {
         let mut test = Test::new();
         test.run(test.create_persona(), |proxy| {
             async move {
-                let (token_manager_client_end, token_manager_server_end) =
-                    create_endpoints().unwrap();
+                let (token_manager_proxy, token_manager_server_end) = create_proxy().unwrap();
                 assert_eq!(
                     proxy
                         .get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end)
@@ -373,7 +391,6 @@ mod tests {
                 );
 
                 // The token manager channel should now be usable.
-                let token_manager_proxy = token_manager_client_end.into_proxy().unwrap();
                 let mut app_config = create_dummy_app_config();
                 assert_eq!(
                     token_manager_proxy.list_profile_ids(&mut app_config).await?,
@@ -391,10 +408,16 @@ mod tests {
         let mut test = Test::new();
         test.run(test.create_persona(), |proxy| {
             async move {
-                let (_, key_manager_server_end) = create_endpoints().unwrap();
+                let (key_manager_proxy, key_manager_server_end) = create_proxy().unwrap();
+                assert!(proxy
+                    .get_key_manager(&TEST_APPLICATION_URL, key_manager_server_end)
+                    .await?
+                    .is_ok());
+
+                // Channel should be usable, but key manager isn't implemented yet.
                 assert_eq!(
-                    proxy.get_key_manager(&TEST_APPLICATION_URL, key_manager_server_end).await?,
-                    Err(ApiError::UnsupportedOperation)
+                    key_manager_proxy.delete_key_set("key-set").await?,
+                    Err(fidl_fuchsia_identity_keys::Error::UnsupportedOperation)
                 );
                 Ok(())
             }
