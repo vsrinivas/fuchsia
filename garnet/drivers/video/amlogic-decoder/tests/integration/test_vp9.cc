@@ -166,6 +166,9 @@ class TestVP9 {
               frames_to_return.push_back(frame);
             if (frame_count == 241)
               wait_valid.set_value();
+
+            if (frame_count % 5 == 0)
+              SetReallocateBuffersNextFrameForTesting(video.get());
           });
     }
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
@@ -502,6 +505,12 @@ class TestVP9 {
   static void ReturnFrame(AmlogicVideo* video,
                           std::shared_ptr<VideoFrame> frame) __TA_NO_THREAD_SAFETY_ANALYSIS {
     video->video_decoder_->ReturnFrame(frame);
+  }
+
+  static void SetReallocateBuffersNextFrameForTesting(AmlogicVideo* video)
+      __TA_NO_THREAD_SAFETY_ANALYSIS {
+    static_cast<Vp9Decoder*>(video->video_decoder_)
+        ->set_reallocate_buffers_next_frame_for_testing();
   }
 };
 

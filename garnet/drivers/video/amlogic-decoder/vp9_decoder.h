@@ -105,6 +105,10 @@ class Vp9Decoder : public VideoDecoder {
 
   void SetPausedAtEndOfStream();
 
+  void set_reallocate_buffers_next_frame_for_testing() {
+    reallocate_buffers_next_frame_for_testing_ = true;
+  }
+
  private:
   friend class Vp9UnitTest;
   friend class TestVP9;
@@ -207,6 +211,11 @@ class Vp9Decoder : public VideoDecoder {
 
     // This is decoded_frame_count_ when this frame was decoded into.
     uint32_t decoded_index = 0xffffffff;
+
+    // This is valid even after the VideoFrame is cleared out on resize.
+    uint32_t hw_width = 0;
+    uint32_t hw_height = 0;
+    int32_t client_refcount = 0;
   };
 
   struct MpredBuffer {
@@ -281,6 +290,10 @@ class Vp9Decoder : public VideoDecoder {
   uint32_t decoded_frame_count_ = 0;
 
   uint32_t frame_done_count_ = 0;
+
+  // This is used to force new buffers to be allocated without needing a test stream that
+  // resizes.
+  bool reallocate_buffers_next_frame_for_testing_ = false;
 
   PictureData last_frame_data_;
   PictureData current_frame_data_;

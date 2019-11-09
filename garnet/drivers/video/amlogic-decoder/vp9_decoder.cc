@@ -385,6 +385,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
     current_frame_->frame->has_pts = current_frame_data_.has_pts;
     current_frame_->frame->pts = current_frame_data_.pts;
     current_frame_->refcount++;
+    current_frame_->client_refcount++;
     notifier_(current_frame_->frame);
   }
 
@@ -481,6 +482,8 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
   assert(ref_frame->frame == frame);
   ref_frame->refcount--;
   assert(ref_frame->refcount >= 0);
+  ref_frame->client_refcount--;
+  assert(ref_frame->client_refcount >= 0);
 
   // If either of these bools is true, we know the decoder isn't running.  It's
   // fine that we don't check here that there's a frame with refcount 0 or check
@@ -686,8 +689,8 @@ void Vp9Decoder::ConfigureMotionPrediction() {
 
   bool last_frame_has_mv = last_frame_ && !last_frame_data_.keyframe &&
                            !last_frame_data_.intra_only &&
-                           current_frame_->frame->hw_width == last_frame_->frame->hw_width &&
-                           current_frame_->frame->hw_height == last_frame_->frame->hw_height &&
+                           current_frame_->frame->hw_width == last_frame_->hw_width &&
+                           current_frame_->frame->hw_height == last_frame_->hw_height &&
                            !current_frame_data_.error_resilient_mode && last_frame_data_.show_frame;
   HevcMpredCtrl4::Get()
       .ReadFrom(owner_->dosbus())
@@ -879,6 +882,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
 
   if (notifier_) {
     frame->refcount++;
+    frame->client_refcount++;
     notifier_(frame->frame);
   }
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
@@ -1004,10 +1008,11 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 
   // If !is_current_output_buffer_collection_usable_, then we don't support dynamic dimensions.
   bool buffers_allocated = !!frames_[0]->frame;
-  if (!buffers_allocated ||
+  if (!buffers_allocated || reallocate_buffers_next_frame_for_testing_ ||
       (is_current_output_buffer_collection_usable_ &&
        !is_current_output_buffer_collection_usable_(frames_.size(), coded_width, coded_height,
                                                     stride, display_width, display_height))) {
+    reallocate_buffers_next_frame_for_testing_ = false;
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
       // BufferCollectionInfo_2 settings/constraints vs. params on a thread
@@ -1062,6 +1067,14 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       // under video_decoder_lock_.  See comment on Vp9Decoder::Frame::frame for
       // more.
       frames_[i]->frame.reset();
+
+      // After the frames are cleared ReturnFrame can't be called on them, so we
+      // need to decrement the refcounts now. This is safe because we'll never
+      // try to modify the existing frames anymore and the clients can keep
+      // their own references.
+      assert(frames_[i]->refcount >= frames_[i]->client_refcount);
+      frames_[i]->refcount -= frames_[i]->client_refcount;
+      frames_[i]->client_refcount = 0;
     }
 
     uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
@@ -1142,6 +1155,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // from frame to frame of the same stream.  As long as the BufferCollection
   // can accomodate params (checked above), we don't need to re-allocate
   // buffers.
+  new_frame->hw_width = params->hw_width;
+  new_frame->hw_height = params->hw_height;
   new_frame->frame->hw_width = params->hw_width;
   new_frame->frame->hw_height = params->hw_height;
   new_frame->frame->coded_width = coded_width;
@@ -1219,18 +1234,18 @@ void Vp9Decoder::ConfigureReferenceFrameHardware() {
     Frame* frame = current_reference_frames_[i];
     if (!frame)
       continue;
-    Vp9dMppRefinfoData::Get().FromValue(frame->frame->hw_width).WriteTo(owner_->dosbus());
-    Vp9dMppRefinfoData::Get().FromValue(frame->frame->hw_height).WriteTo(owner_->dosbus());
+    Vp9dMppRefinfoData::Get().FromValue(frame->hw_width).WriteTo(owner_->dosbus());
+    Vp9dMppRefinfoData::Get().FromValue(frame->hw_height).WriteTo(owner_->dosbus());
 
-    if (current_frame_->frame->hw_width != frame->frame->hw_width ||
-        current_frame_->frame->hw_height != frame->frame->hw_height) {
+    if (current_frame_->hw_width != frame->hw_width ||
+        current_frame_->hw_height != frame->hw_height) {
       scale_mask |= 1 << i;
     }
     Vp9dMppRefinfoData::Get()
-        .FromValue((frame->frame->hw_width << 14) / current_frame_->frame->hw_width)
+        .FromValue((frame->hw_width << 14) / current_frame_->hw_width)
         .WriteTo(owner_->dosbus());
     Vp9dMppRefinfoData::Get()
-        .FromValue((frame->frame->hw_height << 14) / current_frame_->frame->hw_height)
+        .FromValue((frame->hw_height << 14) / current_frame_->hw_height)
         .WriteTo(owner_->dosbus());
     // Compressed body size. 0 If dynamically allocated
     Vp9dMppRefinfoData::Get().FromValue(0).WriteTo(owner_->dosbus());
