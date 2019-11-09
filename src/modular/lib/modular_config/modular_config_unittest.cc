@@ -162,3 +162,90 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
 }
+
+TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
+  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx";
+  std::string startup_agent = "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx";
+  std::string session_agent = "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx";
+  std::string agent_service_name = "fuchsia.modular.ModularConfigReaderTest";
+  std::string agent_url =
+      "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
+      "ModularConfigReaderTest.cmx";
+  std::string session_shell_url = "fuchsia-pkg://fuchsia.com/session_shell#meta/session_shell.cmx";
+  std::string story_shell_url = "fuchsia-pkg://fuchsia.com/story_shell#meta/story_shell.cmx";
+
+  fuchsia::modular::session::BasemgrConfig basemgr_config;
+  basemgr_config.set_enable_cobalt(false);
+  basemgr_config.set_enable_presenter(true);
+  basemgr_config.set_use_minfs(false);
+  basemgr_config.set_test(true);
+  basemgr_config.set_use_session_shell_for_story_shell_factory(true);
+  basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(base_shell_url);
+  basemgr_config.mutable_base_shell()->set_keep_alive_after_login(true);
+  fuchsia::modular::session::SessionShellConfig session_shell_config;
+  session_shell_config.mutable_app_config()->set_url(session_shell_url);
+  session_shell_config.set_display_usage(fuchsia::ui::policy::DisplayUsage::kHandheld);
+  session_shell_config.set_screen_height(20.f);
+  session_shell_config.set_screen_width(30.f);
+  fuchsia::modular::session::SessionShellMapEntry session_shell_map_entry;
+  session_shell_map_entry.set_name(session_shell_url);
+  session_shell_map_entry.set_config(std::move(session_shell_config));
+  basemgr_config.mutable_session_shell_map()->push_back(std::move(session_shell_map_entry));
+  fuchsia::modular::session::StoryShellConfig story_shell_config;
+  story_shell_config.mutable_app_config()->set_url(story_shell_url);
+  story_shell_config.mutable_app_config()->mutable_args()->push_back("arg1");
+  basemgr_config.set_story_shell(std::move(story_shell_config));
+
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
+  sessionmgr_config.set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
+  sessionmgr_config.set_enable_cobalt(false);
+  sessionmgr_config.set_enable_story_shell_preload(false);
+  sessionmgr_config.set_use_memfs_for_ledger(true);
+  sessionmgr_config.mutable_startup_agents()->push_back(startup_agent);
+  sessionmgr_config.mutable_session_agents()->push_back(session_agent);
+  sessionmgr_config.set_story_shell_url(story_shell_url);
+  fuchsia::modular::session::AppConfig component_arg;
+  component_arg.set_url(agent_url);
+  component_arg.mutable_args()->push_back("arg2");
+  sessionmgr_config.mutable_component_args()->push_back(std::move(component_arg));
+  fuchsia::modular::session::AgentServiceIndexEntry agent_entry;
+  agent_entry.set_service_name(agent_service_name);
+  agent_entry.set_agent_url(agent_url);
+  sessionmgr_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
+
+  modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
+
+  // Check that none of the configs were modified as part of GetConfigAsString
+  EXPECT_FALSE(basemgr_config.enable_cobalt());
+  EXPECT_TRUE(basemgr_config.enable_presenter());
+  EXPECT_FALSE(basemgr_config.use_minfs());
+  EXPECT_TRUE(basemgr_config.use_session_shell_for_story_shell_factory());
+  EXPECT_TRUE(basemgr_config.test());
+  EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
+  EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());
+  ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
+  EXPECT_EQ(session_shell_url, basemgr_config.session_shell_map().at(0).name());
+  EXPECT_EQ(session_shell_url,
+            basemgr_config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_TRUE(basemgr_config.session_shell_map().at(0).config().has_display_usage());
+  EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kHandheld,
+            basemgr_config.session_shell_map().at(0).config().display_usage());
+  EXPECT_EQ(20.f, basemgr_config.session_shell_map().at(0).config().screen_height());
+  EXPECT_EQ(30.f, basemgr_config.session_shell_map().at(0).config().screen_width());
+  EXPECT_EQ(story_shell_url, basemgr_config.story_shell().app_config().url());
+  ASSERT_EQ(1u, basemgr_config.story_shell().app_config().args().size());
+  EXPECT_EQ("arg1", basemgr_config.story_shell().app_config().args().at(0));
+
+  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
+  EXPECT_FALSE(sessionmgr_config.enable_cobalt());
+  EXPECT_FALSE(sessionmgr_config.enable_story_shell_preload());
+  EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
+  EXPECT_EQ(startup_agent, sessionmgr_config.startup_agents().at(0));
+  EXPECT_EQ(session_agent, sessionmgr_config.session_agents().at(0));
+  EXPECT_EQ(story_shell_url, sessionmgr_config.story_shell_url());
+  EXPECT_EQ(agent_url, sessionmgr_config.component_args().at(0).url());
+  ASSERT_EQ(1u, sessionmgr_config.component_args().at(0).args().size());
+  EXPECT_EQ("arg2", sessionmgr_config.component_args().at(0).args().at(0));
+  EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
+  EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
+}

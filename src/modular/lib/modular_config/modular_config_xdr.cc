@@ -37,7 +37,6 @@ fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string usage) {
     return fuchsia::ui::policy::DisplayUsage::kFar;
   }
 
-  FXL_LOG(WARNING) << "Unknown display usage string: " << usage;
   return fuchsia::ui::policy::DisplayUsage::kUnknown;
 }
 
@@ -82,10 +81,11 @@ void XdrSessionShellMapEntry(XdrContext* const xdr,
   std::string display_usage;
   xdr->FieldWithDefault(modular_config::kDisplayUsage, &display_usage, false, display_usage_str);
 
-  // This is only used when reading. We want to set the value read into
-  // |display_usage| into |data|.
-  auto display_usage_fidl = GetDisplayUsageFromString(display_usage);
-  config->set_display_usage(display_usage_fidl);
+  // This is only used when reading. We the value read into |display_usage| into |data|.
+  if (xdr->op() == XdrOp::FROM_JSON) {
+    auto display_usage_fidl = GetDisplayUsageFromString(display_usage);
+    config->set_display_usage(display_usage_fidl);
+  }
 
   xdr->FieldWithDefault(modular_config::kScreenHeight, config->mutable_screen_height(),
                         has_screen_height, 0.f);
@@ -216,15 +216,15 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kStoryShellUrl,
                         data->mutable_story_shell()->mutable_app_config()->mutable_url(),
                         has_story_shell_url, std::string(modular_config::kDefaultStoryShellUrl));
-  data->mutable_story_shell()->mutable_app_config()->set_args(std::vector<std::string>());
+  if (xdr->op() == XdrOp::FROM_JSON) {
+    data->mutable_story_shell()->mutable_app_config()->set_args(std::vector<std::string>());
+  }
 }
 
 void XdrSessionmgrConfig_v1(XdrContext* const xdr,
                             fuchsia::modular::session::SessionmgrConfig* const data) {
-  bool has_cloud_provider = data->has_cloud_provider();
-
   std::string cloud_provider_str = modular_config::kLetLedgerDecide;
-  if (has_cloud_provider) {
+  if (data->has_cloud_provider()) {
     cloud_provider_str = GetCloudProviderAsString(data->cloud_provider());
   }
 
@@ -237,10 +237,12 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kCloudProvider, &cloud_provider, /* use_data= */ false,
                         cloud_provider_str);
 
-  // This is only used when reading. We want to set the value read into
-  // |cloud_provider| into |data|.
-  auto cloud_provider_fidl = GetCloudProviderFromString(cloud_provider);
-  data->set_cloud_provider(cloud_provider_fidl);
+  // This is only used when reading. We set the value read into the string
+  // |cloud_provider| into |data->cloud_provider()|.
+  if (xdr->op() == XdrOp::FROM_JSON) {
+    auto cloud_provider_fidl = GetCloudProviderFromString(cloud_provider);
+    data->set_cloud_provider(cloud_provider_fidl);
+  }
 
   bool has_enable_cobalt = data->has_enable_cobalt();
   xdr->FieldWithDefault(modular_config::kEnableCobalt, data->mutable_enable_cobalt(),
