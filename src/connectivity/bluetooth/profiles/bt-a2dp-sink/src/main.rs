@@ -14,7 +14,7 @@ use {
         PeerManagerRequest, PeerManagerRequestStream,
     },
     fidl_fuchsia_bluetooth_bredr::*,
-    fidl_fuchsia_media::AUDIO_ENCODING_SBC,
+    fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -103,11 +103,11 @@ fn make_profile_service_definition() -> ServiceDefinition {
 // https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
 const ATTR_A2DP_SUPPORTED_FEATURES: u16 = 0x0311;
 
-// Defined in the Bluetooth Assigned Numbers for Audio/Video applications
-// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-const AUDIO_CODEC_SBC: u8 = 0;
 // Arbitrarily chosen ID for the SBC stream endpoint.
 const SBC_SEID: u8 = 6;
+
+// Arbitrarily chosen ID for the AAC stream endpoint.
+const AAC_SEID: u8 = 7;
 
 const DEFAULT_SAMPLE_RATE: u32 = 48000;
 
@@ -154,6 +154,34 @@ impl Stream {
         }
     }
 
+    /// Extract sampling frequency from AAC codec extra data field
+    /// (A2DP Sec. 4.5.2)
+    fn parse_aac_sampling_frequency(codec_extra: &[u8]) -> u32 {
+        if codec_extra.len() != 6 {
+            fx_log_warn!("Invalid AAC codec extra length: {:?}", codec_extra.len());
+            return DEFAULT_SAMPLE_RATE;
+        }
+
+        // AACMediaCodecInfo is represented as 8 bytes, with lower 6 bytes containing
+        // the codec extra data.
+        let mut codec_info_bytes = [0_u8; 8];
+        let codec_info_slice = &mut codec_info_bytes[2..8];
+
+        codec_info_slice.copy_from_slice(&codec_extra);
+
+        let codec_info = AACMediaCodecInfo(u64::from_be_bytes(codec_info_bytes));
+        let sample_freq = AACSamplingFrequency::from_bits_truncate(codec_info.sampling_frequency());
+
+        match sample_freq {
+            AACSamplingFrequency::FREQ48000HZ => 48000,
+            AACSamplingFrequency::FREQ44100HZ => 44100,
+            _ => {
+                fx_log_warn!("Invalid sample_freq set in configuration {:?}", sample_freq);
+                DEFAULT_SAMPLE_RATE
+            }
+        }
+    }
+
     /// Get the currently configured sampling frequency for this stream or return a default value
     /// if none is configured.
     ///
@@ -164,14 +192,19 @@ impl Stream {
             .get_configuration()
             .map(|caps| {
                 for c in caps {
-                    if let avdtp::ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                        codec_extra,
-                    } = c
-                    {
-                        return Self::parse_sbc_sampling_frequency(&codec_extra);
-                    }
+                    match c {
+                        avdtp::ServiceCapability::MediaCodec {
+                            media_type: avdtp::MediaType::Audio,
+                            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                            codec_extra,
+                        } => return Self::parse_sbc_sampling_frequency(&codec_extra),
+                        avdtp::ServiceCapability::MediaCodec {
+                            media_type: avdtp::MediaType::Audio,
+                            codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                            codec_extra,
+                        } => return Self::parse_aac_sampling_frequency(&codec_extra),
+                        _ => continue,
+                    };
                 }
                 DEFAULT_SAMPLE_RATE
             })
@@ -248,8 +281,7 @@ impl Streams {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
-
-        let sbc_media_codec_info: SbcCodecInfo = SbcCodecInfo::new(
+        let sbc_media_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
             SbcChannelMode::MANDATORY_SNK,
             SbcBlockCount::MANDATORY_SNK,
@@ -268,12 +300,36 @@ impl Streams {
                 avdtp::ServiceCapability::MediaTransport,
                 avdtp::ServiceCapability::MediaCodec {
                     media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
                     codec_extra: sbc_media_codec_info.to_bytes(),
                 },
             ],
         )?;
         s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+
+        let aac_media_codec_info = AACMediaCodecInfo::new(
+            AACObjectType::MANDATORY_SNK,
+            AACSamplingFrequency::MANDATORY_SNK,
+            AACChannels::MANDATORY_SNK,
+            AACVariableBitRate::MANDATORY_SNK,
+            0, // 0 = Unknown constant bitrate support (A2DP Sec. 4.5.2.4)
+        )?;
+        fx_log_info!("Supported codec parameters: {:?}.", aac_media_codec_info);
+
+        let aac_stream = avdtp::StreamEndpoint::new(
+            AAC_SEID,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![
+                avdtp::ServiceCapability::MediaTransport,
+                avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                    codec_extra: aac_media_codec_info.to_bytes(),
+                },
+            ],
+        )?;
+        s.insert(aac_stream, AUDIO_ENCODING_AACLATM.to_string());
 
         s.construct_inspect_data(inspect);
         Ok(s)
@@ -467,7 +523,7 @@ async fn handle_controller_request(
             // and allocation for reconfigure (A2DP 4.3.2)
             let generic_capabilities = vec![avdtp::ServiceCapability::MediaCodec {
                 media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
                 codec_extra: vec![0x11, 0x15, 2, 250],
             }];
             match avdtp.reconfigure(endpoint_id, &generic_capabilities[..]).await {
@@ -508,7 +564,7 @@ async fn handle_controller_request(
                     // and allocation for reconfigure (A2DP 4.3.2)
                     let generic_capabilities = vec![avdtp::ServiceCapability::MediaCodec {
                         media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
                         codec_extra: vec![0x11, 0x15, 2, 250],
                     }];
 
@@ -920,6 +976,70 @@ mod tests {
                         media_type: avdtp::MediaType::Audio,
                         codec_type: avdtp::MediaCodecType::AUDIO_SBC,
                         codec_extra: vec![41, 245, 2, 53],
+                    },
+                ],
+            )
+            .expect("Failed to configure endpoint");
+
+        assert_eq!(sample_freq, streams.get_mut(&id).unwrap().sample_freq());
+
+        let res = streams.get_mut(&id);
+
+        assert_matches!(res.as_ref().unwrap().suspend_sender, None);
+        assert_eq!(encoding, res.as_ref().unwrap().encoding);
+    }
+
+    #[test]
+    /// Test that a AAC endpoint stream works as expected to retrieve codec info
+    fn test_aac_stream() {
+        let mut streams = Streams::new();
+        const LOCAL_ID: u8 = 1;
+
+        // An endpoint for testing
+        let s = avdtp::StreamEndpoint::new(
+            LOCAL_ID,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![
+                avdtp::ServiceCapability::MediaTransport,
+                avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                    codec_extra: vec![128, 1, 4, 4, 226, 0],
+                },
+            ],
+        )
+        .expect("Failed to create endpoint");
+
+        let id = s.local_id().clone();
+        let information = s.information();
+        let encoding = AUDIO_ENCODING_AACLATM.to_string();
+        let sample_freq = 44100;
+
+        assert_matches!(streams.get_endpoint(&id), None);
+
+        let res = streams.get_mut(&id);
+
+        assert_matches!(res, Err(avdtp::ErrorCode::BadAcpSeid));
+
+        streams.insert(s, encoding.clone());
+
+        assert!(streams.get_endpoint(&id).is_some());
+        assert_eq!(&id, streams.get_endpoint(&id).unwrap().local_id());
+
+        assert_eq!([information], streams.information().as_slice());
+
+        streams
+            .get_endpoint(&id)
+            .unwrap()
+            .configure(
+                &id,
+                vec![
+                    avdtp::ServiceCapability::MediaTransport,
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                        codec_extra: vec![128, 1, 4, 4, 226, 0],
                     },
                 ],
             )

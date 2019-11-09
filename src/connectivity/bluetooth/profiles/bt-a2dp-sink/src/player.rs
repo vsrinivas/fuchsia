@@ -4,11 +4,12 @@
 
 use {
     bitfield::bitfield,
+    bt_avdtp::RtpHeader,
     failure::{bail, format_err, Error, ResultExt},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_media::{
         AudioSampleFormat, AudioStreamType, MediumSpecificStreamType, SimpleStreamSinkProxy,
-        StreamPacket, StreamType, AUDIO_ENCODING_SBC, NO_TIMESTAMP,
+        StreamPacket, StreamType, AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC, NO_TIMESTAMP,
         STREAM_PACKET_FLAG_DISCONTINUITY,
     },
     fidl_fuchsia_media_playback::{
@@ -227,7 +228,13 @@ impl Player {
     /// Accepts a payload which may contain multiple frames and breaks it into
     /// frames and sends it to media.
     pub fn push_payload(&mut self, payload: &[u8]) -> Result<(), Error> {
-        let mut offset = 13;
+        let mut offset = RtpHeader::LENGTH;
+
+        if self.codec == AUDIO_ENCODING_SBC {
+            // TODO(40918) Handle SBC packet header
+            offset += 1;
+        }
+
         while offset < payload.len() {
             if self.codec == AUDIO_ENCODING_SBC {
                 let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
@@ -240,6 +247,9 @@ impl Player {
                 }
                 self.send_frame(&payload[offset..offset + len])?;
                 offset += len;
+            } else if self.codec == AUDIO_ENCODING_AACLATM {
+                self.send_frame(&payload[offset..])?;
+                offset = payload.len();
             } else {
                 return Err(format_err!("Unrecognized codec!"));
             }
@@ -249,19 +259,40 @@ impl Player {
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
     pub fn send_frame(&mut self, frame: &[u8]) -> Result<(), Error> {
-        if frame.len() > self.buffer_len {
+        let mut full_frame_len = frame.len();
+
+        if self.codec == AUDIO_ENCODING_AACLATM {
+            full_frame_len += 3;
+        }
+
+        if full_frame_len > self.buffer_len {
             self.stream_source.end_of_stream()?;
             bail!("frame is too large for buffer");
         }
-        if self.current_offset + frame.len() > self.buffer_len {
+        if self.current_offset + full_frame_len > self.buffer_len {
             self.current_offset = 0;
         }
+
+        let start_offset = self.current_offset;
+
+        if self.codec == AUDIO_ENCODING_AACLATM {
+            // Prepend LOAS sync word and mux length so mediaplayer decoder can handle it
+            let loas_syncword = [
+                0x56_u8,
+                0xe0_u8 | ((frame.len() >> 8) as u8 & 0xff_u8),
+                frame.len() as u8 & 0xff_u8,
+            ];
+
+            self.buffer.write(&loas_syncword, self.current_offset as u64)?;
+            self.current_offset += loas_syncword.len();
+        }
+
         self.buffer.write(frame, self.current_offset as u64)?;
         let mut packet = StreamPacket {
             pts: NO_TIMESTAMP,
             payload_buffer_id: 0,
-            payload_offset: self.current_offset as u64,
-            payload_size: frame.len() as u64,
+            payload_offset: start_offset as u64,
+            payload_size: full_frame_len as u64,
             buffer_config: 0,
             flags: self.next_packet_flags,
             stream_segment_id: 0,

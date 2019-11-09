@@ -234,7 +234,7 @@ bitfield! {
     vbr, set_vbr: 23, 23;
     // Bits 24-25 RFA.
     channels, set_channels: 27,26;
-    u16, sampling_frequency, set_sampling_frequency: 39, 28;
+    pub u16, sampling_frequency, set_sampling_frequency: 39, 28;
     object_type, set_object_type: 47, 40;
     // Bits 48-63 Unused.
 }
