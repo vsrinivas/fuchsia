@@ -91,7 +91,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // Performs initialization on a newly constructed ThreadDispatcher
   // If this fails, then the object is invalid and should be deleted
-  zx_status_t Initialize(const char* name, size_t len);
+  zx_status_t Initialize();
   // Start this thread running inside the parent process with the provided entry state, only
   // valid to be called on a thread in the INITIALIZED state that has not yet been started.
   zx_status_t Start(const EntryState& entry, bool initial_thread);
@@ -116,8 +116,8 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
   void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
-  uint64_t runtime_ns() const { return thread_runtime(&thread_); }
-  cpu_num_t last_cpu() const { return thread_last_cpu(&thread_); }
+  uint64_t runtime_ns() const { return thread_runtime(core_thread_); }
+  cpu_num_t last_cpu() const { return thread_last_cpu(core_thread_); }
 
   zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
   // Returns true if a port had been set.
@@ -227,7 +227,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   };
 
  private:
-  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags);
+  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, thread_t* core_thread, uint32_t flags);
   ThreadDispatcher(const ThreadDispatcher&) = delete;
   ThreadDispatcher& operator=(const ThreadDispatcher&) = delete;
 
@@ -275,8 +275,11 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // The containing process holds a list of all its threads.
   fbl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;
-  // a ref pointer back to the parent process
-  fbl::RefPtr<ProcessDispatcher> process_;
+  // a ref pointer back to the parent process.
+  const fbl::RefPtr<ProcessDispatcher> process_;
+
+  // The thread as understood by the lower kernel.
+  thread_t* const core_thread_;
 
   // User thread starting register values.
   EntryState user_entry_;
@@ -326,13 +329,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Needed to support the requirements of being able to interrupt a Call
   // in order to suspend a thread.
   ChannelDispatcher::MessageWaiter channel_waiter_;
-
-  // LK thread structure
-  // put last to ease debugging since this is a pretty large structure
-  // (~1.5K on x86_64).
-  // Also, a simple experiment to move this to the first member (after the
-  // canary) resulted in a 1K increase in text size (x86_64).
-  thread_t thread_ = {};
 
   // If true and ancestor job has a debugger attached, thread will block on
   // start and will send a process start exception.

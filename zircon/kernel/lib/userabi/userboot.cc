@@ -319,6 +319,8 @@ void userboot_init(uint) {
     zx_rights_t rights;
     status = ThreadDispatcher::Create(ktl::move(process), 0, "userboot", &thread_handle, &rights);
     ASSERT(status == ZX_OK);
+    status = thread_handle.dispatcher()->Initialize();
+    ASSERT(status == ZX_OK);
     thread = thread_handle.dispatcher();
   }
   ASSERT(thread);

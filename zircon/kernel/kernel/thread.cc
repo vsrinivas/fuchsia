@@ -142,7 +142,7 @@ static void initial_thread_func(void) {
   arch_enable_ints();
 
   thread_t* ct = get_current_thread();
-  ret = ct->entry(ct->arg);
+  ret = (ct->arg) ? ct->entry(ct->arg) : ct->entry(ct->user_thread);
 
   thread_exit(ret);
 }
@@ -168,7 +168,8 @@ static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_
  * @param  t               If not NULL, use the supplied thread_t
  * @param  name            Name of thread
  * @param  entry           Entry point of thread
- * @param  arg             Arbitrary argument passed to entry()
+ * @param  arg             Arbitrary argument passed to entry(). It can be null.
+ *                         in which case |user_thread| will be used.
  * @param  priority        Execution priority for the thread.
  * @param  alt_trampoline  If not NULL, an alternate trampoline for the thread
  *                         to start on.
@@ -1458,7 +1459,7 @@ static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb
 }
 
 namespace {
-  constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
+constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
 }
 
 static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {

@@ -98,7 +98,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
     return result;
   }
 
-  uint32_t pid = (uint32_t)process->get_koid();
+  auto pid = static_cast<uint32_t>(process->get_koid());
 
   // create the thread dispatcher
   KernelHandle<ThreadDispatcher> handle;
@@ -107,7 +107,13 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
   if (result != ZX_OK)
     return result;
 
-  uint32_t tid = (uint32_t)handle.dispatcher()->get_koid();
+  result = handle.dispatcher()->Initialize();
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  auto tid = static_cast<uint32_t>(handle.dispatcher()->get_koid());
+
   ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
   ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 

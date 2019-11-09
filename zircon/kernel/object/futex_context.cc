@@ -354,13 +354,13 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
     guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
 
-    thread_t* new_owner = futex_owner_thread ? &futex_owner_thread->thread_ : nullptr;
+    thread_t* new_owner = futex_owner_thread ? futex_owner_thread->core_thread_ : nullptr;
     wait_tracer.FutexWait(futex_id, new_owner);
 
-    current_thread->thread_.interruptable = true;
+    current_thread->core_thread_->interruptable = true;
     result =
         futex_ref->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal);
-    current_thread->thread_.interruptable = false;
+    current_thread->core_thread_->interruptable = false;
 
     // Do _not_ allow the PendingOpRef helper to release our pending op
     // reference.  Having just woken up, either the thread which woke us will
@@ -597,7 +597,8 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
                                  (requeue_owner_thread->blocking_futex_id_ == requeue_id))) {
       return ZX_ERR_INVALID_ARGS;
     }
-    thread_t* new_requeue_owner = requeue_owner_thread ? &(requeue_owner_thread->thread_) : nullptr;
+    thread_t* new_requeue_owner =
+        requeue_owner_thread ? requeue_owner_thread->core_thread_ : nullptr;
 
     // Now that all of our sanity checks are complete, it is time to do the
     // actual manipulation of the various wait queues.

@@ -44,36 +44,33 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
                                      fbl::StringPiece name,
                                      KernelHandle<ThreadDispatcher>* out_handle,
                                      zx_rights_t* out_rights) {
-  // Make sure we contribute a FutexState object to our process's futex state
-  // pool before allocating the thread.  If we cannot grow the pool, then we
-  // cannot make a thread.
-  zx_status_t result = process->futex_context().GrowFutexStatePool();
-  if (result != ZX_OK)
-    return result;
-
+  // Create the lower level thread and attach it to the scheduler.
+  thread_t* core_thread = thread_create(name.data(), StartRoutine, nullptr, DEFAULT_PRIORITY);
+  if (!core_thread) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  // Create the user-mode thread and attach it to the process and lower level thread.
   fbl::AllocChecker ac;
-  KernelHandle new_handle(fbl::AdoptRef(new (&ac) ThreadDispatcher(process, flags)));
+  auto user_thread = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, core_thread, flags));
   if (!ac.check()) {
-    // We grew the state pool, but failed to allocate the thread.  Go ahead
-    // and shrink the pool back down to size.  Otherwise, the thread class
-    // we created will shrink the pool when the time comes
-    process->futex_context().ShrinkFutexStatePool();
+    thread_forget(core_thread);
     return ZX_ERR_NO_MEMORY;
   }
 
-  result = new_handle.dispatcher()->Initialize(name.data(), name.length());
-  if (result != ZX_OK)
-    return result;
+  // The syscall layer will call Initialize(), which used to be called here.
 
   *out_rights = default_rights();
-  *out_handle = ktl::move(new_handle);
+  *out_handle = KernelHandle(ktl::move(user_thread));
   return ZX_OK;
 }
 
-ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags)
-    : process_(ktl::move(process)), exceptionate_(ExceptionPort::Type::THREAD) {
+ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, thread_t* core_thread,
+                                   uint32_t flags)
+    : process_(ktl::move(process)),
+      core_thread_(core_thread),
+      exceptionate_(ExceptionPort::Type::THREAD) {
   LTRACE_ENTRY_OBJ;
-
+  core_thread_->user_thread = this;
   kcounter_add(dispatcher_thread_create_count, 1);
 }
 
@@ -82,25 +79,26 @@ ThreadDispatcher::~ThreadDispatcher() {
 
   kcounter_add(dispatcher_thread_destroy_count, 1);
 
-  DEBUG_ASSERT(&thread_ != get_current_thread());
+  DEBUG_ASSERT(core_thread_ != nullptr);
+  DEBUG_ASSERT(core_thread_ != get_current_thread());
 
   switch (state_.lifecycle()) {
     case ThreadState::Lifecycle::DEAD: {
       // join the LK thread before doing anything else to clean up LK state and ensure
       // the thread we're destroying has stopped.
       LTRACEF("joining LK thread to clean up state\n");
-      __UNUSED auto ret = thread_join(&thread_, nullptr, ZX_TIME_INFINITE);
+      [[maybe_unused]] auto ret = thread_join(core_thread_, nullptr, ZX_TIME_INFINITE);
       LTRACEF("done joining LK thread\n");
       DEBUG_ASSERT_MSG(ret == ZX_OK, "thread_join returned something other than ZX_OK\n");
       break;
     }
     case ThreadState::Lifecycle::INITIAL:
-      // this gets a pass, we can destruct a partially constructed thread
-      break;
+      __FALLTHROUGH;
+      // this gets a pass, we can destruct a partially constructed thread.
     case ThreadState::Lifecycle::INITIALIZED:
       // as we've been initialized previously, forget the LK thread.
-      // note that thread_forget is not called for self since the thread is not running
-      thread_forget(&thread_);
+      // note that thread_forget is not called for self since the thread is not running.
+      thread_forget(core_thread_);
       break;
     default:
       DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n",
@@ -109,46 +107,29 @@ ThreadDispatcher::~ThreadDispatcher() {
 
   event_destroy(&exception_event_);
 
-  process_->futex_context().ShrinkFutexStatePool();
+  if (state_.lifecycle() != ThreadState::Lifecycle::INITIAL) {
+    // We grew the pool in Initialize(), which transitioned the thread from its
+    // inintial state.
+    process_->futex_context().ShrinkFutexStatePool();
+  }
 }
 
 // complete initialization of the thread object outside of the constructor
-zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
+zx_status_t ThreadDispatcher::Initialize() {
   LTRACE_ENTRY_OBJ;
+  thread_set_user_callback(core_thread_, &ThreadUserCallback);
+  // Associate the proc's address space with this thread.
+  process_->aspace()->AttachToThread(core_thread_);
+
+  // Make sure we contribute a FutexState object to our process's futex state.
+  auto result = process_->futex_context().GrowFutexStatePool();
+  if (result != ZX_OK) {
+    return result;
+  }
 
   Guard<fbl::Mutex> guard{get_lock()};
-
-  // Make sure LK's max name length agrees with ours.
-  static_assert(THREAD_NAME_LENGTH == ZX_MAX_NAME_LEN, "name length issue");
-  if (len >= ZX_MAX_NAME_LEN)
-    len = ZX_MAX_NAME_LEN - 1;
-
-  char thread_name[THREAD_NAME_LENGTH];
-  memcpy(thread_name, name, len);
-  memset(thread_name + len, 0, ZX_MAX_NAME_LEN - len);
-
-  // create an underlying LK thread
-  thread_t* lkthread =
-      thread_create_etc(&thread_, thread_name, StartRoutine, this, DEFAULT_PRIORITY, nullptr);
-
-  if (!lkthread) {
-    TRACEF("error creating thread\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-  DEBUG_ASSERT(lkthread == &thread_);
-
-  // register an event handler with the LK kernel
-  thread_set_user_callback(&thread_, &ThreadUserCallback);
-
-  // set the per-thread pointer
-  lkthread->user_thread = this;
-
-  // associate the proc's address space with this thread
-  process_->aspace()->AttachToThread(lkthread);
-
   // we've entered the initialized state
   SetStateLocked(ThreadState::Lifecycle::INITIALIZED);
-
   return ZX_OK;
 }
 
@@ -162,8 +143,8 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     len = ZX_MAX_NAME_LEN - 1;
 
   Guard<SpinLock, IrqSave> guard{&name_lock_};
-  memcpy(thread_.name, name, len);
-  memset(thread_.name + len, 0, ZX_MAX_NAME_LEN - len);
+  memcpy(core_thread_->name, name, len);
+  memset(core_thread_->name + len, 0, ZX_MAX_NAME_LEN - len);
   return ZX_OK;
 }
 
@@ -172,7 +153,7 @@ void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
 
   Guard<SpinLock, IrqSave> guard{&name_lock_};
   memset(out_name, 0, ZX_MAX_NAME_LEN);
-  strlcpy(out_name, thread_.name, ZX_MAX_NAME_LEN);
+  strlcpy(out_name, core_thread_->name, ZX_MAX_NAME_LEN);
 }
 
 // start a thread
@@ -204,20 +185,20 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
   // bump the ref on this object that the LK thread state will now own until the lk thread has
   // exited
   AddRef();
-  thread_.user_tid = get_koid();
-  thread_.user_pid = process_->get_koid();
+  core_thread_->user_tid = get_koid();
+  core_thread_->user_pid = process_->get_koid();
 
   // start the thread in RUNNING state, if we're starting suspended it will transition to
   // SUSPENDED when it checks thread signals before executing any user code
   SetStateLocked(ThreadState::Lifecycle::RUNNING);
 
   if (suspend_count_ == 0) {
-    thread_resume(&thread_);
+    thread_resume(core_thread_);
   } else {
     // thread_suspend() only fails if the underlying thread is already dead, which we should
     // ignore here to match the behavior of thread_resume(); our Exiting() callback will run
     // shortly to clean us up
-    thread_suspend(&thread_);
+    thread_suspend(core_thread_);
   }
 
   return ZX_OK;
@@ -230,7 +211,7 @@ void ThreadDispatcher::Exit() {
   LTRACE_ENTRY_OBJ;
 
   // only valid to call this on the current thread
-  DEBUG_ASSERT(get_current_thread() == &thread_);
+  DEBUG_ASSERT(get_current_thread() == core_thread_);
 
   {
     Guard<fbl::Mutex> guard{get_lock()};
@@ -260,7 +241,7 @@ void ThreadDispatcher::Kill() {
     case ThreadState::Lifecycle::RUNNING:
     case ThreadState::Lifecycle::SUSPENDED:
       // deliver a kernel kill signal to the thread
-      thread_kill(&thread_);
+      thread_kill(core_thread_);
 
       // enter the dying state
       SetStateLocked(ThreadState::Lifecycle::DYING);
@@ -299,7 +280,7 @@ zx_status_t ThreadDispatcher::Suspend() {
     case ThreadState::Lifecycle::RUNNING:
     case ThreadState::Lifecycle::SUSPENDED:
       if (suspend_count_ == 1)
-        return thread_suspend(&thread_);
+        return thread_suspend(core_thread_);
       return ZX_OK;
     case ThreadState::Lifecycle::DYING:
     case ThreadState::Lifecycle::DEAD:
@@ -333,7 +314,7 @@ void ThreadDispatcher::Resume() {
     case ThreadState::Lifecycle::SUSPENDED:
       // It's possible the thread never transitioned from RUNNING -> SUSPENDED.
       if (suspend_count_ == 0)
-        thread_resume(&thread_);
+        thread_resume(core_thread_);
       break;
     case ThreadState::Lifecycle::DYING:
     case ThreadState::Lifecycle::DEAD:
@@ -726,7 +707,7 @@ void ThreadDispatcher::EnterException(fbl::RefPtr<ExceptionPort> eport,
   DEBUG_ASSERT(!event_signaled(&exception_event_));
 
   // Mark that we're in an exception.
-  thread_.exception_context = arch_context;
+  core_thread_->exception_context = arch_context;
 
   // For GetExceptionReport.
   exception_report_ = report;
@@ -748,7 +729,7 @@ void ThreadDispatcher::ExitExceptionLocked() {
 
   exception_wait_port_.reset();
   exception_report_ = nullptr;
-  thread_.exception_context = nullptr;
+  core_thread_->exception_context = nullptr;
   state_.set(ThreadState::Exception::IDLE);
 }
 
@@ -811,7 +792,7 @@ bool ThreadDispatcher::InPortExceptionLocked() {
 
   LTRACE_ENTRY_OBJ;
   DEBUG_ASSERT(get_lock()->lock().IsHeld());
-  return thread_stopped_in_exception(&thread_);
+  return thread_stopped_in_exception(core_thread_);
 }
 
 bool ThreadDispatcher::InChannelExceptionLocked() {
@@ -927,7 +908,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   // We assume that we can fit the entire mask in the first word of
   // cpu_affinity_mask.
   static_assert(SMP_MAX_CPUS <= sizeof(info->cpu_affinity_mask.mask[0]) * 8);
-  info->cpu_affinity_mask.mask[0] = thread_get_soft_cpu_affinity(&thread_);
+  info->cpu_affinity_mask.mask[0] = thread_get_soft_cpu_affinity(core_thread_);
 
   return ZX_OK;
 }
@@ -1043,8 +1024,8 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
     return false;
   }
 
-  arch_install_context_regs(&thread_, &context);
-  auto auto_call = fbl::MakeAutoCall([this]() { arch_remove_context_regs(&thread_); });
+  arch_install_context_regs(core_thread_, &context);
+  auto auto_call = fbl::MakeAutoCall([this]() { arch_remove_context_regs(core_thread_); });
 
   zx_exception_report_t report;
   ExceptionPort::BuildArchReport(&report, exception_type, &context);
@@ -1100,20 +1081,20 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
 
   switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS:
-      return ReadStateGeneric<zx_thread_state_general_regs_t>(arch_get_general_regs, &thread_,
+      return ReadStateGeneric<zx_thread_state_general_regs_t>(arch_get_general_regs, core_thread_,
                                                               buffer, buffer_size);
     case ZX_THREAD_STATE_FP_REGS:
-      return ReadStateGeneric<zx_thread_state_fp_regs_t>(arch_get_fp_regs, &thread_, buffer,
+      return ReadStateGeneric<zx_thread_state_fp_regs_t>(arch_get_fp_regs, core_thread_, buffer,
                                                          buffer_size);
     case ZX_THREAD_STATE_VECTOR_REGS:
-      return ReadStateGeneric<zx_thread_state_vector_regs_t>(arch_get_vector_regs, &thread_, buffer,
-                                                             buffer_size);
+      return ReadStateGeneric<zx_thread_state_vector_regs_t>(arch_get_vector_regs, core_thread_,
+                                                             buffer, buffer_size);
     case ZX_THREAD_STATE_DEBUG_REGS:
-      return ReadStateGeneric<zx_thread_state_debug_regs_t>(arch_get_debug_regs, &thread_, buffer,
-                                                            buffer_size);
+      return ReadStateGeneric<zx_thread_state_debug_regs_t>(arch_get_debug_regs, core_thread_,
+                                                            buffer, buffer_size);
     case ZX_THREAD_STATE_SINGLE_STEP:
-      return ReadStateGeneric<zx_thread_state_single_step_t>(arch_get_single_step, &thread_, buffer,
-                                                             buffer_size);
+      return ReadStateGeneric<zx_thread_state_single_step_t>(arch_get_single_step, core_thread_,
+                                                             buffer, buffer_size);
     default:
       return ZX_ERR_INVALID_ARGS;
   }
@@ -1153,19 +1134,19 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 
   switch (state_kind) {
     case ZX_THREAD_STATE_GENERAL_REGS:
-      return WriteStateGeneric<zx_thread_state_general_regs_t>(arch_set_general_regs, &thread_,
+      return WriteStateGeneric<zx_thread_state_general_regs_t>(arch_set_general_regs, core_thread_,
                                                                buffer, buffer_size);
     case ZX_THREAD_STATE_FP_REGS:
-      return WriteStateGeneric<zx_thread_state_fp_regs_t>(arch_set_fp_regs, &thread_, buffer,
+      return WriteStateGeneric<zx_thread_state_fp_regs_t>(arch_set_fp_regs, core_thread_, buffer,
                                                           buffer_size);
     case ZX_THREAD_STATE_VECTOR_REGS:
-      return WriteStateGeneric<zx_thread_state_vector_regs_t>(arch_set_vector_regs, &thread_,
+      return WriteStateGeneric<zx_thread_state_vector_regs_t>(arch_set_vector_regs, core_thread_,
                                                               buffer, buffer_size);
     case ZX_THREAD_STATE_DEBUG_REGS:
-      return WriteStateGeneric<zx_thread_state_debug_regs_t>(arch_set_debug_regs, &thread_, buffer,
-                                                             buffer_size);
+      return WriteStateGeneric<zx_thread_state_debug_regs_t>(arch_set_debug_regs, core_thread_,
+                                                             buffer, buffer_size);
     case ZX_THREAD_STATE_SINGLE_STEP:
-      return WriteStateGeneric<zx_thread_state_single_step_t>(arch_set_single_step, &thread_,
+      return WriteStateGeneric<zx_thread_state_single_step_t>(arch_set_single_step, core_thread_,
                                                               buffer, buffer_size);
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -1180,7 +1161,7 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
     return ZX_ERR_BAD_STATE;
   }
   // The priority was already validated by the Profile dispatcher.
-  thread_set_priority(&thread_, priority);
+  thread_set_priority(core_thread_, priority);
   return ZX_OK;
 }
 
@@ -1192,7 +1173,7 @@ zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& para
     return ZX_ERR_BAD_STATE;
   }
   // The deadline parameters are already validated by the Profile dispatcher.
-  thread_set_deadline(&thread_, params);
+  thread_set_deadline(core_thread_, params);
   return ZX_OK;
 }
 
@@ -1204,7 +1185,7 @@ zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
     return ZX_ERR_BAD_STATE;
   }
   // The mask was already validated by the Profile dispatcher.
-  thread_set_soft_cpu_affinity(&thread_, mask);
+  thread_set_soft_cpu_affinity(core_thread_, mask);
   return ZX_OK;
 }
 
