@@ -26,6 +26,7 @@ group("configs") {
 
 rustc_binary("bin") {
   name = "shortcut"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -90,12 +91,17 @@ rustc_test("shortcut_test_bin") {
 
 test_package("shortcut_test") {
   deps = [
+    ":bin_test",
     ":shortcut_test_bin",
   ]
 
   tests = [
     {
       name = "shortcut_test_bin"
+      environments = basic_envs
+    },
+    {
+      name = "shortcut_bin_test"
       environments = basic_envs
     },
   ]

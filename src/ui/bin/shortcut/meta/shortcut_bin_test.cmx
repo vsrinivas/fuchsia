@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/shortcut_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

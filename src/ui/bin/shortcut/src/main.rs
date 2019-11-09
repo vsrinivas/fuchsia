@@ -75,7 +75,56 @@ async fn registry_server(
                 registry.subscriber =
                     Some(registry::Subscriber { view_ref, listener: listener.into_proxy()? });
             }
-            ui_shortcut::RegistryRequest::RegisterShortcut { shortcut, responder, .. } => {
+            ui_shortcut::RegistryRequest::RegisterShortcut { mut shortcut, responder, .. } => {
+                fn key_to_modifiers(
+                    shortcut: &mut ui_shortcut::Shortcut,
+                    modifiers: ui_input::Modifiers,
+                ) {
+                    match shortcut.modifiers {
+                        Some(mut shortcut_modifiers) => shortcut_modifiers.insert(modifiers),
+                        None => shortcut.modifiers = Some(modifiers),
+                    }
+                    shortcut.key = None;
+                }
+
+                // Normalize modifiers for simpler matching.
+                match shortcut.key {
+                    Some(ui_input::Key::LeftShift) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::LeftShift)
+                    }
+                    Some(ui_input::Key::RightShift) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::RightShift)
+                    }
+                    Some(ui_input::Key::LeftAlt) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::LeftAlt)
+                    }
+                    Some(ui_input::Key::RightAlt) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::RightAlt)
+                    }
+                    Some(ui_input::Key::LeftMeta) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::LeftMeta)
+                    }
+                    Some(ui_input::Key::RightMeta) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::RightMeta)
+                    }
+                    Some(ui_input::Key::LeftCtrl) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::LeftControl)
+                    }
+                    Some(ui_input::Key::RightCtrl) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::RightControl)
+                    }
+                    Some(ui_input::Key::NumLock) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::NumLock)
+                    }
+                    Some(ui_input::Key::CapsLock) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::CapsLock)
+                    }
+                    Some(ui_input::Key::ScrollLock) => {
+                        key_to_modifiers(&mut shortcut, ui_input::Modifiers::ScrollLock)
+                    }
+                    _ => {}
+                };
+
                 if let Some(mut modifiers) = shortcut.modifiers {
                     if modifiers.contains(ui_input::Modifiers::Shift) {
                         modifiers.remove(ui_input::Modifiers::LeftShift);
@@ -94,7 +143,11 @@ async fn registry_server(
                         modifiers.remove(ui_input::Modifiers::RightMeta);
                     }
                 }
-                // TODO: validation
+                // Set default value for trigger.
+                if shortcut.trigger.is_none() {
+                    shortcut.trigger = Some(ui_shortcut::Trigger::KeyPressed);
+                }
+                // TODO: Normalize modifier-only shortcuts
                 registry.shortcuts.push(shortcut);
                 responder.send()?;
             }

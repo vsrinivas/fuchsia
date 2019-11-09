@@ -12,6 +12,7 @@ use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
+use futures::future::join;
 use futures::StreamExt;
 use std::sync::Once;
 
@@ -66,6 +67,36 @@ impl ShortcutService {
 
         self.manager.handle_key_event(event)
     }
+
+    fn release_key(
+        &self,
+        key: ui_input::Key,
+        modifiers: Option<ui_input::Modifiers>,
+    ) -> QueryResponseFut<bool> {
+        // Process key event that triggers a shortcut.
+        let event = ui_input::KeyEvent {
+            key: Some(key),
+            modifiers: modifiers,
+            phase: Some(ui_input::KeyEventPhase::Released),
+            physical_key: None,
+            semantic_key: None,
+        };
+
+        self.manager.handle_key_event(event)
+    }
+
+    async fn handle_shortcut_activation<HandleFunc>(&mut self, mut handler: HandleFunc)
+    where
+        HandleFunc: FnMut(u32) -> bool,
+    {
+        if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
+            self.listener.next().await
+        {
+            responder.send(handler(id)).expect("responding from shortcut listener for shift")
+        } else {
+            panic!("Error from listener.next() on shift shortcut activation");
+        };
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -93,37 +124,30 @@ async fn test_as_client() -> Result<(), Error> {
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut right_control");
 
     // Process key event that *does not* trigger a shortcut.
-    let was_handled =
-        service.press_key(ui_input::Key::A, None).await.expect("handle_key_event false");
+    let was_handled = service
+        .press_key(ui_input::Key::A, None)
+        .await
+        .expect("handle_key not activating a shortcut");
     assert_eq!(false, was_handled);
 
-    // Process key event that triggers shift shortcut.
-    // The order is important here, as handle_key_event() dispatches the key
-    // to be processed by the manager, which is expected to result in listener
-    // message in the next block.
-    // At the same time, handle_key_event should return true, which is validated
-    // later.
-    let was_handled_fut = service.press_key(
-        ui_input::Key::A,
-        Some(
-            ui_input::Modifiers::Shift
-                | ui_input::Modifiers::LeftShift
-                | ui_input::Modifiers::CapsLock,
+    // Press a key that triggers a shortcut.
+    let was_handled = join(
+        service.press_key(
+            ui_input::Key::A,
+            Some(
+                ui_input::Modifiers::Shift
+                    | ui_input::Modifiers::LeftShift
+                    | ui_input::Modifiers::CapsLock,
+            ),
         ),
-    );
-
-    // React to one shortcut activation message from the listener stream.
-    if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
-        service.listener.next().await
-    {
-        assert_eq!(id, TEST_SHORTCUT_ID);
-        responder.send(true).expect("responding from shortcut listener for shift")
-    } else {
-        panic!("Error from listener.next() on shift shortcut activation");
-    }
-
-    let was_handled = was_handled_fut.await.expect("handle_key_event true");
-    // Expect key event to be handled.
+        service.handle_shortcut_activation(|id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        }),
+    )
+    .await
+    .0
+    .expect("handle_key_event true");
     assert_eq!(true, was_handled);
 
     // LEFT_CONTROL + B should *not* trigger the shortcut.
@@ -137,34 +161,32 @@ async fn test_as_client() -> Result<(), Error> {
     assert_eq!(false, was_handled);
 
     // RIGHT_CONTROL + B should trigger the shortcut.
-    let was_handled_fut = service.press_key(
-        ui_input::Key::B,
-        Some(ui_input::Modifiers::RightControl | ui_input::Modifiers::Control),
-    );
-
-    if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { responder, .. })) =
-        service.listener.next().await
-    {
-        responder.send(true).expect("responding from shortcut listener for right control");
-    }
-
-    let was_handled = was_handled_fut.await.expect("handle_key_event true for right_control");
+    let was_handled = join(
+        service.press_key(
+            ui_input::Key::B,
+            Some(ui_input::Modifiers::RightControl | ui_input::Modifiers::Control),
+        ),
+        service.handle_shortcut_activation(|_| true),
+    )
+    .await
+    .0
+    .expect("handle_key_event true for right_control");
     assert_eq!(true, was_handled);
 
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_modifiers_only() -> Result<(), Error> {
+async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
     let mut service = ShortcutService::new().await?;
 
-    // Set shortcut for LEFT_SHIFT
+    // Set modifier-only shortcut for LEFT_SHIFT
     let shortcut = ui_shortcut::Shortcut {
         id: Some(TEST_SHORTCUT_ID),
         modifiers: Some(ui_input::Modifiers::LeftShift),
-        key: Some(ui_input::Key::LeftShift),
+        key: None,
         use_priority: None,
-        trigger: None,
+        trigger: Some(ui_shortcut::Trigger::KeyPressedAndReleased),
     };
     service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_shift");
 
@@ -176,43 +198,86 @@ async fn test_modifiers_only() -> Result<(), Error> {
         use_priority: None,
         trigger: None,
     };
-    service.registry.register_shortcut(shortcut).await.expect("register_shortcut right_control");
+    service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_shift+c");
 
-    service
+    let was_handled = service
         .press_key(
             ui_input::Key::LeftShift,
             Some(ui_input::Modifiers::LeftShift | ui_input::Modifiers::Shift),
         )
         .await
         .expect("Press LeftShift");
+    assert_eq!(false, was_handled);
 
-    // React to one shortcut activation message from the listener stream.
-    if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
-        service.listener.next().await
-    {
-        assert_eq!(id, TEST_SHORTCUT_ID);
-        responder.send(true).expect("responding from shortcut listener for shift")
-    } else {
-        panic!("Error from listener.next() on shift shortcut activation");
-    }
-
-    service
-        .press_key(
+    let was_handled = join(
+        service.press_key(
             ui_input::Key::C,
+            Some(ui_input::Modifiers::LeftShift | ui_input::Modifiers::Shift),
+        ),
+        service.handle_shortcut_activation(|id| {
+            assert_eq!(id, TEST_SHORTCUT_2_ID);
+            true
+        }),
+    )
+    .await
+    .0
+    .expect("handle_key_event left_shift + C");
+    assert_eq!(true, was_handled);
+
+    let was_handled = service
+        .release_key(
+            ui_input::Key::LeftShift,
             Some(ui_input::Modifiers::LeftShift | ui_input::Modifiers::Shift),
         )
         .await
-        .expect("Press C");
+        .expect("Release LeftShift");
+    assert_eq!(false, was_handled);
 
-    // React to one shortcut activation message from the listener stream.
-    if let Some(Ok(ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. })) =
-        service.listener.next().await
-    {
-        assert_eq!(id, TEST_SHORTCUT_2_ID);
-        responder.send(true).expect("responding from shortcut listener for shift + A")
-    } else {
-        panic!("Error from listener.next() on shift + C shortcut activation");
-    }
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_modifiers_activated_on_release() -> Result<(), Error> {
+    let mut service = ShortcutService::new().await?;
+
+    // Set shortcut for LEFT_META
+    let shortcut = ui_shortcut::Shortcut {
+        id: Some(TEST_SHORTCUT_ID),
+        modifiers: Some(ui_input::Modifiers::LeftMeta),
+        key: None,
+        use_priority: None,
+        trigger: Some(ui_shortcut::Trigger::KeyPressedAndReleased),
+    };
+    service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_meta");
+
+    // Set shortcut for LEFT_META + Q.
+    let shortcut = ui_shortcut::Shortcut {
+        id: Some(TEST_SHORTCUT_2_ID),
+        modifiers: Some(ui_input::Modifiers::LeftMeta),
+        key: Some(ui_input::Key::Q),
+        use_priority: None,
+        trigger: None,
+    };
+    service.registry.register_shortcut(shortcut).await.expect("register_shortcut left_meta+q");
+
+    let was_handled =
+        service.press_key(ui_input::Key::LeftMeta, None).await.expect("Press LeftMeta");
+    assert_eq!(false, was_handled);
+
+    let was_handled_fut = service.release_key(
+        ui_input::Key::LeftMeta,
+        Some(ui_input::Modifiers::LeftMeta | ui_input::Modifiers::Meta),
+    );
+
+    service
+        .handle_shortcut_activation(|id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        })
+        .await;
+
+    let was_handled = was_handled_fut.await.expect("handle_key_event true for left_meta");
+    assert_eq!(true, was_handled);
 
     Ok(())
 }
