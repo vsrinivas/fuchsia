@@ -15,10 +15,11 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        DirectoryEvent, DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_test_hub as fhub, fuchsia_zircon as zx,
+    futures::TryStreamExt,
     hub_test_hook::*,
     std::{path::PathBuf, sync::Arc, vec::Vec},
 };
@@ -146,9 +147,16 @@ impl TestRunner {
         let dir_proxy = io_util::open_directory(
             &self.hub_proxy,
             &PathBuf::from(relative_path),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
         )
         .expect("Could not open directory from global view");
+
+        // Expect an OnOpen event to be sent over the event stream.
+        let mut event_stream = dir_proxy.take_event_stream();
+        let event = event_stream.try_next().await.unwrap();
+        let DirectoryEvent::OnOpen_ { s: _, info: _ } =
+            event.expect("failed to receive OnOpen directory event");
+
         assert_eq!(expected_listing, test_helpers::list_directory(&dir_proxy).await);
     }
 

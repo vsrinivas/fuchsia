@@ -15,7 +15,8 @@ use {
     futures::lock::Mutex,
     std::sync::Arc,
 };
-const SERVICE_OPEN_FLAGS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+const SERVICE_OPEN_FLAGS: u32 =
+    fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 /// Describes the source of a capability, for any type of capability.
 enum OfferSource<'a> {
