@@ -588,6 +588,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     while (parser.GetNextReport(&data, &rssi)) {
       DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
     }
+    return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
   auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
       ::bt::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, cmd_data->dispatcher());
@@ -728,6 +729,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       }
       DisplayInquiryResult(result.responses[i]);
     }
+    return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
@@ -739,6 +741,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     auto params = event.params<::bt::hci::InquiryCompleteEventParams>();
     std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n", params.status);
     cleanup_cb();
+    return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
