@@ -10,7 +10,6 @@ export 'src/device_log.dart';
 export 'src/dump.dart';
 export 'src/exceptions.dart';
 export 'src/factory_store.dart';
-export 'src/flutter_driver.dart';
 export 'src/input.dart';
 export 'src/inspect.dart';
 export 'src/modular.dart';

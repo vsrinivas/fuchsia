@@ -17,7 +17,6 @@ dart_library("client") {
     "src/dump.dart",
     "src/exceptions.dart",
     "src/factory_store.dart",
-    "src/flutter_driver.dart",
     "src/input.dart",
     "src/inspect.dart",
     "src/modular.dart",
@@ -37,8 +36,6 @@ dart_library("client") {
   ]
 
   deps = [
-    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
-    "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol",
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
