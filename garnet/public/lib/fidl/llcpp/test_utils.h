@@ -23,11 +23,15 @@ bool ComparePayload(const uint8_t* actual, size_t actual_size, const uint8_t* ex
 template <typename FidlType>
 bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
+
+  FIDL_ALIGNDECL char aligned_value_buf[fidl::FidlAlign(sizeof(FidlType))] = {};
+  FidlType* aligned_value = new (aligned_value_buf) FidlType(std::move(*value));
+
   fidl::DecodedMessage<FidlType> message;
   std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
   if constexpr (FidlType::Type != nullptr && FidlType::MaxOutOfLine > 0) {
     auto linearize_result =
-        fidl::Linearize(value, fidl::BytePart(&buffer[0], ZX_CHANNEL_MAX_MSG_BYTES));
+        fidl::Linearize(aligned_value, fidl::BytePart(&buffer[0], ZX_CHANNEL_MAX_MSG_BYTES));
     if (linearize_result.status != ZX_OK || linearize_result.error != nullptr) {
       std::cout << "Linearization failed (" << zx_status_get_string(linearize_result.status)
                 << "): " << linearize_result.error << std::endl;
@@ -35,9 +39,9 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
     }
     message = std::move(linearize_result.message);
   } else {
-    message = fidl::DecodedMessage<FidlType>(fidl::BytePart(reinterpret_cast<uint8_t*>(value),
-                                                            fidl::FidlAlign(sizeof(FidlType)),
-                                                            fidl::FidlAlign(sizeof(FidlType))));
+    message = fidl::DecodedMessage<FidlType>(
+        fidl::BytePart(reinterpret_cast<uint8_t*>(aligned_value), fidl::FidlAlign(sizeof(FidlType)),
+                       fidl::FidlAlign(sizeof(FidlType))));
   }
 
   auto encode_result = fidl::Encode(std::move(message));

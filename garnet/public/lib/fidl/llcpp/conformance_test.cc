@@ -22,38 +22,33 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInStruct))];
-    llcpp::conformance::ThreeByteInStruct* v1 =
-        new (buf_v2) llcpp::conformance::ThreeByteInStruct();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    v1->elem1 = std::move(*v3);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    v1->elem2 = std::move(*v8);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    v1->elem3 = std::move(*v13);
+    llcpp::conformance::ThreeByteInStruct v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    v1.elem1 = std::move(v2);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    v1.elem2 = std::move(v6);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    v1.elem3 = std::move(v10);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -65,31 +60,27 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInStruct))];
-    llcpp::conformance::FiveByteInStruct* v1 = new (buf_v2) llcpp::conformance::FiveByteInStruct();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    v1->elem1 = std::move(*v3);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    v1->elem2 = std::move(*v7);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    v1->elem3 = std::move(*v11);
+    llcpp::conformance::FiveByteInStruct v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    v1.elem1 = std::move(v2);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    v1.elem2 = std::move(v5);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    v1.elem3 = std::move(v8);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -102,38 +93,34 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInVector))];
-    llcpp::conformance::ThreeByteInVector* v1 =
-        new (buf_v2) llcpp::conformance::ThreeByteInVector();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::ThreeByte, 3>{*v3, *v8, *v13};
-    auto v19 = fidl::VectorView<llcpp::conformance::ThreeByte>(v18.data(), 3);
-    v1->elems = std::move(v19);
+    llcpp::conformance::ThreeByteInVector v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    auto v14 =
+        fidl::Array<llcpp::conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
+    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(v14.data(), 3);
+    v1.elems = std::move(v15);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -146,31 +133,28 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInVector))];
-    llcpp::conformance::FiveByteInVector* v1 = new (buf_v2) llcpp::conformance::FiveByteInVector();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::FiveByte, 3>{*v3, *v7, *v11};
-    auto v16 = fidl::VectorView<llcpp::conformance::FiveByte>(v15.data(), 3);
-    v1->elems = std::move(v16);
+    llcpp::conformance::FiveByteInVector v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    auto v11 =
+        fidl::Array<llcpp::conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
+    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(v11.data(), 3);
+    v1.elems = std::move(v12);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -182,36 +166,33 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInArray))];
-    llcpp::conformance::ThreeByteInArray* v1 = new (buf_v2) llcpp::conformance::ThreeByteInArray();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::ThreeByte, 3>{*v3, *v8, *v13};
-    v1->elems = std::move(v18);
+    llcpp::conformance::ThreeByteInArray v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    auto v14 =
+        fidl::Array<llcpp::conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
+    v1.elems = std::move(v14);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -223,30 +204,27 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInArray))];
-    llcpp::conformance::FiveByteInArray* v1 = new (buf_v2) llcpp::conformance::FiveByteInArray();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::FiveByte, 3>{*v3, *v7, *v11};
-    v1->elems = std::move(v15);
+    llcpp::conformance::FiveByteInArray v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    auto v11 =
+        fidl::Array<llcpp::conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
+    v1.elems = std::move(v11);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -257,10 +235,9 @@ TEST(Conformance, EmptyStruct_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v1 = new (buf_v2) llcpp::conformance::EmptyStruct();
+    llcpp::conformance::EmptyStruct v1{};
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -274,19 +251,15 @@ TEST(Conformance, EmptyStructSandwich_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStructSandwich))];
-    llcpp::conformance::EmptyStructSandwich* v1 =
-        new (buf_v2) llcpp::conformance::EmptyStructSandwich();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v4 = new (buf_v5) llcpp::conformance::EmptyStruct();
-    v1->es = std::move(*v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::EmptyStructSandwich v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::EmptyStruct v3{};
+    v1.es = std::move(v3);
+    fidl::StringView v4("after", 5);
+    v1.after = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -298,20 +271,17 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::Uint8Uint16Uint32Uint64))];
-    llcpp::conformance::Uint8Uint16Uint32Uint64* v1 =
-        new (buf_v2) llcpp::conformance::Uint8Uint16Uint32Uint64();
-    uint8_t v3 = 1ull;
-    v1->f1 = std::move(v3);
-    uint16_t v4 = 515ull;
-    v1->f2 = std::move(v4);
-    uint32_t v5 = 67438087ull;
-    v1->f3 = std::move(v5);
-    uint64_t v6 = 579005069656919567ull;
-    v1->f4 = std::move(v6);
+    llcpp::conformance::Uint8Uint16Uint32Uint64 v1{};
+    uint8_t v2 = 1ull;
+    v1.f1 = std::move(v2);
+    uint16_t v3 = 515ull;
+    v1.f2 = std::move(v3);
+    uint32_t v4 = 67438087ull;
+    v1.f3 = std::move(v4);
+    uint64_t v5 = 579005069656919567ull;
+    v1.f4 = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -323,20 +293,17 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::Uint64Uint32Uint16Uint8))];
-    llcpp::conformance::Uint64Uint32Uint16Uint8* v1 =
-        new (buf_v2) llcpp::conformance::Uint64Uint32Uint16Uint8();
-    uint64_t v3 = 579005069656919567ull;
-    v1->f1 = std::move(v3);
-    uint32_t v4 = 67438087ull;
-    v1->f2 = std::move(v4);
-    uint16_t v5 = 515ull;
-    v1->f3 = std::move(v5);
-    uint8_t v6 = 1ull;
-    v1->f4 = std::move(v6);
+    llcpp::conformance::Uint64Uint32Uint16Uint8 v1{};
+    uint64_t v2 = 579005069656919567ull;
+    v1.f1 = std::move(v2);
+    uint32_t v3 = 67438087ull;
+    v1.f2 = std::move(v3);
+    uint16_t v4 = 515ull;
+    v1.f3 = std::move(v4);
+    uint8_t v5 = 1ull;
+    v1.f4 = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -348,15 +315,12 @@ TEST(Conformance, SimpleTableEmpty_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    auto v4 = v3.view();
-    v1->table = std::move(v4);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    auto v3 = v2.view();
+    v1.table = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -374,19 +338,16 @@ TEST(Conformance, SimpleTableXAndY_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 42ull;
-    v3.set_x(&v4);
-    int64_t v5 = 67ull;
-    v3.set_y(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 42ull;
+    v2.set_x(&v3);
+    int64_t v4 = 67ull;
+    v2.set_y(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -403,17 +364,14 @@ TEST(Conformance, SimpleTableJustY_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 67ull;
-    v3.set_y(&v4);
-    auto v5 = v3.view();
-    v1->table = std::move(v5);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 67ull;
+    v2.set_y(&v3);
+    auto v4 = v2.view();
+    v1.table = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -429,19 +387,16 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::StructOfTableWithStringAndVector))];
-    llcpp::conformance::StructOfTableWithStringAndVector* v1 =
-        new (buf_v2) llcpp::conformance::StructOfTableWithStringAndVector();
-    auto v3 = llcpp::conformance::TableWithStringAndVector::Build();
-    fidl::StringView v4("hello", 5);
-    v3.set_foo(&v4);
-    int32_t v5 = 27ull;
-    v3.set_bar(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
+    llcpp::conformance::StructOfTableWithStringAndVector v1{};
+    auto v2 = llcpp::conformance::TableWithStringAndVector::Build();
+    fidl::StringView v3("hello", 5);
+    v2.set_foo(&v3);
+    int32_t v4 = 27ull;
+    v2.set_bar(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -459,21 +414,18 @@ TEST(Conformance, SimpleTableThenUint64_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::SimpleTableThenUint64))];
-    llcpp::conformance::SimpleTableThenUint64* v1 =
-        new (buf_v2) llcpp::conformance::SimpleTableThenUint64();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 42ull;
-    v3.set_x(&v4);
-    int64_t v5 = 67ull;
-    v3.set_y(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
-    uint64_t v7 = 16045690984833335023ull;
-    v1->number = std::move(v7);
+    llcpp::conformance::SimpleTableThenUint64 v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 42ull;
+    v2.set_x(&v3);
+    int64_t v4 = 67ull;
+    v2.set_y(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
+    uint64_t v6 = 16045690984833335023ull;
+    v1.number = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -489,20 +441,17 @@ TEST(Conformance, InlineXUnionInStruct_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestInlineXUnionInStruct))];
-    llcpp::conformance::TestInlineXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestInlineXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    llcpp::conformance::SampleXUnion v4;
-    uint32_t v5 = 3735928559ull;
-    v4.set_u(&v5);
-    v1->xu = std::move(v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::TestInlineXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::SampleXUnion v3;
+    uint32_t v4 = 3735928559ull;
+    v3.set_u(&v4);
+    v1.xu = std::move(v3);
+    fidl::StringView v5("after", 5);
+    v1.after = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -517,16 +466,13 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestOptionalXUnionInStruct))];
-    llcpp::conformance::TestOptionalXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestOptionalXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    fidl::StringView v4("after", 5);
-    v1->after = std::move(v4);
+    llcpp::conformance::TestOptionalXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    fidl::StringView v3("after", 5);
+    v1.after = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -542,20 +488,17 @@ TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestOptionalXUnionInStruct))];
-    llcpp::conformance::TestOptionalXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestOptionalXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    llcpp::conformance::SampleXUnion v4;
-    uint32_t v5 = 3735928559ull;
-    v4.set_u(&v5);
-    v1->xu = std::move(v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::TestOptionalXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::SampleXUnion v3;
+    uint32_t v4 = 3735928559ull;
+    v3.set_u(&v4);
+    v1.xu = std::move(v3);
+    fidl::StringView v5("after", 5);
+    v1.after = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -573,18 +516,16 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::TestXUnionInTable))];
-    llcpp::conformance::TestXUnionInTable* v1 =
-        new (buf_v2) llcpp::conformance::TestXUnionInTable();
-    auto v3 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v4("before", 6);
-    v3.set_before(&v4);
-    fidl::StringView v5("after", 5);
-    v3.set_after(&v5);
-    auto v6 = v3.view();
-    v1->value = std::move(v6);
+    llcpp::conformance::TestXUnionInTable v1{};
+    auto v2 = llcpp::conformance::XUnionInTable::Build();
+    fidl::StringView v3("before", 6);
+    v2.set_before(&v3);
+    fidl::StringView v4("after", 5);
+    v2.set_after(&v4);
+    auto v5 = v2.view();
+    v1.value = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -604,22 +545,20 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::TestXUnionInTable))];
-    llcpp::conformance::TestXUnionInTable* v1 =
-        new (buf_v2) llcpp::conformance::TestXUnionInTable();
-    auto v3 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v4("before", 6);
-    v3.set_before(&v4);
-    llcpp::conformance::SampleXUnion v5;
-    uint32_t v6 = 3735928559ull;
-    v5.set_u(&v6);
-    v3.set_xu(&v5);
-    fidl::StringView v7("after", 5);
-    v3.set_after(&v7);
-    auto v8 = v3.view();
-    v1->value = std::move(v8);
+    llcpp::conformance::TestXUnionInTable v1{};
+    auto v2 = llcpp::conformance::XUnionInTable::Build();
+    fidl::StringView v3("before", 6);
+    v2.set_before(&v3);
+    llcpp::conformance::SampleXUnion v4;
+    uint32_t v5 = 3735928559ull;
+    v4.set_u(&v5);
+    v2.set_xu(&v4);
+    fidl::StringView v6("after", 5);
+    v2.set_after(&v6);
+    auto v7 = v2.view();
+    v1.value = std::move(v7);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -632,16 +571,13 @@ TEST(Conformance, StrictXUnion_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestStrictXUnionInStruct))];
-    llcpp::conformance::TestStrictXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestStrictXUnionInStruct();
-    llcpp::conformance::SampleStrictXUnion v3;
-    uint32_t v4 = 3735928559ull;
-    v3.set_u(&v4);
-    v1->xu = std::move(v3);
+    llcpp::conformance::TestStrictXUnionInStruct v1{};
+    llcpp::conformance::SampleStrictXUnion v2;
+    uint32_t v3 = 3735928559ull;
+    v2.set_u(&v3);
+    v1.xu = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -659,25 +595,21 @@ TEST(Conformance, AddEthernetDeviceRequest_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestAddEthernetDeviceRequest))];
-    llcpp::conformance::TestAddEthernetDeviceRequest* v1 =
-        new (buf_v2) llcpp::conformance::TestAddEthernetDeviceRequest();
-    fidl::StringView v3("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
-    v1->topological_path = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::InterfaceConfig))];
-    llcpp::conformance::InterfaceConfig* v4 = new (buf_v5) llcpp::conformance::InterfaceConfig();
-    fidl::StringView v6("ethp0003", 8);
-    v4->name = std::move(v6);
-    llcpp::conformance::IpAddressConfig v7;
-    bool v8 = true;
-    v7.set_dhcp(&v8);
-    v4->ip_address_config = std::move(v7);
-    v1->config = std::move(*v4);
-    uint32_t v9 = 4294967295ull;
-    v1->this_should_be_a_handle = std::move(v9);
+    llcpp::conformance::TestAddEthernetDeviceRequest v1{};
+    fidl::StringView v2("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
+    v1.topological_path = std::move(v2);
+    llcpp::conformance::InterfaceConfig v3{};
+    fidl::StringView v4("ethp0003", 8);
+    v3.name = std::move(v4);
+    llcpp::conformance::IpAddressConfig v5;
+    bool v6 = true;
+    v5.set_dhcp(std::move(v6));
+    v3.ip_address_config = std::move(v5);
+    v1.config = std::move(v3);
+    uint32_t v7 = 4294967295ull;
+    v1.this_should_be_a_handle = std::move(v7);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -692,31 +624,27 @@ TEST(Conformance, FileGetAttrResponse_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FileGetAttrResponse))];
-    llcpp::conformance::FileGetAttrResponse* v1 =
-        new (buf_v2) llcpp::conformance::FileGetAttrResponse();
-    int32_t v3 = 2125315759ull;
-    v1->s = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::NodeAttributes))];
-    llcpp::conformance::NodeAttributes* v4 = new (buf_v5) llcpp::conformance::NodeAttributes();
-    uint32_t v6 = 2518909348ull;
-    v4->mode = std::move(v6);
-    uint64_t v7 = 1ull;
-    v4->id = std::move(v7);
-    uint64_t v8 = 231ull;
-    v4->content_size = std::move(v8);
-    uint64_t v9 = 231ull;
-    v4->storage_size = std::move(v9);
-    uint64_t v10 = 1ull;
-    v4->link_count = std::move(v10);
-    uint64_t v11 = 9833440827789222417ull;
-    v4->creation_time = std::move(v11);
-    uint64_t v12 = 72038755451251353ull;
-    v4->modification_time = std::move(v12);
-    v1->attributes = std::move(*v4);
+    llcpp::conformance::FileGetAttrResponse v1{};
+    int32_t v2 = 2125315759ull;
+    v1.s = std::move(v2);
+    llcpp::conformance::NodeAttributes v3{};
+    uint32_t v4 = 2518909348ull;
+    v3.mode = std::move(v4);
+    uint64_t v5 = 1ull;
+    v3.id = std::move(v5);
+    uint64_t v6 = 231ull;
+    v3.content_size = std::move(v6);
+    uint64_t v7 = 231ull;
+    v3.storage_size = std::move(v7);
+    uint64_t v8 = 1ull;
+    v3.link_count = std::move(v8);
+    uint64_t v9 = 9833440827789222417ull;
+    v3.creation_time = std::move(v9);
+    uint64_t v10 = 72038755451251353ull;
+    v3.modification_time = std::move(v10);
+    v1.attributes = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -738,44 +666,34 @@ TEST(Conformance, Optionals_Encode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithOptionals))];
-    llcpp::conformance::StructWithOptionals* v1 =
-        new (buf_v2) llcpp::conformance::StructWithOptionals();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v3 = new (buf_v4) llcpp::conformance::EmptyStruct();
-    v1->s = std::move(*v3);
-    llcpp::conformance::EmptyStruct v5_pointee{};
-    auto v5 = &v5_pointee;
-    v1->s2 = v5;
-    auto v6 = llcpp::conformance::TableWithEmptyStruct::Build();
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v7 = new (buf_v8) llcpp::conformance::EmptyStruct();
-    v6.set_s(v7);
-    auto v9 = v6.view();
-    v1->t = std::move(v9);
-    llcpp::conformance::XUnionWithEmptyStruct v10;
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v11 = new (buf_v12) llcpp::conformance::EmptyStruct();
-    v10.set_s(v11);
-    v1->xu = std::move(v10);
-    llcpp::conformance::XUnionWithEmptyStruct v13;
-    char buf_v15[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v14 = new (buf_v15) llcpp::conformance::EmptyStruct();
-    v13.set_s(v14);
-    v1->xu2 = std::move(v13);
-    llcpp::conformance::UnionWithEmptyStruct v16;
-    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v17 = new (buf_v18) llcpp::conformance::EmptyStruct();
-    v16.set_s(*v17);
-    v1->u = std::move(v16);
-    llcpp::conformance::UnionWithEmptyStruct v19;
-    char buf_v21[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v20 = new (buf_v21) llcpp::conformance::EmptyStruct();
-    v19.set_s(*v20);
-    v1->u2 = &v19;
+    llcpp::conformance::StructWithOptionals v1{};
+    llcpp::conformance::EmptyStruct v2{};
+    v1.s = std::move(v2);
+    llcpp::conformance::EmptyStruct v3{};
+    v1.s2 = std::move(&v3);
+    auto v4 = llcpp::conformance::TableWithEmptyStruct::Build();
+    llcpp::conformance::EmptyStruct v5{};
+    v4.set_s(&v5);
+    auto v6 = v4.view();
+    v1.t = std::move(v6);
+    llcpp::conformance::XUnionWithEmptyStruct v7;
+    llcpp::conformance::EmptyStruct v8{};
+    v7.set_s(&v8);
+    v1.xu = std::move(v7);
+    llcpp::conformance::XUnionWithEmptyStruct v9;
+    llcpp::conformance::EmptyStruct v10{};
+    v9.set_s(&v10);
+    v1.xu2 = std::move(v9);
+    llcpp::conformance::UnionWithEmptyStruct v11;
+    llcpp::conformance::EmptyStruct v12{};
+    v11.set_s(std::move(v12));
+    v1.u = std::move(v11);
+    llcpp::conformance::UnionWithEmptyStruct v13;
+    llcpp::conformance::EmptyStruct v14{};
+    v13.set_s(std::move(v14));
+    v1.u2 = std::move(&v13);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -796,49 +714,45 @@ TEST(Conformance, Arrays_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithArrays))];
-    llcpp::conformance::StructWithArrays* v1 = new (buf_v2) llcpp::conformance::StructWithArrays();
-    int32_t v3 = 1ull;
-    int32_t v4 = 2ull;
-    auto v5 = fidl::Array<int32_t, 2>{v3, v4};
-    v1->arr_int = std::move(v5);
-    fidl::StringView v6("a", 1);
-    fidl::StringView v7("b", 1);
-    auto v8 = fidl::Array<fidl::StringView, 2>{v6, v7};
-    v1->arr_string = std::move(v8);
-    fidl::StringView v9("c", 1);
-    fidl::StringView v10{};
-    auto v11 = fidl::Array<fidl::StringView, 2>{v9, v10};
-    v1->arr_nullable_string = std::move(v11);
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 1ull;
-    v12->x = std::move(v14);
-    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v15 = new (buf_v16) llcpp::conformance::StructWithInt();
-    int32_t v17 = 2ull;
-    v15->x = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v12, *v15};
-    v1->arr_struct = std::move(v18);
-    llcpp::conformance::StructWithInt* v19{};
-    llcpp::conformance::StructWithInt v20_pointee{};
-    auto v20 = &v20_pointee;
-    int32_t v21 = 16909060ull;
-    v20->x = std::move(v21);
-    auto v22 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{v19, v20};
-    v1->arr_nullable_struct = std::move(v22);
-    int32_t v23 = 1ull;
-    int32_t v24 = 2ull;
-    int32_t v25 = 3ull;
-    auto v26 = fidl::Array<int32_t, 3>{v23, v24, v25};
-    int32_t v27 = 4ull;
-    int32_t v28 = 5ull;
-    int32_t v29 = 6ull;
-    auto v30 = fidl::Array<int32_t, 3>{v27, v28, v29};
-    auto v31 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v26, v30};
-    v1->arr_arr_int = std::move(v31);
+    llcpp::conformance::StructWithArrays v1{};
+    int32_t v2 = 1ull;
+    int32_t v3 = 2ull;
+    auto v4 = fidl::Array<int32_t, 2>{std::move(v2), std::move(v3)};
+    v1.arr_int = std::move(v4);
+    fidl::StringView v5("a", 1);
+    fidl::StringView v6("b", 1);
+    auto v7 = fidl::Array<fidl::StringView, 2>{std::move(v5), std::move(v6)};
+    v1.arr_string = std::move(v7);
+    fidl::StringView v8("c", 1);
+    fidl::StringView v9{};
+    auto v10 = fidl::Array<fidl::StringView, 2>{std::move(v8), std::move(v9)};
+    v1.arr_nullable_string = std::move(v10);
+    llcpp::conformance::StructWithInt v11{};
+    int32_t v12 = 1ull;
+    v11.x = std::move(v12);
+    llcpp::conformance::StructWithInt v13{};
+    int32_t v14 = 2ull;
+    v13.x = std::move(v14);
+    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 2>{std::move(v11), std::move(v13)};
+    v1.arr_struct = std::move(v15);
+    llcpp::conformance::StructWithInt* v16{};
+    llcpp::conformance::StructWithInt v17{};
+    int32_t v18 = 16909060ull;
+    v17.x = std::move(v18);
+    auto v19 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{std::move(v16), std::move(&v17)};
+    v1.arr_nullable_struct = std::move(v19);
+    int32_t v20 = 1ull;
+    int32_t v21 = 2ull;
+    int32_t v22 = 3ull;
+    auto v23 = fidl::Array<int32_t, 3>{std::move(v20), std::move(v21), std::move(v22)};
+    int32_t v24 = 4ull;
+    int32_t v25 = 5ull;
+    int32_t v26 = 6ull;
+    auto v27 = fidl::Array<int32_t, 3>{std::move(v24), std::move(v25), std::move(v26)};
+    auto v28 = fidl::Array<fidl::Array<int32_t, 3>, 2>{std::move(v23), std::move(v27)};
+    v1.arr_arr_int = std::move(v28);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -869,55 +783,52 @@ TEST(Conformance, Vectors_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithVectors))];
-    llcpp::conformance::StructWithVectors* v1 =
-        new (buf_v2) llcpp::conformance::StructWithVectors();
-    auto v3 = fidl::VectorView<int32_t>();
-    v1->vec_empty = std::move(v3);
-    int32_t v4 = 1ull;
-    int32_t v5 = 2ull;
-    auto v6 = fidl::Array<int32_t, 2>{v4, v5};
-    auto v7 = fidl::VectorView<int32_t>(v6.data(), 2);
-    v1->vec_int = std::move(v7);
-    fidl::StringView v8("a", 1);
-    fidl::StringView v9("b", 1);
-    auto v10 = fidl::Array<fidl::StringView, 2>{v8, v9};
-    auto v11 = fidl::VectorView<fidl::StringView>(v10.data(), 2);
-    v1->vec_string = std::move(v11);
-    fidl::StringView v12{};
-    fidl::StringView v13("c", 1);
-    fidl::StringView v14{};
-    auto v15 = fidl::Array<fidl::StringView, 3>{v12, v13, v14};
-    auto v16 = fidl::VectorView<fidl::StringView>(v15.data(), 3);
-    v1->vec_nullable_string = std::move(v16);
-    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v17 = new (buf_v18) llcpp::conformance::StructWithInt();
-    int32_t v19 = 1ull;
-    v17->x = std::move(v19);
-    auto v20 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v17};
-    auto v21 = fidl::VectorView<llcpp::conformance::StructWithInt>(v20.data(), 1);
-    v1->vec_struct = std::move(v21);
-    llcpp::conformance::StructWithInt* v22{};
-    llcpp::conformance::StructWithInt* v23{};
-    llcpp::conformance::StructWithInt v24_pointee{};
-    auto v24 = &v24_pointee;
-    int32_t v25 = 2ull;
-    v24->x = std::move(v25);
-    auto v26 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{v22, v23, v24};
-    auto v27 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v26.data(), 3);
-    v1->vec_nullable_struct = std::move(v27);
-    int32_t v28 = 1ull;
-    int32_t v29 = 2ull;
-    auto v30 = fidl::Array<int32_t, 2>{v28, v29};
-    auto v31 = fidl::VectorView<int32_t>(v30.data(), 2);
-    int32_t v32 = 3ull;
-    auto v33 = fidl::Array<int32_t, 1>{v32};
-    auto v34 = fidl::VectorView<int32_t>(v33.data(), 1);
-    auto v35 = fidl::Array<fidl::VectorView<int32_t>, 2>{v31, v34};
-    auto v36 = fidl::VectorView<fidl::VectorView<int32_t>>(v35.data(), 2);
-    v1->vec_vec_int = std::move(v36);
+    llcpp::conformance::StructWithVectors v1{};
+    auto v2 = fidl::VectorView<int32_t>();
+    v1.vec_empty = std::move(v2);
+    int32_t v3 = 1ull;
+    int32_t v4 = 2ull;
+    auto v5 = fidl::Array<int32_t, 2>{std::move(v3), std::move(v4)};
+    auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
+    v1.vec_int = std::move(v6);
+    fidl::StringView v7("a", 1);
+    fidl::StringView v8("b", 1);
+    auto v9 = fidl::Array<fidl::StringView, 2>{std::move(v7), std::move(v8)};
+    auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
+    v1.vec_string = std::move(v10);
+    fidl::StringView v11{};
+    fidl::StringView v12("c", 1);
+    fidl::StringView v13{};
+    auto v14 = fidl::Array<fidl::StringView, 3>{std::move(v11), std::move(v12), std::move(v13)};
+    auto v15 = fidl::VectorView<fidl::StringView>(v14.data(), 3);
+    v1.vec_nullable_string = std::move(v15);
+    llcpp::conformance::StructWithInt v16{};
+    int32_t v17 = 1ull;
+    v16.x = std::move(v17);
+    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 1>{std::move(v16)};
+    auto v19 = fidl::VectorView<llcpp::conformance::StructWithInt>(v18.data(), 1);
+    v1.vec_struct = std::move(v19);
+    llcpp::conformance::StructWithInt* v20{};
+    llcpp::conformance::StructWithInt* v21{};
+    llcpp::conformance::StructWithInt v22{};
+    int32_t v23 = 2ull;
+    v22.x = std::move(v23);
+    auto v24 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{std::move(v20), std::move(v21),
+                                                                  std::move(&v22)};
+    auto v25 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v24.data(), 3);
+    v1.vec_nullable_struct = std::move(v25);
+    int32_t v26 = 1ull;
+    int32_t v27 = 2ull;
+    auto v28 = fidl::Array<int32_t, 2>{std::move(v26), std::move(v27)};
+    auto v29 = fidl::VectorView<int32_t>(v28.data(), 2);
+    int32_t v30 = 3ull;
+    auto v31 = fidl::Array<int32_t, 1>{std::move(v30)};
+    auto v32 = fidl::VectorView<int32_t>(v31.data(), 1);
+    auto v33 = fidl::Array<fidl::VectorView<int32_t>, 2>{std::move(v29), std::move(v32)};
+    auto v34 = fidl::VectorView<fidl::VectorView<int32_t>>(v33.data(), 2);
+    v1.vec_vec_int = std::move(v34);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -928,12 +839,11 @@ TEST(Conformance, BoolTrue_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
-    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
-    bool v3 = true;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyBool v1{};
+    bool v2 = true;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -944,12 +854,11 @@ TEST(Conformance, BoolFalse_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
-    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
-    bool v3 = false;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyBool v1{};
+    bool v2 = false;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -960,12 +869,11 @@ TEST(Conformance, ByteZero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
-    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
-    uint8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyByte v1{};
+    uint8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -976,12 +884,11 @@ TEST(Conformance, Byte255_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
-    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
-    uint8_t v3 = 255ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyByte v1{};
+    uint8_t v2 = 255ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -992,12 +899,11 @@ TEST(Conformance, Int8Min_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = -128ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = -128ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1008,12 +914,11 @@ TEST(Conformance, Int8Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1024,12 +929,11 @@ TEST(Conformance, Int8Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = 127ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = 127ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1040,12 +944,11 @@ TEST(Conformance, Int16Min_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = -32768ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = -32768ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1056,12 +959,11 @@ TEST(Conformance, Int16Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1072,12 +974,11 @@ TEST(Conformance, Int16Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = 32767ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = 32767ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1088,12 +989,11 @@ TEST(Conformance, Int32Min_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = -2147483648ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = -2147483648ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1104,12 +1004,11 @@ TEST(Conformance, Int32Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1120,12 +1019,11 @@ TEST(Conformance, Int32Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = 2147483647ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = 2147483647ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1136,12 +1034,11 @@ TEST(Conformance, Int64Min_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = -9223372036854775807ll - 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = -9223372036854775807ll - 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1152,12 +1049,11 @@ TEST(Conformance, Int64Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1168,12 +1064,11 @@ TEST(Conformance, Int64Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = 9223372036854775807ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = 9223372036854775807ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1184,12 +1079,11 @@ TEST(Conformance, Uint8Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
-    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
-    uint8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint8 v1{};
+    uint8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1200,12 +1094,11 @@ TEST(Conformance, Uint8Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
-    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
-    uint8_t v3 = 255ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint8 v1{};
+    uint8_t v2 = 255ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1216,12 +1109,11 @@ TEST(Conformance, Uint16Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
-    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
-    uint16_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint16 v1{};
+    uint16_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1232,12 +1124,11 @@ TEST(Conformance, Uint16Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
-    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
-    uint16_t v3 = 65535ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint16 v1{};
+    uint16_t v2 = 65535ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1248,12 +1139,11 @@ TEST(Conformance, Uint32Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
-    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
-    uint32_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint32 v1{};
+    uint32_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1264,12 +1154,11 @@ TEST(Conformance, Uint32Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
-    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
-    uint32_t v3 = 4294967295ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint32 v1{};
+    uint32_t v2 = 4294967295ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1280,12 +1169,11 @@ TEST(Conformance, Uint64Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
-    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
-    uint64_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint64 v1{};
+    uint64_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1296,12 +1184,11 @@ TEST(Conformance, Uint64Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
-    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
-    uint64_t v3 = 18446744073709551615ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint64 v1{};
+    uint64_t v2 = 18446744073709551615ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1312,12 +1199,11 @@ TEST(Conformance, Float32Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 0;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 0;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1328,12 +1214,11 @@ TEST(Conformance, Float32One_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1344,12 +1229,11 @@ TEST(Conformance, Float32MinusOne_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = -1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = -1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1360,12 +1244,11 @@ TEST(Conformance, Float32Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 3.4028234663852886e+38;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 3.4028234663852886e+38;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1376,12 +1259,11 @@ TEST(Conformance, Float64Zero_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 0;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 0;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1392,12 +1274,11 @@ TEST(Conformance, Float64One_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1408,12 +1289,11 @@ TEST(Conformance, Float64MinusOne_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = -1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = -1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1424,12 +1304,11 @@ TEST(Conformance, Float64Max_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 1.7976931348623157e+308;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 1.7976931348623157e+308;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1442,16 +1321,13 @@ TEST(Conformance, UnionWithBoundString_Encode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::UnionWithBoundStringStruct))];
-    llcpp::conformance::UnionWithBoundStringStruct* v1 =
-        new (buf_v2) llcpp::conformance::UnionWithBoundStringStruct();
-    llcpp::conformance::UnionWithBoundString v3;
-    fidl::StringView v4("abcd", 4);
-    v3.set_boundFiveStr(std::move(v4));
-    v1->v = std::move(v3);
+    llcpp::conformance::UnionWithBoundStringStruct v1{};
+    llcpp::conformance::UnionWithBoundString v2;
+    fidl::StringView v3("abcd", 4);
+    v2.set_boundFiveStr(std::move(v3));
+    v1.v = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(v1, expected));
+    EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
   }
 }
 
@@ -1463,38 +1339,33 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInStruct))];
-    llcpp::conformance::ThreeByteInStruct* v1 =
-        new (buf_v2) llcpp::conformance::ThreeByteInStruct();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    v1->elem1 = std::move(*v3);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    v1->elem2 = std::move(*v8);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    v1->elem3 = std::move(*v13);
+    llcpp::conformance::ThreeByteInStruct v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    v1.elem1 = std::move(v2);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    v1.elem2 = std::move(v6);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    v1.elem3 = std::move(v10);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1506,31 +1377,27 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInStruct))];
-    llcpp::conformance::FiveByteInStruct* v1 = new (buf_v2) llcpp::conformance::FiveByteInStruct();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    v1->elem1 = std::move(*v3);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    v1->elem2 = std::move(*v7);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    v1->elem3 = std::move(*v11);
+    llcpp::conformance::FiveByteInStruct v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    v1.elem1 = std::move(v2);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    v1.elem2 = std::move(v5);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    v1.elem3 = std::move(v8);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1543,38 +1410,34 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInVector))];
-    llcpp::conformance::ThreeByteInVector* v1 =
-        new (buf_v2) llcpp::conformance::ThreeByteInVector();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::ThreeByte, 3>{*v3, *v8, *v13};
-    auto v19 = fidl::VectorView<llcpp::conformance::ThreeByte>(v18.data(), 3);
-    v1->elems = std::move(v19);
+    llcpp::conformance::ThreeByteInVector v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    auto v14 =
+        fidl::Array<llcpp::conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
+    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(v14.data(), 3);
+    v1.elems = std::move(v15);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1587,31 +1450,28 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInVector))];
-    llcpp::conformance::FiveByteInVector* v1 = new (buf_v2) llcpp::conformance::FiveByteInVector();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::FiveByte, 3>{*v3, *v7, *v11};
-    auto v16 = fidl::VectorView<llcpp::conformance::FiveByte>(v15.data(), 3);
-    v1->elems = std::move(v16);
+    llcpp::conformance::FiveByteInVector v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    auto v11 =
+        fidl::Array<llcpp::conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
+    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(v11.data(), 3);
+    v1.elems = std::move(v12);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1623,36 +1483,33 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByteInArray))];
-    llcpp::conformance::ThreeByteInArray* v1 = new (buf_v2) llcpp::conformance::ThreeByteInArray();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v3 = new (buf_v4) llcpp::conformance::ThreeByte();
-    uint8_t v5 = 1ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 2ull;
-    v3->elem2 = std::move(v6);
-    uint8_t v7 = 3ull;
-    v3->elem3 = std::move(v7);
-    char buf_v9[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v8 = new (buf_v9) llcpp::conformance::ThreeByte();
-    uint8_t v10 = 4ull;
-    v8->elem1 = std::move(v10);
-    uint8_t v11 = 5ull;
-    v8->elem2 = std::move(v11);
-    uint8_t v12 = 6ull;
-    v8->elem3 = std::move(v12);
-    char buf_v14[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::ThreeByte))];
-    llcpp::conformance::ThreeByte* v13 = new (buf_v14) llcpp::conformance::ThreeByte();
-    uint8_t v15 = 7ull;
-    v13->elem1 = std::move(v15);
-    uint8_t v16 = 8ull;
-    v13->elem2 = std::move(v16);
-    uint8_t v17 = 9ull;
-    v13->elem3 = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::ThreeByte, 3>{*v3, *v8, *v13};
-    v1->elems = std::move(v18);
+    llcpp::conformance::ThreeByteInArray v1{};
+    llcpp::conformance::ThreeByte v2{};
+    uint8_t v3 = 1ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 2ull;
+    v2.elem2 = std::move(v4);
+    uint8_t v5 = 3ull;
+    v2.elem3 = std::move(v5);
+    llcpp::conformance::ThreeByte v6{};
+    uint8_t v7 = 4ull;
+    v6.elem1 = std::move(v7);
+    uint8_t v8 = 5ull;
+    v6.elem2 = std::move(v8);
+    uint8_t v9 = 6ull;
+    v6.elem3 = std::move(v9);
+    llcpp::conformance::ThreeByte v10{};
+    uint8_t v11 = 7ull;
+    v10.elem1 = std::move(v11);
+    uint8_t v12 = 8ull;
+    v10.elem2 = std::move(v12);
+    uint8_t v13 = 9ull;
+    v10.elem3 = std::move(v13);
+    auto v14 =
+        fidl::Array<llcpp::conformance::ThreeByte, 3>{std::move(v2), std::move(v6), std::move(v10)};
+    v1.elems = std::move(v14);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1664,30 +1521,27 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByteInArray))];
-    llcpp::conformance::FiveByteInArray* v1 = new (buf_v2) llcpp::conformance::FiveByteInArray();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v3 = new (buf_v4) llcpp::conformance::FiveByte();
-    uint32_t v5 = 16909060ull;
-    v3->elem1 = std::move(v5);
-    uint8_t v6 = 5ull;
-    v3->elem2 = std::move(v6);
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v7 = new (buf_v8) llcpp::conformance::FiveByte();
-    uint32_t v9 = 101124105ull;
-    v7->elem1 = std::move(v9);
-    uint8_t v10 = 10ull;
-    v7->elem2 = std::move(v10);
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FiveByte))];
-    llcpp::conformance::FiveByte* v11 = new (buf_v12) llcpp::conformance::FiveByte();
-    uint32_t v13 = 185339150ull;
-    v11->elem1 = std::move(v13);
-    uint8_t v14 = 15ull;
-    v11->elem2 = std::move(v14);
-    auto v15 = fidl::Array<llcpp::conformance::FiveByte, 3>{*v3, *v7, *v11};
-    v1->elems = std::move(v15);
+    llcpp::conformance::FiveByteInArray v1{};
+    llcpp::conformance::FiveByte v2{};
+    uint32_t v3 = 16909060ull;
+    v2.elem1 = std::move(v3);
+    uint8_t v4 = 5ull;
+    v2.elem2 = std::move(v4);
+    llcpp::conformance::FiveByte v5{};
+    uint32_t v6 = 101124105ull;
+    v5.elem1 = std::move(v6);
+    uint8_t v7 = 10ull;
+    v5.elem2 = std::move(v7);
+    llcpp::conformance::FiveByte v8{};
+    uint32_t v9 = 185339150ull;
+    v8.elem1 = std::move(v9);
+    uint8_t v10 = 15ull;
+    v8.elem2 = std::move(v10);
+    auto v11 =
+        fidl::Array<llcpp::conformance::FiveByte, 3>{std::move(v2), std::move(v5), std::move(v8)};
+    v1.elems = std::move(v11);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1698,10 +1552,9 @@ TEST(Conformance, EmptyStruct_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v1 = new (buf_v2) llcpp::conformance::EmptyStruct();
+    llcpp::conformance::EmptyStruct v1{};
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1715,19 +1568,15 @@ TEST(Conformance, EmptyStructSandwich_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStructSandwich))];
-    llcpp::conformance::EmptyStructSandwich* v1 =
-        new (buf_v2) llcpp::conformance::EmptyStructSandwich();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v4 = new (buf_v5) llcpp::conformance::EmptyStruct();
-    v1->es = std::move(*v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::EmptyStructSandwich v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::EmptyStruct v3{};
+    v1.es = std::move(v3);
+    fidl::StringView v4("after", 5);
+    v1.after = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1739,20 +1588,17 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::Uint8Uint16Uint32Uint64))];
-    llcpp::conformance::Uint8Uint16Uint32Uint64* v1 =
-        new (buf_v2) llcpp::conformance::Uint8Uint16Uint32Uint64();
-    uint8_t v3 = 1ull;
-    v1->f1 = std::move(v3);
-    uint16_t v4 = 515ull;
-    v1->f2 = std::move(v4);
-    uint32_t v5 = 67438087ull;
-    v1->f3 = std::move(v5);
-    uint64_t v6 = 579005069656919567ull;
-    v1->f4 = std::move(v6);
+    llcpp::conformance::Uint8Uint16Uint32Uint64 v1{};
+    uint8_t v2 = 1ull;
+    v1.f1 = std::move(v2);
+    uint16_t v3 = 515ull;
+    v1.f2 = std::move(v3);
+    uint32_t v4 = 67438087ull;
+    v1.f3 = std::move(v4);
+    uint64_t v5 = 579005069656919567ull;
+    v1.f4 = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1764,20 +1610,17 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::Uint64Uint32Uint16Uint8))];
-    llcpp::conformance::Uint64Uint32Uint16Uint8* v1 =
-        new (buf_v2) llcpp::conformance::Uint64Uint32Uint16Uint8();
-    uint64_t v3 = 579005069656919567ull;
-    v1->f1 = std::move(v3);
-    uint32_t v4 = 67438087ull;
-    v1->f2 = std::move(v4);
-    uint16_t v5 = 515ull;
-    v1->f3 = std::move(v5);
-    uint8_t v6 = 1ull;
-    v1->f4 = std::move(v6);
+    llcpp::conformance::Uint64Uint32Uint16Uint8 v1{};
+    uint64_t v2 = 579005069656919567ull;
+    v1.f1 = std::move(v2);
+    uint32_t v3 = 67438087ull;
+    v1.f2 = std::move(v3);
+    uint16_t v4 = 515ull;
+    v1.f3 = std::move(v4);
+    uint8_t v5 = 1ull;
+    v1.f4 = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1789,15 +1632,12 @@ TEST(Conformance, SimpleTableEmpty_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    auto v4 = v3.view();
-    v1->table = std::move(v4);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    auto v3 = v2.view();
+    v1.table = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1815,19 +1655,16 @@ TEST(Conformance, SimpleTableXAndY_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 42ull;
-    v3.set_x(&v4);
-    int64_t v5 = 67ull;
-    v3.set_y(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 42ull;
+    v2.set_x(&v3);
+    int64_t v4 = 67ull;
+    v2.set_y(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1844,17 +1681,14 @@ TEST(Conformance, SimpleTableJustY_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructOfSimpleTable))];
-    llcpp::conformance::StructOfSimpleTable* v1 =
-        new (buf_v2) llcpp::conformance::StructOfSimpleTable();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 67ull;
-    v3.set_y(&v4);
-    auto v5 = v3.view();
-    v1->table = std::move(v5);
+    llcpp::conformance::StructOfSimpleTable v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 67ull;
+    v2.set_y(&v3);
+    auto v4 = v2.view();
+    v1.table = std::move(v4);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1870,19 +1704,16 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::StructOfTableWithStringAndVector))];
-    llcpp::conformance::StructOfTableWithStringAndVector* v1 =
-        new (buf_v2) llcpp::conformance::StructOfTableWithStringAndVector();
-    auto v3 = llcpp::conformance::TableWithStringAndVector::Build();
-    fidl::StringView v4("hello", 5);
-    v3.set_foo(&v4);
-    int32_t v5 = 27ull;
-    v3.set_bar(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
+    llcpp::conformance::StructOfTableWithStringAndVector v1{};
+    auto v2 = llcpp::conformance::TableWithStringAndVector::Build();
+    fidl::StringView v3("hello", 5);
+    v2.set_foo(&v3);
+    int32_t v4 = 27ull;
+    v2.set_bar(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1900,21 +1731,18 @@ TEST(Conformance, SimpleTableThenUint64_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::SimpleTableThenUint64))];
-    llcpp::conformance::SimpleTableThenUint64* v1 =
-        new (buf_v2) llcpp::conformance::SimpleTableThenUint64();
-    auto v3 = llcpp::conformance::SimpleTable::Build();
-    int64_t v4 = 42ull;
-    v3.set_x(&v4);
-    int64_t v5 = 67ull;
-    v3.set_y(&v5);
-    auto v6 = v3.view();
-    v1->table = std::move(v6);
-    uint64_t v7 = 16045690984833335023ull;
-    v1->number = std::move(v7);
+    llcpp::conformance::SimpleTableThenUint64 v1{};
+    auto v2 = llcpp::conformance::SimpleTable::Build();
+    int64_t v3 = 42ull;
+    v2.set_x(&v3);
+    int64_t v4 = 67ull;
+    v2.set_y(&v4);
+    auto v5 = v2.view();
+    v1.table = std::move(v5);
+    uint64_t v6 = 16045690984833335023ull;
+    v1.number = std::move(v6);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1930,20 +1758,17 @@ TEST(Conformance, InlineXUnionInStruct_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestInlineXUnionInStruct))];
-    llcpp::conformance::TestInlineXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestInlineXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    llcpp::conformance::SampleXUnion v4;
-    uint32_t v5 = 3735928559ull;
-    v4.set_u(&v5);
-    v1->xu = std::move(v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::TestInlineXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::SampleXUnion v3;
+    uint32_t v4 = 3735928559ull;
+    v3.set_u(&v4);
+    v1.xu = std::move(v3);
+    fidl::StringView v5("after", 5);
+    v1.after = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1958,16 +1783,13 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestOptionalXUnionInStruct))];
-    llcpp::conformance::TestOptionalXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestOptionalXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    fidl::StringView v4("after", 5);
-    v1->after = std::move(v4);
+    llcpp::conformance::TestOptionalXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    fidl::StringView v3("after", 5);
+    v1.after = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -1983,20 +1805,17 @@ TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestOptionalXUnionInStruct))];
-    llcpp::conformance::TestOptionalXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestOptionalXUnionInStruct();
-    fidl::StringView v3("before", 6);
-    v1->before = std::move(v3);
-    llcpp::conformance::SampleXUnion v4;
-    uint32_t v5 = 3735928559ull;
-    v4.set_u(&v5);
-    v1->xu = std::move(v4);
-    fidl::StringView v6("after", 5);
-    v1->after = std::move(v6);
+    llcpp::conformance::TestOptionalXUnionInStruct v1{};
+    fidl::StringView v2("before", 6);
+    v1.before = std::move(v2);
+    llcpp::conformance::SampleXUnion v3;
+    uint32_t v4 = 3735928559ull;
+    v3.set_u(&v4);
+    v1.xu = std::move(v3);
+    fidl::StringView v5("after", 5);
+    v1.after = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2014,18 +1833,16 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::TestXUnionInTable))];
-    llcpp::conformance::TestXUnionInTable* v1 =
-        new (buf_v2) llcpp::conformance::TestXUnionInTable();
-    auto v3 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v4("before", 6);
-    v3.set_before(&v4);
-    fidl::StringView v5("after", 5);
-    v3.set_after(&v5);
-    auto v6 = v3.view();
-    v1->value = std::move(v6);
+    llcpp::conformance::TestXUnionInTable v1{};
+    auto v2 = llcpp::conformance::XUnionInTable::Build();
+    fidl::StringView v3("before", 6);
+    v2.set_before(&v3);
+    fidl::StringView v4("after", 5);
+    v2.set_after(&v4);
+    auto v5 = v2.view();
+    v1.value = std::move(v5);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2045,22 +1862,20 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::TestXUnionInTable))];
-    llcpp::conformance::TestXUnionInTable* v1 =
-        new (buf_v2) llcpp::conformance::TestXUnionInTable();
-    auto v3 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v4("before", 6);
-    v3.set_before(&v4);
-    llcpp::conformance::SampleXUnion v5;
-    uint32_t v6 = 3735928559ull;
-    v5.set_u(&v6);
-    v3.set_xu(&v5);
-    fidl::StringView v7("after", 5);
-    v3.set_after(&v7);
-    auto v8 = v3.view();
-    v1->value = std::move(v8);
+    llcpp::conformance::TestXUnionInTable v1{};
+    auto v2 = llcpp::conformance::XUnionInTable::Build();
+    fidl::StringView v3("before", 6);
+    v2.set_before(&v3);
+    llcpp::conformance::SampleXUnion v4;
+    uint32_t v5 = 3735928559ull;
+    v4.set_u(&v5);
+    v2.set_xu(&v4);
+    fidl::StringView v6("after", 5);
+    v2.set_after(&v6);
+    auto v7 = v2.view();
+    v1.value = std::move(v7);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2073,16 +1888,13 @@ TEST(Conformance, StrictXUnion_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestStrictXUnionInStruct))];
-    llcpp::conformance::TestStrictXUnionInStruct* v1 =
-        new (buf_v2) llcpp::conformance::TestStrictXUnionInStruct();
-    llcpp::conformance::SampleStrictXUnion v3;
-    uint32_t v4 = 3735928559ull;
-    v3.set_u(&v4);
-    v1->xu = std::move(v3);
+    llcpp::conformance::TestStrictXUnionInStruct v1{};
+    llcpp::conformance::SampleStrictXUnion v2;
+    uint32_t v3 = 3735928559ull;
+    v2.set_u(&v3);
+    v1.xu = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2100,25 +1912,21 @@ TEST(Conformance, AddEthernetDeviceRequest_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::TestAddEthernetDeviceRequest))];
-    llcpp::conformance::TestAddEthernetDeviceRequest* v1 =
-        new (buf_v2) llcpp::conformance::TestAddEthernetDeviceRequest();
-    fidl::StringView v3("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
-    v1->topological_path = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::InterfaceConfig))];
-    llcpp::conformance::InterfaceConfig* v4 = new (buf_v5) llcpp::conformance::InterfaceConfig();
-    fidl::StringView v6("ethp0003", 8);
-    v4->name = std::move(v6);
-    llcpp::conformance::IpAddressConfig v7;
-    bool v8 = true;
-    v7.set_dhcp(&v8);
-    v4->ip_address_config = std::move(v7);
-    v1->config = std::move(*v4);
-    uint32_t v9 = 4294967295ull;
-    v1->this_should_be_a_handle = std::move(v9);
+    llcpp::conformance::TestAddEthernetDeviceRequest v1{};
+    fidl::StringView v2("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
+    v1.topological_path = std::move(v2);
+    llcpp::conformance::InterfaceConfig v3{};
+    fidl::StringView v4("ethp0003", 8);
+    v3.name = std::move(v4);
+    llcpp::conformance::IpAddressConfig v5;
+    bool v6 = true;
+    v5.set_dhcp(std::move(v6));
+    v3.ip_address_config = std::move(v5);
+    v1.config = std::move(v3);
+    uint32_t v7 = 4294967295ull;
+    v1.this_should_be_a_handle = std::move(v7);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2133,31 +1941,27 @@ TEST(Conformance, FileGetAttrResponse_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::FileGetAttrResponse))];
-    llcpp::conformance::FileGetAttrResponse* v1 =
-        new (buf_v2) llcpp::conformance::FileGetAttrResponse();
-    int32_t v3 = 2125315759ull;
-    v1->s = std::move(v3);
-    char buf_v5[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::NodeAttributes))];
-    llcpp::conformance::NodeAttributes* v4 = new (buf_v5) llcpp::conformance::NodeAttributes();
-    uint32_t v6 = 2518909348ull;
-    v4->mode = std::move(v6);
-    uint64_t v7 = 1ull;
-    v4->id = std::move(v7);
-    uint64_t v8 = 231ull;
-    v4->content_size = std::move(v8);
-    uint64_t v9 = 231ull;
-    v4->storage_size = std::move(v9);
-    uint64_t v10 = 1ull;
-    v4->link_count = std::move(v10);
-    uint64_t v11 = 9833440827789222417ull;
-    v4->creation_time = std::move(v11);
-    uint64_t v12 = 72038755451251353ull;
-    v4->modification_time = std::move(v12);
-    v1->attributes = std::move(*v4);
+    llcpp::conformance::FileGetAttrResponse v1{};
+    int32_t v2 = 2125315759ull;
+    v1.s = std::move(v2);
+    llcpp::conformance::NodeAttributes v3{};
+    uint32_t v4 = 2518909348ull;
+    v3.mode = std::move(v4);
+    uint64_t v5 = 1ull;
+    v3.id = std::move(v5);
+    uint64_t v6 = 231ull;
+    v3.content_size = std::move(v6);
+    uint64_t v7 = 231ull;
+    v3.storage_size = std::move(v7);
+    uint64_t v8 = 1ull;
+    v3.link_count = std::move(v8);
+    uint64_t v9 = 9833440827789222417ull;
+    v3.creation_time = std::move(v9);
+    uint64_t v10 = 72038755451251353ull;
+    v3.modification_time = std::move(v10);
+    v1.attributes = std::move(v3);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2179,44 +1983,34 @@ TEST(Conformance, Optionals_Decode) {
   };
 
   {
-    char
-        buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithOptionals))];
-    llcpp::conformance::StructWithOptionals* v1 =
-        new (buf_v2) llcpp::conformance::StructWithOptionals();
-    char buf_v4[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v3 = new (buf_v4) llcpp::conformance::EmptyStruct();
-    v1->s = std::move(*v3);
-    llcpp::conformance::EmptyStruct v5_pointee{};
-    auto v5 = &v5_pointee;
-    v1->s2 = v5;
-    auto v6 = llcpp::conformance::TableWithEmptyStruct::Build();
-    char buf_v8[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v7 = new (buf_v8) llcpp::conformance::EmptyStruct();
-    v6.set_s(v7);
-    auto v9 = v6.view();
-    v1->t = std::move(v9);
-    llcpp::conformance::XUnionWithEmptyStruct v10;
-    char buf_v12[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v11 = new (buf_v12) llcpp::conformance::EmptyStruct();
-    v10.set_s(v11);
-    v1->xu = std::move(v10);
-    llcpp::conformance::XUnionWithEmptyStruct v13;
-    char buf_v15[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v14 = new (buf_v15) llcpp::conformance::EmptyStruct();
-    v13.set_s(v14);
-    v1->xu2 = std::move(v13);
-    llcpp::conformance::UnionWithEmptyStruct v16;
-    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v17 = new (buf_v18) llcpp::conformance::EmptyStruct();
-    v16.set_s(*v17);
-    v1->u = std::move(v16);
-    llcpp::conformance::UnionWithEmptyStruct v19;
-    char buf_v21[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::EmptyStruct))];
-    llcpp::conformance::EmptyStruct* v20 = new (buf_v21) llcpp::conformance::EmptyStruct();
-    v19.set_s(*v20);
-    v1->u2 = &v19;
+    llcpp::conformance::StructWithOptionals v1{};
+    llcpp::conformance::EmptyStruct v2{};
+    v1.s = std::move(v2);
+    llcpp::conformance::EmptyStruct v3{};
+    v1.s2 = std::move(&v3);
+    auto v4 = llcpp::conformance::TableWithEmptyStruct::Build();
+    llcpp::conformance::EmptyStruct v5{};
+    v4.set_s(&v5);
+    auto v6 = v4.view();
+    v1.t = std::move(v6);
+    llcpp::conformance::XUnionWithEmptyStruct v7;
+    llcpp::conformance::EmptyStruct v8{};
+    v7.set_s(&v8);
+    v1.xu = std::move(v7);
+    llcpp::conformance::XUnionWithEmptyStruct v9;
+    llcpp::conformance::EmptyStruct v10{};
+    v9.set_s(&v10);
+    v1.xu2 = std::move(v9);
+    llcpp::conformance::UnionWithEmptyStruct v11;
+    llcpp::conformance::EmptyStruct v12{};
+    v11.set_s(std::move(v12));
+    v1.u = std::move(v11);
+    llcpp::conformance::UnionWithEmptyStruct v13;
+    llcpp::conformance::EmptyStruct v14{};
+    v13.set_s(std::move(v14));
+    v1.u2 = std::move(&v13);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2237,49 +2031,45 @@ TEST(Conformance, Arrays_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithArrays))];
-    llcpp::conformance::StructWithArrays* v1 = new (buf_v2) llcpp::conformance::StructWithArrays();
-    int32_t v3 = 1ull;
-    int32_t v4 = 2ull;
-    auto v5 = fidl::Array<int32_t, 2>{v3, v4};
-    v1->arr_int = std::move(v5);
-    fidl::StringView v6("a", 1);
-    fidl::StringView v7("b", 1);
-    auto v8 = fidl::Array<fidl::StringView, 2>{v6, v7};
-    v1->arr_string = std::move(v8);
-    fidl::StringView v9("c", 1);
-    fidl::StringView v10{};
-    auto v11 = fidl::Array<fidl::StringView, 2>{v9, v10};
-    v1->arr_nullable_string = std::move(v11);
-    char buf_v13[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v12 = new (buf_v13) llcpp::conformance::StructWithInt();
-    int32_t v14 = 1ull;
-    v12->x = std::move(v14);
-    char buf_v16[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v15 = new (buf_v16) llcpp::conformance::StructWithInt();
-    int32_t v17 = 2ull;
-    v15->x = std::move(v17);
-    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 2>{*v12, *v15};
-    v1->arr_struct = std::move(v18);
-    llcpp::conformance::StructWithInt* v19{};
-    llcpp::conformance::StructWithInt v20_pointee{};
-    auto v20 = &v20_pointee;
-    int32_t v21 = 16909060ull;
-    v20->x = std::move(v21);
-    auto v22 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{v19, v20};
-    v1->arr_nullable_struct = std::move(v22);
-    int32_t v23 = 1ull;
-    int32_t v24 = 2ull;
-    int32_t v25 = 3ull;
-    auto v26 = fidl::Array<int32_t, 3>{v23, v24, v25};
-    int32_t v27 = 4ull;
-    int32_t v28 = 5ull;
-    int32_t v29 = 6ull;
-    auto v30 = fidl::Array<int32_t, 3>{v27, v28, v29};
-    auto v31 = fidl::Array<fidl::Array<int32_t, 3>, 2>{v26, v30};
-    v1->arr_arr_int = std::move(v31);
+    llcpp::conformance::StructWithArrays v1{};
+    int32_t v2 = 1ull;
+    int32_t v3 = 2ull;
+    auto v4 = fidl::Array<int32_t, 2>{std::move(v2), std::move(v3)};
+    v1.arr_int = std::move(v4);
+    fidl::StringView v5("a", 1);
+    fidl::StringView v6("b", 1);
+    auto v7 = fidl::Array<fidl::StringView, 2>{std::move(v5), std::move(v6)};
+    v1.arr_string = std::move(v7);
+    fidl::StringView v8("c", 1);
+    fidl::StringView v9{};
+    auto v10 = fidl::Array<fidl::StringView, 2>{std::move(v8), std::move(v9)};
+    v1.arr_nullable_string = std::move(v10);
+    llcpp::conformance::StructWithInt v11{};
+    int32_t v12 = 1ull;
+    v11.x = std::move(v12);
+    llcpp::conformance::StructWithInt v13{};
+    int32_t v14 = 2ull;
+    v13.x = std::move(v14);
+    auto v15 = fidl::Array<llcpp::conformance::StructWithInt, 2>{std::move(v11), std::move(v13)};
+    v1.arr_struct = std::move(v15);
+    llcpp::conformance::StructWithInt* v16{};
+    llcpp::conformance::StructWithInt v17{};
+    int32_t v18 = 16909060ull;
+    v17.x = std::move(v18);
+    auto v19 = fidl::Array<llcpp::conformance::StructWithInt*, 2>{std::move(v16), std::move(&v17)};
+    v1.arr_nullable_struct = std::move(v19);
+    int32_t v20 = 1ull;
+    int32_t v21 = 2ull;
+    int32_t v22 = 3ull;
+    auto v23 = fidl::Array<int32_t, 3>{std::move(v20), std::move(v21), std::move(v22)};
+    int32_t v24 = 4ull;
+    int32_t v25 = 5ull;
+    int32_t v26 = 6ull;
+    auto v27 = fidl::Array<int32_t, 3>{std::move(v24), std::move(v25), std::move(v26)};
+    auto v28 = fidl::Array<fidl::Array<int32_t, 3>, 2>{std::move(v23), std::move(v27)};
+    v1.arr_arr_int = std::move(v28);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2310,55 +2100,52 @@ TEST(Conformance, Vectors_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithVectors))];
-    llcpp::conformance::StructWithVectors* v1 =
-        new (buf_v2) llcpp::conformance::StructWithVectors();
-    auto v3 = fidl::VectorView<int32_t>();
-    v1->vec_empty = std::move(v3);
-    int32_t v4 = 1ull;
-    int32_t v5 = 2ull;
-    auto v6 = fidl::Array<int32_t, 2>{v4, v5};
-    auto v7 = fidl::VectorView<int32_t>(v6.data(), 2);
-    v1->vec_int = std::move(v7);
-    fidl::StringView v8("a", 1);
-    fidl::StringView v9("b", 1);
-    auto v10 = fidl::Array<fidl::StringView, 2>{v8, v9};
-    auto v11 = fidl::VectorView<fidl::StringView>(v10.data(), 2);
-    v1->vec_string = std::move(v11);
-    fidl::StringView v12{};
-    fidl::StringView v13("c", 1);
-    fidl::StringView v14{};
-    auto v15 = fidl::Array<fidl::StringView, 3>{v12, v13, v14};
-    auto v16 = fidl::VectorView<fidl::StringView>(v15.data(), 3);
-    v1->vec_nullable_string = std::move(v16);
-    char buf_v18[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::StructWithInt))];
-    llcpp::conformance::StructWithInt* v17 = new (buf_v18) llcpp::conformance::StructWithInt();
-    int32_t v19 = 1ull;
-    v17->x = std::move(v19);
-    auto v20 = fidl::Array<llcpp::conformance::StructWithInt, 1>{*v17};
-    auto v21 = fidl::VectorView<llcpp::conformance::StructWithInt>(v20.data(), 1);
-    v1->vec_struct = std::move(v21);
-    llcpp::conformance::StructWithInt* v22{};
-    llcpp::conformance::StructWithInt* v23{};
-    llcpp::conformance::StructWithInt v24_pointee{};
-    auto v24 = &v24_pointee;
-    int32_t v25 = 2ull;
-    v24->x = std::move(v25);
-    auto v26 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{v22, v23, v24};
-    auto v27 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v26.data(), 3);
-    v1->vec_nullable_struct = std::move(v27);
-    int32_t v28 = 1ull;
-    int32_t v29 = 2ull;
-    auto v30 = fidl::Array<int32_t, 2>{v28, v29};
-    auto v31 = fidl::VectorView<int32_t>(v30.data(), 2);
-    int32_t v32 = 3ull;
-    auto v33 = fidl::Array<int32_t, 1>{v32};
-    auto v34 = fidl::VectorView<int32_t>(v33.data(), 1);
-    auto v35 = fidl::Array<fidl::VectorView<int32_t>, 2>{v31, v34};
-    auto v36 = fidl::VectorView<fidl::VectorView<int32_t>>(v35.data(), 2);
-    v1->vec_vec_int = std::move(v36);
+    llcpp::conformance::StructWithVectors v1{};
+    auto v2 = fidl::VectorView<int32_t>();
+    v1.vec_empty = std::move(v2);
+    int32_t v3 = 1ull;
+    int32_t v4 = 2ull;
+    auto v5 = fidl::Array<int32_t, 2>{std::move(v3), std::move(v4)};
+    auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
+    v1.vec_int = std::move(v6);
+    fidl::StringView v7("a", 1);
+    fidl::StringView v8("b", 1);
+    auto v9 = fidl::Array<fidl::StringView, 2>{std::move(v7), std::move(v8)};
+    auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
+    v1.vec_string = std::move(v10);
+    fidl::StringView v11{};
+    fidl::StringView v12("c", 1);
+    fidl::StringView v13{};
+    auto v14 = fidl::Array<fidl::StringView, 3>{std::move(v11), std::move(v12), std::move(v13)};
+    auto v15 = fidl::VectorView<fidl::StringView>(v14.data(), 3);
+    v1.vec_nullable_string = std::move(v15);
+    llcpp::conformance::StructWithInt v16{};
+    int32_t v17 = 1ull;
+    v16.x = std::move(v17);
+    auto v18 = fidl::Array<llcpp::conformance::StructWithInt, 1>{std::move(v16)};
+    auto v19 = fidl::VectorView<llcpp::conformance::StructWithInt>(v18.data(), 1);
+    v1.vec_struct = std::move(v19);
+    llcpp::conformance::StructWithInt* v20{};
+    llcpp::conformance::StructWithInt* v21{};
+    llcpp::conformance::StructWithInt v22{};
+    int32_t v23 = 2ull;
+    v22.x = std::move(v23);
+    auto v24 = fidl::Array<llcpp::conformance::StructWithInt*, 3>{std::move(v20), std::move(v21),
+                                                                  std::move(&v22)};
+    auto v25 = fidl::VectorView<llcpp::conformance::StructWithInt*>(v24.data(), 3);
+    v1.vec_nullable_struct = std::move(v25);
+    int32_t v26 = 1ull;
+    int32_t v27 = 2ull;
+    auto v28 = fidl::Array<int32_t, 2>{std::move(v26), std::move(v27)};
+    auto v29 = fidl::VectorView<int32_t>(v28.data(), 2);
+    int32_t v30 = 3ull;
+    auto v31 = fidl::Array<int32_t, 1>{std::move(v30)};
+    auto v32 = fidl::VectorView<int32_t>(v31.data(), 1);
+    auto v33 = fidl::Array<fidl::VectorView<int32_t>, 2>{std::move(v29), std::move(v32)};
+    auto v34 = fidl::VectorView<fidl::VectorView<int32_t>>(v33.data(), 2);
+    v1.vec_vec_int = std::move(v34);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2369,12 +2156,11 @@ TEST(Conformance, BoolTrue_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
-    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
-    bool v3 = true;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyBool v1{};
+    bool v2 = true;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2385,12 +2171,11 @@ TEST(Conformance, BoolFalse_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyBool))];
-    llcpp::conformance::MyBool* v1 = new (buf_v2) llcpp::conformance::MyBool();
-    bool v3 = false;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyBool v1{};
+    bool v2 = false;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2401,12 +2186,11 @@ TEST(Conformance, ByteZero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
-    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
-    uint8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyByte v1{};
+    uint8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2417,12 +2201,11 @@ TEST(Conformance, Byte255_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyByte))];
-    llcpp::conformance::MyByte* v1 = new (buf_v2) llcpp::conformance::MyByte();
-    uint8_t v3 = 255ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyByte v1{};
+    uint8_t v2 = 255ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2433,12 +2216,11 @@ TEST(Conformance, Int8Min_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = -128ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = -128ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2449,12 +2231,11 @@ TEST(Conformance, Int8Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2465,12 +2246,11 @@ TEST(Conformance, Int8Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt8))];
-    llcpp::conformance::MyInt8* v1 = new (buf_v2) llcpp::conformance::MyInt8();
-    int8_t v3 = 127ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt8 v1{};
+    int8_t v2 = 127ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2481,12 +2261,11 @@ TEST(Conformance, Int16Min_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = -32768ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = -32768ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2497,12 +2276,11 @@ TEST(Conformance, Int16Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2513,12 +2291,11 @@ TEST(Conformance, Int16Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt16))];
-    llcpp::conformance::MyInt16* v1 = new (buf_v2) llcpp::conformance::MyInt16();
-    int16_t v3 = 32767ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt16 v1{};
+    int16_t v2 = 32767ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2529,12 +2306,11 @@ TEST(Conformance, Int32Min_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = -2147483648ll;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = -2147483648ll;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2545,12 +2321,11 @@ TEST(Conformance, Int32Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2561,12 +2336,11 @@ TEST(Conformance, Int32Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt32))];
-    llcpp::conformance::MyInt32* v1 = new (buf_v2) llcpp::conformance::MyInt32();
-    int32_t v3 = 2147483647ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt32 v1{};
+    int32_t v2 = 2147483647ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2577,12 +2351,11 @@ TEST(Conformance, Int64Min_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = -9223372036854775807ll - 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = -9223372036854775807ll - 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2593,12 +2366,11 @@ TEST(Conformance, Int64Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2609,12 +2381,11 @@ TEST(Conformance, Int64Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyInt64))];
-    llcpp::conformance::MyInt64* v1 = new (buf_v2) llcpp::conformance::MyInt64();
-    int64_t v3 = 9223372036854775807ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyInt64 v1{};
+    int64_t v2 = 9223372036854775807ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2625,12 +2396,11 @@ TEST(Conformance, Uint8Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
-    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
-    uint8_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint8 v1{};
+    uint8_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2641,12 +2411,11 @@ TEST(Conformance, Uint8Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint8))];
-    llcpp::conformance::MyUint8* v1 = new (buf_v2) llcpp::conformance::MyUint8();
-    uint8_t v3 = 255ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint8 v1{};
+    uint8_t v2 = 255ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2657,12 +2426,11 @@ TEST(Conformance, Uint16Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
-    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
-    uint16_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint16 v1{};
+    uint16_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2673,12 +2441,11 @@ TEST(Conformance, Uint16Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint16))];
-    llcpp::conformance::MyUint16* v1 = new (buf_v2) llcpp::conformance::MyUint16();
-    uint16_t v3 = 65535ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint16 v1{};
+    uint16_t v2 = 65535ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2689,12 +2456,11 @@ TEST(Conformance, Uint32Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
-    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
-    uint32_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint32 v1{};
+    uint32_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2705,12 +2471,11 @@ TEST(Conformance, Uint32Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint32))];
-    llcpp::conformance::MyUint32* v1 = new (buf_v2) llcpp::conformance::MyUint32();
-    uint32_t v3 = 4294967295ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint32 v1{};
+    uint32_t v2 = 4294967295ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2721,12 +2486,11 @@ TEST(Conformance, Uint64Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
-    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
-    uint64_t v3 = 0ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint64 v1{};
+    uint64_t v2 = 0ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2737,12 +2501,11 @@ TEST(Conformance, Uint64Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyUint64))];
-    llcpp::conformance::MyUint64* v1 = new (buf_v2) llcpp::conformance::MyUint64();
-    uint64_t v3 = 18446744073709551615ull;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyUint64 v1{};
+    uint64_t v2 = 18446744073709551615ull;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2753,12 +2516,11 @@ TEST(Conformance, Float32Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 0;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 0;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2769,12 +2531,11 @@ TEST(Conformance, Float32One_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2785,12 +2546,11 @@ TEST(Conformance, Float32MinusOne_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = -1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = -1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2801,12 +2561,11 @@ TEST(Conformance, Float32Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat32))];
-    llcpp::conformance::MyFloat32* v1 = new (buf_v2) llcpp::conformance::MyFloat32();
-    float v3 = 3.4028234663852886e+38;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat32 v1{};
+    float v2 = 3.4028234663852886e+38;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2817,12 +2576,11 @@ TEST(Conformance, Float64Zero_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 0;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 0;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2833,12 +2591,11 @@ TEST(Conformance, Float64One_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2849,12 +2606,11 @@ TEST(Conformance, Float64MinusOne_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = -1;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = -1;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2865,12 +2621,11 @@ TEST(Conformance, Float64Max_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(sizeof(llcpp::conformance::MyFloat64))];
-    llcpp::conformance::MyFloat64* v1 = new (buf_v2) llcpp::conformance::MyFloat64();
-    double v3 = 1.7976931348623157e+308;
-    v1->value = std::move(v3);
+    llcpp::conformance::MyFloat64 v1{};
+    double v2 = 1.7976931348623157e+308;
+    v1.value = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
 
@@ -2883,15 +2638,12 @@ TEST(Conformance, UnionWithBoundString_Decode) {
   };
 
   {
-    char buf_v2[llcpp_conformance_utils::FidlAlign(
-        sizeof(llcpp::conformance::UnionWithBoundStringStruct))];
-    llcpp::conformance::UnionWithBoundStringStruct* v1 =
-        new (buf_v2) llcpp::conformance::UnionWithBoundStringStruct();
-    llcpp::conformance::UnionWithBoundString v3;
-    fidl::StringView v4("abcd", 4);
-    v3.set_boundFiveStr(std::move(v4));
-    v1->v = std::move(v3);
+    llcpp::conformance::UnionWithBoundStringStruct v1{};
+    llcpp::conformance::UnionWithBoundString v2;
+    fidl::StringView v3("abcd", 4);
+    v2.set_boundFiveStr(std::move(v3));
+    v1.v = std::move(v2);
 
-    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(v1, std::move(bytes)));
+    EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
   }
 }
