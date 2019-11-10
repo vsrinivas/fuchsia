@@ -223,27 +223,27 @@ class TransformerBase {
       : src_dst(src_dst), out_error_msg_(out_error_msg) {}
   virtual ~TransformerBase() = default;
 
-  uint32_t InlineSize(const fidl_type_t* type, WireFormat wire_format, const Position& position) {
+  uint32_t InlineSize(const fidl_type_t* type, WireFormat wire_format) {
     assert(type);
 
     return UnsafeInlineSize(type, wire_format);
   }
 
-  uint32_t AltInlineSize(const fidl_type_t* type, const Position& position) {
+  uint32_t AltInlineSize(const fidl_type_t* type) {
     assert(type);
 
     switch (type->type_tag) {
       case fidl::kFidlTypeStruct: {
         const fidl_type_t ft(*type->coded_struct.alt_type);
-        return InlineSize(&ft, To(), position);
+        return InlineSize(&ft, To());
       }
       case fidl::kFidlTypeUnion: {
         const fidl_type_t ft(*type->coded_union.alt_type);
-        return InlineSize(&ft, To(), position);
+        return InlineSize(&ft, To());
       }
       case fidl::kFidlTypeArray: {
         const fidl_type_t ft(*type->coded_array.alt_type);
-        return InlineSize(&ft, To(), position);
+        return InlineSize(&ft, To());
       }
       case fidl::kFidlTypePrimitive:
       case fidl::kFidlTypeEnum:
@@ -255,7 +255,7 @@ class TransformerBase {
       case fidl::kFidlTypeXUnion:
       case fidl::kFidlTypeHandle:
       case fidl::kFidlTypeTable:
-        return InlineSize(type, To(), position);
+        return InlineSize(type, To());
     }
 
     assert(false && "unexpected non-exhaustive switch on fidl::FidlTypeTag");
@@ -428,9 +428,9 @@ class TransformerBase {
 
         // Transform field.
         uint32_t src_next_field_offset = current_position.src_inline_offset +
-                                         InlineSize(src_field.type, From(), current_position);
+                                         InlineSize(src_field.type, From());
         uint32_t dst_next_field_offset =
-            current_position.dst_inline_offset + InlineSize(dst_field.type, To(), current_position);
+            current_position.dst_inline_offset + InlineSize(dst_field.type, To());
         uint32_t dst_field_size = dst_next_field_offset - (dst_start_of_struct + dst_field.offset);
 
         TraversalResult field_traversal_result;
@@ -557,10 +557,10 @@ class TransformerBase {
         return src_envelope->num_bytes;
       }
 
-      return InlineSize(type, From(), position);
+      return InlineSize(type, From());
     }();
 
-    const uint32_t dst_contents_inline_size = FIDL_ALIGN(AltInlineSize(type, position));
+    const uint32_t dst_contents_inline_size = FIDL_ALIGN(AltInlineSize(type));
     Position data_position = Position{position.src_out_of_line_offset,
                                       position.src_out_of_line_offset + src_contents_inline_size,
                                       position.dst_out_of_line_offset,
@@ -855,12 +855,20 @@ class V1ToOld final : public TransformerBase {
         return src_xunion->envelope.num_bytes;
       }
 
-      return InlineSize(src_field->type, From(), position);
+      return InlineSize(src_field->type, From());
     }();
 
     // Transform: xunion field to static-union field (or variant).
     auto field_position = Position{
         position.src_out_of_line_offset,
+        // TODO(pascallouis): In a way, this is incorrect because `src_field_inline_size`
+        // might not be FIDL_ALIGN. However, it works because the cases where we
+        // return an unaligned size in `InlineSize` are gated by
+        // `if (!src_field->type) {` and use the `src_xunion->envelope.num_bytes`.
+        // Also, in those cases (single out-of-line object), we will never
+        // use this value because there is only one out-of-line object, and
+        // we will not transform beyond the single call below, i.e. the call is
+        // terminal, and does not recurse further.
         position.src_out_of_line_offset + src_field_inline_size,
         position.dst_inline_offset + dst_coded_union.data_offset,
         position.dst_out_of_line_offset,

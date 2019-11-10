@@ -1515,6 +1515,28 @@ uint8_t regression4_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // f6 padding
 };
 
+uint8_t regression5_old_and_v1[] = {
+    0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
+    0x2F, 0x30, 0x31, 0x32,  // f2 (uint32 enum)
+    0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x5D, 0x5E, 0x5F, 0x60,  // f5 (uint64)
+    0x61, 0x62, 0x63, 0x64,  // f5 (uint64) [cont.]
+    0x08, 0x00, 0x00, 0x00,  // f6 (uint8) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
+};
+
+uint8_t regression6_old_and_v1[] = {
+    0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
+    0x30, 0x00, 0x00, 0x03,  // f2 (uint32 enum)
+    0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x5D, 0x5E, 0x5F, 0x60,  // f5 (uint64)
+    0x61, 0x62, 0x63, 0x64,  // f5 (uint64) [cont.]
+    0x08, 0x00, 0x00, 0x00,  // f6 (uint8) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
+};
+
 uint8_t size5alignment1array_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // a.data[0]
     0x05, 0x06, 0x07, 0x08,  // a.data[0] & a.data[1]
@@ -2783,6 +2805,26 @@ bool regression4() {
   END_TEST;
 }
 
+bool regression5_enums() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression5Table, &example_Regression5Table,
+                                 regression5_old_and_v1, sizeof(regression5_old_and_v1),
+                                 regression5_old_and_v1, sizeof(regression5_old_and_v1)));
+
+  END_TEST;
+}
+
+bool regression6_bits() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression6Table, &example_Regression6Table,
+                                 regression6_old_and_v1, sizeof(regression6_old_and_v1),
+                                 regression6_old_and_v1, sizeof(regression6_old_and_v1)));
+
+  END_TEST;
+}
+
 bool size5alignment1array() {
   BEGIN_TEST;
 
@@ -3031,6 +3073,8 @@ RUN_TEST(regression2)
 RUN_TEST(regression3_absent)
 RUN_TEST(regression3_present)
 RUN_TEST(regression4)
+RUN_TEST(regression5_enums)
+RUN_TEST(regression6_bits)
 RUN_TEST(size5alignment1array)
 RUN_TEST(size5alignment4array)
 RUN_TEST(size5alignment1vector)
