@@ -182,6 +182,11 @@ type {{ .StubName }} struct {
 }
 
 func (s_ *{{ .StubName }}) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	var ctx_ _bindings.MarshalerContext
+	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
+}
+
+func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
@@ -194,7 +199,7 @@ func (s_ *{{ .StubName }}) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ 
 		{{- if .Request }}
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}

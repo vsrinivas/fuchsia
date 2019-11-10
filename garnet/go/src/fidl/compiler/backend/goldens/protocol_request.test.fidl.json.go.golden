@@ -36,6 +36,11 @@ type ChildStub struct {
 }
 
 func (s_ *ChildStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	var ctx_ _bindings.MarshalerContext
+	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
+}
+
+func (s_ *ChildStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
@@ -168,6 +173,11 @@ type ParentStub struct {
 }
 
 func (s_ *ParentStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	var ctx_ _bindings.MarshalerContext
+	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
+}
+
+func (s_ *ParentStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case ParentGetChildOrdinal:
 		fallthrough
@@ -187,7 +197,7 @@ func (s_ *ParentStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx
 		fallthrough
 	case ParentTakeChildGenOrdinal:
 		in_ := parentTakeChildRequest{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeChild(in_.C)
@@ -196,7 +206,7 @@ func (s_ *ParentStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx
 		fallthrough
 	case ParentTakeChildRequestGenOrdinal:
 		in_ := parentTakeChildRequestRequest{}
-		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeChildRequest(in_.R)
