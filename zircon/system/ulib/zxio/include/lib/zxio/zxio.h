@@ -268,7 +268,7 @@ typedef struct zxio_dirent {
   // This string is not null terminated. Instead, refer to |size| to
   // determine the length of the string.
   char name[0];
-} zxio_dirent_t;
+} __PACKED zxio_dirent_t;
 
 // An iterator for |zxio_dirent_t| objects.
 //

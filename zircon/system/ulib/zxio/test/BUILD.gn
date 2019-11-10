@@ -12,6 +12,7 @@ group("test") {
 zx_test("zxio") {
   sources = [
     "debuglog-test.cc",
+    "dirent-test.cc",
     "null-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",
