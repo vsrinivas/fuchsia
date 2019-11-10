@@ -334,3 +334,20 @@ struct SimpleTableArrayStruct {
 struct StringUnionVector {
     vector<StringUnion?>:3 the_vector;
 };
+
+struct LaunchInfo {
+    string:200 url;
+    vector<string>? arguments;
+    TransformerEmptyStruct? out;
+    TransformerEmptyStruct? err;
+    // handle<channel>? directory_request; // TODO(mkember): Support handles in GIDL.
+    uint32 directory_request;
+    TransformerEmptyStruct? flat_namespace;
+    TransformerEmptyStruct? additional_services;
+};
+
+struct CreateComponentRequest {
+    LaunchInfo launch_info;
+    // request<ComponentController>? controller;  // TODO(mkember): Support handles in GIDL.
+    uint32 controller;
+};
