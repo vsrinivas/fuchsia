@@ -142,7 +142,8 @@ class CompleterBase {
         uint32_t actual_num_bytes = 0;
         zx_status_t status =
             fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, FidlType::Type, message.bytes().data(),
-                           message.bytes().actual(), transformer_dest, &actual_num_bytes, nullptr);
+                           message.bytes().actual(), transformer_dest, kDestinationSize,
+                           &actual_num_bytes, nullptr);
         if (status != ZX_OK) {
           Close(ZX_ERR_INTERNAL);
           return;

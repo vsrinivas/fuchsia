@@ -77,7 +77,8 @@ zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out)
     uint32_t size;
     zx_status_t transform_status =
         fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type, bytes_.data(), bytes_.actual(),
-                       allocated_buffer.data(), &size, error_msg_out);
+                       allocated_buffer.data(), static_cast<uint32_t>(allocated_buffer.capacity()),
+                       &size, error_msg_out);
     if (transform_status != ZX_OK) {
       return transform_status;
     }

@@ -1302,7 +1302,9 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         file_ << kIndent << kIndent << "_transformer_dest = alloca(_rd_num_bytes);\n";
         file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &"
               << method_info.response->alt_coded_name
-              << ", _rd_bytes, _actual_num_bytes, _transformer_dest, &_actual_num_bytes, NULL);\n";
+              << ", _rd_bytes, _actual_num_bytes"
+              << ", _transformer_dest, _rd_num_bytes, &_actual_num_bytes"
+              << ", NULL);\n";
         file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
         if (max_hcount > 0) {
           file_ << kIndent << kIndent << kIndent
@@ -1587,13 +1589,17 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     }
     if (method_info.response->typeshape.ContainsUnion()) {
       file_ << kIndent << "if (fidl_global_get_should_write_union_as_xunion()) {\n";
-      file_ << kIndent << kIndent << "uint8_t* _transformer_dest = alloca("
+      file_ << kIndent << kIndent << "uint32_t _transformer_dest_capacity = "
             << method_info.response->alt_typeshape.InlineSize() +
                    method_info.response->alt_typeshape.MaxOutOfLine()
-            << ");\n";
+            << ";\n";
+      file_ << kIndent << kIndent << "uint8_t* _transformer_dest = "
+            << "alloca(_transformer_dest_capacity);\n";
       file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &"
             << method_info.response->coded_name
-            << ", _msg.bytes, _msg.num_bytes, _transformer_dest, &_msg.num_bytes, NULL);\n";
+            << ", _msg.bytes, _msg.num_bytes"
+            << ", _transformer_dest, _transformer_dest_capacity, &_msg.num_bytes"
+            << ", NULL);\n";
       file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
       if (hcount > 0) {
         file_ << kIndent << kIndent << kIndent

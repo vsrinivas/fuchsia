@@ -1702,6 +1702,7 @@ zx_status_t Device::Call::HandleEvents(zx::unowned_channel client_end, Device::E
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {

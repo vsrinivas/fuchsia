@@ -2382,7 +2382,7 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
     const char* error = nullptr;
     zx_status_t status =
         fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type, v1_bytes, v1_num_bytes,
-                       actual_old_bytes, &actual_old_num_bytes, &error);
+                       actual_old_bytes, old_num_bytes, &actual_old_num_bytes, &error);
     if (error) {
       printf("ERROR: %s\n", error);
     }
@@ -2399,7 +2399,7 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
     const char* error = nullptr;
     zx_status_t status =
         fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, old_type, old_bytes, old_num_bytes,
-                       actual_v1_bytes, &actual_v1_num_bytes, &error);
+                       actual_v1_bytes, v1_num_bytes, &actual_v1_num_bytes, &error);
     if (error) {
       printf("ERROR: %s\n", error);
     }

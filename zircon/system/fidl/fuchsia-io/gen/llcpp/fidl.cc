@@ -934,6 +934,7 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end, Node::Event
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {
@@ -2718,6 +2719,7 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end, File::Event
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {
@@ -5001,6 +5003,7 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end, Direct
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {
@@ -7578,6 +7581,7 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end, D
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {

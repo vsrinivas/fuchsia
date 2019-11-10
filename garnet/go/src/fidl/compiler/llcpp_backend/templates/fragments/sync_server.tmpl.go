@@ -46,6 +46,7 @@ bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} 
                                                       reinterpret_cast<uint8_t*>(msg->bytes),
                                                       msg->num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg->num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {

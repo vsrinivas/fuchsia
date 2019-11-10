@@ -39,7 +39,8 @@ bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_
 
   const char* error = nullptr;
   zx_status_t status = fidl_transform(transformation, type, src_bytes, src_num_bytes,
-                                      actual_dst_bytes, &actual_dst_num_bytes, &error);
+                                      actual_dst_bytes, expected_num_bytes, &actual_dst_num_bytes,
+                                      &error);
   if (error) {
     printf("ERROR: %s\n", error);
   }

@@ -110,6 +110,7 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end, {{ .
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg.num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {

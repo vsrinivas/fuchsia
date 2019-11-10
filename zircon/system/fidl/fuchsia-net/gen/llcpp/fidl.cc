@@ -541,6 +541,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
                                                       reinterpret_cast<uint8_t*>(msg->bytes),
                                                       msg->num_bytes,
                                                       transformer_dest,
+                                                      kTransformerDestSize,
                                                       &msg->num_bytes,
                                                       nullptr);
         if (transform_status != ZX_OK) {

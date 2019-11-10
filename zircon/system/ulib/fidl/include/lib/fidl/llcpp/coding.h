@@ -248,7 +248,7 @@ zx_status_t Write(const zx::unowned_channel& chan, EncodedMessage<FidlType> enco
       uint32_t actual_num_bytes = 0;
       auto status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, FidlType::Type,
                                    encoded_msg.bytes().data(), encoded_msg.bytes().actual(),
-                                   transformer_dest, &actual_num_bytes, nullptr);
+                                   transformer_dest, kDestinationSize, &actual_num_bytes, nullptr);
       if (status != ZX_OK) {
         return status;
       }
@@ -326,7 +326,8 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
       fidl::Message message = request.ToAnyMessage();
       auto status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, RequestType::Type,
                                    message.bytes().data(), message.bytes().actual(),
-                                   transformer_dest, &actual_num_bytes, &result.error);
+                                   transformer_dest, kMaybeRequestAltSize, &actual_num_bytes,
+                                   &result.error);
       if (status != ZX_OK) {
         result.status = status;
         return result;
@@ -393,7 +394,8 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
           // Transform into user buffer
           result.status =
               fidl_transform(transformation, ResponseType::AltType, transformer_src,
-                             actual_num_bytes, out_bytes->data(), &actual_num_bytes, &result.error);
+                             actual_num_bytes, out_bytes->data(), out_bytes->capacity(),
+                             &actual_num_bytes, &result.error);
           if (result.status != ZX_OK) {
             return;
           }

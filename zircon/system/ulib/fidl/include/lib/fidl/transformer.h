@@ -55,7 +55,8 @@ typedef uint32_t fidl_transformation_t;
 // See also `fidl_transformation_t` and `FIDL_TRANSFORMATION_...` constants.
 zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
                            const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
-                           uint32_t* out_dst_num_bytes, const char** out_error_msg);
+                           uint32_t dst_num_bytes_capacity,  uint32_t* out_dst_num_bytes,
+                           const char** out_error_msg);
 
 __END_CDECLS
 
