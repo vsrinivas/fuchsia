@@ -29,6 +29,8 @@ typedef struct zx_policy_basic {
     uint32_t policy;
 } zx_policy_basic_t;
 
+typedef struct zx_policy_basic zx_policy_basic_v1_t;
+
 // Conditions handled by job policy.
 #define ZX_POL_BAD_HANDLE                    0u
 #define ZX_POL_WRONG_OBJECT                  1u
