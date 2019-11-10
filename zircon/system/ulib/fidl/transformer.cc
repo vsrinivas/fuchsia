@@ -39,21 +39,40 @@ struct TraversalResult {
   }
 };
 
-// TODO(apang): I think we can get rid of the wire_format parameter by just doing union.alt.
-// TODO(apang): This may not return the aligned size, since e.g. "type->coded_struct.size" below may
-// be unaligned
-uint32_t AlignedInlineSize(const fidl_type_t* type, WireFormat wire_format) {
-  if (!type) {
-    // For integral types (i.e. primitive, enum, bits).
-    // TODO(apang): This returns the aligned size... but structs etc below don't return the aligned
-    // size :/
-    return 8;
+constexpr uint32_t PrimitiveSize(const fidl::FidlCodedPrimitive primitive) {
+  switch (primitive) {
+    case fidl::FidlCodedPrimitive::kBool:
+    case fidl::FidlCodedPrimitive::kInt8:
+    case fidl::FidlCodedPrimitive::kUint8:
+      return 1;
+    case fidl::FidlCodedPrimitive::kInt16:
+    case fidl::FidlCodedPrimitive::kUint16:
+      return 2;
+    case fidl::FidlCodedPrimitive::kInt32:
+    case fidl::FidlCodedPrimitive::kUint32:
+    case fidl::FidlCodedPrimitive::kFloat32:
+      return 4;
+    case fidl::FidlCodedPrimitive::kInt64:
+    case fidl::FidlCodedPrimitive::kUint64:
+    case fidl::FidlCodedPrimitive::kFloat64:
+      return 8;
   }
+  __builtin_unreachable();
+}
+
+// This function is named UnsafeInlineSize since it assumes that |type| will be
+// non-null. Don't call this function directly; instead, call
+// TransformerBase::InlineSize().
+uint32_t UnsafeInlineSize(const fidl_type_t* type, WireFormat wire_format) {
+  assert(type);
+
   switch (type->type_tag) {
     case fidl::kFidlTypePrimitive:
+      return PrimitiveSize(type->coded_primitive);
     case fidl::kFidlTypeEnum:
+      return PrimitiveSize(type->coded_enum.underlying_type);
     case fidl::kFidlTypeBits:
-      return 8;
+      return PrimitiveSize(type->coded_bits.underlying_type);
     case fidl::kFidlTypeStructPointer:
       return 8;
     case fidl::kFidlTypeUnionPointer:
@@ -204,28 +223,27 @@ class TransformerBase {
       : src_dst(src_dst), out_error_msg_(out_error_msg) {}
   virtual ~TransformerBase() = default;
 
-  uint32_t AlignedAltInlineSize(const fidl_type_t* type) {
-    if (!type) {
-      return AlignedInlineSize(nullptr, To());
-    }
+  uint32_t InlineSize(const fidl_type_t* type, WireFormat wire_format, const Position& position) {
+    assert(type);
+
+    return UnsafeInlineSize(type, wire_format);
+  }
+
+  uint32_t AltInlineSize(const fidl_type_t* type, const Position& position) {
+    assert(type);
 
     switch (type->type_tag) {
-        // Note that for structs, unions, and arrays, we need to FIDL_ALIGN the
-        // return value, because the AlignedInlineSize() function is a misnomer:
-        // it doesn't always return the aligned value. (See the TODO in that
-        // function's comment.)
-
       case fidl::kFidlTypeStruct: {
         const fidl_type_t ft(*type->coded_struct.alt_type);
-        return FIDL_ALIGN(AlignedInlineSize(&ft, To()));
+        return InlineSize(&ft, To(), position);
       }
       case fidl::kFidlTypeUnion: {
         const fidl_type_t ft(*type->coded_union.alt_type);
-        return FIDL_ALIGN(AlignedInlineSize(&ft, To()));
+        return InlineSize(&ft, To(), position);
       }
       case fidl::kFidlTypeArray: {
         const fidl_type_t ft(*type->coded_array.alt_type);
-        return FIDL_ALIGN(AlignedInlineSize(&ft, To()));
+        return InlineSize(&ft, To(), position);
       }
       case fidl::kFidlTypePrimitive:
       case fidl::kFidlTypeEnum:
@@ -237,7 +255,7 @@ class TransformerBase {
       case fidl::kFidlTypeXUnion:
       case fidl::kFidlTypeHandle:
       case fidl::kFidlTypeTable:
-        return AlignedInlineSize(type, To());
+        return InlineSize(type, To(), position);
     }
 
     assert(false && "unexpected non-exhaustive switch on fidl::FidlTypeTag");
@@ -409,10 +427,10 @@ class TransformerBase {
         assert(current_position.dst_inline_offset == dst_start_of_struct + dst_field.offset);
 
         // Transform field.
-        uint32_t src_next_field_offset =
-            current_position.src_inline_offset + AlignedInlineSize(src_field.type, From());
+        uint32_t src_next_field_offset = current_position.src_inline_offset +
+                                         InlineSize(src_field.type, From(), current_position);
         uint32_t dst_next_field_offset =
-            current_position.dst_inline_offset + AlignedInlineSize(dst_field.type, To());
+            current_position.dst_inline_offset + InlineSize(dst_field.type, To(), current_position);
         uint32_t dst_field_size = dst_next_field_offset - (dst_start_of_struct + dst_field.offset);
 
         TraversalResult field_traversal_result;
@@ -539,10 +557,10 @@ class TransformerBase {
         return src_envelope->num_bytes;
       }
 
-      return AlignedInlineSize(type, From());
+      return InlineSize(type, From(), position);
     }();
 
-    const uint32_t dst_contents_inline_size = AlignedAltInlineSize(type);
+    const uint32_t dst_contents_inline_size = FIDL_ALIGN(AltInlineSize(type, position));
     Position data_position = Position{position.src_out_of_line_offset,
                                       position.src_out_of_line_offset + src_contents_inline_size,
                                       position.dst_out_of_line_offset,
@@ -837,7 +855,7 @@ class V1ToOld final : public TransformerBase {
         return src_xunion->envelope.num_bytes;
       }
 
-      return AlignedInlineSize(src_field->type, From());
+      return InlineSize(src_field->type, From(), position);
     }();
 
     // Transform: xunion field to static-union field (or variant).
