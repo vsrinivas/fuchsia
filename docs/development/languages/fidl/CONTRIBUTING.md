@@ -338,29 +338,31 @@ Tab 2> fx qemu -kN
 Tab 3> fx run-test fidl_bindings_test
 ```
 
-### Compatibility Test
+### Dart Compatibility Test
 
 The language bindings compatibility test is located in
 [//topaz/bin/fidl_compatibility_test][compatibility_test],
 and is launched from a shell script.
 
+First, ensure that you include the proper test targets. For instance:
+```sh
+fx set core.x64 ... --with //topaz/packages/tests:all
+```
+
 To build this test, use:
 
 ```sh
-fx build topaz/bin/fidl_compatibility_test/dart:fidl_compatibility_test_server_dart
+fx build topaz/bin/fidl_compatibility_test:fidl_compatibility_test_topaz
 ```
 
-To run this test, you first need to have a Fuchsia instance running in an emulator:
+You first need to have Fuchsia running in an emulator. Here are the steps:
 
 ```sh
-fx qemu -N
-```
+Tab 1> fx build && fx serve-updates
 
-Then, copy the script to the device, and run it:
+Tab 2> fx qemu -kN
 
-```sh
-fx cp `find topaz -name run_fidl_compatibility_test_topaz.sh` /tmp/
-fx shell /tmp/run_fidl_compatibility_test_topaz.sh
+Tab 3> fx run-test fidl_compatibility_test_topaz
 ```
 
 ### GIDL
