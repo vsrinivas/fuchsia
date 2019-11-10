@@ -29,6 +29,8 @@ class ArchInfo {
 
   Err Init(debug_ipc::Arch arch);
 
+  debug_ipc::Arch arch() const { return arch_; }
+
   // Returns true of the instruction length is fixed.
   bool is_fixed_instr() const { return is_fixed_instr_; }
 
@@ -54,6 +56,8 @@ class ArchInfo {
   const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
 
  private:
+  debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+
   bool is_fixed_instr_ = false;
   size_t instr_align_ = 1;
   size_t max_instr_len_ = 1;

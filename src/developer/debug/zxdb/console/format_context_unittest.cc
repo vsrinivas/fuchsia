@@ -110,7 +110,8 @@ TEST(FormatContext, FormatAsmContext) {
   block_with_data.data = std::vector<uint8_t>{
       0xbf, 0xe0, 0xe5, 0x28, 0x00,  // mov edi, 0x28e5e0
       0x48, 0x89, 0xde,              // mov rsi, rbx
-      0x48, 0x8d, 0x7c, 0x24, 0x0c   // lea rdi, [rsp + 0xc]
+      0x48, 0x8d, 0x7c, 0x24, 0x0c,  // lea rdi, [rsp + 0xc]
+      0xe8, 0xce, 0x00, 0x00, 0x00   // call +0xce (relative to next instruction).
   };
   block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
   MemoryDump dump(std::vector<debug_ipc::MemoryBlock>({block_with_data}));
@@ -128,9 +129,10 @@ TEST(FormatContext, FormatAsmContext) {
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
-      " ◉ 0x123456780  mov  edi, 0x28e5e0 \n"
-      " ▶ 0x123456785  mov  rsi, rbx \n"
-      "   0x123456788  lea  rdi, [rsp + 0xc] \n",
+      " ◉ 0x123456780  mov   edi, 0x28e5e0 \n"
+      " ▶ 0x123456785  mov   rsi, rbx \n"
+      "   0x123456788  lea   rdi, [rsp + 0xc] \n"
+      "   0x12345678d  call  0xce     ➔ 0x123456860\n",
       out.AsString());
 
   // Try again with source bytes and a disabled breakpoint on the same line as
@@ -143,9 +145,10 @@ TEST(FormatContext, FormatAsmContext) {
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
-      "   0x123456780  bf e0 e5 28 00  mov  edi, 0x28e5e0 \n"
-      "◯▶ 0x123456785  48 89 de        mov  rsi, rbx \n"
-      "   0x123456788  48 8d 7c 24 0c  lea  rdi, [rsp + 0xc] \n",
+      "   0x123456780  bf e0 e5 28 00  mov   edi, 0x28e5e0 \n"
+      "◯▶ 0x123456785  48 89 de        mov   rsi, rbx \n"
+      "   0x123456788  48 8d 7c 24 0c  lea   rdi, [rsp + 0xc] \n"
+      "   0x12345678d  e8 ce 00 00 00  call  0xce     ➔ 0x123456860\n",
       out.AsString());
 
   // Combined source/assembly.
@@ -192,10 +195,11 @@ TEST(FormatContext, FormatAsmContext) {
       "     2 \n"
       "     3 int main() {\n"
       "     4   printf(\"Hello, world.\");\n"
-      "   0x123456780  mov  edi, 0x28e5e0 \n"
-      " ▶ 0x123456785  mov  rsi, rbx \n"
+      "   0x123456780  mov   edi, 0x28e5e0 \n"
+      " ▶ 0x123456785  mov   rsi, rbx \n"
       "     5   return 0;\n"
-      "   0x123456788  lea  rdi, [rsp + 0xc] \n",
+      "   0x123456788  lea   rdi, [rsp + 0xc] \n"
+      "   0x12345678d  call  0xce     ➔ 0x123456860\n",
       out.AsString());
 }
 
@@ -235,9 +239,10 @@ TEST(FormatContext, FormatSourceFileContext_Stale) {
   out = OutputBuffer();
   ASSERT_FALSE(
       FormatSourceFileContext(FileLine(kFileName, 4), file_provider, opts, &out).has_error());
-  EXPECT_EQ("⚠️  Warning: Source file is newer than the binary. The build may be out-of-date.\n" +
-                expected_code,
-            out.AsString());
+  EXPECT_EQ(
+      "⚠️  Warning: Source file is newer than the binary. The build may be out-of-date.\n" +
+          expected_code,
+      out.AsString());
 
   // Doing the same file again should not give a warning. Each file should be warned about once.
   out = OutputBuffer();

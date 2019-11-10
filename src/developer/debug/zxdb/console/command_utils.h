@@ -105,13 +105,26 @@ OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);
 OutputBuffer FormatIdentifier(const Identifier& str, bool show_global_qual, bool bold_last);
 OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool show_global_qual, bool bold_last);
 
+struct FormatLocationOptions {
+  // When set, the address will always be printed. Otherwise it will be omitted if there is a
+  // function name present.
+  bool always_show_addresses = false;
+
+  // Show function parameter types. Otherwise, it will have "()" (if there are no arguments), or
+  // "(...)" if there are some.
+  bool show_params = false;
+
+  // Shows file/line information if present.
+  bool show_file_line = true;
+};
+
 // Formats the location. Normally if a function name is present the code
 // address will be omitted, but always_show_address will override this.
 //
 // The target symbols, if non-null, will be used to shorten file names while
 // keeping them unique.
 OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const Location& loc,
-                            bool always_show_address, bool show_params);
+                            const FormatLocationOptions& opts);
 
 // The TargetSymbols pointer is used to find the shortest unique way to
 // reference the file name.

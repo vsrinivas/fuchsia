@@ -393,23 +393,25 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool show_glob
 }
 
 OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const Location& loc,
-                            bool always_show_address, bool always_show_types) {
+                            const FormatLocationOptions& opts) {
   if (!loc.is_valid())
     return OutputBuffer("<invalid address>");
   if (!loc.has_symbols())
     return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, loc.address()));
 
   OutputBuffer result;
-  if (always_show_address) {
+  if (opts.always_show_addresses) {
     result = OutputBuffer(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64 ", ", loc.address()));
   }
 
+  bool show_file_line = opts.show_file_line && loc.file_line().is_valid();
+
   const Function* func = loc.symbol().Get()->AsFunction();
   if (func) {
-    OutputBuffer func_output = FormatFunctionName(func, always_show_types);
+    OutputBuffer func_output = FormatFunctionName(func, opts.show_params);
     if (!func_output.empty()) {
       result.Append(std::move(func_output));
-      if (loc.file_line().is_valid()) {
+      if (show_file_line) {
         // Separator between function and file/line.
         result.Append(" " + GetBullet() + " ");
       } else {
@@ -417,14 +419,17 @@ OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const 
         AddressRange function_range = func->GetFullRange(loc.symbol_context());
         if (function_range.InRange(loc.address())) {
           // Inside a function but no file/line known. Show the offset.
-          result.Append(fxl::StringPrintf(" + 0x%" PRIx64, loc.address() - function_range.begin()));
-          result.Append(Syntax::kComment, " (no line info)");
+          uint64_t offset = loc.address() - function_range.begin();
+          if (offset)
+            result.Append(fxl::StringPrintf(" + 0x%" PRIx64, offset));
+          if (opts.show_file_line)
+            result.Append(Syntax::kComment, " (no line info)");
         }
       }
     }
   }
 
-  if (loc.file_line().is_valid())
+  if (show_file_line)
     result.Append(DescribeFileLine(optional_target_symbols, loc.file_line()));
   return result;
 }

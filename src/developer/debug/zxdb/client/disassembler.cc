@@ -73,13 +73,18 @@ void SplitInstruction(std::string* instruction, std::string* params) {
 Disassembler::Row::Row() = default;
 
 Disassembler::Row::Row(uint64_t address, const uint8_t* bytes, size_t bytes_len, std::string op,
-                       std::string params, std::string comment)
-    : address(address), bytes(bytes, bytes + bytes_len), op(op), params(params), comment(comment) {}
+                       std::string params, std::string comment, std::optional<uint64_t> call_dest)
+    : address(address),
+      bytes(bytes, bytes + bytes_len),
+      op(op),
+      params(params),
+      comment(comment),
+      call_dest(call_dest) {}
 Disassembler::Row::~Row() = default;
 
 bool Disassembler::Row::operator==(const Row& other) const {
   return address == other.address && bytes == other.bytes && op == other.op &&
-         params == other.params && comment == other.comment;
+         params == other.params && comment == other.comment && call_dest == other.call_dest;
 }
 
 Disassembler::Disassembler() = default;
@@ -129,6 +134,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
     comment_stream.flush();
 
     SplitInstruction(&out->op, &out->params);
+    out->call_dest = GetCallDest(address, data, consumed, inst);
   } else {
     // Failure decoding.
     if (!options.emit_undecodable)
@@ -232,6 +238,40 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump, uint64_t start_addr
 
   // All bytes of the memory dump were consumed.
   return static_cast<size_t>(dump.size());
+}
+
+std::optional<uint64_t> Disassembler::GetCallDest(uint64_t address, const uint8_t* data,
+                                                  uint64_t data_len,
+                                                  const llvm::MCInst& inst) const {
+  // inst.getOpcode() returns an LLVM enum value that's defined in an internal header not included
+  // in our build. Therefore, this can not be used and the raw instruction bytes are checked
+  // instead.
+  if (inst.getNumOperands() != 1)
+    return std::nullopt;  // All call instructions we care about have one operand.
+  const llvm::MCOperand& operand = inst.getOperand(0);
+
+  if (arch_->arch() == debug_ipc::Arch::kX64) {
+    // On x64, almost all of our calls use the 32-bit instruction-relative variant. Most of the
+    // other variants are indirect so can't be decoded statically. Therefore this is the only
+    // variant we're worrying about here.
+    if (data_len >= 1 && data[0] == 0xe8) {  // call _rel32_
+      // Opcode has one operand which is a 32-bit signed offset from the address of the next
+      // instruction.
+      if (!operand.isImm())
+        return std::nullopt;  // Invalid.
+      return address + 5 /* length of instruction */ + operand.getImm();
+    }
+  } else if (arch_->arch() == debug_ipc::Arch::kArm64) {
+    // The BL instruction has the high 6 bits 0b100101 (in data[3] for little-endian).
+    if (data_len == sizeof(uint32_t) && (data[3] & 0b11111100) == 0b10010100) {
+      // Opcode has one operand which is a 24-bit signed offset from the address of this
+      // instruction, divided by 4.
+      if (!operand.isImm())
+        return std::nullopt;  // Invalid.
+      return address + operand.getImm() * 4;
+    }
+  }
+  return std::nullopt;
 }
 
 }  // namespace zxdb

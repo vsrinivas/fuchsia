@@ -11,13 +11,14 @@
 namespace zxdb {
 
 struct ConsoleFormatOptions;
+struct FormatLocationOptions;
 class Frame;
 class OutputBuffer;
 class Thread;
 
 // Generates the list of frames to the console. This will complete asynchronously. Printing of
 // function parameter types is controlled by include_params.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool include_params,
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, const FormatLocationOptions& opts,
                                                bool long_format);
 
 // Formats one frame using the short format to the output buffer. The frame ID will be printed if
@@ -27,15 +28,17 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool include_para
 // prints parameter values.
 //
 // This does not append a newline at the end of the output.
-OutputBuffer FormatFrame(const Frame* frame, bool include_params, int id = -1);
+OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, int id = -1);
 
 // Formats one frame using the long format. Since the long format includes function parameters which
 // are computed asynchronously, this returns an AsyncOutputBuffer. The buffer will be appended to
 // and NOT marked complete by this function.
 //
 // This does not append a newline at the end of the output.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_params,
-                                               const ConsoleFormatOptions& options, int id = -1);
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
+                                               const FormatLocationOptions& loc_opts,
+                                               const ConsoleFormatOptions& console_opts,
+                                               int id = -1);
 
 }  // namespace zxdb
 

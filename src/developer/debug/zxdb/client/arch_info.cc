@@ -38,6 +38,8 @@ ArchInfo::ArchInfo() {
 ArchInfo::~ArchInfo() = default;
 
 Err ArchInfo::Init(debug_ipc::Arch arch) {
+  arch_ = arch;
+
   switch (arch) {
     case debug_ipc::Arch::kX64:
       is_fixed_instr_ = false;

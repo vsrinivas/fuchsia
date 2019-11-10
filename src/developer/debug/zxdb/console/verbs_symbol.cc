@@ -615,8 +615,14 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
 
         auto locations = weak_process->GetSymbols()->ResolveInputLocation(InputLocation(address));
         FXL_DCHECK(locations.size() == 1u);
+
+        FormatLocationOptions opts;
+        opts.always_show_addresses = true;
+        opts.show_params = true;
+        opts.show_file_line = true;
+
         console->Output(
-            FormatLocation(weak_process->GetTarget()->GetSymbols(), locations[0], true, true));
+            FormatLocation(weak_process->GetTarget()->GetSymbols(), locations[0], opts));
       });
 }
 

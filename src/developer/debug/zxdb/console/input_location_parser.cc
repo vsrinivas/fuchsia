@@ -253,7 +253,9 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
       err_str += DescribeFileLine(nullptr, locations[i].file_line());
       err_str += fxl::StringPrintf(" = 0x%" PRIx64, locations[i].address());
     } else {
-      err_str += FormatLocation(nullptr, locations[i], true, false).AsString();
+      FormatLocationOptions opts;
+      opts.always_show_addresses = true;
+      err_str += FormatLocation(nullptr, locations[i], opts).AsString();
     }
     err_str += "\n";
   }

@@ -105,12 +105,15 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
+  FormatLocationOptions loc_opts;
+  loc_opts.show_params = cmd.HasSwitch(kForceTypes);
+
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
     if (cmd.HasSwitch(kForceUpdate))
       cmd.thread()->GetStack().ClearFrames();
-    Console::get()->Output(
-        FormatFrameList(cmd.thread(), cmd.HasSwitch(kForceTypes), cmd.HasSwitch(kVerboseSwitch)));
+
+    Console::get()->Output(FormatFrameList(cmd.thread(), loc_opts, cmd.HasSwitch(kVerboseSwitch)));
     return true;
   }
 
@@ -123,12 +126,12 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  ConsoleFormatOptions options;
-  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  options.pointer_expand_depth = 1;
-  options.max_depth = 4;
+  ConsoleFormatOptions console_opts;
+  console_opts.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  console_opts.pointer_expand_depth = 1;
+  console_opts.max_depth = 4;
 
-  Console::get()->Output(FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), options));
+  Console::get()->Output(FormatFrameLong(cmd.frame(), loc_opts, console_opts));
   return true;
 }
 
@@ -570,14 +573,16 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     row.push_back(FormatInputLocations(settings.locations));
 
     if (include_locations) {
+      FormatLocationOptions opts;
+      opts.always_show_addresses = true;  // So the disambiguation is always unique.
+
       for (const auto& loc : matched_locs) {
         std::vector<OutputBuffer>& loc_row = rows.emplace_back();
 
         loc_row.resize(2);  // Empty columns.
         Process* process = loc->GetProcess();
         OutputBuffer out(GetBullet() + " ");
-        out.Append(
-            FormatLocation(process->GetTarget()->GetSymbols(), loc->GetLocation(), true, false));
+        out.Append(FormatLocation(process->GetTarget()->GetSymbols(), loc->GetLocation(), opts));
 
         loc_row.push_back(out);
       }

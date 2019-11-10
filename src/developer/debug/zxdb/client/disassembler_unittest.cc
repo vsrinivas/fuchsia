@@ -249,4 +249,72 @@ TEST(Disassembler, Arm64Many) {
             out[2]);
 }
 
+TEST(Disassembler, CallX64) {
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kX64);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  Disassembler d;
+  err = d.Init(&arch);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  Disassembler::Options opts;
+  std::vector<Row> out;
+
+  // Make a little memory block with valid instructions in it.
+  debug_ipc::MemoryBlock block_with_data;
+  block_with_data.address = 0x123456780;
+  block_with_data.valid = true;
+  block_with_data.data = std::vector<uint8_t>{
+      0xe8, 0xce, 0x00, 0x00, 0x00,  // call +0xce (relative to next instruction).
+      0xe8, 0xf4, 0xff, 0xff, 0xff,  // call -0x0c (relative to next instruction).
+  };
+  block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
+
+  std::vector<debug_ipc::MemoryBlock> vect;
+  vect.push_back(block_with_data);
+
+  MemoryDump dump(std::move(vect));
+  size_t consumed = d.DisassembleDump(dump, block_with_data.address, opts, 2, &out);
+  EXPECT_EQ(10u, consumed);
+  ASSERT_EQ(2u, out.size());
+  EXPECT_EQ(Row(0x123456780, &block_with_data.data[0], 5, "call", "0xce", "",
+                block_with_data.address + 5 /* = length of instruction */ + 0xce),
+            out[0]);
+  EXPECT_EQ(Row(0x123456785, &block_with_data.data[5], 5, "call", "-0xc", "",
+                block_with_data.address + 10 - 12),
+            out[1]);
+}
+
+TEST(Disassembler, CallArm64) {
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kArm64);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  Disassembler d;
+  err = d.Init(&arch);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  Disassembler::Options opts;
+  std::vector<Row> out;
+
+  // Make a little memory block with valid instructions in it.
+  debug_ipc::MemoryBlock block_with_data;
+  block_with_data.address = 0xc55f8;
+  block_with_data.valid = true;
+  block_with_data.data = std::vector<uint8_t>{
+      0x06, 0x00, 0x00, 0x94,  // bl +0x06 (relative to this instruction)
+  };
+  block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
+
+  std::vector<debug_ipc::MemoryBlock> vect;
+  vect.push_back(block_with_data);
+
+  MemoryDump dump(std::move(vect));
+  size_t consumed = d.DisassembleDump(dump, block_with_data.address, opts, 4, &out);
+  EXPECT_EQ(4u, consumed);
+  ASSERT_EQ(1u, out.size());
+  EXPECT_EQ(Row(0xc55f8, &block_with_data.data[0], 4, "bl", "#0x18", "", 0xc5610), out[0]);
+}
+
 }  // namespace zxdb

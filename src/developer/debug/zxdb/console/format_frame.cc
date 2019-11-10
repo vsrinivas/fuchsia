@@ -24,7 +24,8 @@ namespace zxdb {
 
 namespace {
 
-fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_params,
+fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread,
+                                                   const FormatLocationOptions& loc_opts,
                                                    bool long_format) {
   int active_frame_id = Console::get()->context().GetActiveFrameIdForThread(thread);
 
@@ -61,9 +62,9 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_
 
       // Supply "-1" for the frame index to suppress printing (we already did it above).
       if (long_format)
-        out->Append(FormatFrameLong(stack[i], include_params, format_options, -1));
+        out->Append(FormatFrameLong(stack[i], loc_opts, format_options, -1));
       else
-        out->Append(FormatFrame(stack[i], include_params, -1));
+        out->Append(FormatFrame(stack[i], loc_opts, -1));
 
       out->Append("\n");
     }
@@ -75,23 +76,23 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_
 
 }  // namespace
 
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool include_params,
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, const FormatLocationOptions& opts,
                                                bool long_format) {
   // Always request an up-to-date frame list from the agent. Various things could have changed and
   // the user is manually requesting a new list, so don't rely on the cached copy even if
   // Stack::has_all_frames() is true.
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
   thread->GetStack().SyncFrames(
-      [thread = thread->GetWeakPtr(), include_params, long_format, out](const Err& err) {
+      [thread = thread->GetWeakPtr(), opts, long_format, out](const Err& err) {
         if (!err.has_error() && thread)
-          out->Complete(ListCompletedFrames(thread.get(), include_params, long_format));
+          out->Complete(ListCompletedFrames(thread.get(), opts, long_format));
         else
           out->Complete("Thread exited, no frames.\n");
       });
   return out;
 }
 
-OutputBuffer FormatFrame(const Frame* frame, bool include_params, int id) {
+OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, int id) {
   OutputBuffer out;
 
   if (id >= 0)
@@ -102,12 +103,13 @@ OutputBuffer FormatFrame(const Frame* frame, bool include_params, int id) {
   const TargetSymbols* syms =
       !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
 
-  out.Append(FormatLocation(syms, frame->GetLocation(), false, include_params));
+  out.Append(FormatLocation(syms, frame->GetLocation(), opts));
   return out;
 }
 
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_params,
-                                               const ConsoleFormatOptions& options, int id) {
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
+                                               const FormatLocationOptions& loc_opts,
+                                               const ConsoleFormatOptions& console_opts, int id) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
   if (id >= 0)
@@ -122,7 +124,7 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_
     const TargetSymbols* syms =
         !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
 
-    out->Append(FormatLocation(syms, location, false, include_params));
+    out->Append(FormatLocation(syms, location, loc_opts));
   }
 
   if (frame->IsInline())
@@ -147,7 +149,7 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame, bool include_
           continue;  // Symbols are corrupt.
 
         out->Append("\n      ");  // Indent.
-        out->Append(FormatVariableForConsole(value, options, frame->GetEvalContext()));
+        out->Append(FormatVariableForConsole(value, console_opts, frame->GetEvalContext()));
       }
     }
   }

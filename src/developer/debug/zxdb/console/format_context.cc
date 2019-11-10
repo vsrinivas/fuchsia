@@ -105,6 +105,29 @@ OutputBuffer FormatAsmSourceForRange(Process* process,
                       DescribeFileLine(process->GetSymbols()->target_symbols(), start_line));
 }
 
+// Describes the destination for the given call destination, formatted as for a disassembly. The
+// process may be null which will mean only addresses will be printed, no symbols.
+OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
+  OutputBuffer result(Syntax::kComment, GetRightArrow() + " ");
+
+  std::vector<Location> resolved;
+  if (process) {
+    resolved = process->GetSymbols()->ResolveInputLocation(InputLocation(call_dest));
+    FXL_DCHECK(resolved.size() == 1);  // Addresses should always match one location.
+  } else {
+    // Can't symbolize, use the address.
+    resolved.emplace_back(Location(Location::State::kAddress, call_dest));
+  }
+
+  FormatLocationOptions opts;
+  opts.always_show_addresses = false;
+  opts.show_params = false;
+  opts.show_file_line = false;
+
+  result.Append(FormatLocation(nullptr, resolved[0], opts));
+  return result;
+}
+
 }  // namespace
 
 Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> file_provider,
@@ -361,7 +384,14 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
         row.address == opts.active_address ? Syntax::kHeading : Syntax::kNormal;
     out_row.emplace_back(op_param_syntax, std::move(row.op));
     out_row.emplace_back(op_param_syntax, std::move(row.params));
-    out_row.emplace_back(Syntax::kComment, std::move(row.comment));
+
+    // If there's a call destination, include that. Otherwise use the disassembler-generated comment
+    // if present.
+    if (row.call_dest) {
+      out_row.push_back(DescribeAsmCallDest(process, *row.call_dest));
+    } else {
+      out_row.emplace_back(Syntax::kComment, std::move(row.comment));
+    }
   }
 
   std::vector<ColSpec> spec;

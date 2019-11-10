@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -24,7 +25,8 @@ std::string SyncFormatFrameLong(const Frame* frame, const ConsoleFormatOptions& 
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto out = LoopUntilAsyncOutputBufferComplete(FormatFrameLong(frame, false, options));
+  auto out =
+      LoopUntilAsyncOutputBufferComplete(FormatFrameLong(frame, FormatLocationOptions(), options));
 
   loop.Cleanup();
   return out.AsString();
@@ -37,7 +39,7 @@ TEST(FormatFrame, Unsymbolized) {
                   std::vector<debug_ipc::Register>(), 0xdeadbeef);
 
   // Short format just prints the address.
-  auto out = FormatFrame(&frame, false);
+  auto out = FormatFrame(&frame, FormatLocationOptions());
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
@@ -45,7 +47,7 @@ TEST(FormatFrame, Unsymbolized) {
             SyncFormatFrameLong(&frame, ConsoleFormatOptions()));
 
   // With index.
-  out = FormatFrame(&frame, false, 3);
+  out = FormatFrame(&frame, FormatLocationOptions(), 3);
   EXPECT_EQ("Frame 3 0x12345678", out.AsString());
 }
 
