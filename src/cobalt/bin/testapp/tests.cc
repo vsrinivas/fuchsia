@@ -423,7 +423,7 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
           FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs[cobalt_registry::kConnectionAttemptsPerDeviceCountReportId] +=
+        expected_num_obs[cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId] +=
             kConnectionAttemptsNumWindowSizes;
       }
     }
@@ -466,7 +466,7 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
           FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs[cobalt_registry::kStreamingTimePerDeviceTotalReportId] +=
+        expected_num_obs[cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId] +=
             kStreamingTimeNumWindowSizes;
       }
     }

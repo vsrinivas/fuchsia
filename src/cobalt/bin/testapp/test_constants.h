@@ -64,9 +64,9 @@ const int kStreamingTimeNumWindowSizes = 2;
 
 // The report IDs of the locally aggregated reports in the testapp project.
 const std::vector<uint32_t> kAggregatedReportIds = {
-    cobalt_registry::kFeaturesActiveUniqueDevicesReportId,
-    cobalt_registry::kConnectionAttemptsPerDeviceCountReportId,
-    cobalt_registry::kStreamingTimePerDeviceTotalReportId};
+    cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId,
+    cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId,
+    cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId};
 
 // The number of locally aggregated observations that should be generated for
 // each locally aggregated report in the test_app2 project for a day, assuming
@@ -79,11 +79,9 @@ const std::vector<uint32_t> kAggregatedReportIds = {
 // connection_attempts_per_device_count: 1 ReportParticipationObservation
 // streaming_time_per_device_total: 1 ReportParticipationObservation
 const std::map<uint32_t, uint64_t> kNumAggregatedObservations = {
-    {cobalt_registry::kFeaturesActiveUniqueDevicesReportId, 20},
-    {cobalt_registry::kConnectionAttemptsPerDeviceCountReportId, 1},
-    {cobalt_registry::kStreamingTimePerDeviceTotalReportId, 1}};
-
-const size_t kNumBackfillDays = 2;
+    {cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId, 20},
+    {cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId, 1},
+    {cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId, 1}};
 
 }  // namespace testapp
 }  // namespace cobalt
