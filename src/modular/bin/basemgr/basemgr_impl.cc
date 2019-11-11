@@ -12,6 +12,7 @@
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/bin/basemgr/basemgr_settings.h"
+#include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/noop_clipboard_impl.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
@@ -61,6 +62,7 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                          const std::shared_ptr<sys::ServiceDirectory> incoming_services,
+                         const std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
                          fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
@@ -70,6 +72,7 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                          fit::function<void()> on_shutdown)
     : config_(std::move(config)),
       component_context_services_(std::move(incoming_services)),
+      outgoing_services_(std::move(outgoing_services)),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
@@ -186,6 +189,7 @@ void BasemgrImpl::Start() {
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().story_shell().app_config());
   auto intl_property_provider = IntlPropertyProviderImpl::Create(component_context_services_);
+  outgoing_services_->AddPublicService(intl_property_provider->GetHandler());
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
       std::move(sessionmgr_config), CloneStruct(session_shell_config_),
