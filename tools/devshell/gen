@@ -3,8 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Build
-### run `gn gen` against the Zircon and Fuchsia build directories.
+### `gn gen` the Zircon and Fuchsia build directories.
 
 ## Execute a `gn gen` against the Zircon build
 ## If successful, execute a `gn gen` against the Fuchsia build.

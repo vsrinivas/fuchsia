@@ -3,11 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Build
-### manually edit args.gn for the current build directory
+### `gn args` the FUCHSIA_BUILD_DIR
 
-## If FUCHSIA_BUILD_DIR is out/default, this is simply:
-##   gn args out/default
+## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
+##   gn args out/x64
 ## It is useful for seeing and editing the arguments that are currently
 ## configured.
 
