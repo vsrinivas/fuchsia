@@ -185,11 +185,13 @@ void BasemgrImpl::Start() {
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().sessionmgr());
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().story_shell().app_config());
+  auto intl_property_provider = IntlPropertyProviderImpl::Create(component_context_services_);
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, component_context_services_, launcher_.get(),
-      std::move(device_administrator_), std::move(sessionmgr_config),
-      CloneStruct(session_shell_config_), std::move(story_shell_config),
-      config_.basemgr_config().use_session_shell_for_story_shell_factory(), CloneStruct(config_),
+      /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
+      std::move(sessionmgr_config), CloneStruct(session_shell_config_),
+      std::move(story_shell_config),
+      config_.basemgr_config().use_session_shell_for_story_shell_factory(),
+      std::move(intl_property_provider), CloneStruct(config_),
       /* on_zero_sessions= */
       [this] {
         if (state_ == State::SHUTTING_DOWN) {

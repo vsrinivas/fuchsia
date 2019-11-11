@@ -37,19 +37,6 @@ class SessionProvider {
         fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
   };
 
-  // |on_zero_sessions| is invoked when all sessions have been deleted. This is
-  // meant to be a callback for BasemgrImpl to either display a base shell or
-  // start a new session.
-  SessionProvider(Delegate* const delegate,
-                  const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
-                  fuchsia::sys::Launcher* const launcher,
-                  fuchsia::device::manager::AdministratorPtr administrator,
-                  fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
-                  fuchsia::modular::AppConfig story_shell,
-                  bool use_session_shell_for_story_shell_factory,
-                  fuchsia::modular::session::ModularConfig config,
-                  fit::function<void()> on_zero_sessions);
-
   // Target constructor.
   //
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
