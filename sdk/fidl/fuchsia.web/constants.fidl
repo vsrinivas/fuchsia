@@ -16,6 +16,10 @@ using UrlSchemeName = string:MAX_URL_SCHEME_NAME_LENGTH;
 const int32 MAX_HOST_LENGTH = 255;
 using UrlHostName = string:MAX_HOST_LENGTH;
 
+// MAX_URL_SCHEME_NAME_LENGTH + 3 + MAX_HOST_LENGTH.
+const int32 MAX_SCHEME_AND_HOST_LENGTH = 513;
+using UrlSchemeAndHostName = string:MAX_SCHEME_AND_HOST_LENGTH;
+
 // Most servers support less than 16 kiB maximum header size. 4k max headers is a reasonable size.
 const int32 MAX_HEADERS_COUNT = 4096;
 

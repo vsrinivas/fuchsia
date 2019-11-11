@@ -132,6 +132,12 @@ table CreateContextParams {
     /// [EME API](https://www.w3.org/TR/encrypted-media/#key-system). Requires
     /// [`fuchsia.media.drm.PlayReady`] service.
     8: string:128 playready_key_system;
+
+    /// Treat given insecure origins as secure origins. For the definition of secure contexts, see
+    /// https://w3c.github.io/webappsec-secure-contexts/ and
+    /// https://www.w3.org/TR/powerful-features/#is-origin-trustworthy.
+    /// Example value: `{"http://a.com", "http://b.com"}`.
+    9: vector<UrlSchemeAndHostName>:100 unsafely_treat_insecure_origins_as_secure;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of
