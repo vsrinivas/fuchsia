@@ -172,3 +172,10 @@ flutter_test("ermine_unittests") {
     "//third_party/dart-pkg/pub/test",
   ]
 }
+
+config_data("services_config") {
+  for_pkg = "sysmgr"
+  sources = [
+    rebase_path("config/ermine_services.config"),
+  ]
+}
