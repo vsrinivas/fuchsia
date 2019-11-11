@@ -32,13 +32,34 @@ using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
+  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
+  // TODO(fxb/34531): this currently supports both the old (data root only) and the new (outgoing
+  // directory) behaviors. once all clients are moved over to using the new behavior, delete the old
+  // one.
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
-  if (!root_server.is_valid()) {
-    FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
+
+  if (outgoing_server.is_valid() && root_server.is_valid()) {
+    FS_TRACE_ERROR(
+        "blobfs: both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
+        "other.\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  return blobfs::Mount(std::move(device), options, std::move(root_server));
+  zx::channel export_root;
+  blobfs::ServeLayout layout;
+  if (outgoing_server.is_valid()) {
+    export_root = std::move(outgoing_server);
+    layout = blobfs::ServeLayout::kExportDirectory;
+  } else if (root_server.is_valid()) {
+    export_root = std::move(root_server);
+    layout = blobfs::ServeLayout::kDataRootOnly;
+  } else {
+    // neither provided? or we can't access them for some reason.
+    FS_TRACE_ERROR("blobfs: could not get startup handle to serve on\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return blobfs::Mount(std::move(device), options, std::move(export_root), layout);
 }
 
 zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {

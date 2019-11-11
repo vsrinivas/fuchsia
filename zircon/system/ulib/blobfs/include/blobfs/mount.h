@@ -16,6 +16,18 @@ namespace blobfs {
 
 using block_client::BlockDevice;
 
+// Determines the kind of directory layout the filesystem server should expose to the outside world.
+// TODO(fxb/34531): When all users migrate to the export directory, delete this enum, since only
+// |kExportDirectory| would be used.
+enum class ServeLayout {
+  // The root of the filesystem is exposed directly
+  kDataRootOnly,
+
+  // Expose a pseudo-directory with the filesystem root located at "/root".
+  // TODO(fxb/34531): Also expose an administration service under "/svc/fuchsia.fs.Admin".
+  kExportDirectory
+};
+
 enum class Writability {
   // Do not write to persistent storage under any circumstances whatsoever.
   ReadOnlyDisk,
@@ -34,11 +46,13 @@ struct MountOptions {
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
-// Begins serving requests to the filesystem by parsing
-// the on-disk format using |device|, using |root| as a filesystem server.
+// Begins serving requests to the filesystem by parsing the on-disk format using |device|. If
+// |ServeLayout| is |kDataRootOnly|, |root| serves the root of the filesystem. If it's
+// |kExportDirectory|, |root| serves an outgoing directory.
 //
 // This function blocks until the filesystem terminates.
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root);
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root,
+                  ServeLayout layout);
 
 }  // namespace blobfs
 

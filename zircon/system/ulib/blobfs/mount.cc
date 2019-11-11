@@ -15,7 +15,8 @@
 
 namespace blobfs {
 
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root) {
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root,
+                  ServeLayout layout) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
@@ -25,7 +26,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx
     return status;
   }
 
-  status = runner->ServeRoot(std::move(root));
+  status = runner->ServeRoot(std::move(root), layout);
   if (status != ZX_OK) {
     return status;
   }

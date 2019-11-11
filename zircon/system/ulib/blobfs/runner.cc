@@ -46,9 +46,9 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Runner::ServeRoot(zx::channel root) {
-  fbl::RefPtr<Directory> vn;
-  zx_status_t status = blobfs_->OpenRootNode(&vn);
+zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
+  fbl::RefPtr<fs::Vnode> vn;
+  zx_status_t status = blobfs_->OpenRootNode(&vn, layout);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
     return status;

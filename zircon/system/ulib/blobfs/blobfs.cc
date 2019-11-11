@@ -32,6 +32,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
+#include <fs/pseudo_dir.h>
 #include <fs/ticker.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs_types.h>
@@ -751,7 +752,7 @@ zx_status_t Blobfs::ReloadSuperblock() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
+zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout) {
   fbl::RefPtr<Directory> vn = fbl::AdoptRef(new Directory(this));
 
   zx_status_t status = vn->Open(fs::VnodeConnectionOptions(), nullptr);
@@ -759,7 +760,19 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
     return status;
   }
 
-  *out = std::move(vn);
+  fbl::RefPtr<fs::Vnode> export_root;
+  switch (layout) {
+    case ServeLayout::kDataRootOnly:
+      export_root = std::move(vn);
+      break;
+    case ServeLayout::kExportDirectory:
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+      export_root = std::move(outgoing);
+      break;
+  }
+
+  *out = std::move(export_root);
   return ZX_OK;
 }
 

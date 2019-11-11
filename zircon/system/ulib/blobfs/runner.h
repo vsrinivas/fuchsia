@@ -42,7 +42,7 @@ class Runner : public fs::ManagedVfs {
 
   // Serves the root directory of the filesystem using |root| as the server-end
   // of an IPC connection.
-  zx_status_t ServeRoot(zx::channel root);
+  zx_status_t ServeRoot(zx::channel root, ServeLayout layout);
 
  private:
   Runner(async::Loop* loop, std::unique_ptr<Blobfs> fs);

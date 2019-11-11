@@ -59,6 +59,8 @@ using digest::Digest;
 using storage::OperationType;
 using storage::UnbufferedOperationsBuilder;
 
+constexpr char kOutgoingDataRoot[] = "root";
+
 class Blobfs : public TransactionManager {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
@@ -136,7 +138,7 @@ class Blobfs : public TransactionManager {
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.
-  zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
+  zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout);
 
   BlobCache& Cache() { return blob_cache_; }
 

@@ -8,6 +8,7 @@
 
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
+#include <blobfs/mount.h>
 #include <block-client/cpp/fake-device.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <storage/buffer/vmo-buffer.h>
@@ -161,8 +162,8 @@ TEST_F(BlobfsTest, RunOperationReadWrite) {
 }
 
 TEST_F(BlobfsTest, TrimsData) {
-  fbl::RefPtr<Directory> root;
-  ASSERT_OK(fs_->OpenRootNode(&root));
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_OK(fs_->OpenRootNode(&root, ServeLayout::kDataRootOnly));
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<fs_test_utils::BlobInfo> info;
