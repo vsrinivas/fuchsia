@@ -9,9 +9,13 @@ import 'time_delta.dart';
 import 'time_point.dart';
 import 'trace_model.dart';
 
-/// Create a [Model] from a file path
-Future<Model> createModelFromFile(String path) async =>
-    createModelFromJsonString(await File(path).readAsString());
+/// Create a [Model] from a file path.
+Future<Model> createModelFromFilePath(String path) async =>
+    createModelFromFile(File(path));
+
+/// Create a [Model] from a [File].
+Future<Model> createModelFromFile(File file) async =>
+    createModelFromJsonString(await file.readAsString());
 
 /// Create a [Model] from a raw JSON string of trace data.
 Model createModelFromJsonString(String jsonString) {
