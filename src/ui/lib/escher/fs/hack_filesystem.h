@@ -63,6 +63,12 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
 #endif
                                        ) = 0;
 
+  // Notifies all watchers that their watched file has changed (it actually hasn't).
+  void InvalidateFile(const HackFilePath& path);
+
+  // Calls |InvalidateFile()| for each file in the filesystem.
+  void InvalidateAllFiles();
+
   // If the hack file system was initialized with a call to |InitializeWithRealFiles|
   // then the member variable base_path_ is set to be the absolute path of the
   // root path that was provided. If the file system was not initialized, then the

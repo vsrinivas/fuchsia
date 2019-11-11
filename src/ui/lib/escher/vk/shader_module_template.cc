@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 
 #include "src/ui/lib/escher/util/hasher.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
@@ -170,6 +171,7 @@ void ShaderModuleTemplate::Variant::ScheduleCompilation() {
 // Generates the spirv for a compiled shader and returns it via the |output| parameter.
 // Returns true if the compilation was successful and false otherwise.
 bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output) {
+  TRACE_DURATION("gfx", "ShaderModuleTemplate::GenerateSpirV");
   FXL_DCHECK(output);
 
   // Clear watcher paths; we'll gather new ones during compilation.

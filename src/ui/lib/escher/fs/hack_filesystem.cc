@@ -37,10 +37,20 @@ HackFileContents HackFilesystem::ReadFile(const HackFilePath& path) const {
 
 void HackFilesystem::WriteFile(const HackFilePath& path, HackFileContents new_contents) {
   files_[path] = std::move(new_contents);
+  InvalidateFile(path);
+}
+
+void HackFilesystem::InvalidateFile(const HackFilePath& path) {
   for (auto w : watchers_) {
     if (w->IsWatchingPath(path)) {
       w->callback_(path);
     }
+  }
+}
+
+void HackFilesystem::InvalidateAllFiles() {
+  for (auto& pair : files_) {
+    InvalidateFile(pair.first);
   }
 }
 
