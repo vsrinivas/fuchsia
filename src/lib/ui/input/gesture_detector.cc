@@ -4,9 +4,9 @@
 
 #include "src/lib/ui/input/gesture_detector.h"
 
-#include <cmath>
-
 #include "src/lib/syslog/cpp/logger.h"
+
+#include <glm/gtx/norm.hpp>
 
 namespace input {
 namespace {
@@ -46,8 +46,7 @@ class CheckedInteraction : public GestureDetector::Interaction {
       : interaction_(std::move(interaction)) {}
 
  private:
-  void OnTapBegin(const fuchsia::ui::gfx::vec2& coordinate,
-                  GestureDetector::TapType tap_type) override {
+  void OnTapBegin(const glm::vec2& coordinate, GestureDetector::TapType tap_type) override {
     FX_CHECK(tap_type > 0);
     interaction_->OnTapBegin(coordinate, tap_type);
   }
@@ -73,7 +72,7 @@ class CheckedInteraction : public GestureDetector::Interaction {
 
 GestureDetector::Interaction::~Interaction() = default;
 
-void GestureDetector::Interaction::OnTapBegin(const fuchsia::ui::gfx::vec2& coordinate,
+void GestureDetector::Interaction::OnTapBegin(const glm::vec2& coordinate,
                                               GestureDetector::TapType tap_type) {}
 void GestureDetector::Interaction::OnTapUpdate(GestureDetector::TapType tap_type) {}
 void GestureDetector::Interaction::OnTapCommit() {}
@@ -90,7 +89,7 @@ GestureDetector::DevicePointerState::GetWeakPtr() {
 }
 
 GestureDetector::GestureDetector(Delegate* delegate, float drag_threshold)
-    : delegate_(delegate), drag_threshold_(drag_threshold) {}
+    : delegate_(delegate), drag_threshold_squared_(drag_threshold * drag_threshold) {}
 
 void GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
   switch (event.phase) {
@@ -159,9 +158,8 @@ void GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
         // Decide whether we've exceeded the threshold to start a multidrag.
         state.pending_delta += delta;
 
-        const float distance = std::hypot(state.origins[event.pointer_id].x - event.x,
-                                          state.origins[event.pointer_id].y - event.y);
-        if (distance >= drag_threshold_) {
+        if (glm::distance2(state.origins[event.pointer_id], {event.x, event.y}) >=
+            drag_threshold_squared_) {
           // Kill the tap and handle as a multidrag from now on.
           state.tap_type = 0;
           state.origins.clear();

@@ -23,7 +23,6 @@ source_set("input") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//zircon/public/lib/async-loop-cpp",
@@ -40,13 +39,12 @@ source_set("gesture") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//src/lib/syslog/cpp",
   ]
 }

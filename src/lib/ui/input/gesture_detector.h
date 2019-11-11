@@ -5,13 +5,13 @@
 #ifndef SRC_LIB_UI_INPUT_GESTURE_DETECTOR_H_
 #define SRC_LIB_UI_INPUT_GESTURE_DETECTOR_H_
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 #include <map>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/ui/input/gesture.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace input {
 
@@ -61,7 +61,7 @@ class GestureDetector {
     virtual ~Interaction();
 
     // Called when the first pointer comes down.
-    virtual void OnTapBegin(const fuchsia::ui::gfx::vec2& coordinate, TapType tap_type);
+    virtual void OnTapBegin(const glm::vec2& coordinate, TapType tap_type);
     // Called when the type of tap has changed, either due to more mouse buttons
     // or more touch points. As a tap evolves, |tap_type| can increase but not
     // decrease, as any release signifies the end of the tap.
@@ -110,7 +110,7 @@ class GestureDetector {
 
     Gesture gesture;
     std::unique_ptr<Interaction> interaction;
-    std::map<Gesture::PointerId, fuchsia::ui::gfx::vec2> origins;
+    std::map<Gesture::PointerId, glm::vec2> origins;
     // While an interaction can be classified as a tap, this tracks the tap
     // type, > 0, nondecreasing. Once a tap is committed, this becomes negative.
     // If this interaction becomes a multidrag, this is set to 0. Only positive
@@ -135,7 +135,7 @@ class GestureDetector {
 
   Delegate* const delegate_;
   std::map<DeviceId, DevicePointerState> devices_;
-  float drag_threshold_;
+  float drag_threshold_squared_;
 };
 
 }  // namespace input

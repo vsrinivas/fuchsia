@@ -8,20 +8,8 @@
 #include "src/lib/ui/input/gesture_detector.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-// gtest blocks top-level namespace lookup of overloaded ==
-namespace fuchsia {
-namespace ui {
-namespace gfx {
-
-bool operator==(const vec2& a, const vec2& b) { return fidl::Equals(a, b); }
-
-}  // namespace gfx
-}  // namespace ui
-}  // namespace fuchsia
-
 namespace {
 
-using fuchsia::ui::gfx::vec2;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
@@ -32,7 +20,7 @@ struct InteractionRecord {
   bool active = false;
   InteractionType interaction_type = InteractionType::kUnknown;
   input::GestureDetector::TapType tap_type;
-  vec2 coordinate;
+  glm::vec2 coordinate;
   input::Gesture::Delta delta;
 };
 
@@ -43,7 +31,7 @@ class TestInteraction : public input::GestureDetector::Interaction {
   ~TestInteraction() override { record_->active = false; }
 
  private:
-  void OnTapBegin(const vec2& coordinate, input::GestureDetector::TapType tap_type) override {
+  void OnTapBegin(const glm::vec2& coordinate, input::GestureDetector::TapType tap_type) override {
     EXPECT_EQ(record_->interaction_type, InteractionType::kUnknown);
     record_->interaction_type = InteractionType::kPreTap;
     record_->coordinate = coordinate;
@@ -146,7 +134,7 @@ TEST_F(GestureDetectorTest, Tap) {
 
   EXPECT_EQ(ixn.interaction_type, InteractionType::kTap);
   EXPECT_EQ(ixn.tap_type, 1);
-  EXPECT_EQ(ixn.coordinate, vec2({0, 0}));
+  EXPECT_EQ(ixn.coordinate, glm::vec2(0, 0));
 }
 
 TEST_F(GestureDetectorTest, TwoFingerTap) {
@@ -177,7 +165,7 @@ TEST_F(GestureDetectorTest, TwoFingerTap) {
 
   EXPECT_EQ(ixn.interaction_type, InteractionType::kTap);
   EXPECT_EQ(ixn.tap_type, 2);
-  EXPECT_EQ(ixn.coordinate, vec2({0, 0}));
+  EXPECT_EQ(ixn.coordinate, glm::vec2(0, 0));
 }
 
 TEST_F(GestureDetectorTest, TwoFingerTapWithDrift) {
@@ -231,7 +219,7 @@ TEST_F(GestureDetectorTest, TwoFingerTapWithDrift) {
 
   EXPECT_EQ(ixn.interaction_type, InteractionType::kTap);
   EXPECT_EQ(ixn.tap_type, 2);
-  EXPECT_EQ(ixn.coordinate, vec2({0, 0}));
+  EXPECT_EQ(ixn.coordinate, glm::vec2(0, 0));
 }
 
 TEST_F(GestureDetectorTest, Drag) {
@@ -325,7 +313,7 @@ class PoisonInteraction : public input::GestureDetector::Interaction {
   void Poison() { poisoned_ = true; }
 
  private:
-  void OnTapBegin(const vec2&, input::GestureDetector::TapType) override { CheckPoison(); }
+  void OnTapBegin(const glm::vec2&, input::GestureDetector::TapType) override { CheckPoison(); }
 
   void OnTapUpdate(input::GestureDetector::TapType) override { CheckPoison(); }
 

@@ -4,10 +4,6 @@
 
 #include "src/lib/ui/input/gesture.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-
-#include <cmath>
-
 namespace input {
 
 Gesture::Delta& Gesture::Delta::operator+=(const Delta& other) {
@@ -18,11 +14,10 @@ Gesture::Delta& Gesture::Delta::operator+=(const Delta& other) {
 }
 
 bool Gesture::Delta::operator==(const Delta& other) const {
-  return fidl::Equals(translation, other.translation) && rotation == other.rotation &&
-         scale == other.scale;
+  return translation == other.translation && rotation == other.rotation && scale == other.scale;
 }
 
-void Gesture::AddPointer(PointerId pointer_id, const fuchsia::ui::gfx::vec2& position) {
+void Gesture::AddPointer(PointerId pointer_id, const glm::vec2& position) {
   // TODO(SCN-1404): This is sometimes violated.
   // FX_DCHECK(pointers_.find(pointer_id) == pointers_.end());
 
@@ -31,8 +26,7 @@ void Gesture::AddPointer(PointerId pointer_id, const fuchsia::ui::gfx::vec2& pos
   UpdateRelative();
 }
 
-Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id,
-                                      const fuchsia::ui::gfx::vec2& position) {
+Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id, const glm::vec2& position) {
   // TODO(SCN-1404): This is sometimes violated.
   // FX_DCHECK(pointers_.find(pointer_id) != pointers_.end());
   auto it = pointers_.find(pointer_id);
@@ -46,7 +40,7 @@ Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id,
   Delta delta;
 
   {
-    fuchsia::ui::gfx::vec2 old_centroid = centroid_;
+    glm::vec2 old_centroid = centroid_;
     UpdateCentroid();
     delta.translation = centroid_ - old_centroid;
   }
@@ -59,10 +53,10 @@ Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id,
     for (auto& entry : pointers_) {
       PointerInfo& p = entry.second;
 
-      fuchsia::ui::gfx::vec2 old_relative = p.relative;
+      glm::vec2 old_relative = p.relative;
       float old_distance = p.distance;
       p.relative = p.absolute - centroid_;
-      p.distance = std::hypot(p.relative.x, p.relative.y);
+      p.distance = glm::length(p.relative);
 
       // For small displacements, this approximates radians.
       delta.rotation +=
@@ -88,12 +82,11 @@ void Gesture::RemovePointer(PointerId pointer_id) {
 }
 
 void Gesture::UpdateCentroid() {
-  // It would be more efficient to do this incrementally at the possible cost
-  // of precision. Gestures tend to be both short and with a small number of
-  // pointers, so neither the efficiency nor precision is particularly
-  // important. However, edge cases like new pointers are easier to deal with
-  // if we always recalculate, especially with SCN-1404.
-  centroid_ = {.x = 0, .y = 0};
+  // It would be more efficient to do this incrementally at the possible cost of precision. Gestures
+  // tend to be both short and with a small number of pointers, so neither the efficiency nor
+  // precision is particularly important. However, edge cases like new pointers are easier to deal
+  // with if we always recalculate, especially with SCN-1404.
+  centroid_ = {0, 0};
   for (const auto& entry : pointers_) {
     centroid_ += entry.second.absolute;
   }
@@ -104,7 +97,7 @@ void Gesture::UpdateRelative() {
   for (auto& entry : pointers_) {
     PointerInfo& p = entry.second;
     p.relative = p.absolute - centroid_;
-    p.distance = std::hypot(p.relative.x, p.relative.y);
+    p.distance = glm::length(p.relative);
   }
 }
 

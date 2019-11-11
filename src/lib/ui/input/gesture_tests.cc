@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/lib/ui/input/gesture.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace {
-
-using fuchsia::ui::gfx::vec2;
 
 class GestureTest : public testing::Test {
  protected:
@@ -20,12 +19,12 @@ TEST_F(GestureTest, SinglePointerDrag) {
   gesture_.AddPointer(0, {0, 0});
 
   auto delta = gesture_.UpdatePointer(0, {1, 0});
-  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({1, 0})));
+  EXPECT_EQ(delta.translation, glm::vec2(1, 0));
   EXPECT_EQ(delta.rotation, 0);
   EXPECT_EQ(delta.scale, 1);
 
   delta = gesture_.UpdatePointer(0, {1, -1});
-  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({0, -1})));
+  EXPECT_EQ(delta.translation, glm::vec2(0, -1));
   EXPECT_EQ(delta.rotation, 0);
   EXPECT_EQ(delta.scale, 1);
 }
@@ -40,7 +39,7 @@ TEST_F(GestureTest, MultiPointerDelta) {
 
   gesture_.AddPointer(1, {10, 1});
   auto delta = gesture_.UpdatePointer(1, {10, 2});
-  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({0, .5})));
+  EXPECT_EQ(delta.translation, glm::vec2(0, .5));
 }
 
 // Basic 2-pointer scale.
@@ -124,7 +123,7 @@ TEST_F(GestureTest, RemovePointer) {
   EXPECT_EQ(gesture_.pointer_count(), 1u);
 
   auto delta = gesture_.UpdatePointer(1, {1, 2});
-  EXPECT_EQ(delta, input::Gesture::Delta({.translation = vec2({0, 1}), .rotation = 0, .scale = 1}));
+  EXPECT_EQ(delta, input::Gesture::Delta({.translation = {0, 1}, .rotation = 0, .scale = 1}));
   EXPECT_TRUE(gesture_.has_pointers());
   EXPECT_EQ(gesture_.pointer_count(), 1u);
 
