@@ -60,11 +60,15 @@ class ProcessNode {
   }
 
   ~ProcessNode() {
-    // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer collections
-    // will be part of camera processing nodes, and they will get destructed and handles will be
-    // released.
-    // The ISP does not actually take ownership of the buffers upon creating the stream (they are
-    // duplicated internally), so they must be manually released here.
+    // We need to ensure that the child nodes
+    // are destructed before parent node.
+    child_nodes_info_.clear();
+
+    // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer
+    // collections will be part of camera processing nodes, and they will get destructed and
+    // handles will be released. The ISP does not actually take ownership of the buffers upon
+    // creating the stream (they are duplicated internally), so they must be manually released
+    // here.
     if (type_ == NodeType::kInputStream) {
       ZX_ASSERT(ZX_OK == zx_handle_close_many(old_output_buffer_collection_.vmos,
                                               old_output_buffer_collection_.buffer_count));
