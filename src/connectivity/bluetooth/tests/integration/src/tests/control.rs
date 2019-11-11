@@ -47,14 +47,18 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
         .hosts
         .iter()
         .filter(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))
-        .map(|(id, _)| id)
-        .cloned()
+        .map(|(id, _)| id.clone())
         .collect();
 
-    for (id, _) in state.hosts {
-        let fut = control.aux().set_active_adapter(&id);
+    for host in fake_hosts.iter() {
+        let fut = control.aux().set_active_adapter(host);
         fut.await?;
-        control.when_satisfied(control_expectation::active_host_is(id), control_timeout()).await?;
+        control
+            .when_satisfied(
+                control_expectation::active_host_is(host.to_string()),
+                control_timeout(),
+            )
+            .await?;
     }
 
     fake_hci_0.destroy_and_wait().await?;
