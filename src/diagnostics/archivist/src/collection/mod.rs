@@ -47,6 +47,9 @@ static CHANNEL_CAPACITY: usize = 1024;
 /// Ignore components with this name, since reading our own output data may deadlock.
 static ARCHIVIST_NAME: &str = "archivist.cmx";
 
+/// Ignore components with this name, since ComponentManager hub contains a cycle.
+static COMPONENT_MANAGER_NAME: &str = "component_manager.cmx";
+
 /// Represents the data associated with a component event.
 #[derive(Debug, Eq, PartialEq)]
 pub struct ComponentEventData {
@@ -293,7 +296,7 @@ impl DataCollector for ExtraDataCollector {
                 return Err(format_err!("Error collecting data."));
             }
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -461,6 +464,10 @@ impl HubCollector {
     pub async fn start(mut self) -> Result<(), Error> {
         let mut watch_stream = fuchsia_watch::watch_recursive(&self.path);
 
+        let is_name_allowed = |component_name: &str| -> bool {
+            component_name != ARCHIVIST_NAME && component_name != COMPONENT_MANAGER_NAME
+        };
+
         while let Some(result) = watch_stream.next().await {
             let event = match result {
                 Err(_) => {
@@ -479,7 +486,9 @@ impl HubCollector {
             match event {
                 PathEvent::Added(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
-                        if data.component_name != ARCHIVIST_NAME {
+                        // TODO(41194): We don't need to worry about deadlocks or cycles if
+                        // all inspect data is in a diagnostics-specific directory.
+                        if is_name_allowed(&data.component_name) {
                             self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
                                 eprintln!(
                                     "Error processing new out directory {}: {:?}",
@@ -498,7 +507,7 @@ impl HubCollector {
                 }
                 PathEvent::Existing(_, NodeType::Directory) => {
                     if let Some(data) = HubCollector::check_if_out_directory(&relative_path) {
-                        if data.component_name != ARCHIVIST_NAME {
+                        if is_name_allowed(&data.component_name) {
                             self.add_out_watcher(relative_path, data).await.unwrap_or_else(|e| {
                                 eprintln!(
                                     "Error processing existing out directory {}: {:?}",
@@ -788,6 +797,24 @@ mod tests {
 
         assert_eq!(
             make_start_with_realm(vec!["app".to_string()], "with_runner.cmx", "1", None),
+            component_events.next().await.unwrap()
+        );
+
+        fs::create_dir_all(path.join("r/app/1/c/archivist.cmx/12/out")).unwrap();
+
+        fs::create_dir_all(path.join("r/app/1/c/component_manager.cmx/12/out")).unwrap();
+
+        // Test that the appearence of the archivist component is recorded but not
+        // the appearence of its out directory.
+        assert_eq!(
+            make_start_with_realm(vec!["app".to_string()], "archivist.cmx", "12", None),
+            component_events.next().await.unwrap()
+        );
+
+        // Test that the appearence of the component_manager component is recorded but not
+        // the appearence of its out directory.
+        assert_eq!(
+            make_start_with_realm(vec!["app".to_string()], "component_manager.cmx", "12", None),
             component_events.next().await.unwrap()
         );
 
