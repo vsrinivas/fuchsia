@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <sys/socket.h>
 
 #include <future>
@@ -23,11 +24,14 @@ using ::testing::Each;
 using ::testing::HasSubstr;
 
 static constexpr char kVirtioNetUtil[] = "virtio_net_test_util";
-static constexpr size_t kMtu = 1500;
 static constexpr size_t kTestPacketSize = 1000;
 
 // Includes ethernet + IPv4 + UDP headers.
 static constexpr size_t kHeadersSize = 42;
+
+static constexpr fuchsia::hardware::ethernet::MacAddress kHostMacAddress = {
+    .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00},
+};
 
 class VirtioNetZirconGuest : public ZirconEnclosedGuest {
  public:
@@ -56,26 +60,24 @@ class VirtioNetDebianGuest : public DebianEnclosedGuest {
   }
 };
 
-static void TestThread(const FakeNetstack& netstack, uint8_t receive_byte, uint8_t send_byte,
+static void TestThread(FakeNetstack* netstack, uint8_t receive_byte, uint8_t send_byte,
                        bool use_raw_packets) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // This thread will loop indefinitely until it receives the correct packet.
   // The test will time out via RunUtil in the test fixture if we fail to
   // receive the correct packet.
-  uint8_t pkt[kMtu];
-  zx_status_t status;
   while (true) {
-    size_t actual;
-    status = netstack.ReceivePacket(static_cast<void*>(pkt), kMtu, &actual);
-    ASSERT_EQ(status, ZX_OK);
+    auto result = fit::run_single_threaded(netstack->ReceivePacket(kHostMacAddress));
+    ASSERT_TRUE(result.is_ok());
+    std::vector<uint8_t> packet = result.take_value();
 
     bool match_test_packet = false;
     size_t headers_size = use_raw_packets ? 0 : kHeadersSize;
-    if (actual == headers_size + kTestPacketSize) {
+    if (packet.size() == headers_size + kTestPacketSize) {
       match_test_packet = true;
-      for (size_t i = headers_size; i != actual; ++i) {
-        if (pkt[i] != receive_byte) {
+      for (size_t i = headers_size; i != packet.size(); ++i) {
+        if (packet[i] != receive_byte) {
           match_test_packet = false;
           break;
         }
@@ -86,13 +88,16 @@ static void TestThread(const FakeNetstack& netstack, uint8_t receive_byte, uint8
     }
   }
 
-  memset(pkt, send_byte, kTestPacketSize);
+  std::vector<uint8_t> send_packet(kTestPacketSize);
+  memset(send_packet.data(), send_byte, kTestPacketSize);
+  fit::promise<void, zx_status_t> promise;
   if (use_raw_packets) {
-    status = netstack.SendPacket(static_cast<void*>(pkt), kTestPacketSize);
+    promise = netstack->SendPacket(kHostMacAddress, std::move(send_packet));
   } else {
-    status = netstack.SendUdpPacket(static_cast<void*>(pkt), kTestPacketSize);
+    promise = netstack->SendUdpPacket(kHostMacAddress, std::move(send_packet));
   }
-  ASSERT_EQ(status, ZX_OK);
+  auto result = fit::run_single_threaded(std::move(promise));
+  ASSERT_TRUE(result.is_ok());
 }
 
 using VirtioNetZirconGuestTest = GuestTest<VirtioNetZirconGuest>;
@@ -100,7 +105,7 @@ using VirtioNetZirconGuestTest = GuestTest<VirtioNetZirconGuest>;
 TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
     FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
-    TestThread(*netstack, 0xab, 0xba, true /* use_raw_packets */);
+    TestThread(netstack, 0xab, 0xba, true /* use_raw_packets */);
   });
 
   std::string result;
@@ -122,7 +127,7 @@ using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
     FakeNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
-    TestThread(*netstack, 0xab, 0xba, false /* use_raw_packets */);
+    TestThread(netstack, 0xab, 0xba, false /* use_raw_packets */);
   });
 
   // Find the network interface corresponding to the guest's MAC address.
