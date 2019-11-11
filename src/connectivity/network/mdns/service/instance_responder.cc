@@ -97,6 +97,11 @@ void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
 }
 
 void InstanceResponder::Reannounce() {
+  if (!started()) {
+    // This agent isn't started, so we can't announce yet. |Reannounce| will be called by |Start|.
+    return;
+  }
+
   // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
   // were already announcing, the sequence restarts now.
   announcement_interval_ = kInitialAnnouncementInterval;

@@ -214,6 +214,10 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
             Quit(1);
           }
         });
+
+    // Ensure that the service guards against reannouncing when the instance probe hasn't yet
+    // completed to avoid regressing b/144188577.
+    responder_binding_.events().Reannounce();
   }
 
  private:
