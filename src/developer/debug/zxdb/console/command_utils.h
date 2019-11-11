@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -92,20 +93,10 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
 OutputBuffer FormatInputLocation(const InputLocation& location);
 OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);
 
-// Formats the given string as an identifier, with any template annotations dimmed.
-//
-// If |show_global_qual| is set, the output will be preceeded with "::" if it's globally qualified.
-// Otherwise, global qualifications on the identifier will be ignored. Callers may want to ignore
-// the global qualifiers in cases where it's clear in context whether the name is global or not.
-// For example, function names in backtraces are always global and adding "::" to everything adds
-// noise.
-//
-// If |bold_last| is set, the last identifier component will be bolded. This is best when printing
-// function names.
-OutputBuffer FormatIdentifier(const Identifier& str, bool show_global_qual, bool bold_last);
-OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool show_global_qual, bool bold_last);
-
 struct FormatLocationOptions {
+  // How identifier function name formatting should be done.
+  FormatFunctionNameOptions func;
+
   // When set, the address will always be printed. Otherwise it will be omitted if there is a
   // function name present.
   bool always_show_addresses = false;

@@ -140,40 +140,6 @@ TEST(CommandUtils, ReadUint64Arg) {
   EXPECT_EQ("Invalid number \"notanumber\" when reading the code.", err.msg());
 }
 
-TEST(CommandUtils, FormatIdentifier) {
-  // Regular name.
-  OutputBuffer output = FormatIdentifier(Identifier("ThisIsAName"), true, false);
-  EXPECT_EQ("kNormal \"ThisIsAName\"", output.GetDebugString());
-
-  // Regular name with bolding.
-  output = FormatIdentifier(Identifier("ThisIsAName"), true, true);
-  EXPECT_EQ("kHeading \"ThisIsAName\"", output.GetDebugString());
-
-  // Hierarchical name.
-  ParsedIdentifier ident;
-  Err err = ExprParser::ParseIdentifier("::Foo<int, char*>::Bar<Baz>", &ident);
-  ASSERT_FALSE(err.has_error());
-  EXPECT_EQ(
-      "kNormal \"::Foo\", "
-      "kComment \"<int, char*>\", "
-      "kNormal \"::\", "
-      "kHeading \"Bar\", "
-      "kComment \"<Baz>\"",
-      FormatIdentifier(ident, true, true).GetDebugString());
-
-  // Hide global qualification.
-  EXPECT_EQ("Foo<int, char*>::Bar<Baz>", FormatIdentifier(ident, false, true).AsString());
-
-  // With an anonymous namespace.
-  ParsedIdentifier anon(ParsedIdentifierComponent(""));
-  anon.AppendComponent(ParsedIdentifierComponent("Function"));
-  EXPECT_EQ(
-      "kComment \"$anon\", "
-      "kNormal \"::\", "
-      "kHeading \"Function\"",
-      FormatIdentifier(anon, false, true).GetDebugString());
-}
-
 TEST(CommandUtils, FormatInputLocation) {
   EXPECT_EQ("<no location>", FormatInputLocation(InputLocation()).AsString());
   EXPECT_EQ("0x123456", FormatInputLocation(InputLocation(0x123456)).AsString());

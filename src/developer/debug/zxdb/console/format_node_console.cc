@@ -181,7 +181,11 @@ void AppendRustCollectionName(const FormatNode* node, const RecursiveState& stat
 
   if (state.options.verbosity != ConsoleFormatOptions::Verbosity::kMinimal) {
     // Use the full identifier name in the more verbose modes.
-    out->Append(FormatIdentifier(node->value().type()->GetIdentifier(), false, false));
+    FormatIdentifierOptions opts;
+    opts.show_global_qual = false;
+    opts.elide_templates = false;
+    opts.bold_last = false;
+    out->Append(FormatIdentifier(node->value().type()->GetIdentifier(), opts));
     return;
   }
 
@@ -215,7 +219,11 @@ void AppendRustCollectionName(const FormatNode* node, const RecursiveState& stat
                                                        {GetElidedTypeName(state, template_string)});
   }
 
-  out->Append(FormatIdentifier(parsed, false, false));
+  FormatIdentifierOptions ident_opts;
+  ident_opts.show_global_qual = false;
+  ident_opts.elide_templates = false;
+  ident_opts.bold_last = false;
+  out->Append(FormatIdentifier(parsed, ident_opts));
 }
 
 // Writes the suffix for when there are multiple items in a collection or an array.

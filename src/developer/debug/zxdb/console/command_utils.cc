@@ -24,7 +24,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_context.h"
-#include "src/developer/debug/zxdb/console/format_function.h"
+#include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -311,17 +311,24 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
 
 OutputBuffer FormatInputLocation(const InputLocation& location) {
   switch (location.type) {
-    case InputLocation::Type::kNone:
+    case InputLocation::Type::kNone: {
       return OutputBuffer(Syntax::kComment, "<no location>");
-    case InputLocation::Type::kLine:
+    }
+    case InputLocation::Type::kLine: {
       // Don't pass a TargetSymbols to DescribeFileLine because we always want
       // the full file name as passed-in by the user (as this is an "input"
       // location object). It is surprising if the debugger deletes some input.
       return OutputBuffer(DescribeFileLine(nullptr, location.line));
-    case InputLocation::Type::kName:
-      return FormatIdentifier(location.name, true, true);
-    case InputLocation::Type::kAddress:
+    }
+    case InputLocation::Type::kName: {
+      FormatIdentifierOptions opts;
+      opts.show_global_qual = true;  // Imporant to disambiguate for InputLocations.
+      opts.bold_last = true;
+      return FormatIdentifier(location.name, opts);
+    }
+    case InputLocation::Type::kAddress: {
       return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, location.address));
+    }
   }
   FXL_NOTREACHED();
   return OutputBuffer();
@@ -344,54 +351,6 @@ OutputBuffer FormatInputLocations(const std::vector<InputLocation>& locations) {
   return result;
 }
 
-OutputBuffer FormatIdentifier(const Identifier& identifier, bool show_global_qual, bool bold_last) {
-  return FormatIdentifier(ToParsedIdentifier(identifier), show_global_qual, bold_last);
-}
-
-// This annoyingly duplicates Identifier::GetName but is required to get syntax highlighting for all
-// the components.
-OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool show_global_qual,
-                              bool bold_last) {
-  OutputBuffer result;
-  if (show_global_qual && identifier.qualification() == IdentifierQualification::kGlobal)
-    result.Append(identifier.GetSeparator());
-
-  const auto& comps = identifier.components();
-  for (size_t i = 0; i < comps.size(); i++) {
-    const auto& comp = comps[i];
-    if (i > 0)
-      result.Append(identifier.GetSeparator());
-
-    // Name.
-    std::string name = comp.name();
-    if (name.empty()) {
-      // Provide names for anonymous components.
-      result.Append(Syntax::kComment, kAnonIdentifierComponentName);
-    } else {
-      if (bold_last && i == comps.size() - 1)
-        result.Append(Syntax::kHeading, name);
-      else
-        result.Append(Syntax::kNormal, name);
-    }
-
-    // Template.
-    if (comp.has_template()) {
-      std::string t_string("<");
-
-      for (size_t t_i = 0; t_i < comp.template_contents().size(); t_i++) {
-        if (t_i > 0)
-          t_string += ", ";
-        t_string += comp.template_contents()[t_i];
-      }
-
-      t_string.push_back('>');
-      result.Append(Syntax::kComment, std::move(t_string));
-    }
-  }
-
-  return result;
-}
-
 OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const Location& loc,
                             const FormatLocationOptions& opts) {
   if (!loc.is_valid())
@@ -408,7 +367,7 @@ OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const 
 
   const Function* func = loc.symbol().Get()->AsFunction();
   if (func) {
-    OutputBuffer func_output = FormatFunctionName(func, opts.show_params);
+    OutputBuffer func_output = FormatFunctionName(func, opts.func);
     if (!func_output.empty()) {
       result.Append(std::move(func_output));
       if (show_file_line) {
