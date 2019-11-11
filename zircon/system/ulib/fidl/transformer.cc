@@ -165,8 +165,7 @@ class SrcDst final {
 
   ~SrcDst() { *out_dst_num_bytes_ = dst_max_offset_; }
 
-  // TODO(apang): Change |position| arg to src_offset
-  template <typename T>  // TODO(apang): restrict T should be pointer type
+  template <typename T>
   const T* __attribute__((warn_unused_result)) Read(const Position& position) const {
     uint32_t size = sizeof(T);
     if (!(position.src_inline_offset + size <= src_num_bytes_)) {
@@ -176,7 +175,6 @@ class SrcDst final {
     return reinterpret_cast<const T*>(src_bytes_ + position.src_inline_offset);
   }
 
-  // TODO(apang): Rename to CopyInline?
   void Copy(const Position& position, uint32_t size) {
     assert(position.src_inline_offset + size <= src_num_bytes_);
 
@@ -184,15 +182,9 @@ class SrcDst final {
     UpdateMaxOffset(position.dst_inline_offset + size);
   }
 
-  // TODO(apang): Rename to PadInline
   void Pad(const Position& position, uint32_t size) {
     memset(dst_bytes_ + position.dst_inline_offset, 0, size);
     UpdateMaxOffset(position.dst_inline_offset + size);
-  }
-
-  void PadOutOfLine(const Position& position, uint32_t size) {
-    memset(dst_bytes_ + position.dst_out_of_line_offset, 0, size);
-    UpdateMaxOffset(position.dst_out_of_line_offset + size);
   }
 
   template <typename T>
@@ -402,8 +394,7 @@ class TransformerBase {
     }
 
     const uint32_t src_start_of_struct = position.src_inline_offset;
-    // only used in assert statements
-    const uint32_t dst_start_of_struct __attribute__((unused)) = position.dst_inline_offset;
+    const uint32_t dst_start_of_struct = position.dst_inline_offset;
 
     auto current_position = position;
     for (uint32_t field_index = 0; field_index < src_coded_struct.field_count; field_index++) {
@@ -449,22 +440,15 @@ class TransformerBase {
         current_position.dst_out_of_line_offset += field_traversal_result.dst_out_of_line_size;
       }
 
-      if (dst_field.padding) {
-        src_dst->Pad(current_position, dst_field.padding);
-        current_position = current_position.IncreaseDstInlineOffset(dst_field.padding);
-      }
-
-      if (src_field.padding) {
-        current_position = current_position.IncreaseSrcInlineOffset(src_field.padding);
-      }
+      // Pad (possibly with 0 bytes).
+      src_dst->Pad(current_position, dst_field.padding);
+      current_position = current_position.IncreaseDstInlineOffset(dst_field.padding);
+      current_position = current_position.IncreaseSrcInlineOffset(src_field.padding);
     }
 
-    // Pad end (if needed).
+    // Pad (possibly with 0 bytes).
     const uint32_t dst_end_of_struct = position.dst_inline_offset + dst_size;
-    if (current_position.dst_inline_offset < dst_end_of_struct) {
-      uint32_t size = dst_end_of_struct - current_position.dst_inline_offset;
-      src_dst->Pad(current_position, size);
-    }
+    src_dst->Pad(current_position, dst_end_of_struct - current_position.dst_inline_offset);
 
     return ZX_OK;
   }
@@ -855,20 +839,12 @@ class V1ToOld final : public TransformerBase {
         return src_xunion->envelope.num_bytes;
       }
 
-      return InlineSize(src_field->type, From());
+      return FIDL_ALIGN(InlineSize(src_field->type, From()));
     }();
 
     // Transform: xunion field to static-union field (or variant).
     auto field_position = Position{
         position.src_out_of_line_offset,
-        // TODO(pascallouis): In a way, this is incorrect because `src_field_inline_size`
-        // might not be FIDL_ALIGN. However, it works because the cases where we
-        // return an unaligned size in `InlineSize` are gated by
-        // `if (!src_field->type) {` and use the `src_xunion->envelope.num_bytes`.
-        // Also, in those cases (single out-of-line object), we will never
-        // use this value because there is only one out-of-line object, and
-        // we will not transform beyond the single call below, i.e. the call is
-        // terminal, and does not recurse further.
         position.src_out_of_line_offset + src_field_inline_size,
         position.dst_inline_offset + dst_coded_union.data_offset,
         position.dst_out_of_line_offset,
@@ -956,31 +932,31 @@ class OldToV1 final : public TransformerBase {
         position.dst_out_of_line_offset,
         position.dst_out_of_line_offset + FIDL_ALIGN(dst_inline_field_size),
     };
-
-    TraversalResult traversal_result;
+    TraversalResult field_traversal_result;
     zx_status_t status =
-        Transform(src_field.type, field_position, dst_inline_field_size, &traversal_result);
+        Transform(src_field.type, field_position, dst_inline_field_size, &field_traversal_result);
     if (status != ZX_OK) {
       return status;
     }
 
-    const uint32_t dst_field_size = dst_inline_field_size + traversal_result.dst_out_of_line_size;
+    // Pad field (if needed).
+    const uint32_t dst_field_size = dst_inline_field_size
+                                  + field_traversal_result.dst_out_of_line_size;
+    const uint32_t dst_padding = FIDL_ALIGN(dst_field_size) - dst_field_size;
+    src_dst->Pad(field_position.IncreaseDstInlineOffset(dst_field_size), dst_padding);
 
+    // Write envelope header.
     fidl_xunion_t xunion;
     xunion.tag = dst_field.xunion_ordinal;
     xunion.padding = 0;
     xunion.envelope.num_bytes = FIDL_ALIGN(dst_field_size);
-    xunion.envelope.num_handles = traversal_result.handle_count;
+    xunion.envelope.num_handles = field_traversal_result.handle_count;
     xunion.envelope.presence = FIDL_ALLOC_PRESENT;
     src_dst->Write(position, xunion);
 
-    // Pad xunion data to object alignment.
-    const uint32_t dst_padding = FIDL_ALIGN(dst_field_size) - dst_field_size;
-    src_dst->PadOutOfLine(position.IncreaseDstOutOfLineOffset(dst_field_size), dst_padding);
-
-    out_traversal_result->src_out_of_line_size += traversal_result.src_out_of_line_size;
+    out_traversal_result->src_out_of_line_size += field_traversal_result.src_out_of_line_size;
     out_traversal_result->dst_out_of_line_size += FIDL_ALIGN(dst_field_size);
-    out_traversal_result->handle_count += traversal_result.handle_count;
+    out_traversal_result->handle_count += field_traversal_result.handle_count;
 
     return ZX_OK;
   }
