@@ -22,9 +22,8 @@
   ],
   "overview": [
     {
-      "char": "space",
       "modifier": "meta",
-      "chord": "Meta + Space bar",
+      "chord": "Meta",
       "description": "Toggle Overview"
     }
   ],

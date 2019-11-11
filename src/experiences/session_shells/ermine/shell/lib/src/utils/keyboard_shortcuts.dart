@@ -9,7 +9,7 @@ import 'package:meta/meta.dart';
 
 import 'package:fidl_fuchsia_ui_input2/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
-    show Registry, Shortcut, Listener, ListenerBinding;
+    show Registry, Shortcut, Trigger, Listener, ListenerBinding;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 import 'package:zircon/zircon.dart' show EventPairPair;
 
@@ -141,6 +141,9 @@ class Shortcut extends ui_shortcut.Shortcut {
         super(
             id: ++lastId,
             key: Key.$valueOf(object['char']),
+            trigger: object['char'] == null && object['modifier'] != null
+                ? ui_shortcut.Trigger.keyPressedAndReleased
+                : null,
             modifiers: _modifiersFromArray(object['modifier']));
 
   @override
