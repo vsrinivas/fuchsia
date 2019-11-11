@@ -81,7 +81,7 @@ class MessageDecoder {
  public:
   MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
                  uint32_t num_handles, std::ostream& error_stream);
-  MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
+  MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
   uint32_t absolute_offset() const { return absolute_offset_; }
 

@@ -1180,6 +1180,56 @@ TEST_F(WireParserTest, ParseHandleStruct) {
 
 namespace {
 
+class HandleTableSupport {
+ public:
+  HandleTableSupport() {
+    zx::channel::create(0, &out1_, &out2_);
+    json_ = "{\"t\":{" + HandleToJson("h1", out1_.get()) + ",\"s1\":{\"sh1\":\"00000000\"," +
+            HandleToJson("sh2", out2_.get()) + "}}}";
+    pretty_ =
+        "{\n"
+        "  t: #gre#test.fidlcodec.examples/HandleTable#rst# = {\n"
+        "    " +
+        HandleToPretty("h1", out1_.get()) +
+        "\n"
+        "    s1: #gre#test.fidlcodec.examples/OptHandleStruct#rst# = {\n"
+        "      sh1: #gre#handle#rst# = #red#00000000#rst#\n"
+        "      " +
+        HandleToPretty("sh2", out2_.get()) +
+        "\n"
+        "    }\n"
+        "  }\n"
+        "}";
+  }
+  test::fidlcodec::examples::HandleTable handle_table() {
+    test::fidlcodec::examples::HandleTable t;
+    t.set_h1(std::move(out1_));
+    test::fidlcodec::examples::OptHandleStruct s;
+    s.sh2 = std::move(out2_);
+    t.set_s1(std::move(s));
+    return t;
+  }
+  std::string GetJSON() { return json_; }
+  std::string GetPretty() { return pretty_; }
+
+ private:
+  zx::channel out1_;
+  zx::channel out2_;
+
+  std::string json_;
+  std::string pretty_;
+};
+
+}  // namespace
+
+TEST_F(WireParserTest, ParseHandleTable) {
+  HandleTableSupport support;
+  TEST_DECODE_WIRE_BODY(HandleTableMessage, support.GetJSON(), support.GetPretty(),
+                        support.handle_table());
+}
+
+namespace {
+
 class TraversalOrderSupport {
  public:
   TraversalOrderSupport() {

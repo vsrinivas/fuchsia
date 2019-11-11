@@ -197,7 +197,7 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
           reinterpret_cast<const fidl_message_header_t*>(bytes))),
       error_stream_(error_stream) {}
 
-MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
+MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
                                uint64_t num_handles)
     : absolute_offset_(container->absolute_offset() + offset),
       num_bytes_(num_bytes),
@@ -205,7 +205,9 @@ MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset,
       end_handle_pos_(container->handle_pos_ + num_handles),
       handle_pos_(container->handle_pos_),
       unions_are_xunions_(container->unions_are_xunions_),
-      error_stream_(container->error_stream_) {}
+      error_stream_(container->error_stream_) {
+  container->handle_pos_ += num_handles;
+}
 
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).

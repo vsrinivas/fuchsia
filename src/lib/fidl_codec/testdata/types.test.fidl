@@ -78,6 +78,7 @@ protocol FidlCodecTestInterface {
     Handle(handle<channel> ch);
     NullableHandle(handle<channel>? ch);
     HandleStructMessage(HandleStruct hs);
+    HandleTableMessage(HandleTable t);
     TraversalOrderMessage(TraversalOrder t);
 
     Protocol(ParamProtocol ch);
@@ -207,6 +208,11 @@ struct HandleStruct {
 struct OptHandleStruct {
     handle<channel>? sh1;
     handle<channel>? sh2;
+};
+
+table HandleTable {
+    1: handle<channel> h1;
+    2: OptHandleStruct s1;
 };
 
 struct TraversalOrder {
