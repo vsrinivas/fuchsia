@@ -26,7 +26,7 @@ zx_driver("aml-uart") {
 }
 
 
-test("aml-uart-test") {
+zx_test("aml-uart-test") {
   output_name = "aml-uart-test"
   sources = [
     "aml-uart-test.cc",

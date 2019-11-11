@@ -34,7 +34,7 @@ zx_driver("hikey-display") {
   ]
 }
 
-test("hikey-display-test") {
+zx_test("hikey-display-test") {
   sources = [
     "adv7533.cc",
     "ddk-interface.cc",

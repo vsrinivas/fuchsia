@@ -18,7 +18,7 @@ zx_driver("gpt") {
   ]
 }
 
-test("gpt-device-test") {
+zx_test("gpt-device-test") {
   output_name = "gpt-device-test"
   sources = [
     "gpt.cc",

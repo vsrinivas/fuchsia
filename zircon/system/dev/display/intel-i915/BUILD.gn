@@ -39,7 +39,7 @@ zx_driver("intel-i915") {
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
-test("intel-i915-test") {
+zx_test("intel-i915-test") {
   sources = [
     "display-device.cc",
     "dp-display.cc",
