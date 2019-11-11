@@ -264,8 +264,9 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
 }
 
 async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error> {
-    // Very fast advertising interval (<= 60 ms)
+    // Very fast advertising interval (<= 60 ms), only supported for connectable advertising.
     let params = AdvertisingParameters {
+        connectable: Some(true),
         mode_hint: Some(AdvertisingModeHint::VeryFast),
         ..default_parameters()
     };
@@ -274,6 +275,19 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
         .when_satisfied(emulator::expectation::advertising_max_interval_is(60), test_timeout())
+        .await?;
+
+    // Very fast advertising interval (<= 60 ms) falls back to "fast" parameters for non-connectable
+    // advertising.
+    let params = AdvertisingParameters {
+        mode_hint: Some(AdvertisingModeHint::VeryFast),
+        ..default_parameters()
+    };
+    let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+    let result = start_advertising(&harness, params, handle_remote).await?;
+    expect_ok(result, "failed to start advertising")?;
+    let _ = harness
+        .when_satisfied(emulator::expectation::advertising_max_interval_is(150), test_timeout())
         .await?;
 
     // Fast advertising interval (<= 150 ms)
@@ -288,7 +302,7 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
         .when_satisfied(emulator::expectation::advertising_max_interval_is(150), test_timeout())
         .await?;
 
-    // Slow advertising intterval (<= 1.2 s)
+    // Slow advertising interval (<= 1.2 s)
     let params = AdvertisingParameters {
         mode_hint: Some(AdvertisingModeHint::Slow),
         ..default_parameters()
