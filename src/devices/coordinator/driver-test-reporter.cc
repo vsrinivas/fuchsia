@@ -21,9 +21,11 @@ void DriverTestReporter::LogTestCase(const char* name, size_t name_size,
   fprintf(stdout, "[----------] %lu failed\n", result->failed);
   fprintf(stdout, "[----------] %lu skipped\n", result->skipped);
   if (result->failed == 0) {
-    fprintf(stdout, "[       OK ] %s.%s\n", driver_name_.data(), name);
+    fprintf(stdout, "[       OK ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size),
+            name);
   } else {
-    fprintf(stdout, "[     FAIL ] %s.%s\n", driver_name_.data(), name);
+    fprintf(stdout, "[     FAIL ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name_size),
+            name);
   }
   total_cases_ += 1;
   total_passed_ += result->passed;
