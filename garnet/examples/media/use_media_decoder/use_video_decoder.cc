@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/fourcc.h>
@@ -21,12 +22,17 @@
 #include <src/media/lib/raw_video_writer/raw_video_writer.h>
 
 #include "in_stream_peeker.h"
+#include "input_copier.h"
 #include "lib/zx/time.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "util.h"
 
 namespace {
+
+// Most cases secure output can't be read to be verified, but under some testing
+// circumstances it can be possible.
+constexpr bool kVerifySecureOutput = false;
 
 constexpr zx::duration kReadDeadlineDuration = zx::sec(30);
 
@@ -120,15 +126,15 @@ enum class Format {
 // TODO(dustingreen): Determine for .mp4 or similar which don't have SPS / PPS
 // in band whether .mp4 provides ongoing OOB data, or just at the start, and
 // document in codec.fidl how that's to be handled.
-void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
+void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp) {
   // We assign fake PTS values starting at 0 partly to verify that 0 is
   // treated as a valid PTS.
   uint64_t input_frame_pts_counter = 0;
   // Raw .h264 has start code 00 00 01 or 00 00 00 01 before each NAL, and
   // the start codes don't alias in the middle of NALs, so we just scan
   // for NALs and send them in to the decoder.
-  auto queue_access_unit = [&codec_client, &input_frame_pts_counter](uint8_t* bytes,
-                                                                     size_t byte_count) {
+  auto queue_access_unit = [&codec_client, &input_frame_pts_counter, tvp](uint8_t* bytes,
+                                                                          size_t byte_count) {
     size_t bytes_so_far = 0;
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
@@ -148,7 +154,9 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
       // For input we do buffer_index == packet_index.
       const CodecBuffer& buffer =
           codec_client->GetInputBufferByIndex(packet->header().packet_index());
-      size_t bytes_to_copy = std::min(byte_count - bytes_so_far, buffer.size_bytes());
+      uint32_t padding_length = tvp ? tvp->PaddingLength() : 0;
+      size_t bytes_to_copy =
+          std::min(byte_count - bytes_so_far, buffer.size_bytes() - padding_length);
       packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
       packet->set_start_offset(0);
       packet->set_valid_length_bytes(bytes_to_copy);
@@ -162,7 +170,11 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
 
       packet->set_start_access_unit(bytes_so_far == 0);
       packet->set_known_end_access_unit(bytes_so_far + bytes_to_copy == byte_count);
-      memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
+      if (tvp) {
+        tvp->DecryptVideo(bytes + bytes_so_far, bytes_to_copy, buffer.vmo());
+      } else {
+        memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
+      }
       codec_client->QueueInputPacket(std::move(packet));
       bytes_so_far += bytes_to_copy;
     }
@@ -322,7 +334,7 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
 static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                               fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                              InStreamPeeker* in_stream, Format format,
+                              InStreamPeeker* in_stream, InputCopier* copier, Format format,
                               uint64_t min_output_buffer_size, bool is_secure_output,
                               bool is_secure_input, FrameSink* frame_sink, EmitFrame emit_frame) {
   VLOGF("use_video_decoder()\n");
@@ -331,6 +343,7 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
   CodecClient codec_client(fidl_loop, fidl_thread, std::move(sysmem));
   codec_client.SetMinOutputBufferSize(min_output_buffer_size);
   codec_client.set_is_output_secure(is_secure_output);
+  codec_client.set_is_input_secure(is_secure_input);
 
   const char* mime_type;
   switch (format) {
@@ -390,11 +403,11 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
 
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread =
-      std::make_unique<std::thread>([&codec_client, in_stream, format]() {
+      std::make_unique<std::thread>([&codec_client, in_stream, format, copier]() {
         VLOGF("in_thread start");
         switch (format) {
           case Format::kH264:
-            QueueH264Frames(&codec_client, in_stream);
+            QueueH264Frames(&codec_client, in_stream, copier);
             break;
 
           case Format::kVp9:
@@ -558,9 +571,10 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
         // When height is odd, we want a chroma sample for the bottom-most luma.
         uint32_t uv_height = (raw->primary_display_height_pixels + 1) / 2;
         uint32_t uv_stride = i420_stride / 2;
-        std::unique_ptr<uint8_t[]> i420_bytes = std::make_unique<uint8_t[]>(
-            i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
-        if (!is_secure_output) {
+        std::unique_ptr<uint8_t[]> i420_bytes;
+        if (kVerifySecureOutput || !is_secure_output) {
+          i420_bytes = std::make_unique<uint8_t[]>(
+              i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
           switch (raw->fourcc) {
             case make_fourcc('N', 'V', '1', '2'): {
               // Y
@@ -710,21 +724,21 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
 void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                      InStreamPeeker* in_stream, uint64_t min_output_buffer_size,
-                      bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
-                      EmitFrame emit_frame) {
+                      InStreamPeeker* in_stream, InputCopier* input_copier,
+                      uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                      FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
-                    Format::kH264, min_output_buffer_size, is_secure_output, is_secure_input,
-                    frame_sink, std::move(emit_frame));
+                    input_copier, Format::kH264, min_output_buffer_size, is_secure_output,
+                    is_secure_input, frame_sink, std::move(emit_frame));
 }
 
 void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     InStreamPeeker* in_stream, uint64_t min_output_buffer_size,
-                     bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
-                     EmitFrame emit_frame) {
+                     InStreamPeeker* in_stream, InputCopier* input_copier,
+                     uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                     FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
-                    Format::kVp9, min_output_buffer_size, is_secure_output, is_secure_input,
-                    frame_sink, std::move(emit_frame));
+                    input_copier, Format::kVp9, min_output_buffer_size, is_secure_output,
+                    is_secure_input, frame_sink, std::move(emit_frame));
 }

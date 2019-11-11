@@ -703,7 +703,16 @@ bool CodecClient::ConfigurePortBufferCollection(
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   // TODO(SCN-1388): Hardcoded to read/write to allow direct Vulkan import on
   // UMA platforms.
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
+  if (!is_output && is_input_secure_) {
+    constraints.usage.video = fuchsia::sysmem::videoUsageDecryptorOutput;
+  } else if (is_output && is_output_secure_) {
+    // Only used if kVerifySecureOutput is used in test.
+    constraints.usage.cpu =
+        fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
+  } else {
+    constraints.usage.cpu =
+        fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
+  }
 
   // TODO(dustingreen): Make this more flexible once we're more flexible on
   // frame_count on output of decoder.
@@ -728,11 +737,19 @@ bool CodecClient::ConfigurePortBufferCollection(
   constraints.buffer_memory_constraints.secure_required = false;
   if (is_output && is_output_secure_) {
     constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+  } else if (!is_output && is_input_secure_) {
+    constraints.buffer_memory_constraints.cpu_domain_supported = false;
+    constraints.buffer_memory_constraints.ram_domain_supported = false;
+    constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+    constraints.buffer_memory_constraints.secure_required = true;
+    constraints.buffer_memory_constraints.heap_permitted_count = 1;
+    constraints.buffer_memory_constraints.heap_permitted[0] =
+        fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC;
   } else {
     ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    ZX_DEBUG_ASSERT(constraints.buffer_memory_constraints.cpu_domain_supported);
   }
 
-  ZX_DEBUG_ASSERT(constraints.buffer_memory_constraints.cpu_domain_supported);
   ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.ram_domain_supported);
 
   // Despite being a consumer of output uncompressed video frames (when decoding

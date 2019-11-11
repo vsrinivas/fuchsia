@@ -184,8 +184,8 @@ fit::result<zx_paddr_t, zx_status_t> AmlogicSecureMemDevice::GetSecureMemoryPhys
   // Pin the VMO to get the physical address.
   zx_paddr_t paddr;
   zx::pmt pmt;
-  status = bti_.pin(ZX_BTI_CONTIGUOUS, secure_mem, 0 /* offset */, secure_mem_info.size_bytes,
-                    &paddr, 1u, &pmt);
+  status = bti_.pin(ZX_BTI_CONTIGUOUS | ZX_BTI_PERM_READ, secure_mem, 0 /* offset */,
+                    secure_mem_info.size_bytes, &paddr, 1u, &pmt);
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to pin memory - status: %d", status);
     return fit::error(status);

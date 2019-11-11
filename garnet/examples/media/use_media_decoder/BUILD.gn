@@ -8,6 +8,7 @@ source_set("use_media_decoder_source_set") {
   testonly = true
 
   sources = [
+    "cleartvp.cc",
     "in_stream.cc",
     "in_stream_file.cc",
     "in_stream_http.cc",
@@ -46,6 +47,8 @@ source_set("use_media_decoder_source_set") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/tee-client-api",
+    "//zircon/system/fidl/fuchsia-hardware-securemem",
   ]
 }
 
@@ -117,6 +120,23 @@ test("use_h264_decoder_secure_output_test") {
   # This test can only use HW decode because codec_impl won't map the output
   # VMOs for CPU access.
   environments = [ astro_env ]
+}
+
+test("use_h264_decoder_secure_input_output_test") {
+  testonly = true
+
+  output_name = "use_h264_decoder_secure_input_output_test"
+
+  sources = [
+    "test/use_h264_decoder_secure_input_output_test.cc",
+  ]
+
+  deps = [
+    ":use_media_decoder_source_set",
+  ]
+
+  # This test needs a the clearTVP TA
+  environments = [ sherlock_env ]
 }
 
 test("use_vp9_decoder_test") {

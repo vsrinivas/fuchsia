@@ -114,6 +114,7 @@ class CodecClient {
   void Stop();
 
   void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
+  void set_is_input_secure(bool is_input_secure) { is_input_secure_ = is_input_secure; }
 
   // On this thread, while the codec is being fed input data on
  private:
@@ -290,6 +291,7 @@ class CodecClient {
   uint64_t next_output_buffer_lifetime_ordinal_ = 1;
   uint64_t current_output_buffer_lifetime_ordinal_ = 0;
   bool is_output_secure_ = false;
+  bool is_input_secure_ = false;
 
   // Invariant:
   // output_pending_ == (!emitted_output_.empty() ||

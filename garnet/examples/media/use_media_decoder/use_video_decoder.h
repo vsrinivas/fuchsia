@@ -13,6 +13,7 @@
 
 class FrameSink;
 class InStreamPeeker;
+class InputCopier;
 
 // An EmitFrame is passed I420 frames with stride == width, and with width
 // and height being display_width and display_height (not coded_width and
@@ -42,36 +43,28 @@ typedef fit::function<void(uint8_t* i420_data, uint32_t width, uint32_t height, 
 //     call back when the frame has been released by the sink.
 // emit_frame - if set, is called to emit each frame in i420 format + timestamp
 //     info.
-void use_h264_decoder(async::Loop* fidl_loop,
-                      thrd_t fidl_thread,
+void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                      InStreamPeeker* in_stream,
-                      uint64_t min_output_buffer_size,
-                      bool is_secure_output,
-                      bool is_secure_input,
-                      FrameSink* frame_sink,
-                      EmitFrame emit_frame);
+                      InStreamPeeker* in_stream, InputCopier* input_copier,
+                      uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                      FrameSink* frame_sink, EmitFrame emit_frame);
 
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
-void use_vp9_decoder(async::Loop* fidl_loop,
-                     thrd_t fidl_thread,
+void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     InStreamPeeker* in_stream,
-                     uint64_t min_output_buffer_size,
-                     bool is_secure_output,
-                     bool is_secure_input,
-                     FrameSink* frame_sink,
-                     EmitFrame emit_frame);
+                     InStreamPeeker* in_stream, InputCopier* input_copier,
+                     uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                     FrameSink* frame_sink, EmitFrame emit_frame);
 
 // Common function pointer type shared by use_h264_decoder, use_vp9_decoder.
-typedef void (*UseVideoDecoderFunction)(
-    async::Loop* fidl_loop, thrd_t fidl_thread, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-    InStreamPeeker* in_stream,
-    uint64_t min_output_buffer_size,
-    bool is_secure_output, bool is_secure_input,
-    FrameSink* frame_sink, EmitFrame emit_frame);
+typedef void (*UseVideoDecoderFunction)(async::Loop* fidl_loop, thrd_t fidl_thread,
+                                        fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                                        fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
+                                        InStreamPeeker* in_stream, InputCopier* input_copier,
+                                        uint64_t min_output_buffer_size, bool is_secure_output,
+                                        bool is_secure_input, FrameSink* frame_sink,
+                                        EmitFrame emit_frame);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_

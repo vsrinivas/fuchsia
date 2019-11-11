@@ -190,7 +190,8 @@ int main(int argc, char* argv[]) {
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
                    frame_sink = frame_sink.get()]() mutable {
       use_h264_decoder(&fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                       in_stream_peeker, /*min_output_buffer_size=*/0, /*is_secure_output=*/false,
+                       in_stream_peeker, /*input_copier*/ nullptr, /*min_output_buffer_size=*/0,
+                       /*is_secure_output=*/false,
                        /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
     };
   } else if (command_line.HasOption("vp9")) {
@@ -198,7 +199,8 @@ int main(int argc, char* argv[]) {
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
                    frame_sink = frame_sink.get()]() mutable {
       use_vp9_decoder(&fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                      in_stream_peeker, /*min_output_buffer_size=*/0, /*is_secure_output=*/false,
+                      in_stream_peeker, /*input_copier*/ nullptr, /*min_output_buffer_size=*/0,
+                      /*is_secure_output=*/false,
                       /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
     };
   } else {

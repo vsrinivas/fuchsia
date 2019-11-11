@@ -87,7 +87,8 @@ package("use_h264_decoder_secure_output_test") {
 
   meta = [
     {
-      path = rebase_path("use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx")
+      path = rebase_path(
+              "use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx")
       dest = "use_h264_decoder_secure_output_test.cmx"
     },
   ]
@@ -97,9 +98,41 @@ package("use_h264_decoder_secure_output_test") {
       # Should pass when run on astro.
       name = "use_h264_decoder_secure_output_test"
 
-      environments = [
-        astro_env,
-      ]
+      environments = [ astro_env ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
+package("use_h264_decoder_secure_input_output_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_input_output_test",
+    "//garnet/packages/prod:media_codec_factory",
+  ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/use_h264_decoder_secure_input_output_test.cmx")
+      dest = "use_h264_decoder_secure_input_output_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on sherlock.
+      name = "use_h264_decoder_secure_input_output_test"
+
+      environments = [ sherlock_env ]
     },
   ]
 

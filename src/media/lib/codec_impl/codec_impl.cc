@@ -2774,7 +2774,11 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
         FailLocked("Core codec set disallowed CPU usage bits (input port).");
         return false;
       }
-      usage.cpu |= fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften;
+      if (!IsSecureInput()) {
+        usage.cpu |= fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften;
+      } else {
+        usage.cpu = 0;
+      }
     } else {
       if (usage.cpu & ~(fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften)) {
         FailLocked("Core codec set disallowed CPU usage bit(s) (output port).");

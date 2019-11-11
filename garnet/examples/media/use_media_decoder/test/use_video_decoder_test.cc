@@ -22,6 +22,7 @@
 
 #include "../in_stream_file.h"
 #include "../in_stream_peeker.h"
+#include "../input_copier.h"
 #include "../use_video_decoder.h"
 #include "../util.h"
 #include "src/lib/fxl/logging.h"
@@ -55,14 +56,16 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   SHA256_Init(&sha256_ctx);
 
   uint32_t frame_index = 0;
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, is_secure_output](
+  bool got_output_data = false;
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, &got_output_data](
                              uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
                              bool has_timestamp_ish, uint64_t timestamp_ish) {
     VLOGF("emit_frame frame_index: %u", frame_index);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
-    if (!is_secure_output) {
+    if (i420_data) {
+      got_output_data = true;
       SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
     }
     frame_index++;
@@ -113,7 +116,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     exit(-1);
   }
 
-  if (!is_secure_output) {
+  if (got_output_data) {
     uint8_t md[SHA256_DIGEST_LENGTH] = {};
     ZX_ASSERT(SHA256_Final(md, &sha256_ctx));
     char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
@@ -130,8 +133,11 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
       exit(-1);
     }
     printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
-  } else {
+  } else if (is_secure_output) {
     printf("Can't check output data sha256 because output is secure.\nPASS.\n");
+  } else {
+    printf("No output data received");
+    exit(-1);
   }
 
   fidl_loop.Quit();
@@ -158,10 +164,13 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
       [](zx_status_t status) { FXL_PLOG(FATAL, status) << "sysmem failed - unexpected"; });
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
+  std::unique_ptr<InputCopier> input_copier;
+  if (is_secure_input)
+    input_copier = InputCopier::Create();
+
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                    in_stream_peeker, min_output_buffer_size,
-                    is_secure_output, is_secure_input, nullptr,
-                    std::move(emit_frame));
+                    in_stream_peeker, input_copier.get(), min_output_buffer_size, is_secure_output,
+                    is_secure_input, nullptr, std::move(emit_frame));
 
   return true;
 }

@@ -7,6 +7,7 @@
 #include <lib/fidl-utils/bind.h>
 #include <zircon/compiler.h>
 
+#include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 
 namespace {
@@ -315,8 +316,9 @@ uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
       fuchsia_sysmem_vulkanUsageTransferDst | fuchsia_sysmem_vulkanUsageStorage;
   // Display usages don't include any writing.
   const uint32_t kDisplayWriteBits = 0;
-  const uint32_t kVideoWriteBits =
-      fuchsia_sysmem_videoUsageHwDecoder | fuchsia_sysmem_videoUsageHwDecoderInternal;
+  const uint32_t kVideoWriteBits = fuchsia_sysmem_videoUsageHwDecoder |
+                                   fuchsia_sysmem_videoUsageHwDecoderInternal |
+                                   fuchsia_sysmem_videoUsageDecryptorOutput;
 
   is_write_needed = (usage->cpu & kCpuWriteBits) || (usage->vulkan & kVulkanWriteBits) ||
                     (usage->display & kDisplayWriteBits) || (usage->video & kVideoWriteBits);

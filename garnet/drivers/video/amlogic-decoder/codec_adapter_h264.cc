@@ -668,6 +668,16 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     image_constraints.required_min_coded_height = height_;
     image_constraints.required_max_coded_height = height_;
   } else {
+    if (is_secure_output_) {
+      // non-protected inputs are still supported with secure outputs.
+      result.buffer_memory_constraints.secure_required = false;
+      result.buffer_memory_constraints.cpu_domain_supported = true;
+      result.buffer_memory_constraints.inaccessible_domain_supported = true;
+      result.buffer_memory_constraints.heap_permitted_count = 2;
+      result.buffer_memory_constraints.heap_permitted[0] = fuchsia::sysmem::HeapType::SYSTEM_RAM;
+      result.buffer_memory_constraints.heap_permitted[1] =
+          fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC;
+    }
     ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
   }
 
