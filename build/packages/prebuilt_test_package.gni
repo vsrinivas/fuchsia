@@ -54,9 +54,10 @@ template("prebuilt_test_package") {
   test_spec(spec_target_name) {
     name = main_target_name
     target = main_target_name
+    package_url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx"
     command = [
       "${invoker.runner}",
-      "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx",
+      package_url,
     ]
 
     forward_variables_from(invoker,
