@@ -405,6 +405,12 @@ mod test {
                 if_statement("if a == b { c == 1;"),
                 Err(nom::Err::Error(BindParserError::IfBlockEnd("".to_string())))
             );
+
+            // Blocks must not be empty.
+            // TODO(fxb/35146): Improve this error message, it currently reports a failure to parse
+            // an accept statement due to the way the combinator works for the statement parser.
+            assert!(if_statement("if a == b { } else { c == 1; }").is_err());
+            assert!(if_statement("if a == b { c == 1; } else { }").is_err());
         }
 
         #[test]
