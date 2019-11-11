@@ -66,7 +66,7 @@ func TestExecute(t *testing.T) {
 			}
 		}
 		// Logs are not empty since we wrote to it when checking to see if they were open.
-		if err = cmd.checkEmptyLogs(ctx, targetSetup); err != nil {
+		if err = checkEmptyLogs(ctx, append(targetSetup.syslogs, targetSetup.serialLogs...)); err != nil {
 			t.Fatalf("%v", err)
 		}
 	})
@@ -103,7 +103,7 @@ func TestExecute(t *testing.T) {
 			t.Fatalf("Execute failed with error: %v", err)
 		}
 		// Logs should be empty.
-		if err = cmd.checkEmptyLogs(ctx, targetSetup); err == nil {
+		if err = checkEmptyLogs(ctx, append(targetSetup.syslogs, targetSetup.serialLogs...)); err == nil {
 			t.Fatalf("Did not fail for empty logs")
 		}
 	})

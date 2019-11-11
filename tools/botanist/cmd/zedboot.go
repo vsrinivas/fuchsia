@@ -7,7 +7,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -49,6 +51,9 @@ type ZedbootCommand struct {
 
 	// CmdlineFile is the path to a file of additional kernel command-line arguments.
 	cmdlineFile string
+
+	// SerialLogFile, if nonempty, is the file where the system's serial logs will be written.
+	serialLogFile string
 }
 
 func (*ZedbootCommand) Name() string {
@@ -72,6 +77,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
 	f.StringVar(&cmd.configFile, "config", "", "path to file of device config")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
+	f.StringVar(&cmd.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 }
 
 func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, t tftp.Client, cmdlineArgs []string) error {
@@ -98,10 +104,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		devices = append(devices, device)
 	}
 
-	for _, device := range devices {
-		defer device.Restart(ctx)
-	}
-
 	imgs, err := build.LoadImages(cmd.imageManifest)
 	if err != nil {
 		return err
@@ -111,12 +113,56 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	defer cancel()
 	errs := make(chan error)
 
-	for _, device := range devices {
+	var serialLogs []*logWriter
+	for i, device := range devices {
+		if device.Serial() != nil {
+			if cmd.serialLogFile != "" {
+				serialLogFile := cmd.serialLogFile
+				if len(devices) > 1 {
+					serialLogFile = getIndexedFilename(cmd.serialLogFile, i)
+				}
+				serialLog, err := os.Create(serialLogFile)
+				if err != nil {
+					return err
+				}
+				serialLogs = append(serialLogs, &logWriter{
+					name: serialLogFile,
+					file: serialLog})
+
+				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
+				// output file.  This should give us everything since Zedboot boot, and new messages should
+				// be written to directly to the serial port without needing to tail with `dlog -f`.
+				if _, err = io.WriteString(device.Serial(), "\ndlog\n"); err != nil {
+					logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
+				}
+
+				go func(device *target.DeviceTarget) {
+					for {
+						_, err := io.Copy(serialLog, device.Serial())
+						if err != nil && err != io.EOF {
+							logger.Errorf(ctx, "failed to write serial log: %v", err)
+							return
+						}
+					}
+				}(device)
+				cmdlineArgs = append(cmdlineArgs, "kernel.bypass-debuglog=true")
+			}
+			// Modify the cmdlineArgs passed to the kernel on boot to enable serial on x64.
+			// arm64 devices should already be enabling kernel.serial at compile time.
+			cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
+		}
+
 		go func(device *target.DeviceTarget) {
 			if err := device.Start(ctx, imgs, cmdlineArgs); err != nil {
 				errs <- err
 			}
 		}(device)
+	}
+	for _, log := range serialLogs {
+		defer log.file.Close()
+	}
+	for _, device := range devices {
+		defer device.Restart(ctx)
 	}
 	go func() {
 		// We execute tests here against the 0th device, there may be N devices
@@ -131,7 +177,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	case <-ctx.Done():
 	}
 
-	return nil
+	return checkEmptyLogs(ctx, serialLogs)
 }
 
 func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

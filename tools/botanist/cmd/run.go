@@ -369,8 +369,8 @@ func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetS
 	return nil
 }
 
-func (r *RunCommand) checkEmptyLogs(ctx context.Context, targetSetup *targetSetup) error {
-	for _, log := range append(targetSetup.syslogs, targetSetup.serialLogs...) {
+func checkEmptyLogs(ctx context.Context, logs []*logWriter) error {
+	for _, log := range logs {
 		b, err := ioutil.ReadFile(log.name)
 		if err != nil {
 			return err
@@ -418,7 +418,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	if err := r.runCmdWithTargets(ctx, targetSetup, args); err != nil {
 		return err
 	}
-	return r.checkEmptyLogs(ctx, targetSetup)
+	return checkEmptyLogs(ctx, append(targetSetup.syslogs, targetSetup.serialLogs...))
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
