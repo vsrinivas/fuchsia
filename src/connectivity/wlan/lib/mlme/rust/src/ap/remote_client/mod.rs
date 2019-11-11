@@ -85,9 +85,6 @@ pub enum ClientRejection {
     /// The client is not associated.
     NotAssociated,
 
-    /// The client is not in an RSN.
-    NotRSN,
-
     /// The EAPoL controlled port is closed.
     ControlledPortClosed,
 
@@ -253,7 +250,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         result_code: fidl_mlme::AuthenticateResultCodes,
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         self.change_state(
             ctx,
             if result_code == fidl_mlme::AuthenticateResultCodes::Success {
@@ -287,7 +284,6 @@ impl RemoteClient {
                 }
             },
         )
-        .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2) from the SME.
@@ -299,7 +295,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: fidl_mlme::ReasonCode,
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         self.change_state(ctx, State::Deauthenticated);
 
         // IEEE Std 802.11-2016, 6.3.6.3.3 states that we should send MLME-DEAUTHENTICATE.confirm
@@ -308,7 +304,6 @@ impl RemoteClient {
         // MLME-DEAUTHENTICATE.confirm is redundant.
 
         ctx.send_deauth_frame(self.addr.clone(), ReasonCode(reason_code as u16))
-            .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5) from the SME.
@@ -325,7 +320,7 @@ impl RemoteClient {
         result_code: fidl_mlme::AssociateResultCodes,
         aid: Aid,
         ies: &[u8],
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         self.change_state(
             ctx,
             if result_code == fidl_mlme::AssociateResultCodes::Success {
@@ -379,7 +374,6 @@ impl RemoteClient {
             aid,
             ies,
         )
-        .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1) from the SME.
@@ -392,7 +386,7 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         reason_code: u16,
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         self.change_state(ctx, State::Authenticated);
 
         // IEEE Std 802.11-2016, 6.3.9.2.3 states that we should send MLME-DISASSOCIATE.confirm
@@ -400,7 +394,6 @@ impl RemoteClient {
         // about this client, so sending MLME-DISASSOCIATE.confirm is redundant.
 
         ctx.send_disassoc_frame(self.addr.clone(), ReasonCode(reason_code))
-            .map_err(ClientRejection::WlanSendError)
     }
 
     /// Handles SET_CONTROLLED_PORT.request (fuchsia.wlan.mlme.SetControlledPortRequest) from the
@@ -408,7 +401,7 @@ impl RemoteClient {
     pub fn handle_mlme_set_controlled_port_req(
         &mut self,
         state: fidl_mlme::ControlledPortState,
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         match self.state.as_mut() {
             State::Associated {
                 eapol_controlled_port: eapol_controlled_port @ Some(_), ..
@@ -416,8 +409,10 @@ impl RemoteClient {
                 eapol_controlled_port.replace(state);
                 Ok(())
             }
-            State::Associated { eapol_controlled_port: None, .. } => Err(ClientRejection::NotRSN),
-            _ => Err(ClientRejection::NotAssociated),
+            State::Associated { eapol_controlled_port: None, .. } => {
+                Err(Error::Status(format!("client is not in an RSN"), zx::Status::BAD_STATE))
+            }
+            _ => Err(Error::Status(format!("client is not associated"), zx::Status::BAD_STATE)),
         }
     }
 
@@ -429,13 +424,12 @@ impl RemoteClient {
         ctx: &mut Context,
         src_addr: MacAddr,
         data: &[u8],
-    ) -> Result<(), ClientRejection> {
+    ) -> Result<(), Error> {
         // IEEE Std 802.11-2016, 6.3.22.2.3 states that we should send MLME-EAPOL.confirm to the
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
 
         ctx.send_eapol_frame(self.addr, src_addr, false, data)
-            .map_err(ClientRejection::WlanSendError)
     }
 
     // WLAN frame handlers.
@@ -990,11 +984,13 @@ mod tests {
             eapol_controlled_port: None,
             active_timeout_event_id: None,
         });
-        assert_variant!(
-            r_sta
-                .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
-                .expect_err("expected err"),
-            ClientRejection::NotRSN
+        assert_eq!(
+            zx::Status::from(
+                r_sta
+                    .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
+                    .expect_err("expected err")
+            ),
+            zx::Status::BAD_STATE
         );
         assert_variant!(r_sta.state.as_ref(), State::Associated {
             eapol_controlled_port: None,
@@ -1006,11 +1002,13 @@ mod tests {
     fn handle_mlme_set_controlled_port_req_wrong_state() {
         let mut r_sta = make_remote_client();
         r_sta.state = StateMachine::new(State::Authenticating);
-        assert_variant!(
-            r_sta
-                .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
-                .expect_err("expected err"),
-            ClientRejection::NotAssociated
+        assert_eq!(
+            zx::Status::from(
+                r_sta
+                    .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
+                    .expect_err("expected err")
+            ),
+            zx::Status::BAD_STATE
         );
     }
 
