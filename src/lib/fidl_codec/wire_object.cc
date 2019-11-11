@@ -695,7 +695,8 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
     return;
   }
   is_string_ = true;
-  for (uint64_t i = 0; i < size_; ++i) {
+  for (uint64_t i = 0;
+       (i < size_) && (offset + component_type_->InlineSize() <= decoder->num_bytes()); ++i) {
     std::unique_ptr<Value> value = component_type_->Decode(decoder, offset);
     if (value != nullptr) {
       uint8_t uvalue = value->GetUint8Value();

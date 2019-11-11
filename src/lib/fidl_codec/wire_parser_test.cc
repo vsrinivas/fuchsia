@@ -131,9 +131,12 @@ TEST_F(WireParserTest, ParseSingleString) {
 // |_pretty_print| is the expected pretty print of the message.
 // The remaining parameters are the parameters to |_iface| to generate the
 // message.
+// If patched_offset is not -1, we patch the encoded buffer with patched_value.
+// This is useful when we want to test that we can decode junk data.
 // If num_bytes is not -1, instead of decoding the full buffer, we only decode num_bytes of buffer.
 // This is helpful when we want to test display of incorect data.
-#define TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, num_bytes, ...)           \
+#define TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,           \
+                                     _pretty_print, num_bytes, ...)                                \
   do {                                                                                             \
     fidl::MessageBuffer buffer;                                                                    \
     fidl::Message message = buffer.CreateEmptyMessage();                                           \
@@ -162,12 +165,15 @@ TEST_F(WireParserTest, ParseSingleString) {
                                  ZX_RIGHT_INSPECT;                                                 \
       }                                                                                            \
     }                                                                                              \
+    if (patched_offset != -1) {                                                                    \
+      *(reinterpret_cast<uint64_t*>(message.bytes().data() + patched_offset)) = patched_value;     \
+    }                                                                                              \
                                                                                                    \
     MessageDecoder decoder(message.bytes().data(),                                                 \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
                            message.handles().size(), std::cerr);                                   \
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
-    if (num_bytes == -1) {                                                                         \
+    if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
     }                                                                                              \
     rapidjson::Document actual;                                                                    \
@@ -228,10 +234,10 @@ TEST_F(WireParserTest, ParseSingleString) {
   } while (0)
 
 #define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...) \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, -1, __VA_ARGS__)
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, -1, __VA_ARGS__)
 
 #define TEST_DECODE_WIRE_BODY_BAD(_iface, _json_value, _pretty_print, num_bytes, ...) \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, _json_value, _pretty_print, num_bytes, __VA_ARGS__)
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, num_bytes, __VA_ARGS__)
 
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
@@ -245,6 +251,13 @@ TEST_F(WireParserTest, ParseSingleString) {
 #define TEST_DECODE_WIRE(_testname, _iface, _json_value, _pretty_print, ...) \
   TEST_F(WireParserTest, Parse##_testname) {                                 \
     TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);  \
+  }
+
+#define TEST_DECODE_WIRE_PATCHED(_testname, _iface, patched_offset, patched_value, _json_value, \
+                                 _pretty_print, ...)                                            \
+  TEST_F(WireParserTest, Parse##_testname) {                                                    \
+    TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,            \
+                                 _pretty_print, -1, __VA_ARGS__);                               \
   }
 
 // Scalar Tests
@@ -494,6 +507,20 @@ TEST_DECODE_WIRE(
 
 TEST_DECODE_WIRE(
     VectorUint32, VectorUint32,
+    R"({"v":["0","65537","2","65539","4","65541","6","65543","8","65545","10","65547","12","65549","14","65551","16","65553","18","65555","20","65557","22","65559","24","65561"]})",
+    "{\n"
+    "  v: #gre#vector<uint32>#rst# = [\n"
+    "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
+    "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
+    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#,\n"
+    "    #blu#65551#rst#, #blu#16#rst#, #blu#65553#rst#, #blu#18#rst#, #blu#65555#rst#, "
+    "#blu#20#rst#, #blu#65557#rst#, #blu#22#rst#, #blu#65559#rst#, #blu#24#rst#, #blu#65561#rst#\n"
+    "  ]\n"
+    "}",
+    VectorUint32())
+
+TEST_DECODE_WIRE_PATCHED(
+    VectorUint32BadSize, VectorUint32, 16, 100000,
     R"({"v":["0","65537","2","65539","4","65541","6","65543","8","65545","10","65547","12","65549","14","65551","16","65553","18","65555","20","65557","22","65559","24","65561"]})",
     "{\n"
     "  v: #gre#vector<uint32>#rst# = [\n"
