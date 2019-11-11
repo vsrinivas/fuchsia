@@ -393,6 +393,40 @@ struct LauncherInfo {
     EmptyStruct? additional_services;
 };
 
+union this_is_a_union {
+    1: string s;
+    2: bool b;
+};
+
+table this_is_a_table {
+    1: string s;
+};
+
+xunion this_is_a_xunion {
+    string s; // 0x3BC5BEBD
+    bool b;
+};
+
+table AllTypesTable {
+    1: this_is_a_union union_member;
+    2: array<uint32>:3 array_member;
+    3: this_is_a_table table_member;
+    4: this_is_a_xunion xunion_member;
+};
+
+struct CompatTable {
+    AllTypesTable value;
+    string empty;
+};
+
+table TableWithXUnion {
+    1: this_is_a_xunion member;
+};
+
+struct StructOfTableWithXUnion {
+    TableWithXUnion value;
+};
+
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);
