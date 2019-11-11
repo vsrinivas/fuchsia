@@ -69,7 +69,12 @@ zx_status_t Exceptionate::SendException(const fbl::RefPtr<ExceptionDispatcher>& 
     return ZX_ERR_NEXT;
   }
 
-  zx_exception_info_t info;
+  zx_exception_info_t info{};
+
+  // Since info will be copied to a usermode process make sure it's safe to to be copied (no
+  // internal padding, trivially copyable, etc.).
+  static_assert(internal::is_copy_out_allowed<decltype(info)>::value);
+
   info.tid = exception->thread()->get_koid();
   info.pid = exception->thread()->process()->get_koid();
   info.type = exception->exception_type();
