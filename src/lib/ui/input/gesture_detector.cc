@@ -82,38 +82,59 @@ void GestureDetector::Interaction::OnMultidrag(GestureDetector::TapType tap_type
 
 GestureDetector::Delegate::~Delegate() = default;
 
+GestureDetector::DevicePointerState::DevicePointerState() : weak_ptr_factory_(this) {}
+
+fxl::WeakPtr<GestureDetector::DevicePointerState>
+GestureDetector::DevicePointerState::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
 GestureDetector::GestureDetector(Delegate* delegate, float drag_threshold)
     : delegate_(delegate), drag_threshold_(drag_threshold) {}
 
-bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
+void GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
   switch (event.phase) {
     case fuchsia::ui::input::PointerEventPhase::DOWN: {
-      DevicePointerState& state = devices_[event.device_id];
-      state.gesture.AddPointer(event.pointer_id, {event.x, event.y});
+      fxl::WeakPtr<DevicePointerState> state = devices_[event.device_id].GetWeakPtr();
+      state->gesture.AddPointer(event.pointer_id, {event.x, event.y});
 
-      if (!state.interaction) {
-        state.interaction = delegate_->BeginInteraction(&state.gesture);
+      if (!state->interaction) {
+        std::unique_ptr<Interaction> interaction = delegate_->BeginInteraction(&state->gesture);
+        // Store interaction in temporary variable so we can guard against state having been
+        // destroyed in |BeginInteraction|. This can happen because the delegate can implement
+        // |BeginInteraction| however it likes, including by resetting or destroying the
+        // |GestureDetector|.
+        if (!state) {
+          return;
+        }
+        state->interaction = std::move(interaction);
 #ifndef NDEBUG
-        state.interaction = std::make_unique<CheckedInteraction>(std::move(state.interaction));
+        state->interaction = std::make_unique<CheckedInteraction>(std::move(state->interaction));
 #endif
         // Only start a tap if we're the first pointer. Otherwise, if we've
         // already committed a tap, immediately enter a multidrag.
-        if (state.gesture.pointer_count() == 1) {
-          state.tap_type = ClassifyTap(event, state.gesture);
-          state.interaction->OnTapBegin({event.x, event.y}, state.tap_type);
+        if (state->gesture.pointer_count() == 1) {
+          state->tap_type = ClassifyTap(event, state->gesture);
+          state->interaction->OnTapBegin({event.x, event.y}, state->tap_type);
+          if (!state) {
+            return;
+          }
         }
-        state.origins[event.pointer_id] = {event.x, event.y};
-      } else if (state.tap_type > 0) {
-        TapType tap_type = ClassifyTap(event, state.gesture);
-        if (tap_type > state.tap_type) {
-          state.tap_type = tap_type;
-          state.interaction->OnTapUpdate(tap_type);
+        state->origins[event.pointer_id] = {event.x, event.y};
+      } else if (state->tap_type > 0) {
+        TapType tap_type = ClassifyTap(event, state->gesture);
+        if (tap_type > state->tap_type) {
+          state->tap_type = tap_type;
+          state->interaction->OnTapUpdate(tap_type);
+          if (!state) {
+            return;
+          }
         }
-        state.origins[event.pointer_id] = {event.x, event.y};
+        state->origins[event.pointer_id] = {event.x, event.y};
       } else {
         // This is an in-progress multidrag that we should update with the new
         // tap_type.
-        state.interaction->OnMultidrag(ClassifyTap(event, state.gesture), {});
+        state->interaction->OnMultidrag(ClassifyTap(event, state->gesture), {});
       }
       break;
     }
@@ -127,10 +148,12 @@ bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
 
       DevicePointerState& state = it->second;
       FX_DCHECK(state.interaction);
+      // Unlike in the other handlers, we don't need to guard state with a weak pointer here since
+      // all the |Interaction| callbacks in this one are the last line in the method.
 
       Gesture::Delta delta = state.gesture.UpdatePointer(event.pointer_id, {event.x, event.y});
       if (!state.tap_type) {
-        // in-progress multidrag
+        // 0 signifies in-progress multidrag (see |tap_type| docs for details).
         state.interaction->OnMultidrag(ClassifyTap(event, state.gesture), delta);
       } else {
         // Decide whether we've exceeded the threshold to start a multidrag.
@@ -150,17 +173,20 @@ bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
     case fuchsia::ui::input::PointerEventPhase::UP: {
       auto it = devices_.find(event.device_id);
       if (it != devices_.end()) {
-        DevicePointerState& state = it->second;
-        if (state.tap_type > 0) {
-          state.interaction->OnTapCommit();
-          state.tap_type = -state.tap_type;
+        fxl::WeakPtr<DevicePointerState> state = it->second.GetWeakPtr();
+        if (state->tap_type > 0) {
+          state->interaction->OnTapCommit();
+          if (!state) {
+            return;
+          }
+          state->tap_type = -state->tap_type;
         }
-        state.gesture.RemovePointer(event.pointer_id);
-        if (!state.gesture.has_pointers()) {
+        state->gesture.RemovePointer(event.pointer_id);
+        if (!state->gesture.has_pointers()) {
           devices_.erase(it);  // This destroys the interaction as well.
-        } else if (!state.tap_type) {
+        } else if (!state->tap_type) {
           // If there's still a drag active, update the |tap_type|.
-          state.interaction->OnMultidrag(ClassifyTap(event, state.gesture), {});
+          state->interaction->OnMultidrag(ClassifyTap(event, state->gesture), {});
         }
       }
       break;
@@ -168,7 +194,6 @@ bool GestureDetector::OnPointerEvent(fuchsia::ui::input::PointerEvent event) {
     default:
       break;
   }
-  return true;
-}  // namespace input
+}
 
 }  // namespace input

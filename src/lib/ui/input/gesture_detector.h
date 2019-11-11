@@ -10,6 +10,7 @@
 
 #include <map>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/ui/input/gesture.h"
 
 namespace input {
@@ -96,12 +97,17 @@ class GestureDetector {
   // considered a multidrag.
   GestureDetector(Delegate* delegate, float drag_threshold = kDefaultDragThreshold);
 
-  bool OnPointerEvent(fuchsia::ui::input::PointerEvent event);
+  void OnPointerEvent(fuchsia::ui::input::PointerEvent event);
+
+  // Clears all tracked devices and interactions from this detector.
+  void Reset() { devices_.clear(); }
 
  private:
   using DeviceId = uint32_t;
 
   struct DevicePointerState {
+    DevicePointerState();
+
     Gesture gesture;
     std::unique_ptr<Interaction> interaction;
     std::map<Gesture::PointerId, fuchsia::ui::gfx::vec2> origins;
@@ -117,6 +123,14 @@ class GestureDetector {
     //   dragged
     TapType tap_type;
     Gesture::Delta pending_delta;
+
+    // The delegate implementation may choose to reset or destroy the |GestureDetector| in any of
+    // its methods, so any time we call out to the delegate, we should guard subsequent execution
+    // with a weak pointer to the state.
+    fxl::WeakPtr<DevicePointerState> GetWeakPtr();
+
+   private:
+    fxl::WeakPtrFactory<DevicePointerState> weak_ptr_factory_;
   };
 
   Delegate* const delegate_;
