@@ -178,11 +178,31 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
   if (!arg) {
     return ZX_ERR_NO_MEMORY;
   }
-  {
-    status = _init_buf.reinterpret<const void>().copy_array_from_user(arg.get(), len);
+
+  // Copy in the base struct.
+  status = _init_buf.copy_from_user(arg.get());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Are there any flexible array members to copy in?
+  const uint32_t win_count = arg->addr_window_count;
+  if (len != sizeof(*arg) + sizeof(arg->addr_windows[0]) * win_count) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (win_count > 0) {
+    // The flexible array member is an unnamed struct so use typedef so we make a user_ptr to it.
+    typedef ktl::remove_reference_t<decltype(zx_pci_init_arg_t::addr_windows[0])> addr_window_t;
+    user_in_ptr<const addr_window_t> addr_windows =
+        _init_buf.byte_offset(sizeof(*arg)).reinterpret<const addr_window_t>();
+    status = addr_windows.copy_array_from_user(arg->addr_windows, win_count);
     if (status != ZX_OK) {
       return status;
     }
+  }
+
+  if (arg->num_irqs > fbl::count_of(arg->irqs)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if (LOCAL_TRACE) {
@@ -202,15 +222,6 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
              arg->addr_windows[i].size, arg->addr_windows[i].bus_start,
              arg->addr_windows[i].bus_end);
     }
-  }
-
-  const uint32_t win_count = arg->addr_window_count;
-  if (len != sizeof(*arg) + sizeof(arg->addr_windows[0]) * win_count) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (arg->num_irqs > fbl::count_of(arg->irqs)) {
-    return ZX_ERR_INVALID_ARGS;
   }
 
   // Configure interrupts
