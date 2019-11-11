@@ -4,6 +4,7 @@
 
 group("intel-hda") {
   deps = [
+    "codecs/hdmi",
     "codecs/qemu",
     "codecs/realtek",
     "controller",
