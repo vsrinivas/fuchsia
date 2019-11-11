@@ -5,7 +5,7 @@
 #include "src/ui/tools/tiles/tiles.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <cmath>
@@ -41,18 +41,18 @@ Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls, in
 void Tiles::AddTileFromURL(std::string url, bool allow_focus, fidl::VectorPtr<std::string> args,
                            AddTileFromURLCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
-  component::Services services;
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LaunchInfo launch_info;
+  std::shared_ptr<sys::ServiceDirectory> services =
+      sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launch_info.url = url;
   launch_info.arguments = std::move(args);
-  launch_info.directory_request = services.NewRequest();
 
   launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   // Create a View from the launched component.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto view_provider = services.ConnectToService<fuchsia::ui::app::ViewProvider>();
+  auto view_provider = services->Connect<fuchsia::ui::app::ViewProvider>();
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   uint32_t child_key = ++next_child_view_key_;
