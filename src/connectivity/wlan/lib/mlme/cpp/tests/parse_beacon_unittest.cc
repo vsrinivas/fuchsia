@@ -97,8 +97,9 @@ TEST(ParseBeaconTest, FillRates) {
     {{SR::basic(97),},  {SR::basic(111),}, {SR::basic(97), SR::basic(111)}},
       // clang-format on
   };
+  // declaring vector outside of the loop to make sure it is being cleared of any residual values.
+  std::vector<uint8_t> got_rates{};
   for (auto tv : tvs) {
-    std::vector<uint8_t> got_rates{};
     FillRates(tv.supp_rates, tv.ext_supp_rates, &got_rates);
     EXPECT_EQ(got_rates, tv.want_rates);
   }

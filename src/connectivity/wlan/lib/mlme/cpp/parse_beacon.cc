@@ -174,7 +174,7 @@ static void DoParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_chann
 
 void FillRates(fbl::Span<const SupportedRate> supp_rates,
                fbl::Span<const SupportedRate> ext_supp_rates, ::std::vector<uint8_t>* rates) {
-  rates->insert(rates->end(), supp_rates.cbegin(), supp_rates.cend());
+  rates->assign(supp_rates.cbegin(), supp_rates.cend());
   rates->insert(rates->end(), ext_supp_rates.cbegin(), ext_supp_rates.cend());
   if (rates->size() > wlan_mlme::RATES_MAX_LEN) {
     rates->resize(wlan_mlme::RATES_MAX_LEN);
