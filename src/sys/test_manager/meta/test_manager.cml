@@ -1,0 +1,27 @@
+{
+    "program": {
+        "binary": "bin/test_manager",
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        },
+    ],
+    "offer": [
+        {
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
+            "from": "realm",
+            "to": [ "#tests" ]
+        },
+    ],
+    "collections": [
+        {
+            "name": "tests",
+            "durability": "transient",
+        },
+    ],
+}
