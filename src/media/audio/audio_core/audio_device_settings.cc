@@ -37,7 +37,7 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
 
 void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
   TRACE_DURATION("audio", "AudioDeviceSettings::InitFromClone");
-  FXL_DCHECK(memcmp(&uid_, &other.uid_, sizeof(uid_)) == 0);
+  FX_DCHECK(memcmp(&uid_, &other.uid_, sizeof(uid_)) == 0);
 
   // Clone the gain settings.
   fuchsia::media::AudioGainInfo gain_info;
@@ -90,7 +90,7 @@ bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
 
 void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) const {
   TRACE_DURATION("audio", "AudioDeviceSettings::GetGainInfo");
-  FXL_DCHECK(out_info != nullptr);
+  FX_DCHECK(out_info != nullptr);
 
   // TODO(35439): consider eliminating the acquisition of this lock.  In theory, the only mutation
   // of gain state happens during SetGainInfo, which is supposed to only be called from the
@@ -119,7 +119,7 @@ void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) c
 
 audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_state) {
   TRACE_DURATION("audio", "AudioDeviceSettings::SnapshotGainState");
-  FXL_DCHECK(out_state != nullptr);
+  FX_DCHECK(out_state != nullptr);
   audio_set_gain_flags_t ret;
 
   {

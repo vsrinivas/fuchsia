@@ -9,7 +9,6 @@ source_set("logging") {
   ]
 
   public_deps = [
-    "//src/lib/fxl:fxl_logging",
     "//src/lib/syslog/cpp",
   ]
 }

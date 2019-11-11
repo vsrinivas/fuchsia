@@ -45,8 +45,8 @@ std::unique_ptr<AudioDeviceSettingsSerialization>
 AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer() {
   std::unique_ptr<AudioDeviceSettingsSerialization> result;
   zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&result);
-  FXL_DCHECK(status == ZX_OK);
-  FXL_DCHECK(result);
+  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK(result);
   return result;
 }
 
@@ -62,15 +62,15 @@ AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
       threading_model_(*threading_model),
       serialization_(std::move(serialization)) {
   // We expect one default one non-default config path.
-  FXL_DCHECK(configs_[0].is_default != configs_[1].is_default);
-  FXL_DCHECK(threading_model);
-  FXL_DCHECK(serialization_);
+  FX_DCHECK(configs_[0].is_default != configs_[1].is_default);
+  FX_DCHECK(threading_model);
+  FX_DCHECK(serialization_);
 }
 
 fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::LoadSettings(
     fbl::RefPtr<AudioDeviceSettings> settings) {
   TRACE_DURATION("audio", "AudioDeviceSettingsPersistence::LoadSettings");
-  FXL_DCHECK(settings != nullptr);
+  FX_DCHECK(settings != nullptr);
   std::lock_guard<fxl::ThreadChecker> assert_on_main_thread_(thread_checker_);
   return ReadSettingsFromDisk(settings).and_then([this, settings = std::move(settings)](
                                                      fbl::unique_fd& storage) mutable {
@@ -104,7 +104,7 @@ fit::promise<void, zx_status_t> AudioDeviceSettingsPersistence::LoadSettings(
                     "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", id[0],
                     id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11],
                     id[12], id[13], id[14], id[15]);
-      FXL_LOG(WARNING) << "Warning: Device shares a persistent unique ID (" << id_buf
+      FX_LOGS(WARNING) << "Warning: Device shares a persistent unique ID (" << id_buf
                        << ") with another device in the system.  Initial Settings will be cloned "
                           "from this device, and not persisted";
       settings->InitFromClone(*it->first);
@@ -156,11 +156,11 @@ AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking(
       } else {
         storage.reset();
         if (!cfg_src.is_default) {
-          FXL_PLOG(INFO, res) << "Failed to read device settings at \"" << path
+          FX_PLOGS(INFO, res) << "Failed to read device settings at \"" << path
                               << "\". Re-creating file from defaults";
           unlink(path);
         } else {
-          FXL_PLOG(INFO, res) << "Could not load default audio settings file \"" << path << "\"";
+          FX_PLOGS(INFO, res) << "Could not load default audio settings file \"" << path << "\"";
         }
       }
     }
@@ -171,7 +171,7 @@ AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking(
     return fit::ok(fbl::unique_fd());
   }
 
-  FXL_DCHECK(configs_[0].is_default || configs_[1].is_default);
+  FX_DCHECK(configs_[0].is_default || configs_[1].is_default);
   const std::string& writable_settings_path =
       configs_[0].is_default ? configs_[1].prefix : configs_[0].prefix;
 
@@ -180,7 +180,7 @@ AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking(
   char path[256];
   CreateSettingsPath(*settings, writable_settings_path, path, sizeof(path));
   if (!files::CreateDirectory(writable_settings_path)) {
-    FXL_LOG(ERROR) << "Failed to ensure that \"" << writable_settings_path
+    FX_LOGS(ERROR) << "Failed to ensure that \"" << writable_settings_path
                    << "\" exists!  Settings will neither be persisted nor restored.";
     return fit::error(ZX_ERR_IO);
   }
@@ -189,14 +189,14 @@ AudioDeviceSettingsPersistence::ReadSettingsFromDiskBlocking(
   if (!storage) {
     // TODO(mpuryear): define and enforce a limit for the number of settings
     // files allowed to be created.
-    FXL_LOG(WARNING) << "Failed to create new audio settings file \"" << path << "\" (err " << errno
+    FX_LOGS(WARNING) << "Failed to create new audio settings file \"" << path << "\" (err " << errno
                      << "). Settings for this device will not be persisted.";
     return fit::error(ZX_ERR_IO);
   }
 
   zx_status_t res = serialization_->Serialize(storage.get(), *settings);
   if (res != ZX_OK) {
-    FXL_PLOG(WARNING, res) << "Failed to write new settings file at \"" << path
+    FX_PLOGS(WARNING, res) << "Failed to write new settings file at \"" << path
                            << "\". Settings for this device will not be persisted";
     storage.reset();
     unlink(path);

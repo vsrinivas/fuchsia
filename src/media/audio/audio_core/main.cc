@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 using namespace media::audio;
 
@@ -22,6 +23,13 @@ int main(int argc, const char** argv) {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
 #ifndef NTRACE
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
+#endif
+
+#ifdef NDEBUG
+  Logging::Init(FX_LOG_WARNING, {"audio_core"});
+#else
+  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
+  Logging::Init(FX_LOG_INFO, {"audio_core"});
 #endif
 
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
@@ -35,14 +43,14 @@ int main(int argc, const char** argv) {
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (!process_config) {
-    FXL_LOG(INFO) << "No audio_core_config.json; using default configuration";
+    FX_LOGS(INFO) << "No audio_core_config.json; using default configuration";
     auto default_config = ProcessConfig::Builder()
                               .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
                                   VolumeCurve::kDefaultGainForMinVolume))
                               .Build();
     process_config = {std::move(default_config)};
   }
-  FXL_CHECK(process_config);
+  FX_CHECK(process_config);
   auto config_handle = ProcessConfig::set_instance(std::move(*process_config));
 
   AudioCoreImpl impl(threading_model.get(), std::move(component_context), options.take_value());

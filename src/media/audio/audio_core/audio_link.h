@@ -10,7 +10,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
@@ -64,7 +64,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   // Bookkeeping access.
   const std::unique_ptr<Bookkeeping>& bookkeeping() const { return bookkeeping_; }
   void set_bookkeeping(std::unique_ptr<Bookkeeping> bookkeeping) {
-    FXL_DCHECK(bookkeeping_ == nullptr);
+    FX_DCHECK(bookkeeping_ == nullptr);
     bookkeeping_ = std::move(bookkeeping);
   }
 

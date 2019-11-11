@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstring>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/test/device/audio_device_test.h"
 #include "src/media/audio/audio_core/test/device/virtual_audio_device_test.h"
 
@@ -171,7 +171,7 @@ void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(bool us
                                                                          bool is_input,
                                                                          bool set_gain) {
   if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
+    FX_LOGS(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 
@@ -200,7 +200,7 @@ void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(bool us
 void VirtualAudioSystemGainTest::TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input,
                                                                                   bool set_gain) {
   if (HasPreExistingDevices()) {
-    FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
+    FX_LOGS(INFO) << "Test case requires an environment with no audio devices";
     return;
   }
 

@@ -7,7 +7,7 @@
 
 #include <optional>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -56,13 +56,13 @@ class ProcessConfig {
   // |ProcessConfig::Handle| exists. It's illegal to call |set_instance| while a
   // |ProcessConfig::Handle| is active.
   [[nodiscard]] static ProcessConfig::Handle set_instance(ProcessConfig config) {
-    FXL_CHECK(!ProcessConfig::instance_);
+    FX_CHECK(!ProcessConfig::instance_);
     ProcessConfig::instance_ = {std::move(config)};
     return std::unique_ptr<HandleImpl>(new HandleImpl);
   }
   // Returns the |ProcessConfig|. Must be called while there is a
   static const ProcessConfig& instance() {
-    FXL_CHECK(ProcessConfig::instance_);
+    FX_CHECK(ProcessConfig::instance_);
     return *ProcessConfig::instance_;
   }
 

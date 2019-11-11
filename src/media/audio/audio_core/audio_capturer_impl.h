@@ -178,7 +178,7 @@ class AudioCapturerImpl : public AudioObject,
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, int64_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final {
-    FXL_NOTIMPLEMENTED();
+    FX_NOTIMPLEMENTED();
   }
   void SetMute(bool mute) final;
   void NotifyGainMuteChanged();

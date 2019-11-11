@@ -14,7 +14,6 @@
 #include <cstring>
 #include <optional>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::testing {

@@ -80,7 +80,7 @@ class AudioLinkPacketSource : public AudioLink {
 //
 // Utility function used by packet-oriented AudioObjects (e.g. AudioRenderer)
 inline AudioLinkPacketSource& AsPacketSource(AudioLink& link) {
-  FXL_DCHECK(link.source_type() == AudioLink::SourceType::Packet);
+  FX_DCHECK(link.source_type() == AudioLink::SourceType::Packet);
   return static_cast<AudioLinkPacketSource&>(link);
 }
 

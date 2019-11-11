@@ -9,20 +9,20 @@ namespace media::audio::mixer {
 
 // Display the filter table values.
 void Filter::DisplayTable(const std::vector<float>& filter_coefficients) {
-  FXL_LOG(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
+  FX_LOGS(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
                 << ", width 0x" << std::hex << side_width_;
 
-  FXL_LOG(INFO) << " **************************************************************";
-  FXL_LOG(INFO) << " *** Displaying filter coefficient data for length 0x" << std::hex
+  FX_LOGS(INFO) << " **************************************************************";
+  FX_LOGS(INFO) << " *** Displaying filter coefficient data for length 0x" << std::hex
                 << side_width_ << "  ***";
-  FXL_LOG(INFO) << " **************************************************************";
+  FX_LOGS(INFO) << " **************************************************************";
 
   char str[256];
   str[0] = 0;
   int n;
   for (uint32_t idx = 0; idx < side_width_; ++idx) {
     if (idx % 16 == 0) {
-      FXL_LOG(INFO) << str;
+      FX_LOGS(INFO) << str;
       n = sprintf(str, " [%5x] ", idx);
     }
     if (filter_coefficients[idx] < std::numeric_limits<float>::epsilon() &&
@@ -33,8 +33,8 @@ void Filter::DisplayTable(const std::vector<float>& filter_coefficients) {
       n += sprintf(str + n, " %10.7f ", filter_coefficients[idx]);
     }
   }
-  FXL_LOG(INFO) << str;
-  FXL_LOG(INFO) << " **************************************************************";
+  FX_LOGS(INFO) << str;
+  FX_LOGS(INFO) << " **************************************************************";
 }
 
 // Used to debug computation of output values (ComputeSample), from coefficients and input values.
@@ -42,7 +42,7 @@ constexpr bool kTraceComputation = false;
 
 float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficients,
                                      uint32_t frac_offset, float* center) {
-  FXL_DCHECK(frac_offset <= frac_size_) << frac_offset;
+  FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
 
   float result = 0.0f;
 
@@ -52,7 +52,7 @@ float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficien
   for (auto off = frac_offset; off < side_width_; off += frac_size_) {
     auto contribution = (*sample_ptr) * filter_coefficients[off];
     if constexpr (kTraceComputation) {
-      FXL_LOG(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
+      FX_LOGS(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
                     << "] " << filter_coefficients[off] << " = " << contribution;
     }
     result += contribution;
@@ -66,7 +66,7 @@ float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficien
   for (auto off = frac_size_ - frac_offset; off < side_width_; off += frac_size_) {
     auto contribution = (*sample_ptr) * filter_coefficients[off];
     if constexpr (kTraceComputation) {
-      FXL_LOG(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
+      FX_LOGS(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
                     << "] " << filter_coefficients[off] << " = " << contribution;
     }
     result += contribution;
@@ -74,7 +74,7 @@ float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficien
     ++source_idx;
   }
   if constexpr (kTraceComputation) {
-    FXL_LOG(INFO) << "... to get " << result;
+    FX_LOGS(INFO) << "... to get " << result;
   }
   return result;
 }
@@ -91,7 +91,7 @@ void PointFilter::SetUpFilterCoefficients() {
 
   // We know that transition_idx will always be the last idx in the filter table, because in our
   // ctor we set side_width to (1u << (num_frac_bits - 1u)) + 1u, which == (frac_size() >> 1u) + 1u
-  FXL_DCHECK(transition_idx + 1u == width);
+  FX_DCHECK(transition_idx + 1u == width);
 
   // Just a rectangular window, actually.
   for (auto idx = 0u; idx < transition_idx; ++idx) {
@@ -154,7 +154,7 @@ void SincFilter::SetUpFilterCoefficients() {
     auto sin_theta = sin(theta);
     auto sinc_theta = sin_theta / theta;
 
-    FXL_VLOG(TRACE) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
+    FX_VLOGS(TRACE) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
                     << ", 2:" << theta << ", 3:" << sin_theta << ", 4:" << sinc_theta;
 
     // Then window the filter. Here we choose a VonHann window, but Kaiser or others can work too.
@@ -165,7 +165,7 @@ void SincFilter::SetUpFilterCoefficients() {
     auto cos_pi_frac_width = cos(pi_fraction_width);
     auto raised_cosine = cos_pi_frac_width * 0.5 + 0.5;
 
-    FXL_VLOG(TRACE) << "VonHann window[" << std::hex << idx
+    FX_VLOGS(TRACE) << "VonHann window[" << std::hex << idx
                     << "] -- Fraction of width:" << fraction_width
                     << ", PI * fraction_width:" << pi_fraction_width
                     << ", COS(PI * fraction_width):" << cos_pi_frac_width

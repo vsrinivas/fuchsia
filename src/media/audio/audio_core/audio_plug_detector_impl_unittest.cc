@@ -16,6 +16,8 @@
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media::audio {
 namespace {
 
@@ -23,7 +25,7 @@ namespace {
 // for testing.
 class FakeAudioDevice : public fuchsia::hardware::audio::Device {
  public:
-  FakeAudioDevice() { FXL_CHECK(zx::channel::create(0, &client_, &server_) == ZX_OK); }
+  FakeAudioDevice() { FX_CHECK(zx::channel::create(0, &client_, &server_) == ZX_OK); }
 
   fbl::RefPtr<fs::Service> AsService() {
     return fbl::MakeRefCounted<fs::Service>([this](zx::channel c) {
@@ -36,7 +38,7 @@ class FakeAudioDevice : public fuchsia::hardware::audio::Device {
 
  private:
   void GetChannel(GetChannelCallback callback) override {
-    FXL_CHECK(client_);
+    FX_CHECK(client_);
     callback(std::move(client_));
   }
 
@@ -111,7 +113,7 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
   // the local namespace at /dev/class/audio-input.
   ScopedDirent AddInputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_input_device_number_++);
-    FXL_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
+    FX_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
     return {name, input_dir_};
   }
 
@@ -119,7 +121,7 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
   // the local namespace at /dev/class/audio-output.
   ScopedDirent AddOutputDevice(FakeAudioDevice* device) {
     auto name = std::to_string(next_output_device_number_++);
-    FXL_CHECK(ZX_OK == output_dir_->AddEntry(name, device->AsService()));
+    FX_CHECK(ZX_OK == output_dir_->AddEntry(name, device->AsService()));
     return {name, output_dir_};
   }
 

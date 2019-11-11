@@ -9,9 +9,9 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_output.h"
 
 namespace media::audio {
@@ -68,14 +68,14 @@ class ThrottleOutput : public AudioOutput {
 
   bool FinishMixJob(const MixJob& job) override {
     // Since we never start any jobs, this should never be called.
-    FXL_DCHECK(false);
+    FX_DCHECK(false);
     return false;
   }
 
   // AudioDevice implementation.
   // No one should ever be trying to apply gain limits for a throttle output.
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {
-    FXL_DCHECK(false);
+    FX_DCHECK(false);
   }
 
  private:

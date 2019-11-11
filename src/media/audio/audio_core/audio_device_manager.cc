@@ -29,14 +29,14 @@ AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGra
       system_gain_mute_(system_gain_mute),
       route_graph_(*route_graph),
       device_settings_persistence_(*device_settings_persistence) {
-  FXL_DCHECK(route_graph);
-  FXL_DCHECK(device_settings_persistence);
-  FXL_DCHECK(threading_model);
+  FX_DCHECK(route_graph);
+  FX_DCHECK(device_settings_persistence);
+  FX_DCHECK(threading_model);
 }
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
-  FXL_DCHECK(devices_.empty());
+  FX_DCHECK(devices_.empty());
 }
 
 // Configure this admin singleton object to manage audio device instances.
@@ -47,7 +47,7 @@ zx_status_t AudioDeviceManager::Init() {
   zx_status_t res =
       plug_detector_.Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to start plug detector";
+    FX_PLOGS(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
   }
 
@@ -71,7 +71,7 @@ void AudioDeviceManager::Shutdown() {
                                                    *device->device_settings()))
             .and_then([](std::tuple<fit::result<void>, fit::result<void, zx_status_t>>& results)
                           -> fit::result<void> {
-              FXL_DCHECK(std::get<0>(results).is_ok());
+              FX_DCHECK(std::get<0>(results).is_ok());
               if (std::get<1>(results).is_error()) {
                 return fit::error();
               }
@@ -90,7 +90,7 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
 
 void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
-  FXL_DCHECK(device != nullptr);
+  FX_DCHECK(device != nullptr);
 
   threading_model_.FidlDomain().executor()->schedule_task(
       device->Startup()
@@ -98,7 +98,7 @@ void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
             devices_pending_init_.insert({device->token(), std::move(device)});
           })
           .or_else([device](zx_status_t& error) {
-            FXL_PLOG(ERROR, error) << "AddDevice failed";
+            FX_PLOGS(ERROR, error) << "AddDevice failed";
             REP(DeviceStartupFailed(*device));
             device->Shutdown();
           }));
@@ -106,7 +106,7 @@ void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
 
 void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::ActivateDevice");
-  FXL_DCHECK(device != nullptr);
+  FX_DCHECK(device != nullptr);
 
   // Have we already been removed from the pending list?  If so, the device is
   // already shutting down and there is nothing to be done.
@@ -131,14 +131,14 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
   // conflict with, and use them without persistence. Currently, when device
   // instances conflict, we persist only the first instance's settings.
   fbl::RefPtr<AudioDeviceSettings> settings = device->device_settings();
-  FXL_DCHECK(settings != nullptr);
+  FX_DCHECK(settings != nullptr);
   threading_model_.FidlDomain().executor()->schedule_task(
       device_settings_persistence_.LoadSettings(settings).then(
           [this, device,
            settings = std::move(settings)](fit::result<void, zx_status_t>& result) mutable {
             if (result.is_error()) {
-              FXL_PLOG(DFATAL, result.error()) << "Unable to load device settings; "
-                                               << "device will not use persisted settings";
+              FX_PLOGS(FATAL, result.error()) << "Unable to load device settings; "
+                                              << "device will not use persisted settings";
             }
             ActivateDeviceWithSettings(std::move(device), std::move(settings));
           }));
@@ -194,7 +194,7 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::RemoveDevice");
-  FXL_DCHECK(device != nullptr);
+  FX_DCHECK(device != nullptr);
 
   REP(RemovingDevice(*device));
 
@@ -219,7 +219,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
 void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
                                             zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnPlugStateChanged");
-  FXL_DCHECK(device != nullptr);
+  FX_DCHECK(device != nullptr);
 
   // Update our bookkeeping for device's plug state. If no change, we're done.
   if (!device->UpdatePlugState(plugged, plug_time)) {
@@ -280,7 +280,7 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallb
   }
 
   auto [_, dev] = *it;
-  FXL_DCHECK(dev->device_settings() != nullptr);
+  FX_DCHECK(dev->device_settings() != nullptr);
   dev->device_settings()->GetGainInfo(&info);
   cbk(device_token, info);
 }
@@ -298,7 +298,7 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   // SetGainInfo clamps out-of-range values (e.g. +infinity) into the device-
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
   if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) && isnan(gain_info.gain_db)) {
-    FXL_DLOG(WARNING) << "Invalid device gain " << gain_info.gain_db << " dB -- making no change";
+    FX_LOGS(WARNING) << "Invalid device gain " << gain_info.gain_db << " dB -- making no change";
     return;
   }
 
@@ -321,7 +321,7 @@ void AudioDeviceManager::GetDefaultOutputDevice(GetDefaultOutputDeviceCallback c
 fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
                                                              bool allow_unplugged) {
   TRACE_DURATION("audio", "AudioDeviceManager::FindLastPlugged");
-  FXL_DCHECK((type == AudioObject::Type::Output) || (type == AudioObject::Type::Input));
+  FX_DCHECK((type == AudioObject::Type::Output) || (type == AudioObject::Type::Input));
   AudioDevice* best = nullptr;
 
   // TODO(johngro): Consider tracking last-plugged times in a fbl::WAVLTree, so
@@ -338,7 +338,7 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
     }
   }
 
-  FXL_DCHECK((best == nullptr) || (best->type() == type));
+  FX_DCHECK((best == nullptr) || (best->type() == type));
   if (!allow_unplugged && best && !best->plugged()) {
     return nullptr;
   }
@@ -349,7 +349,7 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
 void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
                                            zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
-  FXL_DCHECK(device);
+  FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
@@ -365,7 +365,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& devic
 void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
                                          zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
-  FXL_DCHECK(device);
+  FX_DCHECK(device);
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
@@ -381,7 +381,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::NotifyDeviceGainChanged");
   fuchsia::media::AudioGainInfo info;
-  FXL_DCHECK(device.device_settings() != nullptr);
+  FX_DCHECK(device.device_settings() != nullptr);
   device.device_settings()->GetGainInfo(&info);
 
   for (auto& client : bindings_.bindings()) {
@@ -412,7 +412,7 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>
       system_gain_mute_.system_gain_db(),
       system_gain_mute_.system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
 
-  FXL_DCHECK(device != nullptr);
+  FX_DCHECK(device != nullptr);
   REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
   device->SetGainInfo(set_cmd, set_flags);
 }
@@ -431,7 +431,7 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   }
 
   if (new_device == nullptr) {
-    FXL_LOG(ERROR) << "Failed to instantiate audio " << (is_input ? "input" : "output") << " for '"
+    FX_LOGS(ERROR) << "Failed to instantiate audio " << (is_input ? "input" : "output") << " for '"
                    << device_name << "'";
   }
 

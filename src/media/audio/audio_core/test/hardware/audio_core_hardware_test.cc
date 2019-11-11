@@ -5,7 +5,7 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 
@@ -30,7 +30,7 @@ void AudioCoreHardwareTest::ConnectToAudioCore() {
   audio_core_ = sys::ServiceDirectory::CreateFromNamespace()->Connect<fuchsia::media::AudioCore>();
 
   audio_core_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.AudioCore failed";
+    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.AudioCore failed";
   }));
 }
 
@@ -41,7 +41,7 @@ void AudioCoreHardwareTest::ConnectToAudioCapturer() {
   audio_core_->CreateAudioCapturer(kNotLoopback, audio_capturer_.NewRequest());
 
   audio_capturer_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.AudioCapturer failed";
+    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.AudioCapturer failed";
   }));
 }
 

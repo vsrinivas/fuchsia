@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/command_line_options.h"
 
 #include "src/lib/fxl/arraysize.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {
@@ -21,9 +22,9 @@ static Arg kSupportedArgs[] = {
 };
 
 void PrintSupportedArguments() {
-  FXL_LOG(ERROR) << "Supported audio_core arguments:";
+  FX_LOGS(ERROR) << "Supported audio_core arguments:";
   for (size_t i = 0; i < arraysize(kSupportedArgs); ++i) {
-    FXL_LOG(ERROR) << "  --" << kSupportedArgs[i].name << ": " << kSupportedArgs[i].help;
+    FX_LOGS(ERROR) << "  --" << kSupportedArgs[i].name << ": " << kSupportedArgs[i].help;
   }
 }
 
@@ -36,9 +37,9 @@ fit::result<CommandLineOptions, zx_status_t> CommandLineOptions::ParseFromArgcAr
   CommandLineOptions result;
 
   if (cl.positional_args().size() > 0) {
-    FXL_LOG(ERROR) << "Received unsupported positional args:";
+    FX_LOGS(ERROR) << "Received unsupported positional args:";
     for (const auto& arg : cl.positional_args()) {
-      FXL_LOG(ERROR) << "    " << arg;
+      FX_LOGS(ERROR) << "    " << arg;
     }
     PrintSupportedArguments();
     return fit::error(ZX_ERR_INVALID_ARGS);
@@ -47,13 +48,13 @@ fit::result<CommandLineOptions, zx_status_t> CommandLineOptions::ParseFromArgcAr
   for (const fxl::CommandLine::Option& option : cl.options()) {
     if (option.name == kDisableDeviceSettingsWriteArg) {
       if (!option.value.empty()) {
-        FXL_LOG(ERROR) << "--" << kDisableDeviceSettingsWriteArg << " should not have a value";
+        FX_LOGS(ERROR) << "--" << kDisableDeviceSettingsWriteArg << " should not have a value";
         PrintSupportedArguments();
         return fit::error(ZX_ERR_INVALID_ARGS);
       }
       result.enable_device_settings_writeback = false;
     } else {
-      FXL_LOG(ERROR) << "Unknown option '" << option.name << "'";
+      FX_LOGS(ERROR) << "Unknown option '" << option.name << "'";
       PrintSupportedArguments();
       return fit::error(ZX_ERR_INVALID_ARGS);
     }

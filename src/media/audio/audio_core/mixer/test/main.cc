@@ -19,10 +19,10 @@ int main(int argc, char** argv) {
   }
 
 #ifdef NDEBUG
-  media::audio::Logging::Init(fxl::LOG_WARNING);
+  media::audio::Logging::Init(FX_LOG_WARNING, {"audio_core_mixer_test"});
 #else
   // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  media::audio::Logging::Init(fxl::LOG_INFO);
+  media::audio::Logging::Init(FX_LOG_INFO, {"audio_core_mixer_test"});
 #endif
 
   // --full     Measure across the full frequency spectrum; display full results in tabular format.

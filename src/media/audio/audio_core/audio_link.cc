@@ -12,7 +12,7 @@ namespace {
 // Returns one of two curves, if either of them exist. Otherwise returns std::nullopt;
 std::optional<VolumeCurve> SelectVolumeCurve(std::optional<VolumeCurve> curve_a,
                                              std::optional<VolumeCurve> curve_b) {
-  FXL_DCHECK(!(curve_a.has_value() && curve_b.has_value()))
+  FX_DCHECK(!(curve_a.has_value() && curve_b.has_value()))
       << "Two objects with a gain curve cannot be linked.";
 
   if (curve_a.has_value()) {
@@ -32,9 +32,9 @@ AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
       valid_(true),
       volume_curve_(SelectVolumeCurve(source_->GetVolumeCurve(), dest_->GetVolumeCurve())) {
   // Only outputs and AudioCapturers may be destinations.
-  FXL_DCHECK(dest_ != nullptr);
-  FXL_DCHECK((dest_->type() == AudioObject::Type::Output) ||
-             (dest_->type() == AudioObject::Type::AudioCapturer));
+  FX_DCHECK(dest_ != nullptr);
+  FX_DCHECK((dest_->type() == AudioObject::Type::Output) ||
+            (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
 const VolumeCurve& AudioLink::volume_curve() const {

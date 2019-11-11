@@ -14,6 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <trace/event.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
@@ -29,9 +30,9 @@ static const struct {
 zx_status_t AudioPlugDetectorImpl::Start(Observer observer) {
   TRACE_DURATION("audio", "AudioPlugDetectorImpl::Start");
   // Start should only be called once.
-  FXL_DCHECK(watchers_.empty());
-  FXL_DCHECK(!observer_);
-  FXL_DCHECK(observer);
+  FX_DCHECK(watchers_.empty());
+  FX_DCHECK(!observer_);
+  FX_DCHECK(observer);
 
   observer_ = std::move(observer);
 
@@ -47,7 +48,7 @@ zx_status_t AudioPlugDetectorImpl::Start(Observer observer) {
         });
 
     if (watcher == nullptr) {
-      FXL_LOG(ERROR) << "AudioPlugDetectorImpl failed to create DeviceWatcher for \""
+      FX_LOGS(ERROR) << "AudioPlugDetectorImpl failed to create DeviceWatcher for \""
                      << devnode.path << "\".";
       return ZX_ERR_NO_MEMORY;
     }
@@ -80,7 +81,7 @@ void AudioPlugDetectorImpl::AddAudioDevice(int dir_fd, const std::string& name, 
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     REP(FailedToOpenDevice(name, is_input, errno));
-    FXL_LOG(ERROR) << "AudioPlugDetectorImpl failed to open device node at \"" << name << "\". ("
+    FX_LOGS(ERROR) << "AudioPlugDetectorImpl failed to open device node at \"" << name << "\". ("
                    << strerror(errno) << " : " << errno << ")";
     return;
   }
@@ -91,7 +92,7 @@ void AudioPlugDetectorImpl::AddAudioDevice(int dir_fd, const std::string& name, 
   res = fdio_get_service_handle(dev_node.release(), dev_channel.reset_and_get_address());
   if (res != ZX_OK) {
     REP(FailedToObtainFdioServiceChannel(name, is_input, res));
-    FXL_PLOG(ERROR, res) << "Failed to obtain FDIO service channel to audio "
+    FX_PLOGS(ERROR, res) << "Failed to obtain FDIO service channel to audio "
                          << (is_input ? "input" : "output");
     return;
   }
@@ -101,7 +102,7 @@ void AudioPlugDetectorImpl::AddAudioDevice(int dir_fd, const std::string& name, 
       fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).Bind();
   device.set_error_handler([name, is_input](zx_status_t res) {
     REP(FailedToObtainStreamChannel(name, is_input, res));
-    FXL_PLOG(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
+    FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
   });
   device->GetChannel([d = std::move(device), this, is_input, name](zx::channel channel) {
     observer_(std::move(channel), name, is_input);

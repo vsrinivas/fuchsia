@@ -24,7 +24,7 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
   threading_model->FidlDomain().executor()->schedule_task(
       throttle_output->Startup().or_else([throttle_output](zx_status_t& error) {
-        FXL_PLOG(ERROR, error) << "Failed to initialize the throttle output";
+        FX_PLOGS(ERROR, error) << "Failed to initialize the throttle output";
         return throttle_output->Shutdown();
       }));
 
@@ -49,7 +49,7 @@ void RouteGraph::RemoveOutput(AudioDevice* output) {
 
   auto it = std::find(outputs_.begin(), outputs_.end(), output);
   if (it == outputs_.end()) {
-    FXL_LOG(WARNING) << "Attempted to remove unregistered output device from the route graph.";
+    FX_LOGS(WARNING) << "Attempted to remove unregistered output device from the route graph.";
     return;
   }
 
@@ -77,7 +77,7 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
 
   auto it = std::find(inputs_.begin(), inputs_.end(), input);
   if (it == inputs_.end()) {
-    FXL_LOG(WARNING) << "Attempted to remove unregistered input device from the route graph.";
+    FX_LOGS(WARNING) << "Attempted to remove unregistered input device from the route graph.";
     return;
   }
 
@@ -90,22 +90,22 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
 }
 
 void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
-  FXL_DCHECK(throttle_output_);
-  FXL_DCHECK(renderer->is_audio_renderer());
+  FX_DCHECK(throttle_output_);
+  FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
 
   renderers_.insert({renderer.get(), {renderer, {}}});
 }
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
-  FXL_DCHECK(renderer->is_audio_renderer());
-  FXL_DCHECK(renderer->format_info_valid())
+  FX_DCHECK(renderer->is_audio_renderer());
+  FX_DCHECK(renderer->format_info_valid())
       << "AudioRenderer without PCM format was added to route graph";
   AUD_VLOG(TRACE) << "Setting renderer route profile: " << renderer;
 
   auto it = renderers_.find(renderer);
   if (it == renderers_.end()) {
-    FXL_LOG(WARNING) << "Tried to set routing policy for an unregistered renderer.";
+    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
   }
 
@@ -115,7 +115,7 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
     it->second.ref->Unlink();
   } else if (was_unrouted) {
     if (outputs_.empty()) {
-      FXL_LOG(WARNING) << "Tried to route AudioRenderer, but no outputs exist.";
+      FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no outputs exist.";
       return;
     }
 
@@ -124,7 +124,7 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
 }
 
 void RouteGraph::RemoveRenderer(AudioObject* renderer) {
-  FXL_DCHECK(renderer->is_audio_renderer());
+  FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Removing renderer from route graph: " << renderer;
 
   renderer->Unlink();
@@ -132,19 +132,19 @@ void RouteGraph::RemoveRenderer(AudioObject* renderer) {
 }
 
 void RouteGraph::AddCapturer(fbl::RefPtr<AudioObject> capturer) {
-  FXL_DCHECK(capturer->is_audio_capturer());
+  FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
   capturers_.insert({capturer.get(), {capturer, {}}});
 }
 
 void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile) {
-  FXL_DCHECK(capturer->is_audio_capturer());
+  FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting capturer route profile: " << capturer;
 
   auto it = capturers_.find(capturer);
   if (it == capturers_.end()) {
-    FXL_LOG(WARNING) << "Tried to set routing policy for an unregistered renderer.";
+    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
   }
 
@@ -154,7 +154,7 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
     it->second.ref->Unlink();
   } else if (was_unrouted) {
     if (inputs_.empty()) {
-      FXL_LOG(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
+      FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
       return;
     }
 
@@ -163,7 +163,7 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
 }
 
 void RouteGraph::RemoveCapturer(AudioObject* capturer) {
-  FXL_DCHECK(capturer->is_audio_capturer());
+  FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Removing capturer from route graph: " << capturer;
 
   capturer->Unlink();
@@ -172,7 +172,7 @@ void RouteGraph::RemoveCapturer(AudioObject* capturer) {
 
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer) {
-  FXL_DCHECK(loopback_capturer->is_audio_capturer());
+  FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
 
   loopback_capturers_.insert({loopback_capturer.get(), {loopback_capturer, {}}});
@@ -181,12 +181,12 @@ void RouteGraph::AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer)
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capturer,
                                                    RoutingProfile profile) {
-  FXL_DCHECK(loopback_capturer->is_audio_capturer());
+  FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting loopback capturer route profile: " << loopback_capturer;
 
   auto it = loopback_capturers_.find(loopback_capturer);
   if (it == loopback_capturers_.end()) {
-    FXL_LOG(WARNING) << "Tried to set routing policy for an unregistered renderer.";
+    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
   }
 
@@ -196,7 +196,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
     it->second.ref->Unlink();
   } else if (was_unrouted) {
     if (outputs_.empty() || outputs_.front() == throttle_output_.get()) {
-      FXL_LOG(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
+      FX_LOGS(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
       return;
     }
 
@@ -206,7 +206,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
 
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::RemoveLoopbackCapturer(AudioObject* loopback_capturer) {
-  FXL_DCHECK(loopback_capturer->is_audio_capturer());
+  FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting loopback capturer from route graph: " << loopback_capturer;
 
   loopback_capturer->Unlink();

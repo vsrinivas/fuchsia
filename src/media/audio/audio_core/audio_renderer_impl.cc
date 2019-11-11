@@ -69,8 +69,8 @@ AudioRendererImpl::AudioRendererImpl(
       underflow_count_(0u),
       partial_underflow_count_(0u) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
-  FXL_DCHECK(admin);
-  FXL_DCHECK(route_graph);
+  FX_DCHECK(admin);
+  FX_DCHECK(route_graph);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -154,7 +154,7 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
       return;
     }
   }
-  FXL_LOG(ERROR) << "Disallowed or unknown usage - terminating the stream";
+  FX_LOGS(ERROR) << "Disallowed or unknown usage - terminating the stream";
   route_graph_.RemoveRenderer(this);
 }
 
@@ -222,7 +222,7 @@ bool AudioRendererImpl::ValidateConfig() {
 void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
   TRACE_DURATION("audio", "AudioRendererImpl::ComputePtsToFracFrames");
   // We should not be calling this, if transformation is already valid.
-  FXL_DCHECK(!pts_to_frac_frames_valid_);
+  FX_DCHECK(!pts_to_frac_frames_valid_);
   pts_to_frac_frames_ =
       TimelineFunction(next_frac_frame_pts_, first_pts, frac_frames_per_pts_tick_);
   pts_to_frac_frames_valid_ = true;
@@ -244,21 +244,21 @@ void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t fra
 
     if ((kRenderUnderflowErrorInterval > 0) &&
         (underflow_count % kRenderUnderflowErrorInterval == 0)) {
-      FXL_LOG(ERROR) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
+      FX_LOGS(ERROR) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                      << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
                      << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
                      << " by " << std::setprecision(4) << underflow_msec << " ms";
 
     } else if ((kRenderUnderflowInfoInterval > 0) &&
                (underflow_count % kRenderUnderflowInfoInterval == 0)) {
-      FXL_LOG(INFO) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
+      FX_LOGS(INFO) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                     << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
                     << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
                     << " by " << std::setprecision(4) << underflow_msec << " ms";
 
     } else if ((kRenderUnderflowTraceInterval > 0) &&
                (underflow_count % kRenderUnderflowTraceInterval == 0)) {
-      FXL_VLOG(TRACE) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
+      FX_VLOGS(TRACE) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                       << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
                       << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
                       << " by " << std::setprecision(4) << underflow_msec << " ms";
@@ -278,21 +278,21 @@ void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
     if constexpr (kLogRenderUnderflow) {
       if ((kRenderUnderflowErrorInterval > 0) &&
           (partial_underflow_count % kRenderUnderflowErrorInterval == 0)) {
-        FXL_LOG(WARNING) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
+        FX_LOGS(WARNING) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                          << kRenderUnderflowErrorInterval << "): shifted by "
                          << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
                          << abs(frac_source_offset) << " source subframes and " << std::dec
                          << dest_mix_offset << " mix (output) frames";
       } else if ((kRenderUnderflowInfoInterval > 0) &&
                  (partial_underflow_count % kRenderUnderflowInfoInterval == 0)) {
-        FXL_LOG(INFO) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
+        FX_LOGS(INFO) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                       << kRenderUnderflowInfoInterval << "): shifted by "
                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
                       << abs(frac_source_offset) << " source subframes and " << std::dec
                       << dest_mix_offset << " mix (output) frames";
       } else if ((kRenderUnderflowTraceInterval > 0) &&
                  (partial_underflow_count % kRenderUnderflowTraceInterval == 0)) {
-        FXL_VLOG(TRACE) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
+        FX_VLOGS(TRACE) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                         << kRenderUnderflowTraceInterval << "): shifted by "
                         << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
                         << abs(frac_source_offset) << " source subframes and " << std::dec
@@ -301,7 +301,7 @@ void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
     }
   } else {
     if constexpr (kLogRenderUnderflow) {
-      FXL_VLOG(TRACE) << "shifted " << dest_mix_offset
+      FX_VLOGS(TRACE) << "shifted " << dest_mix_offset
                       << " mix (output) frames to align with source packet";
     }
   }
@@ -319,7 +319,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 
   // We cannot change the format while we are currently operational
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set format while in operational mode.";
+    FX_LOGS(ERROR) << "Attempted to set format while in operational mode.";
     return;
   }
 
@@ -332,14 +332,14 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
       break;
 
     default:
-      FXL_LOG(ERROR) << "Unsupported sample format (" << fidl::ToUnderlying(format.sample_format)
+      FX_LOGS(ERROR) << "Unsupported sample format (" << fidl::ToUnderlying(format.sample_format)
                      << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.";
       return;
   }
 
   if ((format.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
       (format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Invalid channel count (" << format.channels
         << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must be in the range ["
         << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", " << fuchsia::media::MAX_PCM_CHANNEL_COUNT
@@ -349,7 +349,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 
   if ((format.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
       (format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Invalid frame rate (" << format.frames_per_second
         << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must be in the range ["
         << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
@@ -384,7 +384,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
   // TODO(MTWN-375): Lift this restriction.
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set payload buffer while in operational mode.";
+    FX_LOGS(ERROR) << "Attempted to set payload buffer while in operational mode.";
     return;
   }
 
@@ -395,7 +395,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   payload_buffers_[id] = vmo_mapper;
   zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, vmar_);
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to map payload buffer";
+    FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
     return;
   }
 
@@ -415,12 +415,12 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 
   // TODO(MTWN-375): Lift this restriction.
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to remove payload buffer while in the operational mode.";
+    FX_LOGS(ERROR) << "Attempted to remove payload buffer while in the operational mode.";
     return;
   }
 
   if (payload_buffers_.erase(id) != 1) {
-    FXL_LOG(ERROR) << "Invalid payload buffer id";
+    FX_LOGS(ERROR) << "Invalid payload buffer id";
     return;
   }
 
@@ -437,12 +437,12 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                             << " / " << tick_per_second_denominator << ")";
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set PTS units while in operational mode.";
+    FX_LOGS(ERROR) << "Attempted to set PTS units while in operational mode.";
     return;
   }
 
   if (!tick_per_second_numerator || !tick_per_second_denominator) {
-    FXL_LOG(ERROR) << "Bad PTS ticks per second (" << tick_per_second_numerator << "/"
+    FX_LOGS(ERROR) << "Bad PTS ticks per second (" << tick_per_second_numerator << "/"
                    << tick_per_second_denominator << ")";
     return;
   }
@@ -462,12 +462,12 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   AUD_VLOG_OBJ(TRACE, this) << " (" << threshold_seconds << " sec)";
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set PTS cont threshold while in operational mode.";
+    FX_LOGS(ERROR) << "Attempted to set PTS cont threshold while in operational mode.";
     return;
   }
 
   if (threshold_seconds < 0.0) {
-    FXL_LOG(ERROR) << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
+    FX_LOGS(ERROR) << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
     return;
   }
 
@@ -489,11 +489,11 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
   AUD_VLOG_OBJ(TRACE, this);
 
   if (IsOperating()) {
-    FXL_LOG(ERROR) << "Attempted to set reference clock while in operational mode.";
+    FX_LOGS(ERROR) << "Attempted to set reference clock while in operational mode.";
     return;
   }
 
-  FXL_NOTIMPLEMENTED();
+  FX_NOTIMPLEMENTED();
 }
 
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
@@ -505,14 +505,14 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   // configuration. IOW - the format must have been configured, and we must have an established
   // payload buffer.
   if (!ValidateConfig()) {
-    FXL_LOG(ERROR) << "Failed to validate configuration during SendPacket";
+    FX_LOGS(ERROR) << "Failed to validate configuration during SendPacket";
     return;
   }
 
   // Lookup our payload buffer.
   auto it = payload_buffers_.find(packet.payload_buffer_id);
   if (it == payload_buffers_.end()) {
-    FXL_LOG(ERROR) << "Invalid payload_buffer_id";
+    FX_LOGS(ERROR) << "Invalid payload_buffer_id";
     return;
   }
   auto payload_buffer = it->second;
@@ -520,9 +520,9 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   // Start by making sure that the region we are receiving is made from an integral number of audio
   // frames. Count the total number of frames in the process.
   uint32_t frame_size = format_info()->bytes_per_frame();
-  FXL_DCHECK(frame_size != 0);
+  FX_DCHECK(frame_size != 0);
   if (packet.payload_size % frame_size) {
-    FXL_LOG(ERROR) << "Region length (" << packet.payload_size
+    FX_LOGS(ERROR) << "Region length (" << packet.payload_size
                    << ") is not divisible by by audio frame size (" << frame_size << ")";
     return;
   }
@@ -531,19 +531,19 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max() >> kPtsFractionalBits;
   uint32_t frame_count = packet.payload_size / frame_size;
   if (frame_count > kMaxFrames) {
-    FXL_LOG(ERROR) << "Audio frame count (" << frame_count << ") exceeds maximum allowed ("
+    FX_LOGS(ERROR) << "Audio frame count (" << frame_count << ") exceeds maximum allowed ("
                    << kMaxFrames << ")";
     return;
   }
 
   // Make sure that the packet offset/size exists entirely within the payload buffer.
-  FXL_DCHECK(payload_buffer != nullptr);
+  FX_DCHECK(payload_buffer != nullptr);
   uint64_t start = packet.payload_offset;
   uint32_t frame_offset = packet.payload_offset / frame_size;
   uint64_t end = start + packet.payload_size;
   uint64_t pb_size = payload_buffer->size();
   if ((start >= pb_size) || (end > pb_size)) {
-    FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end << "). Payload buffer size is "
+    FX_LOGS(ERROR) << "Bad packet range [" << start << ", " << end << "). Payload buffer size is "
                    << pb_size;
     return;
   }
@@ -680,7 +680,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
   auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   if (!ValidateConfig()) {
-    FXL_LOG(ERROR) << "Failed to validate configuration during Play";
+    FX_LOGS(ERROR) << "Failed to validate configuration during Play";
     return;
   }
 
@@ -778,7 +778,7 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
   auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
 
   if (!ValidateConfig()) {
-    FXL_LOG(ERROR) << "Failed to validate configuration during Pause";
+    FX_LOGS(ERROR) << "Failed to validate configuration during Pause";
     return;
   }
 
@@ -862,7 +862,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   // Anywhere we set stream_gain_db_, we should perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
+    FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
     route_graph_.RemoveRenderer(this);
     return;
   }
@@ -889,7 +889,7 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, int64_t duration_ns,
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FXL_LOG(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
+    FX_LOGS(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
     route_graph_.RemoveRenderer(this);
     return;
   }

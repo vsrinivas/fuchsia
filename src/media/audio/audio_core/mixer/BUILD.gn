@@ -44,7 +44,7 @@ source_set("mixer") {
 
   deps = [
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/trace",
   ]
 }

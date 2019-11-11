@@ -51,7 +51,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
     amplitude = kFullScaleFloatInputAmplitude;
     expected_amplitude = kFullScaleFloatAccumAmplitude;
   } else {
-    FXL_DCHECK(false) << "Unsupported source format";
+    FX_DCHECK(false) << "Unsupported source format";
   }
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
@@ -70,9 +70,9 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   int32_t frac_src_offset = frac_src_frames;
   auto source_is_consumed = mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
                                        frac_src_frames, &frac_src_offset, false, &info);
-  FXL_DCHECK(source_is_consumed);
-  FXL_DCHECK(dest_offset == 0u);
-  FXL_DCHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+  FX_DCHECK(source_is_consumed);
+  FX_DCHECK(dest_offset == 0u);
+  FX_DCHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
 
   // We now have a full cache of previous frames (for resamplers that require this), so do the mix.
   frac_src_offset = 0;
@@ -173,7 +173,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
     expected_amplitude = kFullScaleFloatInputAmplitude;
     amplitude = kFullScaleFloatAccumAmplitude;
   } else {
-    FXL_DCHECK(false) << "Unsupported source format";
+    FX_DCHECK(false) << "Unsupported source format";
   }
 
   // Populate accum buffer and output to destination buffer
@@ -323,9 +323,9 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
     auto source_is_consumed = mixer->Mix(accum.data(), num_dest_frames, &dest_offset, source.data(),
                                          frac_src_frames, &frac_src_offset, false, &info);
-    FXL_CHECK(source_is_consumed);
-    FXL_CHECK(dest_offset == 0u);
-    FXL_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+    FX_CHECK(source_is_consumed);
+    FX_CHECK(dest_offset == 0u);
+    FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
 
     // Now resample source to accum. (Why in pieces? See kResamplerTestNumPackets: frequency_set.h)
     frac_src_offset = 0;
@@ -1369,9 +1369,9 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
   auto source_is_consumed = mixer->Mix(accum.get(), num_dest_frames, &dest_offset, source.get(),
                                        frac_src_frames, &frac_src_offset, false, &info);
-  FXL_CHECK(source_is_consumed);
-  FXL_CHECK(dest_offset == 0u);
-  FXL_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
+  FX_CHECK(source_is_consumed);
+  FX_CHECK(dest_offset == 0u);
+  FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
 
   // Resample source to accum. (Why in pieces? See kResamplerTestNumPackets in frequency_set.h)
   frac_src_offset = 0;

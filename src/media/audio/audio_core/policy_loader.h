@@ -9,7 +9,6 @@
 
 #include <rapidjson/document.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_policy.h"
 
 namespace media {

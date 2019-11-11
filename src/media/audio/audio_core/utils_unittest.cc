@@ -12,8 +12,6 @@
 #include <cstdint>
 #include <unordered_map>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio {
 namespace {
 

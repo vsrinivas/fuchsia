@@ -9,7 +9,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::driver_utils {
 
@@ -39,7 +39,7 @@ static const std::map<fuchsia::media::AudioSampleFormat, audio_sample_format_t>
 bool AudioSampleFormatToDriverSampleFormat(fuchsia::media::AudioSampleFormat sample_format,
                                            audio_sample_format_t* driver_sample_format_out) {
   TRACE_DURATION("audio", "AudioSampleFormatToDriverSampleFormat");
-  FXL_DCHECK(driver_sample_format_out != nullptr);
+  FX_DCHECK(driver_sample_format_out != nullptr);
 
   auto iter = kSampleFormatToDriverSampleFormatMap.find(sample_format);
   if (iter == kSampleFormatToDriverSampleFormatMap.end()) {

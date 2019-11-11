@@ -6,7 +6,6 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 

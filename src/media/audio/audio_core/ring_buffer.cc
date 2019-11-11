@@ -6,7 +6,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 
@@ -26,12 +26,12 @@ fbl::RefPtr<RingBuffer> RingBuffer::Create(zx::vmo vmo, uint32_t frame_size, uin
 zx_status_t RingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count, bool input) {
   TRACE_DURATION("audio", "RingBuffer::Init");
   if (!vmo.is_valid()) {
-    FXL_LOG(ERROR) << "Invalid VMO!";
+    FX_LOGS(ERROR) << "Invalid VMO!";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (!frame_size) {
-    FXL_LOG(ERROR) << "Frame size may not be zero!";
+    FX_LOGS(ERROR) << "Frame size may not be zero!";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -39,13 +39,13 @@ zx_status_t RingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_co
   zx_status_t res = vmo.get_size(&vmo_size);
 
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to get ring buffer VMO size";
+    FX_PLOGS(ERROR, res) << "Failed to get ring buffer VMO size";
     return res;
   }
 
   uint64_t size = static_cast<uint64_t>(frame_size) * frame_count;
   if (size > vmo_size) {
-    FXL_LOG(ERROR) << "Driver-reported ring buffer size (" << size << ") is greater than VMO size ("
+    FX_LOGS(ERROR) << "Driver-reported ring buffer size (" << size << ") is greater than VMO size ("
                    << vmo_size << ")";
     return res;
   }
@@ -56,7 +56,7 @@ zx_status_t RingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_co
   res = vmo_mapper_.Map(vmo, 0u, size, flags);
 
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to map ring buffer VMO";
+    FX_PLOGS(ERROR, res) << "Failed to map ring buffer VMO";
     return res;
   }
 

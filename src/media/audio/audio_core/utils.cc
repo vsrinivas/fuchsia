@@ -10,7 +10,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/driver_utils.h"
 
 namespace media::audio {
@@ -30,7 +30,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 
   if (!driver_utils::AudioSampleFormatToDriverSampleFormat(*sample_format_inout,
                                                            &pref_sample_format)) {
-    FXL_LOG(WARNING) << "Failed to convert FIDL sample format ("
+    FX_LOGS(WARNING) << "Failed to convert FIDL sample format ("
                      << static_cast<uint32_t>(*sample_format_inout) << ") to driver sample format.";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -88,7 +88,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
       this_sample_format = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
       sample_format_score = 2;
     } else {
-      FXL_DCHECK(supports_u8);
+      FX_DCHECK(supports_u8);
       this_sample_format = static_cast<audio_sample_format_t>(U8_FMT);
       sample_format_score = 1;
     }
@@ -114,7 +114,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     //
     if (range.min_frames_per_second > range.max_frames_per_second) {
       // Skip this frame rate range entirely if it is empty.
-      FXL_LOG(INFO) << "Skipping empty frame rate range [" << range.min_frames_per_second << ", "
+      FX_LOGS(INFO) << "Skipping empty frame rate range [" << range.min_frames_per_second << ", "
                     << range.max_frames_per_second
                     << "] while searching for best format in driver list.";
       continue;
@@ -136,7 +136,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
         frame_rate_score = 2;
         frame_rate_delta = range.min_frames_per_second - pref_frame_rate;
       } else {
-        FXL_DCHECK(pref_frame_rate > range.max_frames_per_second);
+        FX_DCHECK(pref_frame_rate > range.max_frames_per_second);
         this_frame_rate = range.max_frames_per_second;
         frame_rate_score = 1;
         frame_rate_delta = pref_frame_rate - range.max_frames_per_second;
@@ -163,7 +163,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
             frame_rate_delta = rate - pref_frame_rate;
           }
         } else {
-          FXL_DCHECK(pref_frame_rate > rate);
+          FX_DCHECK(pref_frame_rate > rate);
 
           // Scaling down; 1 point.  If this better than what we were doing before, just choose it.
           // If we were already going to scale down, pick the frame rate which is closer to our
@@ -181,7 +181,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
     // a driver which was completely empty (even though min was <= max as it should be)  Debug log a
     // warning, then skip the range entirely.
     if (frame_rate_score == 0) {
-      FXL_LOG(INFO) << "Skipping empty discrete frame rate range [" << range.min_frames_per_second
+      FX_LOGS(INFO) << "Skipping empty discrete frame rate range [" << range.min_frames_per_second
                     << ", " << range.max_frames_per_second << "] (flags " << range.flags
                     << ") while searching for best format";
       continue;
@@ -194,9 +194,9 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
             + (channel_count_score * 10)  // channel count comes second.
             + frame_rate_score;           // frame rate is the least important.
 
-    FXL_DCHECK(score > 0);
-    FXL_DCHECK(::audio::utils::FormatIsCompatible(this_frame_rate, this_channels,
-                                                  this_sample_format, range));
+    FX_DCHECK(score > 0);
+    FX_DCHECK(::audio::utils::FormatIsCompatible(this_frame_rate, this_channels, this_sample_format,
+                                                 range));
 
     // If this score is better than the current best score, or this score ties the current best
     // score but the frame rate distance is less, then this is the new best format.
@@ -218,7 +218,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 
   __UNUSED bool convert_res =
       driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
-  FXL_DCHECK(convert_res);
+  FX_DCHECK(convert_res);
 
   *channels_inout = best_channels;
   *frames_per_second_inout = best_frame_rate;
@@ -236,14 +236,14 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
     zx::channel ch0, ch1;
     zx_status_t res = zx::channel::create(0u, &ch0, &ch1);
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create channel, res=" << res;
+      FX_LOGS(ERROR) << "Failed to create channel, res=" << res;
       return res;
     }
 
     res = fdio_service_connect(
         (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), ch0.get());
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to connect to ProfileProvider, res=" << res;
+      FX_LOGS(ERROR) << "Failed to connect to ProfileProvider, res=" << res;
       return res;
     }
 
@@ -254,11 +254,11 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
     res = provider.GetProfile(24 /* HIGH_PRIORITY */, "src/media/audio/audio_core", &fidl_status,
                               &res_profile);
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create profile, res=" << res;
+      FX_LOGS(ERROR) << "Failed to create profile, res=" << res;
       return res;
     }
     if (fidl_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create profile, fidl_status=" << fidl_status;
+      FX_LOGS(ERROR) << "Failed to create profile, fidl_status=" << fidl_status;
       return fidl_status;
     }
 

@@ -85,7 +85,7 @@ zx_status_t AudioDeviceSettingsSerializationImpl::CreateWithSchema(
   rapidjson::Document schema_doc;
   rapidjson::ParseResult parse_res = schema_doc.Parse(schema);
   if (parse_res.IsError()) {
-    FXL_LOG(ERROR) << "Failed to parse settings file JSON schema " << parse_res << "!";
+    FX_LOGS(ERROR) << "Failed to parse settings file JSON schema " << parse_res << "!";
     return ZX_ERR_INVALID_ARGS;
   }
   *ptr = std::unique_ptr<AudioDeviceSettingsSerialization>(
@@ -96,8 +96,8 @@ zx_status_t AudioDeviceSettingsSerializationImpl::CreateWithSchema(
 zx_status_t AudioDeviceSettingsSerializationImpl::Deserialize(int fd,
                                                               AudioDeviceSettings* settings) {
   TRACE_DURATION("audio", "AudioDeviceSettingsSerializationImpl::Deserialize");
-  FXL_DCHECK(settings != nullptr);
-  FXL_DCHECK(fd >= 0);
+  FX_DCHECK(settings != nullptr);
+  FX_DCHECK(fd >= 0);
 
   // Figure out the size of the file, then allocate storage for reading the whole thing.
   off_t file_size = lseek(fd, 0, SEEK_END);
@@ -119,15 +119,15 @@ zx_status_t AudioDeviceSettingsSerializationImpl::Deserialize(int fd,
   rapidjson::Document doc;
   rapidjson::ParseResult parse_res = doc.ParseInsitu(buffer.get());
   if (parse_res.IsError()) {
-    FXL_LOG(WARNING) << "Parse error " << parse_res << " when reading persisted audio settings.";
+    FX_LOGS(WARNING) << "Parse error " << parse_res << " when reading persisted audio settings.";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   // Validate that the document conforms to our schema
   rapidjson::SchemaValidator validator(schema_);
   if (!doc.Accept(validator)) {
-    FXL_LOG(WARNING) << "Schema validation error when reading persisted audio settings.";
-    FXL_LOG(WARNING) << "Error: " << validator.GetError();
+    FX_LOGS(WARNING) << "Schema validation error when reading persisted audio settings.";
+    FX_LOGS(WARNING) << "Error: " << validator.GetError();
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -158,7 +158,7 @@ zx_status_t AudioDeviceSettingsSerializationImpl::Deserialize(int fd,
 zx_status_t AudioDeviceSettingsSerializationImpl::Serialize(int fd,
                                                             const AudioDeviceSettings& settings) {
   TRACE_DURATION("audio", "AudioDeviceSettingsSerializationImpl::Serialize");
-  FXL_DCHECK(fd >= 0);
+  FX_DCHECK(fd >= 0);
 
   // Serialize our state into a string buffer.
   rapidjson::StringBuffer buffer(nullptr, 4096);
@@ -190,20 +190,20 @@ zx_status_t AudioDeviceSettingsSerializationImpl::Serialize(int fd,
   const char* data = buffer.GetString();
   const size_t sz = buffer.GetSize();
   if ((lseek(fd, 0, SEEK_SET) != 0)) {
-    FXL_LOG(ERROR) << "Failed to seek: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to seek: " << strerror(errno);
     return ZX_ERR_IO;
   }
   if (ftruncate(fd, 0) != 0) {
-    FXL_LOG(ERROR) << "Failed to truncate: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to truncate: " << strerror(errno);
     return ZX_ERR_IO;
   }
   if (write(fd, data, sz) != static_cast<ssize_t>(sz)) {
-    FXL_LOG(ERROR) << "Failed to write: " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to write: " << strerror(errno);
     return ZX_ERR_IO;
   }
   // Some filesystems do not support sync; allow for that and continue.
   if (fsync(fd != 0) && errno != ENOTSUP) {
-    FXL_LOG(ERROR) << "Failed to sync: " << strerror(errno) << ", " << errno;
+    FX_LOGS(ERROR) << "Failed to sync: " << strerror(errno) << ", " << errno;
     return ZX_ERR_IO;
   }
 

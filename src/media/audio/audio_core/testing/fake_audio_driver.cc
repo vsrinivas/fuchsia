@@ -7,6 +7,8 @@
 #include <audio-proto-utils/format-utils.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media::audio::testing {
 
 FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher)
@@ -16,7 +18,7 @@ FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispat
   zx_status_t status = stream_transceiver_.Init(
       std::move(channel), fit::bind_member(this, &FakeAudioDriver::OnInboundStreamMessage),
       fit::bind_member(this, &FakeAudioDriver::OnInboundStreamError));
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   // Initially leave the driver 'stopped' so that it won't reply to any messages until |Start| is
   // called.
   stream_transceiver_.StopProcessing();
@@ -37,7 +39,7 @@ void FakeAudioDriver::Stop() {
 }
 
 fzl::VmoMapper FakeAudioDriver::CreateRingBuffer(size_t size) {
-  FXL_CHECK(!ring_buffer_) << "Calling CreateRingBuffer multiple times is not supported";
+  FX_CHECK(!ring_buffer_) << "Calling CreateRingBuffer multiple times is not supported";
 
   ring_buffer_size_ = size;
   fzl::VmoMapper mapper;
@@ -133,7 +135,7 @@ void FakeAudioDriver::HandleCommandGetGain(const audio_stream_cmd_get_gain_req_t
 
 void FakeAudioDriver::HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request) {
   // Multiple reponses isn't implemented yet.
-  FXL_CHECK(formats_.size() <= AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+  FX_CHECK(formats_.size() <= AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
 
   test::MessageTransceiver::Message response_message;
   auto& response = response_message.ResizeBytesAs<audio_stream_cmd_get_formats_resp_t>();
@@ -240,17 +242,17 @@ void FakeAudioDriver::HandleCommandGetBuffer(audio_rb_cmd_get_buffer_req_t& requ
 
   // This should be true since it's set as part of creating the channel that's carrying these
   // messages.
-  FXL_CHECK(selected_format_);
+  FX_CHECK(selected_format_);
 
   if (!ring_buffer_) {
     // If we haven't created a ring buffer, we'll just drop this request.
     return;
   }
-  FXL_CHECK(ring_buffer_);
+  FX_CHECK(ring_buffer_);
 
   // Dup our ring buffer VMO to send over the channel.
   zx::vmo dup;
-  FXL_CHECK(ring_buffer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK);
+  FX_CHECK(ring_buffer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK);
 
   // Compute the buffer size in frames.
   auto frame_size =

@@ -4,7 +4,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_POSITION_MANAGER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_POSITION_MANAGER_H_
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
@@ -128,7 +128,7 @@ inline SrcSampleType* PositionManager::LastSourceFrame() const {
 
 template <typename SrcSampleType>
 inline SrcSampleType* PositionManager::CurrentSourceFrame() const {
-  FXL_DCHECK(frac_src_offset_ >= 0);
+  FX_DCHECK(frac_src_offset_ >= 0);
 
   auto src = static_cast<SrcSampleType*>(src_void_);
   return src + ((frac_src_offset_ >> media::audio::kPtsFractionalBits) * num_src_chans_);

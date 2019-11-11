@@ -269,7 +269,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
       sampler_ch = 'W';
       break;
     case Resampler::Default:
-      FXL_LOG(ERROR) << "Test should specify the Resampler exactly";
+      FX_LOGS(ERROR) << "Test should specify the Resampler exactly";
       return;
   }
 

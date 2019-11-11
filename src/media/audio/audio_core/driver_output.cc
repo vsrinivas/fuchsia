@@ -54,7 +54,7 @@ DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
 zx_status_t DriverOutput::Init() {
   TRACE_DURATION("audio", "DriverOutput::Init");
-  FXL_DCHECK(state_ == State::Uninitialized);
+  FX_DCHECK(state_ == State::Uninitialized);
 
   zx_status_t res = AudioOutput::Init();
   if (res != ZX_OK) {
@@ -63,7 +63,7 @@ zx_status_t DriverOutput::Init() {
 
   res = driver()->Init(std::move(initial_stream_channel_));
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to initialize driver object";
+    FX_PLOGS(ERROR, res) << "Failed to initialize driver object";
     return res;
   }
 
@@ -75,7 +75,7 @@ void DriverOutput::OnWakeup() {
   TRACE_DURATION("audio", "DriverOutput::OnWakeup");
   // If we are not in the FormatsUnknown state, then we have already started the
   // state machine.  There is (currently) nothing else to do here.
-  FXL_DCHECK(state_ != State::Uninitialized);
+  FX_DCHECK(state_ != State::Uninitialized);
   if (state_ != State::FormatsUnknown) {
     return;
   }
@@ -89,7 +89,7 @@ void DriverOutput::OnWakeup() {
 bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
-    FXL_LOG(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
+    FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
     state_ = State::Shutdown;
     ShutdownSelf();
     return false;
@@ -123,7 +123,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     job->sw_output_muted = true;
   }
 
-  FXL_DCHECK(driver_ring_buffer() != nullptr);
+  FX_DCHECK(driver_ring_buffer() != nullptr);
   auto uptime = async::Now(mix_domain().dispatcher());
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   const auto& cm2frames = cm2rd_pos.rate();
@@ -149,12 +149,12 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 
         zx::duration output_underflow_duration =
             zx::nsec(cm2frames.Inverse().Scale(output_underflow_frames));
-        FXL_CHECK(output_underflow_duration.get() >= 0);
+        FX_CHECK(output_underflow_duration.get() >= 0);
 
         zx::duration output_variance_from_expected_wakeup =
             zx::nsec(cm2frames.Inverse().Scale(low_water_frames_underflow));
 
-        FXL_LOG(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
+        FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
                        << std::setprecision(4)
                        << static_cast<double>(output_underflow_duration.to_nsecs()) / ZX_MSEC(1)
                        << ", " << output_variance_from_expected_wakeup.to_msecs()
@@ -190,7 +190,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FXL_LOG(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
+        FX_LOGS(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
                          << (uptime - underflow_start_time_).to_msecs() << " ms.";
         underflow_start_time_ = zx::time(0);
         underflow_cooldown_deadline_ = zx::time(0);
@@ -198,8 +198,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     }
 
     int64_t frames_in_flight = frames_sent_ - output_frames_emitted;
-    FXL_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
-    FXL_DCHECK(frames_sent_ <= fill_target);
+    FX_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
+    FX_DCHECK(frames_sent_ <= fill_target);
     int64_t desired_frames = fill_target - frames_sent_;
 
     // If we woke up too early to have any work to do, just get out now.
@@ -209,7 +209,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 
     uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
     if (desired_frames > rb.frames()) {
-      FXL_LOG(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
+      FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
                      << " but the ring buffer is only " << rb.frames() << " frames long.";
       return false;
     }
@@ -237,7 +237,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 bool DriverOutput::FinishMixJob(const MixJob& job) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
   const auto& rb = driver_ring_buffer();
-  FXL_DCHECK(rb != nullptr);
+  FX_DCHECK(rb != nullptr);
   size_t buf_len = job.buf_frames * rb->frame_size();
 
   wav_writer_.Write(job.buf, buf_len);
@@ -251,11 +251,11 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
     int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_end = playback_lead_start + job.buf_frames;
 
-    FXL_LOG(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
+    FX_LOGS(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
                   << playback_lead_end << "]";
   }
 
-  FXL_DCHECK(frames_to_mix_ >= job.buf_frames);
+  FX_DCHECK(frames_to_mix_ >= job.buf_frames);
   frames_sent_ += job.buf_frames;
   frames_to_mix_ -= job.buf_frames;
 
@@ -272,7 +272,7 @@ void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, u
   // See the comment at the start of StartMixJob.  The actual limits we set here
   // are going to eventually depend on what our HW gain control capabilities
   // are, and how we choose to apply them (based on policy)
-  FXL_DCHECK(in_out_info != nullptr);
+  FX_DCHECK(in_out_info != nullptr);
 
   // We do not currently allow more than unity gain for audio outputs.
   if (in_out_info->gain_db > 0.0) {
@@ -300,7 +300,7 @@ void DriverOutput::OnDriverInfoFetched() {
   });
 
   if (state_ != State::FetchingFormats) {
-    FXL_LOG(ERROR) << "Unexpected GetFormatsComplete while in state "
+    FX_LOGS(ERROR) << "Unexpected GetFormatsComplete while in state "
                    << static_cast<uint32_t>(state_);
     return;
   }
@@ -317,7 +317,7 @@ void DriverOutput::OnDriverInfoFetched() {
   res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Output: cannot match a driver format to this request: " << pref_fps
+    FX_LOGS(ERROR) << "Output: cannot match a driver format to this request: " << pref_fps
                    << " Hz, " << pref_chan << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
     return;
@@ -327,8 +327,8 @@ void DriverOutput::OnDriverInfoFetched() {
 
   TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec.to_nsecs());
-  FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
-  FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
+  FX_DCHECK(retention_frames != TimelineRate::kOverflow);
+  FX_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
 
   // Select our output producer
@@ -339,7 +339,7 @@ void DriverOutput::OnDriverInfoFetched() {
 
   output_producer_ = OutputProducer::Select(config);
   if (!output_producer_) {
-    FXL_LOG(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "
+    FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "
                    << pref_chan << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
     return;
@@ -348,7 +348,7 @@ void DriverOutput::OnDriverInfoFetched() {
   // Start the process of configuring our driver
   res = driver()->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
+    FX_LOGS(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
                    << "-channel, sample format 0x" << std::hex << static_cast<uint32_t>(pref_fmt)
                    << " (res " << std::dec << res << ")";
     return;
@@ -378,7 +378,7 @@ void DriverOutput::OnDriverConfigComplete() {
   });
 
   if (state_ != State::Configuring) {
-    FXL_LOG(ERROR) << "Unexpected ConfigComplete while in state " << static_cast<uint32_t>(state_);
+    FX_LOGS(ERROR) << "Unexpected ConfigComplete while in state " << static_cast<uint32_t>(state_);
     return;
   }
 
@@ -389,10 +389,10 @@ void DriverOutput::OnDriverConfigComplete() {
   min_clock_lead_time_ = driver()->external_delay() + fifo_depth_duration + kDefaultHighWaterNsec;
 
   // Fill our brand new ring buffer with silence
-  FXL_CHECK(driver_ring_buffer() != nullptr);
+  FX_CHECK(driver_ring_buffer() != nullptr);
   const auto& rb = *driver_ring_buffer();
-  FXL_DCHECK(output_producer_ != nullptr);
-  FXL_DCHECK(rb.virt() != nullptr);
+  FX_DCHECK(output_producer_ != nullptr);
+  FX_DCHECK(rb.virt() != nullptr);
   output_producer_->FillWithSilence(rb.virt(), rb.frames());
 
   // Set up the intermediate buffer at the AudioOutput level
@@ -409,14 +409,14 @@ void DriverOutput::OnDriverConfigComplete() {
   // work to do.  See MTWN-5
   zx_status_t res = driver()->Start();
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to start ring buffer";
+    FX_PLOGS(ERROR, res) << "Failed to start ring buffer";
     return;
   }
 
   // Start monitoring plug state.
   res = driver()->SetPlugDetectEnabled(true);
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to enable plug detection";
+    FX_PLOGS(ERROR, res) << "Failed to enable plug detection";
     return;
   }
 
@@ -428,7 +428,7 @@ void DriverOutput::OnDriverConfigComplete() {
 void DriverOutput::OnDriverStartComplete() {
   TRACE_DURATION("audio", "DriverOutput::OnDriverStartComplete");
   if (state_ != State::Starting) {
-    FXL_LOG(ERROR) << "Unexpected StartComplete while in state " << static_cast<uint32_t>(state_);
+    FX_LOGS(ERROR) << "Unexpected StartComplete while in state " << static_cast<uint32_t>(state_);
     return;
   }
 
@@ -451,7 +451,7 @@ void DriverOutput::OnDriverStartComplete() {
   frames_to_mix_ = 0;
 
   if (VERBOSE_TIMING_DEBUG) {
-    FXL_LOG(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed
+    FX_LOGS(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed
                   << std::setprecision(3) << trans.rate().Inverse().Scale(fd_frames) / 1000000.0
                   << " mSec) Low Water (" << low_water_frames_ << " frames " << std::fixed
                   << std::setprecision(3)

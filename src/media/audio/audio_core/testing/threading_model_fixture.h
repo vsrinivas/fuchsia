@@ -11,7 +11,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/compiler.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio::testing {
@@ -33,7 +33,7 @@ class TestThreadingModel : public ThreadingModel {
   // Note we should never call this on the |TestThreadingModel|. Execution should instead be
   // controlled using the |async::TestLoop| used to construct this |ThreadingModel|.
   void RunAndJoinAllThreads() override {
-    FXL_CHECK(false) << "RunAndJoinAllThreads not supported on TestThreadingModel.";
+    FX_CHECK(false) << "RunAndJoinAllThreads not supported on TestThreadingModel.";
   }
 
  private:

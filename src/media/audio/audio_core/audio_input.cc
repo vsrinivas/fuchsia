@@ -66,7 +66,7 @@ void AudioInput::OnDriverInfoFetched() {
 
   zx_status_t res = SelectBestFormat(driver()->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Audio input failed to find any compatible driver formats.  Req was "
+    FX_LOGS(ERROR) << "Audio input failed to find any compatible driver formats.  Req was "
                    << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt) << ")";
     ShutdownSelf();
@@ -75,7 +75,7 @@ void AudioInput::OnDriverInfoFetched() {
 
   const auto& hw_gain = driver()->hw_gain_state();
   if (hw_gain.min_gain > hw_gain.max_gain) {
-    FXL_LOG(ERROR) << "Audio input has invalid gain limits [" << hw_gain.min_gain << ", "
+    FX_LOGS(ERROR) << "Audio input has invalid gain limits [" << hw_gain.min_gain << ", "
                    << hw_gain.max_gain << "].";
     ShutdownSelf();
     return;
@@ -87,7 +87,7 @@ void AudioInput::OnDriverInfoFetched() {
   driver()->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
 
   int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance.to_nsecs());
-  FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
+  FX_DCHECK(dist < std::numeric_limits<uint32_t>::max());
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 
   // Tell AudioDeviceManager it can add us to the set of active audio devices.
@@ -156,7 +156,7 @@ void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uin
   // If the user is attempting to set gain, enforce the gain limits.
   if (set_flags & fuchsia::media::SetAudioGainFlag_GainValid) {
     // This should have been enforced in OnDriverInfoFetched.
-    FXL_DCHECK(caps.min_gain <= caps.max_gain);
+    FX_DCHECK(caps.min_gain <= caps.max_gain);
 
     // If the hardware has not supplied a valid gain step size, or an
     // ridiculously small step size, just apply a clamp based on min/max.

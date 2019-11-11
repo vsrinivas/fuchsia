@@ -7,7 +7,7 @@
 #include <cmath>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio::mixer {
@@ -29,10 +29,10 @@ class Filter {
         num_frac_bits_(num_frac_bits),
         frac_size_(1u << num_frac_bits),
         rate_conversion_ratio_(static_cast<double>(dest_rate_) / source_rate_) {
-    FXL_DCHECK(source_rate_ > 0);
-    FXL_DCHECK(dest_rate_ > 0);
-    FXL_DCHECK(side_width > 0);
-    FXL_DCHECK(num_frac_bits_ > 0);
+    FX_DCHECK(source_rate_ > 0);
+    FX_DCHECK(dest_rate_ > 0);
+    FX_DCHECK(side_width > 0);
+    FX_DCHECK(num_frac_bits_ > 0);
   }
 
   virtual float ComputeSample(uint32_t frac_offset, float* center) = 0;

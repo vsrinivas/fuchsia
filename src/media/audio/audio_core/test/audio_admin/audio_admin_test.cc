@@ -10,7 +10,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
@@ -221,7 +221,7 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
 // For loopback tests, setup the first audio_renderer interface.
 void AudioAdminTest::SetUpRenderer(unsigned int index, fuchsia::media::AudioRenderUsage usage,
                                    int16_t data) {
-  FXL_CHECK(index < fbl::count_of(audio_renderer_)) << "Renderer index too high";
+  FX_CHECK(index < fbl::count_of(audio_renderer_)) << "Renderer index too high";
 
   int16_t* buffer;
   zx::vmo payload_vmo;
@@ -262,7 +262,7 @@ void AudioAdminTest::SetUpRenderer(unsigned int index, fuchsia::media::AudioRend
 //
 // Flush the output and free the vmo that was used by Renderer1.
 void AudioAdminTest::CleanUpRenderer(unsigned int index) {
-  FXL_CHECK(index < fbl::count_of(audio_renderer_)) << "Renderer index too high";
+  FX_CHECK(index < fbl::count_of(audio_renderer_)) << "Renderer index too high";
 
   payload_buffer_[index].Unmap();
 }
@@ -272,7 +272,7 @@ void AudioAdminTest::CleanUpRenderer(unsigned int index) {
 // For loopback tests, setup an audio_capturer interface
 void AudioAdminTest::SetUpCapturer(unsigned int index, fuchsia::media::AudioCaptureUsage usage,
                                    int16_t data) {
-  FXL_CHECK(index < fbl::count_of(audio_capturer_)) << "Capturer index too high";
+  FX_CHECK(index < fbl::count_of(audio_capturer_)) << "Capturer index too high";
 
   int16_t* buffer;
   zx::vmo capture_vmo;

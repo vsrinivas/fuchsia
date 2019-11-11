@@ -3,7 +3,7 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 
@@ -20,8 +20,8 @@ Reporter& Reporter::Singleton() {
 }
 
 void Reporter::Init(sys::ComponentContext* component_context) {
-  FXL_DCHECK(component_context);
-  FXL_DCHECK(!component_context_);
+  FX_DCHECK(component_context);
+  FX_DCHECK(!component_context_);
   component_context_ = component_context;
 
   InitInspect();
@@ -47,7 +47,7 @@ void Reporter::InitInspect() {
 void Reporter::InitCobalt() {
   component_context_->svc()->Connect(cobalt_factory_.NewRequest());
   if (!cobalt_factory_) {
-    FXL_LOG(ERROR) << "audio_core could not connect to cobalt. No metrics will be captured.";
+    FX_LOGS(ERROR) << "audio_core could not connect to cobalt. No metrics will be captured.";
     return;
   }
 
@@ -55,7 +55,7 @@ void Reporter::InitCobalt() {
       "media", fuchsia::cobalt::ReleaseStage::GA, cobalt_logger_.NewRequest(),
       [this](fuchsia::cobalt::Status status) {
         if (status != fuchsia::cobalt::Status::OK) {
-          FXL_PLOG(ERROR, fidl::ToUnderlying(status))
+          FX_PLOGS(ERROR, fidl::ToUnderlying(status))
               << "audio_core could not create Cobalt logger";
           cobalt_logger_ = nullptr;
         }
@@ -80,7 +80,7 @@ void Reporter::AddingDevice(const std::string& name, const AudioDevice& device) 
   if (device.is_output()) {
     outputs_.emplace(&device, Output(outputs_node_.CreateChild(name)));
   } else {
-    FXL_DCHECK(device.is_input());
+    FX_DCHECK(device.is_input());
     inputs_.emplace(&device, Input(inputs_node_.CreateChild(name)));
   }
 }
@@ -89,7 +89,7 @@ void Reporter::RemovingDevice(const AudioDevice& device) {
   if (device.is_output()) {
     outputs_.erase(&device);
   } else {
-    FXL_DCHECK(device.is_input());
+    FX_DCHECK(device.is_input());
     inputs_.erase(&device);
   }
 }
@@ -111,7 +111,7 @@ void Reporter::SettingDeviceGainInfo(const AudioDevice& device,
                                      uint32_t set_flags) {
   Device* d = device.is_output() ? FindOutput(device) : FindInput(device);
   if (d == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -142,7 +142,7 @@ void Reporter::SettingRendererStreamType(const fuchsia::media::AudioRenderer& re
                                          const fuchsia::media::AudioStreamType& stream_type) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -155,7 +155,7 @@ void Reporter::AddingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& 
                                            uint32_t buffer_id, uint64_t size) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -168,7 +168,7 @@ void Reporter::RemovingRendererPayloadBuffer(const fuchsia::media::AudioRenderer
                                              uint32_t buffer_id) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
   r->payload_buffers_.erase(buffer_id);
@@ -178,12 +178,12 @@ void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& render
                                      const fuchsia::media::StreamPacket& packet) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
   auto payload_buffer = r->payload_buffers_.find(packet.payload_buffer_id);
   if (payload_buffer == r->payload_buffers_.end()) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
   payload_buffer->second.packets_.Add(1);
@@ -192,7 +192,7 @@ void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& render
 void Reporter::SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -204,7 +204,7 @@ void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& 
                                            fuchsia::media::audio::RampType ramp_type) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -215,7 +215,7 @@ void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& 
 void Reporter::SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -226,7 +226,7 @@ void Reporter::SettingRendererMinClockLeadTime(const fuchsia::media::AudioRender
                                                zx::duration min_clock_lead_time) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -237,7 +237,7 @@ void Reporter::SettingRendererPtsContinuityThreshold(const fuchsia::media::Audio
                                                      float threshold_seconds) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -256,7 +256,7 @@ void Reporter::SettingCapturerStreamType(const fuchsia::media::AudioCapturer& ca
                                          const fuchsia::media::AudioStreamType& stream_type) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -269,7 +269,7 @@ void Reporter::AddingCapturerPayloadBuffer(const fuchsia::media::AudioCapturer& 
                                            uint32_t buffer_id, uint64_t size) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -282,12 +282,12 @@ void Reporter::SendingCapturerPacket(const fuchsia::media::AudioCapturer& captur
                                      const fuchsia::media::StreamPacket& packet) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
   auto payload_buffer = c->payload_buffers_.find(packet.payload_buffer_id);
   if (payload_buffer == c->payload_buffers_.end()) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
   payload_buffer->second.packets_.Add(1);
@@ -296,7 +296,7 @@ void Reporter::SendingCapturerPacket(const fuchsia::media::AudioCapturer& captur
 void Reporter::SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer, float gain_db) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -308,7 +308,7 @@ void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& 
                                            fuchsia::media::audio::RampType ramp_type) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -319,7 +319,7 @@ void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& 
 void Reporter::SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FXL_DLOG(FATAL);
+    FX_LOGS(FATAL);
     return;
   }
 
@@ -387,7 +387,7 @@ void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
   }
 
   if (!cobalt_logger_) {
-    FXL_LOG(ERROR) << "UNDERFLOW: Failed to obtain the Cobalt logger";
+    FX_LOGS(ERROR) << "UNDERFLOW: Failed to obtain the Cobalt logger";
     return;
   }
 
@@ -396,7 +396,7 @@ void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
       [](fuchsia::cobalt::Status status) {
         if (status != fuchsia::cobalt::Status::OK &&
             status != fuchsia::cobalt::Status::BUFFER_FULL) {
-          FXL_PLOG(ERROR, fidl::ToUnderlying(status)) << "Cobalt logger returned an error";
+          FX_PLOGS(ERROR, fidl::ToUnderlying(status)) << "Cobalt logger returned an error";
         }
       });
 }

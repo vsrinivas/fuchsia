@@ -59,7 +59,7 @@ class AudioDeviceSettingsPersistenceTest : public testing::ThreadingModelFixture
   }
   bool IsFileEmpty(const char* path) {
     uint64_t size;
-    FXL_CHECK(files::GetFileSize(path, &size));
+    FX_CHECK(files::GetFileSize(path, &size));
     return size == 0;
   }
 
@@ -69,7 +69,7 @@ class AudioDeviceSettingsPersistenceTest : public testing::ThreadingModelFixture
     executor->schedule_task(
         std::move(promise).then([&result](fit::result<V, E>& r) { result = std::move(r); }));
     RunLoopUntilIdle();
-    FXL_CHECK(!result.is_pending());
+    FX_CHECK(!result.is_pending());
     return result;
   }
 };

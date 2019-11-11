@@ -52,9 +52,7 @@ class MessageTransceiver {
 
   const zx::channel& channel() const { return channel_; }
 
-  void StopProcessing() {
-    wait_.Cancel();
-  }
+  void StopProcessing() { wait_.Cancel(); }
   void ResumeProcessing() {
     if (!wait_.is_pending()) {
       wait_.Begin(dispatcher_);

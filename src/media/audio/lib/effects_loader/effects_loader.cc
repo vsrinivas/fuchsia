@@ -31,9 +31,8 @@ const fuchsia_audio_effects_module_v1 kNullEffectModuleV1 = {
 
 std::optional<uint32_t> FindEffectIdForEffectName(
     std::string_view name, const std::vector<fuchsia_audio_effects_description>& effect_infos) {
-  auto it = std::find_if(effect_infos.cbegin(), effect_infos.cend(), [name] (const auto& info) {
-      return info.name == name;
-  });
+  auto it = std::find_if(effect_infos.cbegin(), effect_infos.cend(),
+                         [name](const auto& info) { return info.name == name; });
   if (it == effect_infos.cend()) {
     return std::nullopt;
   }

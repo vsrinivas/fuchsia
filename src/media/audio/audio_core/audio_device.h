@@ -55,7 +55,7 @@ class AudioDevice : public AudioObject {
 
   // AudioObjects with Type::Output must override this; this version should never be called.
   virtual zx::duration min_clock_lead_time() const {
-    FXL_CHECK(false) << "min_clock_lead_time() not supported on AudioDevice";
+    FX_CHECK(false) << "min_clock_lead_time() not supported on AudioDevice";
     return zx::nsec(0);
   }
 
@@ -236,7 +236,7 @@ class AudioDevice : public AudioObject {
   // Called from the AudioDeviceManager when it moves an audio device from its
   // "pending init" set over to its "active" set .
   void SetActivated() {
-    FXL_DCHECK(!activated());
+    FX_DCHECK(!activated());
     activated_ = true;
   }
 

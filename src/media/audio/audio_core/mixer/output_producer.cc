@@ -12,7 +12,7 @@
 #include <trace/event.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {
@@ -129,7 +129,7 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
   TRACE_DURATION("audio", "OutputProducer::Select");
   if (!format || format->channels == 0u) {
-    FXL_LOG(ERROR) << "Invalid output format";
+    FX_LOGS(ERROR) << "Invalid output format";
     return nullptr;
   }
 
@@ -143,7 +143,7 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<OutputProducerImpl<float>>(format);
     default:
-      FXL_LOG(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
+      FX_LOGS(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
       return nullptr;
   }
 }

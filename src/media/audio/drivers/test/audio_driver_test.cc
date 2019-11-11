@@ -34,9 +34,9 @@ bool AudioDriverTest::no_output_devices_found_ = false;
 void AudioDriverTest::SetUpTestSuite() {
   // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
 #ifdef NDEBUG
-  Logging::Init(fxl::LOG_WARNING);
+  Logging::Init(FX_LOG_WARNING, {"audio_driver_test"});
 #else
-  Logging::Init(fxl::LOG_INFO);
+  Logging::Init(FX_LOG_INFO, {"audio_driver_test"});
 #endif
 }
 

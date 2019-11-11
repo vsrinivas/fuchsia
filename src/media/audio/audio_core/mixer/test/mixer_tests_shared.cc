@@ -24,7 +24,7 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
                                    Resampler resampler) {
   if (resampler == Resampler::Default) {
     EXPECT_TRUE(false);
-    FXL_LOG(ERROR) << "Test should specify the Resampler exactly";
+    FX_LOGS(ERROR) << "Test should specify the Resampler exactly";
     return nullptr;
   }
 

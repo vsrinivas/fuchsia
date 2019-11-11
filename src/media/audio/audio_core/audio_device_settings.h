@@ -13,8 +13,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 
@@ -51,7 +51,7 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   void SetAutoRoutingDisabled(bool auto_routing_disabled);
 
   void set_observer(fit::function<void(const AudioDeviceSettings*)> observer) {
-    FXL_DCHECK(!observer_);
+    FX_DCHECK(!observer_);
     observer_ = std::move(observer);
   }
 

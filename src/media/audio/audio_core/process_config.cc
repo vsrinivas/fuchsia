@@ -4,8 +4,6 @@
 
 #include "src/media/audio/audio_core/process_config.h"
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio {
 
 // static
@@ -36,7 +34,7 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceRoutingProfile(
     std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::UsageSupportSet> profile) {
   auto& [device_id, output_usage_support_set] = profile;
   if (!device_id.has_value()) {
-    FXL_CHECK(!routing_config_.default_output_usage_support_set_.has_value())
+    FX_CHECK(!routing_config_.default_output_usage_support_set_.has_value())
         << "Config specifies two default output usage support sets; must have only one.";
     routing_config_.default_output_usage_support_set_ = std::move(output_usage_support_set);
     return *this;
@@ -50,7 +48,7 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceRoutingProfile(
 ProcessConfig ProcessConfigBuilder::Build() {
   std::optional<VolumeCurve> maybe_curve = std::nullopt;
   default_volume_curve_.swap(maybe_curve);
-  FXL_CHECK(maybe_curve) << "Missing required VolumeCurve member";
+  FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
   return {std::move(*maybe_curve), std::move(pipeline_), std::move(routing_config_)};
 }
 

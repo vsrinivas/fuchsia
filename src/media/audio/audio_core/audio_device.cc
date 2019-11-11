@@ -8,7 +8,6 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_link.h"
@@ -37,8 +36,8 @@ AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain()),
       driver_(new AudioDriver(this)) {
-  FXL_DCHECK(registry);
-  FXL_DCHECK((type == Type::Input) || (type == Type::Output));
+  FX_DCHECK(registry);
+  FX_DCHECK((type == Type::Input) || (type == Type::Output));
 }
 
 AudioDevice::~AudioDevice() = default;
@@ -83,7 +82,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     }
   } else {
     // For inputs, change the gain of all links where it is the source.
-    FXL_DCHECK(is_input());
+    FX_DCHECK(is_input());
     std::lock_guard<std::mutex> links_lock(links_lock_);
     for (auto& link : dest_links_) {
       if (link.GetDest()->type() == AudioObject::Type::AudioCapturer) {
@@ -94,7 +93,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     }
   }
 
-  FXL_DCHECK(device_settings_ != nullptr);
+  FX_DCHECK(device_settings_ != nullptr);
   if (device_settings_->SetGainInfo(limited, set_flags)) {
     Wakeup();
   }
@@ -111,7 +110,7 @@ zx_status_t AudioDevice::Init() {
 
   zx_status_t res = mix_wakeup_.Activate(mix_domain_->dispatcher(), std::move(process_handler));
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res) << "Failed to activate wakeup event for AudioDevice";
+    FX_PLOGS(ERROR, res) << "Failed to activate wakeup event for AudioDevice";
     return res;
   }
 
@@ -135,8 +134,8 @@ void AudioDevice::ActivateSelf() {
   if (!is_shutting_down()) {
     // Create default settings. The device manager will restore these settings
     // from persistent storage for us when it gets our activation message.
-    FXL_DCHECK(device_settings_ == nullptr);
-    FXL_DCHECK(driver() != nullptr);
+    FX_DCHECK(device_settings_ == nullptr);
+    FX_DCHECK(driver() != nullptr);
     device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());
 
     // Now poke our manager.
@@ -225,7 +224,7 @@ void AudioDevice::GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const
   out_info->is_input = is_input();
   out_info->is_default = false;
 
-  FXL_DCHECK(device_settings_);
+  FX_DCHECK(device_settings_);
   device_settings_->GetGainInfo(&out_info->gain_info);
 }
 

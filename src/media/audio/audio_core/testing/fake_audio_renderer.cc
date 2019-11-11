@@ -35,11 +35,11 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
       dispatcher_(dispatcher),
       vmo_ref_(fbl::MakeRefCounted<RefCountedVmoMapper>()) {
   zx_status_t status = vmo_ref_->CreateAndMap(2 * PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) {
-  FXL_CHECK(format_info_valid());
+  FX_CHECK(format_info_valid());
   uint32_t frame_count = format_info()->frames_per_ns().Scale(duration.to_nsecs());
 
   fuchsia::media::StreamPacket packet;
@@ -48,7 +48,7 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
   packet.payload_size = format_info()->bytes_per_frame() * frame_count;
   buffer_offset_ += packet.payload_size;
 
-  FXL_CHECK(packet.payload_offset + packet.payload_size <= vmo_ref_->size());
+  FX_CHECK(packet.payload_offset + packet.payload_size <= vmo_ref_->size());
 
   // Write the data to the packet buffer.
   float* samples = reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(vmo_ref_->start()) +

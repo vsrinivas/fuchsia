@@ -13,7 +13,7 @@
 #include <cmath>
 
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {
@@ -100,7 +100,7 @@ class Gain {
   void SetSourceGain(float gain_db) {
     target_src_gain_db_.store(gain_db);
     if constexpr (kVerboseGainDebug) {
-      FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGain(" << gain_db << ")";
     }
   }
 
@@ -128,7 +128,7 @@ class Gain {
   void SetDestGain(float gain_db) {
     target_dest_gain_db_.store(gain_db);
     if constexpr (kVerboseGainDebug) {
-      FXL_LOG(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
+      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGain(" << gain_db << ")";
     }
   }
 

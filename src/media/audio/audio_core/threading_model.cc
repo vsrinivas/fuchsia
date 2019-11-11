@@ -16,7 +16,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -26,14 +26,14 @@ void SetMixDispatcherThreadProfile(async_dispatcher_t* dispatcher) {
   zx::profile profile;
   zx_status_t status = AcquireHighPriorityProfile(&profile);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Unable to acquire high priority profile; mix threads will run at normal priority";
     return;
   }
-  FXL_DCHECK(profile);
+  FX_DCHECK(profile);
   async::PostTask(dispatcher, [profile = std::move(profile)] {
     zx_status_t status = zx::thread::self()->set_profile(profile, 0);
-    FXL_DCHECK(status == ZX_OK);
+    FX_DCHECK(status == ZX_OK);
   });
 }
 
@@ -117,7 +117,7 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
       thread_name = "mixer-" + std::to_string(mix_thread_number_++);
       holder->loop.StartThread(thread_name.c_str());
       bool inserted = mix_domains_.insert(std::make_pair(dispatcher, std::move(holder))).second;
-      FXL_DCHECK(inserted);
+      FX_DCHECK(inserted);
     }
 
     SetMixDispatcherThreadProfile(dispatcher);
@@ -159,7 +159,7 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
     {
       std::lock_guard<std::mutex> guard(lock_);
       auto it = mix_domains_.find(dispatcher);
-      FXL_DCHECK(it != mix_domains_.end());
+      FX_DCHECK(it != mix_domains_.end());
       domain = std::move(it->second);
       mix_domains_.erase(it);
     }

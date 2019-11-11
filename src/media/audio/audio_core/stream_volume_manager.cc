@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 
@@ -43,7 +43,7 @@ StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher)
         VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)], fidl_dispatcher),
         VolumeControl(&capture_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION)], fidl_dispatcher),
       } {
-  FXL_DCHECK(fidl_dispatcher);
+  FX_DCHECK(fidl_dispatcher);
 
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);

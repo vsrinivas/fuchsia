@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstring>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/test/device/audio_device_test.h"
 
 namespace media::audio::test {

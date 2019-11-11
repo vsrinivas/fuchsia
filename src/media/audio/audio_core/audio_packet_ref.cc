@@ -8,7 +8,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 
@@ -25,8 +25,8 @@ AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
       dispatcher_(callback_dispatcher) {
   TRACE_DURATION("audio", "AudioPacketRef::AudioPacketRef");
   TRACE_FLOW_BEGIN("audio.debug", "process_packet", nonce_);
-  FXL_DCHECK(dispatcher_ != nullptr);
-  FXL_DCHECK(vmo_ref_ != nullptr);
+  FX_DCHECK(dispatcher_ != nullptr);
+  FX_DCHECK(vmo_ref_ != nullptr);
 }
 
 AudioPacketRef::~AudioPacketRef() {

@@ -5,7 +5,6 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
@@ -29,12 +28,12 @@ fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
     fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
     fbl::RefPtr<AudioRendererFormatInfo> format) {
   TRACE_DURATION("audio", "AudioLinkPacketSource::Create");
-  FXL_DCHECK(source);
-  FXL_DCHECK(dest);
+  FX_DCHECK(source);
+  FX_DCHECK(dest);
 
   // TODO(mpuryear): Relax this when other audio objects can be packet sources.
   if (source->type() != AudioObject::Type::AudioRenderer) {
-    FXL_LOG(ERROR) << "Cannot create packet source link; packet sources must be AudioRenderers";
+    FX_LOGS(ERROR) << "Cannot create packet source link; packet sources must be AudioRenderers";
     return nullptr;
   }
 
@@ -77,8 +76,8 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
       // If the sink is not currently mixing, then we just swap the contents the pending packet
       // queues with out local queue and release the packets in the proper order once we have left
       // the pending mutex lock.
-      FXL_DCHECK(pending_flush_packet_queue_.empty());
-      FXL_DCHECK(pending_flush_token_queue_.empty());
+      FX_DCHECK(pending_flush_packet_queue_.empty());
+      FX_DCHECK(pending_flush_token_queue_.empty());
       flushed_packets.swap(pending_packet_queue_);
     }
   }
@@ -90,10 +89,10 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
 }
 
 fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(bool* was_flushed) {
-  FXL_DCHECK(was_flushed);
+  FX_DCHECK(was_flushed);
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
-  FXL_DCHECK(!processing_in_progress_);
+  FX_DCHECK(!processing_in_progress_);
   processing_in_progress_ = true;
 
   *was_flushed = flushed_;
@@ -110,7 +109,7 @@ void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
   TRACE_DURATION("audio", "AudioLinkPacketSource::UnlockPendingQueueFront");
   {
     std::lock_guard<std::mutex> locker(pending_mutex_);
-    FXL_DCHECK(processing_in_progress_);
+    FX_DCHECK(processing_in_progress_);
     processing_in_progress_ = false;
 
     // Did a flush take place while we were working?  If so release each of the packets waiting to
@@ -136,7 +135,7 @@ void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
 
     // Assert that user either got no packet when they locked the queue (because queue was empty),
     // or that they got the front of the queue and that front of the queue has not changed.
-    FXL_DCHECK(!release_packet || !pending_packet_queue_.empty());
+    FX_DCHECK(!release_packet || !pending_packet_queue_.empty());
     if (release_packet) {
       pending_packet_queue_.pop_front();
     }

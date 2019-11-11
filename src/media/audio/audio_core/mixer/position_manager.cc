@@ -21,17 +21,17 @@ PositionManager::PositionManager(uint32_t num_src_chans, uint32_t num_dest_chans
 }
 
 void PositionManager::Display(const PositionManager& pos_mgr, uint32_t frac_bits) {
-  FXL_VLOG(TRACE) << "Channels: src " << pos_mgr.num_src_chans_ << ", dest "
+  FX_VLOGS(TRACE) << "Channels: src " << pos_mgr.num_src_chans_ << ", dest "
                   << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
                   << pos_mgr.positive_width_ << ", neg 0x" << pos_mgr.negative_width_;
 
-  FXL_VLOG(TRACE) << "Source:   len 0x" << std::hex << pos_mgr.frac_src_frames_ << " (" << std::dec
+  FX_VLOGS(TRACE) << "Source:   len 0x" << std::hex << pos_mgr.frac_src_frames_ << " (" << std::dec
                   << (pos_mgr.frac_src_frames_ >> frac_bits) << "), end 0x" << std::hex
                   << pos_mgr.frac_src_end_ << " (" << std::dec
                   << (pos_mgr.frac_src_end_ >> frac_bits) << "), min_frames 0x" << std::hex
                   << pos_mgr.min_frac_src_frames_ << ". Dest: len 0x" << pos_mgr.dest_frames_;
 
-  FXL_VLOG(TRACE) << "Rate:     step_size 0x" << std::hex << pos_mgr.step_size_ << ", rate_mod "
+  FX_VLOGS(TRACE) << "Rate:     step_size 0x" << std::hex << pos_mgr.step_size_ << ", rate_mod "
                   << std::dec << pos_mgr.rate_modulo_ << ", denom " << pos_mgr.denominator_
                   << ", using_mod " << pos_mgr.using_modulo_;
 
@@ -40,7 +40,7 @@ void PositionManager::Display(const PositionManager& pos_mgr, uint32_t frac_bits
 
 void PositionManager::DisplayUpdate(const PositionManager& pos_mgr, uint32_t frac_bits) {
   const auto frac_mask = (1u << frac_bits) - 1u;
-  FXL_VLOG(TRACE) << "Position: frac_src_offset " << std::hex
+  FX_VLOGS(TRACE) << "Position: frac_src_offset " << std::hex
                   << (pos_mgr.frac_src_offset_ < 0 ? "-" : " ") << "0x"
                   << std::abs(pos_mgr.frac_src_offset_ >> frac_bits) << ":"
                   << (pos_mgr.frac_src_offset_ & frac_mask) << ", dest_offset 0x"
@@ -55,19 +55,19 @@ void PositionManager::SetSourceValues(const void* src_void, uint32_t frac_src_fr
 
   // We express number-of-source-frames as fixed-point 19.13 (to align with frac_src_offset) but the
   // actual number of frames provided is always an integer.
-  FXL_DCHECK((frac_src_frames_ & frac_mask_) == 0);
+  FX_DCHECK((frac_src_frames_ & frac_mask_) == 0);
 
   // Interp offset is an int32. frac_src_frames is uint32, but callers cannot exceed int32_t::max()
-  FXL_DCHECK(frac_src_frames_ <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FX_DCHECK(frac_src_frames_ <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   // The source buffer must provide us at least one frame
-  FXL_DCHECK(frac_src_frames_ >= frac_size_);
+  FX_DCHECK(frac_src_frames_ >= frac_size_);
 
   frac_src_offset_ptr_ = frac_src_offset;
   frac_src_offset_ = *frac_src_offset_ptr_;
 
   // "Source offset" can be negative within bounds of pos_filter_width. Callers must ensure this.
-  FXL_DCHECK(frac_src_offset_ + positive_width_ >= 0)
+  FX_DCHECK(frac_src_offset_ + positive_width_ >= 0)
       << std::hex << "frac_src_off: 0x" << frac_src_offset_;
 
   // frac_src_offset_ cannot exceed our last sampleable subframe. We define this as "Source end":
@@ -78,7 +78,7 @@ void PositionManager::SetSourceValues(const void* src_void, uint32_t frac_src_fr
   // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
   // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
   // When equal, we produce no output frame, but samplers with history will cache the final frames.
-  FXL_DCHECK(frac_src_offset_ <= static_cast<int32_t>(frac_src_frames_))
+  FX_DCHECK(frac_src_offset_ <= static_cast<int32_t>(frac_src_frames_))
       << std::hex << "frac_src_off: 0x" << frac_src_offset_ << ", frac_src_end: 0x" << frac_src_end_
       << ", frac_src_frames: 0x" << frac_src_frames_;
 }
@@ -90,26 +90,26 @@ void PositionManager::SetDestValues(float* dest, uint32_t dest_frames, uint32_t*
   dest_offset_ = *dest_offset_ptr_;
 
   // Location of first dest frame to produce must be within the provided buffer.
-  FXL_DCHECK(dest_offset_ < dest_frames_);
+  FX_DCHECK(dest_offset_ < dest_frames_);
 }
 
 void PositionManager::SetRateValues(uint32_t step_size, uint32_t rate_modulo, uint32_t denominator,
                                     uint32_t* src_pos_mod) {
   step_size_ = step_size;
-  FXL_DCHECK(step_size > 0);
+  FX_DCHECK(step_size > 0);
 
   rate_modulo_ = rate_modulo;
   src_pos_modulo_ptr_ = src_pos_mod;
-  FXL_DCHECK(src_pos_modulo_ptr_ != nullptr);
+  FX_DCHECK(src_pos_modulo_ptr_ != nullptr);
   src_pos_modulo_ = *src_pos_modulo_ptr_;
   using_modulo_ = (rate_modulo_ > 0);
 
   if (using_modulo_) {
     denominator_ = denominator;
 
-    FXL_DCHECK(denominator_ > 0);
-    FXL_DCHECK(denominator_ > rate_modulo_);
-    FXL_DCHECK(denominator_ > src_pos_modulo_);
+    FX_DCHECK(denominator_ > 0);
+    FX_DCHECK(denominator_ > rate_modulo_);
+    FX_DCHECK(denominator_ > src_pos_modulo_);
   } else {
     denominator_ = src_pos_modulo_ + 1;  //  so rollover comparisons work as they should
   }

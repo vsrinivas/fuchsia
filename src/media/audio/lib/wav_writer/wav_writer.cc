@@ -4,8 +4,6 @@
 
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
-#include "src/lib/syslog/cpp/logger.h"
-
 #include <endian.h>
 #include <fcntl.h>
 #include <lib/fdio/io.h>
@@ -15,6 +13,8 @@
 #include <iomanip>
 #include <limits>
 #include <optional>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 

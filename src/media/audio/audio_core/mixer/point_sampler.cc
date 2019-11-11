@@ -8,7 +8,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 
@@ -69,19 +69,19 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   // We express number-of-source-frames as fixed-point 19.13 (to align with src_offset) but the
   // actual number of frames provided is always an integer.
-  FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
+  FX_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32, callers should not
   // exceed int32_t::max().
-  FXL_DCHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FX_DCHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
   // This method must always be provided at least one source frame.
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FX_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
   auto dest_off = *dest_offset;
   auto dest_off_start = dest_off;  // Only used when ramping.
 
   // Location of first dest frame to produce must be within the provided buffer.
-  FXL_DCHECK(dest_off < dest_frames);
+  FX_DCHECK(dest_off < dest_frames);
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   auto src_off = *frac_src_offset;
@@ -90,18 +90,18 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   // "Source offset" can be negative within the bounds of pos_filter_width. PointSampler has no
   // memory: input frames only affect present/future output. Its "positive filter width" is zero,
   // thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error case.
-  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
+  FX_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
 
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
   // the past -- they have no impact on any output we would produce here.
   auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
-  FXL_DCHECK(src_end >= 0);
+  FX_DCHECK(src_end >= 0);
 
   // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
   // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
   // When equal, we produce no output frame, but samplers with history will cache the final frames.
-  FXL_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
+  FX_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
       << ", frac_src_frames: 0x" << frac_src_frames;
   if (src_off == static_cast<int32_t>(frac_src_frames)) {
@@ -117,12 +117,12 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
 
-    FXL_DCHECK(denominator > 0);
-    FXL_DCHECK(denominator > rate_modulo);
-    FXL_DCHECK(denominator > src_pos_modulo);
+    FX_DCHECK(denominator > 0);
+    FX_DCHECK(denominator > rate_modulo);
+    FX_DCHECK(denominator > src_pos_modulo);
   }
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Point Ramping: " << (ScaleType == ScalerType::RAMPING)
+    FX_LOGS(INFO) << "Point Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
@@ -213,7 +213,7 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
-  FXL_DCHECK(info != nullptr);
+  FX_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
@@ -283,19 +283,19 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
 
   // We express number-of-source-frames as fixed-point 19.13 (to align with src_offset) but the
   // actual number of frames provided is always an integer.
-  FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
+  FX_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
   // callers should not exceed int32_t::max().
-  FXL_DCHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FX_DCHECK(frac_src_frames <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
   // This method must always be provided at least one source frame.
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FX_DCHECK(frac_src_frames >= FRAC_ONE);
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
   auto dest_off = *dest_offset;
   auto dest_off_start = dest_off;  // Only used when ramping.
 
   // Location of first dest frame to produce must be within the provided buffer.
-  FXL_DCHECK(dest_off < dest_frames);
+  FX_DCHECK(dest_off < dest_frames);
 
   auto src_off = *frac_src_offset;
   const auto* src = static_cast<const SrcSampleType*>(src_void);
@@ -303,18 +303,18 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
   // "Source offset" can be negative within the bounds of pos_filter_width. PointSampler has no
   // memory: input frames only affect present/future output. Its "positive filter width" is zero,
   // thus src_off must be non-negative. Callers explicitly avoid calling Mix in this error case.
-  FXL_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
+  FX_DCHECK(src_off + kPositiveFilterWidth >= 0) << std::hex << "src_off: 0x" << src_off;
 
   // src_off cannot exceed our last sampleable subframe. We define this as "Source end": the last
   // subframe for which this Mix call can produce output. Otherwise, all these src samples are in
   // the past -- they have no impact on any output we would produce here.
   auto src_end = static_cast<int32_t>(frac_src_frames - kPositiveFilterWidth) - 1;
-  FXL_DCHECK(src_end >= 0);
+  FX_DCHECK(src_end >= 0);
 
   // Strictly, src_off should be LESS THAN frac_src_frames. We also allow them to be exactly equal,
   // as this is used to "prime" resamplers that use a significant amount of previously-cached data.
   // When equal, we produce no output frame, but samplers with history will cache the final frames.
-  FXL_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
+  FX_DCHECK(src_off <= static_cast<int32_t>(frac_src_frames))
       << std::hex << "src_off: 0x" << src_off << ", src_end: 0x" << src_end
       << ", frac_src_frames: 0x" << frac_src_frames;
   if (src_off == static_cast<int32_t>(frac_src_frames)) {
@@ -330,12 +330,12 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
     denominator = info->denominator;
     src_pos_modulo = info->src_pos_modulo;
 
-    FXL_DCHECK(denominator > 0);
-    FXL_DCHECK(denominator > rate_modulo);
-    FXL_DCHECK(denominator > src_pos_modulo);
+    FX_DCHECK(denominator > 0);
+    FX_DCHECK(denominator > rate_modulo);
+    FX_DCHECK(denominator > src_pos_modulo);
   }
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Point-NxN Ramping: " << (ScaleType == ScalerType::RAMPING)
+    FX_LOGS(INFO) << "Point-NxN Ramping: " << (ScaleType == ScalerType::RAMPING)
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
@@ -427,7 +427,7 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                              uint32_t frac_src_frames, int32_t* frac_src_offset,
                                              bool accumulate, Bookkeeping* info) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");
-  FXL_DCHECK(info != nullptr);
+  FX_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 

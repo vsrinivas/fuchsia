@@ -38,7 +38,7 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
     auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
     zx_status_t res = vmo_mapper->CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (res != ZX_OK) {
-      FXL_PLOG(ERROR, res) << "Failed to map payload buffer";
+      FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
       return nullptr;
     }
     fuchsia::media::StreamPacket packet;

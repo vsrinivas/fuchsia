@@ -36,30 +36,23 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
-  FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
-
-#ifdef NDEBUG
-  Logging::Init(fxl::LOG_WARNING);
-#else
-  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  Logging::Init(fxl::LOG_INFO);
-#endif
+  FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
   // The main async_t here is responsible for receiving audio payloads sent by applications, so it
   // has real time requirements just like mixing threads. Ideally, this task would not run on the
   // same thread that processes *all* non-mix audio service jobs (even non-realtime ones), but that
   // will take more significant restructuring, when we can deal with realtime requirements in place.
   AcquireAudioCoreImplProfile(component_context_.get(), [](zx::profile profile) {
-    FXL_DCHECK(profile);
+    FX_DCHECK(profile);
     if (profile) {
       zx_status_t status = zx::thread::self()->set_profile(profile, 0);
-      FXL_DCHECK(status == ZX_OK);
+      FX_DCHECK(status == ZX_OK);
     }
   });
 
   device_manager_.EnableDeviceSettings(options.enable_device_settings_writeback);
   zx_status_t res = device_manager_.Init();
-  FXL_DCHECK(res == ZX_OK);
+  FX_DCHECK(res == ZX_OK);
 
   route_graph_.SetThrottleOutput(threading_model,
                                  ThrottleOutput::Create(threading_model, &device_manager_));
@@ -120,7 +113,7 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
   // NAN is undefined and "signless". We cannot simply clamp it into range.
   AUD_VLOG(TRACE) << " (" << gain_db << " dB)";
   if (isnan(gain_db)) {
-    FXL_LOG(ERROR) << "Invalid system gain " << gain_db << " dB -- making no change";
+    FX_LOGS(ERROR) << "Invalid system gain " << gain_db << " dB -- making no change";
     return;
   }
   gain_db =
@@ -216,7 +209,7 @@ void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media:
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
   auto policy = PolicyLoader::LoadDefaultPolicy();
-  FXL_CHECK(policy);
+  FX_CHECK(policy);
   audio_admin_.SetInteractionsFromAudioPolicy(std::move(*policy));
 }
 

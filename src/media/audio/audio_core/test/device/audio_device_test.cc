@@ -10,8 +10,6 @@
 #include <cstring>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio::test {
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;

@@ -52,7 +52,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     static_assert(kRingBufferSizeBytes % sizeof(T) == 0);
     T* array = static_cast<T*>(ring_buffer_mapper_.start());
     size_t len = maybe_len >= 0 ? maybe_len : (kRingBufferSizeBytes / sizeof(T)) - first;
-    FXL_CHECK((first + len) * sizeof(T) <= kRingBufferSizeBytes);
+    FX_CHECK((first + len) * sizeof(T) <= kRingBufferSizeBytes);
     return {&array[first], len};
   }
 

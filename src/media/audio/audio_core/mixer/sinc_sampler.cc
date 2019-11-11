@@ -35,7 +35,7 @@ class SincSamplerImpl : public SincSampler {
     num_prev_frames_needed_ = RightIdx(neg_filter_width());
     total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width());
 
-    FXL_DCHECK(kDataCacheLength > total_frames_needed_);
+    FX_DCHECK(kDataCacheLength > total_frames_needed_);
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
@@ -164,7 +164,7 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       uint32_t frac_cache_offset = frac_src_off - src_offset_to_cache;
       uint32_t interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
       uint32_t cache_center_idx = LeftIdx(frac_cache_offset);
-      FXL_CHECK(RightIdx(frac_cache_offset - neg_filter_width()) >= 0)
+      FX_CHECK(RightIdx(frac_cache_offset - neg_filter_width()) >= 0)
           << RightIdx(static_cast<int32_t>(cache_center_idx - neg_filter_width()))
           << " should be >= 0";
 
@@ -210,7 +210,7 @@ template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
-  FXL_DCHECK(info != nullptr);
+  FX_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 

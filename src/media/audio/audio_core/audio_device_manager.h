@@ -15,7 +15,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 #include "src/media/audio/audio_core/audio_input.h"
@@ -93,13 +93,13 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   fbl::RefPtr<AudioOutput> FindLastPluggedOutput(bool allow_unplugged = false) {
     auto dev = FindLastPlugged(AudioObject::Type::Output, allow_unplugged);
-    FXL_DCHECK(!dev || (dev->type() == AudioObject::Type::Output));
+    FX_DCHECK(!dev || (dev->type() == AudioObject::Type::Output));
     return fbl::RefPtr<AudioOutput>::Downcast(std::move(dev));
   }
 
   fbl::RefPtr<AudioInput> FindLastPluggedInput(bool allow_unplugged = false) {
     auto dev = FindLastPlugged(AudioObject::Type::Input, allow_unplugged);
-    FXL_DCHECK(!dev || (dev->type() == AudioObject::Type::Input));
+    FX_DCHECK(!dev || (dev->type() == AudioObject::Type::Input));
     return fbl::RefPtr<AudioInput>::Downcast(std::move(dev));
   }
 

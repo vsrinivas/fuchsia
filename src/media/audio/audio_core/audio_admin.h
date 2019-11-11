@@ -14,7 +14,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/audio/audio_core/policy_loader.h"

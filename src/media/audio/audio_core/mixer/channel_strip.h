@@ -8,7 +8,7 @@
 #include <cstring>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::mixer {
@@ -20,8 +20,8 @@ class ChannelStrip {
  public:
   ChannelStrip(uint32_t num_channels, uint32_t length)
       : data_(num_channels), num_channels_(num_channels), len_(length) {
-    FXL_DCHECK(num_channels > 0);
-    FXL_DCHECK(length > 0);
+    FX_DCHECK(num_channels > 0);
+    FX_DCHECK(length > 0);
 
     for (auto& channel : data_) {
       channel.resize(len_, 0.0f);
@@ -78,22 +78,22 @@ class ChannelStrip {
 // declared static, used for debugging purposes only
 // Log the contents of the channel strip, channel by channel.
 inline void ChannelStrip::Display(const ChannelStrip& channels) {
-  FXL_VLOG(TRACE) << "ChannelStrip: chans " << channels.num_channels_ << ", len 0x" << std::hex
+  FX_VLOGS(TRACE) << "ChannelStrip: chans " << channels.num_channels_ << ", len 0x" << std::hex
                   << channels.len_;
 
   for (auto chan = 0u; chan < channels.num_channels_; ++chan) {
-    FXL_VLOG(TRACE) << "           channel " << chan;
+    FX_VLOGS(TRACE) << "           channel " << chan;
     char str[256];
     str[0] = 0;
     int n = 0;
     for (auto idx = 0u; idx < channels.len_; ++idx) {
       if (idx % 16 == 0) {
-        FXL_VLOG(TRACE) << str;
+        FX_VLOGS(TRACE) << str;
         n = sprintf(str, "[%4x]  ", idx);
       }
       n += sprintf(str + n, "%6.03f ", channels.data_[chan][idx]);
     }
-    FXL_VLOG(TRACE) << str;
+    FX_VLOGS(TRACE) << str;
   }
 }
 

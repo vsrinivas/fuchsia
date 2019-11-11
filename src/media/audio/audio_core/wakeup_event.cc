@@ -6,7 +6,7 @@
 
 #include <zircon/types.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
 namespace {
@@ -24,7 +24,7 @@ zx_status_t DeassertWakeupEventSignal(const zx::event& event) {
 }  // namespace
 
 WakeupEvent::WakeupEvent() {
-  FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
+  FX_CHECK(zx::event::create(0, &event_) == ZX_OK);
   wait_.set_object(event_.get());
   wait_.set_trigger(kWakeupEventSignal);
 }
@@ -44,28 +44,28 @@ zx_status_t WakeupEvent::Signal() const { return AssertWakeupEventSignal(event_)
 void WakeupEvent::OnSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Async wait failed";
+    FX_PLOGS(ERROR, status) << "Async wait failed";
     return;
   }
   if (signal->observed & kWakeupEventSignal) {
     // Deassert first so that the process handler can reassert if necessary.
     status = DeassertWakeupEventSignal(event_);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to clear signals";
+      FX_PLOGS(ERROR, status) << "Failed to clear signals";
       return;
     }
 
-    FXL_DCHECK(process_handler_);
+    FX_DCHECK(process_handler_);
     zx_status_t status = process_handler_(this);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Process handler failed";
+      FX_PLOGS(ERROR, status) << "Process handler failed";
       Deactivate();
       return;
     }
 
     status = wait->Begin(dispatcher);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to wait on signals";
+      FX_PLOGS(ERROR, status) << "Failed to wait on signals";
       return;
     }
   }

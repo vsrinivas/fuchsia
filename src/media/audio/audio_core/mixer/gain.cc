@@ -6,8 +6,6 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio {
 
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
@@ -15,8 +13,8 @@ namespace media::audio {
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
                                  __UNUSED fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
-  FXL_DCHECK(source_gain_db <= kMaxGainDb);
-  FXL_DCHECK(duration.get() >= 0) << "Ramp duration cannot be negative";
+  FX_DCHECK(source_gain_db <= kMaxGainDb);
+  FX_DCHECK(duration.get() >= 0) << "Ramp duration cannot be negative";
 
   source_ramp_duration_ = duration;
 
@@ -36,7 +34,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
     ClearSourceRamp();
   }
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
+    FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
                   << duration.to_nsecs() << " nsec)";
   }
 }
@@ -49,7 +47,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
   // If the output device's clock is not running, then it isn't possible to
   // convert from output frames to wallclock (local) time.
-  FXL_CHECK(local_to_output.invertible()) << "Output clock must be running!";
+  FX_CHECK(local_to_output.invertible()) << "Output clock must be running!";
 
   frames_ramped_ += num_frames;
   zx::duration advance_duration = zx::nsec(local_to_output.Inverse().Scale(frames_ramped_));
@@ -70,9 +68,9 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
   target_src_gain_db_.store(src_gain_db);
 
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
+    FX_LOGS(INFO) << "Advanced " << advance_duration.to_nsecs() << " nsec for " << num_frames
                   << " frames. Total frames ramped: " << frames_ramped_ << ".";
-    FXL_LOG(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
+    FX_LOGS(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
                   << source_ramp_duration_.to_nsecs() << "-nsec ramp to " << end_src_gain_db_
                   << " dB.";
   }
@@ -86,7 +84,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
     return;
   }
 
-  FXL_CHECK(scale_arr != nullptr);
+  FX_CHECK(scale_arr != nullptr);
 
   AScale scale;
   if (!IsRamping()) {
@@ -98,7 +96,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   } else {
     // If the output device's clock is not running, then it isn't possible to
     // convert from output frames to wallclock (local) time.
-    FXL_CHECK(local_to_output.invertible()) << "Output clock must be running!";
+    FX_CHECK(local_to_output.invertible()) << "Output clock must be running!";
 
     // Compose the ramp, in pieces
     TimelineRate output_to_local = local_to_output.Inverse();

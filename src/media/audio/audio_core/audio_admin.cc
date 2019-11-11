@@ -11,6 +11,7 @@
 
 #include <trace/event.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
 
 namespace media::audio {
@@ -48,9 +49,9 @@ AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adj
       gain_adjustment_(*gain_adjustment),
       policy_action_reporter_(*policy_action_reporter),
       fidl_dispatcher_(fidl_dispatcher) {
-  FXL_DCHECK(gain_adjustment);
-  FXL_DCHECK(policy_action_reporter);
-  FXL_DCHECK(fidl_dispatcher);
+  FX_DCHECK(gain_adjustment);
+  FX_DCHECK(policy_action_reporter);
+  FX_DCHECK(fidl_dispatcher);
 }
 
 void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
@@ -232,7 +233,7 @@ void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, boo
     TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
     std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
+    FX_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
     if (active) {
       active_streams_playback_[usage_index].insert(renderer);
     } else {
@@ -249,7 +250,7 @@ void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bo
     TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
     std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
+    FX_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
     if (active) {
       active_streams_capture_[usage_index].insert(capturer);
     } else {

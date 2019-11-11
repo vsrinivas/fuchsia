@@ -12,7 +12,7 @@
 
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 #include "src/media/audio/audio_core/schema/audio_core_config_schema.inl"
 
@@ -38,14 +38,14 @@ static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_s
 rapidjson::SchemaDocument LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
   const rapidjson::ParseResult result = schema_doc.Parse(kAudioCoreConfigSchema);
-  FXL_CHECK(!result.IsError()) << rapidjson::GetParseError_En(result.Code()) << "("
-                               << result.Offset() << ")";
+  FX_CHECK(!result.IsError()) << rapidjson::GetParseError_En(result.Code()) << "("
+                              << result.Offset() << ")";
   return rapidjson::SchemaDocument(schema_doc);
 }
 
 fit::result<VolumeCurve, VolumeCurve::Error> ParseVolumeCurveFromJsonObject(
     const rapidjson::Value& value) {
-  FXL_CHECK(value.IsArray());
+  FX_CHECK(value.IsArray());
   std::vector<VolumeCurve::VolumeMapping> mappings;
   for (const auto& mapping : value.GetArray()) {
     mappings.emplace_back(mapping["level"].GetFloat(), mapping["db"].GetFloat());
@@ -66,21 +66,21 @@ fuchsia::media::AudioRenderUsage UsageFromString(std::string_view string) {
   } else if (string == "system_agent") {
     return fuchsia::media::AudioRenderUsage::SYSTEM_AGENT;
   }
-  FXL_CHECK(false);
+  FX_CHECK(false);
   return fuchsia::media::AudioRenderUsage::MEDIA;
 }
 
 PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) {
-  FXL_CHECK(value.IsObject());
+  FX_CHECK(value.IsObject());
   PipelineConfig::Effect effect;
 
   auto it = value.FindMember(kJsonKeyLib);
-  FXL_CHECK(it != value.MemberEnd() && it->value.IsString());
+  FX_CHECK(it != value.MemberEnd() && it->value.IsString());
   effect.lib_name = it->value.GetString();
 
   it = value.FindMember(kJsonKeyName);
   if (it != value.MemberEnd()) {
-    FXL_CHECK(it->value.IsString());
+    FX_CHECK(it->value.IsString());
     effect.effect_name = it->value.GetString();
   }
 
@@ -95,27 +95,27 @@ PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) 
 }
 
 PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& value) {
-  FXL_CHECK(value.IsObject());
+  FX_CHECK(value.IsObject());
   PipelineConfig::MixGroup mix_group;
 
   auto it = value.FindMember(kJsonKeyName);
   if (it != value.MemberEnd()) {
-    FXL_CHECK(it->value.IsString());
+    FX_CHECK(it->value.IsString());
     mix_group.name = it->value.GetString();
   }
 
   it = value.FindMember(kJsonKeyStreams);
   if (it != value.MemberEnd()) {
-    FXL_CHECK(it->value.IsArray());
+    FX_CHECK(it->value.IsArray());
     for (const auto& stream_type : it->value.GetArray()) {
-      FXL_CHECK(stream_type.IsString());
+      FX_CHECK(stream_type.IsString());
       mix_group.input_streams.push_back(UsageFromString(stream_type.GetString()));
     }
   }
 
   it = value.FindMember(kJsonKeyEffects);
   if (it != value.MemberEnd()) {
-    FXL_CHECK(it->value.IsArray());
+    FX_CHECK(it->value.IsArray());
     for (const auto& effect : it->value.GetArray()) {
       mix_group.effects.push_back(ParseEffectFromJsonObject(effect));
     }
@@ -129,7 +129,7 @@ void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
 
   auto it = value.FindMember(kJsonKeyOutputStreams);
   if (it != value.MemberEnd()) {
-    FXL_CHECK(it->value.IsArray());
+    FX_CHECK(it->value.IsArray());
     for (const auto& group : it->value.GetArray()) {
       config_builder->AddOutputStreamEffects(ParseMixGroupFromJsonObject(group));
     }
@@ -219,7 +219,7 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
   rapidjson::Document doc;
   const rapidjson::ParseResult parse_res = doc.ParseInsitu(buffer.data());
   if (parse_res.IsError()) {
-    FXL_LOG(FATAL) << "Parse error (" << rapidjson::GetParseError_En(parse_res.Code())
+    FX_LOGS(FATAL) << "Parse error (" << rapidjson::GetParseError_En(parse_res.Code())
                    << ") when reading " << filename << ":" << parse_res.Offset();
   }
 
@@ -229,13 +229,13 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
     rapidjson::StringBuffer error_buf;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(error_buf);
     validator.GetError().Accept(writer);
-    FXL_LOG(FATAL) << "Schema validation error (" << error_buf.GetString() << ") when reading "
+    FX_LOGS(FATAL) << "Schema validation error (" << error_buf.GetString() << ") when reading "
                    << filename;
   }
 
   auto curve_result = ParseVolumeCurveFromJsonObject(doc[kJsonKeyVolumeCurve]);
   if (!curve_result.is_ok()) {
-    FXL_LOG(FATAL) << "Invalid volume curve; error: " << curve_result.take_error();
+    FX_LOGS(FATAL) << "Invalid volume curve; error: " << curve_result.take_error();
   }
 
   auto config_builder = ProcessConfig::Builder();

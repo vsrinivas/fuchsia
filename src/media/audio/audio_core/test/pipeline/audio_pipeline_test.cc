@@ -8,7 +8,7 @@
 
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {
@@ -27,10 +27,10 @@ void AudioPipelineTest::SetUpTestSuite() {
   HermeticAudioCoreTest::SetUpTestSuite();
 
 #ifdef NDEBUG
-  Logging::Init(fxl::LOG_WARNING);
+  Logging::Init(FX_LOG_WARNING, {"audio_pipeline_test"});
 #else
   // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
-  Logging::Init(fxl::LOG_INFO);
+  Logging::Init(FX_LOG_INFO, {"audio_pipeline_test"});
 #endif
 
   environment()->ConnectToService(control_sync_.NewRequest());
@@ -204,7 +204,7 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
           received_gain_db_ = device.gain_info.gain_db;
           received_mute_ = device.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute;
         } else {
-          FXL_LOG(ERROR) << "Unrelated device arrival of " << device.token_id << ", unique_id '"
+          FX_LOGS(ERROR) << "Unrelated device arrival of " << device.token_id << ", unique_id '"
                          << device.unique_id << "'";
         }
         virtual_device_tokens_.insert(device.token_id);
@@ -213,7 +213,7 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
     if (device_token == received_add_device_token_) {
       received_remove_device_ = true;
     } else {
-      FXL_LOG(ERROR) << "Unrelated device removal of " << device_token << " (ours is "
+      FX_LOGS(ERROR) << "Unrelated device removal of " << device_token << " (ours is "
                      << received_add_device_token_ << ")";
     }
     virtual_device_tokens_.erase(device_token);
@@ -223,7 +223,7 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
         if (device_token == received_add_device_token_) {
           received_gain_changed_ = true;
         } else {
-          FXL_LOG(ERROR) << "Unrelated device gain change of " << device_token << " (ours is "
+          FX_LOGS(ERROR) << "Unrelated device gain change of " << device_token << " (ours is "
                          << received_add_device_token_ << ")";
         }
       });
@@ -236,7 +236,7 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
           EXPECT_EQ(old_default_token, received_default_device_token_);
           received_default_device_token_ = 0;
         } else {
-          FXL_LOG(ERROR) << "Unrelated device default change from " << old_default_token << " to "
+          FX_LOGS(ERROR) << "Unrelated device default change from " << old_default_token << " to "
                          << new_default_token << " (ours is " << received_add_device_token_ << ")";
         }
       });
@@ -419,7 +419,7 @@ void AudioPipelineTest::MapAndAddRendererBuffer(uint32_t buffer_id) {
 // initial_pts has been defaulted to 0 if no value was provided by the caller.
 void AudioPipelineTest::CreateAndSendPackets(uint32_t num_packets, int16_t initial_data_value,
                                              int64_t initial_pts) {
-  FXL_CHECK(num_packets <= kNumPayloads);
+  FX_CHECK(num_packets <= kNumPayloads);
   received_packet_completion_ = false;
 
   int16_t* audio_buffer = reinterpret_cast<int16_t*>(payload_buffer_.start());

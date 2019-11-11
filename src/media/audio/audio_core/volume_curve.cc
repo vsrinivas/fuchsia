@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
@@ -21,8 +21,8 @@ const VolumeCurve& VolumeCurve::Default() {
 }
 
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
-  FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);
-  FXL_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
+  FX_DCHECK(min_gain_db < Gain::kUnityGainDb);
+  FX_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
 
   std::vector<VolumeMapping> mappings = {
       {fuchsia::media::audio::MIN_VOLUME, fuchsia::media::audio::MUTED_GAIN_DB}};
@@ -33,7 +33,7 @@ VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
 
   auto curve_result = VolumeCurve::FromMappings(std::move(mappings));
   if (!curve_result.is_ok()) {
-    FXL_LOG(FATAL) << "Failed to build curve; error: " << curve_result.take_error();
+    FX_LOGS(FATAL) << "Failed to build curve; error: " << curve_result.take_error();
   }
 
   return curve_result.take_value();
@@ -74,7 +74,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
                                     fuchsia::media::audio::MAX_VOLUME);
 
   const auto bounds = Bounds(x);
-  FXL_DCHECK(bounds.has_value())
+  FX_DCHECK(bounds.has_value())
       << "At construction, we ensure the volume domain includes [0.0, 1.0].";
 
   const auto [lower_bound, upper_bound] = bounds.value();
@@ -84,7 +84,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
   const auto x1 = upper_bound.volume;
   const auto b = upper_bound.gain_dbfs;
 
-  FXL_DCHECK(x1 != x0) << "At construction, we reject vertical segments.";
+  FX_DCHECK(x1 != x0) << "At construction, we reject vertical segments.";
 
   const auto alpha = (x - x0) / (x1 - x0);
 

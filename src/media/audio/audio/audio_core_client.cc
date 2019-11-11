@@ -11,7 +11,7 @@ AudioCoreClient::AudioCoreClient(sys::ComponentContext* component_context,
                                  fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   audio_core_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR,status) << "Connection to fuchsia.media.AudioCore failed: ";
+    FX_PLOGS(ERROR, status) << "Connection to fuchsia.media.AudioCore failed: ";
     quit_callback_();
   });
 

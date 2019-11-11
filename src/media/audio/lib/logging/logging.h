@@ -9,19 +9,17 @@
 
 #include <iomanip>
 
-#include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 #define AUD_LOG(level)                                                                          \
-  FXL_LOG(level) << std::fixed << std::setprecision(3)                                          \
+  FX_LOGS(level) << std::fixed << std::setprecision(3)                                          \
                  << (static_cast<double>(zx::clock::get_monotonic().get()) / zx::msec(1).get()) \
                  << " " << std::setw(25) << __func__ << " "
 #define AUD_LOG_OBJ(level, object) \
   AUD_LOG(level) << "for " << reinterpret_cast<void*>(object) << " "
 
 #define AUD_VLOG(level)                                                                          \
-  FXL_VLOG(level) << std::fixed << std::setprecision(3)                                          \
+  FX_VLOGS(level) << std::fixed << std::setprecision(3)                                          \
                   << (static_cast<double>(zx::clock::get_monotonic().get()) / zx::msec(1).get()) \
                   << " " << std::setw(25) << __func__ << " "
 #define AUD_VLOG_OBJ(level, object) \
@@ -29,7 +27,7 @@
 
 namespace media::audio {
 
-// Custom FXL_VLOG levels
+// Custom FX_VLOGS levels
 constexpr auto TRACE = 1;
 constexpr auto SPEW = 2;
 
@@ -37,11 +35,12 @@ class Logging {
  public:
   Logging() = delete;
 
-  static void Init(fxl::LogSeverity log_level) {
-    fxl::LogSettings settings;
-    settings.min_log_level = log_level;
+  static void Init(const fx_log_severity_t log_level,
+                   const std::initializer_list<std::string>& tags) {
+    syslog::LogSettings settings;
+    settings.severity = log_level;
 
-    fxl::SetLogSettings(settings);
+    syslog::InitLogger(settings, tags);
   }
 };
 

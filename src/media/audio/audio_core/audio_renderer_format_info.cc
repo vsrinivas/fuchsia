@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {
@@ -38,7 +38,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType
       // Format filtering was supposed to happen during AudioRendererImpl::SetStreamType.  It should
       // never be attempting to create a FormatInfo structure with a sample format that we do not
       // understand.
-      FXL_CHECK(false) << "unrecognized sample format";
+      FX_CHECK(false) << "unrecognized sample format";
       bytes_per_frame_ = 2;
       break;
   }

@@ -8,7 +8,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio::test {
 
@@ -83,10 +83,10 @@ template <typename T>
 void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate, double magn,
                     double phase) {
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
-  FXL_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
+  FX_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
   // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
-  FXL_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
+  FX_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
 
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / buf_size * freq;
@@ -144,7 +144,7 @@ void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate, 
 //
 // TODO(mpuryear): Consider std::complex<double> instead of real/imag arrays.
 void FFT(double* reals, double* imags, uint32_t buf_size) {
-  FXL_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(fbl::is_pow2(buf_size));
   const uint32_t buf_sz_2 = buf_size >> 1;
 
   uint32_t N = 0;
@@ -249,7 +249,7 @@ void RectangularToPolar(const double* reals, const double* imags, uint32_t buf_s
 // freq-domain real_freq[] & imag_freq[], both (buf_size/2 + 1). This is a simple, unoptimized
 // (N^2)/2 implementation.
 void RealDFT(const double* reals, uint32_t buf_size, double* real_freq, double* imag_freq) {
-  FXL_DCHECK((buf_size & 1u) == 0) << "DFT buffer size must be even";
+  FX_DCHECK((buf_size & 1u) == 0) << "DFT buffer size must be even";
 
   const double multiplier = M_PI * 2.0 / static_cast<double>(buf_size);
   const uint32_t buf_sz_2 = buf_size >> 1;
@@ -297,7 +297,7 @@ void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size, double*
 // Converts frequency-domain arrays reals & imags (len buf_size) in-place into time-domain arrays
 // (also len buf_size)
 void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
-  FXL_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(fbl::is_pow2(buf_size));
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     imags[idx] = -imags[idx];
@@ -318,7 +318,7 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 template <typename T>
 void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_signal,
                       double* magn_other, double* phase_signal) {
-  FXL_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(fbl::is_pow2(buf_size));
 
   uint32_t buf_sz_2 = buf_size >> 1;
   bool freq_out_of_range = (freq > buf_sz_2);
