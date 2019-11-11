@@ -20,6 +20,7 @@ group("tests") {
   public_deps = [
     ":dart_target_tests",
     ":dart_unittests",
+    "bin/terminal_settings_agent:tests",
   ]
 }
 

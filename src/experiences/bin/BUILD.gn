@@ -6,6 +6,7 @@ group("bin") {
   deps = [
     "simple_browser",
     "terminal_settings",
+    "terminal_settings_agent",
   ]
 }
 
