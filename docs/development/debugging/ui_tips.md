@@ -24,7 +24,7 @@ From your host workstation, run:
 You can upload `filename.gltf` to any gltf viewer, such as this [online viewer](https://gltf-viewer.donmccurdy.com/).
 
 ### Dump the SceneGraph as Text
-The [SceneGraph](/docs/concepts/graphics/ui/scenic.md#scenic-resource-graph) as text is useful when you want to see all the resources, including non-visible elements such as transform matrices.
+The [SceneGraph](/docs/concepts/graphics/scenic/scenic.md#scenic-resource-graph) as text is useful when you want to see all the resources, including non-visible elements such as transform matrices.
 
 #### Dump the SceneGraph in Bugreport
 The Fuchsia Bugreport contains the SceneGraph that is rendered to the screen. Capture it from your host workstation using the following commands:

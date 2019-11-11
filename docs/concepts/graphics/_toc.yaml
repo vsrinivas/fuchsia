@@ -2,15 +2,15 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Magma (Vulkan driver)"
-  section:
-  - include: /docs/concepts/graphics/magma/_toc.yaml
-- title: "UI services"
-  section:
-  - include: /docs/concepts/graphics/ui/_toc.yaml
-- title: "Escher (physically-based renderer)"
+- title: "Escher (Physically-based renderer)"
   section:
   - include: /docs/concepts/graphics/escher/_toc.yaml
 - title: "Flutter (UI toolkit)"
   path: //flutter.io/
   status: external
+- title: "Magma (GPU driver)"
+  section:
+  - include: /docs/concepts/graphics/magma/_toc.yaml
+- title: "Scenic (Graphics engine)"
+  section:
+  - include: /docs/concepts/graphics/scenic/_toc.yaml

@@ -113,8 +113,8 @@ also provides core drivers and Fuchsia's libc implementation.
 [telephony]: /src/connectivity/telephony/
 [magma]: /docs/concepts/graphics/magma/README.md
 [escher]: /docs/concepts/graphics/escher/README.md
-[ui-overview]: /docs/concepts/graphics/ui/README.md
-[scenic]: /docs/concepts/graphics/ui/scenic.md
-[input-manager]: /docs/concepts/graphics/ui/input.md
+[ui-overview]: /docs/concepts/graphics/scenic/README.md
+[scenic]: /docs/concepts/graphics/scenic/scenic.md
+[input-manager]: /docs/concepts/graphics/scenic/input.md
 [flutter]: https://flutter.dev/
 [software-update-system]: /docs/concepts/system/software_update_system.md
