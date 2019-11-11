@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_bluetooth as fidl, std::fmt};
+use {
+    failure::{bail, Error},
+    fidl_fuchsia_bluetooth as fidl,
+    std::fmt,
+};
 
 /// A Bluetooth device address can either be public or private. The controller device address used
 /// in BR/EDR (aka BD_ADDR) and LE have the "public" address type. A private address is one that is
@@ -52,6 +56,39 @@ impl Address {
             }
         }
     }
+    pub fn public_from_str(s: &str) -> Result<Address, Error> {
+        Ok(Address::Public(le_bytes_from_be_str(s)?))
+    }
+    pub fn random_from_str(s: &str) -> Result<Address, Error> {
+        Ok(Address::Random(le_bytes_from_be_str(s)?))
+    }
+
+    pub fn address_type_string(&self) -> String {
+        match self {
+            Address::Public(_) => "Public".to_string(),
+            Address::Random(_) => "Random".to_string(),
+        }
+    }
+}
+
+/// Read a string of bytes in BigEndian Hex and produce a slice in LittleEndian
+/// E.g. 0x010203040506 becomes [6,5,4,3,2,1]
+fn le_bytes_from_be_str(s: &str) -> Result<AddressBytes, Error> {
+    let mut bytes = [0; 6];
+    let mut insert_cursor = 6; // Start back and work forward
+
+    for octet in s.split(|c| c == ':') {
+        if insert_cursor == 0 {
+            bail!("Too many octets");
+        }
+        bytes[insert_cursor - 1] = u8::from_str_radix(octet, 16)?;
+        insert_cursor -= 1;
+    }
+
+    if insert_cursor != 0 {
+        bail!("Too few octets")
+    }
+    Ok(bytes)
 }
 
 impl From<&fidl::Address> for Address {
@@ -91,13 +128,71 @@ impl fmt::Display for Address {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
+    use proptest::prelude::*;
+
+    pub fn any_public_address() -> impl Strategy<Value = Address> {
+        any::<[u8; 6]>().prop_map(Address::Public)
+    }
+
+    pub fn any_random_address() -> impl Strategy<Value = Address> {
+        any::<[u8; 6]>().prop_map(Address::Random)
+    }
+
+    pub fn any_address() -> impl Strategy<Value = Address> {
+        prop_oneof![any_public_address(), any_random_address()]
+    }
+
+    proptest! {
+        #[test]
+        fn public_address_str_roundtrip(address in any_public_address()) {
+            let str_rep = address.to_string();
+            assert_eq!(
+                Address::public_from_str(&str_rep).map_err(|e| e.to_string()),
+                Ok(address),
+            );
+        }
+
+        #[test]
+        fn random_address_str_roundtrip(address in any_random_address()) {
+            let str_rep = address.to_string();
+            assert_eq!(
+                Address::random_from_str(&str_rep).map_err(|e| e.to_string()),
+                Ok(address),
+            );
+        }
+
+        #[test]
+        fn any_address_fidl_roundtrip(address in any_address()) {
+            let fidl_address: fidl::Address = address.into();
+            assert_eq!(address, fidl_address.into());
+        }
+    }
 
     #[test]
     fn address_to_string() {
         let address = Address::Public([0x01, 0x02, 0x03, 0xDD, 0xEE, 0xFF]);
         assert_eq!("FF:EE:DD:03:02:01", address.to_string());
+    }
+
+    #[test]
+    fn address_from_string_too_few_octets() {
+        let str_rep = "01:02:03:04:05";
+        let parsed = Address::public_from_str(&str_rep).map_err(|e| e.to_string());
+        assert_eq!(parsed, Err("Too few octets".to_string()));
+    }
+    #[test]
+    fn address_from_string_too_many_octets() {
+        let str_rep = "01:02:03:04:05:06:07";
+        let parsed = Address::public_from_str(&str_rep).map_err(|e| e.to_string());
+        assert_eq!(parsed, Err("Too many octets".to_string()));
+    }
+    #[test]
+    fn address_from_string_non_hex_chars() {
+        let str_rep = "01:02:03:04:05:0G";
+        let parsed = Address::public_from_str(&str_rep).map_err(|e| e.to_string());
+        assert_eq!(parsed, Err("invalid digit found in string".to_string()));
     }
 
     #[test]

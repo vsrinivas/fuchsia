@@ -35,6 +35,7 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:uuid",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",

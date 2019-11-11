@@ -69,16 +69,13 @@ macro_rules! run_test {
     }};
 }
 
-/// Collect a Vector of Results into a Result of a Vector. If all results are
-/// `Ok`, then return `Ok` of the results. Otherwise return the first `Err`.
-pub fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
-    results.into_iter().collect()
-}
-
 macro_rules! run_suite {
     ($name:tt, [$($test:ident),+]) => {{
         println!(">>> Running {} tests:", $name);
-        crate::harness::collect_results(vec![$( run_test!($test), )*])?;
+        {
+            use fuchsia_bluetooth::util::CollectExt;
+            vec![$( run_test!($test), )*].into_iter().collect_results()?;
+        }
         println!();
         Ok(())
     }}

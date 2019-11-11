@@ -21,7 +21,7 @@ use {
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{AdapterInfo, BondingData, Peer},
+        types::{AdapterInfo, Address, BondingData, Peer, PeerId},
     },
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -29,13 +29,16 @@ use {
     futures::{channel::mpsc, FutureExt, TryFutureExt},
     parking_lot::RwLock,
     slab::Slab,
-    std::collections::HashMap,
-    std::fs::File,
-    std::future::Future,
-    std::marker::Unpin,
-    std::path::Path,
-    std::sync::{Arc, Weak},
-    std::task::{Context, Poll, Waker},
+    std::{
+        collections::HashMap,
+        convert::TryFrom,
+        fs::File,
+        future::Future,
+        marker::Unpin,
+        path::Path,
+        sync::{Arc, Weak},
+        task::{Context, Poll, Waker},
+    },
 };
 
 use crate::{
@@ -437,7 +440,7 @@ impl HostDispatcher {
         }
     }
 
-    pub async fn forget(&mut self, peer_id: String) -> types::Result<()> {
+    pub async fn forget(&mut self, peer_id: PeerId) -> types::Result<()> {
         // Try to delete from each adapter, even if it might not have the peer.
         // peers will be updated by the disconnection(s).
         let adapters = self.get_all_adapters().await;
@@ -448,7 +451,7 @@ impl HostDispatcher {
         for adapter in adapters {
             let adapter_path = adapter.read().path.clone();
 
-            let fut = adapter.write().forget(peer_id.clone());
+            let fut = adapter.write().forget(peer_id.to_string());
             match fut.await {
                 Ok(()) => adapters_removed += 1,
                 Err(types::Error::HostError(FidlError {
@@ -461,7 +464,7 @@ impl HostDispatcher {
             }
         }
 
-        match self.state.write().stash.rm_peer(&peer_id) {
+        match self.state.write().stash.rm_peer(peer_id) {
             Err(_) => return Err(err_msg("Couldn't remove peer").into()),
             Ok(_) => (),
         }
@@ -802,15 +805,17 @@ async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDe
     let adapter_info = host
         .get_info()
         .await
-        .map(|info| Inspectable::new(AdapterInfo::from(info), node))
-        .map_err(|_| err_msg("failed to obtain bt-host information"))?;
+        .map_err(|_| err_msg("failed to obtain bt-host information"))
+        .and_then(|info| AdapterInfo::try_from(info))
+        .map(|info| Inspectable::new(info, node))?;
+
     Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
 }
 
 async fn try_restore_bonds(
     host_device: Arc<RwLock<HostDevice>>,
     hd: HostDispatcher,
-    address: &str,
+    address: &Address,
 ) -> types::Result<()> {
     // Load bonding data that use this host's `address` as their "local identity address".
     let opt_data: Option<Vec<_>> = {
@@ -838,7 +843,7 @@ fn generate_irk() -> Result<LocalKey, zx::Status> {
 fn assign_host_data(
     host_device: Arc<RwLock<HostDevice>>,
     hd: HostDispatcher,
-    address: &str,
+    address: &Address,
 ) -> Result<(), Error> {
     // Obtain an existing IRK or generate a new one if one doesn't already exists for |address|.
     let stash = &mut hd.state.write().stash;

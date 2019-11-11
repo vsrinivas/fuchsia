@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    failure::{err_msg, Error},
     fidl::{encoding::OutOfLine, endpoints::RequestStream},
     fidl_fuchsia_bluetooth_control::{self as control, ControlRequest, ControlRequestStream},
-    fuchsia_bluetooth::bt_fidl_status,
+    fuchsia_bluetooth::{bt_fidl_status, types::PeerId},
     fuchsia_syslog::fx_log_warn,
     futures::prelude::*,
     std::sync::Arc,
@@ -72,7 +72,13 @@ async fn handler(
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
-            let result = hd.forget(device_id).await;
+            let peer_id = device_id
+                .parse::<PeerId>()
+                .map_err(|_| err_msg(format!("Invalid peer identifier: {}", device_id)));
+            let result = match peer_id {
+                Ok(peer_id) => hd.forget(peer_id).await,
+                Err(e) => Err(e.into()),
+            };
             responder.send(&mut status_response(result))
         }
         ControlRequest::Disconnect { device_id, responder } => {

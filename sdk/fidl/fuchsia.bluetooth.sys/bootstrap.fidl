@@ -6,6 +6,7 @@ library fuchsia.bluetooth.sys;
 
 enum BootstrapError : uint32 {
     INVALID_HOST_IDENTITY = 1;
+    WRITE_FAILURE = 2;
 };
 
 /// Protocol used to initialize persistent core Bluetooth data. This protocol populates data that

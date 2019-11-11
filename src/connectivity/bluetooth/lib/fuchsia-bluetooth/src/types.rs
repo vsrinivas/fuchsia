@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #![allow(warnings)]
-use {fidl_fuchsia_bluetooth, std::fmt};
+use {
+    fidl_fuchsia_bluetooth,
+    std::{fmt, str::FromStr},
+};
 
 pub use {
     self::uuid::*, adapter_info::*, address::*, bonding_data::*, host_info::*, id::*, peer::*,
@@ -63,5 +66,33 @@ impl fmt::Display for Status {
 impl fmt::Debug for DeviceClass {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{:?}", self.0)
+    }
+}
+
+/// A struct indicating either A or B or Both, but not neither - at least one must be present
+/// Useful when indicating support for Le or BrEdr, where dual mode is also supported but we
+/// require at least one. This avoids extra error checking that would be required if two options
+/// were used.
+#[derive(Clone, Debug, PartialEq)]
+pub enum OneOrBoth<L, R> {
+    Left(L),
+    Both(L, R),
+    Right(R),
+}
+
+impl<L, R> OneOrBoth<L, R> {
+    pub fn left(&self) -> Option<&L> {
+        match &self {
+            OneOrBoth::Left(l) => Some(l),
+            OneOrBoth::Both(l, _) => Some(l),
+            OneOrBoth::Right(_) => None,
+        }
+    }
+    pub fn right(&self) -> Option<&R> {
+        match &self {
+            OneOrBoth::Left(_) => None,
+            OneOrBoth::Both(_, r) => Some(r),
+            OneOrBoth::Right(r) => Some(r),
+        }
     }
 }

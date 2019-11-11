@@ -19,6 +19,7 @@ use {
     futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
     std::collections::HashMap,
+    std::convert::TryInto,
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -159,6 +160,13 @@ pub async fn handle_events<H: HostListener>(
             HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
+                let data: BondingData = match data.try_into() {
+                    Err(e) => {
+                        fx_log_err!("Invalid bonding data, ignoring: {:#?}", e);
+                        continue;
+                    }
+                    Ok(data) => data,
+                };
                 if let Err(e) = listener.on_new_host_bond(data.into()) {
                     fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }

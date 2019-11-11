@@ -68,10 +68,10 @@ table BredrData {
     /// The public device address of the peer.
     1: bt.Address address;
 
-    /// True if the peer prefers to lead the piconet. This is determined by role
-    /// switch procedures. Paging and connecting from a peer does not automatically
-    /// set this flag.
-    2: bool piconet_leader;
+    /// The peer's preferred piconet role. This is determined by role switch procedures. Paging and
+    /// connecting from a peer does not automatically set this flag. If absent, the peer has not
+    /// expressed a preference.
+    2: bt.ConnectionRole role_preference;
 
     /// Known service UUIDs obtained from EIR data or SDP.
     3: vector<bt.Uuid> services;
@@ -103,6 +103,9 @@ table BondingData {
 table HostData {
     /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
     /// Addresses when privacy is enabled.
+    ///
+    /// May be absent for hosts that do not use LE privacy, or that only use Non-Resolvable Private
+    /// Addresses.
     ///
     /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
     /// care to assign an IRK that consistent with the local bt-host identity.

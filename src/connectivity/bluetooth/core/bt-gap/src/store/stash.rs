@@ -9,15 +9,26 @@ use {
     fidl_fuchsia_stash::{
         GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
     },
-    fuchsia_bluetooth::{error::Error as BtError, inspect::Inspectable, types::BondingData},
+    fuchsia_bluetooth::{
+        error::Error as BtError,
+        inspect::Inspectable,
+        types::{Address, BondingData, PeerId},
+    },
     fuchsia_inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde_json,
     std::collections::HashMap,
+    std::convert::TryInto,
 };
 
 #[cfg(test)]
-use {fidl::endpoints::Proxy, fuchsia_async as fasync, fuchsia_zircon as zx};
+use {
+    fidl::endpoints::Proxy,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::{LeData, OneOrBoth},
+    fuchsia_zircon as zx,
+    std::collections::HashSet,
+};
 
 use crate::store::{
     keys::{
@@ -65,12 +76,11 @@ pub struct Stash {
 
     /// In-memory state of the bonding data stash. Each entry is hierarchically indexed by a
     /// local Bluetooth host identity and a peer device identifier.
-    bonding_data: HashMap<String, HashMap<String, Inspectable<BondingData>>>,
+    bonding_data: HashMap<Address, HashMap<PeerId, Inspectable<BondingData>>>,
 
     /// Persisted data for a particular local Bluetooth host, indexed by local Bluetooth host
     /// identity.
-    // TODO(armansito): Introduce a concrete type for DeviceAddress instead of String.
-    host_data: HashMap<String, HostData>,
+    host_data: HashMap<Address, HostData>,
 
     /// Handle to inspect data
     inspect: fuchsia_inspect::Node,
@@ -87,7 +97,7 @@ impl Stash {
         // Persist the serialized blob.
         let serialized = serde_json::to_string(&BondingDataSerializer(&data.clone().into()))?;
         self.proxy
-            .set_value(&bonding_data_key(&data.identifier), &mut Value::Stringval(serialized))?;
+            .set_value(&bonding_data_key(data.identifier), &mut Value::Stringval(serialized))?;
         self.proxy.commit()?;
 
         // Update the in memory cache.
@@ -99,7 +109,10 @@ impl Stash {
 
     /// Returns an iterator over the bonding data entries for the local adapter with the given
     /// `address`. Returns None if no such data exists.
-    pub fn list_bonds(&self, local_address: &str) -> Option<impl Iterator<Item = &BondingData>> {
+    pub fn list_bonds(
+        &self,
+        local_address: &Address,
+    ) -> Option<impl Iterator<Item = &BondingData>> {
         Some(
             self.bonding_data
                 .get(local_address)?
@@ -111,25 +124,25 @@ impl Stash {
 
     /// Removes persisted bond for a peer and removes its information from any adapters that have
     /// it. Returns an error for failures but not if the peer isn't found.
-    pub fn rm_peer(&mut self, peer_id: &str) -> Result<(), Error> {
+    pub fn rm_peer(&mut self, peer_id: PeerId) -> Result<(), Error> {
         fx_log_info!("rm_peer (id: {})", peer_id);
 
         // Delete the persisted bond blob.
-        self.proxy.delete_value(&bonding_data_key(&peer_id))?;
+        self.proxy.delete_value(&bonding_data_key(peer_id))?;
         self.proxy.commit()?;
 
         // Delete peer from memory cache of all adapters.
-        self.bonding_data.values_mut().for_each(|m| m.retain(|k, _| k != peer_id));
+        self.bonding_data.values_mut().for_each(|m| m.retain(|&k, _| k != peer_id));
         Ok(())
     }
 
     /// Returns the local host data for the given local `address`.
-    pub fn get_host_data(&self, local_address: &str) -> Option<&HostData> {
+    pub fn get_host_data(&self, local_address: &Address) -> Option<&HostData> {
         self.host_data.get(local_address)
     }
 
     /// Updates the host data for the host with the given identity address.
-    pub fn store_host_data(&mut self, local_addr: &str, data: HostData) -> Result<(), Error> {
+    pub fn store_host_data(&mut self, local_addr: &Address, data: HostData) -> Result<(), Error> {
         fx_log_info!("store_host_data (local address: {})", local_addr);
 
         // Persist the serialized blob.
@@ -138,7 +151,7 @@ impl Stash {
         self.proxy.commit()?;
 
         // Update the in memory cache.
-        self.host_data.insert(local_addr.to_string(), data);
+        self.host_data.insert(local_addr.clone(), data);
         Ok(())
     }
 
@@ -156,7 +169,7 @@ impl Stash {
     async fn load_bonds<'a>(
         accessor: &'a StoreAccessorProxy,
         inspect: &'a fuchsia_inspect::Node,
-    ) -> Result<HashMap<String, HashMap<String, Inspectable<BondingData>>>, Error> {
+    ) -> Result<HashMap<Address, HashMap<PeerId, Inspectable<BondingData>>>, Error> {
         // Obtain a list iterator for all cached bonding data.
         let (iter, server_end) = create_proxy::<GetIteratorMarker>()?;
         accessor.get_prefix(BONDING_DATA_PREFIX, server_end)?;
@@ -170,12 +183,11 @@ impl Stash {
             for key_value in next {
                 if let Value::Stringval(json) = key_value.val {
                     let bonding_data: BondingDataDeserializer = serde_json::from_str(&json)?;
-                    let bonding_data = BondingData::from(bonding_data.contents());
+                    let bonding_data = BondingData::from(bonding_data.contents().try_into()?);
                     let node = inspect.create_child(format!("bond {}", bonding_data.identifier));
                     let bonding_data = Inspectable::new(bonding_data, node);
-                    let local_address_entries = bonding_map
-                        .entry(bonding_data.local_address.clone())
-                        .or_insert(HashMap::new());
+                    let local_address_entries =
+                        bonding_map.entry(bonding_data.local_address).or_insert(HashMap::new());
                     local_address_entries.insert(bonding_data.identifier.clone(), bonding_data);
                 } else {
                     fx_log_err!("stash malformed: bonding data should be a string");
@@ -188,7 +200,7 @@ impl Stash {
 
     async fn load_host_data(
         accessor: &StoreAccessorProxy,
-    ) -> Result<HashMap<String, HostData>, Error> {
+    ) -> Result<HashMap<Address, HostData>, Error> {
         // Obtain a list iterator for all cached host data.
         let (iter, server_end) = create_proxy::<GetIteratorMarker>()?;
         accessor.get_prefix(HOST_DATA_PREFIX, server_end)?;
@@ -200,11 +212,12 @@ impl Stash {
                 break;
             }
             for key_value in next {
-                let host_id = host_id_from_key(&key_value.key)?;
+                let host_address = host_id_from_key(&key_value.key)?;
+                let host_address = Address::public_from_str(&host_address)?;
                 if let Value::Stringval(json) = key_value.val {
                     let host_data: HostDataDeserializer = serde_json::from_str(&json)?;
                     let host_data = host_data.contents();
-                    host_data_map.insert(host_id, host_data);
+                    host_data_map.insert(host_address, host_data);
                 } else {
                     fx_log_err!("stash malformed: host data should be a string");
                     return Err(BtError::new("failed to initialize stash").into());
@@ -247,7 +260,8 @@ mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_control::LocalKey;
     use {
-        fuchsia_async as fasync, fuchsia_component::client::connect_to_service, pin_utils::pin_mut,
+        core::hash::Hash,
+        fuchsia_component::client::connect_to_service,
     };
 
     // create_stash_accessor will create a new accessor to stash scoped under the given test name.
@@ -270,133 +284,187 @@ mod tests {
         Ok(acc)
     }
 
-    #[test]
-    fn new_stash_succeeds_with_empty_values() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_succeeds_with_empty_values() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_empty_values")
+        let accessor = create_stash_accessor("new_stash_succeeds_with_empty_values")
             .expect("failed to create StashAccessor");
-        let stash_new_future = Stash::new(accessor_proxy, inspect);
-        pin_mut!(stash_new_future);
+        let stash = Stash::new(accessor, inspect).await.expect("expected Stash to initialize");
 
         // The stash should be initialized with no data.
-        assert!(exec
-            .run_singlethreaded(stash_new_future)
-            .expect("expected Stash to initialize")
-            .bonding_data
-            .is_empty());
+        assert!(stash.bonding_data.is_empty());
     }
 
-    #[test]
-    fn new_stash_fails_with_malformed_key_value_entry() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_fails_with_malformed_key_value_entry() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor_proxy =
-            create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
-                .expect("failed to create StashAccessor");
+        let accessor = create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
+            .expect("failed to create StashAccessor");
 
         // Set a key/value that contains a non-string value.
-        accessor_proxy
+        accessor
             .set_value("bonding-data:test1234", &mut Value::Intval(5))
             .expect("failed to set a bonding data value");
-        accessor_proxy.commit().expect("failed to commit a bonding data value");
+        accessor.commit().expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        let stash_new_future = Stash::new(accessor_proxy, inspect);
-        assert!(exec.run_singlethreaded(stash_new_future).is_err());
+        assert!(Stash::new(accessor, inspect).await.is_err());
     }
 
-    #[test]
-    fn new_stash_fails_with_malformed_json() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_fails_with_malformed_json() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a mock Stash service interface.
-        let accessor_proxy = create_stash_accessor("new_stash_fails_with_malformed_json")
+        let accessor = create_stash_accessor("new_stash_fails_with_malformed_json")
             .expect("failed to create StashAccessor");
 
         // Set a vector that contains a malformed JSON value
-        accessor_proxy
+        accessor
             .set_value("bonding-data:test1234", &mut Value::Stringval("{0}".to_string()))
             .expect("failed to set a bonding data value");
-        accessor_proxy.commit().expect("failed to commit a bonding data value");
+        accessor.commit().expect("failed to commit a bonding data value");
 
         // The stash should fail to initialize.
-        let stash_new_future = Stash::new(accessor_proxy, inspect);
-        assert!(exec.run_singlethreaded(stash_new_future).is_err());
+        assert!(Stash::new(accessor, inspect).await.is_err());
     }
 
-    #[test]
-    fn new_stash_succeeds_with_values() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    fn host_data_1() -> HostData {
+        HostData {
+            irk: Some(Box::new(LocalKey {
+                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            })),
+        }
+    }
 
+    fn host_data_2() -> HostData {
+        HostData {
+            irk: Some(Box::new(LocalKey {
+                value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+            })),
+        }
+    }
+
+    fn host_text_1() -> Value {
+        Value::Stringval(
+            "{\"irk\":{\"value\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}}".to_string(),
+        )
+    }
+
+    fn host_text_2() -> Value {
+        Value::Stringval(
+            "{\"irk\":{\"value\":[16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]}}".to_string(),
+        )
+    }
+
+    fn default_le_data() -> LeData {
+        LeData {
+            address: Address::Public([1, 0, 0, 0, 0, 0]),
+            connection_parameters: None,
+            services: vec![],
+            ltk: None,
+            irk: None,
+            csrk: None,
+        }
+    }
+
+    fn bond_data_1() -> BondingData {
+        BondingData {
+            identifier: PeerId(1),
+            local_address: Address::Public([1, 0, 0, 0, 0, 0]),
+            name: Some("Test Device 1".to_string()),
+            data: OneOrBoth::Left(default_le_data()),
+        }
+    }
+    fn bond_data_2() -> BondingData {
+        BondingData {
+            identifier: PeerId(2),
+            local_address: Address::Public([1, 0, 0, 0, 0, 0]),
+            name: Some("Test Device 2".to_string()),
+            data: OneOrBoth::Left(default_le_data()),
+        }
+    }
+
+    fn bond_data_3() -> BondingData {
+        BondingData {
+            identifier: PeerId(3),
+            local_address: Address::Public([2, 0, 0, 0, 0, 0]),
+            name: None,
+            data: OneOrBoth::Left(default_le_data()),
+        }
+    }
+
+    fn bond_entry_1() -> Value {
+        Value::Stringval(
+                "{\"identifier\":\"0000000000000001\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":\"Test Device 1\",\
+                \"le\":{\"address\":\"00:00:00:00:00:01\",\"addressType\":\"lePublic\",\"connectionParameters\":null,\"services\":[],\"ltk\":null,\"irk\":null,\"csrk\":null},\
+                \"bredr\":null}".to_string()
+        )
+    }
+
+    fn bond_entry_2() -> Value {
+        Value::Stringval(
+            r#"
+            {
+            "identifier": "2",
+            "localAddress": "00:00:00:00:00:01",
+            "name": "Test Device 2",
+            "le": {
+                "address": "00:00:00:00:00:01",
+                "addressType": "lePublic",
+                "connectionParameters": null,
+                "services": [],
+                "ltk": null,
+                "irk": null,
+                "csrk": null
+            },
+            "bredr": null
+            }"#
+            .to_string(),
+        )
+    }
+    fn bond_entry_3() -> Value {
+        Value::Stringval(
+            r#"
+            {
+            "identifier": "3",
+            "localAddress": "00:00:00:00:00:02",
+            "name": null,
+            "le": {
+                "address": "00:00:00:00:00:01",
+                "addressType": "lePublic",
+                "connectionParameters": null,
+                "services": [],
+                "ltk": null,
+                "irk": null,
+                "csrk": null
+            },
+            "bredr": null
+            }"#
+            .to_string(),
+        )
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_succeeds_with_values() {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor_proxy = create_stash_accessor("new_stash_succeeds_with_values")
+        let accessor = create_stash_accessor("new_stash_succeeds_with_values")
             .expect("failed to create StashAccessor");
 
         // Insert values into stash that contain bonding data for several devices.
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-1",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-1",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": "Test Device 1",
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-2",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-2",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": "Test Device 2",
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-3",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-3",
-                       "localAddress": "00:00:00:00:00:02",
-                       "name": null,
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy.commit().expect("failed to commit bonding data values");
+        accessor.set_value("bonding-data:1", &mut bond_entry_1()).expect("failed to set value");
+        accessor.set_value("bonding-data:2", &mut bond_entry_2()).expect("failed to set value");
+        accessor.set_value("bonding-data:3", &mut bond_entry_3()).expect("failed to set value");
+        accessor.commit().expect("failed to commit bonding data values");
 
         // The stash should initialize with bonding data stored in stash
-        let stash_new_future = Stash::new(accessor_proxy, inspect);
-        let stash = exec.run_singlethreaded(stash_new_future).expect("stash failed to initialize");
+        let stash = Stash::new(accessor, inspect).await.expect("stash failed to initialize");
 
         // There should be devices registered for two local addresses.
         assert_eq!(2, stash.bonding_data.len());
@@ -404,348 +472,154 @@ mod tests {
         // The first local address should have two devices associated with it.
         let local = stash
             .bonding_data
-            .get("00:00:00:00:00:01")
+            .get(&Address::Public([1, 0, 0, 0, 0, 0]))
             .expect("could not find local address entries");
         assert_eq!(2, local.len());
-        let bond: &BondingData = &*local.get("id-1").expect("could not find device");
-        assert_eq!(
-            &BondingData {
-                identifier: "id-1".to_string(),
-                local_address: "00:00:00:00:00:01".to_string(),
-                name: Some("Test Device 1".to_string()),
-                le: None,
-                bredr: None,
-            },
-            bond
-        );
-        let bond: &BondingData = &*local.get("id-2").expect("could not find device");
-        assert_eq!(
-            &BondingData {
-                identifier: "id-2".to_string(),
-                local_address: "00:00:00:00:00:01".to_string(),
-                name: Some("Test Device 2".to_string()),
-                le: None,
-                bredr: None,
-            },
-            bond
-        );
+        let bond: &BondingData = &*local.get(&PeerId(1)).expect("could not find device");
+        assert_eq!(&bond_data_1(), bond);
+        let bond: &BondingData = &*local.get(&PeerId(2)).expect("could not find device");
+        assert_eq!(&bond_data_2(), bond);
 
         // The second local address should have one device associated with it.
         let local = stash
             .bonding_data
-            .get("00:00:00:00:00:02")
+            .get(&Address::Public([2, 0, 0, 0, 0, 0]))
             .expect("could not find local address entries");
         assert_eq!(1, local.len());
-        let bond: &BondingData = &*local.get("id-3").expect("could not find device");
-        assert_eq!(
-            &BondingData {
-                identifier: "id-3".to_string(),
-                local_address: "00:00:00:00:00:02".to_string(),
-                name: None,
-                le: None,
-                bredr: None,
-            },
-            bond
-        );
+        let bond: &BondingData = &*local.get(&PeerId(3)).expect("could not find device");
+        assert_eq!(&bond_data_3(), bond);
     }
 
-    #[test]
-    fn store_bond_commits_entry() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
-        let accessor_proxy = create_stash_accessor("store_bond_commits_entry")
-            .expect("failed to create StashAccessor");
-        let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy.clone(), inspect))
-            .expect("stash failed to initialize");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn store_bond_commits_entry() {
+        let mut stash = setup_stash("store_bond_commits_entry", vec![]).await;
+        let accessor = stash.proxy.clone();
 
-        let bonding_data = BondingData {
-            identifier: "id-1".to_string(),
-            local_address: "00:00:00:00:00:01".to_string(),
-            name: None,
-            le: None,
-            bredr: None,
-        };
-        assert!(stash.store_bond(bonding_data).is_ok());
+        assert!(stash.store_bond(bond_data_1()).is_ok());
 
         // Make sure that the in-memory cache has been updated.
         assert_eq!(1, stash.bonding_data.len());
-        let bond: &BondingData =
-            &*stash.bonding_data.get("00:00:00:00:00:01").unwrap().get("id-1").unwrap();
-        assert_eq!(
-            &BondingData {
-                identifier: "id-1".to_string(),
-                local_address: "00:00:00:00:00:01".to_string(),
-                name: None,
-                le: None,
-                bredr: None,
-            },
-            bond
-        );
+        let bond: &BondingData = &*stash
+            .bonding_data
+            .get(&Address::Public([1, 0, 0, 0, 0, 0]))
+            .unwrap()
+            .get(&PeerId(1))
+            .unwrap();
+        assert_eq!(&bond_data_1(), bond);
 
         // The new data should be accessible over FIDL.
-        assert_eq!(
-            exec.run_singlethreaded(accessor_proxy.get_value("bonding-data:id-1"))
-                .expect("failed to get value")
-                .map(|x| *x),
-            Some(Value::Stringval(
-                "{\"identifier\":\"id-1\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":null,\
-                 \"le\":null,\"bredr\":null}"
-                    .to_string()
-            ))
-        );
+        let result = accessor.get_value("bonding-data:0000000000000001").await;
+        let bond_data = result.expect("failed to get value").map(|x| *x);
+        assert_eq!(bond_data, Some(bond_entry_1()));
     }
 
-    #[test]
-    fn list_bonds() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
-        let accessor_proxy =
-            create_stash_accessor("list_bonds").expect("failed to create StashAccessor");
-
-        // Insert values into stash that contain bonding data for several devices.
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-1",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-1",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": null,
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-2",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-2",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": null,
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy.commit().expect("failed to initialize bonding data for testing");
-
-        let stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
-            .expect("stash failed to initialize");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn list_bonds() {
+        let initial_data =
+            vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
+        let stash = setup_stash("list_bonds", initial_data).await;
 
         // Should return None for unknown address.
-        assert!(stash.list_bonds("00:00:00:00:00:00").is_none());
+        assert_eq!(stash.list_bonds(&Address::Public([0, 0, 0, 0, 0, 0])).map(|iter| iter.collect::<Vec<_>>()), None);
 
-        let mut iter = stash.list_bonds("00:00:00:00:00:01").expect("expected to find address");
-        let next_id = &iter.next().unwrap().identifier.clone();
-        assert!("id-1" == next_id.as_str() || "id-2" == next_id.as_str());
-        let next_id = &iter.next().unwrap().identifier.clone();
-        assert!("id-1" == next_id.as_str() || "id-2" == next_id.as_str());
-        assert_eq!(None, iter.next());
+        let bonds = stash
+            .list_bonds(&Address::Public([1, 0, 0, 0, 0, 0]))
+            .expect("expected to find address");
+        let ids: HashSet<PeerId> = bonds.map(|bond| bond.identifier).collect();
+        assert_eq!(ids, set_of(vec![PeerId(1), PeerId(2)]));
     }
 
-    #[test]
-    fn get_host_data() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
-        let accessor_proxy =
-            create_stash_accessor("list_host_data").expect("failed to create StashAccessor");
-
-        // Insert test data
-        accessor_proxy
-            .set_value(
-                "host-data:00:00:00:00:00:01",
-                &mut Value::Stringval(
-                    r#"{
-                        "irk": {
-                            "value":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
-                        }
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy
-            .set_value(
-                "host-data:00:00:00:00:00:02",
-                &mut Value::Stringval(
-                    r#"{
-                        "irk": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy.commit().expect("failed to initialize host data for testing");
-
-        let stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
-            .expect("stash failed to initialize");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_host_data() {
+        let initial_data = vec![
+            ("host-data:00:00:00:00:00:01", host_text_1()),
+            ("host-data:00:00:00:00:00:02", host_text_2()),
+        ];
+        let stash = setup_stash("get_host_data", initial_data).await;
 
         // Should return None for unknown identity address.
-        assert!(stash.get_host_data("00:00:00:00:00:00").is_none());
+        assert!(stash.get_host_data(&Address::Public([0, 0, 0, 0, 0, 0])).is_none());
 
-        let host_data =
-            stash.get_host_data("00:00:00:00:00:01").expect("expected to find HostData");
-        assert_eq!(
-            &HostData {
-                irk: Some(Box::new(LocalKey {
-                    value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                })),
-            },
-            host_data
-        );
+        let host_data = stash
+            .get_host_data(&Address::Public([1, 0, 0, 0, 0, 0]))
+            .expect("expected to find HostData");
+        assert_eq!(&host_data_1(), host_data);
 
-        let host_data =
-            stash.get_host_data("00:00:00:00:00:02").expect("expected to find HostData");
-        assert_eq!(&HostData { irk: None }, host_data);
+        let host_data = stash
+            .get_host_data(&Address::Public([2, 0, 0, 0, 0, 0]))
+            .expect("expected to find HostData");
+        assert_eq!(&host_data_2(), host_data);
     }
 
-    #[test]
-    fn rm_peer() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
-        let accessor_proxy =
-            create_stash_accessor("rm_peer").expect("failed to create StashAccessor");
-
-        // Insert values into stash that contain bonding data for several devices.
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-1",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-1",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": null,
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy
-            .set_value(
-                "bonding-data:id-2",
-                &mut Value::Stringval(
-                    r#"
-                    {
-                       "identifier": "id-2",
-                       "localAddress": "00:00:00:00:00:01",
-                       "name": null,
-                       "le": null,
-                       "bredr": null
-                    }"#
-                    .to_string(),
-                ),
-            )
-            .expect("failed to set value");
-        accessor_proxy.commit().expect("failed to initialize bonding data for testing");
-
-        let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy, inspect))
-            .expect("stash failed to initialize");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn rm_peer() {
+        let initial_data =
+            vec![("bonding-data:1", bond_entry_1()), ("bonding-data:2", bond_entry_2())];
+        let mut stash = setup_stash("rm_peer", initial_data).await;
 
         // OK to remove some unknown peer...
-        assert!(stash.rm_peer("id-0").is_ok());
+        assert!(stash.rm_peer(PeerId(0)).is_ok());
 
         // ...or known peer.
-        assert!(stash.rm_peer("id-1").is_ok());
+        assert!(stash.rm_peer(PeerId(1)).is_ok());
 
         let local = stash
             .bonding_data
-            .get("00:00:00:00:00:01")
+            .get(&Address::Public([1, 0, 0, 0, 0, 0]))
             .expect("could not find local address entries");
         assert_eq!(1, local.len());
-        assert!(local.get("id-1").is_none());
-        let bond: &BondingData = &*(local.get("id-2").expect("could not find device"));
-        assert_eq!(
-            &BondingData {
-                identifier: "id-2".to_string(),
-                local_address: "00:00:00:00:00:01".to_string(),
-                name: None,
-                le: None,
-                bredr: None,
-            },
-            bond,
-        );
+        assert!(local.get(&PeerId(1)).is_none());
+        let bond: &BondingData = &*(local.get(&PeerId(2)).expect("could not find device"));
+        assert_eq!(&bond_data_2(), bond);
     }
 
-    #[test]
-    fn store_host_data() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
-        let accessor_proxy =
-            create_stash_accessor("store_local_irk").expect("failed to create StashAccessor");
-        let mut stash = exec
-            .run_singlethreaded(Stash::new(accessor_proxy.clone(), inspect))
-            .expect("stash failed to initialize");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn store_host_data() {
+        let host_address = Address::Public([1, 0, 0, 0, 0, 0]);
+        let mut stash = setup_stash("store_host_data", vec![]).await;
+        let accessor = stash.proxy.clone();
 
-        let host_data = HostData {
-            irk: Some(Box::new(LocalKey {
-                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            })),
-        };
-        assert!(stash.store_host_data("00:00:00:00:00:01", host_data).is_ok());
+        assert!(stash.store_host_data(&host_address, host_data_1()).is_ok());
 
         // Make sure the in-memory cache has been updated.
+        assert_eq!(Some(&host_data_1()), stash.host_data.get(&host_address));
         assert_eq!(1, stash.host_data.len());
-        assert_eq!(
-            &HostData {
-                irk: Some(Box::new(LocalKey {
-                    value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                })),
-            },
-            stash.host_data.get("00:00:00:00:00:01").unwrap()
-        );
 
         // The new data should be accessible over FIDL.
-        assert_eq!(
-            exec.run_singlethreaded(accessor_proxy.get_value("host-data:00:00:00:00:00:01"))
-                .expect("failed to get value")
-                .map(|x| *x),
-            Some(Value::Stringval(
-                "{\"irk\":{\"value\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}}".to_string()
-            ))
-        );
+        let host_text = accessor.get_value("host-data:00:00:00:00:00:01").await;
+        let host_text = host_text.expect("failed to get value").map(|x| *x);
+        assert_eq!(host_text, Some(host_text_1()));
 
         // It should be possible to overwrite the IRK.
-        let host_data = HostData {
-            irk: Some(Box::new(LocalKey {
-                value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-            })),
-        };
-        assert!(stash.store_host_data("00:00:00:00:00:01", host_data).is_ok());
+        assert!(stash.store_host_data(&host_address, host_data_2()).is_ok());
 
         // Make sure the in-memory cache has been updated.
+        assert_eq!(Some(&host_data_2()), stash.host_data.get(&host_address));
         assert_eq!(1, stash.host_data.len());
-        assert_eq!(
-            &HostData {
-                irk: Some(Box::new(LocalKey {
-                    value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-                })),
-            },
-            stash.host_data.get("00:00:00:00:00:01").unwrap()
-        );
 
         // The new data should be accessible over FIDL.
-        assert_eq!(
-            exec.run_singlethreaded(accessor_proxy.get_value("host-data:00:00:00:00:00:01"))
-                .expect("failed to get value")
-                .map(|x| *x),
-            Some(Value::Stringval(
-                "{\"irk\":{\"value\":[16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]}}".to_string()
-            ))
-        );
+        let host_text = accessor.get_value("host-data:00:00:00:00:00:01").await;
+        let host_text = host_text.expect("failed to get value").map(|x| *x);
+        assert_eq!(host_text, Some(host_text_2()));
+    }
+
+    async fn setup_stash(name: &'static str, entries: Vec<(&'static str, Value)>) -> Stash {
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let accessor = create_stash_accessor(name).expect("failed to create StashAccessor");
+
+        // Insert intial bonding data values into stash
+        for (id, mut entry) in entries {
+            accessor.set_value(id, &mut entry).expect("failed to set value");
+        }
+        accessor.commit().expect("Stash failed to initialize testing data");
+        Stash::new(accessor, inspect).await.expect("stash failed to initialize")
+    }
+
+    fn set_of<I>(elems: I) -> HashSet<I::Item>
+    where
+        I: IntoIterator,
+        I::Item: Eq + Hash,
+    {
+        elems.into_iter().collect()
     }
 }

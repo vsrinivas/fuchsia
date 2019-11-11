@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use {failure::Error, fuchsia_bluetooth::util::CollectExt};
 
 #[macro_use]
 mod harness;
@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
     // TODO(BT-20): Add test cases for GATT client role
     // TODO(BT-20): Add test cases for GATT server role
     // TODO(BT-20): Add test cases for BR/EDR and dual-mode connections
-    harness::collect_results(vec![
+    vec![
         // Tests that require bt-gap.cmx to not be running. Run these tests first as bt-gap
         // interferes with their operation.
         tests::host_driver::run_all(),
@@ -25,6 +25,8 @@ fn main() -> Result<(), Error> {
         tests::profile::run_all(),
         tests::low_energy_central::run_all(),
         tests::low_energy_peripheral::run_all(),
-    ])?;
+    ]
+    .into_iter()
+    .collect_results()?;
     Ok(())
 }

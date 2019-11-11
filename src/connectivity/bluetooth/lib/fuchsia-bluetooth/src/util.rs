@@ -111,3 +111,41 @@ pub fn clone_remote_device(d: &RemoteDevice) -> RemoteDevice {
         service_uuids: d.service_uuids.iter().cloned().collect(),
     }
 }
+
+pub trait CollectExt {
+    type Item;
+    type Err;
+    /// Collect an iterator of Results into a Result of a Vector. If all results are
+    /// `Ok`, then return `Ok` of the results. Otherwise return the first `Err` encountered.
+    /// This method exists primarily to improve type inference and remove the need for manual type
+    /// ascriptions
+    fn collect_results(self) -> Result<Vec<Self::Item>, Self::Err>;
+}
+
+impl<I, T, E> CollectExt for I
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    type Item = T;
+    type Err = E;
+    fn collect_results(self) -> Result<Vec<Self::Item>, Self::Err> {
+        self.collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn collect_results_all_ok() {
+        let v: Vec<Result<u64, ()>> = vec![Ok(1), Ok(2), Ok(3)];
+        assert_eq!(v.into_iter().collect_results(), Ok(vec![1, 2, 3]));
+    }
+
+    #[test]
+    fn collect_results_returns_first_err() {
+        let v: Vec<Result<u64, &'static str>> = vec![Ok(1), Err("2"), Err("3")];
+        assert_eq!(v.into_iter().collect_results(), Err("2"));
+    }
+}

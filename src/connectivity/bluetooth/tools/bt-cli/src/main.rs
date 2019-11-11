@@ -18,7 +18,9 @@ use {
     pin_utils::pin_mut,
     regex::Regex,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
-    std::{collections::HashMap, fmt::Write, iter::FromIterator, sync::Arc, thread},
+    std::{
+        collections::HashMap, convert::TryFrom, fmt::Write, iter::FromIterator, sync::Arc, thread,
+    },
 };
 
 use crate::{
@@ -35,17 +37,17 @@ static PROMPT: &str = "\x1b[34mbt>\x1b[0m ";
 static CLEAR_LINE: &str = "\x1b[2K";
 
 async fn get_active_adapter(control_svc: &ControlProxy) -> Result<String, Error> {
-    if let Some(adapter) = control_svc.get_active_adapter_info().await? {
-        return Ok(AdapterInfo::from(*adapter).to_string());
+    match control_svc.get_active_adapter_info().await? {
+        Some(adapter) => AdapterInfo::try_from(*adapter).map(|a| a.to_string()),
+        None => Ok(String::from("No Active Adapter")),
     }
-    Ok(String::from("No Active Adapter"))
 }
 
 async fn get_adapters(control_svc: &ControlProxy) -> Result<String, Error> {
     if let Some(adapters) = control_svc.get_adapters().await? {
         let mut string = String::new();
         for adapter in adapters {
-            let _ = writeln!(string, "{}", AdapterInfo::from(adapter));
+            let _ = writeln!(string, "{}", AdapterInfo::try_from(adapter)?);
         }
         return Ok(string);
     }

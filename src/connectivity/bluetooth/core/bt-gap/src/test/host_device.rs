@@ -11,7 +11,7 @@ use {
     fuchsia_bluetooth::{
         bt_fidl_status,
         inspect::{placeholder_node, Inspectable},
-        types::{AdapterInfo, BondingData, Peer},
+        types::{AdapterInfo, Address, BondingData, Peer},
     },
     fuchsia_zircon::DurationNum,
     futures::FutureExt,
@@ -44,7 +44,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let info = AdapterInfo::new(
         "foo".to_string(),
         TechnologyType::DualMode,
-        "00:00:00:00:00:00".to_string(),
+        Address::Public([0, 0, 0, 0, 0, 0]),
         None,
     );
     let info = Inspectable::new(info, placeholder_node());

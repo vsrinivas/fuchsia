@@ -12,6 +12,8 @@ use {
     uuid,
 };
 
+use crate::inspect::ToProperty;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Uuid(uuid::Uuid);
 
@@ -91,6 +93,13 @@ impl FromStr for Uuid {
 
     fn from_str(s: &str) -> Result<Uuid, Self::Err> {
         uuid::Uuid::parse_str(s).map(|uuid| Uuid(uuid))
+    }
+}
+
+impl ToProperty for Uuid {
+    type PropertyType = String;
+    fn to_property(&self) -> Self::PropertyType {
+        self.to_string()
     }
 }
 

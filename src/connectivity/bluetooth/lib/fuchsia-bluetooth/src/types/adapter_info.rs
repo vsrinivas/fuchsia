@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
     fidl_fuchsia_bluetooth_control as control,
     fuchsia_inspect::{self as inspect, Property},
+    std::convert::TryFrom,
     std::fmt,
+};
+
+use crate::{
+    inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
+    types::Address,
 };
 
 /// `AdapterState` is derived from deltas sent over the Control fidl protocol.
@@ -74,18 +79,19 @@ impl fmt::Display for AdapterState {
 pub struct AdapterInfo {
     pub identifier: String,
     pub technology: control::TechnologyType,
-    pub address: String,
+    pub address: Address,
     pub state: Option<AdapterState>,
 }
 
-impl From<control::AdapterInfo> for AdapterInfo {
-    fn from(a: control::AdapterInfo) -> AdapterInfo {
-        AdapterInfo {
+impl TryFrom<control::AdapterInfo> for AdapterInfo {
+    type Error = failure::Error;
+    fn try_from(a: control::AdapterInfo) -> Result<AdapterInfo, Self::Error> {
+        Ok(AdapterInfo {
             identifier: a.identifier,
             technology: a.technology,
-            address: a.address,
+            address: Address::public_from_str(&a.address)?,
             state: a.state.map(|s| AdapterState::from(*s)),
-        }
+        })
     }
 }
 
@@ -94,7 +100,7 @@ impl From<AdapterInfo> for control::AdapterInfo {
         control::AdapterInfo {
             identifier: a.identifier,
             technology: a.technology,
-            address: a.address,
+            address: a.address.to_string(),
             state: a.state.map(control::AdapterState::from).map(Box::new),
         }
     }
@@ -104,7 +110,7 @@ impl fmt::Display for AdapterInfo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         writeln!(fmt, "Adapter:")?;
         writeln!(fmt, "\tIdentifier:\t{}", self.identifier)?;
-        writeln!(fmt, "\tAddress:\t{}", self.address)?;
+        writeln!(fmt, "\tAddress:\t{}", self.address.to_string())?;
         writeln!(fmt, "\tTechnology:\t{:?}", self.technology)?;
         if let Some(state) = &self.state {
             for line in AdapterState::from(state.clone()).to_string().lines() {
@@ -119,7 +125,7 @@ impl AdapterInfo {
     pub fn new(
         identifier: String,
         technology: control::TechnologyType,
-        address: String,
+        address: Address,
         state: Option<AdapterState>,
     ) -> AdapterInfo {
         AdapterInfo { identifier, technology, address, state }
@@ -230,7 +236,7 @@ mod tests {
         AdapterInfo {
             identifier: "id".into(),
             technology: control::TechnologyType::DualMode,
-            address: "address".into(),
+            address: Address::Public([0, 0, 0, 0, 0, 0]),
             state,
         }
     }
@@ -238,7 +244,9 @@ mod tests {
     #[test]
     fn adapter_info_conversion() {
         let expected = adapter_info();
-        let round_trip_conversion = AdapterInfo::from(control::AdapterInfo::from(adapter_info()));
-        assert_eq!(expected, round_trip_conversion);
+        let round_trip_conversion =
+            AdapterInfo::try_from(control::AdapterInfo::from(adapter_info()))
+                .map_err(|e| e.to_string());
+        assert_eq!(Ok(expected), round_trip_conversion);
     }
 }
