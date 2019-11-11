@@ -17,8 +17,7 @@ namespace component {
 
 namespace {
 constexpr char kSandboxDocUrl[] =
-    "https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/"
-    "sandboxing.md#services";
+    "https://fuchsia.dev/fuchsia-src/concepts/framework/sandboxing#services";
 
 std::string ServiceNotInSandbox(const std::string& component_url, const std::string& service_name) {
   return fxl::Substitute(
