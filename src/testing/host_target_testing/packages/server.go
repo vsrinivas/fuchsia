@@ -28,7 +28,7 @@ type Server struct {
 	server *http.Server
 }
 
-func newServer(dir string, localHostname string) (*Server, error) {
+func newServer(dir string, localHostname string, repoName string) (*Server, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func newServer(dir string, localHostname string) (*Server, error) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	log.Printf("Serving %s on :%d", dir, port)
 
-	configURL, configHash, config, err := genConfig(dir, localHostname, port)
+	configURL, configHash, config, err := genConfig(dir, localHostname, repoName, port)
 	if err != nil {
 		listener.Close()
 		return nil, err
@@ -89,7 +89,7 @@ func (lw *loggingWriter) WriteHeader(status int) {
 }
 
 // writeConfig writes the source config to the repository.
-func genConfig(dir string, localHostname string, port int) (configURL string, configHash string, config []byte, err error) {
+func genConfig(dir string, localHostname string, repoName string, port int) (configURL string, configHash string, config []byte, err error) {
 	type keyConfig struct {
 		Type  string
 		Value string
@@ -138,7 +138,7 @@ func genConfig(dir string, localHostname string, port int) (configURL string, co
 	configURL = fmt.Sprintf("%s/host_target_testing/config.json", repoURL)
 
 	config, err = json.Marshal(&sourceConfig{
-		ID:          "host_target_testing",
+		ID:          repoName,
 		RepoURL:     repoURL,
 		BlobRepoURL: fmt.Sprintf("%s/blobs", repoURL),
 		RootKeys:    rootKeys,

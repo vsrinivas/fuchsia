@@ -6,6 +6,7 @@ package device
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/sl4f"
 	"fuchsia.googlesource.com/host_target_testing/sshclient"
 
 	"golang.org/x/crypto/ssh"
@@ -73,8 +75,8 @@ func (c *Client) WaitForDeviceToBeConnected() {
 	c.sshClient.WaitToBeConnected()
 }
 
-// RegisterDisconnectListener adds a waiter that gets notified when the ssh
-// client is disconnected.
+// RegisterDisconnectListener adds a waiter that gets notified when the ssh and
+// shell is disconnected.
 func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
 	c.sshClient.RegisterDisconnectListener(wg)
 }
@@ -97,18 +99,6 @@ func (c *Client) GetSystemImageMerkle() (string, error) {
 	}
 
 	return strings.TrimSpace(string(merkle)), nil
-}
-
-// GetBuildSnapshot fetch the device's current system version, as expressed by the file
-// /config/build-info/snapshot.
-func (c *Client) GetBuildSnapshot() ([]byte, error) {
-	const buildInfoSnapshot = "/config/build-info/snapshot"
-	snapshot, err := c.ReadRemotePath(buildInfoSnapshot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %q: %s", buildInfoSnapshot, err)
-	}
-
-	return snapshot, nil
 }
 
 // RebootToRecovery asks the device to reboot into the recovery partition. It
@@ -176,7 +166,7 @@ func (c *Client) ValidateStaticPackages() error {
 func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.Run(fmt.Sprintf(
+	err := c.sshClient.Run(fmt.Sprintf(
 		`(
 		test -e "%s" &&
 		while IFS='' read f; do
@@ -191,6 +181,17 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 	}
 
 	return stdout.Bytes(), nil
+}
+
+// DeleteRemotePath deletes a file off the remote device.
+func (c *Client) DeleteRemotePath(path string) error {
+	var stderr bytes.Buffer
+	err := c.sshClient.Run(fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
+	if err != nil {
+		return fmt.Errorf("failed to delete %q: %s: %s", path, err, string(stderr.Bytes()))
+	}
+
+	return nil
 }
 
 // RemoteFileExists checks if a file exists on the remote device.
@@ -217,16 +218,41 @@ func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
 	return c.Run(cmd, os.Stdout, os.Stderr)
 }
 
-// Wait for the path to exist on the device.
-func (c *Client) waitForDevicePath(path string) {
-	for {
-		log.Printf("waiting for %q to mount", path)
-		err := c.Run(fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, ioutil.Discard)
-		if err == nil {
-			break
-		}
-
-		log.Printf("sleeping")
-		time.Sleep(1 * time.Second)
+func (c *Client) StartRpcSession(repo *packages.Repository) (*sl4f.Client, error) {
+	// Determine the address of this device from the point of view of the target.
+	localHostname, err := c.sshClient.GetSshConnection()
+	if err != nil {
+		return nil, err
 	}
+
+	// Ensure this client is running system_image or system_image_prime from repo.
+	currentSystemImageMerkle, err := c.GetSystemImageMerkle()
+	if err != nil {
+		return nil, err
+	}
+	if err := repo.VerifyMatchesAnyUpdateSystemImageMerkle(currentSystemImageMerkle); err != nil {
+		return nil, err
+	}
+
+	// Serve the package repository.
+	repoName := "host_target_testing_sl4f"
+	repoServer, err := repo.Serve(localHostname, repoName)
+	if err != nil {
+		return nil, err
+	}
+	defer repoServer.Shutdown(context.Background())
+
+	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing".
+	log.Printf("registering package repository: %s", repoServer.Dir)
+	cmd := fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repoServer.URL, repoServer.Hash)
+	if err := c.sshClient.Run(cmd, os.Stdout, os.Stderr); err != nil {
+		return nil, err
+	}
+
+	rpcClient, err := sl4f.NewClient(c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
+	if err != nil {
+		return nil, fmt.Errorf("error creating sl4f client: %s", err)
+	}
+
+	return rpcClient, nil
 }

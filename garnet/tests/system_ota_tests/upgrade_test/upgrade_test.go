@@ -7,7 +7,6 @@ package upgrade
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,7 +16,7 @@ import (
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/util"
+	"fuchsia.googlesource.com/host_target_testing/sl4f"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -47,18 +46,32 @@ func TestOTA(t *testing.T) {
 	}
 	defer device.Close()
 
+	// Creating a sl4f.Client requires knowing the build currently running
+	// on the device, which not all test cases know during start. Store the
+	// one true client here, and pass around pointers to the various
+	// functions that may use it or device.Client to interact with the
+	// targer. All OTA attempts must first Close and nil out an existing
+	// rpcClient and replace it with a new one after reboot. The final
+	// rpcClient, if present, will be closed by the defer here.
+	var rpcClient *sl4f.Client
+	defer func() {
+		if rpcClient != nil {
+			rpcClient.Close()
+		}
+	}()
+
 	if c.ShouldRepaveDevice() {
-		doPaveDevice(t, device)
+		rpcClient = doPaveDevice(t, device)
 	}
 
 	if c.LongevityTest {
-		doTestLongevityOTAs(t, device)
+		doTestLongevityOTAs(t, device, &rpcClient)
 	} else {
-		doTestOTAs(t, device)
+		doTestOTAs(t, device, &rpcClient)
 	}
 }
 
-func doTestOTAs(t *testing.T, device *device.Client) {
+func doTestOTAs(t *testing.T, device *device.Client, rpcClient **sl4f.Client) {
 	outputDir := c.OutputDir
 	if outputDir == "" {
 		var err error
@@ -75,27 +88,30 @@ func doTestOTAs(t *testing.T, device *device.Client) {
 	}
 
 	// Install version N on the device if it is not already on that version.
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
-	if !isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+	if !isDeviceUpToDate(t, device, *rpcClient, expectedSystemImageMerkle) {
+		log.Printf("\n\n")
 		log.Printf("starting OTA from N-1 -> N test")
-		doSystemOTA(t, device, repo)
+		doSystemOTA(t, device, rpcClient, repo)
 		log.Printf("OTA from N-1 -> N successful")
 	}
 
+	log.Printf("\n\n")
 	log.Printf("starting OTA N -> N' test")
-	doSystemPrimeOTA(t, device, repo)
+	doSystemPrimeOTA(t, device, rpcClient, repo)
 	log.Printf("OTA from N -> N' successful")
 
+	log.Printf("\n\n")
 	log.Printf("starting OTA N' -> N test")
-	doSystemOTA(t, device, repo)
+	doSystemOTA(t, device, rpcClient, repo)
 	log.Printf("OTA from N' -> N successful")
 }
 
-func doTestLongevityOTAs(t *testing.T, device *device.Client) {
+func doTestLongevityOTAs(t *testing.T, device *device.Client, rpcClient **sl4f.Client) {
 	builder, err := c.GetUpgradeBuilder()
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +121,7 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 	attempt := 1
 	for {
 
-		log.Printf("Lookup up latest build for builder %s", builder)
+		log.Printf("Look up latest build for builder %s", builder)
 
 		buildID, err := builder.GetLatestBuildID()
 		if err != nil {
@@ -119,7 +135,7 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 		}
 		log.Printf("Longevity Test Attempt %d  upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
-		doTestLongevityOTAAttempt(t, device, buildID)
+		doTestLongevityOTAAttempt(t, device, rpcClient, buildID)
 
 		log.Printf("Longevity Test Attempt %d successful", attempt)
 		log.Printf("------------------------------------------------------------------------------")
@@ -129,7 +145,7 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client) {
 	}
 }
 
-func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, buildID string) {
+func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, rpcClient **sl4f.Client, buildID string) {
 	// Use the output dir if specified, otherwise download into a temporary directory.
 	outputDir := c.OutputDir
 	if outputDir == "" {
@@ -151,21 +167,22 @@ func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, buildID stri
 		t.Fatalf("failed to get repo for build: %s", err)
 	}
 
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+	if isDeviceUpToDate(t, device, *rpcClient, expectedSystemImageMerkle) {
 		log.Printf("device already up to date")
 		return
 	}
 
+	log.Printf("\n\n")
 	log.Printf("OTAing to %s", build)
-	doSystemOTA(t, device, repo)
+	doSystemOTA(t, device, rpcClient, repo)
 }
 
-func doPaveDevice(t *testing.T, device *device.Client) {
+func doPaveDevice(t *testing.T, device *device.Client) *sl4f.Client {
 	// Use the output dir if specified, otherwise download into a temporary directory.
 	outputDir := c.OutputDir
 	if outputDir == "" {
@@ -188,7 +205,7 @@ func doPaveDevice(t *testing.T, device *device.Client) {
 
 	log.Printf("starting pave")
 
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(downgradeRepo)
+	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
@@ -205,19 +222,28 @@ func doPaveDevice(t *testing.T, device *device.Client) {
 	// Wait for the device to come online.
 	device.WaitForDeviceToBeConnected()
 
-	validateDevice(t, device, downgradeRepo, expectedSystemImageMerkle)
+	rpcClient, err := device.StartRpcSession(downgradeRepo)
+	if err != nil {
+		// FIXME(40913): every downgrade builder should at least build
+		// sl4f as a universe package.
+		log.Printf("unable to connect to sl4f after pave: %s", err)
+		//t.Fatalf("unable to connect to sl4f after pave: %s", err)
+	}
+
+	validateDevice(t, device, rpcClient, downgradeRepo, expectedSystemImageMerkle)
 
 	log.Printf("paving successful")
 
+	return rpcClient
 }
 
-func doSystemOTA(t *testing.T, device *device.Client, repo *packages.Repository) {
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+func doSystemOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository) {
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
-	server := setupOTAServer(t, device, repo, expectedSystemImageMerkle)
+	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
 
 	if err := device.TriggerSystemOTA(); err != nil {
@@ -225,20 +251,40 @@ func doSystemOTA(t *testing.T, device *device.Client, repo *packages.Repository)
 	}
 
 	log.Printf("OTA complete, validating device")
-	validateDevice(t, device, repo, expectedSystemImageMerkle)
+	// FIXME: It would make sense to be able to close the rpcClient before
+	// the reboot, but for an unknown reason, closing this session will
+	// cause the entire ssh connection to disconnect and reconnect, causing
+	// the test to assume the device rebooted and start verifying that the
+	// OTA succeeded, when, in reality, it likely hasn't finished yet.
+	if *rpcClient != nil {
+		(*rpcClient).Close()
+		*rpcClient = nil
+	}
+	*rpcClient, err = device.StartRpcSession(repo)
+	if err != nil {
+		// FIXME(40913): every upgrade builder should at least build
+		// sl4f as a universe package.
+		log.Printf("unable to connect to sl4f after OTA: %s", err)
+		//t.Fatalf("unable to connect to sl4f after OTA: %s", err)
+	}
+	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 }
 
-func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Repository) {
-	expectedSystemImageMerkle, err := extractUpdateContentPackageMerkle(repo, "update_prime/0", "system_image_prime/0")
+func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository) {
+	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
-	server := setupOTAServer(t, device, repo, expectedSystemImageMerkle)
+	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
 
+	// FIXME(40206) sl4f expects to be able to read metadata to determine
+	// if a path exists, but garbage can't be opened.
+	//err = (*rpcClient).FileDelete("/pkgfs/ctl/garbage")
+
 	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
-	err = device.Run("PATH= rm /pkgfs/ctl/garbage", os.Stdout, os.Stderr)
+	err = device.DeleteRemotePath("/pkgfs/ctl/garbage")
 	if err != nil {
 		t.Fatalf("error running GC: %v", err)
 	}
@@ -248,7 +294,7 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Reposi
 	// packages, we need to explicitly resolve it.
 	err = device.Run("pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
 	if err != nil {
-		t.Fatalf("error running GC: %v", err)
+		t.Fatalf("error resolving the run package: %v", err)
 	}
 
 	var wg sync.WaitGroup
@@ -269,11 +315,20 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Reposi
 	device.WaitForDeviceToBeConnected()
 
 	log.Printf("OTA complete, validating device")
-	validateDevice(t, device, repo, expectedSystemImageMerkle)
+	// FIXME: See comment in doSystemOTA(...)
+	if *rpcClient != nil {
+		(*rpcClient).Close()
+		*rpcClient = nil
+	}
+	*rpcClient, err = device.StartRpcSession(repo)
+	if err != nil {
+		t.Fatalf("unable to connect to sl4f after OTA: %s", err)
+	}
+	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 }
 
-func setupOTAServer(t *testing.T, device *device.Client, repo *packages.Repository, expectedSystemImageMerkle string) *packages.Server {
-	if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+func setupOTAServer(t *testing.T, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string) *packages.Server {
+	if isDeviceUpToDate(t, device, rpcClient, expectedSystemImageMerkle) {
 		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
@@ -289,7 +344,7 @@ func setupOTAServer(t *testing.T, device *device.Client, repo *packages.Reposito
 	}
 
 	// Serve the repository before the test begins.
-	server, err := repo.Serve(localHostname)
+	server, err := repo.Serve(localHostname, "host_target_testing")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,10 +357,16 @@ func setupOTAServer(t *testing.T, device *device.Client, repo *packages.Reposito
 	return server
 }
 
-func isDeviceUpToDate(t *testing.T, device *device.Client, expectedSystemImageMerkle string) bool {
+func isDeviceUpToDate(t *testing.T, device *device.Client, rpcClient *sl4f.Client, expectedSystemImageMerkle string) bool {
 	// Get the device's current /system/meta. Error out if it is the same
 	// version we are about to OTA to.
-	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
+	var remoteSystemImageMerkle string
+	var err error
+	if rpcClient == nil {
+		remoteSystemImageMerkle, err = device.GetSystemImageMerkle()
+	} else {
+		remoteSystemImageMerkle, err = rpcClient.GetSystemImageMerkle()
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,44 +376,23 @@ func isDeviceUpToDate(t *testing.T, device *device.Client, expectedSystemImageMe
 	return expectedSystemImageMerkle == remoteSystemImageMerkle
 }
 
-func validateDevice(t *testing.T, device *device.Client, repo *packages.Repository, expectedSystemImageMerkle string) {
+func validateDevice(t *testing.T, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string) {
 	// At the this point the system should have been updated to the target
 	// system version. Confirm the update by fetching the device's current
 	// /system/meta, and making sure it is the correct version.
-	if !isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+	if !isDeviceUpToDate(t, device, rpcClient, expectedSystemImageMerkle) {
 		t.Fatalf("system version failed to update to %q", expectedSystemImageMerkle)
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	if err := device.ValidateStaticPackages(); err != nil {
-		t.Fatal(err)
+	// FIXME(40913): every builder should at least build sl4f as a universe package.
+	if rpcClient == nil {
+		if err := device.ValidateStaticPackages(); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		if err := rpcClient.ValidateStaticPackages(); err != nil {
+			t.Fatal(err)
+		}
 	}
-}
-
-func extractUpdateSystemImage(repo *packages.Repository) (string, error) {
-	return extractUpdateContentPackageMerkle(repo, "update/0", "system_image/0")
-}
-
-func extractUpdateContentPackageMerkle(repo *packages.Repository, updatePackageName string, contentPackageName string) (string, error) {
-	// Extract the "packages" file from the "update" package.
-	p, err := repo.OpenPackage(updatePackageName)
-	if err != nil {
-		return "", err
-	}
-	f, err := p.Open("packages")
-	if err != nil {
-		return "", err
-	}
-
-	packages, err := util.ParsePackageList(f)
-	if err != nil {
-		return "", err
-	}
-
-	merkle, ok := packages[contentPackageName]
-	if !ok {
-		return "", fmt.Errorf("could not find %s merkle", contentPackageName)
-	}
-
-	return merkle, nil
 }

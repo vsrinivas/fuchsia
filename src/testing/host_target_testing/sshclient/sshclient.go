@@ -5,10 +5,12 @@
 package sshclient
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,9 +69,7 @@ func connect(addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, erro
 	return client, conn, nil
 }
 
-// Run a command to completion on the remote device and write STDOUT and STDERR
-// to the passed in io.Writers.
-func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
+func (c *Client) makeSession(stdout io.Writer, stderr io.Writer) (*ssh.Session, error) {
 	// Temporarily grab the lock and make a copy of the client. This
 	// prevents a long running `Run` command from blocking the keep-alive
 	// goroutine.
@@ -77,20 +77,48 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
 	client := c.client
 	c.mu.Unlock()
 
-	log.Printf("running: %s", command)
-
 	if client == nil {
-		return fmt.Errorf("ssh is disconnected")
+		return nil, fmt.Errorf("ssh is disconnected")
 	}
 
 	session, err := client.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	session.Stdout = stdout
+	session.Stderr = stderr
+	return session, nil
+}
+
+// Start a command on the remote device and write STDOUT and STDERR to the
+// passed in io.Writers.
+func (c *Client) Start(command string, stdout io.Writer, stderr io.Writer) (*ssh.Session, error) {
+	session, err := c.makeSession(stdout, stderr)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("spawning: %s", command)
+
+	if err := session.Start(command); err != nil {
+		session.Close()
+		return nil, err
+	}
+	return session, nil
+}
+
+// Run a command to completion on the remote device and write STDOUT and STDERR
+// to the passed in io.Writers.
+func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
+	session, err := c.makeSession(stdout, stderr)
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
-	session.Stdout = stdout
-	session.Stderr = stderr
+	log.Printf("running: %s", command)
+
 	return session.Run(command)
 }
 
@@ -99,6 +127,18 @@ func (c *Client) Close() {
 	c.shuttingDown = true
 	close(c.done)
 	c.disconnect()
+}
+
+// GetSshConnection returns the first field in the remote SSH_CONNECTION
+// environment variable.
+func (c *Client) GetSshConnection() (string, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := c.Run("PATH= echo $SSH_CONNECTION", &stdout, &stderr)
+	if err != nil {
+		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
+	}
+	return strings.Split(string(stdout.Bytes()), " ")[0], nil
 }
 
 // WaitToBeConnected blocks until the ssh connection is available for use.

@@ -95,6 +95,59 @@ func (r *Repository) OpenBlob(merkle string) (*os.File, error) {
 	return os.Open(filepath.Join(r.Dir, "blobs", merkle))
 }
 
-func (r *Repository) Serve(localHostname string) (*Server, error) {
-	return newServer(r.Dir, localHostname)
+func (r *Repository) Serve(localHostname string, repoName string) (*Server, error) {
+	return newServer(r.Dir, localHostname, repoName)
+}
+
+func (r *Repository) LookupUpdateSystemImageMerkle() (string, error) {
+	return r.lookupUpdateContentPackageMerkle("update/0", "system_image/0")
+}
+
+func (r *Repository) LookupUpdatePrimeSystemImageMerkle() (string, error) {
+	return r.lookupUpdateContentPackageMerkle("update_prime/0", "system_image_prime/0")
+}
+
+func (r *Repository) VerifyMatchesAnyUpdateSystemImageMerkle(merkle string) error {
+	systemImageMerkle, err := r.LookupUpdateSystemImageMerkle()
+	if err != nil {
+		return err
+	}
+	if merkle == systemImageMerkle {
+		return nil
+	}
+
+	systemPrimeImageMerkle, err := r.LookupUpdatePrimeSystemImageMerkle()
+	if err != nil {
+		return err
+	}
+	if merkle == systemPrimeImageMerkle {
+		return nil
+	}
+
+	return fmt.Errorf("expected device to be running a system image of %s or %s, got %s",
+		systemImageMerkle, systemPrimeImageMerkle, merkle)
+}
+
+func (r *Repository) lookupUpdateContentPackageMerkle(updatePackageName string, contentPackageName string) (string, error) {
+	// Extract the "packages" file from the "update" package.
+	p, err := r.OpenPackage(updatePackageName)
+	if err != nil {
+		return "", err
+	}
+	f, err := p.Open("packages")
+	if err != nil {
+		return "", err
+	}
+
+	packages, err := util.ParsePackageList(f)
+	if err != nil {
+		return "", err
+	}
+
+	merkle, ok := packages[contentPackageName]
+	if !ok {
+		return "", fmt.Errorf("could not find %s merkle", contentPackageName)
+	}
+
+	return merkle, nil
 }
