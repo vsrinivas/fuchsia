@@ -133,6 +133,7 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 
 struct TestContext {
   std::shared_ptr<MockArchProvider> arch_provider;
+  std::shared_ptr<LimboProvider> limbo_provider;
   std::shared_ptr<MockObjectProvider> object_provider;
 
   std::unique_ptr<DebugAgent> debug_agent;
@@ -144,11 +145,13 @@ TestContext CreateTestContext() {
 
   // Mock the system.
   context.arch_provider = std::make_shared<MockArchProvider>();
+  context.limbo_provider = std::make_shared<LimboProvider>(nullptr);
   context.object_provider = CreateDefaultMockObjectProvider();
 
   // Create the debug agent.
   SystemProviders providers;
   providers.arch_provider = context.arch_provider;
+  providers.limbo_provider = context.limbo_provider;
   providers.object_provider = context.object_provider;
   context.debug_agent = std::make_unique<DebugAgent>(nullptr, std::move(providers));
 

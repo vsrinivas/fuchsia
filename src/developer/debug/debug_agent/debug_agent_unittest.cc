@@ -100,26 +100,18 @@ class MockLimboProvider : public LimboProvider {
  public:
   MockLimboProvider() : LimboProvider(nullptr) {}
 
-  zx_status_t ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) override {
-    out->clear();
-    out->reserve(processes_.size());
-    for (auto& [process_koid, process_metadata] : processes_) {
-      ProcessExceptionMetadata metadata = {};
-      metadata.set_info(process_metadata.info());
-      metadata.set_process(zx::process(process_metadata.process().get()));
-      metadata.set_thread(zx::thread(process_metadata.thread().get()));
+  const std::map<zx_koid_t, ProcessExceptionMetadata>& Limbo() const override { return limbo_; }
 
-      out->push_back(std::move(metadata));
-    }
-
-    return ZX_OK;
-  }
+  bool Valid() const override { return true; }
 
   zx_status_t RetrieveException(zx_koid_t process_koid,
                                 fuchsia::exception::ProcessException* out) override {
-    auto it = processes_.find(process_koid);
-    if (it == processes_.end())
+    auto it = limbo_.find(process_koid);
+    if (it == limbo_.end())
       return ZX_ERR_NOT_FOUND;
+
+    auto excp_it = exception_koids_.find(process_koid);
+    FXL_DCHECK(excp_it != exception_koids_.end());
 
     ProcessException exception;
     exception.set_info(it->second.info());
@@ -130,7 +122,7 @@ class MockLimboProvider : public LimboProvider {
     *out = std::move(exception);
 
     exception_koids_.erase(process_koid);
-    processes_.erase(it);
+    limbo_.erase(it);
     return ZX_OK;
   }
 
@@ -147,14 +139,12 @@ class MockLimboProvider : public LimboProvider {
     metadata.set_thread(thread->GetHandle());
 
     exception_koids_[process->koid] = exception_koid;
-    processes_[process->koid] = std::move(metadata);
+    limbo_[process->koid] = std::move(metadata);
   }
-
-  const std::map<zx_koid_t, ProcessExceptionMetadata>& processes() const { return processes_; }
 
  private:
   std::map<zx_koid_t, zx_koid_t> exception_koids_;
-  std::map<zx_koid_t, ProcessExceptionMetadata> processes_;
+  std::map<zx_koid_t, ProcessExceptionMetadata> limbo_;
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(

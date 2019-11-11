@@ -26,10 +26,18 @@ namespace {
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
-  void WatchActive(WatchActiveCallback callback) override { callback(is_active_); }
+  void WatchActive(WatchActiveCallback callback) override {
+    if (!reply_active_)
+      return;
+
+    callback(is_active_);
+  }
 
   void WatchProcessesWaitingOnException(
       ProcessLimbo::WatchProcessesWaitingOnExceptionCallback callback) override {
+    if (!reply_watch_processes_)
+      return;
+
     std::vector<ProcessExceptionMetadata> processes;
     processes.reserve(processes_.size());
     for (auto& [process_koid, metadata] : processes_) {
@@ -87,11 +95,18 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
 
   void set_is_active(bool is_active) { is_active_ = is_active; }
 
+  void set_reply_active(bool reply) { reply_active_ = reply; }
+  void set_reply_watch_processes(bool reply) { reply_watch_processes_ = reply; }
+
  private:
   std::map<zx_koid_t, ProcessExceptionMetadata> processes_;
   fidl::BindingSet<ProcessLimbo> bindings_;
 
-  bool is_active_ = false;
+  bool is_active_ = true;
+
+  bool reply_active_ = true;
+  bool reply_watch_processes_ = true;
+
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
@@ -107,8 +122,7 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
 
 // Tests -------------------------------------------------------------------------------------------
 
-// TODO(donosoc): Reactivate when the ListProcessesOnLimbo call has changed to an observer pattern.
-TEST(LimboProvider, DISABLED_WatchProcessesOnException) {
+TEST(LimboProvider,WatchProcessesOnException) {
   // Set the process limbo.
   auto object_provider = CreateDefaultMockObjectProvider();
   auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");
@@ -122,25 +136,36 @@ TEST(LimboProvider, DISABLED_WatchProcessesOnException) {
   process_limbo.AppendException(*process2, *thread2, exception2);
 
   // Setup the async loop to respond to the async call.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  sys::testing::ServiceDirectoryProvider services(loop.dispatcher());
+  async::Loop remote_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  sys::testing::ServiceDirectoryProvider services(remote_loop.dispatcher());
   services.AddService(process_limbo.GetHandler());
-  ASSERT_ZX_EQ(loop.StartThread("process-limbo-thread"), ZX_OK);
+  ASSERT_ZX_EQ(remote_loop.StartThread("process-limbo-thread"), ZX_OK);
 
+  async::Loop local_loop(&kAsyncLoopConfigAttachToCurrentThread);
   LimboProvider limbo_provider(services.service_directory());
+  ASSERT_ZX_EQ(limbo_provider.Init(), ZX_OK);
+  ASSERT_TRUE(limbo_provider.Valid());
 
-  std::vector<ProcessExceptionMetadata> processes;
-  ASSERT_ZX_EQ(limbo_provider.ListProcessesOnLimbo(&processes), ZX_OK);
+  process_limbo.set_reply_active(false);
+  process_limbo.set_reply_watch_processes(false);
 
+  local_loop.RunUntilIdle();
+
+  /* std::vector<ProcessExceptionMetadata> processes; */
+  auto& processes = limbo_provider.Limbo();
   ASSERT_EQ(processes.size(), 2u);
-  ASSERT_TRUE(processes[0].has_info());
-  EXPECT_EQ(processes[0].info().process_koid, process1->koid);
-  EXPECT_EQ(processes[0].info().thread_koid, thread1->koid);
-  EXPECT_EQ(processes[0].info().type, exception1);
-  ASSERT_TRUE(processes[1].has_info());
-  EXPECT_EQ(processes[1].info().process_koid, process2->koid);
-  EXPECT_EQ(processes[1].info().thread_koid, thread2->koid);
-  EXPECT_EQ(processes[1].info().type, exception2);
+
+  auto it = processes.begin();
+  ASSERT_TRUE(it->second.has_info());
+  EXPECT_EQ(it->second.info().process_koid, process1->koid);
+  EXPECT_EQ(it->second.info().thread_koid, thread1->koid);
+  EXPECT_EQ(it->second.info().type, exception1);
+
+  it++;
+  ASSERT_TRUE(it->second.has_info());
+  EXPECT_EQ(it->second.info().process_koid, process2->koid);
+  EXPECT_EQ(it->second.info().thread_koid, thread2->koid);
+  EXPECT_EQ(it->second.info().type, exception2);
 }
 
 TEST(LimboProvider, RetriveException) {

@@ -216,7 +216,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   JobStreamBackend backend(message_loop);
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(std::move(services), SystemProviders::CreateDefaults(services));
+  DebugAgent agent(services, SystemProviders::CreateDefaults(services));
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());

@@ -9,33 +9,100 @@ using namespace fuchsia::exception;
 
 namespace debug_agent {
 
+// LimboProvider -----------------------------------------------------------------------------------
+
 LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(std::move(services)) {}
 LimboProvider::~LimboProvider() = default;
 
-zx_status_t LimboProvider::ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) {
-  // TODO(donosoc): The hanging get pattern will hang when called synchronously.
-  //                This call should actually be called through an observer-like API.
-  //                Disable this call for now.
-  return ZX_ERR_NOT_SUPPORTED;
-
-#ifdef LIMBO_MIGRATION
+zx_status_t LimboProvider::Init() {
+  // We get the initial state of the hanging gets.
   ProcessLimboSyncPtr process_limbo;
   zx_status_t status = services_->Connect(process_limbo.NewRequest());
   if (status != ZX_OK)
     return status;
 
-  ProcessLimbo_WatchProcessesWaitingOnException_Result result;
-  status = process_limbo->WatchProcessesWaitingOnException(&result);
+  // Check if the limbo is active.
+  bool is_limbo_active = false;
+  status = process_limbo->WatchActive(&is_limbo_active);
   if (status != ZX_OK)
     return status;
 
-  if (result.is_err())
-    return result.err();
+  is_limbo_active_ = is_limbo_active;
+  if (is_limbo_active_) {
+    // Get the current set of process in exceptions.
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    status = process_limbo->WatchProcessesWaitingOnException(&result);
+    if (status != ZX_OK)
+      return status;
 
-  *out = std::move(result.response().exception_list);
+    if (result.is_err())
+      return result.err();
+
+    // Add to the exceptions.
+    for (auto& exception : result.response().exception_list) {
+      zx_koid_t process_koid = exception.info().process_koid;
+      limbo_[process_koid] = std::move(exception);
+    }
+  }
+
+  // Now that we were able to get the current state of the limbo, we move to an async binding.
+  connection_.Bind(process_limbo.Unbind().TakeChannel());
+
+  // |this| owns the connection, so it's guaranteed to outlive it.
+  connection_.set_error_handler([this](zx_status_t status) { Reset(); });
+
+  WatchActive();
+  WatchLimbo();
+
+  valid_ = true;
   return ZX_OK;
-#endif
+}
+
+void LimboProvider::Reset() {
+  valid_ = false;
+  limbo_.clear();
+  is_limbo_active_ = false;
+  connection_ = {};
+}
+
+void LimboProvider::WatchActive() {
+  // |this| owns the connection, so it's guaranteed to outlive it.
+  connection_->WatchActive([this](bool is_active) {
+    if (!is_active)
+      limbo_.clear();
+    is_limbo_active_ = is_active;
+
+    // Re-issue the hanging get.
+    WatchActive();
+  });
+}
+
+bool LimboProvider::Valid() const { return valid_; }
+
+const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& LimboProvider::Limbo()
+    const {
+  return limbo_;
+}
+
+void LimboProvider::WatchLimbo() {
+  connection_->WatchProcessesWaitingOnException(
+      // |this| owns the connection, so it's guaranteed to outlive it.
+      [this](ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
+        if (result.is_err()) {
+          FXL_LOG(INFO) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
+        } else {
+          // Add the exceptions to the limbo.
+          std::vector<fuchsia::exception::ProcessExceptionMetadata> new_exceptions;
+          for (auto& exception : result.response().exception_list) {
+            zx_koid_t process_koid = exception.info().process_koid;
+            limbo_[process_koid] = std::move(exception);
+          }
+        }
+
+        // Re-issue the hanging get.
+        WatchLimbo();
+      });
 }
 
 zx_status_t LimboProvider::RetrieveException(zx_koid_t process_koid,

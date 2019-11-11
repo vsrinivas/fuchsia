@@ -15,6 +15,7 @@
         ],
         "services": [
             "fuchsia.boot.RootJob",
+            "fuchsia.exception.ProcessLimbo",
             "fuchsia.process.Launcher"
         ]
     }

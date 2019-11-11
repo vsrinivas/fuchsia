@@ -5,6 +5,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <map>
@@ -25,8 +26,23 @@ class LimboProvider {
   explicit LimboProvider(std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~LimboProvider();
 
-  virtual zx_status_t ListProcessesOnLimbo(
-      std::vector<fuchsia::exception::ProcessExceptionMetadata>* out);
+  // Init must be called after constructing the object.
+  // It will get the current state of the limbo being connected and then issue async calls to keep
+  // that state updated. If the provider is valid, |limbo()| is guaranteed to be up to date.
+  //
+  // |error_handler| will only be used if |Init| was successful. Once the error handler has been
+  // issued, this provider is considered invalid and Init should be called again.
+  virtual zx_status_t Init();
+
+  // Limbo can fail to initialize (eg. failed to connect). There is no point querying an invalid
+  // limbo provider, so callers should check for validity before using it. If the limbo is invalid,
+  // callers should either attempt to initialize again or create another limbo provider.
+  //
+  // NOTE: a valid limbo provider might be inactive (see ProcessLimbo fidl declaration) and/or be
+  //       empty (not have any processes waiting on an exception).
+  virtual bool Valid() const;
+
+  virtual const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& Limbo() const;
 
   virtual zx_status_t RetrieveException(zx_koid_t process_koid,
                                         fuchsia::exception::ProcessException* out);
@@ -34,6 +50,21 @@ class LimboProvider {
   virtual zx_status_t ReleaseProcess(zx_koid_t process_koid);
 
  private:
+  void Reset();
+
+  void WatchActive();
+  void WatchLimbo();
+
+  bool valid_ = false;
+
+  // Because the Process Limbo uses hanging gets (async callbacks) and this class exposes a
+  // synchronous inteface, we need to keep track of the current state in order to be able to
+  // return it immediatelly.
+  std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> limbo_;
+  bool is_limbo_active_ = false;
+
+  fuchsia::exception::ProcessLimboPtr connection_;
+
   std::shared_ptr<sys::ServiceDirectory> services_;
 };
 
