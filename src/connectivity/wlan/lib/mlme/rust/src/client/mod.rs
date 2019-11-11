@@ -22,7 +22,10 @@ use {
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
-        ie::{parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, IE_PREFIX_LEN},
+        ie::{
+            parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, IE_PREFIX_LEN,
+            SUPPORTED_RATES_MAX_LEN,
+        },
         mac::{self, Aid, Bssid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
@@ -203,8 +206,14 @@ impl Client {
     ) -> Result<(), Error> {
         let frame_len = frame_len!(mac::MgmtHdr, mac::AssocReqHdr);
         let ssid_len = IE_PREFIX_LEN + ssid.len();
-        let rates_len = IE_PREFIX_LEN + rates.len();
-        let rsne_len = if rsne.is_empty() { 0 } else { IE_PREFIX_LEN + rsne.len() };
+        let rates_len = (IE_PREFIX_LEN + rates.len())
+                    // If there are too many rates, they will be split into two IEs.
+                    // In this case, the total length would be the sum of:
+                    // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
+                    // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
+                    // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
+                    + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
+        let rsne_len = rsne.len(); // RSNE already contains ID/len
         let ht_cap_len = if ht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + ht_cap.len() };
         let vht_cap_len = if vht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + vht_cap.len() };
         let frame_len = frame_len + ssid_len + rates_len + rsne_len + ht_cap_len + vht_cap_len;
@@ -434,6 +443,16 @@ mod tests {
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
+    const RSNE: &[u8] = &[
+        0x30, 0x14, //  ID and len
+        1, 0, //  version
+        0x00, 0x0f, 0xac, 0x04, //  group data cipher suite
+        0x01, 0x00, //  pairwise cipher suite count
+        0x00, 0x0f, 0xac, 0x04, //  pairwise cipher suite list
+        0x01, 0x00, //  akm suite count
+        0x00, 0x0f, 0xac, 0x02, //  akm suite list
+        0xa8, 0x04, //  rsn capabilities
+    ];
 
     fn make_client_station(device: Device, scheduler: Scheduler) -> Client {
         let buf_provider = FakeBufferProvider::new();
@@ -473,12 +492,12 @@ mod tests {
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client
             .send_assoc_req_frame(
-                0x1234,
-                &[11, 22, 33, 44],
-                &[8, 7, 6, 5, 4, 3, 2, 1, 0],
-                &[55, 66, 77, 88],
-                &(0..26).collect::<Vec<u8>>()[..],
-                &(100..112).collect::<Vec<u8>>()[..],
+                0x1234,                               // capability info
+                &[11, 22, 33, 44],                    // SSID
+                &[8, 7, 6, 5, 4, 3, 2, 1, 0],         // rates
+                RSNE,                                 // RSNE (including ID and len)
+                &(0..26).collect::<Vec<u8>>()[..],    // HT Capabilities
+                &(100..112).collect::<Vec<u8>>()[..], // VHT Capabilities
             )
             .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -502,8 +521,14 @@ mod tests {
                 8, 7, 6, 5, 4, 3, 2, 1, // supp rates
                 50, 1, // ext supp rates and length
                 0, // ext supp rates
-                48, 2, // RSNE id and length
-                77, 88, // RSNE
+                0x30, 0x14, // RSNE ID and len
+                1, 0, // RSNE version
+                0x00, 0x0f, 0xac, 0x04, // RSNE group data cipher suite
+                0x01, 0x00, // RSNE pairwise cipher suite count
+                0x00, 0x0f, 0xac, 0x04, // RSNE pairwise cipher suite list
+                0x01, 0x00, // RSNE akm suite count
+                0x00, 0x0f, 0xac, 0x02, // RSNE akm suite list
+                0xa8, 0x04, // RSNE rsn capabilities
                 45, 26, // HT Cap id and length
                 0, 1, 2, 3, 4, 5, 6, 7, // HT Cap \
                 8, 9, 10, 11, 12, 13, 14, 15, // HT Cap \
