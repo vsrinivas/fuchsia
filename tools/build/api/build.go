@@ -13,4 +13,7 @@ const (
 	// PlatformManifestName is the name of the manifest of available test
 	// platforms.
 	PlatformManifestName = "platforms.json"
+
+	// ImageManifestName is the name of the manifest of images to use for paving.
+	ImageManifestName = "images.json"
 )

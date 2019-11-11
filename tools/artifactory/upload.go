@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// found in the LICENSE file.
+
+package artifactory
+
+// Upload is a struct that contains source and destination paths to files to
+// upload to GCS.
+type Upload struct {
+	// Source is the path to the local file to upload.
+	Source string
+
+	// Destination is the path to upload to relative to a gcs bucket and namespace.
+	Destination string
+}

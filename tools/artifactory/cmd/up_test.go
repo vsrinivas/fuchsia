@@ -12,9 +12,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
 )
 
 const (
@@ -31,11 +34,6 @@ func newMemSink() *memSink {
 	return &memSink{
 		contents: make(map[string][]byte),
 	}
-}
-
-func (s memSink) getNamespace() string {
-	// Unimportant. Only explicitly used in uploadFilesAt() for more verbose logging.
-	return "namespace"
 }
 
 func (s *memSink) objectExistsAt(ctx context.Context, name string, expectedChecksum []byte) (bool, error) {
@@ -117,19 +115,36 @@ func sinkHasExpectedContents(t *testing.T, actual, expected map[string][]byte, o
 	defer os.RemoveAll(dir)
 	sink := newMemSink()
 	ctx := context.Background()
-	if err := uploadFilesAt(ctx, dir, sink, opts); err != nil {
+	files := getUploadFiles(dir, expected)
+	if err := uploadFiles(ctx, files, sink, opts); err != nil {
 		t.Fatalf("failed to upload contents: %v", err)
 	}
 	sinkHasContents(t, sink, expected)
 }
 
+func getUploadFiles(dir string, fileContents map[string][]byte) []artifactory.Upload {
+	var files []artifactory.Upload
+	for f := range fileContents {
+		files = append(files, artifactory.Upload{
+			Source:      filepath.Join(dir, f),
+			Destination: f,
+		})
+	}
+	return files
+}
+
 func TestUploading(t *testing.T) {
-	t.Run("simple case", func(t *testing.T) {
+	t.Run("uploads specific files", func(t *testing.T) {
 		actual := map[string][]byte{
-			"a": []byte("one"),
-			"b": []byte("two"),
+			"a":       []byte("one"),
+			"b":       []byte("two"),
+			"c/d":     []byte("three"),
+			"c/e/f/g": []byte("four"),
 		}
-		expected := actual
+		expected := map[string][]byte{
+			"a":   []byte("one"),
+			"c/d": []byte("three"),
+		}
 		opts := uploadOptions{j: 1}
 		sinkHasExpectedContents(t, actual, expected, opts)
 	})
@@ -152,12 +167,19 @@ func TestUploading(t *testing.T) {
 			"c/d":     []byte("three"),
 			"c/e/f/g": []byte("four"),
 		}
-		expected := map[string][]byte{
-			"a": []byte("one"),
-			"b": []byte("two"),
+		dir := artifactory.Upload{Source: newDirWithContents(t, actual)}
+		defer os.RemoveAll(dir.Source)
+		expected := []artifactory.Upload{
+			{Source: filepath.Join(dir.Source, "a"), Destination: "a"},
+			{Source: filepath.Join(dir.Source, "b"), Destination: "b"},
 		}
-		opts := uploadOptions{j: 1}
-		sinkHasExpectedContents(t, actual, expected, opts)
+		files, err := dirToFiles(dir)
+		if err != nil {
+			t.Fatalf("failed to read dir: %v", err)
+		}
+		if !reflect.DeepEqual(files, expected) {
+			t.Fatalf("unexpected files from dir: actual: %v, expected: %v", files, expected)
+		}
 	})
 
 	t.Run("collision behavior is parametrized", func(t *testing.T) {
@@ -169,18 +191,19 @@ func TestUploading(t *testing.T) {
 		}
 		dir := newDirWithContents(t, srcContents)
 		defer os.RemoveAll(dir)
+		files := getUploadFiles(dir, srcContents)
 
 		sink := newMemSink()
 		sink.contents = srcContents
 		expectedFailureOpts := uploadOptions{j: 1, failOnCollision: true}
-		if err = uploadFilesAt(ctx, dir, sink, expectedFailureOpts); err == nil {
+		if err = uploadFiles(ctx, files, sink, expectedFailureOpts); err == nil {
 			t.Fatal("upload succeeded when it should have failed")
 		}
 
 		sink = newMemSink()
 		sink.contents = srcContents
 		expectedSuccessOpts := uploadOptions{j: 1, failOnCollision: false}
-		if err = uploadFilesAt(ctx, dir, sink, expectedSuccessOpts); err != nil {
+		if err = uploadFiles(ctx, files, sink, expectedSuccessOpts); err != nil {
 			t.Fatal(err)
 		}
 
@@ -189,7 +212,7 @@ func TestUploading(t *testing.T) {
 		expectedChecksum := md5.Sum(srcContents["a"])
 		actualChecksum := md5.Sum(sink.contents["a"])
 		genericOpts := uploadOptions{j: 1}
-		err = uploadFilesAt(ctx, dir, sink, genericOpts)
+		err = uploadFiles(ctx, files, sink, genericOpts)
 
 		actualChecksumErr, ok := err.(checksumError)
 		if !ok {
@@ -214,15 +237,15 @@ func TestUploading(t *testing.T) {
 		sink := newMemSink()
 		ctx := context.Background()
 		opts := uploadOptions{j: 1}
-		nonexistentDir := filepath.Join(dir, "nonexistent")
-		if err = uploadFilesAt(ctx, nonexistentDir, sink, opts); err != nil {
+		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
+		if err = uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, opts); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
 			t.Fatal("sink should be empty")
 		}
-		// Now check that uploading from the empty `dir` too does not result in an error.
-		if err = uploadFilesAt(ctx, dir, sink, opts); err != nil {
+		// Now check that uploading an empty files list also does not result in an error.
+		if err = uploadFiles(ctx, []artifactory.Upload{}, sink, opts); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {

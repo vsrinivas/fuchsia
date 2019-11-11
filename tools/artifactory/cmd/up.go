@@ -34,6 +34,7 @@ const (
 	metadataDirName = "repository"
 	keyDirName      = "keys"
 	blobDirName     = "blobs"
+	imageDirName    = "images"
 )
 
 type upCommand struct {
@@ -63,8 +64,8 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   └── <package repo metadata files>
 │   │   │   ├── keys
 │   │   │   │   └── <package repo keys>
-
-TODO(joshuaseaton): upload images to $GCS_PATH/$UUID/images/.
+│   │   │   ├── images
+│   │   │   │   └── <images>
 
 flags:
 
@@ -98,7 +99,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		return fmt.Errorf("-uuid is required")
 	}
 
-	sink, err := newCloudSink(ctx, cmd.gcsBucket, "")
+	sink, err := newCloudSink(ctx, cmd.gcsBucket)
 	if err != nil {
 		return err
 	}
@@ -108,17 +109,23 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	metadataDir := path.Join(repo, metadataDirName)
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
+	imgFiles, err := artifactory.ImageUploads(buildDir, path.Join(cmd.uuid, imageDirName))
+	if err != nil {
+		return err
+	}
 
 	uploads := []struct {
 		// Path on disk to a directory from which to upload.
-		dir string
-		// A namespace within the provided GCS bucket at which to upload.
-		namespace string
-		opts      uploadOptions
+		dir  artifactory.Upload
+		opts uploadOptions
+		// Specific files to upload.
+		files []artifactory.Upload
 	}{
 		{
-			dir:       blobDir,
-			namespace: blobDirName,
+			dir: artifactory.Upload{
+				Source:      blobDir,
+				Destination: blobDirName,
+			},
 			opts: uploadOptions{
 				// Note: there are O(10^3) blobs in a given clean build.
 				j: cmd.j,
@@ -127,8 +134,10 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 			},
 		},
 		{
-			dir:       metadataDir,
-			namespace: path.Join(cmd.uuid, metadataDirName),
+			dir: artifactory.Upload{
+				Source:      metadataDir,
+				Destination: path.Join(cmd.uuid, metadataDirName),
+			},
 			opts: uploadOptions{
 				// O(10^1) metadata files.
 				j:               1,
@@ -136,19 +145,32 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 			},
 		},
 		{
-			dir:       keyDir,
-			namespace: path.Join(cmd.uuid, keyDirName),
+			dir: artifactory.Upload{
+				Source:      keyDir,
+				Destination: path.Join(cmd.uuid, keyDirName),
+			},
 			opts: uploadOptions{
 				// O(10^0) keys.
 				j:               1,
 				failOnCollision: true,
 			},
 		},
+		{
+			opts: uploadOptions{
+				j:               1,
+				failOnCollision: true,
+			},
+			files: imgFiles,
+		},
 	}
 
 	for _, upload := range uploads {
-		dest := sink.subsinkAt(upload.namespace)
-		if err = uploadFilesAt(ctx, upload.dir, dest, upload.opts); err != nil {
+		if upload.dir.Source != "" {
+			if err = uploadDir(ctx, upload.dir, sink, upload.opts); err != nil {
+				return err
+			}
+		}
+		if err = uploadFiles(ctx, upload.files, sink, upload.opts); err != nil {
 			return err
 		}
 	}
@@ -169,9 +191,6 @@ type uploadOptions struct {
 // cloudSink, the GCS-backed implementation below.
 type dataSink interface {
 
-	// GetNamespace returns the namesapce of the sink under which object names are referenced.
-	getNamespace() string
-
 	// ObjectExistsAt takes a name and a checksum, and returns whether an object
 	// of that name exists within the sink. If it does and has a checksum
 	// different than the provided, a checksumError will be returned.
@@ -187,43 +206,28 @@ type dataSink interface {
 
 // CloudSink is a GCS-backed data sink.
 type cloudSink struct {
-	client    *storage.Client
-	bucket    *storage.BucketHandle
-	namespace string
+	client *storage.Client
+	bucket *storage.BucketHandle
 }
 
-func newCloudSink(ctx context.Context, bucket, namespace string) (*cloudSink, error) {
+func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &cloudSink{
-		client:    client,
-		bucket:    client.Bucket(bucket),
-		namespace: namespace,
+		client: client,
+		bucket: client.Bucket(bucket),
 	}, nil
 }
 
-func (s *cloudSink) getNamespace() string {
-	return s.namespace
-}
-
-func (s cloudSink) subsinkAt(subspace string) dataSink {
-	return &cloudSink{
-		client:    s.client,
-		bucket:    s.bucket,
-		namespace: subspace,
-	}
-}
-
 func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChecksum []byte) (bool, error) {
-	fullName := filepath.Join(s.getNamespace(), name)
-	obj := s.bucket.Object(fullName)
+	obj := s.bucket.Object(name)
 	attrs, err := obj.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	} else if err != nil {
-		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", fullName, err)
+		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", name, err)
 	}
 	if bytes.Compare(attrs.MD5, expectedChecksum) != 0 {
 		return true, checksumError{
@@ -236,8 +240,7 @@ func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChec
 }
 
 func (s cloudSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
-	fullName := filepath.Join(s.getNamespace(), name)
-	w := s.bucket.Object(fullName).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
+	w := s.bucket.Object(name).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
 	w.MD5 = expectedChecksum
 
@@ -247,7 +250,7 @@ func (s cloudSink) write(ctx context.Context, name string, path string, expected
 	}
 	defer fd.Close()
 
-	return artifactory.Copy(ctx, fullName, fd, w, chunkSize)
+	return artifactory.Copy(ctx, name, fd, w, chunkSize)
 }
 
 type checksumError struct {
@@ -263,76 +266,105 @@ func (err checksumError) Error() string {
 	)
 }
 
-func uploadFilesAt(ctx context.Context, src string, dest dataSink, opts uploadOptions) error {
+// dirToFiles returns a list of the top-level files in the dir.
+func dirToFiles(dir artifactory.Upload) ([]artifactory.Upload, error) {
+	var files []artifactory.Upload
+	entries, err := ioutil.ReadDir(dir.Source)
+	if err != nil {
+		return nil, err
+	}
+	for _, fi := range entries {
+		if fi.IsDir() {
+			continue
+		}
+		files = append(files, artifactory.Upload{
+			Source:      filepath.Join(dir.Source, fi.Name()),
+			Destination: filepath.Join(dir.Destination, fi.Name()),
+		})
+	}
+	return files, nil
+}
+
+func uploadDir(ctx context.Context, dir artifactory.Upload, dest dataSink, opts uploadOptions) error {
 	if opts.j <= 0 {
 		return fmt.Errorf("Concurrency factor j must be a positive number")
 	}
 
-	if _, err := os.Stat(src); err != nil {
+	if _, err := os.Stat(dir.Source); err != nil {
 		// The associated artifacts might not actually have been created, which is valid.
 		if os.IsNotExist(err) {
-			logger.Debugf(ctx, "%s does not exist; skipping upload", src)
+			logger.Debugf(ctx, "%s does not exist; skipping upload", dir.Source)
 			return nil
 		}
 		return err
 	}
+	files, err := dirToFiles(dir)
+	if err != nil {
+		return err
+	}
+	return uploadFiles(ctx, files, dest, opts)
+}
 
-	names := make(chan string, opts.j)
+func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, opts uploadOptions) error {
+	if opts.j <= 0 {
+		return fmt.Errorf("Concurrency factor j must be a positive number")
+	}
+
+	uploads := make(chan artifactory.Upload, opts.j)
 	errs := make(chan error, opts.j)
 
-	queueNames := func() {
-		defer close(names)
-		entries, err := ioutil.ReadDir(src)
-		if err != nil {
-			errs <- err
-			return
-		}
-		for _, fi := range entries {
-			if fi.IsDir() {
-				continue
+	queueUploads := func() {
+		defer close(uploads)
+		for _, f := range files {
+			if _, err := os.Stat(f.Source); err != nil {
+				// The associated artifacts might not actually have been created, which is valid.
+				if os.IsNotExist(err) {
+					logger.Debugf(ctx, "%s does not exist; skipping upload", f.Source)
+					continue
+				}
+				errs <- err
+				return
 			}
-			names <- fi.Name()
+			uploads <- f
 		}
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(opts.j)
-	uploadNames := func() {
+	upload := func() {
 		defer wg.Done()
-		for name := range names {
-			fullName := filepath.Join(dest.getNamespace(), name)
-			srcPath := filepath.Join(src, name)
-			checksum, err := md5Checksum(srcPath)
+		for upload := range uploads {
+			checksum, err := md5Checksum(upload.Source)
 			if err != nil {
 				errs <- err
 				return
 			}
 
-			exists, err := dest.objectExistsAt(ctx, name, checksum)
+			exists, err := dest.objectExistsAt(ctx, upload.Destination, checksum)
 			if err != nil {
 				errs <- err
 				return
 			}
 			if exists {
-				logger.Debugf(ctx, "object %q: already exists remotely", fullName)
+				logger.Debugf(ctx, "object %q: already exists remotely", upload.Destination)
 				if opts.failOnCollision {
-					errs <- fmt.Errorf("object %q: collided", fullName)
+					errs <- fmt.Errorf("object %q: collided", upload.Destination)
 					return
 				}
 				continue
 			}
 
-			logger.Debugf(ctx, "object %q: attempting creation", fullName)
-			if err := dest.write(ctx, name, srcPath, checksum); err != nil {
+			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
+			if err := dest.write(ctx, upload.Destination, upload.Source, checksum); err != nil {
 				errs <- err
 				return
 			}
 		}
 	}
 
-	go queueNames()
+	go queueUploads()
 	for i := 0; i < opts.j; i++ {
-		go uploadNames()
+		go upload()
 	}
 	wg.Wait()
 	close(errs)
