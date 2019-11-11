@@ -656,6 +656,15 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       uintptr_t value = process->get_debug_addr();
       return _value.reinterpret<uintptr_t>().copy_to_user(value);
     }
+    case ZX_PROP_PROCESS_BREAK_ON_LOAD: {
+      if (size < sizeof(uintptr_t))
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+      if (!process)
+        return ZX_ERR_WRONG_TYPE;
+      uintptr_t value = process->get_dyn_break_on_load();
+      return _value.reinterpret<uintptr_t>().copy_to_user(value);
+    }
     case ZX_PROP_PROCESS_VDSO_BASE_ADDRESS: {
       if (size < sizeof(uintptr_t))
         return ZX_ERR_BUFFER_TOO_SMALL;
@@ -782,6 +791,18 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
       if (status != ZX_OK)
         return status;
       return process->set_debug_addr(value);
+    }
+    case ZX_PROP_PROCESS_BREAK_ON_LOAD: {
+      if (size < sizeof(uintptr_t))
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+      if (!process)
+        return ZX_ERR_WRONG_TYPE;
+      uintptr_t value = 0;
+      zx_status_t status = _value.reinterpret<const uintptr_t>().copy_from_user(&value);
+      if (status != ZX_OK)
+        return status;
+      return process->set_dyn_break_on_load(value);
     }
     case ZX_PROP_SOCKET_RX_THRESHOLD: {
       if (size < sizeof(size_t))

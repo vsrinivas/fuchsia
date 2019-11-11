@@ -43,6 +43,10 @@ int main(int argc, char** argv) {
     if (strcmp(argv[1], kTestSuspendOnStart) == 0) {
       return test_suspend_on_start();
     }
+
+    if (strcmp(argv[1], kTestDynBreakOnLoad) == 0) {
+      return test_dyn_break_on_load();
+    }
   }
 
   bool success = unittest_run_all_tests(argc, argv);

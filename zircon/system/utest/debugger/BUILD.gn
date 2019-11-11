@@ -8,6 +8,7 @@ zx_test("debugger") {
     "crash-and-recover.h",
     "debugger.cc",
     "debugger.h",
+    "dyn_break_on_load.cc",
     "hw-breakpoint-test.cc",
     "inferior-control.cc",
     "inferior-control.h",
@@ -33,5 +34,9 @@ zx_test("debugger") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+  ]
+
+  deps += [
+    "$zx/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-test-module",
   ]
 }

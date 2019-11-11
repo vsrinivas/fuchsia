@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <threads.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -165,6 +166,11 @@ tu_exception_t tu_read_exception(zx_handle_t channel);
 
 zx_handle_t tu_exception_get_process(zx_handle_t exception);
 zx_handle_t tu_exception_get_thread(zx_handle_t exception);
+
+// A ZX_EXCP_SW_BREAKPOINT requires some registers tune-up in order to be handled correctly
+// depending on the architecture. This functions takes care of the correct setup of the program
+// counter so that the exception can be resumed successfully.
+zx_status_t tu_cleanup_breakpoint(zx_handle_t thread);
 
 void tu_resume_from_exception(zx_handle_t exception_handle);
 

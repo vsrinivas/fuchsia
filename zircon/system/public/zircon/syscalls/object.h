@@ -497,6 +497,13 @@ typedef struct zx_info_resource {
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   ((uint32_t) 6u)
 
+// Whether the dynamic loader should issue a debug trap when loading a shared library,
+// either initially or when running (e.g. dlopen).
+//
+// See docs/reference/syscalls/object_get_property.md
+// See third_party/ulib/musl/ldso/dynlink.c.
+#define ZX_PROP_PROCESS_BREAK_ON_LOAD ((uint32_t) 7u)
+
 // Argument is a size_t.
 #define ZX_PROP_SOCKET_RX_THRESHOLD         12u
 #define ZX_PROP_SOCKET_TX_THRESHOLD         13u

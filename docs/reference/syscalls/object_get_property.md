@@ -81,6 +81,34 @@ creation, the loader will manually issue a debug breakpoint when the property
 has been set to its correct value. This gives an opportunity to read or modify
 the initial state of the program.
 
+### ZX_PROP_PROCESS_BREAK_ON_LOAD
+
+*handle* type: **Process**
+
+*value* type: `uintptr_t`
+
+Allowed operations: **get**, **set**
+
+Determines whether the dynamic loader will issue a debug trap on every load of a
+shared library. If set before the first thread of a process runs, it will also
+trigger a debug trap for the initial load.
+
+The dynamic loader sets the expected value of `ZX_PROP_PROCESS_DEBUG_ADDR` before
+triggering this debug trap. Exception handlers can use this property to query the
+dynamic loader's state.
+
+When the dynamic loader issues the debug trap, it sets the value of the `r_brk_on_load`
+member on the `r_debug` struct exposed by the dynamic loader. The address of this
+struct can be obtained by the `ZX_PROP_PROCESS_DEBUG_ADDR` property.
+
+Any non-zero value is considered to activate this feature. Setting this property to
+zero will disable it.
+
+Note: Depending on the architecture, the address reported by the exception might be
+different that the one reported by this property. For example, an x64 platform reports
+the instruction pointer *after* it executes the instruction.  This means that an x64
+platform reports an instruction pointer one byte higher than this property.
+
 ### ZX_PROP_PROCESS_VDSO_BASE_ADDRESS
 
 *handle* type: **Process**

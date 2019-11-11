@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "inferior.h"
+
 #include <assert.h>
-#include <atomic>
+#include <dlfcn.h>
 #include <inttypes.h>
+#include <lib/backtrace-request/backtrace-request.h>
+#include <lib/zx/thread.h>
 #include <link.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <lib/backtrace-request/backtrace-request.h>
-#include <lib/zx/thread.h>
-#include <pretty/hexdump.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -24,9 +22,14 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <atomic>
+
+#include <pretty/hexdump.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "crash-and-recover.h"
 #include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
 #include "utils.h"
 
@@ -254,6 +257,51 @@ int test_suspend_on_start() {
   int res = 1;
   thrd_join(thread, &res);
   ASSERT_TRUE(res == 0);
+
+  return kInferiorReturnCode;
+
+  END_HELPER;
+}
+
+int test_dyn_break_on_load() {
+  BEGIN_HELPER;
+
+  zx_handle_t self_handle = zx_process_self();
+
+  // Load a .so several times. These should trigger an exception.
+  for (int i = 0; i < 5; i++) {
+    void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
+    ASSERT_NONNULL(h, dlerror());
+    EXPECT_EQ(dlclose(h), 0, "dlclose failed");
+  }
+
+  // Disable the property so that there are not exceptions triggered.
+  uintptr_t break_on_load = 0;
+  zx_status_t status = zx_object_set_property(self_handle, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                                              &break_on_load, sizeof(break_on_load));
+  ASSERT_EQ(status, ZX_OK);
+
+  // Load a .so several times. These should not trigger an exception.
+  for (int i = 0; i < 5; i++) {
+    void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
+    ASSERT_NONNULL(h, dlerror());
+    EXPECT_EQ(dlclose(h), 0, "dlclose failed");
+  }
+
+  // Re-Enable the property so that there are not exceptions triggered.
+  break_on_load = 1;
+  status = zx_object_set_property(self_handle, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                                  &break_on_load, sizeof(break_on_load));
+  ASSERT_EQ(status, ZX_OK);
+
+  // Load a .so several times. These should trigger an exception.
+  for (int i = 0; i < 4; i++) {
+    void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
+    ASSERT_NONNULL(h, dlerror());
+    EXPECT_EQ(dlclose(h), 0, "dlclose failed");
+  }
+
+  ASSERT_EQ(zx_handle_close(self_handle), ZX_OK);
 
   return kInferiorReturnCode;
 

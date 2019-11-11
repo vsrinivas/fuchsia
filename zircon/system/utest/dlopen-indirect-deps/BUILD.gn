@@ -16,7 +16,7 @@ zx_test("dlopen-indirect-deps") {
 }
 
 zx_library("dlopen-indirect-deps-test-module") {
-  visibility = [ ":*" ]
+  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
   testonly = true
   shared = true
   sources = [
@@ -28,7 +28,7 @@ zx_library("dlopen-indirect-deps-test-module") {
 }
 
 zx_library("dlopen-indirect-deps-test-liba") {
-  visibility = [ ":*" ]
+  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
   testonly = true
   shared = true
   sources = [
@@ -40,7 +40,7 @@ zx_library("dlopen-indirect-deps-test-liba") {
 }
 
 zx_library("dlopen-indirect-deps-test-libb") {
-  visibility = [ ":*" ]
+  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
   testonly = true
   shared = true
   sources = [

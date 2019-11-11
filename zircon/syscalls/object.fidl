@@ -43,6 +43,7 @@ protocol object {
     /// Ask for various properties of various kernel objects.
     /// Rights: handle must have ZX_RIGHT_GET_PROPERTY.
     /// Rights: If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.
+    /// Rights: If property is ZX_PROP_PROCESS_BREAK_ON_LOAD, handle must be of type ZX_OBJ_TYPE_PROCESS.
     /// Rights: If property is ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, handle must be of type ZX_OBJ_TYPE_PROCESS.
     /// Rights: If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
@@ -51,6 +52,7 @@ protocol object {
     /// Set various properties of various kernel objects.
     /// Rights: handle must have ZX_RIGHT_SET_PROPERTY.
     /// Rights: If property is ZX_PROP_PROCESS_DEBUG_ADDR, handle must be of type ZX_OBJ_TYPE_PROCESS.
+    /// Rights: If property is ZX_PROP_PROCESS_BREAK_ON_LOAD, handle must be of type ZX_OBJ_TYPE_PROCESS.
     /// Rights: If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_JOB_KILL_ON_OOM, handle must be of type ZX_OBJ_TYPE_JOB.
@@ -81,8 +83,8 @@ protocol object {
     object_get_info(handle handle, uint32 topic)
         -> (status status, vector_void buffer, optional_usize actual, optional_usize avail);
 
-    /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
-    /// Rights: handle must have ZX_RIGHT_ENUMERATE.
+    /// Given a kernel object with children objects, obtain a handle to the child specified by the
+    /// provided kernel object id. Rights: handle must have ZX_RIGHT_ENUMERATE.
     object_get_child(handle handle, uint64 koid, rights rights) -> (status status, handle out);
 
     /// Apply a scheduling profile to a thread.

@@ -122,6 +122,8 @@ struct gnu_note {
 
 #define MIN_TLS_ALIGN alignof(struct pthread)
 
+#define NO_INLINE __attribute__((noinline))
+
 #define ADDEND_LIMIT 4096
 static size_t *saved_addends, *apply_addends_to;
 
@@ -169,14 +171,45 @@ NO_ASAN __NO_SAFESTACK static int dl_strcmp(const char* l, const char* r) {
 // __builtin_trap() documented to never return. We don't want the compiler to
 // optimize later code away because it assumes the trap will never be returned
 // from.
- __NO_SAFESTACK static void debug_break(void) {
+//
+// NOTE: The x64 reported address when reading the exception's instruction pointer
+// will be offset by one byte. This is because x64 will report the address as being
+// the one *after* executing the breakpoint, while ARM will report the address of
+// the breakpoint instruction.  Thus the reporting address will be 1 byte higher
+// in the case of x64 and the caller will need to offset it back in order to get
+// the correct address of the debug trap.
+
+void debug_break(void);
+
 #if defined(__x86_64__)
-  __asm__("int3");
+
+__asm__(
+    ".pushsection .text, \"ax\", @progbits\n"
+    ".global debug_break\n"
+    "debug_break:\n"
+    "int3\n"
+    "ret\n"
+    ".popsection\n");
 #elif defined(__aarch64__)
-  __asm__("brk 0");
-#else
-#error
+
+__asm__(
+    ".pushsection .text, \"ax\", %progbits\n"
+    ".global debug_break\n"
+    "debug_break:\n"
+    "brk 0\n"
+    "ret\n"
+    ".popsection\n");
 #endif
+
+__NO_SAFESTACK static bool should_break_on_load(void) {
+  intptr_t dyn_break_on_load = 0;
+  zx_status_t status =
+      zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                             &dyn_break_on_load, sizeof(dyn_break_on_load));
+  if (status != ZX_OK)
+    return false;
+
+  return dyn_break_on_load != 0;
 }
 
 // Simple bump allocator for dynamic linker internal data structures.
@@ -1064,7 +1097,7 @@ __NO_SAFESTACK NO_ASAN static void decode_dyn(struct dso* p) {
     p->versym = laddr(p, *dyn);
 }
 
- __NO_SAFESTACK static size_t count_syms(struct dso* p) {
+__NO_SAFESTACK static size_t count_syms(struct dso* p) {
   if (p->hashtab)
     return p->hashtab[1];
 
@@ -1495,11 +1528,12 @@ void __libc_start_init(void) {
 // Define it in assembly as a single return instruction to avoid any ABI
 // interactions.
 void _dl_debug_state(void);
-__asm__(".pushsection .text._dl_debug_state,\"ax\",%progbits\n"
-        ".type _dl_debug_state,%function\n"
-        "_dl_debug_state: ret\n"
-        ".size _dl_debug_state, . - _dl_debug_state\n"
-        ".popsection");
+__asm__(
+    ".pushsection .text._dl_debug_state,\"ax\",%progbits\n"
+    ".type _dl_debug_state,%function\n"
+    "_dl_debug_state: ret\n"
+    ".size _dl_debug_state, . - _dl_debug_state\n"
+    ".popsection");
 
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
   pthread_t self = __pthread_self();
@@ -1792,30 +1826,43 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, const char* argv0, const 
 
   debug.r_version = 1;
   debug.r_brk = (uintptr_t)&_dl_debug_state;
+  debug.r_brk_on_load = (uintptr_t)&debug_break;
   debug.r_map = &head->l_map;
   debug.r_ldbase = ldso.l_map.l_addr;
   debug.r_state = 0;
 
-  // The ZX_PROP_PROCESS_DEBUG_ADDR being set to 1 on startup is a signal
-  // to issue a debug breakpoint after setting the property to signal to a
-  // debugger that the property is now valid.
-  intptr_t existing_debug_addr = 0;
-  status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR,
-                                   &existing_debug_addr, sizeof(existing_debug_addr));
-  bool break_after_set =
-      (status == ZX_OK) && (existing_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
+  // Check if the process has to issue a debug trap after this load.
+  // If setting ZX_PROP_PROCESS_DEBUG_ADDR fails, crashlogger backtraces, debugger
+  // sessions, etc. will be problematic, but this isn't fatal.
+  //
+  // TODO(dje): Is there a way to detect we're here because of being
+  // an injected process (launchpad_start_injected)? IWBN to print a
+  // warning here but launchpad_start_injected can trigger this.
 
-  status = _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR,
-                                   &_dl_debug_addr, sizeof(_dl_debug_addr));
-  if (status != ZX_OK) {
-    // Bummer. Crashlogger backtraces, debugger sessions, etc. will be
-    // problematic, but this isn't fatal.
-    // TODO(dje): Is there a way to detect we're here because of being
-    // an injected process (launchpad_start_injected)? IWBN to print a
-    // warning here but launchpad_start_injected can trigger this.
-  }
-  if (break_after_set) {
+  // First check if the user is using ZX_PROP_PROCESS_BREAK_ON_LOAD.
+  if (should_break_on_load()) {
+    _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR, &_dl_debug_addr,
+                            sizeof(_dl_debug_addr));
     debug_break();
+  } else {
+    // Fallback to the previous magic number approach.
+    //
+    // The ZX_PROP_PROCESS_DEBUG_ADDR being set to 1 on startup is a signal
+    // to issue a debug breakpoint after setting the property to signal to a
+    // debugger that the property is now valid.
+    intptr_t existing_debug_addr = 0;
+    status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR,
+                                     &existing_debug_addr, sizeof(existing_debug_addr));
+
+    bool break_after_set =
+        (status == ZX_OK) && (existing_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
+
+    _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR, &_dl_debug_addr,
+                            sizeof(_dl_debug_addr));
+
+    if (break_after_set) {
+      debug_break();
+    }
   }
 
   _dl_debug_state();
@@ -2056,6 +2103,12 @@ static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
   }
 
   update_tls_size();
+
+  // Check if the process has set the state to break on this load.
+  if (should_break_on_load()) {
+    debug_break();
+  }
+
   _dl_debug_state();
   if (trace_maps) {
     trace_load(p);
@@ -2370,10 +2423,11 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     fidl_message_header_t hdr;
     ldmsg_clone_t clone;
   } req = {
-      .hdr = {
-        .ordinal = LDMSG_OP_CLONE,
-        .magic_number = kFidlWireFormatMagicNumberInitial,
-      },
+      .hdr =
+          {
+              .ordinal = LDMSG_OP_CLONE,
+              .magic_number = kFidlWireFormatMagicNumberInitial,
+          },
       .clone =
           {
               .object = FIDL_HANDLE_PRESENT,

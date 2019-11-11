@@ -296,6 +296,9 @@ class ProcessDispatcher final
   uintptr_t get_debug_addr() const;
   zx_status_t set_debug_addr(uintptr_t addr);
 
+  uintptr_t get_dyn_break_on_load() const;
+  zx_status_t set_dyn_break_on_load(uintptr_t break_on_load);
+
   // Checks |condition| and enforces the parent job's policy.
   //
   // Depending on the parent job's policy, this method may signal an exception
@@ -457,6 +460,13 @@ class ProcessDispatcher final
   // This is the value of _dl_debug_addr from ld.so.
   // See third_party/ulib/musl/ldso/dynlink.c.
   uintptr_t debug_addr_ TA_GUARDED(get_lock()) = 0;
+
+  // Whether the dynamic loader should issue a debug trap when loading a shared library,
+  // either initially or when running (e.g. dlopen).
+  //
+  // See docs/reference/syscalls/object_get_property.md
+  // See third_party/ulib/musl/ldso/dynlink.c.
+  uintptr_t dyn_break_on_load_ TA_GUARDED(get_lock()) = 0;
 
   // This is a cache of aspace()->vdso_code_address().
   uintptr_t vdso_code_address_ = 0;

@@ -826,6 +826,17 @@ zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
   return ZX_OK;
 }
 
+uintptr_t ProcessDispatcher::get_dyn_break_on_load() const {
+  Guard<fbl::Mutex> guard{get_lock()};
+  return dyn_break_on_load_;
+}
+
+zx_status_t ProcessDispatcher::set_dyn_break_on_load(uintptr_t break_on_load) {
+  Guard<fbl::Mutex> guard{get_lock()};
+  dyn_break_on_load_ = break_on_load;
+  return ZX_OK;
+}
+
 zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
   const auto action = policy_.QueryBasicPolicy(condition);
   switch (action) {
