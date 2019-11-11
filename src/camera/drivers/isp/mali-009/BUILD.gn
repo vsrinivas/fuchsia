@@ -5,16 +5,42 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
+source_set("stream_server") {
+  sources = [
+    "stream_impl.cc",
+    "stream_impl.h",
+    "stream_server.cc",
+    "stream_server.h",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/lib/fidl/cpp",
+    "//src/camera/drivers/isp/modules",
+    "//src/camera/drivers/isp/modules:isp-registers",
+    "//src/camera/drivers/test_utils",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+  ]
+}
+
 driver_module("mali-009-driver") {
   output_name = "mali-009"
   sources = [
     "arm-isp-test.cc",
     "arm-isp.cc",
     "init_sequences.cc",
-    "stream_impl.cc",
-    "stream_server.cc",
   ]
+
   deps = [
+    ":stream_server",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2",
