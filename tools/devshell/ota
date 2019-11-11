@@ -3,7 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### do a system OTA
+#### CATEGORY=Software delivery
+### perform a system OTA on a connected device
 
 ## usage: fx ota [-h|--help]
 ##

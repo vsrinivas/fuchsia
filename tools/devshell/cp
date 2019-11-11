@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Device management
 ### copy a file to/from a target device
 
 ## usage: fx cp [--to-target|--to-host] SRC... DST

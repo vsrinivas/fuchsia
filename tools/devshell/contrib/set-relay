@@ -1,10 +1,13 @@
 #!/usr/bin/env python
-
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-## Actuates the state of an external relay by writing a single byte to |tty|.
+#### CATEGORY=Other
+### Actuates the state of an external relay by writing a single byte to |tty|.
+## usage: fx set-relay [--off|--on] /dev/ttyUSB0
+##
+## Turn on or off a USB-connected relay on the specified device.
 
 import argparse
 import sys

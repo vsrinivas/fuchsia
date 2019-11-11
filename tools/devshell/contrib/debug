@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### run the debug agent on target and connect to it with zxdb
 
 ## Starts the debug agent on the proposed target and automatically connect zxdb

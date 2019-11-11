@@ -3,12 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### `gn clean` the ZIRCON_BUILDROOT and FUCHSIA_BUILD_DIR
+#### CATEGORY=Build
+### clean the current Fuchsia and Zircon build artifacts
 
-## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
-##   gn clean out/build-zircon
-##   gn clean out/x64
-## It is useful to clean the build directory without having to re-run fx set.
+## Delete the contents of the output directory except for args.gn and
+## create a Ninja build environment sufficient to regenerate the build.
+##
+## If FUCHSIA_BUILD_DIR is out/default, this is simply:
+##   gn clean out/default.zircon
+##   gn clean out/default
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read

@@ -109,6 +109,7 @@ It is required that all subcommands implement help documentation lines, which
 are defined as follows:
 
 ```
+#### CATEGORY=Category name
 ### a short one-line (<70 character) description for the command lines
 ## usage: fx <subcommand> [-a|-b|-c] --foo ...
 ##
@@ -124,9 +125,50 @@ and are used to provide full command help output. The long form output should
 document all flags and provide fuller description of the command behaviors as
 appropriate.
 
+Lines starting with `####` contain metadata. The following metadata fields are
+supported:
+
+* `#### CATEGORY=Category`: the subcommand is grouped under the specified
+  category in the output of `fx help`. There's no enforcement on the name of
+  the category, but whenever possible it should be one of the existing
+  categories.
+
+* `#### DEPRECATED`: deprecated subcommands are not listed by default on
+  `fx help`.
+
 Where possible, a command can use `fx-command-help` to print out the
 long-form help (defined by `##` lines). Many commands implement `-h` and
 `--help` to invoke `fx-command-help` and this is recommended.
+
+### fx metadata files
+
+When subcommands are scripts, documentation is embedded as comments in
+the scripts themselves. However, that's not always possible, for example for
+binaries produced by the build, such as `fidldoc`, prebuilt binaries like `gn` and
+symlinks like `rustdoc` and `gen-cargo`. In any case where metadata cannot be
+in the subcommand itself, `fx` looks for a metadata file with the `.fx` extension
+in the same directories where it looks for subcommands. If such a file exists,
+it represents a subcommand with the same name without the `.fx` extension.
+
+`<subcommand>.fx` files follow the same format described in
+the previous section, with an optional metadata field:
+
+* `#### EXECUTABLE=location_of_executable`: points to the actual executable,
+  which can be anywhere in the tree or in the build output. It can/must use the
+  following variables to refer to known paths:
+
+  * `${FUCHSIA_DIR}`: root of the Fuchsia source tree
+  * `${PREBUILT_3P_DIR}`: location of the 3p prebuilts (usually `${FUCHSIA_DIR}/prebuilt/third_party`)
+  * `${HOST_PLATFORM}`: platform of the host, used to compose prebuilt paths
+  * `${HOST_TOOLS_DIR}`: path of the host tools produced by the build
+
+  Some examples of valid uses of `EXECUTABLE` in `.fx` files:
+
+  * `#### EXECUTABLE=${FUCHSIA_DIR}/.jiri_root/bin/cipd`
+  * `#### EXECUTABLE=${PREBUILT_3P_DIR}/gn/${HOST_PLATFORM}/gn`
+  * `#### EXECUTABLE=${FUCHSIA_DIR}/.jiri_root/bin/jiri`
+  * `#### EXECUTABLE=${PREBUILT_3P_DIR}/ninja/${HOST_PLATFORM}/ninja`
+
 
 ## Testing
 

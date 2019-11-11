@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Source tree
 ### compare all built Fuchsia packages with a prior package snapshot
 
 ## usage: fx delta [[--name|-n NAME] | [--source|-s PATH]] [--build] [--help-delta] [DELTA_ARGS...]

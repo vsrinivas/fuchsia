@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### symbolize backtraces and program locations provided as input on stdin
 
 ## This tool takes in log output from either zx_log or syslog and processes

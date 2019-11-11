@@ -3,14 +3,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
+#### DEPRECATED
 ### build a test package and run on target.
-### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 
 ## Deprecated, please use fx run-test
 ##
 ## usage: fx run-test-component [-t|--test <test_name>] [-d|--device <device>] PKG_TARGET
 ## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
 ## target, and executes it.
+##
+## PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 ##
 ## If using this command, please run 'fx build' again before paving your device
 ## because 'fx build updates' used by this script does not build images so it
