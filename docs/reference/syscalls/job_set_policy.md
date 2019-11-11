@@ -114,9 +114,11 @@ typedef struct zx_policy_timer_slack {
 ```
 
 *min_slack* specifies the minimum amount of slack applied to timers and
-deadline-based events the job. Attempts to set a *min_slack* less than the
-parent job's *min_slack* are ignored. In other words, a job's *min_slack* is the
-maximum of the specified value and its parent job's *min_slack*.
+deadline-based events created by the job.
+
+If the parent job's *min_slack* is greater than the specified *min_slack* then
+the parent job's value is used instead. In other words, a job's *min_slack* is
+the maximum of the specified value and its parent job's *min_slack*.
 
 *default_mode* specifies how slack will be applied when not otherwise indicated
 by the syscall arguments. A job's *default_mode* may be set regardless of its
