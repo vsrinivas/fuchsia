@@ -6,10 +6,11 @@
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_PIPE_H_
 
 #include <assert.h>
+#include <zircon/pixelformat.h>
+
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/intelgpucore.h>
 #include <hwreg/bitfields.h>
-#include <zircon/pixelformat.h>
 
 namespace registers {
 
@@ -109,6 +110,9 @@ class PlaneControl : public hwreg::RegisterBase<PlaneControl, uint32_t> {
   DEF_BIT(23, pipe_csc_enable);
   DEF_FIELD(22, 21, key_enable);
   DEF_BIT(20, rgb_color_order);
+  static constexpr uint32_t kOrderBgrx = 0;
+  static constexpr uint32_t kOrderRgbx = 1;
+
   DEF_BIT(19, plane_yuv_to_rgb_csc_dis);
   DEF_BIT(18, plane_yuv_to_rgb_csc_format);
   DEF_FIELD(17, 16, yuv_422_byte_order);

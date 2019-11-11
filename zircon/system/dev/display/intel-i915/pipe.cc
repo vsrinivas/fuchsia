@@ -392,7 +392,8 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   }
   plane_key_mask.WriteTo(mmio_space());
   if (primary->alpha_mode == ALPHA_DISABLE ||
-      primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888) {
+      primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888 ||
+      primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
     plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaDisable);
   } else if (primary->alpha_mode == ALPHA_PREMULTIPLIED) {
     plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaPreMultiply);
@@ -404,6 +405,12 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   plane_ctrl.set_plane_enable(1);
   plane_ctrl.set_pipe_csc_enable(enable_csc);
   plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
+  if (primary->image.pixel_format == ZX_PIXEL_FORMAT_ABGR_8888 ||
+      primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
+    plane_ctrl.set_rgb_color_order(plane_ctrl.kOrderRgbx);
+  } else {
+    plane_ctrl.set_rgb_color_order(plane_ctrl.kOrderBgrx);
+  }
   if (primary->image.type == IMAGE_TYPE_SIMPLE) {
     plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
   } else if (primary->image.type == IMAGE_TYPE_X_TILED) {

@@ -129,6 +129,12 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     image_constraints.color_space[0] = sysmem::ColorSpace{
         .type = sysmem::ColorSpaceType::SRGB,
     };
+  } else if (format == ZX_PIXEL_FORMAT_ABGR_8888 || format == ZX_PIXEL_FORMAT_BGR_888x) {
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::R8G8B8A8;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] = sysmem::ColorSpace{
+        .type = sysmem::ColorSpaceType::SRGB,
+    };
   } else {
     image_constraints.pixel_format.type = sysmem::PixelFormatType::NV12;
     image_constraints.color_spaces_count = 1;

@@ -52,8 +52,9 @@
 #define FLAGS_BACKLIGHT 1
 
 namespace {
-static zx_pixel_format_t supported_formats[2] = {ZX_PIXEL_FORMAT_ARGB_8888,
-                                                 ZX_PIXEL_FORMAT_RGB_x888};
+static zx_pixel_format_t supported_formats[4] = {
+    ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ABGR_8888,
+    ZX_PIXEL_FORMAT_BGR_888x};
 
 static cursor_info_t cursor_infos[3] = {
     {.width = 64, .height = 64, .format = ZX_PIXEL_FORMAT_ARGB_8888},
@@ -850,7 +851,8 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::
 }
 
 static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t* type_out) {
-  if (format.type != fuchsia_sysmem_PixelFormatType_BGRA32) {
+  if (format.type != fuchsia_sysmem_PixelFormatType_BGRA32 &&
+      format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
     return false;
   }
 
@@ -1756,7 +1758,16 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   fuchsia_sysmem_ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];
 
-  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+  switch (config->pixel_format) {
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+    case ZX_PIXEL_FORMAT_RGB_x888:
+      image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+      break;
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+    case ZX_PIXEL_FORMAT_BGR_888x:
+      image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
+      break;
+  }
   image_constraints.pixel_format.has_format_modifier = true;
   switch (config->type) {
     case IMAGE_TYPE_SIMPLE:
