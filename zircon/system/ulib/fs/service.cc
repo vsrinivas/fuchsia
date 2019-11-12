@@ -26,7 +26,7 @@ zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) {
+zx_status_t Service::ConnectService(zx::channel channel) {
   if (!connector_) {
     return ZX_ERR_NOT_SUPPORTED;
   }

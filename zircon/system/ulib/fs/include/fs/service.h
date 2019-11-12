@@ -26,7 +26,7 @@ class Service : public Vnode {
   // Creates a service with the specified connector.
   //
   // If the |connector| is null, then incoming connection requests will be dropped.
-  Service(Connector connector);
+  explicit Service(Connector connector);
 
   // Destroys the services and releases its connector.
   ~Service() override;
@@ -34,7 +34,7 @@ class Service : public Vnode {
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) final;
+  zx_status_t ConnectService(zx::channel channel) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

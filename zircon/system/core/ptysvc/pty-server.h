@@ -28,12 +28,12 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
  public:
   // This ctor is only public for the use of fbl::MakeRefCounted.  Use Create()
   // instead.
-  PtyServer(zx::eventpair local, zx::eventpair remote);
+  PtyServer(zx::eventpair local, zx::eventpair remote, fs::Vfs* vfs);
 
   ~PtyServer();
 
   // Create a new PtyServer.  This method is preferred to the ctor.
-  static zx_status_t Create(fbl::RefPtr<PtyServer>* out);
+  static zx_status_t Create(fbl::RefPtr<PtyServer>* out, fs::Vfs* vfs);
 
   zx_status_t Read(void* data, size_t len, size_t* out_actual);
   zx_status_t Write(const void* data, size_t len, size_t* out_actual);
@@ -68,11 +68,6 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   WindowSize window_size() { return size_; }
   void set_window_size(WindowSize size) { size_ = size; }
 
-  void set_vfs(fs::Vfs* vfs) {
-    ZX_ASSERT(vfs_ == nullptr || vfs_ == vfs);
-    vfs_ = vfs;
-  }
-
   [[nodiscard]] bool is_active(const PtyClient* client) const { return active_.get() == client; }
 
   [[nodiscard]] bool is_control(const PtyClient* client) const { return control_.get() == client; }
@@ -86,7 +81,7 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   // conditions.
   zx::eventpair local_, remote_;
 
-  fs::Vfs* vfs_ = nullptr;
+  fs::Vfs* vfs_;
 
   // Data waiting to be read by a connection to the server.
   Fifo rx_fifo_;

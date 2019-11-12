@@ -67,7 +67,7 @@ class PseudoDir : public Vnode {
 
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   void Notify(fbl::StringPiece name, unsigned event) final;

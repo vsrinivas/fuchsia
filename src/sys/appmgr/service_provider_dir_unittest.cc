@@ -80,7 +80,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     fbl::RefPtr<fs::Service> child_node;
     GetService(service_provider, service_name, &child_node);
     ASSERT_TRUE(child_node);
-    ASSERT_EQ(ZX_OK, child_node->Serve(&vfs_, zx::channel(), fs::VnodeConnectionOptions()));
+    ASSERT_EQ(ZX_OK, vfs_.Serve(child_node, zx::channel(), fs::VnodeConnectionOptions()));
     EXPECT_EQ(expected_value, value_) << service_name.c_str();
 
     // Using ConnectToService.

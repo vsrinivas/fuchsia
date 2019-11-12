@@ -52,6 +52,15 @@ TEST(Rights, ReadExec) {
   // clang-format on
 }
 
+TEST(Rights, WriteExec) {
+  // clang-format off
+  EXPECT_FALSE(fs::Rights::WriteExec().read,    "Bad value for Rights::WriteExec().read");
+  EXPECT_TRUE (fs::Rights::WriteExec().write,   "Bad value for Rights::WriteExec().write");
+  EXPECT_FALSE(fs::Rights::WriteExec().admin,   "Bad value for Rights::WriteExec().admin");
+  EXPECT_TRUE (fs::Rights::WriteExec().execute, "Bad value for Rights::WriteExec().execute");
+  // clang-format on
+}
+
 TEST(Rights, All) {
   // clang-format off
   EXPECT_TRUE (fs::Rights::All().read,    "Bad value for Rights::All().read");
@@ -70,6 +79,11 @@ class DummyVnode : public fs::Vnode {
   }
 };
 
+#define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
+#define EXPECT_RESULT_ERROR(error_val, expr) \
+  EXPECT_TRUE((expr).is_error());            \
+  EXPECT_EQ(error_val, (expr).error())
+
 TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
   class TestDirectory : public DummyVnode {
    public:
@@ -77,11 +91,11 @@ TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
   };
 
   TestDirectory vnode;
-  ASSERT_OK(
+  EXPECT_RESULT_OK(
       vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
-  ASSERT_EQ(vnode.ValidateOptions(
-                fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)),
-            ZX_ERR_NOT_FILE);
+  EXPECT_RESULT_ERROR(ZX_ERR_NOT_FILE,
+                      vnode.ValidateOptions(
+                          fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
 TEST(VnodeConnectionOptions, ValidateOptionsForService) {
@@ -91,10 +105,10 @@ TEST(VnodeConnectionOptions, ValidateOptionsForService) {
   };
 
   TestConnector vnode;
-  ASSERT_EQ(
-      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)),
-      ZX_ERR_NOT_DIR);
-  ASSERT_OK(vnode.ValidateOptions(
+  EXPECT_RESULT_ERROR(
+      ZX_ERR_NOT_DIR,
+      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  EXPECT_RESULT_OK(vnode.ValidateOptions(
       fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
@@ -105,10 +119,10 @@ TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
   };
 
   TestFile vnode;
-  ASSERT_EQ(
-      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)),
-      ZX_ERR_NOT_DIR);
-  ASSERT_OK(vnode.ValidateOptions(
+  EXPECT_RESULT_ERROR(
+      ZX_ERR_NOT_DIR,
+      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  EXPECT_RESULT_OK(vnode.ValidateOptions(
       fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
 }
 

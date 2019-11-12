@@ -64,13 +64,13 @@ void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_st
   handler(status);
 }
 
-void ManagedVfs::RegisterConnection(std::unique_ptr<Connection> connection) {
+void ManagedVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection) {
   fbl::AutoLock<fbl::Mutex> lock(&lock_);
   ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   connections_.push_back(std::move(connection));
 }
 
-void ManagedVfs::UnregisterConnection(Connection* connection) {
+void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
   fbl::AutoLock<fbl::Mutex> lock(&lock_);
   // We drop the result of |erase| on the floor, effectively destroying the
   // connection when all other references (like async callbacks) have

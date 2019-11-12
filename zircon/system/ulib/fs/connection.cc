@@ -21,9 +21,9 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
-#include <fs/connection.h>
 #include <fs/debug.h>
 #include <fs/handler.h>
+#include <fs/internal/connection.h>
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -184,65 +184,40 @@ zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptio
   return ZX_OK;
 }
 
-void VnodeServe(Vfs* vfs, const fbl::RefPtr<Vnode>& vnode, zx::channel channel,
-                VnodeConnectionOptions options) {
-  if (options.flags.node_reference) {
-    vnode->Vnode::Serve(vfs, std::move(channel), options);
-  } else {
-    vnode->Serve(vfs, std::move(channel), options);
-  }
-}
-
 // Performs a path walk and opens a connection to another node.
 void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl::StringPiece path,
             VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
   bool describe = options.flags.describe;
-  fbl::RefPtr<Vnode> vnode;
-  zx_status_t r = vfs->Open(std::move(parent), &vnode, path, &path, options, mode);
-
-  if (r != ZX_OK) {
-    FS_TRACE_DEBUG("vfs: open failure: %d\n", r);
-  } else if (!options.flags.no_remote && vnode->IsRemote()) {
-    FS_TRACE_DEBUG("vfs: handoff to remote\n");
-    // Remote handoff to a remote filesystem node.
-    vfs->ForwardOpenRemote(std::move(vnode), std::move(channel), path, options, mode);
-    return;
-  }
-
-  if (describe) {
-    // Regardless of the error code, in the 'describe' case, we
-    // should respond to the client.
-    if (r != ZX_OK) {
-      WriteDescribeError(std::move(channel), r);
-      return;
+  vfs->Open(std::move(parent), path, options, parent_rights, mode).visit([&](auto&& result) {
+    using ResultT = std::decay_t<decltype(result)>;
+    using OpenResult = fs::Vfs::OpenResult;
+    if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
+      FS_TRACE_DEBUG("vfs: open failure: %d\n", result);
+      if (describe) {
+        WriteDescribeError(std::move(channel), result);
+      }
+    } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
+      FS_TRACE_DEBUG("vfs: handoff to remote\n");
+      // Remote handoff to a remote filesystem node.
+      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), result.path, options,
+                             mode);
+    } else if constexpr (std::is_same_v<ResultT, OpenResult::RemoteRoot>) {
+      FS_TRACE_DEBUG("vfs: handoff to remote\n");
+      // Remote handoff to a remote filesystem node.
+      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), ".", options, mode);
+    } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {
+      if (describe) {
+        OnOpenMsg response;
+        memset(&response, 0, sizeof(response));
+        zx_handle_t extra = ZX_HANDLE_INVALID;
+        Describe(result.vnode, options, &response, &extra);
+        uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
+        channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
+      }
+      // |Vfs::Open| already performs option validation for us.
+      vfs->Serve(result.vnode, std::move(channel), result.validated_options);
     }
-
-    OnOpenMsg response;
-    memset(&response, 0, sizeof(response));
-    zx_handle_t extra = ZX_HANDLE_INVALID;
-    Describe(vnode, options, &response, &extra);
-    uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-    channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
-  } else if (r != ZX_OK) {
-    return;
-  }
-
-  if (vnode->Supports(fs::VnodeProtocol::kDirectory) && options.flags.posix) {
-    // Save this before modifying |options| below.
-    bool admin = options.rights.admin;
-
-    // This is such that POSIX open() can open a directory with O_RDONLY, and
-    // still get the write/execute right if the parent directory connection has the
-    // write/execute right respectively.  With the execute right in particular, the resulting
-    // connection may be passed to fdio_get_vmo_exec() which requires the execute right.
-    // This transfers write and execute from the parent, if present.
-    options.rights |= parent_rights;
-
-    // The ADMIN right is not inherited. It must be explicitly specified.
-    options.rights.admin = admin;
-  }
-
-  VnodeServe(vfs, vnode, std::move(channel), options);
+  });
 }
 
 // This template defines a mechanism to transform a member of Connection
@@ -262,12 +237,12 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
 //      zx_status_t Connection::Foo(Args... args);
 //
 // Such that FooOp may be used in the fuchsia_io_* ops table.
-#define ZXFIDL_OPERATION(Method)                                          \
-  template <typename... Args>                                             \
-  zx_status_t Method##Op(void* ctx, Args... args) {                       \
-    TRACE_DURATION("vfs", #Method);                                       \
-    auto connection = reinterpret_cast<Connection*>(ctx);                 \
-    return (connection->Connection::Method)(std::forward<Args>(args)...); \
+#define ZXFIDL_OPERATION(Method)                                                    \
+  template <typename... Args>                                                       \
+  zx_status_t Method##Op(void* ctx, Args... args) {                                 \
+    TRACE_DURATION("vfs", #Method);                                                 \
+    auto connection = reinterpret_cast<internal::Connection*>(ctx);                 \
+    return (connection->internal::Connection::Method)(std::forward<Args>(args)...); \
   }
 
 ZXFIDL_OPERATION(NodeClone)
@@ -390,6 +365,8 @@ constexpr uint32_t kSettableStatusFlags = fuchsia_io_OPEN_FLAG_APPEND;
 
 // All flags which indicate state of the connection (excluding rights).
 constexpr uint32_t kStatusFlags = kSettableStatusFlags | fuchsia_io_OPEN_FLAG_NODE_REFERENCE;
+
+namespace internal {
 
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode, zx::channel channel,
                        VnodeConnectionOptions options)
@@ -532,24 +509,29 @@ zx_status_t Connection::NodeClone(uint32_t clone_flags, zx_handle_t object) {
   }
 
   fbl::RefPtr<Vnode> vn(vnode_);
-  zx_status_t status = ZX_OK;
+  auto result = vn->ValidateOptions(clone_options);
+  if (result.is_error()) {
+    return write_error(std::move(channel), result.error());
+  }
+  auto& validated_options = result.value();
+  zx_status_t open_status = ZX_OK;
   if (!clone_options.flags.node_reference) {
-    status = OpenVnode(clone_options, &vn);
+    open_status = OpenVnode(validated_options, &vn);
   }
   if (describe) {
     OnOpenMsg response;
     memset(&response, 0, sizeof(response));
-    response.primary.s = status;
+    response.primary.s = open_status;
     zx_handle_t extra = ZX_HANDLE_INVALID;
-    if (status == ZX_OK) {
+    if (open_status == ZX_OK) {
       Describe(vnode_, clone_options, &response, &extra);
     }
     uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
     channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
   }
 
-  if (status == ZX_OK) {
-    VnodeServe(vfs_, vn, std::move(channel), clone_options);
+  if (open_status == ZX_OK) {
+    vfs_->Serve(vn, std::move(channel), validated_options);
   }
   return ZX_OK;
 }
@@ -1104,5 +1086,7 @@ zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   }
   return vnode_->HandleFsSpecificMessage(msg, txn);
 }
+
+}  // namespace internal
 
 }  // namespace fs

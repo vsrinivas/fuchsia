@@ -38,8 +38,9 @@ bool test_service() {
 
   // open
   fbl::RefPtr<fs::Vnode> redirect;
-  EXPECT_EQ(ZX_OK, svc->ValidateOptions(options_readable));
-  EXPECT_EQ(ZX_OK, svc->Open(options_readable, &redirect));
+  auto result = svc->ValidateOptions(options_readable);
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ(ZX_OK, svc->Open(result.value(), &redirect));
   EXPECT_NULL(redirect);
 
   // get attr
@@ -55,12 +56,12 @@ bool test_service() {
 
   // serve, the connector will return success the first time
   fs::SynchronousVfs vfs;
-  EXPECT_EQ(ZX_OK, svc->Serve(&vfs, std::move(c1), options_readable));
+  EXPECT_EQ(ZX_OK, vfs.Serve(svc, std::move(c1), options_readable));
   EXPECT_EQ(hc1, bound_channel.get());
 
   // the connector will return failure because bound_channel is still valid
   // we test that the error is propagated back up through Serve
-  EXPECT_EQ(ZX_ERR_IO, svc->Serve(&vfs, std::move(c2), options_readable));
+  EXPECT_EQ(ZX_ERR_IO, vfs.Serve(svc, std::move(c2), options_readable));
   EXPECT_EQ(hc1, bound_channel.get());
 
   END_TEST;
@@ -120,8 +121,9 @@ bool TestServiceNodeIsNotDirectory() {
   ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
 
   // Call |ValidateOptions| with the directory flag should fail.
-  ASSERT_EQ(ZX_ERR_NOT_DIR,
-            vnode->ValidateOptions(fs::VnodeConnectionOptions::ReadWrite().set_directory()));
+  auto result = vnode->ValidateOptions(fs::VnodeConnectionOptions::ReadWrite().set_directory());
+  ASSERT_TRUE(result.is_error());
+  ASSERT_EQ(ZX_ERR_NOT_DIR, result.error());
 
   // Open the service through FIDL with the directory flag, which should fail.
   zx::channel abc_client_end, abc_server_end;
@@ -152,10 +154,50 @@ bool TestServiceNodeIsNotDirectory() {
   END_TEST;
 }
 
+bool TestOpeningServiceWithNodeReferenceFlag() {
+  BEGIN_TEST;
+
+  // Set up the server
+  zx::channel client_end, server_end;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fs::SynchronousVfs vfs(loop.dispatcher());
+
+  auto directory = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto vnode = fbl::AdoptRef<fs::Service>(new fs::Service([](zx::channel channel) {
+    channel.reset();
+    return ZX_OK;
+  }));
+  directory->AddEntry("abc", vnode);
+  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
+
+  zx::channel abc_client_end, abc_server_end;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &abc_client_end, &abc_server_end));
+
+  loop.StartThread();
+
+  auto open_result =
+      fio::Directory::Call::Open(zx::unowned_channel(client_end), fio::OPEN_FLAG_NODE_REFERENCE,
+                                 0755, fidl::StringView("abc"), std::move(abc_server_end));
+  EXPECT_EQ(open_result.status(), ZX_OK);
+
+  // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol.
+  // We verify it by calling describe on it, which should return correctly.
+  auto describe_result = fio::Node::Call::Describe(zx::unowned_channel(abc_client_end));
+  ASSERT_EQ(ZX_OK, describe_result.status());
+  ASSERT_EQ(fio::NodeInfo::Tag::kService, describe_result->info.which());
+
+  loop.Shutdown();
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(service_tests)
 RUN_TEST(test_service)
 RUN_TEST(TestServeDirectory)
 RUN_TEST(TestServiceNodeIsNotDirectory)
+RUN_TEST(TestOpeningServiceWithNodeReferenceFlag)
 END_TEST_CASE(service_tests)

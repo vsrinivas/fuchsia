@@ -100,7 +100,7 @@ class BufferedPseudoFile : public PseudoFile {
   ~BufferedPseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
   class Content final : public Vnode {
@@ -186,7 +186,7 @@ class UnbufferedPseudoFile : public PseudoFile {
   ~UnbufferedPseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
  private:
   class Content final : public Vnode {
@@ -196,7 +196,7 @@ class UnbufferedPseudoFile : public PseudoFile {
 
     // |Vnode| implementation:
     VnodeProtocolSet GetProtocols() const final;
-    zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;

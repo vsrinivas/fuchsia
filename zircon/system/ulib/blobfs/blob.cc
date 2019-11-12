@@ -951,7 +951,7 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   return nullptr;
 }
 
-zx_status_t Blob::Open([[maybe_unused]] fs::VnodeConnectionOptions options,
+zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
                        fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;
   return ZX_OK;

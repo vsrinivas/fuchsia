@@ -55,17 +55,17 @@ BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler wr
 
 BufferedPseudoFile::~BufferedPseudoFile() = default;
 
-zx_status_t BufferedPseudoFile::Open(VnodeConnectionOptions options,
+zx_status_t BufferedPseudoFile::Open(ValidatedOptions options,
                                      fbl::RefPtr<Vnode>* out_redirect) {
   fbl::String output;
-  if (options.rights.read) {
+  if (options->rights.read) {
     zx_status_t status = read_handler_(&output);
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), options, std::move(output)));
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), *options, std::move(output)));
   return ZX_OK;
 }
 
@@ -177,9 +177,9 @@ UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
 
 VnodeProtocolSet UnbufferedPseudoFile::Content::GetProtocols() const { return VnodeProtocol::kFile; }
 
-zx_status_t UnbufferedPseudoFile::Open(VnodeConnectionOptions options,
+zx_status_t UnbufferedPseudoFile::Open(ValidatedOptions options,
                                        fbl::RefPtr<Vnode>* out_redirect) {
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), options));
+  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), *options));
   return ZX_OK;
 }
 
@@ -191,7 +191,7 @@ UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file,
 
 UnbufferedPseudoFile::Content::~Content() = default;
 
-zx_status_t UnbufferedPseudoFile::Content::Open(VnodeConnectionOptions options,
+zx_status_t UnbufferedPseudoFile::Content::Open(ValidatedOptions options,
                                                 fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_ERR_NOT_SUPPORTED;
 }

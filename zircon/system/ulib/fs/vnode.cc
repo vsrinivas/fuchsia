@@ -4,15 +4,12 @@
 
 #include <fs/vnode.h>
 
-#include <fs/vfs_types.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#ifdef __Fuchsia__
 #include <utility>
 
-#include <fs/connection.h>
-#endif
+#include <fs/vfs_types.h>
 
 namespace fs {
 
@@ -21,10 +18,8 @@ Vnode::Vnode() = default;
 Vnode::~Vnode() = default;
 
 #ifdef __Fuchsia__
-zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) {
-  return vfs->ServeConnection(
-      std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), options));
-}
+
+zx_status_t Vnode::ConnectService(zx::channel channel) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Vnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   zx_handle_close_many(msg->handles, msg->num_handles);
@@ -71,7 +66,8 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
   }
   return ZX_OK;
 }
-#endif
+
+#endif  // __Fuchsia__
 
 void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
 
@@ -81,19 +77,20 @@ bool Vnode::Supports(VnodeProtocolSet protocols) const {
 
 bool Vnode::ValidateRights([[maybe_unused]] Rights rights) { return true; }
 
-zx_status_t Vnode::ValidateOptions(VnodeConnectionOptions options) {
+auto Vnode::ValidateOptions(VnodeConnectionOptions options)
+    -> fit::result<ValidatedOptions, zx_status_t> {
   auto protocols = options.protocols();
   if (!Supports(protocols)) {
     if (protocols == VnodeProtocol::kDirectory) {
-      return ZX_ERR_NOT_DIR;
+      return fit::error(ZX_ERR_NOT_DIR);
     } else {
-      return ZX_ERR_NOT_FILE;
+      return fit::error(ZX_ERR_NOT_FILE);
     }
   }
   if (!ValidateRights(options.rights)) {
-    return ZX_ERR_ACCESS_DENIED;
+    return fit::error(ZX_ERR_ACCESS_DENIED);
   }
-  return ZX_OK;
+  return fit::ok(Validated(options));
 }
 
 VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
@@ -102,8 +99,17 @@ VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
   return *protocol;
 }
 
-zx_status_t Vnode::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t Vnode::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_OK;
+}
+
+zx_status_t Vnode::OpenValidating(VnodeConnectionOptions options,
+                                  fbl::RefPtr<Vnode>* out_redirect) {
+  auto validated_options = ValidateOptions(options);
+  if (validated_options.is_error()) {
+    return validated_options.error();
+  }
+  return Open(validated_options.value(), out_redirect);
 }
 
 zx_status_t Vnode::Close() { return ZX_OK; }
@@ -172,7 +178,8 @@ zx::channel Vnode::DetachRemote() { return zx::channel(); }
 zx_handle_t Vnode::GetRemote() const { return ZX_HANDLE_INVALID; }
 
 void Vnode::SetRemote(zx::channel remote) { ZX_DEBUG_ASSERT(false); }
-#endif
+
+#endif  // __Fuchsia__
 
 DirentFiller::DirentFiller(void* ptr, size_t len)
     : ptr_(static_cast<char*>(ptr)), pos_(0), len_(len) {}

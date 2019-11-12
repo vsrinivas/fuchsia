@@ -7,12 +7,12 @@
 #include "pty-client-vnode.h"
 #include "pty-client.h"
 
-PtyServer::PtyServer(zx::eventpair local, zx::eventpair remote)
-    : local_(std::move(local)), remote_(std::move(remote)) {}
+PtyServer::PtyServer(zx::eventpair local, zx::eventpair remote, fs::Vfs* vfs)
+    : local_(std::move(local)), remote_(std::move(remote)), vfs_(vfs) {}
 
 PtyServer::~PtyServer() = default;
 
-zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out) {
+zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out, fs::Vfs* vfs) {
   zx::eventpair local, remote;
   zx_status_t status = zx::eventpair::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -23,7 +23,7 @@ zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out) {
   // 0-byte response with ZX_OK.
   local.signal_peer(0, ::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE |
                            ::llcpp::fuchsia::device::DEVICE_SIGNAL_HANGUP);
-  *out = fbl::MakeRefCounted<PtyServer>(std::move(local), std::move(remote));
+  *out = fbl::MakeRefCounted<PtyServer>(std::move(local), std::move(remote), vfs);
   return ZX_OK;
 }
 
@@ -92,7 +92,7 @@ zx_status_t PtyServer::CreateClient(uint32_t id, zx::channel client_request) {
   clients_.push_back(client);
 
   auto vnode = fbl::MakeRefCounted<PtyClientVnode>(client);
-  status = vnode->Serve(vfs_, std::move(client_request), fs::VnodeConnectionOptions::ReadWrite());
+  status = vfs_->Serve(vnode, std::move(client_request), fs::VnodeConnectionOptions::ReadWrite());
   if (status != ZX_OK) {
     return status;
   }

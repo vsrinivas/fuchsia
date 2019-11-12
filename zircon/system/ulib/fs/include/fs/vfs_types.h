@@ -80,8 +80,13 @@ union Rights {
   constexpr static Rights WriteOnly() { return Rights{0x2}; }
   constexpr static Rights ReadWrite() { return Rights{0x3}; }
   constexpr static Rights ReadExec() { return Rights{0x9}; }
+  constexpr static Rights WriteExec() { return Rights{0xa}; }
   constexpr static Rights All() { return Rights{0xf}; }
 };
+
+constexpr Rights operator&(Rights lhs, Rights rhs) {
+  return Rights(lhs.raw_value & rhs.raw_value);
+}
 
 // Identifies the different operational contracts used to interact with a vnode.
 // For example, the |kFile| protocol allows reading and writing byte contents through

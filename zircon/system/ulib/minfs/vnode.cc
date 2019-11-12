@@ -777,7 +777,8 @@ VnodeMinfs::~VnodeMinfs() {
 #endif
 }
 
-zx_status_t VnodeMinfs::Open(fs::VnodeConnectionOptions, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t VnodeMinfs::Open([[maybe_unused]] ValidatedOptions options,
+                             fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;
   return ZX_OK;
 }

@@ -15,7 +15,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fs/connection.h>
 #include <fs/vfs_types.h>
 #include <launchpad/launchpad.h>
 
@@ -55,21 +54,19 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
-  return CreateVnodeConnection(vfs_.get(), root_, fs::VnodeConnectionOptions::ReadExec(), out);
+  return CreateVnodeConnection(vfs_.get(), root_, fs::Rights::ReadExec(), out);
 }
 
 zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
-  fbl::RefPtr<fs::Vnode> node;
-  fbl::StringPiece path_out;
-  zx_status_t status = vfs_->Open(root_, &node, path, &path_out,
-                                  fs::VnodeConnectionOptions::ReadOnly().set_no_remote(), 0);
-  if (status != ZX_OK) {
-    return status;
+  auto open_result = vfs_->Open(root_, path, fs::VnodeConnectionOptions::ReadOnly().set_no_remote(),
+                                fs::Rights::ReadOnly(), 0);
+  if (open_result.is_error()) {
+    return open_result.error();
   }
-  ZX_ASSERT(path_out.size() == 0);
-
+  ZX_ASSERT(open_result.is_ok());
+  fbl::RefPtr<fs::Vnode> node = std::move(open_result.ok().vnode);
   fs::VnodeRepresentation info;
-  status = node->GetNodeInfo(fs::Rights::ReadOnly(), &info);
+  zx_status_t status = node->GetNodeInfo(fs::Rights::ReadOnly(), &info);
   if (status != ZX_OK) {
     return status;
   }

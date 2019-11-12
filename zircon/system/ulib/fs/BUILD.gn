@@ -5,8 +5,8 @@
 zx_library("fs") {
   sdk = "source"
   sdk_headers = [
+    "fs/internal/connection.h",
     "fs/client.h",
-    "fs/connection.h",
     "fs/handler.h",
     "fs/lazy_dir.h",
     "fs/locking.h",
@@ -34,10 +34,12 @@ zx_library("fs") {
   public_deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio:headers",
+    "$zx/system/ulib/fit:headers",
   ]
 
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon-internal",
   ]
 
@@ -78,7 +80,7 @@ zx_library("fs") {
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
 
-      # <fs/connection.h> has #include <lib/async/cpp/wait.h>.
+      # <fs/internal/connection.h> has #include <lib/async/cpp/wait.h>.
       "$zx/system/ulib/async:async-cpp",
     ]
     deps += [
@@ -136,6 +138,7 @@ if (is_fuchsia) {
       "$zx/system/ulib/async:headers",
       "$zx/system/ulib/fbl:headers",
       "$zx/system/ulib/fdio:headers",
+      "$zx/system/ulib/fit:headers",
       "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
 
@@ -158,6 +161,7 @@ if (is_fuchsia) {
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fit",
       "$zx/system/ulib/fzl",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace:trace-driver",

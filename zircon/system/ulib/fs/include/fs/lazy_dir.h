@@ -37,7 +37,7 @@ class LazyDir : public Vnode {
 
   // |Vnode| implementation.
   VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* out_attr) final;
   // Read the directory contents. Note that cookie->p is used to denote
   // if the "." entry has been returned. All IDs other than 0 are valid.

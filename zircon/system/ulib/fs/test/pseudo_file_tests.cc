@@ -104,61 +104,77 @@ bool CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, fbl::St
   END_HELPER;
 }
 
+#define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
+#define EXPECT_RESULT_ERROR(error_val, expr) \
+  EXPECT_TRUE((expr).is_error());            \
+  EXPECT_EQ(error_val, (expr).error())
+
 bool TestOpenValidationBuffered() {
   BEGIN_TEST;
 
   // no read handler, no write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile());
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
   }
 
   // read handler, no write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NONNULL(redirect);
   }
 
   // no read handler, write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(nullptr, &DummyWriter));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NONNULL(redirect);
   }
 
   // read handler, write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
 
-    fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
-    EXPECT_NONNULL(redirect);
-    redirect.reset();
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadWrite(), &redirect));
-    EXPECT_NONNULL(redirect);
-    redirect.reset();
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
-    EXPECT_NONNULL(redirect);
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::ReadWrite());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
   }
 
   END_TEST;
@@ -170,52 +186,63 @@ bool TestOpenValidationUnbuffered() {
   // no read handler, no write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
   }
 
   // read handler, no write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NONNULL(redirect);
   }
 
   // no read handler, write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(nullptr, &DummyWriter));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file->ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_NONNULL(redirect);
   }
 
   // read handler, write handler
   {
     auto file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile(&DummyReader, &DummyWriter));
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
-    fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
-    EXPECT_NONNULL(redirect);
-    redirect.reset();
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadWrite(), &redirect));
-    EXPECT_NONNULL(redirect);
-    redirect.reset();
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
-    EXPECT_NONNULL(redirect);
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file->ValidateOptions(VnodeOptions().set_directory()));
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::ReadWrite());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
+    {
+      fbl::RefPtr<fs::Vnode> redirect;
+      auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+      EXPECT_RESULT_OK(result);
+      EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
+      EXPECT_NONNULL(redirect);
+    }
   }
 
   END_TEST;
@@ -231,7 +258,7 @@ bool TestGetattrBuffered() {
     EXPECT_EQ(ZX_OK, file->GetAttributes(&attr));
     EXPECT_EQ(V_TYPE_FILE, attr.mode);
     EXPECT_EQ(1, attr.link_count);
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions().set_node_reference()));
+    EXPECT_RESULT_OK(file->ValidateOptions(VnodeOptions().set_node_reference()));
     fs::VnodeAttributes path_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&path_attr));
     EXPECT_ATTR_EQ(attr, path_attr);
@@ -246,8 +273,9 @@ bool TestGetattrBuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -262,8 +290,9 @@ bool TestGetattrBuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -278,8 +307,9 @@ bool TestGetattrBuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadWrite(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadWrite());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -299,7 +329,7 @@ bool TestGetattrUnbuffered() {
     EXPECT_EQ(V_TYPE_FILE, attr.mode);
     EXPECT_EQ(1, attr.link_count);
 
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions().set_node_reference()));
+    EXPECT_RESULT_OK(file->ValidateOptions(VnodeOptions().set_node_reference()));
     fs::VnodeAttributes path_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&path_attr));
     EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&path_attr, sizeof(attr), "");
@@ -314,8 +344,9 @@ bool TestGetattrUnbuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -330,8 +361,9 @@ bool TestGetattrUnbuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -346,8 +378,9 @@ bool TestGetattrUnbuffered() {
     EXPECT_EQ(1, attr.link_count);
 
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadWrite(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadWrite());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     fs::VnodeAttributes open_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&open_attr));
     EXPECT_ATTR_EQ(attr, open_attr);
@@ -364,8 +397,9 @@ bool TestReadBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "firs"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, "rst"));
@@ -376,8 +410,9 @@ bool TestReadBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, "cond"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 6u, 0u, "second"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 8u, 0u, "second"));
@@ -386,8 +421,9 @@ bool TestReadBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, ""));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, ""));
     EXPECT_EQ(ZX_OK, redirect->Close());
@@ -395,7 +431,9 @@ bool TestReadBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "null"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, fbl::StringPiece("ll\0n", 4u)));
@@ -406,7 +444,9 @@ bool TestReadBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_ERR_IO, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_ERR_IO, file->Open(result.value(), &redirect));
   }
 
   END_TEST;
@@ -426,8 +466,9 @@ bool TestReadUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 0u, 0u, ""));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, "seco"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 2u, ""));
@@ -438,8 +479,9 @@ bool TestReadUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 8u, 0u, "fifth"));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 4u, 0u, ""));
     EXPECT_TRUE(CheckRead(redirect, ZX_OK, 12u, 0u, fbl::StringPiece("null\0null", 9u)));
@@ -459,8 +501,9 @@ bool TestWriteBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "fixx", 4u));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "", 0u));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 2u, "rst", 3u));
@@ -469,23 +512,26 @@ bool TestWriteBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "second", 6u));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "thxrxxx", 7u, 7u));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 2u, "i", 1u));
     EXPECT_EQ(ZX_OK, redirect->Truncate(4u));
@@ -495,8 +541,9 @@ bool TestWriteBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "null", 4u));
     EXPECT_EQ(ZX_OK, redirect->Truncate(5u));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "null", 9u, 4u));
@@ -505,8 +552,9 @@ bool TestWriteBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_ERR_NO_SPACE, redirect->Truncate(11u));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "too-long", 8u, 8u));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "-off-the-end", 10u, 2u));
@@ -516,8 +564,9 @@ bool TestWriteBuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_ERR_IO, redirect->Close());
   }
 
@@ -540,8 +589,9 @@ bool TestWriteUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "first", 5u));
     EXPECT_TRUE(CheckWrite(redirect, ZX_ERR_NO_SPACE, 2u, "xxx", 0u));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "second", 6u));
@@ -550,8 +600,9 @@ bool TestWriteUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "", 0u));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "third", 5u, 5u));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, fbl::StringPiece("null\0null", 9u), 9u, 9u));
@@ -560,45 +611,51 @@ bool TestWriteUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly().set_truncate()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly().set_truncate(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly().set_truncate());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly().set_create()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly().set_create(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly().set_create());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "fourth", 6u, 6u));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_EQ(ZX_OK, redirect->Close());
   }
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckAppend(redirect, ZX_OK, "fifth", 5u, 5u));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, redirect->Truncate(10u));
     EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
@@ -607,8 +664,9 @@ bool TestWriteUnbuffered() {
 
   {
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file->ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file->Open(VnodeOptions::WriteOnly(), &redirect));
+    auto result = file->ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
     EXPECT_TRUE(CheckWrite(redirect, ZX_OK, 0u, "a long string", 13u));
     EXPECT_EQ(ZX_OK, redirect->Truncate(0u));
     EXPECT_EQ(ZX_ERR_IO, redirect->Close());

@@ -15,7 +15,7 @@
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
-#include <fs/connection.h>
+#include <fs/internal/connection.h>
 #include <fs/vfs.h>
 
 namespace fs {
@@ -48,11 +48,11 @@ class SynchronousVfs : public Vfs {
   // It is safe to delete SynchronousVfs from within the closure.
   void Shutdown(ShutdownCallback handler) override;
 
-  void RegisterConnection(std::unique_ptr<Connection> connection) final;
-  void UnregisterConnection(Connection* connection) final;
+  void RegisterConnection(std::unique_ptr<internal::Connection> connection) final;
+  void UnregisterConnection(internal::Connection* connection) final;
   bool IsTerminating() const final;
 
-  fbl::DoublyLinkedList<std::unique_ptr<Connection>> connections_;
+  fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_;
   bool is_shutting_down_;
 };
 

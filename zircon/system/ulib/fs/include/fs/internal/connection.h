@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_CONNECTION_H_
-#define FS_CONNECTION_H_
+#ifndef FS_INTERNAL_CONNECTION_H_
+#define FS_INTERNAL_CONNECTION_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
@@ -33,13 +33,15 @@ struct OnOpenMsg {
   fuchsia_io_NodeInfo extra;
 };
 
+namespace internal {
+
 // Connection represents an open connection to a Vnode (the server-side component
 // of a file descriptor). Connections will be managed in a |fbl::DoublyLinkedList|.
 // The Vnode's methods will be invoked in response to FIDL protocol messages
 // received over the channel.
 //
 // This class is thread-safe.
-class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>> {
+class Connection final : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>> {
  public:
   // Create a connection bound to a particular vnode.
   //
@@ -174,6 +176,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   size_t offset_{};
 };
 
+}  // namespace internal
+
 }  // namespace fs
 
-#endif  // FS_CONNECTION_H_
+#endif  // FS_INTERNAL_CONNECTION_H_

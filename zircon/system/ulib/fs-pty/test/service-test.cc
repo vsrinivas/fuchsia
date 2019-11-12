@@ -81,7 +81,7 @@ class PtyTestCase : public zxtest::Test {
   void Connect(::llcpp::fuchsia::hardware::pty::Device::SyncClient* client) {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(svc_->Serve(&vfs_, std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
+    ASSERT_OK(vfs_.Serve(svc_, std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
     *client = ::llcpp::fuchsia::hardware::pty::Device::SyncClient{std::move(local)};
   }
 

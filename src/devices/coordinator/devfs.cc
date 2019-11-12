@@ -24,7 +24,6 @@
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
-#include <fs/connection.h>
 #include <fs/handler.h>
 
 #include "async-loop-owned-rpc-handler.h"
@@ -34,6 +33,12 @@
 namespace devmgr {
 
 namespace {
+
+// `OnOpen` event from fuchsia-io.  See zircon/system/fidl/fuchsia-io/io.fidl.
+struct OnOpenMsg {
+  fuchsia_io_NodeOnOpenEvent primary;
+  fuchsia_io_NodeInfo extra;
+};
 
 uint64_t next_ino = 2;
 
@@ -425,7 +430,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       return;
     }
     if (describe) {
-      fs::OnOpenMsg msg;
+      OnOpenMsg msg;
       memset(&msg, 0, sizeof(msg));
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
       msg.primary.s = ZX_OK;

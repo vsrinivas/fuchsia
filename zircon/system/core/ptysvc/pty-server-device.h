@@ -9,7 +9,6 @@
 #include <lib/zx/channel.h>
 
 #include <fbl/ref_ptr.h>
-#include <fs/connection.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>

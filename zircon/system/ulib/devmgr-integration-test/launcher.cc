@@ -152,10 +152,7 @@ zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction g
                     &root_job, &kRootJobOps);
 
   // Serve VFS on channel.
-  auto conn =
-      std::make_unique<fs::Connection>(&vfs, root, std::move(bootsvc_server),
-                                       fs::VnodeConnectionOptions::ReadWrite().set_directory());
-  vfs.ServeConnection(std::move(conn));
+  vfs.ServeDirectory(root, std::move(bootsvc_server), fs::Rights::ReadWrite());
 
   return loop.Run();
 }

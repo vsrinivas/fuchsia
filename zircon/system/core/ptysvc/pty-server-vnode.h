@@ -22,12 +22,6 @@ class PtyServerVnode : public PtyServerVnodeBase {
   explicit PtyServerVnode(fbl::RefPtr<PtyServer> console)
       : PtyServerVnodeBase(std::move(console)) {}
 
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel,
-                    fs::VnodeConnectionOptions options) override {
-    console_->set_vfs(vfs);
-    return PtyServerVnodeBase::Serve(vfs, std::move(channel), options);
-  }
-
   ~PtyServerVnode() override { console_->Shutdown(); }
 };
 

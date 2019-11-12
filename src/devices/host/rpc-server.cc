@@ -34,7 +34,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
-#include <fs/connection.h>
 #include <fs/handler.h>
 
 #include "devhost.h"
@@ -42,6 +41,17 @@
 #include "zx-device.h"
 
 namespace devmgr {
+
+namespace {
+
+// A one-way message which may be emitted by the server without an
+// accompanying request. Optionally used as a part of the Open handshake.
+struct OnOpenMsg {
+  fuchsia_io_NodeOnOpenEvent primary;
+  fuchsia_io_NodeInfo extra;
+};
+
+}  // namespace
 
 #define ZXDEBUG 0
 
@@ -56,7 +66,7 @@ void describe_error(zx::channel h, zx_status_t status) {
   h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
 
-static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, fs::OnOpenMsg* msg,
+static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, OnOpenMsg* msg,
                                       zx::eventpair* handle) {
   memset(msg, 0, sizeof(*msg));
   fidl_init_txn_header(&msg->primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
@@ -107,7 +117,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
   newconn->dev = new_dev;
 
   if (describe) {
-    fs::OnOpenMsg info;
+    OnOpenMsg info;
     zx::eventpair handle;
     if ((r = create_description(new_dev, &info, &handle)) != ZX_OK) {
       goto fail_open;

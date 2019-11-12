@@ -93,7 +93,8 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
   static const fuchsia_minfs_Minfs_ops* Ops();
 #endif
-  zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  using fs::Vnode::Open;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Close() final;
 
   // fbl::Recyclable interface.

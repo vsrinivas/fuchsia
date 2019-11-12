@@ -19,7 +19,6 @@
 #include <digest/digest.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/connection.h>
 #include <fs/metrics/events.h>
 #include <fs/vfs_types.h>
 
@@ -113,7 +112,9 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   if ((status = Cache().Add(vn)) != ZX_OK) {
     return status;
   }
-  vn->Open(fs::VnodeConnectionOptions(), nullptr);
+  if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
+    return status;
+  }
   *out = std::move(vn);
   return ZX_OK;
 }

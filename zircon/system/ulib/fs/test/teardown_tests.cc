@@ -31,7 +31,7 @@ class FdCountVnode : public fs::Vnode {
 
   int fds() const { return fd_count_; }
 
-  zx_status_t Open(fs::VnodeConnectionOptions, fbl::RefPtr<Vnode>* redirect) final {
+  zx_status_t Open(ValidatedOptions, fbl::RefPtr<Vnode>* redirect) final {
     fd_count_++;
     return ZX_OK;
   }
@@ -116,8 +116,10 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
   zx::channel client;
   zx::channel server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-  ASSERT_EQ(vn->Serve(vfs->get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
+  auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+  ASSERT_TRUE(validated_options.is_ok());
+  ASSERT_EQ(vn->Open(validated_options.value(), nullptr), ZX_OK);
+  ASSERT_EQ((*vfs)->Serve(vn, std::move(server), validated_options.value()), ZX_OK);
   vn = nullptr;
 
   ASSERT_TRUE(send_sync(client));
@@ -267,8 +269,10 @@ bool TestTeardownSlowClone() {
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-  ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
+  auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+  ASSERT_TRUE(validated_options.is_ok());
+  ASSERT_EQ(vn->Open(validated_options.value(), nullptr), ZX_OK);
+  ASSERT_EQ(vfs->Serve(vn, std::move(server), validated_options.value()), ZX_OK);
   vn = nullptr;
 
   // A) Wait for sync to begin.
@@ -323,8 +327,10 @@ bool TestSynchronousTeardown() {
     auto vn = fbl::AdoptRef(new FdCountVnode());
     zx::channel server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-    ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
+    auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+    ASSERT_TRUE(validated_options.is_ok());
+    ASSERT_EQ(vn->Open(validated_options.value(), nullptr), ZX_OK);
+    ASSERT_EQ(vfs->Serve(vn, std::move(server), validated_options.value()), ZX_OK);
   }
 
   loop.Quit();
@@ -335,8 +341,10 @@ bool TestSynchronousTeardown() {
     auto vn = fbl::AdoptRef(new FdCountVnode());
     zx::channel server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-    ASSERT_EQ(vn->Open(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-    ASSERT_EQ(vn->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions()), ZX_OK);
+    auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+    ASSERT_TRUE(validated_options.is_ok());
+    ASSERT_EQ(vn->Open(validated_options.value(), nullptr), ZX_OK);
+    ASSERT_EQ(vfs->Serve(vn, std::move(server), validated_options.value()), ZX_OK);
   }
 
   {

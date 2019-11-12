@@ -34,7 +34,7 @@ zx_status_t Registry::ServeRoot(zx::channel server) {
   options.rights.write = true;
   options.rights.admin = true;
 
-  return root_->Serve(&vfs_, std::move(server), options);
+  return vfs_.Serve(root_, std::move(server), options);
 }
 
 }  // namespace fshost

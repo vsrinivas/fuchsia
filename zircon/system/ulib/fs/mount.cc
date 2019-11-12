@@ -91,25 +91,30 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
 zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountChannel h,
                             uint32_t flags) {
   fbl::AutoLock lock(&vfs_lock_);
-  zx_status_t r = OpenLocked(
-      vn, &vn, name, &name,
-      fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(), S_IFDIR);
-  ZX_DEBUG_ASSERT(r <= ZX_OK);  // Should not be accessing remote nodes
-  if (r < 0) {
-    return r;
-  }
-  if (vn->IsRemote()) {
-    if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
-      // There is an old remote handle on this vnode; shut it down and
-      // replace it with our own.
-      zx::channel old_remote;
-      Vfs::UninstallRemoteLocked(vn, &old_remote);
-      vfs_unmount_handle(old_remote.release(), 0);
-    } else {
-      return ZX_ERR_BAD_STATE;
-    }
-  }
-  return Vfs::InstallRemoteLocked(vn, std::move(h));
+  return OpenLocked(
+             vn, name,
+             fs::VnodeConnectionOptions::ReadOnly().set_create().set_directory().set_no_remote(),
+             fs::Rights::ReadOnly(), S_IFDIR)
+      .visit([&](auto&& result) FS_TA_REQUIRES(vfs_lock_) {
+        using T = std::decay_t<decltype(result)>;
+        using OpenResult = fs::Vfs::OpenResult;
+        if constexpr (std::is_same_v<T, OpenResult::Error>) {
+          return result;
+        } else {
+          if (result.vnode->IsRemote()) {
+            if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
+              // There is an old remote handle on this vnode; shut it down and
+              // replace it with our own.
+              zx::channel old_remote;
+              Vfs::UninstallRemoteLocked(vn, &old_remote);
+              vfs_unmount_handle(old_remote.release(), 0);
+            } else {
+              return ZX_ERR_BAD_STATE;
+            }
+          }
+          return Vfs::InstallRemoteLocked(result.vnode, std::move(h));
+        }
+      });
 }
 
 zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, zx::channel* h) {

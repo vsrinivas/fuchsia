@@ -82,7 +82,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // fs::Vnode interface.
 
-  zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+  using fs::Vnode::Open;
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Close() final;
 
   ////////////////

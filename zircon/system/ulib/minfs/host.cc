@@ -16,6 +16,7 @@
 
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 #include <fbl/ref_ptr.h>
@@ -255,15 +256,14 @@ int emu_open(const char* path, int flags, mode_t mode) {
   }
   for (fd = 0; fd < MAXFD; fd++) {
     if (fdtab[fd].vn == nullptr) {
-      fbl::RefPtr<fs::Vnode> vn_fs;
       fbl::StringPiece str(path + PREFIX_SIZE);
       fs::VnodeConnectionOptions options = fdio_flags_to_connection_options(flags);
-      zx_status_t status =
-          fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn_fs, str, &str, options, mode);
-      if (status < 0) {
-        STATUS(status);
+      auto result =
+          fakeFs.fake_vfs->Open(fakeFs.fake_root, str, options, fs::Rights::ReadWrite(), mode);
+      if (result.is_error()) {
+        STATUS(result.error());
       }
-      fdtab[fd].vn = fbl::RefPtr<fs::Vnode>::Downcast(vn_fs);
+      fdtab[fd].vn = fbl::RefPtr<fs::Vnode>::Downcast(result.ok().vnode);
       return fd | FD_MAGIC;
     }
   }
@@ -468,19 +468,18 @@ int emu_mkdir(const char* path, mode_t mode) {
 
 DIR* emu_opendir(const char* name) {
   ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
-  fbl::RefPtr<fs::Vnode> vn;
   fbl::StringPiece path(name + PREFIX_SIZE);
   fs::VnodeConnectionOptions options;
   options.rights.read = true;
   options.flags.posix = true;
-  zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn, path, &path, options, 0);
-  if (status != ZX_OK) {
+  auto result = fakeFs.fake_vfs->Open(fakeFs.fake_root, path, options, fs::Rights::ReadWrite(), 0);
+  if (result.is_error()) {
     return nullptr;
   }
-  MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
+  MINDIR* dir = reinterpret_cast<MINDIR*>(calloc(1, sizeof(MINDIR)));
   dir->magic = minfs::kMinfsMagic0;
-  dir->vn = fbl::RefPtr<fs::Vnode>::Downcast(vn);
-  return (DIR*)dir;
+  dir->vn = fbl::RefPtr<fs::Vnode>::Downcast(result.ok().vnode);
+  return reinterpret_cast<DIR*>(dir);
 }
 
 struct dirent* emu_readdir(DIR* dirp) {

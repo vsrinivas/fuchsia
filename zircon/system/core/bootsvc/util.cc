@@ -13,7 +13,6 @@
 #include <zircon/status.h>
 
 #include <fbl/algorithm.h>
-#include <fs/connection.h>
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
@@ -215,16 +214,14 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
 }
 
 zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                                  fs::VnodeConnectionOptions options, zx::channel* out) {
+                                  fs::Rights rights, zx::channel* out) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return status;
   }
 
-  options.flags.directory = true;
-  auto conn = std::make_unique<fs::Connection>(vfs, vnode, std::move(local), options);
-  status = vfs->ServeConnection(std::move(conn));
+  status = vfs->ServeDirectory(std::move(vnode), std::move(local), rights);
   if (status != ZX_OK) {
     return status;
   }

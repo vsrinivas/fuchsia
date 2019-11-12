@@ -62,12 +62,13 @@ class PtyTestCase : public zxtest::Test {
  private:
   void CreateNewServer(Connection* conn) {
     fbl::RefPtr<PtyServer> server;
-    ASSERT_OK(PtyServer::Create(&server));
+    ASSERT_OK(PtyServer::Create(&server, &vfs_));
     auto vnode = fbl::MakeRefCounted<PtyServerVnode>(std::move(server));
 
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(vnode->Serve(vfs(), std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
+    ASSERT_OK(
+        vfs()->Serve(std::move(vnode), std::move(remote), fs::VnodeConnectionOptions::ReadWrite()));
     *conn = Connection(std::move(local));
   }
 

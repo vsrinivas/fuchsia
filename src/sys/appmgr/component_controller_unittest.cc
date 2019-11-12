@@ -264,7 +264,11 @@ fbl::String get_value(const fbl::RefPtr<fs::PseudoDir>& hub_dir, std::string pat
     }
   }
   fbl::RefPtr<fs::Vnode> file;
-  if (node->Open(fs::VnodeConnectionOptions::ReadOnly(), &file) != ZX_OK) {
+  auto validated_options = node->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly());
+  if (validated_options.is_error()) {
+    EXPECT_FALSE(true) << "validate option failed: " << validated_options.error();
+  }
+  if (node->Open(validated_options.value(), &file) != ZX_OK) {
     EXPECT_FALSE(true) << "cannot open: " << path;
     return "";
   }

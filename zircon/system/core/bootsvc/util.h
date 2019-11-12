@@ -55,7 +55,7 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
 zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                                  fs::VnodeConnectionOptions options, zx::channel* out);
+                                  fs::Rights rights, zx::channel* out);
 
 // Path relative to /boot used for crashlogs.
 extern const char* const kLastPanicFilePath;

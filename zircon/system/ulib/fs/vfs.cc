@@ -26,7 +26,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <fs/connection.h>
+#include <fs/internal/connection.h>
 #include <fs/remote.h>
 #endif
 
@@ -108,17 +108,17 @@ Vfs::~Vfs() = default;
 Vfs::Vfs(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 #endif
 
-zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                      fbl::StringPiece* out_path, VnodeConnectionOptions options, uint32_t mode) {
+Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+                          VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
 #ifdef __Fuchsia__
   fbl::AutoLock lock(&vfs_lock_);
 #endif
-  return OpenLocked(std::move(vndir), out, path, out_path, options, mode);
+  return OpenLocked(std::move(vndir), path, options, parent_rights, mode);
 }
 
-zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
-                            fbl::StringPiece path, fbl::StringPiece* out_path,
-                            VnodeConnectionOptions options, uint32_t mode) {
+Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+                                VnodeConnectionOptions options, Rights parent_rights,
+                                uint32_t mode) {
   FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()), "' options=", options);
   zx_status_t r;
   if ((r = PrevalidateOptions(options)) != ZX_OK) {
@@ -129,83 +129,117 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
   }
 #ifdef __Fuchsia__
   if (vndir->IsRemote()) {
-    // remote filesystem, return handle and path through to caller
-    *out = std::move(vndir);
-    *out_path = path;
-    return ZX_OK;
+    // remote filesystem, return handle and path to caller
+    return OpenResult::Remote{.vnode = std::move(vndir), .path = path};
   }
 #endif
+
+  {
+    bool must_be_dir = false;
+    if ((r = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
+      return r;
+    } else if (path == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (must_be_dir) {
+      options.flags.directory = true;
+    }
+  }
 
   fbl::RefPtr<Vnode> vn;
-
-  bool must_be_dir = false;
-  if ((r = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (path == "..") {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+  bool just_created = false;
   if (options.flags.create) {
-    if (must_be_dir && !S_ISDIR(mode)) {
-      return ZX_ERR_INVALID_ARGS;
-    } else if (path == ".") {
-      return ZX_ERR_INVALID_ARGS;
-    } else if (ReadonlyLocked()) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-    if ((r = vndir->Create(&vn, path, mode)) < 0) {
-      if ((r == ZX_ERR_ALREADY_EXISTS) && !options.flags.fail_if_exists) {
-        goto try_open;
-      }
-      if (r == ZX_ERR_NOT_SUPPORTED) {
-        // filesystem may not support create (like devfs)
-        // in which case we should still try to open() the file
-        goto try_open;
-      }
+    if ((r = EnsureExists(std::move(vndir), path, &vn, options, mode, &just_created)) != ZX_OK) {
       return r;
     }
-#ifdef __Fuchsia__
-    vndir->Notify(path, fuchsia_io_WATCH_EVENT_ADDED);
-#endif
   } else {
-  try_open:
-    r = LookupNode(std::move(vndir), path, &vn);
-    if (r < 0) {
+    if ((r = LookupNode(std::move(vndir), path, &vn)) != ZX_OK) {
+      return r;
+    }
+  }
+
+#ifdef __Fuchsia__
+  if (!options.flags.no_remote && vn->IsRemote()) {
+    // Opening a mount point: Traverse across remote.
+    return OpenResult::RemoteRoot{.vnode = std::move(vn)};
+  }
+#endif
+
+  if (ReadonlyLocked() && options.rights.write) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+
+  if (vn->Supports(fs::VnodeProtocol::kDirectory) && options.flags.posix) {
+    // Save this before modifying |options| below.
+    bool admin = options.rights.admin;
+
+    // This is such that POSIX open() can open a directory with O_RDONLY, and
+    // still get the write/execute right if the parent directory connection has the
+    // write/execute right respectively.  With the execute right in particular, the resulting
+    // connection may be passed to fdio_get_vmo_exec() which requires the execute right.
+    // This transfers write and execute from the parent, if present.
+    auto inheritable_rights = Rights::WriteExec();
+    options.rights |= parent_rights & inheritable_rights;
+
+    // The ADMIN right is not inherited. It must be explicitly specified.
+    options.rights.admin = admin;
+  }
+  auto validated_options = vn->ValidateOptions(options);
+  if (validated_options.is_error()) {
+    return validated_options.error();
+  }
+
+  // |node_reference| requests that we don't actually open the underlying Vnode,
+  // but use the connection as a reference to the Vnode.
+  if (!options.flags.node_reference && !just_created) {
+    if ((r = OpenVnode(validated_options.value(), &vn)) != ZX_OK) {
       return r;
     }
 #ifdef __Fuchsia__
     if (!options.flags.no_remote && vn->IsRemote()) {
-      // Opening a mount point: Traverse across remote.
-      *out_path = ".";
-      *out = std::move(vn);
-      return ZX_OK;
-    }
-
-    if (must_be_dir) {
-      options.flags.directory = true;
+      // |OpenVnode| redirected us to a remote vnode; traverse across mount point.
+      return OpenResult::RemoteRoot{.vnode = std::move(vn)};
     }
 #endif
-    if (ReadonlyLocked() && options.rights.write) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-    if ((r = vn->ValidateOptions(options)) != ZX_OK) {
+    if (options.flags.truncate && ((r = vn->Truncate(0)) < 0)) {
+      vn->Close();
       return r;
     }
-    // |node_reference| requests that we don't actually open the underlying Vnode,
-    // but use the connection as a reference to the Vnode.
-    if (!options.flags.node_reference) {
-      if ((r = OpenVnode(options, &vn)) != ZX_OK) {
-        return r;
-      }
-      if (options.flags.truncate && ((r = vn->Truncate(0)) < 0)) {
-        vn->Close();
-        return r;
-      }
-    }
   }
+
   FS_TRACE_DEBUG("VfsOpen: vn=%p\n", vn.get());
-  *out_path = "";
-  *out = vn;
+  return OpenResult::Ok{.vnode = std::move(vn), .validated_options = validated_options.value()};
+}
+
+zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
+                              fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
+                              uint32_t mode, bool* did_create) {
+  zx_status_t status;
+  if (options.flags.directory && !S_ISDIR(mode)) {
+    return ZX_ERR_INVALID_ARGS;
+  } else if (options.flags.not_directory && S_ISDIR(mode)) {
+    return ZX_ERR_INVALID_ARGS;
+  } else if (path == ".") {
+    return ZX_ERR_INVALID_ARGS;
+  } else if (ReadonlyLocked()) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  if ((status = vndir->Create(out_vn, path, mode)) != ZX_OK) {
+    *did_create = false;
+    if ((status == ZX_ERR_ALREADY_EXISTS) && !options.flags.fail_if_exists) {
+      return LookupNode(std::move(vndir), path, out_vn);
+    }
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      // filesystem may not support create (like devfs)
+      // in which case we should still try to open() the file
+      return LookupNode(std::move(vndir), path, out_vn);
+    }
+    return status;
+  }
+#ifdef __Fuchsia__
+  vndir->Notify(path, fuchsia_io_WATCH_EVENT_ADDED);
+#endif
+  *did_create = true;
   return ZX_OK;
 }
 
@@ -394,17 +428,44 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
   return ZX_OK;
 }
 
-zx_status_t Vfs::ServeConnection(std::unique_ptr<Connection> connection) {
-  ZX_DEBUG_ASSERT(connection);
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
+                       VnodeConnectionOptions options) {
+  auto result = vnode->ValidateOptions(options);
+  if (result.is_error()) {
+    return result.error();
+  }
+  return Serve(std::move(vnode), std::move(channel), result.value());
+}
 
-  zx_status_t status = connection->Serve();
-  if (status == ZX_OK) {
-    RegisterConnection(std::move(connection));
+zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
+                       Vnode::ValidatedOptions options) {
+  zx_status_t status;
+  // |ValidateOptions| was called, hence at least one protocol must be supported.
+  auto candidate_protocols = options->protocols() & vnode->GetProtocols();
+  ZX_DEBUG_ASSERT(candidate_protocols.any());
+  auto maybe_protocol = candidate_protocols.which();
+  VnodeProtocol protocol;
+  if (maybe_protocol.has_value()) {
+    protocol = maybe_protocol.value();
+  } else {
+    protocol = vnode->Negotiate(candidate_protocols);
+  }
+  // If |node_reference| is specified, serve |fuchsia.io/Node| even for
+  // |VnodeProtocol::kConnector| nodes.
+  if (options->flags.node_reference || protocol != VnodeProtocol::kConnector) {
+    auto connection = std::make_unique<internal::Connection>(this, std::move(vnode),
+                                                             std::move(channel), options.value());
+    status = connection->Serve();
+    if (status == ZX_OK) {
+      RegisterConnection(std::move(connection));
+    }
+  } else {
+    status = vnode->ConnectService(std::move(channel));
   }
   return status;
 }
 
-void Vfs::OnConnectionClosedRemotely(Connection* connection) {
+void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {
   ZX_DEBUG_ASSERT(connection);
 
   UnregisterConnection(connection);
@@ -414,21 +475,21 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, 
   VnodeConnectionOptions options;
   options.flags.directory = true;
   options.rights = rights;
-  zx_status_t r;
-  if ((r = vn->ValidateOptions(options)) != ZX_OK) {
-    return r;
-  } else if ((r = OpenVnode(options, &vn)) != ZX_OK) {
+  auto validated_options = vn->ValidateOptions(options);
+  if (validated_options.is_error()) {
+    return validated_options.error();
+  } else if (zx_status_t r = OpenVnode(validated_options.value(), &vn); r != ZX_OK) {
     return r;
   }
 
   // Tell the calling process that we've mounted the directory.
-  r = channel.signal_peer(0, ZX_USER_SIGNAL_0);
+  zx_status_t r = channel.signal_peer(0, ZX_USER_SIGNAL_0);
   // ZX_ERR_PEER_CLOSED is ok because the channel may still be readable.
   if (r != ZX_OK && r != ZX_ERR_PEER_CLOSED) {
     return r;
   }
 
-  return vn->Serve(this, std::move(channel), options);
+  return Serve(std::move(vn), std::move(channel), validated_options.value());
 }
 
 #endif  // ifdef __Fuchsia__

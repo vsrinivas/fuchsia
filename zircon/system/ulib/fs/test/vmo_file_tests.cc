@@ -116,6 +116,11 @@ bool TestConstructor() {
   END_TEST;
 }
 
+#define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
+#define EXPECT_RESULT_ERROR(error_val, expr) \
+  EXPECT_TRUE((expr).is_error());            \
+  EXPECT_EQ(error_val, (expr).error())
+
 bool TestOpen() {
   BEGIN_TEST;
 
@@ -126,14 +131,15 @@ bool TestOpen() {
   {
     fs::VmoFile file(abc, 0u, 0u);
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file.ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::ReadWrite()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::ReadWrite()));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::WriteOnly()));
+    EXPECT_RESULT_ERROR(ZX_ERR_ACCESS_DENIED, file.ValidateOptions(VnodeOptions::WriteOnly()));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 
@@ -141,16 +147,19 @@ bool TestOpen() {
   {
     fs::VmoFile file(abc, 0u, 0u, true);
     fbl::RefPtr<fs::Vnode> redirect;
-    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadOnly()));
-    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadOnly(), &redirect));
+    auto result = file.ValidateOptions(VnodeOptions::ReadOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::ReadWrite()));
-    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::ReadWrite(), &redirect));
+    result = file.ValidateOptions(VnodeOptions::ReadWrite());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_OK, file.ValidateOptions(VnodeOptions::WriteOnly()));
-    EXPECT_EQ(ZX_OK, file.Open(VnodeOptions::WriteOnly(), &redirect));
+    result = file.ValidateOptions(VnodeOptions::WriteOnly());
+    EXPECT_RESULT_OK(result);
+    EXPECT_EQ(ZX_OK, file.Open(result.value(), &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
+    EXPECT_RESULT_ERROR(ZX_ERR_NOT_DIR, file.ValidateOptions(VnodeOptions().set_directory()));
     EXPECT_NULL(redirect);
   }
 

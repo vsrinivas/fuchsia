@@ -19,6 +19,7 @@
 
 #include <fs/locking.h>
 #include <fs/vfs_types.h>
+#include <fs/vnode.h>
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
@@ -31,10 +32,11 @@
 #include <fbl/mutex.h>
 #include <fs/client.h>
 #include <fs/mount_channel.h>
-#include <fs/vnode.h>
 #endif  // __Fuchsia__
 
+#include <memory>
 #include <utility>
+#include <variant>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -45,7 +47,12 @@
 
 namespace fs {
 
+namespace internal {
+
 class Connection;
+
+}  // namespace internal
+
 class Vnode;
 
 // A storage class for a vdircookie which is passed to Readdir.
@@ -73,16 +80,86 @@ class Vfs {
   Vfs();
   virtual ~Vfs();
 
+  class OpenResult {
+   public:
+    // When this variant is active, the indicated error occurred.
+    using Error = zx_status_t;
+
+#ifdef __Fuchsia__
+    // When this variant is active, the path being opened contains a remote node.
+    // |path| is the remaining portion of the path yet to be traversed.
+    // The caller should forward the remainder of this open request to that vnode.
+    struct Remote {
+      fbl::RefPtr<Vnode> vnode;
+      fbl::StringPiece path;
+    };
+
+    // When this variant is active, the path being opened is a remote node itself.
+    // The caller should clone the connection associated with this vnode.
+    struct RemoteRoot {
+      fbl::RefPtr<Vnode> vnode;
+    };
+#endif  // __Fuchsia__
+
+    // When this variant is active, |Open| has successfully reached a vnode under
+    // this filesystem. |validated_options| contains options to be used on the new
+    // connection, potentially adjusted for posix-flag rights expansion.
+    struct Ok {
+      fbl::RefPtr<Vnode> vnode;
+      Vnode::ValidatedOptions validated_options;
+    };
+
+    // Forwards the constructor arguments into the underlying |std::variant|.
+    // This allows |OpenResult| to be constructed directly from one of the variants, e.g.
+    //
+    //     OpenResult r = OpenResult::Error{ZX_ERR_ACCESS_DENIED};
+    //
+    template <typename T>
+    OpenResult(T&& v) : variants_(std::forward<T>(v)) {}
+
+    // Applies the |visitor| function to the variant payload. It simply forwards the visitor into
+    // the underlying |std::variant|. Returns the return value of |visitor|.
+    // Refer to C++ documentation for |std::visit|.
+    template <class Visitor>
+    constexpr auto visit(Visitor&& visitor) -> decltype(visitor(std::declval<zx_status_t>())) {
+      return std::visit(std::forward<Visitor>(visitor), variants_);
+    }
+
+    Error& error() { return std::get<Error>(variants_); }
+
+    bool is_error() const { return std::holds_alternative<Error>(variants_); }
+
+#ifdef __Fuchsia__
+    Remote& remote() { return std::get<Remote>(variants_); }
+
+    bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
+
+    RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
+
+    bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
+#endif  // __Fuchsia__
+
+    Ok& ok() { return std::get<Ok>(variants_); }
+
+    bool is_ok() const { return std::holds_alternative<Ok>(variants_); }
+
+   private:
+#ifdef __Fuchsia__
+    using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
+#else
+    using Variants = std::variant<Error, Ok>;
+#endif  // __Fuchsia__
+
+    Variants variants_ = {};
+  };
+
   // Traverse the path to the target vnode, and create / open it using
   // the underlying filesystem functions (lookup, create, open).
   //
-  // If the node represented by |path| contains a remote node,
-  // set |pathout| to the remaining portion of the path yet to
-  // be traversed (or ".", if the endpoint of |path| is the mount point),
-  // and return the node containing the node in |out|.
-  zx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                   fbl::StringPiece* pathout, VnodeConnectionOptions options, uint32_t mode)
-      FS_TA_EXCLUDES(vfs_lock_);
+  // The return value will suggest the next action to take. Refer to the variants in
+  // |OpenResult| for more information.
+  OpenResult Open(fbl::RefPtr<Vnode> vn, fbl::StringPiece path, VnodeConnectionOptions options,
+                  Rights parent_rights, uint32_t mode) FS_TA_EXCLUDES(vfs_lock_);
   zx_status_t Unlink(fbl::RefPtr<Vnode> vn, fbl::StringPiece path) FS_TA_EXCLUDES(vfs_lock_);
 
   // Sets whether this file system is read-only.
@@ -117,12 +194,20 @@ class Vfs {
   async_dispatcher_t* dispatcher() { return dispatcher_; }
   void SetDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
-  // Begins serving VFS messages over the specified connection.
-  zx_status_t ServeConnection(std::unique_ptr<Connection> connection) FS_TA_EXCLUDES(vfs_lock_);
+  // Begins serving VFS messages over the specified channel.
+  // If the vnode supports multiple protocols and the client requested more than one of them,
+  // it would use |Vnode::Negotiate| to tie-break and obtain the resulting protocol.
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel, VnodeConnectionOptions options)
+      FS_TA_EXCLUDES(vfs_lock_);
+
+  // Begins serving VFS messages over the specified channel. This version takes an |options|
+  // that have been validated.
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel, Vnode::ValidatedOptions options)
+      FS_TA_EXCLUDES(vfs_lock_);
 
   // Called by a VFS connection when it is closed remotely.
   // The VFS is now responsible for destroying the connection.
-  void OnConnectionClosedRemotely(Connection* connection) FS_TA_EXCLUDES(vfs_lock_);
+  void OnConnectionClosedRemotely(internal::Connection* connection) FS_TA_EXCLUDES(vfs_lock_);
 
   // Serves a Vnode over the specified channel (used for creating new filesystems);
   // the Vnode must be a directory.
@@ -170,9 +255,19 @@ class Vfs {
   zx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
                    fbl::StringPiece* pathout) FS_TA_REQUIRES(vfs_lock_);
 
-  zx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out, fbl::StringPiece path,
-                         fbl::StringPiece* pathout, VnodeConnectionOptions options, uint32_t mode)
+  OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, fbl::StringPiece path,
+                        VnodeConnectionOptions options, Rights parent_rights, uint32_t mode)
       FS_TA_REQUIRES(vfs_lock_);
+
+  // Attempt to create an entry with name |name| within the |vndir| directory.
+  // - Upon success, returns a reference to the new vnode via |out_vn|, and return ZX_OK.
+  // - Upon recoverable error (e.g. target already exists but |options| did not specify this to be
+  // fatal), attempt to lookup the vnode.
+  // In the above two cases, |did_create| will be updated to indicate if an entry was created.
+  // Otherwise, a corresponding error code is returned.
+  zx_status_t EnsureExists(fbl::RefPtr<Vnode> vndir, fbl::StringPiece name,
+                           fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
+                           uint32_t mode, bool* did_create) FS_TA_REQUIRES(vfs_lock_);
 
   bool readonly_{};
 
@@ -212,10 +307,10 @@ class Vfs {
   mtx_t vfs_lock_{};
 
   // Starts tracking the lifetime of the connection.
-  virtual void RegisterConnection(std::unique_ptr<Connection> connection) = 0;
+  virtual void RegisterConnection(std::unique_ptr<internal::Connection> connection) = 0;
 
   // Stops tracking the lifetime of the connection.
-  virtual void UnregisterConnection(Connection* connection) = 0;
+  virtual void UnregisterConnection(internal::Connection* connection) = 0;
 
 #endif  // ifdef __Fuchsia__
 };

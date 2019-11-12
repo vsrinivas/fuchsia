@@ -7,6 +7,7 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fit/result.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <type_traits>
 #include <utility>
 
 #include <fbl/function.h>
@@ -56,6 +58,25 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual ~Vnode();
   virtual void fbl_recycle() { delete this; }
 
+  template <typename T>
+  class Validated {
+   public:
+    Validated(const Validated&) = default;
+    Validated& operator=(const Validated&) = default;
+    Validated(Validated&&) noexcept = default;
+    Validated& operator=(Validated&&) noexcept = default;
+
+    const T& value() const { return value_; }
+    const T* operator->() const { return &value(); }
+    const T& operator*() const { return value(); }
+
+   private:
+    explicit Validated(T value) : value_(value) {}
+    friend class Vnode;  // Such that only |Vnode| methods may mint new instances of |Validated<T>|.
+    T value_;
+  };
+  using ValidatedOptions = Validated<VnodeConnectionOptions>;
+
   // METHODS FOR OPTION VALIDATION AND PROTOCOL NEGOTIATION
   //
   // Implementations should override |GetProtocols| to express which representation(s)
@@ -76,8 +97,13 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Ensures that it is valid to access the vnode with given connection options.
   // The vnode will only be opened for a particular request if the validation
-  // returns |ZX_OK|.
-  zx_status_t ValidateOptions(VnodeConnectionOptions options);
+  // returns |fit::ok(...)|.
+  // The |fit::ok| variant of the return value is a |ValidatedOptions| object that
+  // encodes the fact that |options| has been validated. It may be used to call
+  // other functions that only accepts validated options.
+  // The |fit::error| variant of the return value contains a suitable error code
+  // when validation fails.
+  fit::result<ValidatedOptions, zx_status_t> ValidateOptions(VnodeConnectionOptions options);
 
   // Picks one protocol from |protocols|, when the intersection of the protocols requested
   // by the client and the ones supported by the vnode has more than one elements i.e.
@@ -102,8 +128,15 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // indicated vnode instead of being handled by this instance. This is useful
   // when implementing lazy files/pseudo files, where a different vnode may be
   // used for each new connection to a file. Note that the |out_redirect| vnode is not
-  // |Open()|ed further for the purpose of creating this connection.
-  virtual zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect);
+  // |Open()|ed further for the purpose of creating this connection. Furthermore, the
+  // redirected vnode must support the same set of protocols as the original vnode.
+  virtual zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect);
+
+  // Same as |Open|, but calls |ValidateOptions| on |options| automatically.
+  // Errors from |ValidateOptions| are propagated via the return value.
+  // This is convenient when serving a connection with the validated options is unnecessary
+  // e.g. when used from a non-Fuchsia operating system.
+  zx_status_t OpenValidating(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect);
 
   // METHODS FOR OPENED NODES
   //
@@ -114,15 +147,12 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // classes' implementation of some of these functions may be invoked anyway.
 
 #ifdef __Fuchsia__
-  // Serves a connection to the Vnode over the specified channel.
+  // Serves a custom FIDL protocol over the specified |channel|, when the node protocol is
+  // |VnodeProtocol::kConnector|.
   //
-  // The default implementation creates and registers a FIDL |Connection| with the VFS.
+  // The default implementation returns |ZX_ERR_NOT_SUPPORTED|.
   // Subclasses may override this behavior to serve custom protocols over the channel.
-  //
-  // |vfs| is the VFS which manages the Vnode.
-  // |channel| is the channel over which the client will exchange messages with the Vnode.
-  // |options| are the flags and rights which were previously provided to |Open()|.
-  virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options);
+  virtual zx_status_t ConnectService(zx::channel channel);
 
   // Dispatches incoming FIDL messages which aren't recognized by |Connection::HandleMessage|.
   //
@@ -222,7 +252,8 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Set attributes of the vnode.
   virtual zx_status_t SetAttributes(VnodeAttributesUpdate a);
 
-  // Create a new node under vn.
+  // Create a new node under vn. The vfs layer assumes that upon success, the |out| vnode
+  // has been already opened i.e. |Open()| is not called again on the created vnode.
   // Name is len bytes long, and does not include a null terminator.
   // Mode specifies the type of entity to create.
   virtual zx_status_t Create(fbl::RefPtr<Vnode>* out, fbl::StringPiece name, uint32_t mode);
@@ -271,10 +302,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 // Opens a vnode by reference.
 // The |vnode| reference is updated in-place if redirection occurs.
-inline zx_status_t OpenVnode(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* vnode) {
+inline zx_status_t OpenVnode(Vnode::ValidatedOptions options, fbl::RefPtr<Vnode>* vnode) {
   fbl::RefPtr<Vnode> redirect;
   zx_status_t status = (*vnode)->Open(options, &redirect);
   if (status == ZX_OK && redirect != nullptr) {
+    ZX_DEBUG_ASSERT((*vnode)->GetProtocols() == redirect->GetProtocols());
     *vnode = std::move(redirect);
   }
   return status;

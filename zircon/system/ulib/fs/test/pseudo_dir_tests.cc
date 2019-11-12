@@ -69,8 +69,9 @@ bool TestPseudoDir() {
   fs::VnodeConnectionOptions options_directory;
   options_directory.flags.directory = true;
   fbl::RefPtr<fs::Vnode> redirect;
-  EXPECT_EQ(ZX_OK, dir->ValidateOptions(options_directory));
-  EXPECT_EQ(ZX_OK, dir->Open(options_directory, &redirect));
+  auto validated_options = dir->ValidateOptions(options_directory);
+  EXPECT_TRUE(validated_options.is_ok());
+  EXPECT_EQ(ZX_OK, dir->Open(validated_options.value(), &redirect));
   EXPECT_NULL(redirect);
 
   // get attributes
@@ -160,8 +161,9 @@ bool TestRejectOpenFlagNotDirectory() {
   BEGIN_TEST;
 
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  EXPECT_EQ(ZX_ERR_NOT_FILE,
-            dir->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly().set_not_directory()));
+  auto result = dir->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly().set_not_directory());
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(ZX_ERR_NOT_FILE, result.error());
 
   END_TEST;
 }

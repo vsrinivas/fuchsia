@@ -13,7 +13,6 @@ zx_executable("ptysvc") {
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/svc",
   ]
 }
 

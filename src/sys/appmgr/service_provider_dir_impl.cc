@@ -85,7 +85,7 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
   fbl::RefPtr<fs::Vnode> child;
   zx_status_t status = root_->Lookup(&child, service_name);
   if (status == ZX_OK) {
-    status = child->Serve(&vfs_, std::move(channel), fs::VnodeConnectionOptions());
+    status = vfs_.Serve(child, std::move(channel), fs::VnodeConnectionOptions());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name, status);
     }

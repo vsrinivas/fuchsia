@@ -36,12 +36,12 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   }
 }
 
-void SynchronousVfs::RegisterConnection(std::unique_ptr<Connection> connection) {
+void SynchronousVfs::RegisterConnection(std::unique_ptr<internal::Connection> connection) {
   ZX_DEBUG_ASSERT(!is_shutting_down_);
   connections_.push_back(std::move(connection));
 }
 
-void SynchronousVfs::UnregisterConnection(Connection* connection) {
+void SynchronousVfs::UnregisterConnection(internal::Connection* connection) {
   // We drop the result of |erase| on the floor, effectively destroying the
   // connection.
   connections_.erase(*connection);

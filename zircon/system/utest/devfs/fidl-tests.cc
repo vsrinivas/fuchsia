@@ -16,7 +16,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fs/connection.h>
 #include <zxtest/zxtest.h>
 
 namespace {

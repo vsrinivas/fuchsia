@@ -94,13 +94,14 @@ zx_status_t FsManager::Initialize() {
     return status;
   }
   for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
-    fbl::StringPiece pathout;
-    status =
-        root_vfs_->Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]), &pathout,
-                        fs::VnodeConnectionOptions::ReadWrite().set_create(), S_IFDIR);
-    if (status != ZX_OK) {
-      return status;
+    auto open_result = root_vfs_->Open(global_root_, fbl::StringPiece(kMountPoints[n]),
+                                       fs::VnodeConnectionOptions::ReadWrite().set_create(),
+                                       fs::Rights::ReadWrite(), S_IFDIR);
+    if (open_result.is_error()) {
+      return open_result.error();
     }
+    ZX_ASSERT(open_result.is_ok());
+    mount_nodes[n] = std::move(open_result.ok().vnode);
   }
 
   global_loop_->StartThread("root-dispatcher");

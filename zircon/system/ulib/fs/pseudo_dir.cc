@@ -20,7 +20,7 @@ PseudoDir::~PseudoDir() {
   entries_by_id_.clear();
 }
 
-zx_status_t PseudoDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t PseudoDir::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_OK;
 }
 

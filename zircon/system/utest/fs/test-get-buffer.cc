@@ -13,7 +13,6 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fs/connection.h>
 #include <fs/managed_vfs.h>
 #include <fs/vfs_types.h>
 #include <unittest/unittest.h>
@@ -90,7 +89,7 @@ bool TestConnectionRights() {
       zx::channel client, server;
       ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
       uint32_t flags = row.connection_flags;
-      vnode->Serve(vfs.get(), std::move(server), fs::VnodeConnectionOptions::FromIoV1Flags(flags));
+      vfs->Serve(vnode, std::move(server), fs::VnodeConnectionOptions::FromIoV1Flags(flags));
 
       // Call FileGetBuffer on the channel with the testcase's request flags.
       // Check that we get the expected result.
