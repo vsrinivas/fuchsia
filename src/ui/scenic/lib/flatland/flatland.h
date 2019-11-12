@@ -147,9 +147,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
     ObjectLinker::ExportLink exporter;
   };
 
-  // TODO(36451): ChildLinks need to be a heap allocations, because Link objects are unsafe to move
-  // once they have been initialized. Remove the unique pointer indirection once BUG 36451 is fixed.
-  using LinkMap = std::unordered_map<LinkId, std::unique_ptr<ChildLink>>;
+  using LinkMap = std::unordered_map<LinkId, ChildLink>;
 
   // An object linker shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<ObjectLinker> linker_;
@@ -176,11 +174,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A mapping from user-generated id to ChildLink.
   LinkMap child_links_;
 
-  // The Link protocol from this Flatland instance to our parent.
-  //
-  // TODO(36451): ParentLinks need to be a heap allocations, because Link objects are unsafe to move
-  // once they have been initialized. Change this to a member variable once BUG 36451 is fixed.
-  std::unique_ptr<ParentLink> parent_link_;
+  // The link from this Flatland instance to our parent.
+  ParentLink parent_link_;
 
   // Any FIDL requests that have to be bound, are bound in these BindingSets. Despite using shared
   // pointers, the Impl classes are only owned by this Flatland instance, so the values in the

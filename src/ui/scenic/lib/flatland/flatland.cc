@@ -69,15 +69,15 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
-  auto link = std::unique_ptr<ParentLink>(new ParentLink({
+  ParentLink link({
       .impl = std::make_shared<ContentLinkImpl>(),
       .exporter = linker_->CreateExport(std::move(graph_link), std::move(token.value),
                                         /* error_reporter */ nullptr),
-  }));
+  });
 
-  link->exporter.Initialize(
+  link.exporter.Initialize(
       /* link_resolved = */
-      [this, impl = link->impl](fidl::InterfaceRequest<ContentLink> request) {
+      [this, impl = link.impl](fidl::InterfaceRequest<ContentLink> request) {
         // Set up the link here, so that the channel is initialized, but don't actually change the
         // link in our member variable until present is called.
         //
@@ -92,7 +92,7 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // batch.
   pending_operations_.push_back([this, link = std::move(link)]() mutable {
     parent_link_ = std::move(link);
-    parent_link_->impl->UpdateLinkStatus(
+    parent_link_.impl->UpdateLinkStatus(
         fuchsia::ui::scenic::internal::ContentLinkStatus::CONTENT_HAS_PRESENTED);
     return true;
   });
@@ -219,15 +219,15 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
                           fidl::InterfaceRequest<ContentLink> content_link) {
   // We can initialize the link importer immediately, since no state changes actually occur before
   // the feed-forward portion of this method.
-  auto link = std::unique_ptr<ChildLink>(new ChildLink({
+  ChildLink link({
       .impl = std::make_shared<GraphLinkImpl>(),
       .importer = linker_->CreateImport(std::move(content_link), std::move(token.value),
                                         /* error_reporter */ nullptr),
-  }));
+  });
 
-  link->importer.Initialize(
+  link.importer.Initialize(
       /* link_resolved = */
-      [this, impl = link->impl](fidl::InterfaceRequest<GraphLink> request) {
+      [this, impl = link.impl](fidl::InterfaceRequest<GraphLink> request) {
         graph_link_bindings_.AddBinding(impl, std::move(request));
       },
       /* link_failed = */ nullptr);
@@ -248,7 +248,7 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
         else
           info.set_logical_size(Vec2{kDefaultLayoutSize, kDefaultLayoutSize});
 
-        link->impl->UpdateLayoutInfo(std::move(info));
+        link.impl->UpdateLayoutInfo(std::move(info));
         child_links_[link_id] = std::move(link);
         return true;
       });
@@ -266,15 +266,15 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
     if (link_kv == child_links_.end())
       return false;
 
-    FXL_DCHECK(link_kv->second->impl);
-    FXL_DCHECK(link_kv->second->importer.valid());
+    FXL_DCHECK(link_kv->second.impl);
+    FXL_DCHECK(link_kv->second.importer.valid());
     LayoutInfo info;
     if (properties.has_logical_size())
       info.set_logical_size(properties.logical_size());
     else
       info.set_logical_size(Vec2{kDefaultLayoutSize, kDefaultLayoutSize});
 
-    link_kv->second->impl->UpdateLayoutInfo(std::move(info));
+    link_kv->second.impl->UpdateLayoutInfo(std::move(info));
     return true;
   });
 }
