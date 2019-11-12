@@ -9,6 +9,7 @@ use {
             hooks::*,
             testing::breakpoints::*,
             testing::test_hook::{Lifecycle, TestHook},
+            ComponentManagerConfig,
         },
         startup,
     },
@@ -32,7 +33,9 @@ async fn destruction() -> Result<(), Error> {
         use_builtin_vmex: false,
         root_component_url,
     };
-    let model = startup::model_setup(&args, vec![]).await?;
+    let model = startup::model_setup(&args).await?;
+    let _builtin_environment =
+        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default()).await;
     let test_hook = TestHook::new();
 
     let breakpoint_registry = Arc::new(BreakpointRegistry::new());

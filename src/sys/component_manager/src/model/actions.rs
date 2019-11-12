@@ -299,10 +299,9 @@ fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelEr
 mod tests {
     use super::*;
     use {
-        crate::framework::*,
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
-        crate::startup::{Arguments, BuiltinRootCapabilities},
+        crate::startup::{self, Arguments},
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
@@ -372,7 +371,8 @@ mod tests {
     }
 
     struct ActionsTest {
-        model: Model,
+        pub model: Model,
+        pub builtin_environment: Arc<BuiltinEnvironment>,
         test_hook: TestHook,
         realm_proxy: Option<fsys::RealmProxy>,
     }
@@ -405,17 +405,24 @@ mod tests {
             resolver.register("test".to_string(), Box::new(mock_resolver));
 
             let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-            let builtin = Arc::new(BuiltinRootCapabilities::new(&args));
             let model = Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
                 elf_runner: Arc::new(runner),
-                config: ModelConfig::default(),
-                builtin_capabilities: builtin.clone(),
             });
-            model.root_realm.hooks.install(builtin.hooks()).await;
-            let realm_capability_host = RealmCapabilityHost::new(model.clone());
-            model.root_realm.hooks.install(realm_capability_host.hooks()).await;
+            // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
+            // to start and stop in a certain lifecycle ordering. In particular, some unit
+            // tests will destroy component instances before binding to their parents.
+            let builtin_environment = Arc::new(
+                startup::builtin_environment_setup(
+                    &args,
+                    &model,
+                    ComponentManagerConfig::default(),
+                )
+                .await
+                .expect("failed to set up builtin environment"),
+            );
+            let builtin_environment_inner = builtin_environment.clone();
             let test_hook = TestHook::new();
             model.root_realm.hooks.install(test_hook.hooks()).await;
             model.root_realm.hooks.install(extra_hooks).await;
@@ -429,7 +436,8 @@ mod tests {
                     .await
                     .expect(&format!("could not look up {}", realm_moniker));
                 fasync::spawn(async move {
-                    realm_capability_host
+                    builtin_environment_inner
+                        .realm_capability_host
                         .serve(realm, stream)
                         .await
                         .expect("failed serving realm service");
@@ -439,7 +447,7 @@ mod tests {
                 None
             };
 
-            Self { model, test_hook, realm_proxy }
+            Self { model, builtin_environment, test_hook, realm_proxy }
         }
 
         async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {

@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        framework::RealmCapabilityHost,
         klog,
         model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
         model::*,
@@ -76,7 +75,7 @@ pub enum CheckUse {
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
     pub model: Model,
-    pub realm_capability_host: RealmCapabilityHost,
+    pub builtin_environment: BuiltinEnvironment,
     _echo_service: Arc<EchoService>,
     pub namespaces: Namespaces,
     _test_dir: TempDir,
@@ -123,26 +122,27 @@ impl RoutingTest {
             root_component_url: "".to_string(),
         };
         let echo_service = Arc::new(EchoService::new());
-        let builtin_capabilities = Arc::new(startup::BuiltinRootCapabilities::new(&startup_args));
-
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
-            config: ModelConfig::default(),
-            builtin_capabilities: builtin_capabilities.clone(),
         });
+        let builtin_environment = startup::builtin_environment_setup(
+            &startup_args,
+            &model,
+            ComponentManagerConfig::default(),
+        )
+        .await
+        .expect("builtin environment setup failed");
 
-        let realm_capability_host = RealmCapabilityHost::new(model.clone());
-        model.root_realm.hooks.install(realm_capability_host.hooks()).await;
         model.root_realm.hooks.install(additional_hooks).await;
-        model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
         model.root_realm.hooks.install(echo_service.hooks()).await;
+
         Self {
             components,
             model,
-            realm_capability_host,
+            builtin_environment,
             _echo_service: echo_service,
             namespaces,
             _test_dir: test_dir,

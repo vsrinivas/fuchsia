@@ -4,7 +4,9 @@
 
 use {
     component_manager_lib::{
-        model::{self, hooks::*, AbsoluteMoniker, Model},
+        model::{
+            self, hooks::*, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model,
+        },
         startup,
     },
     failure::{self, Error},
@@ -16,18 +18,22 @@ use {
 
 struct TestRunner {
     _model: Model,
+    _builtin_environment: BuiltinEnvironment,
     work_scheduler_test_hook: Arc<WorkSchedulerTestHook>,
 }
 
-async fn create_model(root_component_url: &str) -> Result<Model, Error> {
+async fn create_model(root_component_url: &str) -> Result<(Model, BuiltinEnvironment), Error> {
     let root_component_url = root_component_url.to_string();
     let args = startup::Arguments {
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url,
     };
-    let model = startup::model_setup(&args, vec![]).await?;
-    Ok(model)
+    let model = startup::model_setup(&args).await?;
+    let builtin_environment =
+        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
+            .await?;
+    Ok((model, builtin_environment))
 }
 
 async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTestHook> {
@@ -45,14 +51,14 @@ async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTes
 
 impl TestRunner {
     async fn new(root_component_url: &str) -> Result<Self, Error> {
-        let _model = create_model(root_component_url).await?;
+        let (_model, _builtin_environment) = create_model(root_component_url).await?;
         let work_scheduler_test_hook = install_work_scheduler_test_hook(&_model).await;
 
         let res = _model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", expected_res), format!("{:?}", res));
 
-        Ok(Self { _model, work_scheduler_test_hook })
+        Ok(Self { _model, _builtin_environment, work_scheduler_test_hook })
     }
 }
 

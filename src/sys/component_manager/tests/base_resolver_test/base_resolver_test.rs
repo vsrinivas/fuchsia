@@ -65,7 +65,7 @@ async fn base_resolver_test() -> Result<(), Error> {
         use_builtin_vmex: false,
         root_component_url: "fuchsia-boot:///#meta/root.cm".to_string(),
     };
-    let model = startup::model_setup(&args, vec![]).await.context("failed to set up model")?;
+    let model = startup::model_setup(&args).await.context("failed to set up model")?;
 
     let echo_server_moniker = vec!["echo_server:0"].into();
     let echo_server_realm = model.look_up_realm(&echo_server_moniker).await?;

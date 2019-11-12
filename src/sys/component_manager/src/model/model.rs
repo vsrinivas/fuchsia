@@ -12,8 +12,10 @@ use {
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_runtime::HandleType,
+    fuchsia_zircon as zx,
     futures::future::join_all,
     futures::lock::Mutex,
     std::sync::Arc,
@@ -22,8 +24,6 @@ use {
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
-    /// Builtin services that are available in the root realm.
-    pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -31,8 +31,6 @@ pub struct ModelParams {
     pub root_resolver_registry: ResolverRegistry,
     /// The built-in ELF runner, used for starting components with an ELF binary.
     pub elf_runner: Arc<dyn Runner + Send + Sync + 'static>,
-    /// Configuration options for the model.
-    pub config: ModelConfig,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -45,13 +43,8 @@ pub struct ModelParams {
 /// `Runner` and `Resolver`.
 #[derive(Clone)]
 pub struct Model {
-    // TODO(xbhatnag): Move this out of Model.
     pub notifier: Arc<Mutex<Option<RootRealmPostDestroyNotifier>>>,
     pub root_realm: Arc<Realm>,
-    pub config: ModelConfig,
-    /// Builtin services that are available in the root realm.
-    pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
-    pub realm_capability_host: Option<RealmCapabilityHost>,
 
     /// The built-in ELF runner, used for starting components with an ELF binary.
     // TODO(fxb/4761): Remove. This should be a routed capability, and
@@ -59,36 +52,64 @@ pub struct Model {
     pub elf_runner: Arc<dyn Runner + Send + Sync>,
 }
 
-/// Holds configuration options for the model.
+pub struct BuiltinEnvironment {
+    /// Builtin services that are available in the root realm.
+    pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
+    pub realm_capability_host: RealmCapabilityHost,
+    pub hub: Hub,
+}
+
+impl BuiltinEnvironment {
+    pub fn new(
+        builtin_capabilities: Arc<BuiltinRootCapabilities>,
+        realm_capability_host: RealmCapabilityHost,
+        hub: Hub,
+    ) -> Self {
+        Self { builtin_capabilities, realm_capability_host, hub }
+    }
+
+    pub async fn bind_hub_to_outgoing_dir(&self, model: &Model) -> Result<(), ModelError> {
+        let outgoing_dir_channel =
+            fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
+                .map(|handle| zx::Channel::from(handle));
+        self.bind_hub(model, outgoing_dir_channel).await
+    }
+
+    pub async fn bind_hub(
+        &self,
+        model: &Model,
+        channel: Option<fuchsia_zircon::Channel>,
+    ) -> Result<(), ModelError> {
+        if let Some(channel) = channel {
+            self.hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, channel).await?;
+        };
+        model.root_realm.hooks.install(self.hub.hooks()).await;
+        Ok(())
+    }
+}
+
+/// Holds configuration options for the component manager.
 #[derive(Clone)]
-pub struct ModelConfig {
+pub struct ComponentManagerConfig {
     /// How many children, maximum, are returned by a call to `ChildIterator.next()`.
     pub list_children_batch_size: usize,
 }
 
-impl ModelConfig {
+impl ComponentManagerConfig {
     pub fn default() -> Self {
-        ModelConfig { list_children_batch_size: 1000 }
-    }
-
-    fn validate(&self) {
-        assert!(self.list_children_batch_size > 0, "list_children_batch_size is 0");
+        ComponentManagerConfig { list_children_batch_size: 1000 }
     }
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
-        params.config.validate();
         Model {
             notifier: Arc::new(Mutex::new(Some(RootRealmPostDestroyNotifier::new()))),
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
                 params.root_component_url,
             )),
-            config: params.config,
-            builtin_capabilities: params.builtin_capabilities,
-            realm_capability_host: None,
             elf_runner: params.elf_runner,
         }
     }

@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::{klog, model::{AbsoluteMoniker, Model, Hub}, startup},
+    component_manager_lib::{
+        klog,
+        model::{AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model},
+        startup,
+    },
     failure::{Error, ResultExt},
     fuchsia_async as fasync,
     log::*,
@@ -28,7 +32,7 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match run_root(args).await {
-            Ok((model, _hub)) => {
+            Ok((model, _builtin_environment)) => {
                 model.wait_for_root_realm_destroy().await;
             }
             Err(err) => {
@@ -42,15 +46,16 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_root(args: startup::Arguments) -> Result<(Model, Hub), Error> {
-    let hub = startup::create_hub_if_possible(args.root_component_url.clone())
-        .await
-        .context("failed to create hub")?;
-    let model = startup::model_setup(&args, hub.hooks()).await.context("failed to set up model")?;
+async fn run_root(args: startup::Arguments) -> Result<(Model, BuiltinEnvironment), Error> {
+    let model = startup::model_setup(&args).await.context("failed to set up model")?;
+    let builtin_environment =
+        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
+            .await?;
+    builtin_environment.bind_hub_to_outgoing_dir(&model).await?;
     model
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await
         .map_err(|e| Error::from(e))
         .context(format!("failed to bind to root component {}", args.root_component_url))?;
-    Ok((model, hub))
+    Ok((model, builtin_environment))
 }

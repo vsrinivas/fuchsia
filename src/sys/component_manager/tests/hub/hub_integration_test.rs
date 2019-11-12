@@ -6,8 +6,8 @@ use {
     breakpoints_capability::*,
     component_manager_lib::{
         model::{
-            self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker, Hub,
-            Model,
+            self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker,
+            BuiltinEnvironment, ComponentManagerConfig, Model,
         },
         startup,
     },
@@ -16,7 +16,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_READABLE,
     },
     fidl_fuchsia_test_hub as fhub, fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -26,35 +26,12 @@ use {
 
 struct TestRunner {
     pub model: Model,
-    pub hub: Hub,
+    pub builtin_environment: BuiltinEnvironment,
     hub_test_hook: Arc<HubTestHook>,
     _breakpoint_hook: BreakpointHook,
     _breakpoint_capability_hook: BreakpointCapabilityHook,
     breakpoint_receiver: BreakpointInvocationReceiver,
     hub_proxy: DirectoryProxy,
-}
-
-async fn create_model(root_component_url: &str) -> Result<Model, Error> {
-    let root_component_url = root_component_url.to_string();
-    // TODO(xbhatnag): Explain this in more detail. Setting use_builtin_process_launcher to false is non-obvious.
-    let args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        use_builtin_vmex: false,
-        root_component_url,
-    };
-    let model = startup::model_setup(&args, vec![]).await?;
-    Ok(model)
-}
-
-async fn install_hub(model: &Model) -> Result<(Hub, DirectoryProxy), Error> {
-    let (client_chan, server_chan) = zx::Channel::create()?;
-    let root_component_url = model.root_realm.component_url.clone();
-    let hub = Hub::new(root_component_url)?;
-    // TODO(xbhatnag): Investigate why test() fails when OPEN_RIGHT_WRITABLE is removed
-    hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
-    model.root_realm.hooks.install(hub.hooks()).await;
-    let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan).into_proxy()?;
-    Ok((hub, hub_proxy))
 }
 
 async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
@@ -92,9 +69,21 @@ impl TestRunner {
         root_component_url: &str,
         event_types: Vec<EventType>,
     ) -> Result<Self, Error> {
-        let model = create_model(root_component_url).await?;
-        let (hub, hub_proxy) = install_hub(&model).await?;
+        // TODO(xbhatnag): Explain this in more detail. Setting use_builtin_process_launcher to false is non-obvious.
+        let args = startup::Arguments {
+            use_builtin_process_launcher: false,
+            use_builtin_vmex: false,
+            root_component_url: root_component_url.to_string(),
+        };
+        let model = startup::model_setup(&args).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
+        let builtin_environment =
+            startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
+                .await?;
+        let (client_chan, server_chan) = zx::Channel::create()?;
+        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan).into_proxy()?;
+        builtin_environment.bind_hub(&model, server_chan.into()).await?;
+
         let (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver) =
             register_breakpoints(&model, event_types).await;
 
@@ -104,7 +93,7 @@ impl TestRunner {
 
         Ok(Self {
             model,
-            hub,
+            builtin_environment,
             hub_proxy,
             hub_test_hook,
             _breakpoint_hook: breakpoint_hook,

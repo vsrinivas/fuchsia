@@ -10,8 +10,8 @@ use {
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver,
         model::{
-            error::ModelError, hooks::*, hub::Hub, Model, ModelConfig, ModelParams,
-            ResolverRegistry,
+            error::ModelError, hooks::*, hub::Hub, BuiltinEnvironment, ComponentManagerConfig,
+            Model, ModelParams, ResolverRegistry,
         },
         process_launcher::*,
         system_controller::*,
@@ -20,10 +20,8 @@ use {
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_component::client,
-    fuchsia_runtime::HandleType,
     futures::lock::Mutex,
     log::*,
     std::{path::PathBuf, sync::Arc},
@@ -154,17 +152,6 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
     return Ok(Some(loader));
 }
 
-pub async fn create_hub_if_possible(root_component_url: String) -> Result<Hub, ModelError> {
-    let hub = Hub::new(root_component_url)?;
-    if let Some(out_dir_handle) =
-        fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
-    {
-        hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, out_dir_handle.into()).await?;
-    };
-
-    Ok(hub)
-}
-
 /// Serves services built into component_manager and provides methods for connecting to those
 /// services.
 pub struct BuiltinRootCapabilities {
@@ -215,10 +202,7 @@ impl BuiltinRootCapabilities {
 
 /// Creates and sets up a model with standard parameters. This is easier than setting up the
 /// model manually with `Model::new()`.
-pub async fn model_setup(
-    args: &Arguments,
-    additional_capabilities: Vec<HookRegistration>,
-) -> Result<Model, Error> {
+pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
     // The model needs the resolver registry to be created, but the resolver registry needs the
     // model to be created so that the fuchsia_pkg resolver can route the pkgfs handle. Thus we
     // create an empty Arc<Mutex<<Option<Model>>>, give it to the resolvers, create the model with
@@ -228,34 +212,37 @@ pub async fn model_setup(
     let launcher_connector = ProcessLauncherConnector::new(&args);
     let runner = ElfRunner::new(launcher_connector);
     let resolver_registry = available_resolvers(model_for_resolver.clone())?;
-    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
         root_resolver_registry: resolver_registry,
         elf_runner: Arc::new(runner),
-        config: ModelConfig::default(),
-        builtin_capabilities: builtin_capabilities.clone(),
     };
-
-    let mut model = Model::new(params);
-    let realm_capability_host = RealmCapabilityHost::new(model.clone());
-    model.root_realm.hooks.install(realm_capability_host.hooks()).await;
-    model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
-    model.root_realm.hooks.install(additional_capabilities).await;
+    let model = Model::new(params);
     let notifier_hooks = {
         let notifier = model.notifier.lock().await;
         let notifier = notifier.as_ref();
         notifier.expect("Notifier must exist. Model is not created!").hooks()
     };
     model.root_realm.hooks.install(notifier_hooks).await;
-    // TODO(geb, fsamuel): model refers to a RealmCapabilityHost and RealmCapabilityHost
-    // refers to model. We need to break this cycle.
-    model.realm_capability_host = Some(realm_capability_host);
 
-    // TODO(dgonyeo): need to break this one too.
+    // TODO(dgonyeo): This introduces cyclic references between model and the
+    // resolver_registry. We need to break this cycle perhaps by using weak
+    // references.
     *model_for_resolver.lock().await = Some(model.clone());
-
     Ok(model)
+}
+
+pub async fn builtin_environment_setup(
+    args: &Arguments,
+    model: &Model,
+    config: ComponentManagerConfig,
+) -> Result<BuiltinEnvironment, ModelError> {
+    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));
+    let realm_capability_host = RealmCapabilityHost::new(model.clone(), config);
+    model.root_realm.hooks.install(realm_capability_host.hooks()).await;
+    model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
+    let hub = Hub::new(args.root_component_url.clone())?;
+    Ok(BuiltinEnvironment::new(builtin_capabilities, realm_capability_host, hub))
 }
 
 #[cfg(test)]

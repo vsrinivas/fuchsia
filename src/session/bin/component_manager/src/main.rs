@@ -4,7 +4,7 @@
 
 use {
     component_manager_lib::{
-        model::{testing::test_helpers, AbsoluteMoniker, Hub},
+        model::{testing::test_helpers, AbsoluteMoniker, ComponentManagerConfig},
         startup,
     },
     failure::{self, Error},
@@ -16,7 +16,7 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process, sync::Arc},
+    std::{path::PathBuf, process},
 };
 
 /// This is a temporary workaround to allow command line tools to connect to the session manager
@@ -82,9 +82,11 @@ async fn main() -> Result<(), Error> {
     };
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
-    let hub = Arc::new(Hub::new(args.root_component_url.clone()).unwrap());
-    hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
-    let model = startup::model_setup(&args, hub.hooks()).await?;
+    let model = startup::model_setup(&args).await?;
+    let builtin_environment =
+        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
+            .await?;
+    builtin_environment.bind_hub(&model, Some(server_chan.into())).await?;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {

@@ -72,12 +72,13 @@ pub struct RealmCapabilityHost {
 
 pub struct RealmCapabilityHostInner {
     model: Model,
+    config: ComponentManagerConfig,
 }
 
 // `RealmCapabilityHost` is a `Hook` that serves the `Realm` FIDL protocol.
 impl RealmCapabilityHost {
-    pub fn new(model: Model) -> Self {
-        Self { inner: Arc::new(RealmCapabilityHostInner::new(model)) }
+    pub fn new(model: Model, config: ComponentManagerConfig) -> Self {
+        Self { inner: Arc::new(RealmCapabilityHostInner::new(model, config)) }
     }
 
     pub fn hooks(&self) -> Vec<HookRegistration> {
@@ -97,8 +98,8 @@ impl RealmCapabilityHost {
 }
 
 impl RealmCapabilityHostInner {
-    pub fn new(model: Model) -> Self {
-        Self { model }
+    pub fn new(model: Model, config: ComponentManagerConfig) -> Self {
+        Self { model, config }
     }
 
     async fn serve(
@@ -125,8 +126,7 @@ impl RealmCapabilityHostInner {
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
                     let mut res =
-                        Self::list_children(self.model.clone(), realm.clone(), collection, iter)
-                            .await;
+                        Self::list_children(&self.config, realm.clone(), collection, iter).await;
                     responder.send(&mut res)?;
                 }
             }
@@ -218,7 +218,7 @@ impl RealmCapabilityHostInner {
     }
 
     async fn list_children(
-        model: Model,
+        config: &ComponentManagerConfig,
         realm: Arc<Realm>,
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
@@ -261,7 +261,7 @@ impl RealmCapabilityHostInner {
             }
         });
         let stream = iter.into_stream().expect("could not convert iterator channel into stream");
-        let batch_size = model.config.list_children_batch_size;
+        let batch_size = config.list_children_batch_size;
         fasync::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
@@ -353,6 +353,8 @@ mod tests {
     };
 
     struct RealmCapabilityTest {
+        pub model: Model,
+        pub builtin_environment: Arc<BuiltinEnvironment>,
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
     }
@@ -367,25 +369,24 @@ mod tests {
             // Init model.
             let mut resolver = ResolverRegistry::new();
             resolver.register("test".to_string(), Box::new(mock_resolver));
-            let mut config = ModelConfig::default();
+            let mut config = ComponentManagerConfig::default();
             config.list_children_batch_size = 2;
             let startup_args = startup::Arguments {
                 use_builtin_process_launcher: false,
                 use_builtin_vmex: false,
                 root_component_url: "".to_string(),
             };
-            let builtin_capabilities =
-                Arc::new(startup::BuiltinRootCapabilities::new(&startup_args));
             let model = Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
                 elf_runner: Arc::new(mock_runner),
-                config,
-                builtin_capabilities: builtin_capabilities.clone(),
             });
-            model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
-            let realm_service_host = RealmCapabilityHost::new(model.clone());
-            model.root_realm.hooks.install(realm_service_host.hooks()).await;
+            let builtin_environment = Arc::new(
+                startup::builtin_environment_setup(&startup_args, &model, config)
+                    .await
+                    .expect("failed to set up builtin environment"),
+            );
+            let builtin_environment_inner = builtin_environment.clone();
             model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
@@ -398,13 +399,14 @@ mod tests {
             {
                 let realm = realm.clone();
                 fasync::spawn(async move {
-                    realm_service_host
+                    builtin_environment_inner
+                        .realm_capability_host
                         .serve(realm, stream)
                         .await
                         .expect("failed serving realm service");
                 });
             }
-            RealmCapabilityTest { realm, realm_proxy }
+            RealmCapabilityTest { model, builtin_environment, realm, realm_proxy }
         }
     }
 

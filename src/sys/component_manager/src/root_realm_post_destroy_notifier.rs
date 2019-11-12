@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{AbsoluteMoniker, Hook, Event, ModelError, HookRegistration, EventType},
+    crate::model::{AbsoluteMoniker, Event, EventType, Hook, HookRegistration, ModelError},
+    futures::channel::*,
     futures::future::BoxFuture,
     futures::lock::Mutex,
-    futures::channel::*,
     std::sync::Arc,
 };
 
@@ -15,25 +15,21 @@ use {
 /// TODO(xbhatnag): Consider replacing this with breakpoints.
 pub struct RootRealmPostDestroyNotifier {
     pub rx: oneshot::Receiver<()>,
-    inner: Arc<RootRealmPostDestroyNotifierInner>
+    inner: Arc<RootRealmPostDestroyNotifierInner>,
 }
 
 impl RootRealmPostDestroyNotifier {
     pub fn new() -> Self {
         let (tx, rx) = oneshot::channel();
-        let inner = Arc::new(RootRealmPostDestroyNotifierInner {
-            tx: Mutex::new(Some(tx))
-        });
-        return Self { rx, inner }
+        let inner = Arc::new(RootRealmPostDestroyNotifierInner { tx: Mutex::new(Some(tx)) });
+        return Self { rx, inner };
     }
 
     pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![
-            HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: self.inner.clone(),
-            }
-        ]
+        vec![HookRegistration {
+            event_type: EventType::PostDestroyInstance,
+            callback: self.inner.clone(),
+        }]
     }
 
     pub async fn wait_for_root_realm_destroy(self) {
@@ -42,7 +38,7 @@ impl RootRealmPostDestroyNotifier {
 }
 
 struct RootRealmPostDestroyNotifierInner {
-    tx: Mutex<Option<oneshot::Sender<()>>>
+    tx: Mutex<Option<oneshot::Sender<()>>>,
 }
 
 impl Hook for RootRealmPostDestroyNotifierInner {
