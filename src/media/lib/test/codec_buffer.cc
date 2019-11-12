@@ -7,7 +7,7 @@
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 CodecBuffer::CodecBuffer(uint32_t buffer_index, size_t size_bytes)
     : buffer_index_(buffer_index), size_bytes_(size_bytes) {}
@@ -18,7 +18,7 @@ void CodecBuffer::SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_
   is_physically_contiguous_required_ = true;
   zx_status_t status = ::zx::unowned_bti(very_temp_kludge_bti_handle.get())
                            ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti_handle_);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
 }
 
 bool CodecBuffer::AllocateInternal() {
@@ -64,7 +64,7 @@ CodecBuffer::~CodecBuffer() {
   if (base_) {
     zx_status_t res = zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(base_), size_bytes_);
     if (res != ZX_OK) {
-      FXL_PLOG(FATAL, res) << "Failed to unmap " << size_bytes_ << " byte buffer vmo";
+      FX_PLOGS(FATAL, res) << "Failed to unmap " << size_bytes_ << " byte buffer vmo";
     }
     base_ = nullptr;
   }
@@ -111,7 +111,7 @@ bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,
   zx_status_t status =
       zx::vmar::root_self()->map(0, vmo, vmo_usable_start, vmo_usable_size, options, &tmp);
   if (status != ZX_OK) {
-    FXL_PLOG(WARNING, status) << "CodecBuffer::CreateFromVmoInternal failed to map VMO";
+    FX_PLOGS(WARNING, status) << "CodecBuffer::CreateFromVmoInternal failed to map VMO";
     return false;
   }
   base_ = reinterpret_cast<uint8_t*>(tmp);

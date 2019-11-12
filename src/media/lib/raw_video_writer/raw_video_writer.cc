@@ -31,7 +31,7 @@ RawVideoWriter<enabled>::RawVideoWriter(const char* file_name) {
     file_name_ = file_name;
   } else {
     // mostly a comment
-    FXL_DCHECK(file_name_.empty());
+    FX_DCHECK(file_name_.empty());
   }
 }
 
@@ -114,17 +114,17 @@ void RawVideoWriter<enabled>::Close() {
 
   if (!is_initialized_) {
     // file never created, so nothing to do
-    FXL_DCHECK(!file_.is_valid());
+    FX_DCHECK(!file_.is_valid());
     return;
   }
 
   if (!file_.is_valid()) {
-    FXL_DCHECK(!is_ok_);
-    // Don't FXL_LOG(WARNING) again since we already did previously.
+    FX_DCHECK(!is_ok_);
+    // Don't FX_LOGS(WARNING) again since we already did previously.
     return;
   }
   file_.reset();
-  FXL_LOG(INFO) << "Closed raw video file " << std::quoted(file_name_);
+  FX_LOGS(INFO) << "Closed raw video file " << std::quoted(file_name_);
 
   // is_ok_ intentionally not modified
 }
@@ -141,25 +141,25 @@ void RawVideoWriter<enabled>::Delete() {
 
   if (!is_initialized_) {
     // file never created, so nothing to do
-    FXL_DCHECK(!file_.is_valid());
+    FX_DCHECK(!file_.is_valid());
     return;
   }
 
-  FXL_DCHECK(!file_name_.empty() || !file_.is_valid());
+  FX_DCHECK(!file_name_.empty() || !file_.is_valid());
   if (!file_.is_valid()) {
-    FXL_DCHECK(!is_ok_);
-    // Don't FXL_LOG(WARNING) again since we already did previously.
+    FX_DCHECK(!is_ok_);
+    // Don't FX_LOGS(WARNING) again since we already did previously.
     return;
   }
   file_.reset();
 
   if (::unlink(file_name_.c_str()) < 0) {
-    FXL_LOG(WARNING) << "Could not delete " << std::quoted(file_name_);
+    FX_LOGS(WARNING) << "Could not delete " << std::quoted(file_name_);
     Fail();
     return;
   }
 
-  FXL_LOG(INFO) << "Deleted raw video file " << std::quoted(file_name_);
+  FX_LOGS(INFO) << "Deleted raw video file " << std::quoted(file_name_);
 }
 
 template <bool enabled>
@@ -181,7 +181,7 @@ void RawVideoWriter<enabled>::Initialize() {
   }
   file_.reset(::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC));
   if (!file_.is_valid()) {
-    FXL_LOG(WARNING) << "::open failed for " << std::quoted(file_name_) << ", returned "
+    FX_LOGS(WARNING) << "::open failed for " << std::quoted(file_name_) << ", returned "
                      << file_.get() << ", errno " << errno;
     Fail();
     return;
@@ -190,7 +190,7 @@ void RawVideoWriter<enabled>::Initialize() {
 
 template <bool enabled>
 void RawVideoWriter<enabled>::Fail() {
-  FXL_LOG(WARNING) << "RawVideoWriter<enabled>::Fail()";
+  FX_LOGS(WARNING) << "RawVideoWriter<enabled>::Fail()";
   is_ok_ = false;
   // We intentionally don't Close() or Delete() here - a client can do a Close()
   // or Delete() later without having looked at IsOk(), or might decide whether
@@ -203,15 +203,15 @@ template <bool enabled>
 void RawVideoWriter<enabled>::WriteData(const uint8_t* to_write, size_t size) {
   EnsureInitialized();
   if (!is_ok_) {
-    // Don't FXL_LOG() again because we already did previously.
+    // Don't FX_LOGS() again because we already did previously.
     return;
   }
   if (is_done_) {
-    FXL_LOG(WARNING) << "RawVideoWriter write requested after Close() or Delete()";
+    FX_LOGS(WARNING) << "RawVideoWriter write requested after Close() or Delete()";
     Fail();
     return;
   }
-  FXL_DCHECK(file_.is_valid());
+  FX_DCHECK(file_.is_valid());
   ::write(file_.get(), reinterpret_cast<const void*>(to_write), size);
 }
 

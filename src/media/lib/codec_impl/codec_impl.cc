@@ -3103,7 +3103,6 @@ const fuchsia::media::drm::DecryptorParams& CodecImpl::decryptor_params() const 
 // true - maybe it's the core codec thread.
 // false - it's definitely not the core codec thread.
 bool CodecImpl::IsPotentiallyCoreCodecThread() {
-  // FXL_CHECK(false) << "not yet implemented";
   return (thrd_current() != stream_control_thread_) && (thrd_current() != fidl_thread());
 }
 

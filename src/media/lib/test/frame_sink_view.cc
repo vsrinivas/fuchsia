@@ -31,8 +31,8 @@ class Frame {
       : wait_(this), on_done_(std::move(on_done)) {
     zx_status_t status = release_eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_eventpair_);
     if (status != ZX_OK) {
-      FXL_PLOG(FATAL, status) << "::zx::event::duplicate() failed";
-      FXL_NOTREACHED();
+      FX_PLOGS(FATAL, status) << "::zx::event::duplicate() failed";
+      FX_NOTREACHED();
     }
     wait_.set_object(release_eventpair_.get());
     // TODO(dustingreen): We should make it so an eventpair A B can have A wait
@@ -48,14 +48,14 @@ class Frame {
     wait_.set_trigger(ZX_EVENTPAIR_PEER_CLOSED);
     status = wait_.Begin(dispatcher);
     if (status != ZX_OK) {
-      FXL_PLOG(FATAL, status) << "Begin() failed";
-      FXL_NOTREACHED();
+      FX_PLOGS(FATAL, status) << "Begin() failed";
+      FX_NOTREACHED();
     }
   }
 
   ~Frame() {
     // on_done_ was already run prior to ~Frame, and set to nullptr.
-    FXL_DCHECK(!on_done_);
+    FX_DCHECK(!on_done_);
   }
 
   // Normally this runs when the remote end of the eventpair is closed.  In
@@ -68,9 +68,9 @@ class Frame {
         // Probably normal if this is not happening until dispatcher shutdown.
         //
         // TODO(dustingreen): Mute this output if |dispatcher| is shutting down.
-        FXL_LOG(INFO) << "WaitHandler() sees ZX_ERR_CANCELED (normal if shutting down)";
+        FX_LOGS(INFO) << "WaitHandler() sees ZX_ERR_CANCELED (normal if shutting down)";
       } else {
-        FXL_PLOG(INFO, status) << "WaitHandler() sees failure";
+        FX_PLOGS(INFO, status) << "WaitHandler() sees failure";
       }
     }
 
@@ -104,7 +104,7 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
                              uint64_t vmo_offset,
                              const fuchsia::media::VideoUncompressedFormat& video_format,
                              fit::closure on_done) {
-  FXL_DCHECK((image_id != FrameSink::kBlankFrameImageId) || !on_done);
+  FX_DCHECK((image_id != FrameSink::kBlankFrameImageId) || !on_done);
 
   fuchsia::images::PixelFormat pixel_format = fuchsia::images::PixelFormat::BGRA_8;
   uint32_t fourcc = video_format.fourcc;
@@ -119,9 +119,9 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
       pixel_format = fuchsia::images::PixelFormat::YV12;
       break;
     default:
-      FXL_CHECK(false) << "fourcc conversion not implemented - fourcc: " << fourcc_to_string(fourcc)
+      FX_CHECK(false) << "fourcc conversion not implemented - fourcc: " << fourcc_to_string(fourcc)
                        << " in hex: 0x" << std::hex << std::setw(8) << fourcc;
-      FXL_NOTREACHED();
+      FX_NOTREACHED();
       pixel_format = fuchsia::images::PixelFormat::BGRA_8;
       break;
   }
@@ -132,21 +132,21 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
       .pixel_format = pixel_format,
   };
 
-  FXL_VLOG(3) << "#### image_id: " << image_id << " width: " << image_info.width
+  FX_VLOGS(3) << "#### image_id: " << image_id << " width: " << image_info.width
               << " height: " << image_info.height << " stride: " << image_info.stride;
 
   ::zx::vmo image_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo);
   if (status != ZX_OK) {
-    FXL_PLOG(FATAL, status) << "vmo.duplicate() failed";
-    FXL_NOTREACHED();
+    FX_PLOGS(FATAL, status) << "vmo.duplicate() failed";
+    FX_NOTREACHED();
   }
 
   size_t image_vmo_size;
   status = image_vmo.get_size(&image_vmo_size);
   if (status != ZX_OK) {
-    FXL_PLOG(FATAL, status) << "vmo.get_size() failed";
-    FXL_NOTREACHED();
+    FX_PLOGS(FATAL, status) << "vmo.get_size() failed";
+    FX_NOTREACHED();
   }
 
   image_pipe_->AddImage(image_id, image_info, std::move(image_vmo), vmo_offset, image_vmo_size,
@@ -156,8 +156,8 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
   ::zx::eventpair release_frame_server;
   status = ::zx::eventpair::create(0, &release_frame_client, &release_frame_server);
   if (status != ZX_OK) {
-    FXL_PLOG(FATAL, status) << "::zx::eventpair::create() failed";
-    FXL_NOTREACHED();
+    FX_PLOGS(FATAL, status) << "::zx::eventpair::create() failed";
+    FX_NOTREACHED();
   }
 
   // TODO(dustingreen): Stop doing this, or rather, do use eventpair(s) but stop
@@ -188,7 +188,7 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
     if (image_id == FrameSink::kBlankFrameImageId) {
       // The image_pipe_ may already be gone, so don't touch ImagePipe.  There
       // is no on_done callback, so no worries re. not running it.
-      FXL_DCHECK(!on_done);
+      FX_DCHECK(!on_done);
       return;
     }
     // According to ImagePipe .fidl, this RemoveImage() doesn't impact the
@@ -215,7 +215,7 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
   image_pipe_->PresentImage(
       image_id, present_time, std::move(acquire_fences), std::move(release_fences),
       [image_id](fuchsia::images::PresentationInfo presentation_info) {
-        FXL_VLOG(3) << "PresentImageCallback() called - presentation_time: "
+        FX_VLOGS(3) << "PresentImageCallback() called - presentation_time: "
                     << presentation_info.presentation_time
                     << " presenation_interval: " << presentation_info.presentation_interval
                     << " image_id: " << image_id;
@@ -230,7 +230,7 @@ FrameSinkView::FrameSinkView(scenic::ViewContext context, FrameSink* parent, asy
       parent_(parent),
       main_loop_(main_loop),
       node_(session()) {
-  FXL_VLOG(3) << "Creating View";
+  FX_VLOGS(3) << "Creating View";
 
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();

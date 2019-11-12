@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 
@@ -37,7 +37,7 @@ FrameSink::~FrameSink() {
   // Only after ~view_provider_component_ do we know there will be zero views_
   // left.
   view_provider_component_ = nullptr;
-  FXL_DCHECK(views_.empty());
+  FX_DCHECK(views_.empty());
 }
 
 // Must be called on main_loop_'s thread.
@@ -58,17 +58,17 @@ void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_off
     // program uses the present queue, it's equivalent since there's only
     // ever at most 1 usage of any given image_id in the present queue at
     // any given time.
-    FXL_VLOG(3) << "Scenic released image_id: " << image_id;
+    FX_VLOGS(3) << "Scenic released image_id: " << image_id;
     on_done();
     frames_outstanding_--;
     CheckIfAllFramesReturned();
   });
   auto shared_done_runner = std::make_shared<decltype(done_runner)>(std::move(done_runner));
 
-  FXL_DCHECK(output_format->has_format_details());
-  FXL_DCHECK(output_format->format_details().has_domain());
-  FXL_DCHECK(output_format->format_details().domain().is_video());
-  FXL_DCHECK(output_format->format_details().domain().video().is_uncompressed());
+  FX_DCHECK(output_format->has_format_details());
+  FX_DCHECK(output_format->format_details().has_domain());
+  FX_DCHECK(output_format->format_details().domain().is_video());
+  FX_DCHECK(output_format->format_details().domain().video().is_uncompressed());
   const fuchsia::media::VideoUncompressedFormat& video_format =
       output_format->format_details().domain().video().uncompressed();
 
@@ -78,12 +78,12 @@ void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_off
     present_time = zx_clock_get_monotonic() + ZX_SEC(3);
   } else {
     auto delta = ZX_USEC(1000000 / frames_per_second_);
-    FXL_CHECK(delta > 0);
+    FX_CHECK(delta > 0);
     present_time = last_requested_present_time_ + delta;
   }
   last_requested_present_time_ = present_time;
 
-  FXL_VLOG(3) << "putting frame - present_time: " << present_time << " image_id: " << image_id;
+  FX_VLOGS(3) << "putting frame - present_time: " << present_time << " image_id: " << image_id;
 
   for (FrameSinkView* view : views_) {
     view->PutFrame(image_id, present_time, vmo, vmo_offset, video_format, [shared_done_runner] {
@@ -120,7 +120,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
       last_requested_present_time_ + ZX_SEC(kDelayBeforeBlankFrameSeconds);
   ::zx::vmo blank_frame_vmo;
   zx_status_t status = ::zx::vmo::create(kBlankFrameBytes, 0, &blank_frame_vmo);
-  FXL_CHECK(status == ZX_OK) << "::zx::vmo::create() failed - status: " << status;
+  FX_CHECK(status == ZX_OK) << "::zx::vmo::create() failed - status: " << status;
 
   // We intentionally change the format, including pixel format, for the blank
   // frame, because it's easier to generate a black frame in RGB, and because
@@ -142,7 +142,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
                    kBlankFrameVmoOffset, blank_frame_video_format, nullptr);
   }
 
-  FXL_DCHECK(!on_frames_returned_);
+  FX_DCHECK(!on_frames_returned_);
   on_frames_returned_ = std::move(on_frames_returned);
   // It's unlikely that this would see all the frames returned, but possible,
   // especially if Scenic died.  Normally it'll be a similar check later on
@@ -152,7 +152,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
 
 void FrameSink::AddFrameSinkView(FrameSinkView* view) {
   views_.insert(view);
-  FXL_DCHECK(view_connected_callback_);
+  FX_DCHECK(view_connected_callback_);
   view_connected_callback_(this);
 }
 
@@ -181,6 +181,6 @@ void FrameSink::CheckIfAllFramesReturned() {
     async::PostTask(
         main_loop_->dispatcher(),
         [on_frames_returned = std::move(on_frames_returned_)] { on_frames_returned(); });
-    FXL_DCHECK(!on_frames_returned_);
+    FX_DCHECK(!on_frames_returned_);
   }
 }

@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/media/test/one_shot_event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 
@@ -43,7 +43,7 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
     // way.
     //
     // TODO(dustingreen): get and print epitaph once that's possible.
-    FXL_PLOG(FATAL, status) << "codec_ failed - exiting";
+    FX_PLOGS(FATAL, status) << "codec_ failed - exiting";
   });
 
   // Only one request is ever created, so we create it in the constructor to
@@ -96,9 +96,9 @@ void CodecClient::Start() {
   // debugging if just starting the Codec server fails instead.  Actual clients
   // don't need to use Sync() here.
   CallSyncAndWaitForResponse();
-  FXL_VLOG(3) << "Sync() completed, which means the Codec server exists.";
+  FX_VLOGS(3) << "Sync() completed, which means the Codec server exists.";
 
-  FXL_VLOG(3) << "Waiting for OnInputConstraints() from the Codec server...";
+  FX_VLOGS(3) << "Waiting for OnInputConstraints() from the Codec server...";
   // The Codec client can rely on an OnInputConstraints() arriving shortly,
   // without any message required from the client first.  The
   // OnInputConstraints() may in future actually be sent by the CodecFactory,
@@ -112,7 +112,7 @@ void CodecClient::Start() {
     }
   }  // ~lock
   ZX_ASSERT(input_constraints_);
-  FXL_VLOG(3) << "Got OnInputConstraints() from the Codec server.";
+  FX_VLOGS(3) << "Got OnInputConstraints() from the Codec server.";
 
   // We know input_constraints_ won't change outside the lock because we prevent
   // that in OnInputConstraints() by only accepting input constraints if there
@@ -127,13 +127,13 @@ void CodecClient::Start() {
   // We're not on the FIDL thread, so we need to async::PostTask() over to the
   // FIDL thread to send any FIDL message.
 
-  FXL_CHECK(input_constraints_->has_packet_count_for_server_recommended());
-  FXL_CHECK(input_constraints_->has_packet_count_for_server_max());
+  FX_CHECK(input_constraints_->has_packet_count_for_server_recommended());
+  FX_CHECK(input_constraints_->has_packet_count_for_server_max());
   uint32_t packet_count_for_client =
       std::max(kMinExtraInputPacketsForClient, input_constraints_->packet_count_for_client_min());
   uint32_t packet_count_for_server = input_constraints_->packet_count_for_server_recommended();
   if (packet_count_for_client > input_constraints_->packet_count_for_client_max()) {
-    FXL_LOG(FATAL) << "server can't accomodate "
+    FX_LOGS(FATAL) << "server can't accomodate "
                       "kMinExtraInputPacketsForClient - not "
                       "using server - exiting";
   }
@@ -145,7 +145,7 @@ void CodecClient::Start() {
                                      packet_count_for_server, packet_count_for_client,
                                      &input_packet_count, &input_buffer_collection_,
                                      &buffer_collection_info)) {
-    FXL_LOG(FATAL) << "ConfigurePortBufferCollection failed (input)";
+    FX_LOGS(FATAL) << "ConfigurePortBufferCollection failed (input)";
   }
 
   ZX_ASSERT(input_free_bits_.empty());
@@ -157,7 +157,7 @@ void CodecClient::Start() {
         buffer_collection_info.buffers[i].vmo_usable_start,
         buffer_collection_info.settings.buffer_settings.size_bytes, true);
     if (!local_buffer) {
-      FXL_LOG(FATAL) << "CodecBuffer::CreateFromVmo() failed";
+      FX_LOGS(FATAL) << "CodecBuffer::CreateFromVmo() failed";
     }
     ZX_ASSERT(all_input_buffers_.size() == i);
     all_input_buffers_.push_back(std::move(local_buffer));
@@ -217,7 +217,7 @@ bool CodecClient::CreateAndSyncBufferCollection(
   // a different sysmem channel.
   zx_status_t sync_status = buffer_collection->Sync();
   if (sync_status != ZX_OK) {
-    FXL_PLOG(FATAL, sync_status) << "buffer_collection->Sync() failed";
+    FX_PLOGS(FATAL, sync_status) << "buffer_collection->Sync() failed";
   }
 
   *out_buffer_collection = std::move(buffer_collection);
@@ -242,11 +242,11 @@ bool CodecClient::WaitForSysmemBuffersAllocated(
   zx_status_t call_status =
       buffer_collection->WaitForBuffersAllocated(&allocate_status, &result_buffer_collection_info);
   if (call_status != ZX_OK) {
-    FXL_PLOG(ERROR, call_status) << "WaitForBuffersAllocated returned failure";
+    FX_PLOGS(ERROR, call_status) << "WaitForBuffersAllocated returned failure";
     return false;
   }
   if (allocate_status != ZX_OK) {
-    FXL_PLOG(ERROR, allocate_status) << "WaitForBuffersAllocated allocation failed";
+    FX_PLOGS(ERROR, allocate_status) << "WaitForBuffersAllocated allocation failed";
     return false;
   }
 
@@ -300,9 +300,9 @@ void CodecClient::CallSyncAndWaitForResponse() {
   // method is called from the main thread not the FIDL thread, so we have to
   // switch threads to send a FIDL message.  The inner lambda is the completion
   // callback.
-  FXL_VLOG(3) << "before calling Sync() (main thread)...";
+  FX_VLOGS(3) << "before calling Sync() (main thread)...";
   async::PostTask(dispatcher_, [&] {
-    FXL_VLOG(3) << "before calling Sync() (fidl thread)...";
+    FX_VLOGS(3) << "before calling Sync() (fidl thread)...";
     codec_->Sync([&]() {
       {  // scope lock
         std::unique_lock<std::mutex> lock(is_sync_complete_lock);
@@ -311,7 +311,7 @@ void CodecClient::CallSyncAndWaitForResponse() {
       is_sync_complete_condition.notify_all();
     });
   });
-  FXL_VLOG(3) << "after calling Sync() - waiting...\n";
+  FX_VLOGS(3) << "after calling Sync() - waiting...\n";
   {  // scope lock
     std::unique_lock<std::mutex> lock(is_sync_complete_lock);
     // We rely on the channel error handler to be doing an exit() for this loop
@@ -320,7 +320,7 @@ void CodecClient::CallSyncAndWaitForResponse() {
       is_sync_complete_condition.wait(lock);
     }
   }
-  FXL_VLOG(3) << "after calling Sync() - done waiting\n";
+  FX_VLOGS(3) << "after calling Sync() - done waiting\n";
   ZX_ASSERT(is_sync_complete);
 }
 
@@ -342,7 +342,7 @@ void CodecClient::TrackOutputStreamLifetimeOrdinal(uint64_t output_stream_lifeti
 
 void CodecClient::OnInputConstraints(fuchsia::media::StreamBufferConstraints input_constraints) {
   if (input_constraints_) {
-    FXL_LOG(FATAL) << "server sent more than one input constraints";
+    FX_LOGS(FATAL) << "server sent more than one input constraints";
   }
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -357,13 +357,13 @@ void CodecClient::OnFreeInputPacket(fuchsia::media::PacketHeader free_input_pack
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!free_input_packet.has_packet_index()) {
-      FXL_LOG(FATAL) << "OnFreeInputPacket(): Packet has no index.";
+      FX_LOGS(FATAL) << "OnFreeInputPacket(): Packet has no index.";
     }
     if (input_free_bits_[free_input_packet.packet_index()]) {
       // already free - a normal client wouldn't want to just exit here since
       // this is the server's fault - in this example we just care that we
       // detect it
-      FXL_LOG(FATAL) << "OnFreeInputPacket() when already free - server's fault? - "
+      FX_LOGS(FATAL) << "OnFreeInputPacket() when already free - server's fault? - "
                         "packet_index: "
                      << free_input_packet.packet_index();
     }
@@ -578,7 +578,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     uint32_t packet_count_for_client =
         std::max(kMinExtraOutputPacketsForClient, buffer_constraints.packet_count_for_client_min());
     if (packet_count_for_client > buffer_constraints.packet_count_for_client_max()) {
-      FXL_LOG(FATAL) << "server can't accomodate "
+      FX_LOGS(FATAL) << "server can't accomodate "
                         "kMinExtraOutputPacketsForClient - not "
                         "using server - exiting";
     }
@@ -590,7 +590,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
                                        packet_count_for_server, packet_count_for_client,
                                        &packet_count, &output_buffer_collection_,
                                        &buffer_collection_info)) {
-      FXL_LOG(FATAL) << "ConfigurePortBufferCollection failed (output)";
+      FX_LOGS(FATAL) << "ConfigurePortBufferCollection failed (output)";
     }
 
     // Configure tracking for output buffers.
@@ -604,7 +604,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
             buffer_collection_info.buffers[i].vmo_usable_start,
             buffer_collection_info.settings.buffer_settings.size_bytes, true);
         if (!buffer) {
-          FXL_LOG(FATAL) << "CodecBuffer::Allocate() failed (output)";
+          FX_LOGS(FATAL) << "CodecBuffer::Allocate() failed (output)";
         }
         ZX_ASSERT(all_output_buffers_.size() == i);
         all_output_buffers_.push_back(std::move(buffer));
@@ -650,7 +650,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         // all along during most of this whole method.  If we had set to false
         // up there, it would probably be less obvious why it works vs. here,
         // but either can work.
-        FXL_VLOG(3) << "output_config_action_pending_ = false, because client "
+        FX_VLOGS(3) << "output_config_action_pending_ = false, because client "
                        "caught up";
         output_constraints_action_pending_ = false;
         // Because this was true for at least pending config reason which we
@@ -667,7 +667,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         // output_constraints_action_pending_ or output_pending_. Both remain
         // true until we've caught up to a config that's at least as new as the
         // last_required_output_constraints_.
-        FXL_VLOG(3) << "output_constraints_action_pending_ remains true because server "
+        FX_VLOGS(3) << "output_constraints_action_pending_ remains true because server "
                        "has sent yet another action-required output constraints";
         ZX_ASSERT(output_constraints_action_pending_);
         ZX_ASSERT(output_pending_);
@@ -694,7 +694,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> codec_sysmem_token;
   if (!CreateAndSyncBufferCollection(&buffer_collection, &codec_sysmem_token)) {
-    FXL_LOG(FATAL) << "CreateAndSyncBufferCollection failed (output)";
+    FX_LOGS(FATAL) << "CreateAndSyncBufferCollection failed (output)";
     return false;
   }
 
@@ -776,7 +776,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   // This borrows buffer_collection during
   // the call.
   if (!WaitForSysmemBuffersAllocated(&buffer_collection, &buffer_collection_info)) {
-    FXL_LOG(FATAL) << "WaitForSysmemBuffer"
+    FX_LOGS(FATAL) << "WaitForSysmemBuffer"
                       "sAllocated failed";
     return false;
   }
@@ -789,7 +789,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   // the Bind() here.  This does mean we need to set the error handler before
   // the Bind() however.
   buffer_collection_ptr.set_error_handler([is_output](zx_status_t status) {
-    FXL_PLOG(FATAL, status) << "BufferCollection failed is_output: " << is_output;
+    FX_PLOGS(FATAL, status) << "BufferCollection failed is_output: " << is_output;
   });
 
   // This implicitly converts buffer_collection from
@@ -798,7 +798,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   // the FIDL thread.
   zx_status_t bind_status = buffer_collection_ptr.Bind(std::move(buffer_collection), dispatcher_);
   if (bind_status != ZX_OK) {
-    FXL_PLOG(FATAL, bind_status) << "buffer_collection_ptr.Bind() failed is_output: " << is_output;
+    FX_PLOGS(FATAL, bind_status) << "buffer_collection_ptr.Bind() failed is_output: " << is_output;
     return false;
   }
 
@@ -828,7 +828,7 @@ void CodecClient::OnOutputConstraints(fuchsia::media::StreamOutputConstraints ou
     std::unique_lock<std::mutex> lock(lock_);
 
     if (!shared_constraints->has_stream_lifetime_ordinal()) {
-      FXL_LOG(FATAL) << "StreamOutputConstraints missing stream_lifetime_ordinal";
+      FX_LOGS(FATAL) << "StreamOutputConstraints missing stream_lifetime_ordinal";
     }
     uint64_t stream_lifetime_ordinal = shared_constraints->stream_lifetime_ordinal();
     TrackOutputStreamLifetimeOrdinal(stream_lifetime_ordinal);
@@ -845,17 +845,17 @@ void CodecClient::OnOutputConstraints(fuchsia::media::StreamOutputConstraints ou
               shared_constraints->buffer_constraints().has_buffer_constraints_version_ordinal());
     if (shared_constraints->buffer_constraints().buffer_constraints_version_ordinal() <
         previous_buffer_constraints_version_ordinal) {
-      FXL_LOG(FATAL) << "broken server sent badly ordered buffer constraints ordinals";
+      FX_LOGS(FATAL) << "broken server sent badly ordered buffer constraints ordinals";
     }
     if ((shared_constraints->has_buffer_constraints_action_required() &&
          shared_constraints->buffer_constraints_action_required()) &&
         shared_constraints->buffer_constraints().buffer_constraints_version_ordinal() <=
             previous_buffer_constraints_version_ordinal) {
-      FXL_LOG(FATAL) << "broken server sent buffer_constraints_action_required without "
+      FX_LOGS(FATAL) << "broken server sent buffer_constraints_action_required without "
                         "increasingbuffer_constraints_version_ordinal";
     }
     last_output_constraints_ = shared_constraints;
-    FXL_VLOG(3) << "OnOutputConstraints buffer_constraints_version_ordinal: "
+    FX_VLOGS(3) << "OnOutputConstraints buffer_constraints_version_ordinal: "
                 << shared_constraints->buffer_constraints().buffer_constraints_version_ordinal()
                 << "buffer_constraints_action_required: "
                 << shared_constraints->buffer_constraints_action_required();
@@ -864,7 +864,7 @@ void CodecClient::OnOutputConstraints(fuchsia::media::StreamOutputConstraints ou
       // A client is allowed to forget the output format on any action required
       // buffer constraints, so forget here.
       last_output_format_ = nullptr;
-      FXL_VLOG(3) << "output_config_action_pending_ = true, because received a "
+      FX_VLOGS(3) << "output_config_action_pending_ = true, because received a "
                      "buffer_constraints_action_required constraints\n";
       output_constraints_action_pending_ = true;
       if (!output_pending_) {
@@ -887,7 +887,7 @@ void CodecClient::OnOutputFormat(fuchsia::media::StreamOutputFormat output_forma
   std::unique_lock<std::mutex> lock(lock_);
 
   if (!shared_format->has_stream_lifetime_ordinal()) {
-    FXL_LOG(FATAL) << "StreamOutputFormat missing stream_lifetime_ordinal";
+    FX_LOGS(FATAL) << "StreamOutputFormat missing stream_lifetime_ordinal";
   }
   uint64_t stream_lifetime_ordinal = shared_format->stream_lifetime_ordinal();
   TrackOutputStreamLifetimeOrdinal(stream_lifetime_ordinal);
@@ -898,13 +898,13 @@ void CodecClient::OnOutputFormat(fuchsia::media::StreamOutputFormat output_forma
     // logically part of each output packet, with the optimization that we only
     // send output format when it changes, in between packets, to avoid needing
     // to send output format with every packet.
-    FXL_LOG(FATAL) << "broken server sent two OnOutputFormat() in a row";
+    FX_LOGS(FATAL) << "broken server sent two OnOutputFormat() in a row";
   }
   if (!shared_format->has_stream_lifetime_ordinal()) {
-    FXL_LOG(FATAL) << "OnOutputFormat !has_stream_lifetime_ordinal()";
+    FX_LOGS(FATAL) << "OnOutputFormat !has_stream_lifetime_ordinal()";
   }
   if (!shared_format->has_format_details()) {
-    FXL_LOG(FATAL) << "OnOutputFormat !has_format_details()";
+    FX_LOGS(FATAL) << "OnOutputFormat !has_format_details()";
   }
   last_output_format_ = shared_format;
   is_format_since_last_packet_ = true;
@@ -912,9 +912,9 @@ void CodecClient::OnOutputFormat(fuchsia::media::StreamOutputFormat output_forma
 
 void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool error_detected_before,
                                  bool error_detected_during) {
-  FXL_CHECK(output_packet.has_header());
-  FXL_CHECK(output_packet.has_stream_lifetime_ordinal());
-  FXL_CHECK(output_packet.header().has_packet_index());
+  FX_CHECK(output_packet.has_header());
+  FX_CHECK(output_packet.has_stream_lifetime_ordinal());
+  FX_CHECK(output_packet.header().has_packet_index());
   bool output_pending_notify_needed = false;
   std::unique_ptr<const fuchsia::media::Packet> local_packet =
       std::make_unique<fuchsia::media::Packet>(std::move(output_packet));
@@ -924,13 +924,13 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
     std::unique_lock<std::mutex> lock(lock_);
 
     if (!local_packet->has_stream_lifetime_ordinal()) {
-      FXL_LOG(FATAL) << "Packet missing stream_lifetime_ordinal";
+      FX_LOGS(FATAL) << "Packet missing stream_lifetime_ordinal";
     }
     uint64_t stream_lifetime_ordinal = local_packet->stream_lifetime_ordinal();
     TrackOutputStreamLifetimeOrdinal(stream_lifetime_ordinal);
     if (!last_output_format_ ||
         last_output_format_->stream_lifetime_ordinal() != stream_lifetime_ordinal) {
-      FXL_LOG(FATAL) << "OnOutputFormat required before OnOutputPacket, per-stream";
+      FX_LOGS(FATAL) << "OnOutputFormat required before OnOutputPacket, per-stream";
     }
 
     std::unique_ptr<CodecOutput> output =
@@ -939,13 +939,13 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
     if (output_constraints_action_pending_) {
       // FWIW, we wouldn't be able to detect this if we were using the
       // async::Loop thread to perform output buffer re-configuration.
-      FXL_LOG(FATAL) << "server incorrectly sent output packet while required "
+      FX_LOGS(FATAL) << "server incorrectly sent output packet while required "
                         "constraints change pending";
     }
     if (!output_free_bits_[packet_index]) {
       // The packet was emitted twice by the server without it becoming free in
       // between, which is broken server behavior.
-      FXL_LOG(FATAL) << "server incorrectly emitted an output packet without it becoming "
+      FX_LOGS(FATAL) << "server incorrectly emitted an output packet without it becoming "
                         "free in between";
     }
     // Emitted by server, so not free until later when we send it back to server
@@ -974,7 +974,7 @@ void CodecClient::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
     if (output_constraints_action_pending_) {
       // FWIW, we wouldn't be able to detect this if we were using the
       // async::Loop thread to perform output buffer re-configuration.
-      FXL_LOG(FATAL) << "server incorrectly sent OnOutputEndOfStream() while "
+      FX_LOGS(FATAL) << "server incorrectly sent OnOutputEndOfStream() while "
                         "required constraints change pending";
     }
     emitted_output_.push_back(std::move(output));
@@ -990,6 +990,6 @@ void CodecClient::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
 
 void CodecClient::OnStreamFailed(uint64_t stream_lifetime_ordinal,
                                  fuchsia::media::StreamError error) {
-  FXL_LOG(FATAL) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
+  FX_LOGS(FATAL) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
                  << " error: " << std::hex << static_cast<uint32_t>(error);
 }

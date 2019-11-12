@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 // Sets up an ImagePipe (including scene graph aspects) such that FrameSink can
@@ -43,7 +43,7 @@ class FrameSinkView : public scenic::BaseView {
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   FrameSink* parent_;
 
