@@ -112,7 +112,7 @@ restart_session
 next_session_shell
   Toggles to the next defined session shell.
 
-shutdown_basemgr
+kill_basemgr
   Shutdown the running instance of basemgr.
 
 help
