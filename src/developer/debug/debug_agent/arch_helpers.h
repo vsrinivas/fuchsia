@@ -9,6 +9,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "src/developer/debug/ipc/records.h"
+
 namespace debug_ipc {
 struct Register;
 }
@@ -28,6 +30,22 @@ zx_status_t WriteRegisterValue(const debug_ipc::Register& reg, RegType* dest) {
   memcpy(dest, reg.data.data(), sizeof(RegType));
   return ZX_OK;
 }
+
+// Depending on their size, watchpoints can only be inserted into aligned ranges. The alignment is
+// as follows:
+//
+// Size Alignment
+//    1    1 byte
+//    2    2 byte
+//    4    4 byte
+//    8    8 byte
+//
+// A given range could be un-aligned (eg. observe two bytes unaligned). This will attempt to create
+// a bigger range that will cover that range, so that the watchpoint can be installed and still
+// track this range.
+//
+// If the range cannot be aligned (eg. unaligned 8 byte range), it will return a null option.
+std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&);
 
 }  // namespace arch
 }  // namespace debug_agent

@@ -16,6 +16,7 @@ static_library("lib") {
     "agent_configuration.h",
     "arch.cc",
     "arch.h",
+    "arch_helpers.cc",
     "arch_helpers.h",
     "binary_launcher.cc",
     "binary_launcher.h",
@@ -167,6 +168,7 @@ executable("unit_tests") {
   output_name = "debug_agent_unit_tests"
 
   sources = [
+    "arch_helpers_unittest.cc",
     "breakpoint_unittest.cc",
     "debug_agent_unittest.cc",
     "debugged_job_unittest.cc",
