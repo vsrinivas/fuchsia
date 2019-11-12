@@ -61,8 +61,7 @@ class PowerTestCase : public zxtest::Test {
     ASSERT_NE(child_device_handle.get(), ZX_HANDLE_INVALID);
   }
   void AddChildWithPowerArgs(DevicePowerStateInfo *states, uint8_t sleep_state_count,
-                             DevicePerformanceStateInfo *perf_states,
-                             uint8_t perf_state_count) {
+                             DevicePerformanceStateInfo *perf_states, uint8_t perf_state_count) {
     auto power_states = ::fidl::VectorView(states, sleep_state_count);
     auto perf_power_states = ::fidl::VectorView(perf_states, perf_state_count);
     auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
@@ -93,9 +92,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
   states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
   states[0].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -111,9 +110,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
     states[i].is_supported = true;
   }
   auto power_states = ::fidl::VectorView(states);
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -131,9 +130,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
     states[i].is_supported = true;
   }
   auto power_states = ::fidl::VectorView(states);
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -153,9 +152,9 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -172,9 +171,9 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
   states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[1].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -272,9 +271,9 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
   auto power_states = ::fidl::VectorView(states);
 
   // This is the default case. By default, the devhost fills in the fully performance state.
-  auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
-      ::fidl::VectorView<DevicePerformanceStateInfo>());
+  auto response =
+      TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states,
+                                               ::fidl::VectorView<DevicePerformanceStateInfo>());
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -486,6 +485,244 @@ TEST_F(PowerTestCase, Suspend_Success) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+}
+
+TEST_F(PowerTestCase, AutoSuspend_Enable) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  auto suspend_result = Controller::Call::ConfigureAutoSuspend(
+      zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
+  ASSERT_OK(suspend_result.status());
+  const auto &suspend_response = suspend_result.value();
+  ASSERT_OK(suspend_response.status);
+
+  auto response2 =
+      TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  zx_status_t call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().enabled, true);
+  ASSERT_EQ(response2->result.response().deepest_sleep_state,
+            DevicePowerState::DEVICE_POWER_STATE_D1);
+}
+
+TEST_F(PowerTestCase, AutoSuspend_Disable) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  auto suspend_result = Controller::Call::ConfigureAutoSuspend(
+      zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
+  ASSERT_OK(suspend_result.status());
+  const auto &suspend_response = suspend_result.value();
+  ASSERT_OK(suspend_response.status);
+
+  auto response2 =
+      TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  zx_status_t call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().enabled, true);
+  ASSERT_EQ(response2->result.response().deepest_sleep_state,
+            DevicePowerState::DEVICE_POWER_STATE_D1);
+
+  suspend_result = Controller::Call::ConfigureAutoSuspend(zx::unowned(child2_device_handle), false,
+                                                          DevicePowerState::DEVICE_POWER_STATE_D0);
+  ASSERT_OK(suspend_result.status());
+  auto &suspend_response_2 = suspend_result.value();
+  ASSERT_OK(suspend_response_2.status);
+
+  response2 =
+      TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().enabled, false);
+}
+
+TEST_F(PowerTestCase, AutoSuspend_DefaultDisabled) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  auto response2 =
+      TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  zx_status_t call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().enabled, false);
+  ASSERT_EQ(response2->result.response().deepest_sleep_state,
+            DevicePowerState::DEVICE_POWER_STATE_D0);
+}
+
+TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  auto auto_suspend_result = Controller::Call::ConfigureAutoSuspend(
+      zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
+  ASSERT_OK(auto_suspend_result.status());
+  const auto &auto_suspend_response = auto_suspend_result.value();
+  ASSERT_OK(auto_suspend_response.status);
+
+  auto response2 =
+      TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
+  ASSERT_OK(response2.status());
+  zx_status_t call_status = ZX_OK;
+  if (response2->result.is_err()) {
+    call_status = response2->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(response2->result.response().enabled, true);
+  ASSERT_EQ(response2->result.response().deepest_sleep_state,
+            DevicePowerState::DEVICE_POWER_STATE_D1);
+
+  auto suspend_result = Controller::Call::Suspend(zx::unowned(child2_device_handle),
+                                                  DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_OK(suspend_result.status());
+  const auto &suspend_response = suspend_result.value();
+  // Device suspend is not supported when auto suspend is configured.
+  ASSERT_EQ(suspend_response.status, ZX_ERR_NOT_SUPPORTED);
+
+  // Disable autosuspend and try again
+  auto_suspend_result = Controller::Call::ConfigureAutoSuspend(
+      zx::unowned(child2_device_handle), false, DevicePowerState::DEVICE_POWER_STATE_D0);
+  ASSERT_OK(auto_suspend_result.status());
+  auto &auto_suspend_response_2 = auto_suspend_result.value();
+  ASSERT_OK(auto_suspend_response_2.status);
+
+  suspend_result = Controller::Call::Suspend(zx::unowned(child2_device_handle),
+                                             DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+  ASSERT_OK(suspend_result.status());
+  ASSERT_OK(suspend_result.value().status);
+}
+
+TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D2;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
+  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
+    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+    mapping[i].wakeup_enable = false;
+  }
+
+  auto update_result =
+      Controller::Call::UpdatePowerStateMapping(zx::unowned(child2_device_handle), mapping);
+  ASSERT_OK(update_result.status());
+  zx_status_t call_status = ZX_OK;
+  if (update_result->result.is_err()) {
+    call_status = update_result->result.err();
+  }
+  ASSERT_OK(call_status);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  auto auto_suspend_result = Controller::Call::ConfigureAutoSuspend(
+      zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D2);
+  ASSERT_OK(auto_suspend_result.status());
+  const auto &auto_suspend_response = auto_suspend_result.value();
+  ASSERT_OK(auto_suspend_response.status);
+
+  // Verify systemsuspend overrides autosuspend
+  char service_name[100];
+  snprintf(service_name, sizeof(service_name), "svc/%s",
+           ::llcpp::fuchsia::device::manager::Administrator::Name);
+  ASSERT_OK(fdio_service_connect_at(devmgr.svc_root_dir().get(), service_name, remote.release()));
+  ASSERT_NE(devmgr.svc_root_dir().get(), ZX_HANDLE_INVALID);
+
+  auto suspend_result = Administrator::Call::Suspend(
+      zx::unowned(local), ::llcpp::fuchsia::device::manager::SUSPEND_FLAG_REBOOT);
+  ASSERT_OK(suspend_result.status());
+  const auto &suspend_response = suspend_result.value();
+  ASSERT_OK(suspend_response.status);
+
+  // Verify the child's DdkSuspendNew routine gets called.
+  auto child_dev_suspend_response =
+      TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(child2_device_handle));
+  ASSERT_OK(child_dev_suspend_response.status());
+  call_status = ZX_OK;
+  if (child_dev_suspend_response->result.is_err()) {
+    call_status = child_dev_suspend_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
+            DevicePowerState::DEVICE_POWER_STATE_D2);
+
+  // Verify the parent'd DdkSuspend routine gets called.
+  auto parent_dev_suspend_response =
+      TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(parent_device_handle));
+  ASSERT_OK(parent_dev_suspend_response.status());
+  call_status = ZX_OK;
+  if (parent_dev_suspend_response->result.is_err()) {
+    call_status = parent_dev_suspend_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
+            DevicePowerState::DEVICE_POWER_STATE_D1);
 }
 
 TEST_F(PowerTestCase, Resume_Success) {

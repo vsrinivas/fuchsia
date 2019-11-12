@@ -1506,6 +1506,10 @@ extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateRequest
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
 
 // Interface for manipulating a device in a devhost
 class Controller final {
@@ -2036,6 +2040,43 @@ class Controller final {
     using ResponseType = SetPerformanceStateResponse;
   };
 
+  struct ConfigureAutoSuspendResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ConfigureAutoSuspendRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    bool enable;
+    ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ConfigureAutoSuspendResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -2361,6 +2402,22 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class ConfigureAutoSuspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
+      ~ConfigureAutoSuspend_Impl() = default;
+      ConfigureAutoSuspend_Impl(ConfigureAutoSuspend_Impl&& other) = default;
+      ConfigureAutoSuspend_Impl& operator=(ConfigureAutoSuspend_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -2383,6 +2440,7 @@ class Controller final {
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
     using SetPerformanceState = SetPerformanceState_Impl<SetPerformanceStateResponse>;
+    using ConfigureAutoSuspend = ConfigureAutoSuspend_Impl<ConfigureAutoSuspendResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -2710,6 +2768,22 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class ConfigureAutoSuspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
+      ~ConfigureAutoSuspend_Impl() = default;
+      ConfigureAutoSuspend_Impl(ConfigureAutoSuspend_Impl&& other) = default;
+      ConfigureAutoSuspend_Impl& operator=(ConfigureAutoSuspend_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -2732,6 +2806,7 @@ class Controller final {
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
     using SetPerformanceState = SetPerformanceState_Impl<SetPerformanceStateResponse>;
+    using ConfigureAutoSuspend = ConfigureAutoSuspend_Impl<ConfigureAutoSuspendResponse>;
   };
 
   class SyncClient final {
@@ -2945,6 +3020,14 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetPerformanceState SetPerformanceState(::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
 
+    // Configure autosuspend of device to this deepest sleep state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
+
+    // Configure autosuspend of device to this deepest sleep state.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -3154,6 +3237,14 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetPerformanceState SetPerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
 
+    // Configure autosuspend of device to this deepest sleep state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
+
+    // Configure autosuspend of device to this deepest sleep state.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -3241,6 +3332,9 @@ class Controller final {
     // device transitions to working state.
     // On failure, the out_state will have the state that the device can go into.
     static ::fidl::DecodeResult<SetPerformanceStateResponse> SetPerformanceState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer);
+
+    // Configure autosuspend of device to this deepest sleep state.
+    static ::fidl::DecodeResult<ConfigureAutoSuspendResponse> ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -3556,6 +3650,20 @@ class Controller final {
 
     virtual void SetPerformanceState(uint32_t requested_state, SetPerformanceStateCompleter::Sync _completer) = 0;
 
+    class ConfigureAutoSuspendCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<ConfigureAutoSuspendResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ConfigureAutoSuspendCompleter = ::fidl::Completer<ConfigureAutoSuspendCompleterBase>;
+
+    virtual void ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ConfigureAutoSuspendCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -3621,6 +3729,8 @@ class Controller final {
     static void ResumeResponse(const ::fidl::DecodedMessage<Controller::ResumeResponse>& _msg);
     static void SetPerformanceStateRequest(const ::fidl::DecodedMessage<Controller::SetPerformanceStateRequest>& _msg);
     static void SetPerformanceStateResponse(const ::fidl::DecodedMessage<Controller::SetPerformanceStateResponse>& _msg);
+    static void ConfigureAutoSuspendRequest(const ::fidl::DecodedMessage<Controller::ConfigureAutoSuspendRequest>& _msg);
+    static void ConfigureAutoSuspendResponse(const ::fidl::DecodedMessage<Controller::ConfigureAutoSuspendResponse>& _msg);
   };
 };
 
@@ -3985,5 +4095,22 @@ static_assert(sizeof(::llcpp::fuchsia::device::Controller::SetPerformanceStateRe
     == ::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetPerformanceStateResponse, out_state) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest)
+    == ::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest, enable) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendRequest, requested_deepest_sleep_state) == 17);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendResponse)
+    == ::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ConfigureAutoSuspendResponse, status) == 16);
 
 }  // namespace fidl

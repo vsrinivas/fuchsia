@@ -291,6 +291,20 @@ class PerformanceTunable : public base_mixin {
 };
 
 template <typename D>
+class AutoSuspendable : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckConfigureAutoSuspend<D>();
+    proto->configure_auto_suspend = Configure_Auto_Suspend;
+  }
+
+ private:
+  static zx_status_t Configure_Auto_Suspend(void* ctx, bool enable, uint8_t requested_sleep_state) {
+    return static_cast<D*>(ctx)->DdkConfigureAutoSuspend(enable, requested_sleep_state);
+  }
+};
+
+template <typename D>
 class ResumableNew : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {

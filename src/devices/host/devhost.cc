@@ -647,10 +647,17 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
 };
 
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
-    SetPerformanceStateCompleter::Sync completer) {
+                                          SetPerformanceStateCompleter::Sync completer) {
   uint32_t out_state;
   zx_status_t status = devhost_device_set_performance_state(dev, requested_state, &out_state);
   return completer.Reply(status, out_state);
+}
+
+void DevfsConnection::ConfigureAutoSuspend(
+    bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
+    ConfigureAutoSuspendCompleter::Sync completer) {
+  zx_status_t status = devhost_device_configure_auto_suspend(dev, enable, requested_state);
+  return completer.Reply(status);
 }
 
 void DevfsConnection::UpdatePowerStateMapping(
@@ -694,7 +701,7 @@ void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState request
                               SuspendCompleter::Sync completer) {
   ::llcpp::fuchsia::device::DevicePowerState out_state;
   zx_status_t status = devhost_device_suspend_new(dev, requested_state, &out_state);
-  completer.Reply(status, out_state);
+  return completer.Reply(status, out_state);
 }
 
 void DevfsConnection::Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,

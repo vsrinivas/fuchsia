@@ -274,6 +274,18 @@ constexpr void CheckSuspendableNew() {
       "'zx_status_t DdkSuspendNew(uint8_t, bool, uint8_t)'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_auto_configure_suspend, DdkConfigureAutoSuspend);
+
+template <typename D>
+constexpr void CheckConfigureAutoSuspend() {
+  static_assert(has_ddk_auto_configure_suspend<D>::value,
+                "ConfigureAutoSuspendable classes must implement DdkConfigureAutoSuspend");
+  static_assert(
+      std::is_same<decltype(&D::DdkConfigureAutoSuspend), zx_status_t (D::*)(bool, uint8_t)>::value,
+      "DdkConfigureAutoSuspend must be a public non-static member function with signature "
+      "'zx_status_t DdkConfigureAutoSuspend(bool, uint8_t)'.");
+}
+
 DECLARE_HAS_MEMBER_FN(has_ddk_resume_new, DdkResumeNew);
 
 template <typename D>

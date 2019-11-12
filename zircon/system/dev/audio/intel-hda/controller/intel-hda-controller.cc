@@ -339,24 +339,12 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
   }
 }
 
-zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    .release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->RootDeviceRelease(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend_new = nullptr,
-    .resume_new = nullptr,
-    .set_performance_state = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message = nullptr,
-};
+zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = []() {
+  zx_protocol_device_t proto = {};
+  proto.version = DEVICE_OPS_VERSION;
+  proto.release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->RootDeviceRelease(); };
+  return proto;
+}();
 
 zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
   fbl::AllocChecker ac;

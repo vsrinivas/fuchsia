@@ -42,7 +42,8 @@ class TestPowerDriver : public DeviceType,
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
   void GetCurrentDevicePerformanceState(
       GetCurrentDevicePerformanceStateCompleter::Sync completer) override;
-
+  void GetCurrentDeviceAutoSuspendConfig(
+      GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
@@ -52,6 +53,8 @@ class TestPowerDriver : public DeviceType,
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
   uint32_t current_performance_state_ = 0;
+  bool auto_suspend_enabled_ = false;
+  DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
 };
 
 zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
@@ -78,11 +81,23 @@ void TestPowerDriver::GetCurrentDevicePowerState(
 
 void TestPowerDriver::GetCurrentDevicePerformanceState(
     GetCurrentDevicePerformanceStateCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result
-      result;
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
   result.set_response(
       llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response{
           .cur_state = static_cast<int32_t>(current_performance_state_),
+      });
+
+  completer.Reply(std::move(result));
+}
+
+void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
+    GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
+  result.set_response(
+      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response{
+          .enabled = auto_suspend_enabled_,
+          .deepest_sleep_state = static_cast<llcpp::fuchsia::device::DevicePowerState>(
+              deepest_autosuspend_sleep_state_),
       });
 
   completer.Reply(std::move(result));

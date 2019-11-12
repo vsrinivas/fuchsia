@@ -161,12 +161,16 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
 zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                                 uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
-zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device_t>& dev,
+                                          uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
                                        ::llcpp::fuchsia::device::DevicePowerState requested_state,
                                        ::llcpp::fuchsia::device::DevicePowerState* out_state);
 zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device_t>& dev,
                                                  uint32_t requested_state, uint32_t* out_state);
+zx_status_t devhost_device_configure_auto_suspend(
+    const fbl::RefPtr<zx_device_t>& dev, bool enable,
+    ::llcpp::fuchsia::device::DevicePowerState requested_state);
 zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
                                   uint32_t target_system_state) REQ_DM_LOCK;
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
@@ -249,7 +253,8 @@ class DevfsConnection : public AsyncLoopOwnedRpcHandler<DevfsConnection>,
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync _completer) override;
   void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) override;
-  void SetPerformanceState(uint32_t requested_state, SetPerformanceStateCompleter::Sync _completer) override;
+  void SetPerformanceState(uint32_t requested_state,
+                           SetPerformanceStateCompleter::Sync _completer) override;
 
   void UpdatePowerStateMapping(
       ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping,
@@ -257,6 +262,8 @@ class DevfsConnection : public AsyncLoopOwnedRpcHandler<DevfsConnection>,
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync _completer) override;
   void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
                SuspendCompleter::Sync _completer) override;
+  void ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
+                            ConfigureAutoSuspendCompleter::Sync _completer) override;
   void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
               ResumeCompleter::Sync _complete) override;
 };

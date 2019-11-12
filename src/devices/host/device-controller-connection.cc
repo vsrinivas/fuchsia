@@ -58,7 +58,7 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
   zx_status_t r;
   {
     ApiAutoLock lock;
-    r = devhost_device_suspend(this->dev(), flags);
+    r = devhost_device_system_suspend(this->dev(), flags);
   }
   completer.Reply(r);
 }

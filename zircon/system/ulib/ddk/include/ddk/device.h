@@ -289,6 +289,21 @@ typedef struct zx_protocol_device {
   //
   zx_status_t (*set_performance_state)(void* ctx, uint32_t requested_state, uint32_t* out_state);
 
+  //@ ## configure_autosuspend
+  // The configure_autosuspend hook is used for configuring whether a driver can
+  // auto suspend the device depending on the activity and idleness of the device.
+  //
+  // If "enable" is true, auto suspend is configured. deepest_sleep_state is the deepest
+  // sleep state the device is expected to go into when the device is suspended.
+  //
+  // On success, the device is configured to be autosuspended
+  // On failure, the device not configured to be autosuspended. If the device does
+  // not implement the autosuspend hook, it means the device does not support autosuspend.
+  //
+  // This hook will only be executed on the devhost's main thread.
+  //
+
+  zx_status_t (*configure_auto_suspend)(void* ctx, bool enable, uint8_t deepest_sleep_state);
   // Stops the device and puts it in a low power mode
   // DEPRECATED: Use suspend_new instead.
   zx_status_t (*suspend)(void* ctx, uint32_t flags);

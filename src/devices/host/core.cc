@@ -29,6 +29,7 @@
 
 #include "composite-device.h"
 #include "devhost.h"
+#include "log.h"
 
 namespace devmgr {
 
@@ -618,10 +619,14 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
   return ZX_OK;
 }
 
-zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
-  // TODO this should eventually be two-pass using SUSPENDING/SUSPENDED flags
+zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev,
+                                          uint32_t flags) REQ_DM_LOCK {
+  if (dev->auto_suspend_configured()) {
+    dev->ops->configure_auto_suspend(dev->ctx, false,
+                                     fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    log(INFO, "Devhost: system suspend overriding auto suspend for %s\n", dev->name);
+  }
   enum_lock_acquire();
-
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
   if (dev->ops->suspend_new) {
@@ -645,6 +650,7 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   if ((status != ZX_OK) && (status != ZX_ERR_NOT_SUPPORTED)) {
     return status;
   }
+
   return ZX_OK;
 }
 
@@ -679,10 +685,17 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
                                        ::llcpp::fuchsia::device::DevicePowerState requested_state,
                                        ::llcpp::fuchsia::device::DevicePowerState* out_state) {
-  zx_status_t status = ZX_OK;
+  if (dev->auto_suspend_configured()) {
+    log(INFO, "Devhost: Suspending %s failed: AutoSuspend is enabled\n", dev->name);
+    *out_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0;
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   if (!(dev->IsPowerStateSupported(requested_state))) {
+    *out_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0;
     return ZX_ERR_INVALID_ARGS;
   }
+  zx_status_t status = ZX_OK;
+
   if (dev->ops->suspend_new) {
     uint8_t raw_out;
     status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
@@ -713,6 +726,24 @@ zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev,
     *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
   }
   return status;
+}
+
+zx_status_t devhost_device_configure_auto_suspend(
+    const fbl::RefPtr<zx_device>& dev, bool enable,
+    ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+  if (enable && !(dev->IsPowerStateSupported(requested_state))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (dev->ops->configure_auto_suspend) {
+    zx_status_t status =
+        dev->ops->configure_auto_suspend(dev->ctx, enable, static_cast<uint8_t>(requested_state));
+    if (status != ZX_OK) {
+      return status;
+    }
+    dev->set_auto_suspend_configured(enable);
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace devmgr

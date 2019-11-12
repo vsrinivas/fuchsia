@@ -215,4 +215,7 @@ protocol Controller {
     /// device transitions to working state.
     /// On failure, the out_state will have the state that the device can go into.
     SetPerformanceState(uint32 requested_state) -> (zx.status status, uint32 out_state);
+    /// Configure autosuspend of device to this deepest sleep state.
+    ConfigureAutoSuspend(bool enable,
+                         DevicePowerState requested_deepest_sleep_state) -> (zx.status status);
 };

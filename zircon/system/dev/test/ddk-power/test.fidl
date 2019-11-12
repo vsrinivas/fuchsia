@@ -10,9 +10,12 @@ using fuchsia.device;
 protocol TestDevice {
     /// Add Test Device with some powerargs
     AddDeviceWithPowerArgs(vector<fuchsia.device.DevicePowerStateInfo> info,
-    vector<fuchsia.device.DevicePerformanceStateInfo> perf_state_info) -> () error zx.status;
+                           vector<fuchsia.device.DevicePerformanceStateInfo> perf_state_info) -> () error zx.status;
     /// Get current power state of the device
     GetCurrentDevicePowerState() -> (fuchsia.device.DevicePowerState cur_state) error zx.status;
     /// Get current performance state of the device
     GetCurrentDevicePerformanceState() -> (int32 cur_state) error zx.status;
+    /// Get current auto suspend status and deepest_sleep_state
+    GetCurrentDeviceAutoSuspendConfig() -> (bool enabled,
+                                            fuchsia.device.DevicePowerState deepest_sleep_state) error zx.status;
 };

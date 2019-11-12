@@ -74,8 +74,12 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return Dispatch(ops->resume, ZX_ERR_NOT_SUPPORTED, flags);
   }
 
-  zx_status_t ChangePerformanceOp(uint32_t requested_state, uint32_t* out_state) {
+  zx_status_t SetPerformanceStateOp(uint32_t requested_state, uint32_t* out_state) {
     return Dispatch(ops->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
+  }
+
+  zx_status_t ConfigureAutoSuspendOp(bool enable, uint8_t requested_state) {
+    return Dispatch(ops->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
   }
 
   zx_status_t ResumeNewOp(uint8_t requested_state, uint8_t* out_state) {
@@ -203,6 +207,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   }
 
   bool IsPerformanceStateSupported(uint32_t requested_state);
+  bool auto_suspend_configured() { return auto_suspend_configured_; }
+  void set_auto_suspend_configured(bool value) { auto_suspend_configured_ = value; }
 
   zx_status_t SetSystemPowerStateMapping(const SystemPowerStateMapping& mapping);
 
@@ -265,6 +271,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   DevicePowerStates power_states_;
   SystemPowerStateMapping system_power_states_mapping_;
   ::llcpp::fuchsia::device::DevicePowerState current_power_state_;
+  bool auto_suspend_configured_ = false;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

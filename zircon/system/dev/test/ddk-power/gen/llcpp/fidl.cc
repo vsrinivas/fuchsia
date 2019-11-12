@@ -69,6 +69,65 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePower
 }
 
 
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::~TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~TestDevice_GetCurrentDeviceAutoSuspendConfig_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::MoveImpl_(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::TestDevice_GetCurrentDevicePerformanceState_Result() {
   tag_ = Tag::Invalid;
 }
@@ -210,6 +269,13 @@ constexpr uint64_t kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal = 0x3
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal = 0x109bde2f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal = 0x5a245a86e6eaba4blu;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigRequestTable;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
 
 }  // namespace
 template <>
@@ -403,6 +469,67 @@ TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState TestDevice::Call::
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDeviceAutoSuspendConfigRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetCurrentDeviceAutoSuspendConfigRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDeviceAutoSuspendConfigRequest));
+  ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      TestDevice::InPlace::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end), Super::response_buffer()));
+}
+
+TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::SyncClient::GetCurrentDeviceAutoSuspendConfig() {
+  return ResultOf::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel(this->channel_));
+}
+
+TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end) {
+  return ResultOf::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end));
+}
+
+template <>
+TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentDeviceAutoSuspendConfigRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetCurrentDeviceAutoSuspendConfigRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetCurrentDeviceAutoSuspendConfigRequest));
+  ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      TestDevice::InPlace::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end), std::move(_response_buffer)));
+}
+
+TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::SyncClient::GetCurrentDeviceAutoSuspendConfig(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse> TestDevice::InPlace::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetCurrentDeviceAutoSuspendConfigRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigRequest> params(std::move(_request_buffer));
+  TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetCurrentDeviceAutoSuspendConfigRequest, GetCurrentDeviceAutoSuspendConfigResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -452,6 +579,18 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       impl->GetCurrentDevicePerformanceState(
           Interface::GetCurrentDevicePerformanceStateCompleter::Sync(txn));
+      return true;
+    }
+    case kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal:
+    case kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetCurrentDeviceAutoSuspendConfigRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetCurrentDeviceAutoSuspendConfig(
+          Interface::GetCurrentDeviceAutoSuspendConfigCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -621,6 +760,59 @@ void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply
 }
 
 
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDeviceAutoSuspendConfigResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetCurrentDeviceAutoSuspendConfigResponse*>(_write_bytes);
+  TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(
+      ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize,
+              GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDeviceAutoSuspendConfigResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(std::move(_response_bytes)));
+}
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplySuccess(bool enabled, ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state) {
+  TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response;
+  response.enabled = std::move(enabled);
+  response.deepest_sleep_state = std::move(deepest_sleep_state);
+
+  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(std::move(response)));
+}
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplyError(int32_t error) {
+  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithErr(std::move(error)));
+}
+
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result) {
+  if (_buffer.capacity() < GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetCurrentDeviceAutoSuspendConfigResponse*>(_buffer.data());
+  TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(
+      ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize,
+              GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(GetCurrentDeviceAutoSuspendConfigResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(std::move(_buffer)));
+}
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplySuccess(::fidl::BytePart _buffer, bool enabled, ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state) {
+  TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response;
+  response.enabled = std::move(enabled);
+  response.deepest_sleep_state = std::move(deepest_sleep_state);
+
+  Reply(std::move(_buffer), TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(std::move(response)));
+}
+
+void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse> params) {
+  TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_Ordinal);
@@ -641,6 +833,13 @@ void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateReques
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePerformanceStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_Ordinal);
+}
+
+void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal);
+}
+void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal);
 }
 
 }  // namespace test

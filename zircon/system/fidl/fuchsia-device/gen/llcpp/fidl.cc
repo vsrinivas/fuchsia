@@ -864,6 +864,13 @@ constexpr uint64_t kController_SetPerformanceState_GenOrdinal = 0x364c4698975d7f
 extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kController_ConfigureAutoSuspend_Ordinal = 0x6277961100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_ConfigureAutoSuspend_GenOrdinal = 0x21dd7803b96694celu;
+extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
 
 }  // namespace
 template <>
@@ -2106,6 +2113,70 @@ Controller::UnownedResultOf::SetPerformanceState Controller::Call::SetPerformanc
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Controller::ResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigureAutoSuspendRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ConfigureAutoSuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ConfigureAutoSuspendRequest*>(_write_bytes);
+  _request.enable = std::move(enable);
+  _request.requested_deepest_sleep_state = std::move(requested_deepest_sleep_state);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConfigureAutoSuspendRequest));
+  ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::ConfigureAutoSuspend(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Controller::ResultOf::ConfigureAutoSuspend Controller::SyncClient::ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
+  return ResultOf::ConfigureAutoSuspend(zx::unowned_channel(this->channel_), std::move(enable), std::move(requested_deepest_sleep_state));
+}
+
+Controller::ResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
+  return ResultOf::ConfigureAutoSuspend(std::move(_client_end), std::move(enable), std::move(requested_deepest_sleep_state));
+}
+
+template <>
+Controller::UnownedResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < ConfigureAutoSuspendRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<ConfigureAutoSuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, ConfigureAutoSuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ConfigureAutoSuspendRequest*>(_request_buffer.data());
+  _request.enable = std::move(enable);
+  _request.requested_deepest_sleep_state = std::move(requested_deepest_sleep_state);
+  _request_buffer.set_actual(sizeof(ConfigureAutoSuspendRequest));
+  ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::ConfigureAutoSuspend(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::ConfigureAutoSuspend Controller::SyncClient::ConfigureAutoSuspend(::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ConfigureAutoSuspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(enable), std::move(requested_deepest_sleep_state), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ConfigureAutoSuspend(std::move(_client_end), std::move(_request_buffer), std::move(enable), std::move(requested_deepest_sleep_state), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::ConfigureAutoSuspendResponse> Controller::InPlace::ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer) {
+  Controller::SetTransactionHeaderFor::ConfigureAutoSuspendRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::ConfigureAutoSuspendResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ConfigureAutoSuspendRequest, ConfigureAutoSuspendResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::ConfigureAutoSuspendResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -2366,6 +2437,19 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       auto message = result.message.message();
       impl->SetPerformanceState(std::move(message->requested_state),
           Interface::SetPerformanceStateCompleter::Sync(txn));
+      return true;
+    }
+    case kController_ConfigureAutoSuspend_Ordinal:
+    case kController_ConfigureAutoSuspend_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ConfigureAutoSuspendRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ConfigureAutoSuspend(std::move(message->enable), std::move(message->requested_deepest_sleep_state),
+          Interface::ConfigureAutoSuspendCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -3268,6 +3352,42 @@ void Controller::Interface::SetPerformanceStateCompleterBase::Reply(::fidl::Deco
 }
 
 
+void Controller::Interface::ConfigureAutoSuspendCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigureAutoSuspendResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ConfigureAutoSuspendResponse*>(_write_bytes);
+  Controller::SetTransactionHeaderFor::ConfigureAutoSuspendResponse(
+      ::fidl::DecodedMessage<ConfigureAutoSuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ConfigureAutoSuspendResponse::PrimarySize,
+              ConfigureAutoSuspendResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConfigureAutoSuspendResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConfigureAutoSuspendResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::ConfigureAutoSuspendCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < ConfigureAutoSuspendResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ConfigureAutoSuspendResponse*>(_buffer.data());
+  Controller::SetTransactionHeaderFor::ConfigureAutoSuspendResponse(
+      ::fidl::DecodedMessage<ConfigureAutoSuspendResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ConfigureAutoSuspendResponse::PrimarySize,
+              ConfigureAutoSuspendResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(ConfigureAutoSuspendResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConfigureAutoSuspendResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::ConfigureAutoSuspendCompleterBase::Reply(::fidl::DecodedMessage<ConfigureAutoSuspendResponse> params) {
+  Controller::SetTransactionHeaderFor::ConfigureAutoSuspendResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void Controller::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<Controller::BindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Bind_Ordinal);
@@ -3407,6 +3527,13 @@ void Controller::SetTransactionHeaderFor::SetPerformanceStateRequest(const ::fid
 }
 void Controller::SetTransactionHeaderFor::SetPerformanceStateResponse(const ::fidl::DecodedMessage<Controller::SetPerformanceStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetPerformanceState_Ordinal);
+}
+
+void Controller::SetTransactionHeaderFor::ConfigureAutoSuspendRequest(const ::fidl::DecodedMessage<Controller::ConfigureAutoSuspendRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ConfigureAutoSuspend_Ordinal);
+}
+void Controller::SetTransactionHeaderFor::ConfigureAutoSuspendResponse(const ::fidl::DecodedMessage<Controller::ConfigureAutoSuspendResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ConfigureAutoSuspend_Ordinal);
 }
 
 }  // namespace device
