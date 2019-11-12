@@ -23,7 +23,7 @@
 ### Value {#Value}
 *Defined in [fuchsia.stash/stash.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.stash/stash.fidl#35)*
 
- Value holds a value for a given key.
+<p>Value holds a value for a given key.</p>
 
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr>

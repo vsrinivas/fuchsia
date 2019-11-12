@@ -8,7 +8,7 @@
                     <code>32</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td> Maximum length for a resource label.
+            <td><p>Maximum length for a resource label.</p>
 </td>
         </tr>
     <tr>
@@ -17,8 +17,8 @@
                     <code>1</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td> Reports metrics information.
- This event type is only reported for node resources.
+            <td><p>Reports metrics information.
+This event type is only reported for node resources.</p>
 </td>
         </tr>
     <tr>

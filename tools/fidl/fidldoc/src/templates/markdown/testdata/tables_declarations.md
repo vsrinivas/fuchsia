@@ -6,7 +6,7 @@
 
 *Defined in [fuchsia.intl/intl.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl#8)*
 
- Typed identifier for a regulatory domain as specified in the IEEE 802.11 standard.
+<p>Typed identifier for a regulatory domain as specified in the IEEE 802.11 standard.</p>
 
 
 <table>
@@ -17,8 +17,8 @@
             <td>
                 <code>string</code>
             </td>
-            <td> ISO 3166-1 alpha-2, a two-letter code representing a domain of operation.
- (https://www.iso.org/publication/PUB500001.html)
+            <td><p>ISO 3166-1 alpha-2, a two-letter code representing a domain of operation.
+(https://www.iso.org/publication/PUB500001.html)</p>
 </td>
         </tr></table>
 
@@ -27,13 +27,11 @@
 
 *Defined in [fuchsia.intl/intl.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl#69)*
 
- A collection of ranked internationalization properties.
-
- There is no implied origin for this information; it might come from a user account, device
- settings, a synthesis of user settings and app-specific overrides, or anywhere else.
-
- Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
- first-day-of-week, time zone) are denormalized into the locale IDs in `locales`.
+<p>A collection of ranked internationalization properties.</p>
+<p>There is no implied origin for this information; it might come from a user account, device
+settings, a synthesis of user settings and app-specific overrides, or anywhere else.</p>
+<p>Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
+first-day-of-week, time zone) are denormalized into the locale IDs in <code>locales</code>.</p>
 
 
 <table>
@@ -44,7 +42,7 @@
             <td>
                 <code>vector&lt;<a class='link' href='#LocaleId'>LocaleId</a>&gt;</code>
             </td>
-            <td> Ranked list of locales (in descending order).
+            <td><p>Ranked list of locales (in descending order).</p>
 </td>
         </tr><tr>
             <td>2</td>
@@ -52,9 +50,9 @@
             <td>
                 <code>vector&lt;<a class='link' href='#CalendarId'>CalendarId</a>&gt;</code>
             </td>
-            <td> Ranked list of calendars (in descending order). The first entry is the primary calendar, and
- will be equal to the calendar indicated in `locales`.
- The list is intended for use by applications that can display multiple calendar systems.
+            <td><p>Ranked list of calendars (in descending order). The first entry is the primary calendar, and
+will be equal to the calendar indicated in <code>locales</code>.
+The list is intended for use by applications that can display multiple calendar systems.</p>
 </td>
         </tr><tr>
             <td>3</td>
@@ -62,11 +60,11 @@
             <td>
                 <code>vector&lt;<a class='link' href='#TimeZoneId'>TimeZoneId</a>&gt;</code>
             </td>
-            <td> Ranked list of time zones (in descending order). The first entry is the primary time zone,
- which should be used by default for formatting dates and times; it will be equal to the
- calendar indicated in `locales`.
- The list is intended for use by applications that can display multiple time zones, e.g.
- a world clock.
+            <td><p>Ranked list of time zones (in descending order). The first entry is the primary time zone,
+which should be used by default for formatting dates and times; it will be equal to the
+calendar indicated in <code>locales</code>.
+The list is intended for use by applications that can display multiple time zones, e.g.
+a world clock.</p>
 </td>
         </tr><tr>
             <td>4</td>
@@ -74,6 +72,6 @@
             <td>
                 <code><a class='link' href='#TemperatureUnit'>TemperatureUnit</a></code>
             </td>
-            <td> Selected temperature unit.
+            <td><p>Selected temperature unit.</p>
 </td>
         </tr></table>

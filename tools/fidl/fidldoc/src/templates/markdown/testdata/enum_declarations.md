@@ -12,11 +12,11 @@ Type: <code>uint8</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
             <td><code>PUBLIC</code></td>
             <td><code>1</code></td>
-            <td> LE public device address or `BR/EDR` `BD_ADDR`.
+            <td><p>LE public device address or <code>BR/EDR</code> <code>BD_ADDR</code>.</p>
 </td>
         </tr><tr>
             <td><code>RANDOM</code></td>
             <td><code>2</code></td>
-            <td> LE private or static random device address.
+            <td><p>LE private or static random device address.</p>
 </td>
         </tr></table>

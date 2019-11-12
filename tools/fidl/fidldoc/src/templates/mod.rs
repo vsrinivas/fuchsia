@@ -9,6 +9,7 @@ use failure::Error;
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
 use log::debug;
+use pulldown_cmark::{html as pulldown_html, Parser};
 use regex::{Captures, Regex};
 use serde_json::Value;
 
@@ -247,6 +248,28 @@ fn ol(description: &str) -> String {
     lines.first().unwrap().to_string()
 }
 
+pub fn pulldown(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut dyn Output,
+) -> Result<(), RenderError> {
+    // get parameter from helper or throw an error
+    let param =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for pulldown helper"))?;
+    debug!("pulldown called on {}", param.value().render());
+    out.write(&pd(&param.value().render()))?;
+    Ok(())
+}
+
+fn pd(text: &str) -> String {
+    let parser = Parser::new(text);
+    let mut html_text = String::new();
+    pulldown_html::push_html(&mut html_text, parser);
+    html_text
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -362,5 +385,29 @@ mod test {
 
         let multiple_newlines = "some text\n\nmore text\n\neven more text";
         assert_eq!(ol(multiple_newlines), "some text");
+    }
+
+    #[test]
+    fn pd_test() {
+        let description = r#"In addition, clients may assert the type of the object by setting
+the protocol corresponding to the expected type:
+* If the caller expected a directory but the node cannot be accessed
+  as a directory, the error is `ZX_ERR_NOT_DIR`.
+* If the caller expected a file but the node cannot be accessed as a
+  file, the error is `ZX_ERR_NOT_FILE`.
+* In other mismatched cases, the error is `ZX_ERR_WRONG_TYPE`.
+"#;
+
+        let expected = r#"<p>In addition, clients may assert the type of the object by setting
+the protocol corresponding to the expected type:</p>
+<ul>
+<li>If the caller expected a directory but the node cannot be accessed
+as a directory, the error is <code>ZX_ERR_NOT_DIR</code>.</li>
+<li>If the caller expected a file but the node cannot be accessed as a
+file, the error is <code>ZX_ERR_NOT_FILE</code>.</li>
+<li>In other mismatched cases, the error is <code>ZX_ERR_WRONG_TYPE</code>.</li>
+</ul>
+"#;
+        assert_eq!(pd(description), expected);
     }
 }
