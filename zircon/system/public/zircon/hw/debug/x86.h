@@ -408,12 +408,12 @@
 
 // Helper functions ================================================================================
 
-inline uint32_t __x86_internal_hw_debug_get_reg_value(uint32_t reg, uint32_t mask, uint32_t shift) {
+inline uint64_t __x86_internal_hw_debug_get_reg_value(uint64_t reg, uint64_t mask, uint64_t shift) {
   return (reg & mask) >> shift;
 }
 
-inline void __x86_internal_hw_debug_set_reg_value(uint32_t* reg, uint32_t value, uint32_t mask,
-                                                  uint32_t shift) {
+inline void __x86_internal_hw_debug_set_reg_value(uint64_t* reg, uint64_t value, uint64_t mask,
+                                                  uint64_t shift) {
   *reg &= ~mask;
   *reg |= (value << shift) & mask;
 }

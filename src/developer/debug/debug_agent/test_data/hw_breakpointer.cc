@@ -211,9 +211,9 @@ void WatchpointTestCase() {
         // We should only hit if it is the expected byte.
         bool in_range = (j - i) < size;
         if (hit) {
-          FXL_DCHECK(in_range) << "i: " << i << ", j: " << j << ". Didn't get expected hit.";
+          FXL_DCHECK(in_range) << "i: " << i << ", j: " << j << ". Got unexpected hit.";
         } else {
-          FXL_DCHECK(!in_range) << "i: " << i << ", j: " << j << ". Got unexpected hit.";
+          FXL_DCHECK(!in_range) << "i: " << i << ", j: " << j << ". Didn't get expected hit.";
         }
       }
     }

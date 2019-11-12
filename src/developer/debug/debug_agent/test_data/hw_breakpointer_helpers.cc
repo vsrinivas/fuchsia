@@ -4,6 +4,7 @@
 #include "hw_breakpointer_helpers.h"
 
 #if defined(__x86_64__)
+#include <zircon/hw/debug/x86.h>
 #elif defined(__aarch64__)
 #include <zircon/hw/debug/arm64.h>
 #endif
@@ -206,18 +207,149 @@ namespace {
 
 #if defined(__x86_64__)
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t bytes_to_hit) {
-  (void)bytes_to_hit;
-  zx_thread_state_debug_regs_t debug_regs = {};
+#define SET_REG(num, reg, len, address)           \
+  {                                               \
+    X86_DBG_CONTROL_L##num##_SET((reg), 1);       \
+    X86_DBG_CONTROL_RW##num##_SET((reg), 1);      \
+    X86_DBG_CONTROL_LEN##num##_SET((reg), (len)); \
+    regs.dr[(num)] = (address);                   \
+  }
+
+#define BYTES_1 0
+#define BYTES_2 1
+#define BYTES_4 3
+#define BYTES_8 2
+
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
+  zx_thread_state_debug_regs_t regs = {};
   if (address == 0)
     return {};
 
-  debug_regs.dr7 = 0b1 | 1 << 16;
-  debug_regs.dr[0] = address;
-  return debug_regs;
+  uint64_t align_mask = 0;
+  switch (length) {
+    case 1:
+      break;
+    case 2:
+      align_mask = static_cast<uint64_t>(~0b1);
+      break;
+    case 4:
+      align_mask = static_cast<uint64_t>(~0b11);
+      break;
+    case 8:
+      align_mask = static_cast<uint64_t>(~0b111);
+      break;
+    default:
+      FXL_NOTREACHED() << "Invalid length: " << length;
+      break;
+  }
+
+  if (length == 1) {
+    SET_REG(0, &regs.dr7, BYTES_1, address);
+  } else if (length == 2) {
+    uint64_t aligned_address = address & static_cast<uint64_t>(~0b1);
+    uint64_t diff = address - aligned_address;
+
+    if (!diff) {
+      SET_REG(0, &regs.dr7, BYTES_2, address);
+    } else {
+      SET_REG(0, &regs.dr7, BYTES_1, address);
+      SET_REG(1, &regs.dr7, BYTES_1, address + 1);
+    }
+  } else if (length == 4) {
+    uint64_t aligned_address = address & static_cast<uint64_t>(~0b11);
+    uint64_t diff = address - aligned_address;
+
+
+    switch (diff) {
+      case 0:
+        SET_REG(0, &regs.dr7, BYTES_4, address);
+        break;
+      case 1:
+      case 3:
+        SET_REG(0, &regs.dr7, BYTES_1, address);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 1);
+        SET_REG(2, &regs.dr7, BYTES_1, address + 3);
+        break;
+      case 2:
+        SET_REG(0, &regs.dr7, BYTES_2, address);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 2);
+        break;
+      default:
+        FXL_NOTREACHED() << "Invalid diff: " << diff;
+        break;
+    }
+  } else if (length == 8) {
+    uint64_t aligned_address = address & static_cast<uint64_t>(~0b111);
+    uint64_t diff = address - aligned_address;
+
+    /* FXL_LOG(INFO) << "Diff: " << diff; */
+
+    switch (diff) {
+      case 0:
+        SET_REG(0, &regs.dr7, BYTES_8, address);
+        break;
+      case 1:
+      case 5:
+        SET_REG(0, &regs.dr7, BYTES_1, address);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 1);
+        SET_REG(2, &regs.dr7, BYTES_4, address + 3);
+        SET_REG(3, &regs.dr7, BYTES_1, address + 7);
+        break;
+
+      case 2:
+      case 6:
+        SET_REG(0, &regs.dr7, BYTES_2, address);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 2);
+        SET_REG(2, &regs.dr7, BYTES_2, address + 6);
+        break;
+      case 3:
+      case 7:
+        SET_REG(0, &regs.dr7, BYTES_1, address);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 1);
+        SET_REG(2, &regs.dr7, BYTES_2, address + 5);
+        SET_REG(3, &regs.dr7, BYTES_1, address + 7);
+        break;
+      case 4:
+        SET_REG(0, &regs.dr7, BYTES_4, address);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 4);
+        break;
+      default:
+        FXL_NOTREACHED() << "Invalid diff: " << diff;
+        break;
+    }
+
+  } else {
+    FXL_NOTREACHED() << "Invalid length: " << length;
+  }
+
+  return regs;
 }
 
-void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state) {}
+void PrintDebugRegs(const zx_thread_state_debug_regs_t& debug_state) {
+  // DR6
+  printf("DR6: 0x%lx -> B0=%lu, B1=%lu, B2=%lu, B3=%lu, BD=%lu, BS=%lu, BT=%lu\n", debug_state.dr6,
+         X86_DBG_STATUS_B0_GET(debug_state.dr6), X86_DBG_STATUS_B1_GET(debug_state.dr6),
+         X86_DBG_STATUS_B2_GET(debug_state.dr6), X86_DBG_STATUS_B3_GET(debug_state.dr6),
+         X86_DBG_STATUS_BD_GET(debug_state.dr6), X86_DBG_STATUS_BS_GET(debug_state.dr6),
+         X86_DBG_STATUS_BT_GET(debug_state.dr6));
+
+  // DR7
+  printf(
+      "DR7: 0x%lx -> L0=%lu, G0=%lu, L1=%lu, G1=%lu, L2=%lu, G2=%lu, L3=%lu, G4=%lu, LE=%lu, "
+      "GE=%lu, GD=%lu\n",
+      debug_state.dr7, X86_DBG_CONTROL_L0_GET(debug_state.dr7),
+      X86_DBG_CONTROL_G0_GET(debug_state.dr7), X86_DBG_CONTROL_L1_GET(debug_state.dr7),
+      X86_DBG_CONTROL_G1_GET(debug_state.dr7), X86_DBG_CONTROL_L2_GET(debug_state.dr7),
+      X86_DBG_CONTROL_G2_GET(debug_state.dr7), X86_DBG_CONTROL_L3_GET(debug_state.dr7),
+      X86_DBG_CONTROL_G3_GET(debug_state.dr7), X86_DBG_CONTROL_LE_GET(debug_state.dr7),
+      X86_DBG_CONTROL_GE_GET(debug_state.dr7), X86_DBG_CONTROL_GD_GET(debug_state.dr7));
+
+  printf("R/W0=%lu, LEN0=%lu, R/W1=%lu, LEN1=%lu, R/W2=%lu, LEN2=%lu, R/W3=%lu, LEN3=%lu\n",
+         X86_DBG_CONTROL_RW0_GET(debug_state.dr7), X86_DBG_CONTROL_LEN0_GET(debug_state.dr7),
+         X86_DBG_CONTROL_RW1_GET(debug_state.dr7), X86_DBG_CONTROL_LEN1_GET(debug_state.dr7),
+         X86_DBG_CONTROL_RW2_GET(debug_state.dr7), X86_DBG_CONTROL_LEN2_GET(debug_state.dr7),
+         X86_DBG_CONTROL_RW3_GET(debug_state.dr7), X86_DBG_CONTROL_LEN3_GET(debug_state.dr7));
+}
 
 #elif defined(__aarch64__)
 
@@ -229,7 +361,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
   auto* wp = debug_regs.hw_wps + 0;
 
   // The instruction has to be 4 byte aligned.
-  uint64_t aligned_address = address & (uint64_t)(~0b111);
+  uint64_t aligned_address = address & static_cast<uint64_t>(~0b111);
   uint64_t diff = address - aligned_address;
   FXL_DCHECK(diff <= 7);
 
@@ -267,8 +399,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
   return debug_regs;
 }
 
-// Debug only.
-void arm64_print_debug_registers(const zx_thread_state_debug_regs_t& debug_state) {
+void PrintDebugRegs(const zx_thread_state_debug_regs_t& debug_state) {
   printf("HW breakpoints:\n");
   for (uint32_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
     uint32_t dbgbcr = debug_state.hw_bps[i].dbgbcr;
@@ -325,7 +456,7 @@ void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to
 
   if (a) {
     printf("-----------------------------------------------------------\n");
-    arm64_print_debug_registers(debug_regs);
+    PrintDebugRegs(debug_regs);
     printf("-----------------------------------------------------------\n");
   }
 
