@@ -84,8 +84,8 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
-                cm_rust::UseDecl::LegacyService(_) => {
-                    Self::add_service_use(&mut svc_dirs, use_, model.clone(), abs_moniker.clone())?;
+                cm_rust::UseDecl::LegacyService(s) => {
+                    Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
                 cm_rust::UseDecl::Service(_) => {
                     return Err(ModelError::unsupported("Service capability"))
@@ -241,23 +241,17 @@ impl IncomingNamespace {
     /// proxied to the outgoing directory of the source component.
     fn add_service_use(
         svc_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
-        use_: &UseDecl,
+        use_: &cm_rust::UseLegacyServiceDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let use_service = match use_ {
-            UseDecl::LegacyService(s) => s,
-            _ => {
-                panic!("not a service capability");
-            }
-        };
-        let use_ = use_.clone();
+        let use_clone = use_.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                let use_ = use_.clone();
+                let use_ = UseDecl::LegacyService(use_clone.clone());
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {
@@ -289,11 +283,11 @@ impl IncomingNamespace {
         );
 
         let service_dir = svc_dirs
-            .entry(use_service.target_path.dirname.clone())
+            .entry(use_.target_path.dirname.clone())
             .or_insert(fvfs::directory::simple::empty());
         service_dir
             .add_entry(
-                &use_service.target_path.basename,
+                &use_.target_path.basename,
                 directory_broker::DirectoryBroker::new(route_open_fn),
             )
             .map_err(|(status, _)| status)
