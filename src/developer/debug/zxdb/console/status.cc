@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
+#include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -86,6 +87,58 @@ OutputBuffer GetProcessStatus(ConsoleContext* context) {
   result.Append(
       fxl::StringPrintf("  Attached to %d process(es). The debugger has these:\n", attached_count));
   result.Append(FormatTargetList(context, 2));
+
+  return result;
+}
+
+// Get limbo status --------------------------------------------------------------------------------
+
+namespace {
+
+OutputBuffer FormatProcessRecords(std::vector<debug_ipc::ProcessRecord> records, int indent) {
+  // Sort by name.
+  std::sort(records.begin(), records.end(),
+            [](const debug_ipc::ProcessRecord& lhs, const debug_ipc::ProcessRecord& rhs) {
+              return lhs.process_name < rhs.process_name;
+            });
+
+  std::string indent_str(indent, ' ');
+  std::vector<std::vector<std::string>> rows;
+
+  for (const debug_ipc::ProcessRecord& record : records) {
+    auto& row = rows.emplace_back();
+    row.reserve(4);
+
+    row.push_back(indent_str);
+    row.push_back(fxl::StringPrintf("%" PRIu64, record.process_koid));
+    row.push_back(record.process_name);
+  }
+
+  OutputBuffer out;
+  FormatTable(
+      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "Koid"), ColSpec(Align::kLeft, 0, "Name")},
+      rows, &out);
+
+  return out;
+}
+
+}  // namespace
+
+OutputBuffer GetLimboStatus(const std::vector<debug_ipc::ProcessRecord>& limbo) {
+  OutputBuffer result;
+
+  result.Append(Syntax::kHeading, "Processes waiting on exception\n");
+  if (limbo.empty()) {
+    result.Append("  No processes waiting on exception.");
+  } else {
+    result.Append(fxl::StringPrintf("  %zu process(es) waiting on exception.\n", limbo.size()));
+    result.Append(
+        "  Run \"attach <KOID>\" to load them into zxdb or \"detach <KOID>\" to free them back "
+        "into "
+        "the system.\n");
+
+    result.Append(FormatProcessRecords(limbo, 2));
+  }
 
   return result;
 }

@@ -106,7 +106,6 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
 
   bool reply_active_ = true;
   bool reply_watch_processes_ = true;
-
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
@@ -122,7 +121,7 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
 
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(LimboProvider,WatchProcessesOnException) {
+TEST(LimboProvider, WatchProcessesOnException) {
   // Set the process limbo.
   auto object_provider = CreateDefaultMockObjectProvider();
   auto [process1, thread1] = GetProcessThread(*object_provider, "root-p2", "initial-thread");

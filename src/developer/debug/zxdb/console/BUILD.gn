@@ -122,6 +122,7 @@ source_set("tests") {
     "status_unittest.cc",
     "string_formatters_unittest.cc",
     "string_util_unittest.cc",
+    "verbs_control_unittest.cc",
     "verbs_memory_unittest.cc",
     "verbs_process_unittest.cc",
     "verbs_settings_unittest.cc",

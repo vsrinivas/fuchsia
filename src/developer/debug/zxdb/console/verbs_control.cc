@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "lib/fit/defer.h"
+#include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -573,18 +575,47 @@ const char kStatusHelp[] = R"(status: Show debugger status.
   with suggestions on what to do.
 )";
 
-Err DoStatus(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
+Err DoStatus(ConsoleContext* context, const Command& cmd, CommandCallback cb = nullptr) {
   OutputBuffer out;
   out.Append(GetConnectionStatus(context->session()));
   out.Append("\n");
-  if (context->session()->IsConnected()) {
-    out.Append(GetJobStatus(context));
-    out.Append("\n");
-    out.Append(GetProcessStatus(context));
-    out.Append("\n");
+
+  if (!context->session()->IsConnected()) {
+    Console::get()->Output(std::move(out));
+    return Err();
   }
 
-  Console::get()->Output(out);
+  out.Append(GetJobStatus(context));
+  out.Append("\n");
+  out.Append(GetProcessStatus(context));
+  out.Append("\n");
+
+  // Attempt to get the agent's state.
+  context->session()->remote_api()->Status(
+      {}, [out = std::move(out), session = context->session()->GetWeakPtr(), cb = std::move(cb)](
+              const Err& err, debug_ipc::StatusReply reply) mutable {
+        // Call the callback if applicable.
+        Err return_err = err;
+        auto defer = fit::defer([&return_err, cb = std::move(cb)]() mutable {
+          if (cb)
+            cb(return_err);
+        });
+
+        if (!session) {
+          return_err = Err("No session found.");
+          return;
+        }
+
+        if (err.has_error()) {
+          return_err = err;
+          return;
+        }
+
+        // Append the Limbo state.
+        out.Append(GetLimboStatus(reply.limbo));
+
+        Console::get()->Output(std::move(out));
+      });
 
   return Err();
 }

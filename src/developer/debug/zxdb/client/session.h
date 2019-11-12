@@ -157,6 +157,9 @@ class Session : public SettingStoreObserver {
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
+  // For test purposes, so that the Session appears to be connected.
+  void set_stream(debug_ipc::StreamBuffer* stream) { stream_ = stream; }
+
  protected:
   fxl::ObserverList<SessionObserver> observers_;
 
