@@ -9,6 +9,8 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/bin/basemgr/basemgr_settings.h"
@@ -169,6 +171,20 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
   return Future<>::CreateCompleted("StopTokenManagerFactoryApp completed");
 }
 
+FuturePtr<> BasemgrImpl::StopScenic() {
+  // Lazily connect to lifecycle controller, instead of keeping open an often-unused channel.
+  fuchsia::ui::lifecycle::LifecycleControllerPtr controller;
+  component_context_services_->Connect(scenic_lifecycle_controller_.NewRequest());
+  scenic_lifecycle_controller_->Terminate();
+
+  auto fut = Future<>::Create("StopScenic");
+  scenic_lifecycle_controller_.set_error_handler([fut](zx_status_t status) {
+    ASSERT_OK(status);
+    fut->Complete();
+  });
+  return fut;
+}
+
 void BasemgrImpl::Start() {
   if (config_.basemgr_config().test()) {
     // Print test banner.
@@ -270,7 +286,10 @@ void BasemgrImpl::Shutdown() {
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
       StopTokenManagerFactoryApp()->Then([this] {
         FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-        on_shutdown_();
+        StopScenic()->Then([this] {
+          FXL_DLOG(INFO) << "- fuchsia::ui::Scenic down";
+          on_shutdown_();
+        });
       });
     });
   });

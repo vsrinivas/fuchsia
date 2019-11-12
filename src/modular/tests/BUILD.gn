@@ -62,12 +62,19 @@ executable("sessionctl_test") {
     "sessionctl_test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.devicesettings",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.lifecycle",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/inspect_deprecated",
     "//src/modular/bin/sessionctl:lib",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest_main",
   ]
 }

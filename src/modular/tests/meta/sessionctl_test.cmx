@@ -8,7 +8,8 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }

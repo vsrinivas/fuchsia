@@ -13,6 +13,7 @@
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.ui.lifecycle.LifecycleController",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
