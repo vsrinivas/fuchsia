@@ -195,4 +195,60 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
   EXPECT_TRUE(ddk_.Ok());
 }
 
+TEST_F(GptDeviceTest, GuidMapMetadata) {
+  Init();
+  fbl::Vector<PartitionDevice*> devices;
+
+  const guid_map_t guid_map[] = {
+      {"Linux filesystem", GUID_METADATA},
+  };
+  ddk_.SetMetadata(&guid_map, sizeof(guid_map));
+
+  TableRef tab;
+  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
+  ASSERT_OK(tab->Bind());
+
+  ASSERT_EQ(devices.size(), 2);
+
+  char name[MAX_PARTITION_NAME_LENGTH];
+  guid_t guid;
+
+  // Device 0
+  PartitionDevice* dev0 = devices[0];
+  ASSERT_NOT_NULL(dev0);
+  ASSERT_OK(dev0->BlockPartitionGetName(name, sizeof(name)));
+  ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
+  ASSERT_OK(dev0->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
+  {
+    uint8_t expected_guid[GPT_GUID_LEN] = GUID_METADATA;
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
+  }
+  ASSERT_OK(dev0->BlockPartitionGetGuid(GUIDTYPE_INSTANCE, &guid));
+  {
+    uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART0;
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
+  }
+
+  PartitionDevice* dev1 = devices[1];
+  ASSERT_NOT_NULL(dev1);
+  ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
+  ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
+
+  ASSERT_OK(dev1->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
+  {
+    uint8_t expected_guid[GPT_GUID_LEN] = GUID_METADATA;
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
+  }
+  ASSERT_OK(dev1->BlockPartitionGetGuid(GUIDTYPE_INSTANCE, &guid));
+  {
+    uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART1;
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
+  }
+
+  dev0->AsyncRemove();
+  dev1->AsyncRemove();
+
+  EXPECT_TRUE(ddk_.Ok());
+}
+
 }  // namespace gpt

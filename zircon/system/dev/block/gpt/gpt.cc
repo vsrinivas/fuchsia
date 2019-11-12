@@ -235,7 +235,7 @@ zx_status_t PartitionTable::Bind() {
   //                may rely on guid to take action on a partition.
   if (status != ZX_OK) {
     zxlogf(INFO, "gpt: device_get_metadata failed (%d)\n", status);
-  } else if (actual % sizeof(guid_map_) != 0) {
+  } else if (actual % sizeof(guid_map_[0]) != 0) {
     zxlogf(INFO, "gpt: GUID map size is invalid (%lu)\n", actual);
   } else {
     guid_map_entries_ = actual / sizeof(guid_map_[0]);
@@ -319,9 +319,6 @@ zx_status_t PartitionTable::Bind() {
       return ZX_ERR_NO_MEMORY;
     }
 
-    block_info.block_count = entry->last - entry->first + 1;
-    device->SetInfo(entry, &block_info, block_op_size);
-
     char partition_guid[GPT_GUID_STRLEN];
     uint8_to_guid_string(partition_guid, entry->guid);
     char pname[GPT_NAME_LEN];
@@ -334,6 +331,10 @@ zx_status_t PartitionTable::Bind() {
     zxlogf(SPEW,
            "gpt: partition=%u type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
            partitions, type_guid, partition_guid, pname, entry->first, entry->last);
+
+    block_info.block_count = entry->last - entry->first + 1;
+    device->SetInfo(entry, &block_info, block_op_size);
+
     if ((status = device->Add(partitions)) != ZX_OK) {
       return status;
     }
