@@ -427,6 +427,41 @@ struct StructOfTableWithXUnion {
     TableWithXUnion value;
 };
 
+union UnionAtTheBottom {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 tiny;
+};
+
+xunion XUnionOfUnion {
+    UnionAtTheBottom variant; // 0x5F67105B
+};
+
+table TableOfXUnionThenUnion {
+    1: reserved;
+    2: XUnionOfUnion member;
+};
+
+xunion XUnionOfTableThenXUnionThenUnion {
+    TableOfXUnionThenUnion variant; //0x5B15934E
+};
+
+union UnionOfXUnionThenTableThenXUnionThenUnion {
+    1: uint8 unused1; // avoid tag 0
+    2: reserved; // no tag correspondance
+    3: XUnionOfTableThenXUnionThenUnion variant; // tag = 1
+};
+
+table TableOfUnionThenXUnionThenTableThenXUnionThenUnion {
+    1: reserved;
+    2: reserved;
+    3: UnionOfXUnionThenTableThenXUnionThenUnion member;
+};
+
+struct Regression7TableUnionXUnion {
+    TableOfUnionThenXUnionThenTableThenXUnionThenUnion value;
+};
+
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);

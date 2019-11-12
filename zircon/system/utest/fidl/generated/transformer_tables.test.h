@@ -29,6 +29,15 @@ extern const fidl_type_t example_UnionSize12Aligned4Table;
 extern const fidl_type_t example_XUnionWithUnionsTable;
 extern const fidl_type_t example_XUnionWithUnionsNullableRefTable;
 extern const fidl_type_t example_Sandwich2Table;
+extern const fidl_type_t example_UnionAtTheBottomTable;
+extern const fidl_type_t example_XUnionOfUnionTable;
+extern const fidl_type_t example_XUnionOfUnionNullableRefTable;
+extern const fidl_type_t example_TableOfXUnionThenUnionTable;
+extern const fidl_type_t example_XUnionOfTableThenXUnionThenUnionTable;
+extern const fidl_type_t example_XUnionOfTableThenXUnionThenUnionNullableRefTable;
+extern const fidl_type_t example_UnionOfXUnionThenTableThenXUnionThenUnionTable;
+extern const fidl_type_t example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable;
+extern const fidl_type_t example_Regression7TableUnionXUnionTable;
 extern const fidl_type_t example_Table_TwoReservedFieldsTable;
 extern const fidl_type_t example_Table_NoFieldsTable;
 extern const fidl_type_t example_StructSize3Alignment2Table;
@@ -406,6 +415,57 @@ static const ::fidl::FidlStructField Fields17example_Sandwich2[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* example_Sandwich2AltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_Sandwich2Table = fidl_type_t(::fidl::FidlCodedStruct(Fields17example_Sandwich2, 3u, 20u, "example/Sandwich2", example_Sandwich2AltTypePointerTable()));
 
+static const ::fidl::FidlUnionField Fields24example_UnionAtTheBottom[] = {
+    ::fidl::FidlUnionField(nullptr, 3u, 1u),
+    ::fidl::FidlUnionField(nullptr, 3u, 2u),
+    ::fidl::FidlUnionField(nullptr, 3u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionAtTheBottomAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_UnionAtTheBottomTable = fidl_type_t(::fidl::FidlCodedUnion(Fields24example_UnionAtTheBottom, 3u, 4u, 8u, "example/UnionAtTheBottom", example_UnionAtTheBottomAltTypePointerTable()));
+
+static const ::fidl::FidlXUnionField Fields21example_XUnionOfUnion[] = {
+    ::fidl::FidlXUnionField(&example_UnionAtTheBottomTable,1600589915u)
+};
+const fidl_type_t example_XUnionOfUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields21example_XUnionOfUnion, ::fidl::kNonnullable, "example/XUnionOfUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlXUnionField Fields32example_XUnionOfUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&example_UnionAtTheBottomTable,1600589915u)
+};
+const fidl_type_t example_XUnionOfUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields32example_XUnionOfUnionNullableRef, ::fidl::kNullable, "example/XUnionOfUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlTableField Fields30example_TableOfXUnionThenUnion[] = {
+    ::fidl::FidlTableField(&example_XUnionOfUnionTable,2u)
+};
+const fidl_type_t example_TableOfXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedTable(Fields30example_TableOfXUnionThenUnion, 1u, "example/TableOfXUnionThenUnion"));
+
+static const ::fidl::FidlXUnionField Fields40example_XUnionOfTableThenXUnionThenUnion[] = {
+    ::fidl::FidlXUnionField(&example_TableOfXUnionThenUnionTable,1528140622u)
+};
+const fidl_type_t example_XUnionOfTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields40example_XUnionOfTableThenXUnionThenUnion, ::fidl::kNonnullable, "example/XUnionOfTableThenXUnionThenUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlXUnionField Fields51example_XUnionOfTableThenXUnionThenUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&example_TableOfXUnionThenUnionTable,1528140622u)
+};
+const fidl_type_t example_XUnionOfTableThenXUnionThenUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields51example_XUnionOfTableThenXUnionThenUnionNullableRef, ::fidl::kNullable, "example/XUnionOfTableThenXUnionThenUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlUnionField Fields49example_UnionOfXUnionThenTableThenXUnionThenUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 23u, 1u),
+    ::fidl::FidlUnionField(&example_XUnionOfTableThenXUnionThenUnionTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_UnionOfXUnionThenTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields49example_UnionOfXUnionThenTableThenXUnionThenUnion, 2u, 8u, 32u, "example/UnionOfXUnionThenTableThenXUnionThenUnion", example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields58example_TableOfUnionThenXUnionThenTableThenXUnionThenUnion[] = {
+    ::fidl::FidlTableField(&example_UnionOfXUnionThenTableThenXUnionThenUnionTable,3u)
+};
+const fidl_type_t example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedTable(Fields58example_TableOfUnionThenXUnionThenTableThenXUnionThenUnion, 1u, "example/TableOfUnionThenXUnionThenTableThenXUnionThenUnion"));
+
+static const ::fidl::FidlStructField Fields35example_Regression7TableUnionXUnion[] = {
+    ::fidl::FidlStructField(&example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression7TableUnionXUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression7TableUnionXUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35example_Regression7TableUnionXUnion, 1u, 16u, "example/Regression7TableUnionXUnion", example_Regression7TableUnionXUnionAltTypePointerTable()));
+
 static const ::fidl::FidlTableField Fields31example_Table_TwoReservedFields[] = {};
 const fidl_type_t example_Table_TwoReservedFieldsTable = fidl_type_t(::fidl::FidlCodedTable(Fields31example_Table_TwoReservedFields, 0u, "example/Table_TwoReservedFields"));
 
@@ -781,6 +841,15 @@ extern const fidl_type_t v1_example_UnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_XUnionWithUnionsTable;
 extern const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable;
 extern const fidl_type_t v1_example_Sandwich2Table;
+extern const fidl_type_t v1_example_UnionAtTheBottomTable;
+extern const fidl_type_t v1_example_XUnionOfUnionTable;
+extern const fidl_type_t v1_example_XUnionOfUnionNullableRefTable;
+extern const fidl_type_t v1_example_TableOfXUnionThenUnionTable;
+extern const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionTable;
+extern const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionNullableRefTable;
+extern const fidl_type_t v1_example_UnionOfXUnionThenTableThenXUnionThenUnionTable;
+extern const fidl_type_t v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable;
+extern const fidl_type_t v1_example_Regression7TableUnionXUnionTable;
 extern const fidl_type_t v1_example_Table_TwoReservedFieldsTable;
 extern const fidl_type_t v1_example_Table_NoFieldsTable;
 extern const fidl_type_t v1_example_StructSize3Alignment2Table;
@@ -1157,6 +1226,57 @@ static const ::fidl::FidlStructField Fields20v1_example_Sandwich2[] = {
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Sandwich2AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_Sandwich2Table = fidl_type_t(::fidl::FidlCodedStruct(Fields20v1_example_Sandwich2, 3u, 40u, "example/Sandwich2", v1_example_Sandwich2AltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields27v1_example_UnionAtTheBottom[] = {
+    ::fidl::FidlUnionField(nullptr, 7u, 1u),
+    ::fidl::FidlUnionField(nullptr, 7u, 2u),
+    ::fidl::FidlUnionField(nullptr, 7u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionAtTheBottomAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_UnionAtTheBottomTable = fidl_type_t(::fidl::FidlCodedUnion(Fields27v1_example_UnionAtTheBottom, 3u, 8u, 24u, "example/UnionAtTheBottom", v1_example_UnionAtTheBottomAltTypePointerTable()));
+
+static const ::fidl::FidlXUnionField Fields24v1_example_XUnionOfUnion[] = {
+    ::fidl::FidlXUnionField(&v1_example_UnionAtTheBottomTable,1600589915u)
+};
+const fidl_type_t v1_example_XUnionOfUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields24v1_example_XUnionOfUnion, ::fidl::kNonnullable, "example/XUnionOfUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlXUnionField Fields35v1_example_XUnionOfUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&v1_example_UnionAtTheBottomTable,1600589915u)
+};
+const fidl_type_t v1_example_XUnionOfUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields35v1_example_XUnionOfUnionNullableRef, ::fidl::kNullable, "example/XUnionOfUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlTableField Fields33v1_example_TableOfXUnionThenUnion[] = {
+    ::fidl::FidlTableField(&v1_example_XUnionOfUnionTable,2u)
+};
+const fidl_type_t v1_example_TableOfXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedTable(Fields33v1_example_TableOfXUnionThenUnion, 1u, "example/TableOfXUnionThenUnion"));
+
+static const ::fidl::FidlXUnionField Fields43v1_example_XUnionOfTableThenXUnionThenUnion[] = {
+    ::fidl::FidlXUnionField(&v1_example_TableOfXUnionThenUnionTable,1528140622u)
+};
+const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields43v1_example_XUnionOfTableThenXUnionThenUnion, ::fidl::kNonnullable, "example/XUnionOfTableThenXUnionThenUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlXUnionField Fields54v1_example_XUnionOfTableThenXUnionThenUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&v1_example_TableOfXUnionThenUnionTable,1528140622u)
+};
+const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(1u, Fields54v1_example_XUnionOfTableThenXUnionThenUnionNullableRef, ::fidl::kNullable, "example/XUnionOfTableThenXUnionThenUnion", ::fidl::kFlexible));
+
+static const ::fidl::FidlUnionField Fields52v1_example_UnionOfXUnionThenTableThenXUnionThenUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 7u, 1u),
+    ::fidl::FidlUnionField(&v1_example_XUnionOfTableThenXUnionThenUnionTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_UnionOfXUnionThenTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields52v1_example_UnionOfXUnionThenTableThenXUnionThenUnion, 2u, 8u, 24u, "example/UnionOfXUnionThenTableThenXUnionThenUnion", v1_example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields61v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnion[] = {
+    ::fidl::FidlTableField(&v1_example_UnionOfXUnionThenTableThenXUnionThenUnionTable,3u)
+};
+const fidl_type_t v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable = fidl_type_t(::fidl::FidlCodedTable(Fields61v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnion, 1u, "example/TableOfUnionThenXUnionThenTableThenXUnionThenUnion"));
+
+static const ::fidl::FidlStructField Fields38v1_example_Regression7TableUnionXUnion[] = {
+    ::fidl::FidlStructField(&v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnionTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression7TableUnionXUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression7TableUnionXUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_example_Regression7TableUnionXUnion, 1u, 16u, "example/Regression7TableUnionXUnion", v1_example_Regression7TableUnionXUnionAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields34v1_example_Table_TwoReservedFields[] = {};
 const fidl_type_t v1_example_Table_TwoReservedFieldsTable = fidl_type_t(::fidl::FidlCodedTable(Fields34v1_example_Table_TwoReservedFields, 0u, "example/Table_TwoReservedFields"));
@@ -1994,6 +2114,17 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression6Alt
 }
 
 
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression7TableUnionXUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression7TableUnionXUnionAltTypePointerTable() {
+  return &v1_example_Regression7TableUnionXUnionTable.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression7TableUnionXUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression7TableUnionXUnionAltTypePointerTable() {
+  return &example_Regression7TableUnionXUnionTable.coded_struct;
+}
+
+
 constexpr static inline const ::fidl::FidlCodedStruct* example_Sandwich1AltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedStruct* example_Sandwich1AltTypePointerTable() {
   return &v1_example_Sandwich1Table.coded_struct;
@@ -2313,6 +2444,17 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_StructSize3Ali
 }
 
 
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionAtTheBottomAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionAtTheBottomAltTypePointerTable() {
+  return &v1_example_UnionAtTheBottomTable.coded_union;
+}
+
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionAtTheBottomAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionAtTheBottomAltTypePointerTable() {
+  return &example_UnionAtTheBottomTable.coded_union;
+}
+
+
 constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfUnionAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfUnionAltTypePointerTable() {
   return &v1_example_UnionOfUnionTable.coded_union;
@@ -2321,6 +2463,17 @@ constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfUnionAltTyp
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionOfUnionAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionOfUnionAltTypePointerTable() {
   return &example_UnionOfUnionTable.coded_union;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() {
+  return &v1_example_UnionOfXUnionThenTableThenXUnionThenUnionTable.coded_union;
+}
+
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionOfXUnionThenTableThenXUnionThenUnionAltTypePointerTable() {
+  return &example_UnionOfXUnionThenTableThenXUnionThenUnionTable.coded_union;
 }
 
 
