@@ -21,17 +21,12 @@ pub struct RasterBuilder {
 impl RasterBuilder {
     #[cfg(feature = "lib")]
     pub fn new() -> Self {
-        Self {
-            paths_transforms: vec![],
-        }
+        Self { paths_transforms: vec![] }
     }
 
     #[cfg(not(feature = "lib"))]
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
-        Self {
-            context,
-            paths_transforms: vec![],
-        }
+        Self { context, paths_transforms: vec![] }
     }
 
     #[cfg(feature = "lib")]
@@ -47,9 +42,7 @@ impl RasterBuilder {
     #[cfg(feature = "lib")]
     pub fn build(&mut self) -> Raster {
         let raster = Raster::from_paths_and_transforms(
-            self.paths_transforms
-                .iter()
-                .map(|(path, transform)| (path, transform)),
+            self.paths_transforms.iter().map(|(path, transform)| (path, transform)),
         );
 
         self.paths_transforms.clear();

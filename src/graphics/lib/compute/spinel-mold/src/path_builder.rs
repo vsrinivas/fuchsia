@@ -1,6 +1,6 @@
+use std::mem;
 #[cfg(not(feature = "lib"))]
 use std::{cell::RefCell, rc::Rc};
-use std::mem;
 
 use mold::{Path, Point};
 
@@ -99,8 +99,7 @@ impl PathBuilder {
         let p1 = Point::new(x1, y1);
         let p2 = Point::new(x2, y2);
 
-        self.current_path
-            .rat_quad((self.end_point, 1.0), (p1, w0), (p2, 1.0));
+        self.current_path.rat_quad((self.end_point, 1.0), (p1, w0), (p2, 1.0));
         self.end_point = p2;
         self.end_control_point = p2;
     }
@@ -120,8 +119,7 @@ impl PathBuilder {
         let p2 = Point::new(x2, y2);
         let p3 = Point::new(x3, y3);
 
-        self.current_path
-            .rat_cubic((self.end_point, 1.0), (p1, w0), (p2, w1), (p3, 1.0));
+        self.current_path.rat_cubic((self.end_point, 1.0), (p1, w0), (p2, w1), (p3, 1.0));
         self.end_point = p3;
         self.end_control_point = p3;
     }

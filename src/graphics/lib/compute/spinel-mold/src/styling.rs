@@ -1,7 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::{collections::{HashMap, HashSet}, slice};
+use std::{
+    collections::{HashMap, HashSet},
+    slice,
+};
 
 use mold::{
     tile::{Map, TileOp},
@@ -310,12 +313,12 @@ impl Styling {
                 match node {
                     Node::Layer(Layer { depth: Some(depth), layer_id, cmds, .. }) => {
                         let id = Commands::new(*layer_id, CommandsType::Layer, *depth).value;
-                        let raster = layers.get(layer_id).unwrap_or_else(|| {
-                            panic!("layer_id {} not found in composition", layer_id)
-                        });
-                        let layer = mold::tile::Layer::new(raster.clone(), unsafe {
-                            spn_to_tile_ops(cmds)
-                        });
+                        let raster = layers
+                            .get(layer_id)
+                            .map(|raster| raster.clone())
+                            .unwrap_or_else(|| Raster::empty());
+                        let layer =
+                            mold::tile::Layer::new(raster, unsafe { spn_to_tile_ops(cmds) });
 
                         prints.insert(id);
                         map.print(id, layer);
@@ -375,13 +378,40 @@ impl Styling {
                             }
                         };
                     }
-                    Node::Range(Range { parent, .. }) => panic!(
-                        "group with parent {} is missing range_lo/range_hi values",
-                        parent.unwrap(),
-                    ),
+                    Node::Range(Range { parent, .. }) => {
+                        panic!("group with parent {:?} is missing range_lo/range_hi values", parent,)
+                    }
                     _ => unreachable!(),
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "lib")]
+    use super::*;
+
+    #[cfg(feature = "lib")]
+    use crate::composition::Composition;
+
+    #[cfg(feature = "lib")]
+    #[test]
+    fn print_empty() {
+        let mut map = Map::new(1, 1);
+        let mut composition = Composition::new();
+        let mut styling = Styling::new();
+        let group_id_parent = styling.group_alloc();
+
+        styling.group_range_lo(group_id_parent, 1);
+        styling.group_range_hi(group_id_parent, 1);
+
+        styling.layer(group_id_parent, 0, 0);
+        unsafe {
+            styling.group_parents(1, 1).write(group_id_parent);
+        }
+
+        styling.prints(&mut composition, &mut map, &mut HashSet::new());
     }
 }

@@ -1,12 +1,12 @@
+use std::collections::HashMap;
 #[cfg(not(feature = "lib"))]
 use std::{cell::RefCell, rc::Rc};
-use std::collections::HashMap;
 
 use mold::Raster;
 
+use crate::styling::COMMANDS_LAYER_ID_MAX;
 #[cfg(not(feature = "lib"))]
 use crate::Context;
-use crate::styling::COMMANDS_LAYER_ID_MAX;
 
 #[derive(Debug)]
 pub struct Composition {
@@ -19,19 +19,12 @@ pub struct Composition {
 impl Composition {
     #[cfg(feature = "lib")]
     pub fn new() -> Self {
-        Self {
-            placements: HashMap::new(),
-            layers: HashMap::new(),
-        }
+        Self { placements: HashMap::new(), layers: HashMap::new() }
     }
 
     #[cfg(not(feature = "lib"))]
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
-        Self {
-            context,
-            placements: HashMap::new(),
-            layers: HashMap::new(),
-        }
+        Self { context, placements: HashMap::new(), layers: HashMap::new() }
     }
 
     pub fn reset(&mut self) {
@@ -41,10 +34,7 @@ impl Composition {
 
     pub fn place(&mut self, layer_id: u32, raster: Raster) {
         if layer_id >= COMMANDS_LAYER_ID_MAX {
-            panic!(
-                "layer_id overflowed the maximum of {}",
-                COMMANDS_LAYER_ID_MAX
-            );
+            panic!("layer_id overflowed the maximum of {}", COMMANDS_LAYER_ID_MAX);
         }
 
         self.layers.remove(&layer_id);
@@ -56,15 +46,11 @@ impl Composition {
 
     pub fn layers(&mut self) -> &HashMap<u32, Raster> {
         for (&layer_id, rasters) in &self.placements {
-            self.layers
-                .entry(layer_id)
-                .or_insert_with(|| {
-                    match rasters.len() {
-                        0 => Raster::empty(),
-                        1 => rasters[0].clone(),
-                        _ => Raster::union(rasters.iter()),
-                    }
-                });
+            self.layers.entry(layer_id).or_insert_with(|| match rasters.len() {
+                0 => Raster::empty(),
+                1 => rasters[0].clone(),
+                _ => Raster::union(rasters.iter()),
+            });
         }
 
         &self.layers

@@ -1,5 +1,12 @@
 #[cfg(not(feature = "lib"))]
-use std::{cell::RefCell, collections::{HashMap, HashSet}, convert::TryFrom, mem, ptr, rc::Rc, slice};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    mem, ptr,
+    rc::Rc,
+    slice,
+};
 
 mod composition;
 mod path_builder;
@@ -25,7 +32,7 @@ pub use raster_builder::RasterBuilder;
 pub use styling::Styling;
 
 #[cfg(not(feature = "lib"))]
-use mold::{ColorBuffer, PixelFormat, tile::Map, Path, Point, RasterInner};
+use mold::{tile::Map, ColorBuffer, Path, PixelFormat, Point, RasterInner};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -408,9 +415,7 @@ pub unsafe extern "C" fn spn_path_builder_cubic_to(
     x3: f32,
     y3: f32,
 ) -> SpnResult {
-    (*path_builder)
-        .borrow_mut()
-        .cubic_to(x1, y1, x2, y2, x3, y3);
+    (*path_builder).borrow_mut().cubic_to(x1, y1, x2, y2, x3, y3);
 
     SpnResult::SpnSuccess
 }
@@ -457,9 +462,7 @@ pub unsafe extern "C" fn spn_path_builder_rat_cubic_to(
     w0: f32,
     w1: f32,
 ) -> SpnResult {
-    (*path_builder)
-        .borrow_mut()
-        .rat_cubic_to(x1, y1, x2, y2, x3, y3, w0, w1);
+    (*path_builder).borrow_mut().rat_cubic_to(x1, y1, x2, y2, x3, y3, w0, w1);
 
     SpnResult::SpnSuccess
 }
@@ -567,9 +570,7 @@ pub unsafe extern "C" fn spn_raster_builder_add(
             transforms = transforms.add(1);
         }
 
-        (*raster_builder)
-            .borrow_mut()
-            .push_path(path, &transform);
+        (*raster_builder).borrow_mut().push_path(path, &transform);
     }
 
     SpnResult::SpnSuccess
@@ -649,7 +650,7 @@ pub unsafe extern "C" fn spn_composition_release(composition: CompositionPtr) ->
 
 #[cfg(not(feature = "lib"))]
 #[no_mangle]
-pub unsafe  extern "C" fn spn_composition_place(
+pub unsafe extern "C" fn spn_composition_place(
     composition: CompositionPtr,
     rasters: *const RasterId,
     layer_ids: *const u32,
@@ -669,7 +670,6 @@ pub unsafe  extern "C" fn spn_composition_place(
             translation.y = txtys.read();
             txtys = txtys.add(1);
         }
-
 
         let raster = {
             let borrow = (*composition).borrow();
@@ -770,7 +770,10 @@ pub unsafe extern "C" fn spn_styling_reset(styling: StylingPtr) -> SpnResult {
 
 #[cfg(not(feature = "lib"))]
 #[no_mangle]
-pub unsafe extern "C" fn spn_styling_group_alloc(styling: StylingPtr, group_id: *mut u32) -> SpnResult {
+pub unsafe extern "C" fn spn_styling_group_alloc(
+    styling: StylingPtr,
+    group_id: *mut u32,
+) -> SpnResult {
     *group_id = (*styling).borrow_mut().group_alloc();
 
     SpnResult::SpnSuccess
@@ -946,7 +949,13 @@ mod tests {
         value.assume_init()
     }
 
-    unsafe fn band(path_builder: PathBuilderPtr, x: f32, y: f32, width: f32, height: f32) -> PathId {
+    unsafe fn band(
+        path_builder: PathBuilderPtr,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    ) -> PathId {
         spn_path_builder_begin(path_builder);
 
         spn_path_builder_move_to(path_builder, x, y);
@@ -983,11 +992,8 @@ mod tests {
             let mut buffer: Vec<u32> = Vec::with_capacity(buffer_size);
             let buffer_ptr: *mut u8 = mem::transmute(buffer.as_mut_ptr());
 
-            let raw_buffer = RawBuffer {
-                buffer_ptr: &buffer_ptr,
-                stride: 3,
-                format: PixelFormat::RGBA8888,
-            };
+            let raw_buffer =
+                RawBuffer { buffer_ptr: &buffer_ptr, stride: 3, format: PixelFormat::RGBA8888 };
 
             let context = init(move |ptr| mold_context_create(ptr, &raw_buffer));
             let path_builder = init(|ptr| spn_path_builder_create(context, ptr));
@@ -1067,17 +1073,20 @@ mod tests {
             spn_context_release(context);
 
             buffer.set_len(buffer_size);
-            assert_eq!(buffer, vec![
-                0xffff_0000,
-                0x0000_00ff,
-                0xffff_0000,
-                0x0000_ff00,
-                0x0000_ff00,
-                0x0000_ff00,
-                0xffff_0000,
-                0x0000_00ff,
-                0xffff_0000,
-            ]);
+            assert_eq!(
+                buffer,
+                vec![
+                    0xffff_0000,
+                    0x0000_00ff,
+                    0xffff_0000,
+                    0x0000_ff00,
+                    0x0000_ff00,
+                    0x0000_ff00,
+                    0xffff_0000,
+                    0x0000_00ff,
+                    0xffff_0000,
+                ]
+            );
         }
     }
 }
