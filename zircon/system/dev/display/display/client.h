@@ -126,10 +126,11 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
 };
 
 // The Client class manages all state associated with an open display client
-// connection. Over than initialization, all methods of this class execute on
+// connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
 class Client : private FenceCallback {
  public:
+  // |controller| must outlive this and |proxy|.
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
 
   // This is used for testing
@@ -145,7 +146,7 @@ class Client : private FenceCallback {
   void ApplyConfig();
 
   void OnFenceFired(FenceReference* fence) override;
-  void OnRefForFenceDead(Fence* fence) override;
+  void OnRefForFenceDead(Fence* fence) __TA_EXCLUDES(fence_mtx_) override;
 
   void TearDown() __TA_EXCLUDES(fence_mtx_);
 
@@ -289,7 +290,7 @@ class Client : private FenceCallback {
                              const int32_t* displays_removed, uint32_t removed_count);
   bool CheckConfig(fidl::Builder* resp_builder);
 
-  fbl::RefPtr<FenceReference> GetFence(uint64_t id);
+  fbl::RefPtr<FenceReference> GetFence(uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 

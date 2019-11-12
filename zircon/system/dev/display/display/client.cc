@@ -1533,8 +1533,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 }
 
 void Client::ApplyConfig() {
-  ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN ||
-                  controller_->current_thread_is_loop());
+  ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   TRACE_DURATION("gfx", "Display::Client::ApplyConfig");
 
   bool config_missing_image = false;
@@ -1651,7 +1650,7 @@ void Client::SetOwnership(bool is_owner) {
 void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                                const uint64_t* displays_removed, size_t removed_count) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  controller_->AssertMtxAliasHeld(controller_->mtx());
 
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
@@ -1870,8 +1869,7 @@ void Client::CaptureCompleted() {
 }
 
 void Client::TearDown() {
-  ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN ||
-                  controller_->current_thread_is_loop());
+  ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   pending_config_valid_ = false;
 
   // Teardown stops events from the channel, but not from the ddk, so we

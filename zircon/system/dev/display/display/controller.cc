@@ -250,7 +250,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     return;
   }
 
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
 
   for (unsigned i = 0; i < removed_count; i++) {
     auto target = displays_.erase(displays_removed[i]);
@@ -383,7 +383,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
           PopulateDisplayTimings(added_ptr[i]);
         }
       }
-      fbl::AutoLock lock(&mtx_);
+      fbl::AutoLock lock(mtx());
 
       uint64_t added_ids[added_success_count];
       uint32_t final_added_success_count = 0;
@@ -419,10 +419,10 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
 
 void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
   std::unique_ptr<async::Task> task = std::make_unique<async::Task>();
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   task->set_handler([this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
     if (status == ZX_OK) {
-      fbl::AutoLock lock(&mtx_);
+      fbl::AutoLock lock(mtx());
       if (vc_client_ && vc_ready_) {
         vc_client_->OnCaptureComplete();
       }
@@ -444,7 +444,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   DisplayInfo* info = nullptr;
   for (auto& display_config : displays_) {
     if (display_config.id == display_id) {
@@ -578,7 +578,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
 
 zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
     uint64_t display_id, uint32_t fmt_idx, audio_stream_format_range_t* fmt_out) {
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   auto display = displays_.find(display_id);
   if (!display.IsValid()) {
     return ZX_ERR_NOT_FOUND;
@@ -601,7 +601,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
   const display_config_t* display_configs[count];
   uint32_t display_count = 0;
   {
-    fbl::AutoLock lock(&mtx_);
+    fbl::AutoLock lock(mtx());
     // The fact that there could already be a vsync waiting to be handled when a config
     // is applied means that a vsync with no handle for a layer could be interpreted as either
     // nothing in the layer has been presented or everything in the layer can be retired. To
@@ -699,7 +699,7 @@ void Controller::ReleaseCaptureImage(Image* image) {
 }
 
 void Controller::SetVcMode(uint8_t vc_mode) {
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   vc_mode_ = vc_mode;
   HandleClientOwnershipChanges();
 }
@@ -726,7 +726,7 @@ void Controller::HandleClientOwnershipChanges() {
 
 void Controller::OnClientDead(ClientProxy* client) {
   zxlogf(TRACE, "Client %d dead\n", client->id());
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   if (client == vc_client_) {
     vc_client_ = nullptr;
     vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
@@ -813,7 +813,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::AutoLock lock(&mtx_);
+  fbl::AutoLock lock(mtx());
   if (unbinding_) {
     zxlogf(TRACE, "Client connected during unbind\n");
     return ZX_ERR_UNAVAILABLE;
@@ -860,7 +860,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   task->set_handler(
       [this, client_ptr](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
         if (status == ZX_OK) {
-          fbl::AutoLock lock(&mtx_);
+          fbl::AutoLock lock(mtx());
           if (unbinding_) {
             return;
           }
@@ -949,16 +949,16 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
 
 void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Controller::DdkUnbind\n");
-  {
-    fbl::AutoLock lock(&mtx_);
-    unbinding_ = true;
-  }
-  // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
-  loop_.Shutdown();
+  fbl::AutoLock lock(mtx());
+  unbinding_ = true;
   txn.Reply();
 }
 
-void Controller::DdkRelease() { delete this; }
+void Controller::DdkRelease() {
+  // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
+  loop_.Shutdown();
+  delete this;
+}
 
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -969,7 +969,7 @@ Controller::Controller(zx_device_t* parent)
 
 }  // namespace display
 
-zx_status_t display_controller_bind(void* ctx, zx_device_t* parent) {
+static zx_status_t display_controller_bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<display::Controller> core(new (&ac) display::Controller(parent));
   if (!ac.check()) {

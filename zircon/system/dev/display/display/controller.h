@@ -5,8 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
 
-#if __cplusplus
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -83,10 +81,6 @@ class Controller : public ControllerParent,
 
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
-  // Thread-safety annotations currently don't deal with pointer aliases. Use this to document
-  // places where we believe a mutex aliases mtx().
-  void AssertMtxAliasHeld(mtx_t* mtx) __TA_ASSERT(mtx) { ZX_DEBUG_ASSERT(mtx == &mtx_); }
-
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -111,25 +105,21 @@ class Controller : public ControllerParent,
   void ShowActiveDisplay();
 
   void ApplyConfig(DisplayConfig* configs[], int32_t count, bool vc_client, uint32_t apply_stamp,
-                   uint32_t client_id);
+                   uint32_t client_id) __TA_EXCLUDES(mtx());
 
   void ReleaseImage(Image* image);
   void ReleaseCaptureImage(Image* image);
 
-  // Calling GetPanelConfig requires holding |mtx()|, and it must be held
-  // for as long as |edid| and |params| are retained.
+  // |mtx()| must be held for as long as |edid| and |params| are retained.
   bool GetPanelConfig(uint64_t display_id, const fbl::Vector<edid::timing_params_t>** timings,
-                      const display_params_t** params) __TA_NO_THREAD_SAFETY_ANALYSIS;
-  // Calling GetSupportedPixelFormats requires holding |mtx()|
+                      const display_params_t** params) __TA_REQUIRES(mtx());
   bool GetSupportedPixelFormats(uint64_t display_id, fbl::Array<zx_pixel_format_t>* fmts_out)
-      __TA_NO_THREAD_SAFETY_ANALYSIS;
-  // Calling GetCursorInfo requires holding |mtx()|
+      __TA_REQUIRES(mtx());
   bool GetCursorInfo(uint64_t display_id,
-                     fbl::Array<cursor_info_t>* cursor_info_out) __TA_NO_THREAD_SAFETY_ANALYSIS;
-  // Calling GetDisplayIdentifiers requires holding |mtx()|
+                     fbl::Array<cursor_info_t>* cursor_info_out) __TA_REQUIRES(mtx());
   bool GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
                              const char** monitor_name,
-                             const char** monitor_serial) __TA_NO_THREAD_SAFETY_ANALYSIS;
+                             const char** monitor_serial) __TA_REQUIRES(mtx());
 
   ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
   ddk::DisplayCaptureImplProtocolClient* dc_capture() {
@@ -140,12 +130,15 @@ class Controller : public ControllerParent,
   }
   async::Loop& loop() { return loop_; }
   bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
+  // Thread-safety annotations currently don't deal with pointer aliases. Use this to document
+  // places where we believe a mutex aliases mtx()
+  void AssertMtxAliasHeld(mtx_t* m) __TA_ASSERT(m) { ZX_DEBUG_ASSERT(m == mtx()); }
   mtx_t* mtx() { return &mtx_; }
 
  private:
   friend ControllerTest;
-  void HandleClientOwnershipChanges() __TA_REQUIRES(mtx_);
-  void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx_);
+  void HandleClientOwnershipChanges() __TA_REQUIRES(mtx());
+  void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
   zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
@@ -160,20 +153,20 @@ class Controller : public ControllerParent,
 
   // mtx_ is a global lock on state shared among clients.
   mtx_t mtx_;
-  bool unbinding_ __TA_GUARDED(mtx_) = false;
+  bool unbinding_ __TA_GUARDED(mtx()) = false;
 
-  DisplayInfo::Map displays_ __TA_GUARDED(mtx_);
+  DisplayInfo::Map displays_ __TA_GUARDED(mtx());
   bool vc_applied_;
   uint32_t applied_stamp_ = UINT32_MAX;
   uint32_t applied_client_id_ = UINT32_MAX;
 
-  uint32_t next_client_id_ __TA_GUARDED(mtx_) = 1;
-  ClientProxy* vc_client_ __TA_GUARDED(mtx_) = nullptr;
-  bool vc_ready_ __TA_GUARDED(mtx_);
-  ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;
-  bool primary_ready_ __TA_GUARDED(mtx_);
-  uint8_t vc_mode_ __TA_GUARDED(mtx_) = fuchsia_hardware_display_VirtconMode_INACTIVE;
-  ClientProxy* active_client_ __TA_GUARDED(mtx_) = nullptr;
+  uint32_t next_client_id_ __TA_GUARDED(mtx()) = 1;
+  ClientProxy* vc_client_ __TA_GUARDED(mtx()) = nullptr;
+  bool vc_ready_ __TA_GUARDED(mtx());
+  ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
+  bool primary_ready_ __TA_GUARDED(mtx());
+  uint8_t vc_mode_ __TA_GUARDED(mtx()) = fuchsia_hardware_display_VirtconMode_INACTIVE;
+  ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;
   thrd_t loop_thread_;
@@ -183,11 +176,5 @@ class Controller : public ControllerParent,
 };
 
 }  // namespace display
-
-#endif  // __cplusplus
-
-__BEGIN_CDECLS
-zx_status_t display_controller_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
