@@ -19,7 +19,6 @@ source_set("shared") {
     "controller.cc",
     "fence.cc",
     "image.cc",
-    "watchdog.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.display.capture",

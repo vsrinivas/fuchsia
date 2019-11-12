@@ -15,7 +15,6 @@ zx_test("display-core-unittests") {
     "fence-test.cc",
     "image-test.cc",
     "integration-test.cc",
-    "watchdog-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [

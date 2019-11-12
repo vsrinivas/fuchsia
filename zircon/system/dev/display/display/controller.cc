@@ -6,7 +6,6 @@
 
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -562,7 +561,6 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (vc_applied_ && vc_client_) {
-    vsync_watchdog_.Reset();
     vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
   } else if (!vc_applied_ && primary_client_) {
     // A previous client applied a config and then disconnected before the vsync. Don't send garbage
@@ -573,12 +571,8 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
              "but client[%d] is currently active.\n",
              applied_client_id_, primary_client_->id());
     } else {
-      vsync_watchdog_.Reset();
       primary_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
     }
-  } else if (!vc_client_ && !primary_client_) {
-    // No clients are waiting, reset the watchdog.
-    vsync_watchdog_.Reset();
   }
 }
 
@@ -939,14 +933,6 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     return status;
   }
 
-  vsync_watchdog_.Init(loop_.dispatcher(), zx::duration(ZX_SEC(60)), "vsync delivery stalled");
-  int thread_rc = thrd_create_with_name(
-      &vsync_watchdog_thread_, [](void* arg) { return static_cast<Watchdog*>(arg)->Run(); },
-      &vsync_watchdog_, "vsync_watchdog_thread");
-  if (thread_rc != thrd_success) {
-    return thread_rc == thrd_nomem ? ZX_ERR_NO_MEMORY : ZX_ERR_INTERNAL;
-  }
-
   if ((status = DdkAdd("display-controller")) != ZX_OK) {
     zxlogf(ERROR, "Failed to add display core device %d\n", status);
     return status;
@@ -963,17 +949,12 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
 
 void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Controller::DdkUnbind\n");
-  {
-    fbl::AutoLock lock(mtx());
-    unbinding_ = true;
-  }
-  vsync_watchdog_.Stop();
+  fbl::AutoLock lock(mtx());
+  unbinding_ = true;
   txn.Reply();
 }
 
 void Controller::DdkRelease() {
-  // This thread uses loop_.dispatcher() and must be shut down first
-  thrd_join(vsync_watchdog_thread_, nullptr);
   // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
   loop_.Shutdown();
   delete this;

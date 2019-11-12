@@ -27,7 +27,6 @@
 
 #include "id-map.h"
 #include "image.h"
-#include "watchdog.h"
 
 namespace display {
 
@@ -171,10 +170,6 @@ class Controller : public ControllerParent,
 
   async::Loop loop_;
   thrd_t loop_thread_;
-
-  Watchdog vsync_watchdog_;
-  thrd_t vsync_watchdog_thread_;
-
   ddk::DisplayControllerImplProtocolClient dc_;
   ddk::DisplayCaptureImplProtocolClient dc_capture_;
   ddk::I2cImplProtocolClient i2c_;
