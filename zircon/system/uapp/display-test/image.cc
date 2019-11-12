@@ -338,5 +338,7 @@ bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   }
   info_out->id = import_result->image_id;
 
+  // image has been imported. we can close the connection
+  dc->ReleaseBufferCollection(collection_id_);
   return true;
 }
