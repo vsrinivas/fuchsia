@@ -63,7 +63,7 @@ fn get_attr() {
 #[test]
 fn describe() {
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     let server = endpoint(|_scope, _channel| ());
 

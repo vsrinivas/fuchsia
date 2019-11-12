@@ -16,6 +16,8 @@
 //! Implementation wise, execution scope is just a proxy, that forwards all the tasks to an actual
 //! executor, provided as an instance of a [`Spawn`] trait.
 
+use crate::registry::{InodeRegistry, TokenRegistry};
+
 use {
     futures::{
         channel::oneshot,
@@ -38,12 +40,20 @@ pub type SpawnError = task::SpawnError;
 /// [`Spawn`].  In a sense, this is somewhat of an analog of a multithreaded capable
 /// [`FuturesUnordered`], but this some additional functionality specific to the pseudo-fs-mt
 /// library.
+///
+/// Use [`ExecutionScope::from_executor()`] or [`ExecutionScope::build()`] to construct new
+/// `ExecutionScope`es.
 pub struct ExecutionScope {
-    inner: Arc<Mutex<Inner>>,
+    executor: Arc<Mutex<Executor>>,
+
+    token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
+
+    inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
 }
 
-struct Inner {
+struct Executor {
     upstream: Box<dyn Spawn + Send>,
+
     /// This is a list of shutdown channels for all the tasks that might be currently running.
     /// When we initiate a task shutdown by sending a message over the channel, but as we need to
     /// consume the sender in the process, we use `Option`s turning the consumed ones into `None`s.
@@ -51,10 +61,18 @@ struct Inner {
 }
 
 impl ExecutionScope {
-    /// Constructs a new execution scope, wrapping the specified executor.
-    pub fn new(upstream: Box<dyn Spawn + Send>) -> Self {
-        let inner = Arc::new(Mutex::new(Inner { upstream, running: Slab::new() }));
-        ExecutionScope { inner }
+    /// Constructs an execution scope that has only an upstream executor attached.  No
+    /// `token_registry` or `inode_registry`.  Use [`build()`] if you want to specify other
+    /// parameters.
+    pub fn from_executor(upstream: Box<dyn Spawn + Send>) -> Self {
+        Self::build(upstream).new()
+    }
+
+    /// Constructs a new execution scope builder, wrapping the specified executor and optionally
+    /// accepting additional parameters.  Run [`ExecutionScopeParams::new()`] to get an actual
+    /// [`ExecutionScope`] object.
+    pub fn build(upstream: Box<dyn Spawn + Send>) -> ExecutionScopeParams {
+        ExecutionScopeParams { upstream, token_registry: None, inode_registry: None }
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -72,7 +90,7 @@ impl ExecutionScope {
     where
         Task: Future<Output = ()> + Send + 'static,
     {
-        Inner::run_abort_any_time(self.inner.clone(), Box::pin(task))
+        Executor::run_abort_any_time(self.executor.clone(), Box::pin(task))
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -96,21 +114,64 @@ impl ExecutionScope {
         Constructor: FnOnce(oneshot::Receiver<()>) -> Task + 'static,
         Task: Future<Output = ()> + Send + 'static,
     {
-        Inner::run_abort_with_shutdown(
-            self.inner.clone(),
+        Executor::run_abort_with_shutdown(
+            self.executor.clone(),
             Box::new(|shutdown| Box::pin(constructor(shutdown))),
         )
     }
 
+    pub fn token_registry(&self) -> Option<Arc<dyn TokenRegistry + Send + Sync>> {
+        self.token_registry.as_ref().map(Arc::clone)
+    }
+
+    pub fn inode_registry(&self) -> Option<Arc<dyn InodeRegistry + Send + Sync>> {
+        self.inode_registry.as_ref().map(Arc::clone)
+    }
+
     pub fn shutdown(&self) {
-        let mut this = self.inner.lock();
+        let mut this = self.executor.lock();
         this.shutdown();
     }
 }
 
 impl Clone for ExecutionScope {
     fn clone(&self) -> Self {
-        ExecutionScope { inner: self.inner.clone() }
+        ExecutionScope {
+            executor: self.executor.clone(),
+            token_registry: self.token_registry.as_ref().map(Arc::clone),
+            inode_registry: self.inode_registry.as_ref().map(Arc::clone),
+        }
+    }
+}
+
+pub struct ExecutionScopeParams {
+    upstream: Box<dyn Spawn + Send>,
+    token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
+    inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
+}
+
+impl ExecutionScopeParams {
+    pub fn token_registry(mut self, value: Arc<dyn TokenRegistry + Send + Sync>) -> Self {
+        assert!(self.token_registry.is_none(), "`token_registry` is already set");
+        self.token_registry = Some(value);
+        self
+    }
+
+    pub fn inode_registry(mut self, value: Arc<dyn InodeRegistry + Send + Sync>) -> Self {
+        assert!(self.inode_registry.is_none(), "`inode_registry` is already set");
+        self.inode_registry = Some(value);
+        self
+    }
+
+    pub fn new(self) -> ExecutionScope {
+        ExecutionScope {
+            executor: Arc::new(Mutex::new(Executor {
+                upstream: self.upstream,
+                running: Slab::new(),
+            })),
+            token_registry: self.token_registry,
+            inode_registry: self.inode_registry,
+        }
     }
 }
 
@@ -122,7 +183,7 @@ where
     Wrapped: Future<Output = ()> + Send,
 {
     id: usize,
-    inner: Arc<Mutex<Inner>>,
+    executor: Arc<Mutex<Executor>>,
     task: Wrapped,
 }
 
@@ -134,8 +195,8 @@ where
     // does not implement `Unpin`.  `task` is not `#[repr(packed)]`.
     unsafe_pinned!(task: Wrapped);
 
-    fn new(id: usize, inner: Arc<Mutex<Inner>>, task: Wrapped) -> Self {
-        RemoveFromRunning { id, inner, task }
+    fn new(id: usize, executor: Arc<Mutex<Executor>>, task: Wrapped) -> Self {
+        RemoveFromRunning { id, executor, task }
     }
 }
 
@@ -155,18 +216,18 @@ where
     Wrapped: Future<Output = ()> + Send,
 {
     fn drop(&mut self) {
-        let mut this = self.inner.lock();
+        let mut this = self.executor.lock();
         this.running.remove(self.id);
     }
 }
 
-impl Inner {
+impl Executor {
     fn run_abort_any_time(
-        inner: Arc<Mutex<Inner>>,
+        executor: Arc<Mutex<Executor>>,
         task: Pin<Box<dyn Future<Output = ()> + Send>>,
     ) -> Result<(), SpawnError> {
         Self::run_abort_with_shutdown(
-            inner,
+            executor,
             Box::new(move |stop_receiver| {
                 // We need a future that would complete when either `task` or `stop_receiver`
                 // complete.  If there would be a combinator, similar to `join` that would do that,
@@ -191,15 +252,15 @@ impl Inner {
     }
 
     fn run_abort_with_shutdown(
-        inner: Arc<Mutex<Inner>>,
+        executor: Arc<Mutex<Executor>>,
         constructor: FutureConstructorWithArg<oneshot::Receiver<()>>,
     ) -> Result<(), SpawnError> {
-        let mut this = inner.lock();
+        let mut this = executor.lock();
 
         let (stop_sender, stop_receiver) = oneshot::channel();
         let task_id = this.running.insert(Some(stop_sender));
         let task = constructor(stop_receiver);
-        let task = RemoveFromRunning::new(task_id, inner.clone(), task);
+        let task = RemoveFromRunning::new(task_id, executor.clone(), task);
 
         match this.upstream.spawn_obj(Box::pin(task).into()) {
             Ok(()) => Ok(()),
@@ -239,7 +300,7 @@ impl Inner {
     }
 }
 
-impl Drop for Inner {
+impl Drop for Executor {
     fn drop(&mut self) {
         self.shutdown();
     }
@@ -248,6 +309,8 @@ impl Drop for Inner {
 #[cfg(test)]
 mod tests {
     use super::ExecutionScope;
+
+    use crate::registry::{inode_registry, token_registry, InodeRegistry, TokenRegistry};
 
     use {
         fuchsia_async::Executor,
@@ -271,7 +334,7 @@ mod tests {
     {
         let mut exec = Executor::new().expect("Executor creation failed");
 
-        let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+        let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
         let test = get_test(scope);
 
@@ -401,6 +464,36 @@ mod tests {
                 assert_eq!(tick_count.load(Ordering::Relaxed), 2);
             }
         });
+    }
+
+    #[test]
+    fn with_token_registry() {
+        let registry = token_registry::Simple::new();
+
+        let exec = Executor::new().expect("Executor creation failed");
+        let scope =
+            ExecutionScope::build(Box::new(exec.ehandle())).token_registry(registry.clone()).new();
+
+        let registry2 = scope.token_registry().unwrap();
+        assert!(
+            Arc::ptr_eq(&(registry as Arc<dyn TokenRegistry + Send + Sync>), &registry2),
+            "`scope` returned `Arc` to a token registry is different from the one initially set."
+        );
+    }
+
+    #[test]
+    fn with_inode_registry() {
+        let registry = inode_registry::Simple::new();
+
+        let exec = Executor::new().expect("Executor creation failed");
+        let scope =
+            ExecutionScope::build(Box::new(exec.ehandle())).inode_registry(registry.clone()).new();
+
+        let registry2 = scope.inode_registry().unwrap();
+        assert!(
+            Arc::ptr_eq(&(registry as Arc<dyn InodeRegistry + Send + Sync>), &registry2),
+            "`scope` returned `Arc` to an inode registry is different from the one initially set."
+        );
     }
 
     mod mocks {

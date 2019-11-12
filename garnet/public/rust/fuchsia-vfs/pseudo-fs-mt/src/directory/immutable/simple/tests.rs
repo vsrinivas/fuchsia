@@ -99,7 +99,7 @@ fn empty_directory_describe() {
 #[test]
 fn open_empty_directory_with_describe() {
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     let server = simple();
 
@@ -1167,7 +1167,7 @@ fn in_tree_open() {
     };
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     run_client(exec, || {
         async move {
@@ -1197,7 +1197,7 @@ fn in_tree_open_path_one_component() {
     };
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     run_client(exec, || {
         async move {
@@ -1228,7 +1228,7 @@ fn in_tree_open_path_two_components() {
     };
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     run_client(exec, || {
         async move {
@@ -1576,8 +1576,8 @@ fn watch_addition_with_two_scopes() {
     };
 
     let exec = Executor::new().expect("Executor creation failed");
-    let scope1 = ExecutionScope::new(Box::new(exec.ehandle()));
-    let scope2 = ExecutionScope::new(Box::new(exec.ehandle()));
+    let scope1 = ExecutionScope::from_executor(Box::new(exec.ehandle()));
+    let scope2 = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
     run_client(exec, || {
         async move {
