@@ -75,6 +75,8 @@ pub enum ResolverError {
         #[fail(cause)]
         err: ClonableError,
     },
+    #[fail(display = "Model not available.")]
+    ModelAccessError,
     #[fail(display = "scheme not registered")]
     SchemeNotRegistered,
     #[fail(display = "failed to parse url \"{}\": {}", url, err)]
@@ -98,6 +100,10 @@ impl ResolverError {
 
     pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
         ResolverError::ManifestInvalid { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn model_not_available() -> ResolverError {
+        ResolverError::ModelAccessError
     }
 
     pub fn url_parse_error(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {

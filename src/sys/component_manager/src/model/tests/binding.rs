@@ -15,7 +15,7 @@ use {
 async fn new_model(
     mock_resolver: MockResolver,
     mock_runner: MockRunner,
-) -> (Model, BuiltinEnvironment) {
+) -> (Arc<Model>, BuiltinEnvironment) {
     new_model_with(mock_resolver, mock_runner, vec![]).await
 }
 
@@ -23,7 +23,7 @@ async fn new_model_with(
     mock_resolver: MockResolver,
     mock_runner: MockRunner,
     additional_hooks: Vec<HookRegistration>,
-) -> (Model, BuiltinEnvironment) {
+) -> (Arc<Model>, BuiltinEnvironment) {
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let startup_args = startup::Arguments {
@@ -31,11 +31,11 @@ async fn new_model_with(
         use_builtin_vmex: false,
         root_component_url: "".to_string(),
     };
-    let model = Model::new(ModelParams {
+    let model = Arc::new(Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         elf_runner: Arc::new(mock_runner),
-    });
+    }));
     let builtin_environment = startup::builtin_environment_setup(
         &startup_args,
         &model,

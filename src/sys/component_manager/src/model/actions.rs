@@ -163,7 +163,7 @@ impl Action {
     ///
     /// The work to fulfill these actions should be scheduled asynchronously, so this method is not
     /// `async`.
-    pub fn handle(&self, model: Model, realm: Arc<Realm>) {
+    pub fn handle(&self, model: Arc<Model>, realm: Arc<Realm>) {
         let action = self.clone();
         fasync::spawn(async move {
             let res = match &action {
@@ -178,7 +178,7 @@ impl Action {
     }
 }
 
-async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
+async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
     enum Result {
         // Component was resolved, return notifications for the Shutdown actions on children.
         Resolved(Vec<Notification>),
@@ -233,7 +233,7 @@ async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> 
 }
 
 async fn do_delete_child(
-    model: Model,
+    model: Arc<Model>,
     realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
@@ -265,7 +265,7 @@ async fn do_delete_child(
     Ok(())
 }
 
-async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
+async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
     let nf = Realm::register_action(realm.clone(), model.clone(), Action::Shutdown).await?;
     nf.await?;
@@ -371,7 +371,7 @@ mod tests {
     }
 
     struct ActionsTest {
-        pub model: Model,
+        pub model: Arc<Model>,
         pub builtin_environment: Arc<BuiltinEnvironment>,
         test_hook: TestHook,
         realm_proxy: Option<fsys::RealmProxy>,
@@ -405,11 +405,11 @@ mod tests {
             resolver.register("test".to_string(), Box::new(mock_resolver));
 
             let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-            let model = Model::new(ModelParams {
+            let model = Arc::new(Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
                 elf_runner: Arc::new(runner),
-            });
+            }));
             // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
             // to start and stop in a certain lifecycle ordering. In particular, some unit
             // tests will destroy component instances before binding to their parents.
@@ -1824,7 +1824,7 @@ mod tests {
     }
 
     async fn execute_action(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         action: Action,
     ) -> Result<(), ModelError> {

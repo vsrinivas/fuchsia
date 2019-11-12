@@ -25,7 +25,7 @@ use {
 };
 
 struct TestRunner {
-    pub model: Model,
+    pub model: Arc<Model>,
     pub builtin_environment: BuiltinEnvironment,
     hub_test_hook: Arc<HubTestHook>,
     _breakpoint_hook: BreakpointHook,

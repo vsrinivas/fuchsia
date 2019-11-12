@@ -71,13 +71,13 @@ pub struct RealmCapabilityHost {
 }
 
 pub struct RealmCapabilityHostInner {
-    model: Model,
+    model: Arc<Model>,
     config: ComponentManagerConfig,
 }
 
 // `RealmCapabilityHost` is a `Hook` that serves the `Realm` FIDL protocol.
 impl RealmCapabilityHost {
-    pub fn new(model: Model, config: ComponentManagerConfig) -> Self {
+    pub fn new(model: Arc<Model>, config: ComponentManagerConfig) -> Self {
         Self { inner: Arc::new(RealmCapabilityHostInner::new(model, config)) }
     }
 
@@ -98,7 +98,7 @@ impl RealmCapabilityHost {
 }
 
 impl RealmCapabilityHostInner {
-    pub fn new(model: Model, config: ComponentManagerConfig) -> Self {
+    pub fn new(model: Arc<Model>, config: ComponentManagerConfig) -> Self {
         Self { model, config }
     }
 
@@ -155,7 +155,7 @@ impl RealmCapabilityHostInner {
     }
 
     async fn bind_child(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
@@ -201,7 +201,7 @@ impl RealmCapabilityHostInner {
     }
 
     async fn destroy_child(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         child: fsys::ChildRef,
     ) -> Result<(), fsys::Error> {
@@ -353,7 +353,7 @@ mod tests {
     };
 
     struct RealmCapabilityTest {
-        pub model: Model,
+        pub model: Arc<Model>,
         pub builtin_environment: Arc<BuiltinEnvironment>,
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
@@ -376,11 +376,11 @@ mod tests {
                 use_builtin_vmex: false,
                 root_component_url: "".to_string(),
             };
-            let model = Model::new(ModelParams {
+            let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
                 elf_runner: Arc::new(mock_runner),
-            });
+            }));
             let builtin_environment = Arc::new(
                 startup::builtin_environment_setup(&startup_args, &model, config)
                     .await

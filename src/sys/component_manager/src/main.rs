@@ -11,7 +11,7 @@ use {
     failure::{Error, ResultExt},
     fuchsia_async as fasync,
     log::*,
-    std::process,
+    std::{process, sync::Arc},
 };
 
 const NUM_THREADS: usize = 2;
@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_root(args: startup::Arguments) -> Result<(Model, BuiltinEnvironment), Error> {
+async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnvironment), Error> {
     let model = startup::model_setup(&args).await.context("failed to set up model")?;
     let builtin_environment =
         startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())

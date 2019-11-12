@@ -165,7 +165,7 @@ impl Realm {
     /// Register an action on a realm.
     pub async fn register_action(
         realm: Arc<Realm>,
-        model: Model,
+        model: Arc<Model>,
         action: Action,
     ) -> Result<Notification, ModelError> {
         let mut actions = realm.actions.lock().await;
@@ -230,7 +230,7 @@ impl Realm {
 
     /// Removes the dynamic child `partial_moniker`.
     pub async fn remove_dynamic_child(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         partial_moniker: &PartialMoniker,
     ) -> Result<(), ModelError> {
@@ -265,7 +265,7 @@ impl Realm {
     /// REQUIRES: All dependents have already been stopped.
     // TODO: This is a stub because currently the shutdown protocol is not implemented.
     pub async fn stop_instance(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         state: Option<&mut RealmState>,
         shut_down: bool,
@@ -294,7 +294,7 @@ impl Realm {
     /// REQUIRES: All children have already been destroyed.
     // TODO: Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
-    pub async fn destroy_instance(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
+    pub async fn destroy_instance(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
         // Clean up isolated storage.
         let decl = {
             let state = realm.lock_state().await;
@@ -318,7 +318,7 @@ impl Realm {
     /// Registers actions to destroy all children of `realm` that live in transient collections.
     /// Returns a future that completes when all those children are destroyed.
     async fn destroy_transient_children(
-        model: Model,
+        model: Arc<Model>,
         realm: Arc<Realm>,
         state: &mut RealmState,
     ) -> Result<Vec<Notification>, ModelError> {

@@ -24,7 +24,10 @@ use {
     fuchsia_component::client,
     futures::lock::Mutex,
     log::*,
-    std::{path::PathBuf, sync::Arc},
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
@@ -111,7 +114,7 @@ impl Arguments {
 /// Returns a ResolverRegistry configured with the component resolvers available to the current
 /// process.
 pub fn available_resolvers(
-    model_for_resolver: Arc<Mutex<Option<Model>>>,
+    model_for_resolver: Arc<Mutex<Option<Weak<Model>>>>,
 ) -> Result<ResolverRegistry, Error> {
     let mut resolver_registry = ResolverRegistry::new();
 
@@ -202,7 +205,7 @@ impl BuiltinRootCapabilities {
 
 /// Creates and sets up a model with standard parameters. This is easier than setting up the
 /// model manually with `Model::new()`.
-pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
+pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
     // The model needs the resolver registry to be created, but the resolver registry needs the
     // model to be created so that the fuchsia_pkg resolver can route the pkgfs handle. Thus we
     // create an empty Arc<Mutex<<Option<Model>>>, give it to the resolvers, create the model with
@@ -217,7 +220,7 @@ pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
         root_resolver_registry: resolver_registry,
         elf_runner: Arc::new(runner),
     };
-    let model = Model::new(params);
+    let model = Arc::new(Model::new(params));
     let notifier_hooks = {
         let notifier = model.notifier.lock().await;
         let notifier = notifier.as_ref();
@@ -225,16 +228,13 @@ pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
     };
     model.root_realm.hooks.install(notifier_hooks).await;
 
-    // TODO(dgonyeo): This introduces cyclic references between model and the
-    // resolver_registry. We need to break this cycle perhaps by using weak
-    // references.
-    *model_for_resolver.lock().await = Some(model.clone());
+    *model_for_resolver.lock().await = Some(Arc::downgrade(&model));
     Ok(model)
 }
 
 pub async fn builtin_environment_setup(
     args: &Arguments,
-    model: &Model,
+    model: &Arc<Model>,
     config: ComponentManagerConfig,
 ) -> Result<BuiltinEnvironment, ModelError> {
     let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));

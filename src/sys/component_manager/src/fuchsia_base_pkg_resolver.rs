@@ -15,7 +15,7 @@ use {
     futures::lock::Mutex,
     std::convert::TryInto,
     std::path::{Path, PathBuf},
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
 };
 
 pub static SCHEME: &str = "fuchsia-pkg";
@@ -24,12 +24,12 @@ pub static SCHEME: &str = "fuchsia-pkg";
 /// syntax. Uses raw pkgfs handle, and thus can only load packages from the "base" package set.
 /// The root component must expose "/pkgfs" directory capability for this to work.
 pub struct FuchsiaPkgResolver {
-    model: Arc<Mutex<Option<Model>>>,
+    model: Arc<Mutex<Option<Weak<Model>>>>,
     pkgfs_handle: Mutex<Option<DirectoryProxy>>,
 }
 
 impl FuchsiaPkgResolver {
-    pub fn new(model: Arc<Mutex<Option<Model>>>) -> FuchsiaPkgResolver {
+    pub fn new(model: Arc<Mutex<Option<Weak<Model>>>>) -> FuchsiaPkgResolver {
         FuchsiaPkgResolver { model, pkgfs_handle: Mutex::new(None) }
     }
 
@@ -46,6 +46,7 @@ impl FuchsiaPkgResolver {
             // - and store the opened handle in self.pkgfs_handle.
             let model_guard = self.model.lock().await;
             let model = model_guard.as_ref().expect("model reference missing");
+            let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
             let (capability_path, realm) =
                 find_exposed_root_directory_capability(&model, "/pkgfs".try_into().unwrap())
                     .await

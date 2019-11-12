@@ -709,7 +709,7 @@ mod tests {
     async fn start_component_manager_with_hub(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-    ) -> (model::Model, BuiltinEnvironment, DirectoryProxy) {
+    ) -> (Arc<model::Model>, BuiltinEnvironment, DirectoryProxy) {
         start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
     }
 
@@ -717,7 +717,7 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HookRegistration>,
-    ) -> (model::Model, BuiltinEnvironment, DirectoryProxy) {
+    ) -> (Arc<model::Model>, BuiltinEnvironment, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
         let mut runner = mocks::MockRunner::new();
@@ -741,11 +741,11 @@ mod tests {
             use_builtin_vmex: false,
             root_component_url: root_component_url.clone(),
         };
-        let model = model::Model::new(model::ModelParams {
+        let model = Arc::new(model::Model::new(model::ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
-        });
+        }));
         let builtin_environment = startup::builtin_environment_setup(
             &startup_args,
             &model,

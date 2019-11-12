@@ -17,12 +17,12 @@ use {
 };
 
 struct TestRunner {
-    _model: Model,
+    _model: Arc<Model>,
     _builtin_environment: BuiltinEnvironment,
     work_scheduler_test_hook: Arc<WorkSchedulerTestHook>,
 }
 
-async fn create_model(root_component_url: &str) -> Result<(Model, BuiltinEnvironment), Error> {
+async fn create_model(root_component_url: &str) -> Result<(Arc<Model>, BuiltinEnvironment), Error> {
     let root_component_url = root_component_url.to_string();
     let args = startup::Arguments {
         use_builtin_process_launcher: false,

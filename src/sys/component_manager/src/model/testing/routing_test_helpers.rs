@@ -74,7 +74,7 @@ pub enum CheckUse {
 /// "test:///a_resolved".
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
-    pub model: Model,
+    pub model: Arc<Model>,
     pub builtin_environment: BuiltinEnvironment,
     _echo_service: Arc<EchoService>,
     pub namespaces: Namespaces,
@@ -123,11 +123,11 @@ impl RoutingTest {
         };
         let echo_service = Arc::new(EchoService::new());
         let namespaces = runner.namespaces.clone();
-        let model = Model::new(ModelParams {
+        let model = Arc::new(Model::new(ModelParams {
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
-        });
+        }));
         let builtin_environment = startup::builtin_environment_setup(
             &startup_args,
             &model,
