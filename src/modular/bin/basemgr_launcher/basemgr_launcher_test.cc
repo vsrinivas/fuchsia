@@ -56,7 +56,7 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
 
 // Sets up interception of a base shell and passes if the specified base shell is launched
 // through the base_shell basemgr_launcher arg.
-TEST_F(BasemgrLauncherTest, DISABLED_BaseShellArg) {
+TEST_F(BasemgrLauncherTest, BaseShellArg) {
   constexpr char kInterceptUrl[] =
       "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
 
@@ -77,6 +77,8 @@ TEST_F(BasemgrLauncherTest, DISABLED_BaseShellArg) {
   RunLoopUntil([&] { return intercepted; });
 }
 
+// TODO(fxb/41236): This test doesn't check that basemgr is torn down, just that it can be started
+// again with basemgr_launcher.
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
   constexpr char kInterceptUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
@@ -98,4 +100,33 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
   RunBasemgrLauncher({});
 
   RunLoopUntil([&] { return intercepted; });
+}
+
+// Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.
+TEST_F(BasemgrLauncherTest, BadArgs) {
+  constexpr char kInterceptUrl[] =
+      "fuchsia-pkg://fuchsia.com/not_base_shell#meta/not_base_shell.cmx";
+
+  // Setup intercepting a component. This component should never be launched because the argument
+  // is not supported by basemgr_launcher.
+  bool intercepted = false;
+  ASSERT_TRUE(interceptor_.InterceptURL(
+      kInterceptUrl, "",
+      [&intercepted](fuchsia::sys::StartupInfo startup_info,
+                     std::unique_ptr<sys::testing::InterceptedComponent> component) {
+        intercepted = true;
+      }));
+
+  // Create invalid argument for basemgr_launcher and run it
+  std::vector<std::string> args({std::string("--not_supported=") + std::string(kInterceptUrl)});
+
+  bool basemgr_launcher_terminated = false;
+  basemgr_launcher_controller_.events().OnTerminated = [&](int64_t err,
+                                                           fuchsia::sys::TerminationReason reason) {
+    basemgr_launcher_terminated = true;
+  };
+
+  RunBasemgrLauncher(std::move(args));
+  RunLoopUntil([&] { return basemgr_launcher_terminated; });
+  EXPECT_FALSE(intercepted);
 }
