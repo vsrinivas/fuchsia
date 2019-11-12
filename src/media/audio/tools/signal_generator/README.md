@@ -1,7 +1,7 @@
 # Signal Generator tool
 
 This directory contains a developer tool that generates and outputs audio signals, via the Audio,
-AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL protocols.
+AudioRenderer, and GainControl FIDL protocols.
 
 ### USAGE
 
@@ -24,7 +24,6 @@ AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL protocols.
       [--rampdur=<RAMP_DURATION_MSEC>]
       [--sgain=<SYSTEM_GAIN_DB>]
       [--smute[=<0|1>]]
-      [--last | --all]
       [--settings<=ENABLED>]
       [--help | --?]
 
@@ -69,11 +68,6 @@ These optional parameters are interpreted as follows:
     --smute[=<0|1>]         Set System Mute (0=Unmute or 1=Mute; Mute if only '--smute' is provided)
                             Note: changes to System Gain/Mute persist after playback
 
-      By default, system audio output routing policy is unchanged
-    --last                  Set 'Play to Most-Recently-Plugged' routing policy
-    --all                   Set 'Play to All' routing policy
-                            Note: changes to routing policy persist after playback
-
       By default, changes to audio device settings are persisted
     --settings[=<0|1>]      Enable/disable creation/update of device settings
                             (0=Disable, 1=Enable; 0 is default if only '--settings' is provided)
@@ -86,5 +80,5 @@ Developers can use this tool to manipulate a few important systemwide audio sett
 ("master") gain/mute, audio output routing, and systemwide creation/update of settings files for
 audio input and output devices. Changes to these settings affect all audio on the system and
 continue to have effect even after the signal_generator tool exits. Only use the '--sgain',
-'--smute', '--last', '--all' or '--settings' flags when you intend to change the system state in a
+'--smute', or '--settings' flags when you intend to change the system state in a
 persistent, "sticky" way.

@@ -28,8 +28,6 @@ protocol Audio {
     SetSystemGain(float32 gain_db);
     [Transitional, Deprecated]
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
-    [Transitional, Deprecated]
-    SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 };
 
 /// Permitted ranges for AudioRenderer and AudioCapturer

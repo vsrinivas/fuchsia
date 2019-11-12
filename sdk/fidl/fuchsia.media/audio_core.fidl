@@ -131,10 +131,6 @@ protocol AudioCore {
     [Transitional, Deprecated]
     -> SystemGainMuteChanged(float32 gain_db, bool muted);
 
-    // TODO(34922): Replace with flexible audio output routing.
-    [Transitional, Deprecated]
-    SetRoutingPolicy(AudioOutputRoutingPolicy policy);
-
     // By default, reading and writing device settings files is enabled. This
     // method (which has impact across the entire audio subsystem) allows a test
     // client to temporarily disable, then later enable, that reading/writing.
