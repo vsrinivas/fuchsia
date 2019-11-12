@@ -37,13 +37,13 @@ To update the repository including all the submodules, you can use:
 git pull --recurse-submodules
 ```
 
-Alternatively, you can use the semi-official monorepo
-[https://github.com/llvm-project/llvm-project-20170507](https://github.com/llvm-project/llvm-project-20170507)
+Alternatively, you can use the official monorepo
+[https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project)
 maintained by the LLVM community. This repository does not use
 submodules which means you can use the standard Git workflow:
 
 ```bash
-git clone https://github.com/llvm-project/llvm-project-20170507 ${LLVM_SRCDIR}
+git clone https://github.com/llvm/llvm-project ${LLVM_SRCDIR}
 ```
 
 ### Fuchsia SDK
@@ -99,7 +99,7 @@ would use:
 
 ```bash
   -DBOOTSTRAP_LLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DSTAGE2_LINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
 ```
 
 To install the compiler just built into `/usr/local`, you can use the
@@ -129,7 +129,7 @@ The simplest way to build LLVM is to use the following commands:
 ```bash
 cmake -GNinja \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   ${LLVM_SRCDIR}/llvm
 ninja
 ```
@@ -138,7 +138,7 @@ You can enable additional projects using the `LLVM_ENABLE_PROJECTS`
 variable. To enable all common projects, you would use:
 
 ```bash
-  -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;libcxx;libcxxabi;libunwind"
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;libcxx;libcxxabi;libunwind"
 ```
 
 Similarly, you can also enable some projects to be built as runtimes
@@ -146,7 +146,7 @@ which means these projects will be built using the just-built rather
 than the host compiler:
 
 ```bash
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
 ```
 
@@ -198,7 +198,7 @@ cmake -GNinja \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
   -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;libcxx;libcxxabi;libunwind" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;libcxx;libcxxabi;libunwind" \
   -DLLVM_USE_SANITIZER=Memory \
   -DLLVM_ENABLE_LIBCXX=ON \
   -DLLVM_ENABLE_LLD=ON \
@@ -284,10 +284,10 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
   -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
   -DLLVM_ENABLE_LTO=OFF \
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -306,10 +306,10 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_SHARED_LINKER_FLAGS="-ldl -lpthread" \
   -DLLVM_PARALLEL_LINK_JOBS=${LINK_JOBS} \
   -DLLVM_ENABLE_LTO=OFF \
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-unknown-linux-gnu \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
