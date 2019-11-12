@@ -226,12 +226,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestGdcConfigLoading() {
-    zx_handle_t handle;
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, &handle));
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-              pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID, nullptr));
-    EXPECT_EQ(ZX_OK, pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p, &handle));
+    auto result = pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID);
+    EXPECT_TRUE(result.is_error());
+
+    result = pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p);
+    EXPECT_FALSE(result.is_error());
   }
 
   FakeIsp fake_isp_;

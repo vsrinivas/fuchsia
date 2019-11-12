@@ -16,6 +16,7 @@ namespace fake_ddk {
 
 zx_device_t* kFakeDevice = reinterpret_cast<zx_device_t*>(0x55);
 zx_device_t* kFakeParent = reinterpret_cast<zx_device_t*>(0xaa);
+size_t kFakeFWSize = 0x1000;
 
 zx_device_t* FakeDevice() {
   ZX_ASSERT_MSG(Bind::Instance() != nullptr,
@@ -307,7 +308,7 @@ __EXPORT
 zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
   // This is currently a no-op.
   *fw = ZX_HANDLE_INVALID;
-  *size = 0;
+  *size = fake_ddk::kFakeFWSize;
   return ZX_OK;
 }
 

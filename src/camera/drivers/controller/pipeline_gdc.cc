@@ -30,25 +30,22 @@ const char* ToConfigFileName(const camera::GdcConfig& config_type) {
   }
 }
 
-zx_status_t PipelineManager::LoadGdcConfiguration(const camera::GdcConfig& config_type,
-                                                  zx_handle_t* vmo) {
+fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
+    const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
     FX_LOGS(ERROR) << "Invalid GDC configuration type";
-    return ZX_ERR_INVALID_ARGS;
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  if (vmo == nullptr) {
-    FX_LOGS(ERROR) << "Invalid VMO pointer";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+  gdc_config_info info;
   size_t size;
-  auto status = load_firmware(device_, ToConfigFileName(config_type), vmo, &size);
-  if (status != ZX_OK) {
+  auto status = load_firmware(device_, ToConfigFileName(config_type), &info.config_vmo, &size);
+  if (status != ZX_OK || size == 0) {
     FX_PLOGS(ERROR, status) << "Failed to load the GDC firmware";
-    return status;
+    return fit::error(status);
   }
-  return ZX_OK;
+  info.size = size;
+  return fit::ok(std::move(info));
 }
 
 }  // namespace camera
