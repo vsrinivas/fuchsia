@@ -12,7 +12,7 @@ use {
     },
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
-    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect::reader::{snapshot::Snapshot, NodeHierarchy},
     fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
@@ -136,7 +136,7 @@ impl DataCollector for InspectDataCollector {
 
             return self.populate_data_map(&inspect_proxy).await;
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -311,14 +311,14 @@ impl ReaderServer {
         self.active_selectors.lock().unwrap().clear();
     }
 
-    /// Parses an inspect VMO into a node hierarchy, and iterates over the
+    /// Parses an inspect Snapshot into a node hierarchy, and iterates over the
     /// hierarchy creating a copy with selector filters applied.
-    fn filter_inspect_vmo(
-        inspect_vmo: &zx::Vmo,
+    fn filter_inspect_snapshot(
+        inspect_snapshot: Snapshot,
         path_selectors: &RegexSet,
         property_selectors: &Vec<Regex>,
     ) -> Result<NodeHierarchy, Error> {
-        let root_node = NodeHierarchy::try_from(inspect_vmo)?;
+        let root_node = NodeHierarchy::try_from(inspect_snapshot)?;
         let mut new_root = NodeHierarchy::new_root();
         for (node_path, property) in root_node.property_iter() {
             let mut formatted_node_path =
@@ -377,12 +377,33 @@ impl ReaderServer {
                         .await
                     {
                         Ok(_) => {
-                            return Ok((
-                                inspect_data_packet.component_out_dir_path,
-                                collector,
-                                inspect_data_packet.component_node_selector,
-                                inspect_data_packet.node_property_selectors,
-                            ))
+                            match Box::new(collector).take_data().and_then(|data_map| {
+                                Some(data_map.into_iter().fold(Vec::new(), |mut acc, (_, data)| {
+                                    match data {
+                                        Data::Vmo(vmo) => match Snapshot::try_from(&vmo) {
+                                            Ok(snapshot) => acc.push(snapshot),
+                                            _ => {}
+                                        },
+                                        Data::Empty => {}
+                                    }
+                                    acc
+                                }))
+                            }) {
+                                Some(snapshots) => {
+                                    return Ok((
+                                        inspect_data_packet.component_out_dir_path,
+                                        snapshots,
+                                        inspect_data_packet.component_node_selector,
+                                        inspect_data_packet.node_property_selectors,
+                                    ));
+                                }
+                                None => {
+                                    return Err(format_err!(
+                                        "Failed to parse snapshots for: {:?}.",
+                                        inspect_data_packet.component_out_dir_path
+                                    ));
+                                }
+                            };
                         }
                         Err(e) => return Err(e),
                     };
@@ -397,34 +418,27 @@ impl ReaderServer {
         let hierarchy_datas =
             pumped_data_tuple_results.drain(0..).fold(Vec::new(), |mut acc, pumped_data_tuple| {
                 match pumped_data_tuple {
-                    Ok((path, populated_collector, selector_set, property_selectors)) => {
-                        let collector: Box<dyn DataCollector> = Box::new(populated_collector);
-                        collector.take_data().and_then(|data_map| {
-                            data_map.into_iter().for_each(|(_, data)| match data {
-                                Data::Vmo(vmo) => {
-                                    match ReaderServer::filter_inspect_vmo(
-                                        &vmo,
-                                        &selector_set,
-                                        &property_selectors,
-                                    ) {
-                                        Ok(filtered_hierarchy) => {
-                                            acc.push(HierarchyData {
-                                                hierarchy: filtered_hierarchy,
-                                                file_path: path
-                                                    .to_str()
-                                                    .expect("Can't have an invalid path here.")
-                                                    .to_string(),
-                                                fields: vec![],
-                                            });
-                                        }
-                                        // TODO(4601): Failing to parse a node hierarchy
-                                        // might be worth more than a silent failure.
-                                        Err(_) => {}
-                                    }
+                    Ok((path, snapshots, selector_set, property_selectors)) => {
+                        snapshots.into_iter().for_each(|snapshot| {
+                            match ReaderServer::filter_inspect_snapshot(
+                                snapshot,
+                                &selector_set,
+                                &property_selectors,
+                            ) {
+                                Ok(filtered_hierarchy) => {
+                                    acc.push(HierarchyData {
+                                        hierarchy: filtered_hierarchy,
+                                        file_path: path
+                                            .to_str()
+                                            .expect("Can't have an invalid path here.")
+                                            .to_string(),
+                                        fields: vec![],
+                                    });
                                 }
-                                Data::Empty => {}
-                            });
-                            Some(())
+                                // TODO(4601): Failing to parse a node hierarchy
+                                // might be worth more than a silent failure.
+                                Err(_) => {}
+                            }
                         });
                         acc
                     }
