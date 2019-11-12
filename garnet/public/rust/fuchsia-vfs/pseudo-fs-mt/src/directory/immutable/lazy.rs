@@ -12,9 +12,10 @@ mod watchers_task;
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::{AsyncReadDirents, DirectoryConnection, DirectoryEntryContainer},
+        connection::DirectoryConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
+        entry_container::{self, AsyncReadDirents},
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -309,7 +310,7 @@ where
 }
 
 impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-    DirectoryEntryContainer<TraversalPosition>
+    entry_container::Observable<TraversalPosition>
     for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
 where
     TraversalPosition: Default + Send + Sync + 'static,

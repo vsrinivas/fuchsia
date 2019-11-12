@@ -117,8 +117,8 @@ impl Controller {
 
     /// Initiates disconnection between the watcher and this controller.  `disconnect` exits
     /// immediately, after sending a command that still need to be processed by the watcher task.
-    /// It is the resposibility of the watcher task to remove the controller from the list of
-    /// controllers in the [`DirectoryEntryContainer`] this controller was added to.
+    /// It is the responsibility of the watcher task to remove the controller from the list of
+    /// controllers in the [`EntryContainer`] this controller was added to.
     pub(crate) fn disconnect(&mut self) {
         if self.commands.unbounded_send(Command::Disconnect).is_ok() {
             return;

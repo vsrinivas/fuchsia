@@ -19,4 +19,5 @@ pub mod simple;
 
 pub mod dirents_sink;
 pub mod entry;
+pub mod entry_container;
 pub mod read_dirents;

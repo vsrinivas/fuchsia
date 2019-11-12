@@ -8,9 +8,10 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::{AsyncReadDirents, DirectoryConnection, DirectoryEntryContainer},
+        connection::DirectoryConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
+        entry_container::{self, AsyncReadDirents},
         traversal_position::AlphabeticalTraversal,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -54,64 +55,6 @@ impl Simple {
         Arc::new(Simple {
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
         })
-    }
-
-    /// Adds a child entry to this directory.
-    ///
-    /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
-    ///   * An entry with the same name is already present in the directory.
-    pub fn add_entry<Name>(
-        self: Arc<Self>,
-        name: Name,
-        entry: Arc<dyn DirectoryEntry>,
-    ) -> Result<(), Status>
-    where
-        Name: Into<String>,
-    {
-        let name = name.into();
-
-        assert_eq_size!(u64, usize);
-        if name.len() as u64 > MAX_FILENAME {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        let mut this = self.inner.lock();
-
-        if this.entries.contains_key(&name) {
-            return Err(Status::ALREADY_EXISTS);
-        }
-
-        this.watchers.send_event(&mut SingleNameEventProducer::added(&name));
-
-        let _ = this.entries.insert(name, entry);
-        Ok(())
-    }
-
-    /// Removes a child entry from this directory.  In case an entry with the matching name was
-    /// found, the entry will be returned to the caller.
-    ///
-    /// Possible errors are:
-    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
-    pub fn remove_entry<Name>(
-        self: Arc<Self>,
-        name: Name,
-    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>
-    where
-        Name: Into<String>,
-    {
-        let name = name.into();
-
-        assert_eq_size!(u64, usize);
-        if name.len() as u64 >= MAX_FILENAME {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        let mut this = self.inner.lock();
-
-        this.watchers.send_event(&mut SingleNameEventProducer::removed(&name));
-
-        Ok(this.entries.remove(&name))
     }
 }
 
@@ -163,7 +106,47 @@ impl DirectoryEntry for Simple {
     }
 }
 
-impl DirectoryEntryContainer<AlphabeticalTraversal> for Simple {
+impl entry_container::DirectlyMutable for Simple {
+    fn add_entry_impl(
+        self: Arc<Self>,
+        name: String,
+        entry: Arc<dyn DirectoryEntry>,
+    ) -> Result<(), Status> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 > MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        if this.entries.contains_key(&name) {
+            return Err(Status::ALREADY_EXISTS);
+        }
+
+        this.watchers.send_event(&mut SingleNameEventProducer::added(&name));
+
+        let _ = this.entries.insert(name, entry);
+        Ok(())
+    }
+
+    fn remove_entry_impl(
+        self: Arc<Self>,
+        name: String,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        this.watchers.send_event(&mut SingleNameEventProducer::removed(&name));
+
+        Ok(this.entries.remove(&name))
+    }
+}
+
+impl entry_container::Observable<AlphabeticalTraversal> for Simple {
     fn read_dirents(
         self: Arc<Self>,
         pos: AlphabeticalTraversal,

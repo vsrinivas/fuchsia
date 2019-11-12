@@ -9,8 +9,8 @@ use crate::{
             check_child_connection_flags, new_connection_validate_flags,
             POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
         },
-        dirents_sink,
         entry::DirectoryEntry,
+        entry_container::{self, AsyncReadDirents},
         read_dirents,
     },
     execution_scope::ExecutionScope,
@@ -29,41 +29,22 @@ use {
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
-    futures::{future::BoxFuture, stream::StreamExt},
+    futures::stream::StreamExt,
     std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
 };
 
-pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
-
-pub enum AsyncReadDirents {
-    Immediate(ReadDirentsResult),
-    Future(BoxFuture<'static, ReadDirentsResult>),
-}
-
-impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
-    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
-        AsyncReadDirents::Immediate(Ok(done))
-    }
-}
-
-pub trait DirectoryEntryContainer<TraversalPosition>: DirectoryEntry + Send
+pub trait ConnectionClient<TraversalPosition>:
+    DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync
 where
     TraversalPosition: Default + Send + Sync + 'static,
 {
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: TraversalPosition,
-        sink: Box<dyn dirents_sink::Sink<TraversalPosition>>,
-    ) -> AsyncReadDirents;
+}
 
-    fn register_watcher(
-        self: Arc<Self>,
-        scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
-    ) -> Status;
-
-    fn unregister_watcher(self: Arc<Self>, key: usize);
+impl<TraversalPosition, T> ConnectionClient<TraversalPosition> for T
+where
+    TraversalPosition: Default + Send + Sync + 'static,
+    T: DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync,
+{
 }
 
 /// Represents a FIDL connection to a directory.  A single directory may contain multiple
@@ -77,7 +58,7 @@ where
     /// use.
     scope: ExecutionScope,
 
-    directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
+    directory: Arc<dyn ConnectionClient<TraversalPosition>>,
 
     requests: DirectoryRequestStream,
 
@@ -116,7 +97,7 @@ where
     /// an error, sends an appropriate `OnOpen` event (if requested) and returns `None`.
     pub fn create_connection(
         scope: ExecutionScope,
-        directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
+        directory: Arc<dyn ConnectionClient<TraversalPosition>>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,

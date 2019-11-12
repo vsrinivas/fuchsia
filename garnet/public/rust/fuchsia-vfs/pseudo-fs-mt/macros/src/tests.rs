@@ -36,6 +36,7 @@ fn empty() {
     check_pseudo_directory_impl!(
         "",
         "{ \
+             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
              let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              __dir \
          }"
@@ -52,6 +53,7 @@ fn one_entry() {
         "#
         ),
         "{ \
+             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
              let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"name\" , \"Span\" , \
@@ -72,6 +74,7 @@ fn two_entries() {
         "#
         ),
         "{ \
+             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
              let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
@@ -96,6 +99,7 @@ fn assign_to() {
         "#
         ),
         "{ \
+             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
              my_dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
@@ -118,6 +122,7 @@ fn entry_has_name_from_ref() {
         "#
         ),
         "{ \
+             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
              let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  test_name , \"Span\" , \

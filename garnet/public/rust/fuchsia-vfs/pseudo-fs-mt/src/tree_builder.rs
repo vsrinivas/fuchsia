@@ -8,7 +8,7 @@
 //! tree structure to be defined at compile time, while this helper allows the tree structure to be
 //! dynamic.
 
-use crate::directory::{self, entry::DirectoryEntry, immutable};
+use crate::directory::{self, entry::DirectoryEntry, entry_container::DirectlyMutable, immutable};
 
 use {
     failure::Fail,

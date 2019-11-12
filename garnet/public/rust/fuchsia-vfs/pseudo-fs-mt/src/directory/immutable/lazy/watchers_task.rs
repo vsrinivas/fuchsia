@@ -10,7 +10,7 @@ use super::{WatcherCommand, WatcherEvent};
 
 use crate::{
     directory::{
-        connection::{AsyncReadDirents, DirectoryEntryContainer},
+        entry_container::{self, AsyncReadDirents},
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
             Watchers,
@@ -34,7 +34,7 @@ use {
 /// Runs a command loop for all watchers attached to a lazy directory, processing
 /// [`WatcherCommand`] commands and any [`WatcherEvents`].
 pub(super) async fn run<TraversalPosition, WatcherEvents>(
-    directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
+    directory: Arc<dyn entry_container::Observable<TraversalPosition>>,
     mut commands: UnboundedReceiver<WatcherCommand>,
     watcher_events: WatcherEvents,
 ) where
@@ -84,7 +84,7 @@ pub(super) async fn run<TraversalPosition, WatcherEvents>(
 
 async fn handle_register_watcher<TraversalPosition>(
     watchers: &mut Watchers,
-    directory: Arc<dyn DirectoryEntryContainer<TraversalPosition>>,
+    directory: Arc<dyn entry_container::Observable<TraversalPosition>>,
     scope: ExecutionScope,
     mask: u32,
     channel: Channel,

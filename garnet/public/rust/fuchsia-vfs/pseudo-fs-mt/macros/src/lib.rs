@@ -82,14 +82,14 @@ fn pseudo_directory_impl(input: TokenStream) -> TokenStream {
     // Should be def_site, but it is behind cfg(procmacro2_semver_exempt).
     let span = Span::call_site();
 
-    let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::directory::immutable);
+    let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::directory);
     let macro_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::pseudo_directory);
 
     let (dir_var, constructor, result) = match parsed.assign_to {
         Some(ident) => (
             ident.clone(),
             quote! {
-                #ident = #directory_mod::simple();
+                #ident = #directory_mod::immutable::simple();
             },
             quote! { #ident.clone() },
         ),
@@ -99,7 +99,7 @@ fn pseudo_directory_impl(input: TokenStream) -> TokenStream {
             (
                 ident.clone(),
                 quote! {
-                    let #ident = #directory_mod::simple();
+                    let #ident = #directory_mod::immutable::simple();
                 },
                 quote! { #ident },
             )
@@ -114,8 +114,11 @@ fn pseudo_directory_impl(input: TokenStream) -> TokenStream {
         }
     });
 
+    // `use ...::DirectlyMutable` is needed to allow for the `add_entry` call.
     TokenStream::from(quote! {
         {
+            use #directory_mod::entry_container::DirectlyMutable;
+
             #constructor
 
             #( #entries )*
