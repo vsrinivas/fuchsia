@@ -5,7 +5,10 @@
 zx_library("fs-management") {
   sdk = "shared"
   sdk_headers = [
+    "fs-management/admin.h",
+    "fs-management/format.h",
     "fs-management/fvm.h",
+    "fs-management/launch.h",
     "fs-management/mount.h",
   ]
   shared = true
