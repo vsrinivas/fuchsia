@@ -5,7 +5,8 @@
             "composition_pattern": "ticker",
             "intent_filters": [
                 {
-                    "action": "com.google.fuchsia.module.runner"
+                    "action": "com.google.fuchsia.module.runner",
+                    "parameters": []
                 }
             ],
             "suggestion_headline": "Module with fake runner"
