@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # List of kernel command line arguments to bake into the Zedboot image.
+  # See //docs/zircon/kernel_cmdline.md and
+  # [`zedboot_devmgr_config`](#zedboot_devmgr_config).
+  zedboot_cmdline_args = []
+
+  # Files containing additional kernel command line arguments to bake into
+  # the Zedboot image.  The contents of these files (in order) come after any
+  # arguments directly in [`zedboot_cmdline_args`](#zedboot_cmdline_args).
+  # These can be GN `//` source pathnames or absolute system pathnames.
+  zedboot_cmdline_files = []
+
+  # List of arguments to populate /boot/config/devmgr in the Zedboot image.
+  zedboot_devmgr_config = []
+}

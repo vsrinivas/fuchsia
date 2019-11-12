@@ -10,23 +10,8 @@ import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
 import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
+import("//build/images/zedboot/zedboot_args.gni")
 import("//build/images/zxcrypt.gni")
-
-declare_args() {
-  # List of kernel command line arguments to bake into the Zedboot image.
-  # See //docs/zircon/kernel_cmdline.md and
-  # [`zedboot_devmgr_config`](#zedboot_devmgr_config).
-  zedboot_cmdline_args = []
-
-  # Files containing additional kernel command line arguments to bake into
-  # the Zedboot image.  The contents of these files (in order) come after any
-  # arguments directly in [`zedboot_cmdline_args`](#zedboot_cmdline_args).
-  # These can be GN `//` source pathnames or absolute system pathnames.
-  zedboot_cmdline_files = []
-
-  # List of arguments to populate /boot/config/devmgr in the Zedboot image.
-  zedboot_devmgr_config = []
-}
 
 # Construct a minimal manifest containing only the few user binaries
 # that constitute zedboot, and the libraries they depend on.

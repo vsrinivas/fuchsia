@@ -34,6 +34,12 @@ import("//build/images/shell_commands.gni")
 #     [list of strings] List of arguments to add to /boot/config/devmgr.
 #     These arguments come after synthesized arguments to configure blobfs and
 #     pkgfs.
+#
+#   cmdline (optional)
+#       [list of strings] Kernel command line text.
+#
+#   cmdline_inputs (optional)
+#       [list of files] Input files treated as kernel command line text.
 template("assemble_system") {
   base_packages = invoker.base_packages
 
@@ -316,6 +322,12 @@ template("assemble_system") {
         forward_variables_from(invoker.metadata, "*")
       }
     }
+
+    forward_variables_from(invoker,
+                           [
+                             "cmdline",
+                             "cmdline_inputs",
+                           ])
 
     testonly = true
     deps = [
