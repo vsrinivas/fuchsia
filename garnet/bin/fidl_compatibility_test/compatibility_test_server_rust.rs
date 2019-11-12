@@ -16,6 +16,7 @@ use {
         server::ServiceFs,
     },
     futures::{StreamExt, TryStreamExt},
+    std::thread,
 };
 
 fn launch_and_connect_to_echo(
@@ -165,40 +166,32 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         responder.send(&mut result).context("Error responding")?;
                     }
                 }
-                EchoRequest::EchoTable { .. } => {
-                    // Enabling this blows the stack.
+                EchoRequest::EchoTable { mut value, forward_to_server, responder } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        value = echo
+                            .echo_table(value, "")
+                            .await
+                            .context("Error calling echo_table on proxy")?;
+                        drop(app);
+                    }
+                    responder.send(value).context("Error responding")?;
                 }
-                EchoRequest::EchoTableWithError { .. } => {
-                    // Enabling this blows the stack.
+                EchoRequest::EchoTableWithError { .. } => unimplemented!(),
+                EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        value = echo
+                            .echo_xunions(&mut value.iter_mut(), "")
+                            .await
+                            .context("Error calling echo_xunions on proxy")?;
+                        drop(app);
+                    }
+                    responder.send(&mut value.iter_mut()).context("Error responding")?;
                 }
-                EchoRequest::EchoXunions { .. } => {
-                    // Enabling this blows the stack.
-                }
-                EchoRequest::EchoXunionsWithError { .. } => {
-                    // Enabling this blows the stack.
-                } /*
-                  EchoRequest::EchoTable { mut value, forward_to_server, responder } => {
-                      if !forward_to_server.is_empty() {
-                          let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                              .context("Error connecting to proxy")?;
-                          value = echo.echo_table(value, "").await
-                              .context("Error calling echo_table on proxy")?;
-                          drop(app);
-                      }
-                      responder.send(value)
-                          .context("Error responding")?;
-                  }
-                  EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
-                      if !forward_to_server.is_empty() {
-                          let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                              .context("Error connecting to proxy")?;
-                          value = echo.echo_xunions(&mut value.iter_mut(), "").await
-                              .context("Error calling echo_xunions on proxy")?;
-                          drop(app);
-                      }
-                      responder.send(&mut value.iter_mut()).context("Error responding")?;
-                  }
-                  */
+                EchoRequest::EchoXunionsWithError { .. } => unimplemented!(),
             }
             Ok(())
         })
@@ -212,6 +205,15 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
 }
 
 fn main() -> Result<(), Error> {
+    const STACK_SIZE: usize = 512 * 1024;
+
+    // Create a child thread with a larger stack size to accomodate large structures being built.
+    let thread_handle = thread::Builder::new().stack_size(STACK_SIZE).spawn(run_test)?;
+
+    thread_handle.join().expect("Failed to join test thread")
+}
+
+fn run_test() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let launcher = launcher().context("Error connecting to application launcher")?;
 

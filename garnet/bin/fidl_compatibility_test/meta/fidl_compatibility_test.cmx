@@ -4,7 +4,8 @@
             "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_cpp#meta/fidl_compatibility_test_server_cpp.cmx",
             "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_cpp_write_xunion#meta/fidl_compatibility_test_server_cpp_write_xunion.cmx",
             "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_go#meta/fidl_compatibility_test_server_go.cmx",
-            "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_llcpp#meta/fidl_compatibility_test_server_llcpp.cmx"
+            "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_llcpp#meta/fidl_compatibility_test_server_llcpp.cmx",
+            "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_rust#meta/fidl_compatibility_test_server_rust.cmx"
         ],
         "binary": "test/fidl_compatibility_test"
     },

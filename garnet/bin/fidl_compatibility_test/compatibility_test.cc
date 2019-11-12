@@ -1277,7 +1277,7 @@ void ForAllServers(TestBody body) {
   ForSomeServers([](const std::string& _) { return true; }, body);
 }
 
-AllowServer Exclude(std::initializer_list<const char*> substrings) {
+[[maybe_unused]] AllowServer Exclude(std::initializer_list<const char*> substrings) {
   return [substrings](const std::string& server_url) {
     for (auto substring : substrings) {
       if (server_url.find(substring) != std::string::npos) {
@@ -1311,27 +1311,25 @@ TEST(Compatibility, EchoStruct) {
 }
 
 TEST(Compatibility, EchoStructNoRetval) {
-  ForSomeServers(
-      // See: FIDL-644
-      Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url) {
-        Struct sent;
-        InitializeStruct(&sent);
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    Struct sent;
+    InitializeStruct(&sent);
 
-        Struct sent_clone;
-        sent.Clone(&sent_clone);
-        fidl::test::compatibility::Struct resp_clone;
-        bool event_received = false;
-        proxy.events().EchoEvent = [&loop, &resp_clone, &event_received](Struct resp) {
-          resp.Clone(&resp_clone);
-          event_received = true;
-          loop.Quit();
-        };
-        proxy->EchoStructNoRetVal(std::move(sent), server_url);
-        loop.Run();
-        ASSERT_TRUE(event_received);
-        ExpectEq(sent_clone, resp_clone);
-      });
+    Struct sent_clone;
+    sent.Clone(&sent_clone);
+    fidl::test::compatibility::Struct resp_clone;
+    bool event_received = false;
+    proxy.events().EchoEvent = [&loop, &resp_clone, &event_received](Struct resp) {
+      resp.Clone(&resp_clone);
+      event_received = true;
+      loop.Quit();
+    };
+    proxy->EchoStructNoRetVal(std::move(sent), server_url);
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    ExpectEq(sent_clone, resp_clone);
+  });
 }
 
 TEST(Compatibility, EchoArrays) {
@@ -1391,38 +1389,36 @@ TEST(Compatibility, EchoVectors) {
 }
 
 TEST(Compatibility, EchoTable) {
-  ForSomeServers(
-      // See: FIDL-644
-      Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url) {
-        // Using randomness to avoid having to come up with varied values by
-        // hand. Seed deterministically so that this function's outputs are
-        // predictable.
-        DataGenerator generator(0x1234);
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
 
-        AllTypesTable sent;
-        InitializeAllTypesTable(&sent, generator);
+    AllTypesTable sent;
+    InitializeAllTypesTable(&sent, generator);
 
-        AllTypesTable sent_clone;
-        sent.Clone(&sent_clone);
-        AllTypesTable resp_clone;
-        bool called_back = false;
-        proxy->EchoTable(std::move(sent), server_url,
-                         [&loop, &resp_clone, &called_back](AllTypesTable resp) {
-                           ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-                           called_back = true;
-                           loop.Quit();
-                         });
+    AllTypesTable sent_clone;
+    sent.Clone(&sent_clone);
+    AllTypesTable resp_clone;
+    bool called_back = false;
+    proxy->EchoTable(std::move(sent), server_url,
+                     [&loop, &resp_clone, &called_back](AllTypesTable resp) {
+                       ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                       called_back = true;
+                       loop.Quit();
+                     });
 
-        loop.Run();
-        ASSERT_TRUE(called_back);
-        ExpectAllTypesTableEq(sent_clone, resp_clone);
-      });
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectAllTypesTableEq(sent_clone, resp_clone);
+  });
 }
 
 TEST(Compatibility, EchoXunions) {
-  ForSomeServers(Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                                       const std::string& server_url) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
     // Using randomness to avoid having to come up with varied values by
     // hand. Seed deterministically so that this function's outputs are
     // predictable.
