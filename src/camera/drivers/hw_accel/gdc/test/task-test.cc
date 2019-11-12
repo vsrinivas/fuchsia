@@ -185,6 +185,12 @@ class TaskTest : public zxtest::Test {
       fake_bti_destroy(bti_handle_.get());
     }
     zx_handle_close(config_info_.config_vmo);
+    for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
+      ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection_.buffers[i].vmo));
+    }
+    for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
+      ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection_.buffers[i].vmo));
+    }
   }
 
   zx::bti bti_handle_;
@@ -505,7 +511,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 TEST(TaskTest, NonContigVmoTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   hw_accel_callback_t callback;
-  zx_handle_t config_vmo;
+  zx::vmo config_vmo;
   buffer_collection_info_2_t input_buffer_collection;
   buffer_collection_info_2_t output_buffer_collection;
   ASSERT_OK(fake_bti_create(&bti_handle));
@@ -519,12 +525,12 @@ TEST(TaskTest, NonContigVmoTest) {
       output_buffer_collection, format, bti_handle, kWidth, kHeight, kNumberOfBuffers);
   ASSERT_OK(status);
 
-  status = zx_vmo_create(kConfigSize, 0, &config_vmo);
+  ASSERT_OK(zx::vmo::create(kConfigSize, 0, &config_vmo));
+
   gdc_config_info info;
-  info.config_vmo = config_vmo;
+  info.config_vmo = config_vmo.release();
   info.size = kConfigSize;
 
-  ASSERT_OK(status);
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
@@ -535,6 +541,12 @@ TEST(TaskTest, NonContigVmoTest) {
                       image_format_table, 1, 0, &info, 1, &callback, zx::bti(bti_handle));
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_OK, status);
+  for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
+    ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection.buffers[i].vmo));
+  }
+  for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
+    ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection.buffers[i].vmo));
+  }
 }
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
@@ -558,6 +570,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   status = task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1, &callback,
                       zx::bti(bti_handle));
   EXPECT_NE(ZX_OK, status);
+  zx_handle_close(config_vmo);
 }
 
 }  // namespace

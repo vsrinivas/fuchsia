@@ -183,6 +183,12 @@ class TaskTest : public zxtest::Test {
     if (bti_handle_ != ZX_HANDLE_INVALID) {
       fake_bti_destroy(bti_handle_.get());
     }
+    for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
+      ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection_.buffers[i].vmo));
+    }
+    for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
+      ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection_.buffers[i].vmo));
+    }
   }
 
   zx::vmo watermark_vmo_;
@@ -608,6 +614,7 @@ TEST(TaskTest, NonContigVmoTest) {
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
+  zx_handle_close(watermark_vmo);
 }
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
@@ -635,6 +642,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
                                image_format_table, kImageFormatTableSize, 0, &callback,
                                zx::bti(bti_handle), fake_canvas);
   EXPECT_NE(ZX_OK, status);
+  zx_handle_close(watermark_vmo);
 }
 
 }  // namespace
