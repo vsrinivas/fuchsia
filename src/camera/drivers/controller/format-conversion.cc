@@ -68,7 +68,8 @@ fuchsia_sysmem_ImageFormat_2 PipelineManager::ConvertHlcppImageFormat2toCType(
   };
 }
 
-fuchsia_sysmem_BufferCollectionInfo_2 PipelineManager::ConvertHlcppBufferCollection2toCType(
+fit::result<fuchsia_sysmem_BufferCollectionInfo_2, zx_status_t>
+PipelineManager::ConvertHlcppBufferCollection2toCType(
     fuchsia::sysmem::BufferCollectionInfo_2* hlcpp_buffer_collection) {
   fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection;
   buffer_collection.buffer_count = hlcpp_buffer_collection->buffer_count;
@@ -136,10 +137,16 @@ fuchsia_sysmem_BufferCollectionInfo_2 PipelineManager::ConvertHlcppBufferCollect
       hlcpp_image_format_constraints.required_max_bytes_per_row;
 
   for (uint32_t i = 0; i < hlcpp_buffer_collection->buffer_count; ++i) {
-    buffer_collection.buffers[i].vmo = hlcpp_buffer_collection->buffers[i].vmo.release();
+    zx::vmo vmo;
+    auto status = hlcpp_buffer_collection->buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to dup VMO";
+      return fit::error(status);
+    }
+    buffer_collection.buffers[i].vmo = vmo.release();
   }
 
-  return buffer_collection;
+  return fit::ok(buffer_collection);
 }
 
 }  // namespace camera

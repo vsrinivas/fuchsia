@@ -113,8 +113,10 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints, &hlcpp_buffer));
   EXPECT_EQ(hlcpp_buffer.buffer_count, kOutputStreamMlDSMinBufferForCamping);
 
-  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer =
-      pipeline_manager_->ConvertHlcppBufferCollection2toCType(&hlcpp_buffer);
+  auto result = pipeline_manager_->ConvertHlcppBufferCollection2toCType(&hlcpp_buffer);
+  EXPECT_FALSE(result.is_error());
+
+  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer = result.value();
   EXPECT_EQ(c_buffer.buffer_count, hlcpp_buffer.buffer_count);
   auto& c_buffer_settings = c_buffer.settings.buffer_settings;
   auto& hlcpp_buffer_settings = hlcpp_buffer.settings.buffer_settings;
@@ -184,6 +186,10 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
             hlcpp_image_format_constraints.required_min_bytes_per_row);
   EXPECT_EQ(c_image_format_constraints.required_max_bytes_per_row,
             hlcpp_image_format_constraints.required_max_bytes_per_row);
+
+  for (uint32_t i = 0; i < c_buffer.buffer_count; ++i) {
+    EXPECT_EQ(ZX_OK, zx_handle_close(c_buffer.buffers[i].vmo));
+  }
 }
 
 TEST_F(ControllerMemoryAllocatorTest, ConvertImageFormat2TypeTest) {
