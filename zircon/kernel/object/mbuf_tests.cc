@@ -37,9 +37,9 @@ bool WriteHelper(MBufChain* chain, const char* str, MessageType message_type) {
   const size_t length = strlen(str);
   ktl::unique_ptr<UserMemory> memory = UserMemory::Create(length);
   ASSERT_NE(nullptr, memory.get());
-  ASSERT_EQ(ZX_OK, make_user_out_ptr(memory->out()).copy_array_to_user(str, length));
+  ASSERT_EQ(ZX_OK, make_user_out_ptr(memory->out<char>()).copy_array_to_user(str, length));
 
-  auto user_in = make_user_in_ptr(memory->in());
+  auto user_in = make_user_in_ptr(memory->in<char>());
   size_t written = 0;
   if (message_type == MessageType::kDatagram) {
     ASSERT_EQ(ZX_OK, chain->WriteDatagram(user_in, length, &written));
@@ -64,7 +64,7 @@ fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message
     return nullptr;
   }
 
-  auto user_out = make_user_out_ptr(memory->out());
+  auto user_out = make_user_out_ptr(memory->out<char>());
   bool datagram = (message_type == MessageType::kDatagram);
   size_t actual;
   zx_status_t status = (read_type == ReadType::kRead)
@@ -81,7 +81,7 @@ fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message
     return nullptr;
   }
 
-  if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.data(), actual) != ZX_OK) {
+  if (make_user_in_ptr(memory->in<char>()).copy_array_from_user(buffer.data(), actual) != ZX_OK) {
     unittest_printf("Failed to copy user memory bytes\n");
     return nullptr;
   }
@@ -113,7 +113,7 @@ static bool initial_state() {
 static bool stream_read_empty() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   MBufChain chain;
   size_t actual;
@@ -126,8 +126,8 @@ static bool stream_read_empty() {
 static bool stream_read_zero() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   MBufChain chain;
   size_t written = 7;
@@ -147,8 +147,8 @@ static bool stream_write_basic() {
   constexpr int kNumWrites = 5;
 
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   size_t written = 0;
   MBufChain chain;
@@ -168,8 +168,8 @@ static bool stream_write_basic() {
   constexpr size_t kTotalLen = kWriteLen * kNumWrites;
   ASSERT_EQ(kTotalLen, chain.size());
   ktl::unique_ptr<UserMemory> read_buf = UserMemory::Create(kTotalLen);
-  auto read_buf_in = make_user_in_ptr(read_buf->in());
-  auto read_buf_out = make_user_out_ptr(read_buf->out());
+  auto read_buf_in = make_user_in_ptr(read_buf->in<char>());
+  auto read_buf_out = make_user_out_ptr(read_buf->out<char>());
 
   size_t actual;
   zx_status_t status = chain.Read(read_buf_out, kTotalLen, false, &actual);
@@ -198,7 +198,7 @@ static bool stream_write_basic() {
 static bool stream_write_zero() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_in = make_user_in_ptr(mem->in());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
   size_t written = 7;
   MBufChain chain;
   // TODO(maniscalco): Is ZX_ERR_SHOULD_WAIT really the right error here in this case?
@@ -215,8 +215,8 @@ static bool stream_write_too_much() {
   BEGIN_TEST;
   constexpr size_t kWriteLen = 65536;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
   size_t written = 0;
   MBufChain chain;
   size_t total_written = 0;
@@ -302,7 +302,7 @@ static bool stream_peek_underflow() {
 static bool datagram_read_empty() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   MBufChain chain;
   size_t actual;
@@ -316,8 +316,8 @@ static bool datagram_read_empty() {
 static bool datagram_read_zero() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   MBufChain chain;
   size_t written = 7;
@@ -335,8 +335,8 @@ static bool datagram_read_buffer_too_small() {
   BEGIN_TEST;
   constexpr size_t kWriteLen = 32;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
   size_t written = 0;
   MBufChain chain;
 
@@ -393,8 +393,8 @@ static bool datagram_write_basic() {
   size_t total_written = 0;
 
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kMaxLength);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   MBufChain chain;
   // Write a series of datagrams with different sizes.
@@ -435,7 +435,7 @@ static bool datagram_write_basic() {
 static bool datagram_write_zero() {
   BEGIN_TEST;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
-  auto mem_in = make_user_in_ptr(mem->in());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
 
   size_t written = 7;
   MBufChain chain;
@@ -453,8 +453,8 @@ static bool datagram_write_too_much() {
   BEGIN_TEST;
   constexpr size_t kWriteLen = 65536;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   size_t written = 0;
   MBufChain chain;
@@ -489,7 +489,7 @@ static bool datagram_write_huge_packet() {
 
   const size_t kHugePacketSize = chain.max_size() + 1;
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kHugePacketSize);
-  auto mem_in = make_user_in_ptr(mem->in());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
 
   size_t written;
   zx_status_t status = chain.WriteDatagram(mem_in, kHugePacketSize, &written);

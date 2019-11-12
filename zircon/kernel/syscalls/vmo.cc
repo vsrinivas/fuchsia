@@ -78,7 +78,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data, uint64_t 
   if (status != ZX_OK)
     return status;
 
-  return vmo->Read(up->aspace().get(), _data, len, offset);
+  return vmo->Read(up->aspace().get(), _data.reinterpret<char>(), len, offset);
 }
 
 // zx_status_t zx_vmo_write
@@ -94,7 +94,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data, uin
   if (status != ZX_OK)
     return status;
 
-  return vmo->Write(up->aspace().get(), _data, len, offset);
+  return vmo->Write(up->aspace().get(), _data.reinterpret<const char>(), len, offset);
 }
 
 // zx_status_t zx_vmo_get_size
@@ -154,7 +154,7 @@ zx_status_t sys_vmo_op_range(zx_handle_t handle, uint32_t op, uint64_t offset, u
     return status;
   }
 
-  return vmo->RangeOp(op, offset, size, _buffer, buffer_size, rights);
+  return vmo->RangeOp(op, offset, size, _buffer.reinterpret<char>(), buffer_size, rights);
 }
 
 // zx_status_t zx_vmo_set_cache_policy

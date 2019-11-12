@@ -127,11 +127,11 @@ class VmObject : public fbl::RefCounted<VmObject>,
   }
 
   // read/write operators against user space pointers only
-  virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<void> ptr, uint64_t offset,
+  virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
                                size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const void> ptr,
+  virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
                                 uint64_t offset, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -158,7 +158,7 @@ zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
   return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len, size_t* nwritten) {
+zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, size_t* nwritten) {
   canary_.Assert();
 
   LTRACE_ENTRY;
@@ -182,7 +182,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len, siz
   return peer_->WriteSelfLocked(src, len, nwritten);
 }
 
-zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_t len,
+zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const char> src, size_t len,
                                               size_t* written) {
   canary_.Assert();
 
@@ -233,7 +233,7 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
   return status;
 }
 
-zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t len,
                                    size_t* nread) {
   canary_.Assert();
 

@@ -143,7 +143,7 @@ zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t opt
   switch (action) {
     case KTRACE_ACTION_NEW_PROBE: {
       char name[ZX_MAX_NAME_LEN];
-      if (_ptr.copy_array_from_user(name, sizeof(name) - 1) != ZX_OK)
+      if (_ptr.reinterpret<char>().copy_array_from_user(name, sizeof(name) - 1) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
       name[sizeof(name) - 1] = 0;
       return ktrace_control(action, options, name);

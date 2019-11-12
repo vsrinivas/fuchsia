@@ -121,34 +121,36 @@ bool capture_faults_test_capture() {
   END_TEST;
 }
 
-// Verify is_copy_out_allowed<T>::value is false when T contains implicit padding.
+// Verify is_copy_allowed<T>::value is true when T contains no implicit padding.
+struct SomeTypeWithNoPadding {
+  uint64_t field1;
+};
+static_assert(internal::is_copy_allowed<SomeTypeWithNoPadding>::value);
+static_assert(internal::is_copy_allowed<int>::value);
+static_assert(internal::is_copy_allowed<zx_port_packet_t>::value);
+
+// Verify is_copy_allowed<void>::value is false.
+static_assert(!internal::is_copy_allowed<void>::value);
+
+// Verify is_copy_allowed<T>::value is false when T contains implicit padding.
 struct SomeTypeWithPadding {
   uint64_t field1;
   uint32_t field2;
 };
-static_assert(!internal::is_copy_out_allowed<SomeTypeWithPadding>::value);
+static_assert(!internal::is_copy_allowed<SomeTypeWithPadding>::value);
 
-// Verify is_copy_out_allowed<T>::value is true when T contains no implicit padding.
-static_assert(internal::is_copy_out_allowed<void>::value);
-struct SomeTypeWithNoPadding {
-  uint64_t field1;
-};
-static_assert(internal::is_copy_out_allowed<SomeTypeWithNoPadding>::value);
-static_assert(internal::is_copy_out_allowed<int>::value);
-static_assert(internal::is_copy_out_allowed<zx_port_packet_t>::value);
-
-// Verify is_copy_out_allowed<T>::value is false when T does not have a standard-layout.
+// Verify is_copy_allowed<T>::value is false when T does not have a standard-layout.
 struct SomeTypeWithNonStandardLayout : SomeTypeWithNoPadding {
   uint32_t another_field;
 };
-static_assert(!internal::is_copy_out_allowed<SomeTypeWithNonStandardLayout>::value);
+static_assert(!internal::is_copy_allowed<SomeTypeWithNonStandardLayout>::value);
 
-// Verify is_copy_out_allowed<T>::value is false when T is not trival.
+// Verify is_copy_allowed<T>::value is false when T is not trival.
 struct SomeTypeNonTrivial {
   SomeTypeNonTrivial(const SomeTypeNonTrivial& other) { another_field = other.another_field; }
   uint32_t another_field;
 };
-static_assert(!internal::is_copy_out_allowed<SomeTypeNonTrivial>::value);
+static_assert(!internal::is_copy_allowed<SomeTypeNonTrivial>::value);
 
 }  // namespace
 

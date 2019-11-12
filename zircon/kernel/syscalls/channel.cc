@@ -171,7 +171,7 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
     return result;
 
   if (num_bytes > 0u) {
-    if (msg->CopyDataTo(bytes) != ZX_OK)
+    if (msg->CopyDataTo(bytes.reinterpret<char>()) != ZX_OK)
       return ZX_ERR_INVALID_ARGS;
   }
 
@@ -227,7 +227,7 @@ static zx_status_t channel_read_out(ProcessDispatcher* up, MessagePacketPtr repl
     return status;
 
   if (num_bytes > 0u) {
-    if (reply->CopyDataTo(make_user_out_ptr(args->rd_bytes)) != ZX_OK) {
+    if (reply->CopyDataTo(make_user_out_ptr(static_cast<char*>(args->rd_bytes))) != ZX_OK) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
@@ -320,7 +320,8 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
   }
 
   MessagePacketPtr msg;
-  status = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
+  status =
+      MessagePacket::Create(user_bytes.reinterpret<const char>(), num_bytes, num_handles, &msg);
   if (status != ZX_OK) {
     return status;
   }
@@ -374,7 +375,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
   if (status != ZX_OK)
     return status;
 
-  user_in_ptr<const void> user_bytes = make_user_in_ptr(args.wr_bytes);
+  user_in_ptr<const char> user_bytes = make_user_in_ptr(static_cast<const char*>(args.wr_bytes));
   user_in_ptr<const zx_handle_t> user_handles = make_user_in_ptr(args.wr_handles);
 
   uint32_t num_bytes = args.wr_num_bytes;

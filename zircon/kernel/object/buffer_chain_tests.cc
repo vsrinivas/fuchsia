@@ -64,8 +64,8 @@ static bool copy_in_copy_out() {
   auto buf = ktl::unique_ptr<char[]>(new (&ac) char[kSize]);
   ASSERT_TRUE(ac.check());
   ktl::unique_ptr<UserMemory> mem = UserMemory::Create(kSize);
-  auto mem_in = make_user_in_ptr(mem->in());
-  auto mem_out = make_user_out_ptr(mem->out());
+  auto mem_in = make_user_in_ptr(mem->in<char>());
+  auto mem_out = make_user_out_ptr(mem->out<char>());
 
   BufferChain* bc = BufferChain::Alloc(kSize);
   ASSERT_NE(nullptr, bc);

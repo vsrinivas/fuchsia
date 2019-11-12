@@ -305,7 +305,7 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     }
   }
 
-  return user_buffer.copy_array_to_user(buffer.get(), buffer_size);
+  return user_buffer.reinterpret<uint8_t>().copy_array_to_user(buffer.get(), buffer_size);
 }
 
 // zx_status_t zx_system_mexec

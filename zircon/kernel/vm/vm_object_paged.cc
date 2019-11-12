@@ -2433,7 +2433,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
       return status;
     }
     // Compute the kernel mapping of this page.
-    uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_physmap(pa));
+    char* page_ptr = reinterpret_cast<char*>(paddr_to_physmap(pa));
 
     // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
     // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
@@ -2469,7 +2469,7 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
   }
 
   // read routine that just uses a memcpy
-  uint8_t* ptr = reinterpret_cast<uint8_t*>(_ptr);
+  char* ptr = reinterpret_cast<char*>(_ptr);
   auto read_routine = [ptr](const void* src, size_t offset, size_t len,
                             Guard<fbl::Mutex>* guard) -> zx_status_t {
     memcpy(ptr + offset, src, len);
@@ -2488,7 +2488,7 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
   }
 
   // write routine that just uses a memcpy
-  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(_ptr);
+  const char* ptr = reinterpret_cast<const char*>(_ptr);
   auto write_routine = [ptr](void* dst, size_t offset, size_t len,
                              Guard<fbl::Mutex>* guard) -> zx_status_t {
     memcpy(dst, ptr + offset, len);
@@ -2559,12 +2559,12 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
   return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<void> ptr,
+zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr,
                                     uint64_t offset, size_t len) {
   canary_.Assert();
 
   // read routine that uses copy_to_user
-  auto read_routine = [ptr, &current_aspace](const void* src, size_t offset, size_t len,
+  auto read_routine = [ptr, &current_aspace](const char* src, size_t offset, size_t len,
                                              Guard<fbl::Mutex>* guard) -> zx_status_t {
     vaddr_t va;
     uint flags;
@@ -2583,12 +2583,12 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<void>
   return ReadWriteInternal(offset, len, false, read_routine);
 }
 
-zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const void> ptr,
+zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
                                      uint64_t offset, size_t len) {
   canary_.Assert();
 
   // write routine that uses copy_from_user
-  auto write_routine = [ptr, &current_aspace](void* dst, size_t offset, size_t len,
+  auto write_routine = [ptr, &current_aspace](char* dst, size_t offset, size_t len,
                                               Guard<fbl::Mutex>* guard) -> zx_status_t {
     vaddr_t va;
     uint flags;

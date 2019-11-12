@@ -205,9 +205,10 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // Don't try to copy if there are no bytes to copy, as the "is
       // user space" check may not handle (_buffer == NULL and len == 0).
-      if (num_to_copy &&
-          _buffer.copy_array_to_user(threads.data(), sizeof(zx_koid_t) * num_to_copy) != ZX_OK)
+      if (num_to_copy && _buffer.reinterpret<zx_koid_t>().copy_array_to_user(
+                             threads.data(), num_to_copy) != ZX_OK) {
         return ZX_ERR_INVALID_ARGS;
+      }
       if (_actual) {
         zx_status_t status = _actual.copy_to_user(num_to_copy);
         if (status != ZX_OK)
@@ -643,7 +644,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         return ZX_ERR_BUFFER_TOO_SMALL;
       char name[ZX_MAX_NAME_LEN] = {};
       dispatcher->get_name(name);
-      if (_value.copy_array_to_user(name, ZX_MAX_NAME_LEN) != ZX_OK)
+      if (_value.reinterpret<char>().copy_array_to_user(name, ZX_MAX_NAME_LEN) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
       return ZX_OK;
     }
@@ -740,7 +741,7 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
       if (size >= ZX_MAX_NAME_LEN)
         size = ZX_MAX_NAME_LEN - 1;
       char name[ZX_MAX_NAME_LEN - 1];
-      if (_value.copy_array_from_user(name, size) != ZX_OK)
+      if (_value.reinterpret<const char>().copy_array_from_user(name, size) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
       return dispatcher->set_name(name, size);
     }

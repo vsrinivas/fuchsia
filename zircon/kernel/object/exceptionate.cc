@@ -73,14 +73,15 @@ zx_status_t Exceptionate::SendException(const fbl::RefPtr<ExceptionDispatcher>& 
 
   // Since info will be copied to a usermode process make sure it's safe to to be copied (no
   // internal padding, trivially copyable, etc.).
-  static_assert(internal::is_copy_out_allowed<decltype(info)>::value);
+  static_assert(internal::is_copy_allowed<decltype(info)>::value);
 
   info.tid = exception->thread()->get_koid();
   info.pid = exception->thread()->process()->get_koid();
   info.type = exception->exception_type();
 
   MessagePacketPtr message;
-  zx_status_t status = MessagePacket::Create(&info, sizeof(info), 1, &message);
+  zx_status_t status =
+      MessagePacket::Create(reinterpret_cast<const char*>(&info), sizeof(info), 1, &message);
   if (status != ZX_OK) {
     return status;
   }

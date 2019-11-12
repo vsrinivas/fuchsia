@@ -375,7 +375,8 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   // this VMO, it should be reading from multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
-  zx_status_t st = vmo->ReadUser(up->aspace().get(), buffer, offset, buffer_size);
+  zx_status_t st =
+      vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset, buffer_size);
 
   if (st == ZX_OK) {
     zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
@@ -433,7 +434,8 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   // this VMO, it should be writing to multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
   buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
-  zx_status_t st = vmo->WriteUser(up->aspace().get(), buffer, offset, buffer_size);
+  zx_status_t st =
+      vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset, buffer_size);
 
   if (st == ZX_OK) {
     zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));

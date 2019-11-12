@@ -33,17 +33,17 @@ bool MBufChain::is_full() const { return size_ >= kSizeMax; }
 
 bool MBufChain::is_empty() const { return size_ == 0; }
 
-zx_status_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual) {
+zx_status_t MBufChain::Read(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual) {
   return ReadHelper(this, dst, len, datagram, actual);
 }
 
-zx_status_t MBufChain::Peek(user_out_ptr<void> dst, size_t len, bool datagram,
+zx_status_t MBufChain::Peek(user_out_ptr<char> dst, size_t len, bool datagram,
                             size_t* actual) const {
   return ReadHelper(this, dst, len, datagram, actual);
 }
 
 template <class T>
-zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram,
+zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, bool datagram,
                                   size_t* actual) {
   if (chain->size_ == 0) {
     *actual = 0;
@@ -104,7 +104,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, 
   return ZX_OK;
 }
 
-zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written) {
+zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, size_t* written) {
   if (len == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -154,7 +154,7 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len, si
   return ZX_OK;
 }
 
-zx_status_t MBufChain::WriteStream(user_in_ptr<const void> src, size_t len, size_t* written) {
+zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size_t* written) {
   if (head_ == nullptr) {
     head_ = AllocMBuf();
     if (head_ == nullptr)
@@ -171,7 +171,7 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const void> src, size_t len, size
       tail_.insert_after(tail_.make_iterator(*head_), next);
       head_ = next;
     }
-    void* dst = head_->data_ + head_->off_ + head_->len_;
+    char* dst = head_->data_ + head_->off_ + head_->len_;
     size_t copy_len = fbl::min(head_->rem(), len - pos);
     if (size_ + copy_len > kSizeMax) {
       copy_len = kSizeMax - size_;

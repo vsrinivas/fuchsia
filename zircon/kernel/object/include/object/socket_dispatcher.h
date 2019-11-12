@@ -33,12 +33,12 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_SOCKET; }
 
   // Socket methods.
-  zx_status_t Write(user_in_ptr<const void> src, size_t len, size_t* written);
+  zx_status_t Write(user_in_ptr<const char> src, size_t len, size_t* written);
 
   // Shut this endpoint of the socket down for reading, writing, or both.
   zx_status_t Shutdown(uint32_t how);
 
-  zx_status_t Read(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
+  zx_status_t Read(ReadType type, user_out_ptr<char> dst, size_t len, size_t* nread);
 
   // Property methods.
   size_t GetReadThreshold() const;
@@ -56,7 +56,7 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder, zx_signals_t starting_signals,
                    uint32_t flags);
   void Init(fbl::RefPtr<SocketDispatcher> other);
-  zx_status_t WriteSelfLocked(user_in_ptr<const void> src, size_t len, size_t* nwritten)
+  zx_status_t WriteSelfLocked(user_in_ptr<const char> src, size_t len, size_t* nwritten)
       TA_REQ(get_lock());
   zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
   zx_status_t ShutdownOtherLocked(uint32_t how) TA_REQ(get_lock());

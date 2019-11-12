@@ -106,7 +106,8 @@ zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = user_args.copy_array_from_user(&args, sizeof(args));
+  zx_status_t status =
+      user_args.reinterpret<const zx_clock_update_args_v1_t>().copy_from_user(&args);
   if (status != ZX_OK) {
     return status;
   }

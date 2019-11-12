@@ -25,7 +25,7 @@ class MBufChain {
   // Writes |len| bytes of stream data from |src| and sets |written| to number of bytes written.
   //
   // Returns an error on failure.
-  zx_status_t WriteStream(user_in_ptr<const void> src, size_t len, size_t* written);
+  zx_status_t WriteStream(user_in_ptr<const char> src, size_t len, size_t* written);
 
   // Writes a datagram of |len| bytes from |src| and sets |written| to number of bytes written.
   //
@@ -35,7 +35,7 @@ class MBufChain {
   // Writing a zero-length datagram is an error.
   //
   // Returns an error on failure.
-  zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
+  zx_status_t WriteDatagram(user_in_ptr<const char> src, size_t len, size_t* written);
 
   // Reads up to |len| bytes from chain into |dst|.
   //
@@ -48,10 +48,10 @@ class MBufChain {
   // The actual number of bytes read is returned in |actual|.
   //
   // Returns an error on failure.
-  zx_status_t Read(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual);
+  zx_status_t Read(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual);
 
   // Same as Read() but leaves the bytes in the chain instead of consuming them.
-  zx_status_t Peek(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual) const;
+  zx_status_t Peek(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual) const;
 
   bool is_full() const;
   bool is_empty() const;
@@ -106,7 +106,7 @@ class MBufChain {
   // const and non-const MBufChain objects. Const objects will peek,
   // non-const will read and consume.
   template <typename T>
-  static zx_status_t ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram,
+  static zx_status_t ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, bool datagram,
                                 size_t* actual);
 
   fbl::SinglyLinkedList<MBuf*> freelist_;

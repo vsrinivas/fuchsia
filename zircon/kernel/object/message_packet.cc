@@ -75,7 +75,7 @@ inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_
 }
 
 // static
-zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_size,
+zx_status_t MessagePacket::Create(user_in_ptr<const char> data, uint32_t data_size,
                                   uint32_t num_handles, MessagePacketPtr* msg) {
   MessagePacketPtr new_msg;
   zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
@@ -91,7 +91,7 @@ zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_si
 }
 
 // static
-zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t num_handles,
+zx_status_t MessagePacket::Create(const char* data, uint32_t data_size, uint32_t num_handles,
                                   MessagePacketPtr* msg) {
   MessagePacketPtr new_msg;
   zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);

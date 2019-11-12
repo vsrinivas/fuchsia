@@ -15,6 +15,8 @@
 
 // user_*_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory. They can be in, out, or inout pointers.
+//
+// user_*_ptr<> ensure that types copied to/from usermode are ABI-safe (see |is_copy_allowed|).
 
 namespace internal {
 
@@ -69,9 +71,9 @@ class user_ptr {
   // Copies a single T to user memory. T must not be |void|.
   template <typename S>
   __WARN_UNUSED_RESULT zx_status_t copy_to_user(const S& src) const {
-    static_assert(!ktl::is_void<S>::value, "Source type must not be void.");
+    static_assert(!ktl::is_void<S>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
-    static_assert(is_copy_out_allowed<S>::value, "Source type must not have implicit padding.");
+    static_assert(is_copy_allowed<S>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     return arch_copy_to_user(ptr_, &src, sizeof(S));
   }
@@ -83,19 +85,20 @@ class user_ptr {
   template <typename S>
   __WARN_UNUSED_RESULT zx_status_t copy_to_user_capture_faults(const S& src, vaddr_t* pf_va,
                                                                uint* pf_flags) const {
-    static_assert(!ktl::is_void<S>::value, "Source type must not be void.");
+    static_assert(!ktl::is_void<S>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
-    static_assert(is_copy_out_allowed<S>::value, "Source type must not have implicit padding.");
+    static_assert(is_copy_allowed<S>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     return arch_copy_to_user_capture_faults(ptr_, &src, sizeof(S), pf_va, pf_flags);
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count) const {
-    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_to_user(ptr_, src, len);
@@ -108,10 +111,11 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
                                                                      vaddr_t* pf_va,
                                                                      uint* pf_flags) const {
-    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_to_user_capture_faults(ptr_, src, len, pf_va, pf_flags);
@@ -120,10 +124,11 @@ class user_ptr {
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count,
                                                       size_t offset) const {
-    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_to_user(ptr_ + offset, src, len);
@@ -136,10 +141,11 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
                                                                      size_t offset, vaddr_t* pf_va,
                                                                      uint* pf_flags) const {
-    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_to_user_capture_faults(ptr_ + offset, src, len, pf_va, pf_flags);
@@ -147,7 +153,8 @@ class user_ptr {
 
   // Copies a single T from user memory. T must not be |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_from_user(typename ktl::remove_const<T>::type* dst) const {
-    static_assert(!ktl::is_void<T>::value, "Source type must not be void.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     return arch_copy_from_user(dst, ptr_, sizeof(T));
   }
@@ -158,7 +165,8 @@ class user_ptr {
   // are filled with fault information.
   __WARN_UNUSED_RESULT zx_status_t copy_from_user_capture_faults(
       typename ktl::remove_const<T>::type* dst, vaddr_t* pf_va, uint* pf_flags) const {
-    static_assert(!ktl::is_void<T>::value, "Source type must not be void.");
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     return arch_copy_from_user_capture_faults(dst, ptr_, sizeof(T), pf_va, pf_flags);
   }
@@ -166,9 +174,11 @@ class user_ptr {
   // Copies an array of T from user memory. Note: This takes a count not a size, unless T is |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
                                                         size_t count) const {
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_from_user(dst, ptr_, len);
@@ -181,9 +191,11 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t
   copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
                                       vaddr_t* pf_va, uint* pf_flags) const {
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_from_user_capture_faults(dst, ptr_, len, pf_va, pf_flags);
@@ -193,9 +205,11 @@ class user_ptr {
   // |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
                                                         size_t count, size_t offset) const {
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_from_user(dst, ptr_ + offset, len);
@@ -209,9 +223,11 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t
   copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
                                       size_t offset, vaddr_t* pf_va, uint* pf_flags) const {
+    static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
+    static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
-    if (mul_overflow(count, internal::type_size<T>(), &len)) {
+    if (mul_overflow(count, sizeof(T), &len)) {
       return ZX_ERR_INVALID_ARGS;
     }
     return arch_copy_from_user_capture_flags(dst, ptr_ + offset, len, pf_va, pf_flags);

@@ -240,7 +240,7 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
     return status;
 
   const size_t to_copy = fbl::min(actual, len);
-  if (ptr.copy_array_to_user(buf, to_copy) != ZX_OK)
+  if (ptr.reinterpret<char>().copy_array_to_user(buf, to_copy) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
   return static_cast<zx_status_t>(to_copy);
@@ -259,7 +259,7 @@ zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
   ASSERT(prng->is_thread_safe());
   prng->Draw(kernel_buf, len);
 
-  if (buffer.copy_array_to_user(kernel_buf, len) != ZX_OK)
+  if (buffer.reinterpret<uint8_t>().copy_array_to_user(kernel_buf, len) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
   return ZX_OK;
 }
@@ -274,7 +274,7 @@ zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t buffer_
   // returns.
   explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
-  if (buffer.copy_array_from_user(kernel_buf, buffer_size) != ZX_OK)
+  if (buffer.reinterpret<const uint8_t>().copy_array_from_user(kernel_buf, buffer_size) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
   auto prng = crypto::GlobalPRNG::GetInstance();

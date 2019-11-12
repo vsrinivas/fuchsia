@@ -61,7 +61,7 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options, user_in_ptr<c
     return status;
 
   size_t nwritten;
-  status = socket->Write(buffer, size, &nwritten);
+  status = socket->Write(buffer.reinterpret<const char>(), size, &nwritten);
 
   // Caller may ignore results if desired.
   if (status == ZX_OK && actual)
@@ -93,7 +93,7 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
                                         : SocketDispatcher::ReadType::kConsume;
 
   size_t nread;
-  status = socket->Read(type, buffer, size, &nread);
+  status = socket->Read(type, buffer.reinterpret<char>(), size, &nread);
 
   // Caller may ignore results if desired.
   if (status == ZX_OK && actual)

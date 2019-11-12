@@ -30,15 +30,21 @@ class UserMemory {
   static ktl::unique_ptr<UserMemory> Create(size_t size);
   virtual ~UserMemory();
   vaddr_t base() { return mapping_->base(); }
-  void* out() { return reinterpret_cast<void*>(base()); }
-  const void* in() { return reinterpret_cast<void*>(base()); }
+  template <typename T>
+  T* out() {
+    return reinterpret_cast<T*>(base());
+  }
+  template <typename T>
+  const T* in() {
+    return reinterpret_cast<T*>(base());
+  }
   template <typename T>
   user_out_ptr<T> user_out() {
-    return make_user_out_ptr<T>(reinterpret_cast<T*>(out()));
+    return make_user_out_ptr<T>(out<T>());
   }
   template <typename T>
   user_in_ptr<const T> user_in() {
-    return make_user_in_ptr<const T>(reinterpret_cast<const T*>(in()));
+    return make_user_in_ptr<const T>(in<T>());
   }
 
   // Ensures the mapping is committed and mapped such that usages will cause no faults.

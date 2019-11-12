@@ -234,7 +234,8 @@ zx_status_t sys_iommu_create(zx_handle_t resource, uint32_t type, user_in_ptr<co
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
-    if ((status = desc.copy_array_from_user(copied_desc.get(), desc_size)) != ZX_OK) {
+    if ((status = desc.reinterpret<const uint8_t>().copy_array_from_user(copied_desc.get(),
+                                                                         desc_size)) != ZX_OK) {
       return status;
     }
     status = IommuDispatcher::Create(type, ktl::unique_ptr<const uint8_t[]>(copied_desc.release()),

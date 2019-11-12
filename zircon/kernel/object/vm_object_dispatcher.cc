@@ -86,14 +86,14 @@ void VmObjectDispatcher::on_zero_handles() {
   vmo_->SetChildObserver(nullptr);
 }
 
-zx_status_t VmObjectDispatcher::Read(VmAspace* current_aspace, user_out_ptr<void> user_data,
+zx_status_t VmObjectDispatcher::Read(VmAspace* current_aspace, user_out_ptr<char> user_data,
                                      size_t length, uint64_t offset) {
   canary_.Assert();
 
   return vmo_->ReadUser(current_aspace, user_data, offset, length);
 }
 
-zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<const void> user_data,
+zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<const char> user_data,
                                       size_t length, uint64_t offset) {
   canary_.Assert();
 
@@ -148,7 +148,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
 zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) { return VmoToInfoEntry(vmo().get(), true, 0); }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
-                                        user_inout_ptr<void> buffer, size_t buffer_size,
+                                        user_inout_ptr<char> buffer, size_t buffer_size,
                                         zx_rights_t rights) {
   canary_.Assert();
 

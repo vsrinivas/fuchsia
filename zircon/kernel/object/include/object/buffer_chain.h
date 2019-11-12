@@ -65,7 +65,7 @@ class BufferChain {
   // Copies |size| bytes from this chain starting at offset |src_offset| to |dst|.
   //
   // |src_offset| must be in the range [0, kContig).
-  zx_status_t CopyOut(user_out_ptr<void> dst, size_t src_offset, size_t size) {
+  zx_status_t CopyOut(user_out_ptr<char> dst, size_t src_offset, size_t size) {
     DEBUG_ASSERT(src_offset < buffers_.front().size());
     size_t copy_offset = src_offset;
     size_t rem = size;
@@ -137,12 +137,12 @@ class BufferChain {
   // Copies |size| bytes from |src| to this chain starting at offset |dst_offset|.
   //
   // |dst_offset| must be in the range [0, kContig).
-  zx_status_t CopyIn(user_in_ptr<const void> src, size_t dst_offset, size_t size) {
+  zx_status_t CopyIn(user_in_ptr<const char> src, size_t dst_offset, size_t size) {
     return CopyInCommon(src, dst_offset, size);
   }
 
   // Same as CopyIn except |src| can be in kernel space.
-  zx_status_t CopyInKernel(const void* src, size_t dst_offset, size_t size);
+  zx_status_t CopyInKernel(const char* src, size_t dst_offset, size_t size);
 
   class Buffer final : public fbl::SinglyLinkedListable<Buffer*> {
    public:

@@ -40,16 +40,16 @@ class MessagePacket final : public fbl::DoublyLinkedListable<MessagePacketPtr> {
   // Creates a message packet containing the provided data and space for
   // |num_handles| handles. The handles array is uninitialized and must
   // be completely overwritten by clients.
-  static zx_status_t Create(user_in_ptr<const void> data, uint32_t data_size, uint32_t num_handles,
+  static zx_status_t Create(user_in_ptr<const char> data, uint32_t data_size, uint32_t num_handles,
                             MessagePacketPtr* msg);
-  static zx_status_t Create(const void* data, uint32_t data_size, uint32_t num_handles,
+  static zx_status_t Create(const char* data, uint32_t data_size, uint32_t num_handles,
                             MessagePacketPtr* msg);
 
   uint32_t data_size() const { return data_size_; }
 
   // Copies the packet's |data_size()| bytes to |buf|.
   // Returns an error if |buf| points to a bad user address.
-  zx_status_t CopyDataTo(user_out_ptr<void> buf) const {
+  zx_status_t CopyDataTo(user_out_ptr<char> buf) const {
     return buffer_chain_->CopyOut(buf, payload_offset_, data_size_);
   }
 
