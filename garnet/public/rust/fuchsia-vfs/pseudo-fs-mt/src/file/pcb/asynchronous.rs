@@ -36,7 +36,12 @@ use {
     fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
     fuchsia_zircon::Status,
     futures::future,
-    std::{future::Future, pin::Pin, sync::Arc, task::{Context, Poll}},
+    std::{
+        future::Future,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
 };
 
 #[cfg(test)]
