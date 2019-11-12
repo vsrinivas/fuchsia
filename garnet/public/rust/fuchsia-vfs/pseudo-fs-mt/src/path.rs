@@ -76,6 +76,13 @@ impl Path {
         self.is_dir
     }
 
+    /// Returns `true` when the path contains only one component - that is, it is not empty and
+    /// contains not `/` characters.
+    pub fn is_single_component(&self) -> bool {
+        let end = if self.is_dir { self.inner.len() - 1 } else { self.inner.len() };
+        self.next < self.inner.len() && self.inner[self.next..end].find('/').is_none()
+    }
+
     /// Returns a reference to a portion of the string that names the next component.
     pub fn next(&mut self) -> Option<&str> {
         match self.inner[self.next..].find('/') {
@@ -146,6 +153,7 @@ mod tests {
             mut path => {
                 assert!(path.is_empty());
                 assert!(!path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -159,6 +167,7 @@ mod tests {
             mut path => {
                 assert!(path.is_empty());
                 assert!(path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -172,6 +181,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
+                assert!(path.is_single_component());
                 assert_eq!(path.next(), Some("a"));
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
@@ -186,6 +196,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
+                assert!(path.is_single_component());
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
@@ -200,6 +211,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
+                assert!(path.is_single_component());
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
@@ -214,6 +226,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("a"));
                 assert_eq!(path.next(), Some("b"));
                 assert_eq!(path.next(), None);
@@ -229,6 +242,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.next(), None);
@@ -244,6 +258,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.next(), None);
@@ -259,6 +274,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("into"));
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.into_string(), "half/way".to_string());
@@ -273,6 +289,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("into"));
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.into_string(), "half/way/".to_string());
@@ -287,6 +304,7 @@ mod tests {
             mut path => {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
+                assert!(!path.is_single_component());
                 assert_eq!(path.next(), Some("into"));
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.into_string(), "".to_string());
