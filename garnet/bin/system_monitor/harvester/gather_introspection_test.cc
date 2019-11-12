@@ -9,7 +9,7 @@
 
 class GatherIntrospectionTest : public ::testing::Test {
  public:
-  void SetUp() {}
+  void SetUp() override {}
 };
 
 TEST_F(GatherIntrospectionTest, Introspection) {

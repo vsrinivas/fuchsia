@@ -9,7 +9,7 @@
 
 class GatherInspectableTest : public ::testing::Test {
  public:
-  void SetUp() {}
+  void SetUp() override {}
 };
 
 TEST_F(GatherInspectableTest, Inspectable) {

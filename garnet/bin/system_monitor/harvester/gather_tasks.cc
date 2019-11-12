@@ -19,10 +19,10 @@ namespace {
 
 class TaskHarvester final : public TaskEnumerator {
  public:
-  TaskHarvester() {}
+  TaskHarvester() = default;
 
   // After gathering the data, upload it to |dockyard|.
-  void UploadTaskInfo(DockyardProxy& dockyard_proxy) {
+  void UploadTaskInfo(DockyardProxy* dockyard_proxy) {
     if (FXL_VLOG_IS_ON(1)) {
       for (const auto& int_sample : int_sample_list_) {
         FXL_VLOG(1) << int_sample.first << ": " << int_sample.second;
@@ -32,8 +32,8 @@ class TaskHarvester final : public TaskEnumerator {
       }
     }
 
-    dockyard_proxy.SendSampleList(int_sample_list_);
-    dockyard_proxy.SendStringSampleList(string_sample_list_);
+    dockyard_proxy->SendSampleList(int_sample_list_);
+    dockyard_proxy->SendStringSampleList(string_sample_list_);
 
     int_sample_list_.clear();
     string_sample_list_.clear();
@@ -49,7 +49,7 @@ class TaskHarvester final : public TaskEnumerator {
     zx_info_job_t info;
     zx_status_t status =
         zx_object_get_info(job, ZX_INFO_JOB, &info, sizeof(info),
-                           /*actual=*/nullptr, /*available=*/nullptr);
+                           /*actual=*/nullptr, /*avail=*/nullptr);
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "AddJobStats failed for koid " << koid << " ("
                        << status << ")";
@@ -59,7 +59,7 @@ class TaskHarvester final : public TaskEnumerator {
   }
 
   // Helper to add a value to the sample |int_sample_list_|.
-  void AddKoidValue(zx_koid_t koid, const std::string path,
+  void AddKoidValue(zx_koid_t koid, const std::string& path,
                     dockyard::SampleValue value) {
     std::ostringstream label;
     label << "koid:" << koid << ":" << path;
@@ -67,8 +67,8 @@ class TaskHarvester final : public TaskEnumerator {
   }
 
   // Helper to add a value to the string list.
-  void AddKoidString(zx_koid_t koid, const std::string path,
-                     std::string value) {
+  void AddKoidString(zx_koid_t koid, const std::string& path,
+                     const std::string& value) {
     std::ostringstream label;
     label << "koid:" << koid << ":" << path;
     string_sample_list_.emplace_back(label.str(), value);
@@ -95,7 +95,7 @@ class TaskHarvester final : public TaskEnumerator {
     zx_info_task_stats_t info;
     zx_status_t status =
         zx_object_get_info(process, ZX_INFO_TASK_STATS, &info, sizeof(info),
-                           /*actual=*/nullptr, /*available=*/nullptr);
+                           /*actual=*/nullptr, /*avail=*/nullptr);
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "AddProcessStats failed for koid " << koid << " ("
                        << status << ")";
@@ -115,7 +115,7 @@ class TaskHarvester final : public TaskEnumerator {
       zx_info_thread_t info;
       zx_status_t status =
           zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
-                             /*actual=*/nullptr, /*available=*/nullptr);
+                             /*actual=*/nullptr, /*avail=*/nullptr);
       if (status != ZX_OK) {
         FXL_LOG(WARNING) << "AddThreadStats failed for koid " << koid << " ("
                          << status << ")";
@@ -128,7 +128,7 @@ class TaskHarvester final : public TaskEnumerator {
       zx_info_thread_stats_t stats;
       zx_status_t status = zx_object_get_info(
           thread, ZX_INFO_THREAD_STATS, &stats, sizeof(stats),
-          /*actual=*/nullptr, /*available=*/nullptr);
+          /*actual=*/nullptr, /*avail=*/nullptr);
       if (status != ZX_OK) {
         FXL_LOG(WARNING) << "AddThreadStats failed for koid " << koid << " ("
                          << status << ")";
@@ -139,7 +139,7 @@ class TaskHarvester final : public TaskEnumerator {
   }
 
   // |TaskEnumerator| Callback for a job.
-  zx_status_t OnJob(int depth, zx_handle_t job, zx_koid_t koid,
+  zx_status_t OnJob(int /*depth*/, zx_handle_t job, zx_koid_t koid,
                     zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::JOB);
     AddKoidValue(koid, "parent_koid", parent_koid);
@@ -149,7 +149,7 @@ class TaskHarvester final : public TaskEnumerator {
   }
 
   // |TaskEnumerator| Callback for a process.
-  zx_status_t OnProcess(int depth, zx_handle_t process, zx_koid_t koid,
+  zx_status_t OnProcess(int /*depth*/, zx_handle_t process, zx_koid_t koid,
                         zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::PROCESS);
     AddKoidValue(koid, "parent_koid", parent_koid);
@@ -159,7 +159,7 @@ class TaskHarvester final : public TaskEnumerator {
   }
 
   // |TaskEnumerator| Callback for a thread.
-  zx_status_t OnThread(int depth, zx_handle_t thread, zx_koid_t koid,
+  zx_status_t OnThread(int /*depth*/, zx_handle_t thread, zx_koid_t koid,
                        zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::THREAD);
     AddKoidValue(koid, "parent_koid", parent_koid);
@@ -179,7 +179,7 @@ class TaskHarvester final : public TaskEnumerator {
 void GatherTasks::Gather() {
   TaskHarvester task_harvester;
   task_harvester.WalkRootJobTree();
-  task_harvester.UploadTaskInfo(Dockyard());
+  task_harvester.UploadTaskInfo(DockyardPtr());
 }
 
 }  // namespace harvester

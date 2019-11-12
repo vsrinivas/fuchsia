@@ -34,6 +34,7 @@ class GatherCategory {
 
   // The dockyard proxy is used to send data to the remote Dockyard.
   harvester::DockyardProxy& Dockyard() { return *dockyard_proxy_; }
+  harvester::DockyardProxy* DockyardPtr() { return dockyard_proxy_; }
 
   // Gather one-time data that doesn't vary over time. E.g. total RAM.
   virtual void GatherDeviceProperties(){};

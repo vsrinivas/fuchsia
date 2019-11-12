@@ -16,6 +16,7 @@
 #include "gather_introspection.h"
 #include "gather_memory.h"
 #include "gather_tasks.h"
+#include "gather_tasks_cpu.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 
@@ -64,6 +65,7 @@ void Harvester::GatherSlowData() {
   // gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
   gather_memory_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
   gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::sec(2));
+  gather_tasks_cpu_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
 }
 
 }  // namespace harvester

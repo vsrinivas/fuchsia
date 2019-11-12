@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
   // The wip number is incremented arbitrarily.
   // TODO(smbug.com/44) replace wip number with real version number.
-  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 11";
+  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 12";
 
   // Command line options.
   constexpr char COMMAND_LOCAL[] = "local";

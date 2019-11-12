@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gather_tasks.h"
-
 #include <zircon/process.h>
 
 #include "dockyard_proxy_fake.h"
+#include "gather_tasks.h"
 #include "gtest/gtest.h"
 #include "root_resource.h"
 
-class GatherTasksTest : public ::testing::Test {
+class GatherTasksCpuTest : public ::testing::Test {
  public:
   void SetUp() override {
     // Determine our KOID.
@@ -33,7 +32,7 @@ class GatherTasksTest : public ::testing::Test {
   std::string self_koid_;
 };
 
-TEST_F(GatherTasksTest, Inspectable) {
+TEST_F(GatherTasksCpuTest, Inspectable) {
   zx_handle_t root_resource;
   ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
