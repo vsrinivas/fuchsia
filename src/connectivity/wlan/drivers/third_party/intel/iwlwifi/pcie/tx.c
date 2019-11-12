@@ -35,6 +35,7 @@
  *****************************************************************************/
 
 #include <lib/async/time.h>
+#include <zircon/status.h>
 
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
@@ -1653,9 +1654,9 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
 
     iwl_pcie_txq_build_tfd(trans, txq, phys_addr, cmdlen[i], false);
   }
-#endif  // NEEDS_PORTING
 
   BUILD_BUG_ON(IWL_TFH_NUM_TBS > sizeof(out_meta->tbs) * BITS_PER_BYTE);
+#endif  // NEEDS_PORTING
   out_meta->flags = cmd->flags;
 
 #if 0   // NEEDS_PORTING
@@ -1691,95 +1692,109 @@ free_dup_buf:
   if (status != ZX_OK) {
     kfree(dup_buf);
   }
-  if (cmd_idx_out != NULL) {
+  if (cmd_idx_out) {
     *cmd_idx_out = cmd_idx;
   }
   return status;
 }
 
-#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_hcmd_complete - Pull unused buffers off the queue and reclaim them
  * @rxb: Rx buffer to reclaim
  */
 void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
-    uint8_t group_id;
-    uint32_t cmd_id;
-    int txq_id = SEQ_TO_QUEUE(sequence);
-    int index = SEQ_TO_INDEX(sequence);
-    int cmd_index;
-    struct iwl_device_cmd* cmd;
-    struct iwl_cmd_meta* meta;
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
+  uint8_t group_id;
+  uint32_t cmd_id;
+  int txq_id = SEQ_TO_QUEUE(sequence);
+  int index = SEQ_TO_INDEX(sequence);
+  int cmd_index;
+  struct iwl_device_cmd* cmd;
+  struct iwl_cmd_meta* meta;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
 
-    /* If a Tx command is being handled and it isn't in the actual
-     * command queue then there a command routing bug has been introduced
-     * in the queue management code. */
-    if (WARN(txq_id != trans_pcie->cmd_queue,
-             "wrong command queue %d (should be %d), sequence 0x%X readp=%d writep=%d\n", txq_id,
-             trans_pcie->cmd_queue, sequence, txq->read_ptr, txq->write_ptr)) {
-        iwl_print_hex_error(trans, pkt, 32);
-        return;
-    }
+  /* If a Tx command is being handled and it isn't in the actual
+   * command queue then there a command routing bug has been introduced
+   * in the queue management code. */
+  if (txq_id != trans_pcie->cmd_queue) {
+    IWL_WARN(trans, "wrong command queue %d (should be %d), sequence 0x%X readp=%d writep=%d\n",
+             txq_id, trans_pcie->cmd_queue, sequence, txq->read_ptr, txq->write_ptr);
+#if 0   // NEEDS_PORTING
+      iwl_print_hex_error(trans, pkt, 32);
+#endif  // NEEDS_PORTING
+    return;
+  }
 
-    spin_lock_bh(&txq->lock);
+  mtx_lock(&txq->lock);
 
-    cmd_index = iwl_pcie_get_cmd_index(txq, index);
-    cmd = txq->entries[cmd_index].cmd;
-    meta = &txq->entries[cmd_index].meta;
-    group_id = cmd->hdr.group_id;
-    cmd_id = iwl_cmd_id(cmd->hdr.cmd, group_id, 0);
+  cmd_index = iwl_pcie_get_cmd_index(txq, index);
+  cmd = (struct iwl_device_cmd*)io_buffer_virt(&txq->entries[cmd_index].cmd);
+  meta = &txq->entries[cmd_index].meta;
+  group_id = cmd->hdr.group_id;
+  cmd_id = iwl_cmd_id(cmd->hdr.cmd, group_id, 0);
 
+#if 0   // NEEDS_PORTING
     iwl_pcie_tfd_unmap(trans, meta, txq, index);
-
-    /* Input error checking is done when commands are added to queue. */
-    if (meta->flags & CMD_WANT_SKB) {
+#endif  // NEEDS_PORTING
+  /* Input error checking is done when commands are added to queue. */
+  if (meta->flags & CMD_WANT_SKB) {
+#if 0   // NEEDS_PORTING
         struct page* p = rxb_steal_page(rxb);
+#endif  // NEEDS_PORTING
 
-        meta->source->resp_pkt = pkt;
+    meta->source->resp_pkt = pkt;
+#if 0   // NEEDS_PORTING
         meta->source->_rx_page_addr = (unsigned long)page_address(p);
         meta->source->_rx_page_order = trans_pcie->rx_page_order;
-    }
+#endif  // NEEDS_PORTING
+  }
 
-    if (meta->flags & CMD_WANT_ASYNC_CALLBACK) { iwl_op_mode_async_cb(trans->op_mode, cmd); }
+  if (meta->flags & CMD_WANT_ASYNC_CALLBACK) {
+    iwl_op_mode_async_cb(trans->op_mode, cmd);
+  }
 
+#if 0   // NEEDS_PORTING
     iwl_pcie_cmdq_reclaim(trans, txq_id, index);
+#endif  // NEEDS_PORTING
 
-    if (!(meta->flags & CMD_ASYNC)) {
-        if (!test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
-            IWL_WARN(trans, "HCMD_ACTIVE already clear for command %s\n",
-                     iwl_get_cmd_string(trans, cmd_id));
-        }
-        clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
-        IWL_DEBUG_INFO(trans, "Clearing HCMD_ACTIVE for command %s\n",
-                       iwl_get_cmd_string(trans, cmd_id));
-        wake_up(&trans_pcie->wait_command_queue);
+  if (!(meta->flags & CMD_ASYNC)) {
+    if (!test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
+      IWL_WARN(trans, "HCMD_ACTIVE already clear for command %s\n",
+               iwl_get_cmd_string(trans, cmd_id));
     }
+    clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
+    IWL_DEBUG_INFO(trans, "Clearing HCMD_ACTIVE for command %s\n",
+                   iwl_get_cmd_string(trans, cmd_id));
+    sync_completion_signal(&trans_pcie->wait_command_queue);
+  }
 
-    if (meta->flags & CMD_MAKE_TRANS_IDLE) {
-        IWL_DEBUG_INFO(trans, "complete %s - mark trans as idle\n",
-                       iwl_get_cmd_string(trans, cmd->hdr.cmd));
-        set_bit(STATUS_TRANS_IDLE, &trans->status);
+  if (meta->flags & CMD_MAKE_TRANS_IDLE) {
+    IWL_DEBUG_INFO(trans, "complete %s - mark trans as idle\n",
+                   iwl_get_cmd_string(trans, cmd->hdr.cmd));
+    set_bit(STATUS_TRANS_IDLE, &trans->status);
+#if 0   // NEEDS_PORTING
         wake_up(&trans_pcie->d0i3_waitq);
-    }
+#endif  // NEEDS_PORTING
+  }
 
-    if (meta->flags & CMD_WAKE_UP_TRANS) {
-        IWL_DEBUG_INFO(trans, "complete %s - clear trans idle flag\n",
-                       iwl_get_cmd_string(trans, cmd->hdr.cmd));
-        clear_bit(STATUS_TRANS_IDLE, &trans->status);
+  if (meta->flags & CMD_WAKE_UP_TRANS) {
+    IWL_DEBUG_INFO(trans, "complete %s - clear trans idle flag\n",
+                   iwl_get_cmd_string(trans, cmd->hdr.cmd));
+    clear_bit(STATUS_TRANS_IDLE, &trans->status);
+#if 0   // NEEDS_PORTING
         wake_up(&trans_pcie->d0i3_waitq);
-    }
+#endif  // NEEDS_PORTING
+  }
 
-    meta->flags = 0;
+  meta->flags = 0;
 
-    spin_unlock_bh(&txq->lock);
+  mtx_unlock(&txq->lock);
 }
 
-#define HOST_COMPLETE_TIMEOUT (2 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
-#endif  // NEEDS_PORTING
+// (2 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR) where CPTCFG_IWL_TIMEOUT_FACTOR is 1 by default
+#define HOST_COMPLETE_TIMEOUT ZX_SEC(2)
 
 static zx_status_t iwl_pcie_send_hcmd_async(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
   /* An asynchronous command can not expect an SKB to be set. */
@@ -1797,11 +1812,8 @@ static zx_status_t iwl_pcie_send_hcmd_async(struct iwl_trans* trans, struct iwl_
 }
 
 static zx_status_t iwl_pcie_send_hcmd_sync(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-  // struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-#if 0   // NEEDS_PORTING
-    struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
-    int ret;
-#endif  // NEEDS_PORTING
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
 
   IWL_DEBUG_INFO(trans, "Attempting to send sync command %s\n", iwl_get_cmd_string(trans, cmd->id));
 
@@ -1825,6 +1837,8 @@ static zx_status_t iwl_pcie_send_hcmd_sync(struct iwl_trans* trans, struct iwl_h
     }
 #endif  // NEEDS_PORTING
 
+  sync_completion_reset(&trans_pcie->wait_command_queue);
+
   int cmd_idx;
   zx_status_t status = iwl_pcie_enqueue_hcmd(trans, cmd, &cmd_idx);
   if (status != ZX_OK) {
@@ -1833,70 +1847,67 @@ static zx_status_t iwl_pcie_send_hcmd_sync(struct iwl_trans* trans, struct iwl_h
             iwl_get_cmd_string(trans, cmd->id), status);
     return status;
   }
+
+  status = sync_completion_wait(&trans_pcie->wait_command_queue, HOST_COMPLETE_TIMEOUT);
+  if (status != ZX_OK) {
+    IWL_ERR(trans, "Error sending %s: time out after %ldms (%s).\n",
+            iwl_get_cmd_string(trans, cmd->id),
+            zx_nsec_from_duration(HOST_COMPLETE_TIMEOUT) / 1000000, zx_status_get_string(status));
+
+    IWL_ERR(trans, "Current CMD queue read_ptr %d write_ptr %d\n", txq->read_ptr, txq->write_ptr);
+
+    clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
+    IWL_DEBUG_INFO(trans, "Clearing HCMD_ACTIVE for command %s\n",
+                   iwl_get_cmd_string(trans, cmd->id));
+    status = ZX_ERR_TIMED_OUT;
+
+    iwl_force_nmi(trans);
+    iwl_trans_fw_error(trans);
+
+    goto cancel;
+  }
+
+  if (test_bit(STATUS_FW_ERROR, &trans->status)) {
+    iwl_trans_pcie_dump_regs(trans);
+    IWL_ERR(trans, "FW error in SYNC CMD %s\n", iwl_get_cmd_string(trans, cmd->id));
 #if 0   // NEEDS_PORTING
+         dump_stack();
+#endif  // NEEDS_PORTING
+    status = ZX_ERR_IO;
+    goto cancel;
+  }
 
-    ret = wait_event_timeout(trans_pcie->wait_command_queue,
-                             !test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status),
-                             HOST_COMPLETE_TIMEOUT);
-    if (!ret) {
-        IWL_ERR(trans, "Error sending %s: time out after %dms.\n",
-                iwl_get_cmd_string(trans, cmd->id), jiffies_to_msecs(HOST_COMPLETE_TIMEOUT));
+  if (!(cmd->flags & CMD_SEND_IN_RFKILL) && test_bit(STATUS_RFKILL_OPMODE, &trans->status)) {
+    IWL_DEBUG_RF_KILL(trans, "RFKILL in SYNC CMD... no rsp\n");
+    status = ZX_ERR_BAD_STATE;
+    goto cancel;
+  }
 
-        IWL_ERR(trans, "Current CMD queue read_ptr %d write_ptr %d\n", txq->read_ptr,
-                txq->write_ptr);
+  if ((cmd->flags & CMD_WANT_SKB) && !cmd->resp_pkt) {
+    IWL_ERR(trans, "Error: Response NULL in '%s'\n", iwl_get_cmd_string(trans, cmd->id));
+    status = ZX_ERR_IO;
+    goto cancel;
+  }
 
-        clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
-        IWL_DEBUG_INFO(trans, "Clearing HCMD_ACTIVE for command %s\n",
-                       iwl_get_cmd_string(trans, cmd->id));
-        ret = -ETIMEDOUT;
-
-        iwl_force_nmi(trans);
-        iwl_trans_fw_error(trans);
-
-        goto cancel;
-    }
-
-    if (test_bit(STATUS_FW_ERROR, &trans->status)) {
-        iwl_trans_pcie_dump_regs(trans);
-        IWL_ERR(trans, "FW error in SYNC CMD %s\n", iwl_get_cmd_string(trans, cmd->id));
-        dump_stack();
-        ret = -EIO;
-        goto cancel;
-    }
-
-    if (!(cmd->flags & CMD_SEND_IN_RFKILL) && test_bit(STATUS_RFKILL_OPMODE, &trans->status)) {
-        IWL_DEBUG_RF_KILL(trans, "RFKILL in SYNC CMD... no rsp\n");
-        ret = -ERFKILL;
-        goto cancel;
-    }
-
-    if ((cmd->flags & CMD_WANT_SKB) && !cmd->resp_pkt) {
-        IWL_ERR(trans, "Error: Response NULL in '%s'\n", iwl_get_cmd_string(trans, cmd->id));
-        ret = -EIO;
-        goto cancel;
-    }
-
-    return 0;
+  return ZX_OK;
 
 cancel:
-    if (cmd->flags & CMD_WANT_SKB) {
-        /*
-         * Cancel the CMD_WANT_SKB flag for the cmd in the
-         * TX cmd queue. Otherwise in case the cmd comes
-         * in later, it will possibly set an invalid
-         * address (cmd->meta.source).
-         */
-        txq->entries[cmd_idx].meta.flags &= ~CMD_WANT_SKB;
-    }
+  if (cmd->flags & CMD_WANT_SKB) {
+    /*
+     * Cancel the CMD_WANT_SKB flag for the cmd in the
+     * TX cmd queue. Otherwise in case the cmd comes
+     * in later, it will possibly set an invalid
+     * address (cmd->meta.source).
+     */
+    txq->entries[cmd_idx].meta.flags &= ~CMD_WANT_SKB;
+  }
 
-    if (cmd->resp_pkt) {
-        iwl_free_resp(cmd);
-        cmd->resp_pkt = NULL;
-    }
+  if (cmd->resp_pkt) {
+    iwl_free_resp(cmd);
+    cmd->resp_pkt = NULL;
+  }
 
-    return ret;
-#endif  // NEEDS_PORTING
-  return ZX_ERR_INTERNAL;
+  return status;
 }
 
 int iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {

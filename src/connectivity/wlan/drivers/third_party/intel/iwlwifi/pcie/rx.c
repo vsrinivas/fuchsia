@@ -895,12 +895,10 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
       }
     }
 
-#if 0   // NEEDS_PORTING
     uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     int index = SEQ_TO_INDEX(sequence);
     struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
     __UNUSED int cmd_index = iwl_pcie_get_cmd_index(txq, index);
-#endif  // NEEDS_PORTING
 
     // Only handle rx packets when the mvm has been initialed.
     //
@@ -914,9 +912,8 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
       }
     }
 
-#if 0   // NEEDS_PORTING
     if (reclaim) {
-      kzfree(txq->entries[cmd_index].free_buf);
+      free(txq->entries[cmd_index].free_buf);
       txq->entries[cmd_index].free_buf = NULL;
     }
 
@@ -925,13 +922,8 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
        * and fire off the (possibly) blocking
        * iwl_trans_send_cmd()
        * as we reclaim the driver command queue */
-      if (!rxcb._page_stolen) {
-        iwl_pcie_hcmd_complete(trans, &rxcb);
-      } else {
-        IWL_WARN(trans, "Claim null rxb?\n");
-      }
+      iwl_pcie_hcmd_complete(trans, &rxcb);
     }
-#endif  // NEEDS_PORTING
 
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
       break;

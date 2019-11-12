@@ -250,6 +250,12 @@ TEST_F(PcieTest, RxInterrupts) {
   ASSERT_OK(iwl_pcie_alloc_ict(trans_));
   ASSERT_OK(iwl_pcie_rx_init(trans_));
 
+  // Allocate Tx buffer since Rx code would use 'txq'.
+  base_params_.num_of_queues = 31;
+  base_params_.max_tfd_queue_size = 256;
+  trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
   ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
   uint32_t* ict_table = static_cast<uint32_t*>(io_buffer_virt(&trans_pcie_->ict_tbl));
 
@@ -402,6 +408,68 @@ TEST_F(TxTest, AsyncHostCommandTooLarge) {
   EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &default_hcmd), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &nocopy_hcmd), ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &dup_hcmd), ZX_ERR_NO_RESOURCES);
+}
+
+// In the SyncHostCommandEmpty() test, this function will generate an ECHO response in order to
+// simulate the firmware event for iwl_pcie_hcmd_complete().
+static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
+  if (ofs != HBUS_TARG_WRPTR) {
+    return;
+  }
+
+  io_buffer_t io_buf;
+  zx_handle_t fake_bti;
+  fake_bti_create(&fake_bti);
+  io_buffer_init(&io_buf, fake_bti, 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  struct iwl_rx_cmd_buffer rxcb = {
+      ._io_buf = io_buf,
+      ._offset = 0,
+  };
+  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
+  resp_pkt->len_n_flags = cpu_to_le32(0);
+  resp_pkt->hdr.cmd = ECHO_CMD;
+  resp_pkt->hdr.group_id = 0;
+  resp_pkt->hdr.sequence = 0;
+
+  // iwl_pcie_hcmd_complete() will require the txq->lock. However, we already have done it in
+  // iwl_trans_pcie_send_hcmd(). So release the lock before calling it. Note that this is safe
+  // because in the test, it is always single thread and has no race.
+  //
+  // The GCC pragma is to depress the compile warning on mutex check.
+  //
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wthread-safety-analysis"
+  mtx_unlock(&txq->lock);
+  iwl_pcie_hcmd_complete(trans, &rxcb);
+  mtx_lock(&txq->lock);
+
+  io_buffer_release(&io_buf);
+}
+#pragma GCC diagnostic pop
+
+// This test is going to go through the sync host command call:
+//
+// + iwl_trans_pcie_send_hcmd() will call iwl_pcie_send_hcmd_sync().
+// + iwl_pcie_send_hcmd_sync() then calls iwl_pcie_enqueue_hcmd(), which triggers
+//   GenerateFakeEchoResponse().
+// + A fake response is generated to call iwl_pcie_hcmd_complete().
+// + trans_pcie->wait_command_queue is then signaled in iwl_pcie_hcmd_complete().
+// + iwl_pcie_send_hcmd_sync() checks the values after trans_pcie->wait_command_queue.
+// + ZX_OK if everything looks good.
+//
+TEST_F(TxTest, SyncHostCommandEmpty) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = 0;
+  hcmd.data[0] = NULL;
+
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 }
 
 class StuckTimerTest : public PcieTest {

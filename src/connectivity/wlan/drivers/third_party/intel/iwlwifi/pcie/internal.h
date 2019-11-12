@@ -277,7 +277,7 @@ struct iwl_pcie_txq_entry {
   io_buffer_t cmd;
   struct sk_buff* skb;
   /* buffer to free after command completes */
-  const void* free_buf;
+  void* free_buf;
   struct iwl_cmd_meta meta;
 };
 
