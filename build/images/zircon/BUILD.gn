@@ -33,20 +33,6 @@ template("rebased_manifest") {
   }
 }
 
-foreach(image, zircon_images) {
-  if (image.type == "manifest") {
-    if (image.name == "legacy-image-$target_cpu") {
-      rebased_manifest("legacy-image") {
-        manifest = image.path
-      }
-    } else if (image.name == "legacy-aux-$target_cpu") {
-      rebased_manifest("legacy-aux") {
-        manifest = image.path
-      }
-    }
-  }
-}
-
 foreach(flavor, bootsvc_flavors) {
   rebased_manifest(flavor.name) {
     manifest = flavor.path

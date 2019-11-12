@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
-import("//build/config/fuchsia/zircon_images.gni")
 import("//build/images/zircon/bootsvc.gni")
 
 declare_args() {
@@ -31,10 +30,10 @@ zircon_aux_manifests = []
 zircon_aux_manifests_deps = []
 
 legacy_image = {
-  target = "//build/images/zircon:legacy-image"
-  gen_dir = get_label_info(target, "target_gen_dir")
+  target = "//build/unification/images:legacy-image"
+  gen_dir = get_label_info(target, "target_out_dir")
   name = get_label_info(target, "name")
-  file = "$gen_dir/$name.rebased.manifest"
+  file = "$gen_dir/$name.unification.manifest"
 }
 zircon_boot_manifests += [ legacy_image.file ]
 zircon_boot_manifests_deps += [ legacy_image.target ]
@@ -52,10 +51,10 @@ foreach(flavor, bootsvc_flavors) {
 }
 
 legacy_aux = {
-  target = "//build/images/zircon:legacy-aux"
-  gen_dir = get_label_info(target, "target_gen_dir")
+  target = "//build/unification/images:legacy-aux"
+  gen_dir = get_label_info(target, "target_out_dir")
   name = get_label_info(target, "name")
-  file = "$gen_dir/$name.rebased.manifest"
+  file = "$gen_dir/$name.unification.manifest"
 }
 zircon_aux_manifests += [ legacy_aux.file ]
 zircon_aux_manifests_deps += [ legacy_aux.target ]
