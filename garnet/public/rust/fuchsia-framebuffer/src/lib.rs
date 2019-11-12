@@ -46,15 +46,15 @@ const ZX_PIXEL_FORMAT_ARGB_8888: u32 = 262148;
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_RGB_x888: u32 = 262149;
 #[allow(non_camel_case_types, non_upper_case_globals)]
-const ZX_PIXEL_FORMAT_ABGR_8888: u32 = 262150;
-#[allow(non_camel_case_types, non_upper_case_globals)]
-const ZX_PIXEL_FORMAT_BGR_x888: u32 = 262151;
-#[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_MONO_8: u32 = 65543;
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_GRAY_8: u32 = 65543;
 #[allow(non_camel_case_types, non_upper_case_globals)]
 const ZX_PIXEL_FORMAT_MONO_1: u32 = 6;
+#[allow(non_camel_case_types, non_upper_case_globals)]
+const ZX_PIXEL_FORMAT_ABGR_8888: u32 = 262154;
+#[allow(non_camel_case_types, non_upper_case_globals)]
+const ZX_PIXEL_FORMAT_BGR_x888: u32 = 262155;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PixelFormat {
