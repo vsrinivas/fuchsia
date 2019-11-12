@@ -319,14 +319,11 @@ magma_status_t magma_commit_buffer(magma_connection_t connection, magma_buffer_t
                                    uint64_t page_offset, uint64_t page_count) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();
-  magma_status_t status = platform_buffer->CommitPages(page_offset, page_count)
-                              ? MAGMA_STATUS_OK
-                              : MAGMA_STATUS_MEMORY_ERROR;
-  // Submit the CommitBuffer anyway so that clients that don't check the return value will still see
-  // an error. TODO(fxb/40773) Fail early.
+  if (!platform_buffer->CommitPages(page_offset, page_count))
+    return DRET(MAGMA_STATUS_MEMORY_ERROR);
   magma::PlatformConnectionClient::cast(connection)
       ->CommitBuffer(buffer_id, page_offset, page_count);
-  return DRET(status);
+  return MAGMA_STATUS_OK;
 }
 
 void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,

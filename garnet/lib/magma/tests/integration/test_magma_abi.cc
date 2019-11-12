@@ -168,8 +168,7 @@ class TestConnection {
     magma_unmap_buffer_gpu(connection_, id, 2048);
     EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
     EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, id, 100, 100));
-    magma_status_t status = magma_get_error(connection_);
-    EXPECT_TRUE(status == MAGMA_STATUS_INVALID_ARGS || status == MAGMA_STATUS_UNIMPLEMENTED);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
     magma_release_buffer(connection_, id);
   }
