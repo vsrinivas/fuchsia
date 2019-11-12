@@ -44,11 +44,13 @@ fn run_server(ip: &str) -> Result<(), Error> {
 
     let req = String::from_utf8_lossy(&buffer[0..rd]);
     if req != HELLO_MSG_REQ {
-        return Err(format_err!("Got unexpected request from client: {}", req));
+        return Err(format_err!("Got unexpected request from client: '{}'", req));
     }
-    println!("Got request {}", req);
+    println!("Got request ({} bytes) '{}'", rd, req);
+    println!("Sending response '{}'", HELLO_MSG_RSP);
     stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
     stream.flush().context("flush failed")?;
+    println!("Server done");
     Ok(())
 }
 
@@ -56,17 +58,21 @@ fn run_client(server_ip: &str) -> Result<(), Error> {
     println!("Connecting to server...");
     let addr = SocketAddr::from_str(&format!("{}:{}", server_ip, PORT))?;
     let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
+    println!("Connected to server!");
     let request = HELLO_MSG_REQ.as_bytes();
-    stream.write(request)?;
-    stream.flush()?;
+    println!("Sending message '{}'", HELLO_MSG_REQ);
+    stream.write(request).context("write failed")?;
+    stream.flush().context("flush failed")?;
 
     let mut buffer = [0; 512];
+    println!("Waiting for server response...");
     let rd = stream.read(&mut buffer)?;
     let rsp = String::from_utf8_lossy(&buffer[0..rd]);
-    println!("Got response {}", rsp);
+    println!("Got response ({} bytes) '{}'", rd, rsp);
     if rsp != HELLO_MSG_RSP {
-        return Err(format_err!("Got unexpected echo from server: {}", rsp));
+        return Err(format_err!("Got unexpected echo from server: '{}'", rsp));
     }
+    println!("Client done");
     Ok(())
 }
 
@@ -119,14 +125,17 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             }
         },
     );
-    let nicid =
-        netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth).await
-            .context("can't add ethernet device")?;
+    let nicid = netstack
+        .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
+        .await
+        .context("can't add ethernet device")?;
     let () = netstack.set_interface_status(nicid as u32, true)?;
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
     let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
 
-    let (if_id, hwaddr) = if_changed.try_next().await
+    let (if_id, hwaddr) = if_changed
+        .try_next()
+        .await
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
 
