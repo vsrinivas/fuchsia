@@ -79,6 +79,7 @@ class SimFirmware {
   // Firmware iovar accessors
   zx_status_t IovarsSet(const char* name, const void* value, size_t value_len);
   zx_status_t IovarsGet(const char* name, void* value_out, size_t value_len);
+  zx_status_t HandleBssCfgSet(const char* name, const void* data, size_t value_len);
 
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
@@ -127,7 +128,7 @@ class SimFirmware {
   zx_status_t SetMacAddr(const uint8_t* mac_addr);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
-  zx_status_t HandleBssCfgRequest(const bool add_iface, const void* data, const size_t len);
+  zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);

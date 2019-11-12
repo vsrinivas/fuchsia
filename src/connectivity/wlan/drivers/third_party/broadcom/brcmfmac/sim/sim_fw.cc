@@ -303,8 +303,8 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
   return ZX_ERR_IO;
 }
 
-zx_status_t SimFirmware::HandleBssCfgRequest(const bool add_iface, const void* data,
-                                             const size_t len) {
+zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* data,
+                                            const size_t len) {
   brcmf_event_msg_be* msg_be;
   struct brcmf_if_event* ifevent;
   uint8_t iface_id;
@@ -312,22 +312,16 @@ zx_status_t SimFirmware::HandleBssCfgRequest(const bool add_iface, const void* d
 
   auto buf = CreateEventBuffer(sizeof(brcmf_if_event), &msg_be, &data_offset);
   uint8_t* buffer_data = buf->data();
-  // ifevent = (struct brcmf_if_event*)((uint8_t*)msg_be + sizeof(brcmf_event_msg_be));
   ifevent = reinterpret_cast<brcmf_if_event*>(&buffer_data[data_offset]);
 
-  msg_be->flags = 0;
   msg_be->event_type = htobe32(BRCMF_E_IF);
-  msg_be->auth_type = 0;
-  msg_be->reason = 0;
-  memcpy(msg_be->addr, mac_addr_.data(), ETH_ALEN);
-  ifevent->flags = 0;
   ifevent->role = 1;
 
   if (HandleIfaceTblReq(add_iface, data, &iface_id) == ZX_OK) {
     if (add_iface) {
       auto ssid_info = static_cast<const brcmf_mbss_ssid_le*>(data);
-      ifevent->bsscfgidx = ssid_info->bsscfgidx;
       ifevent->action = BRCMF_E_IF_ADD;
+      ifevent->bsscfgidx = ssid_info->bsscfgidx;
     } else {
       auto bsscfgidx = static_cast<const int32_t*>(data);
       ifevent->action = BRCMF_E_IF_DEL;
@@ -345,30 +339,49 @@ zx_status_t SimFirmware::HandleBssCfgRequest(const bool add_iface, const void* d
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t value_len) {
-  if (!std::strcmp(name, "bsscfg:interface_remove")) {
+zx_status_t SimFirmware::HandleBssCfgSet(const char* name, const void* value, size_t value_len) {
+  if (!std::strcmp(name, "interface_remove")) {
     if (value_len < sizeof(int32_t)) {
       return ZX_ERR_IO;
     } else {
-      return HandleBssCfgRequest(false, value, value_len);
+      return HandleIfaceRequest(false, value, value_len);
     }
-  } else if (!std::strcmp(name, "bsscfg:ssid")) {
+  }
+
+  if (!std::strcmp(name, "ssid")) {
     if (value_len < sizeof(brcmf_mbss_ssid_le)) {
       return ZX_ERR_IO;
     } else {
-      return HandleBssCfgRequest(true, value, value_len);
+      return HandleIfaceRequest(true, value, value_len);
     }
-  } else if (!std::strcmp(name, "cur_etheraddr")) {
+  }
+
+  BRCMF_ERR("Ignoring request to set bsscfg iovar '%s'\n", name);
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t value_len) {
+  const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
+  if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
+    return HandleBssCfgSet(name + bsscfg_prefix_len, value, value_len);
+  }
+
+  if (!std::strcmp(name, "cur_etheraddr")) {
     if (value_len == ETH_ALEN) {
       return SetMacAddr(static_cast<const uint8_t*>(value));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
-  } else if (!std::strcmp(name, "escan")) {
+  }
+
+  if (!std::strcmp(name, "escan")) {
     return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
-  } else if (!std::strcmp(name, "country")) {
+  }
+
+  if (!std::strcmp(name, "country")) {
     auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
     country_code_ = *cc_req;
+    return ZX_OK;
   }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
@@ -618,6 +631,7 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
   *msg_out_be = &event->msg;
   (*msg_out_be)->version = htobe16(2);
   (*msg_out_be)->datalen = htobe32(requested_size);
+  memcpy((*msg_out_be)->addr, mac_addr_.data(), ETH_ALEN);
   memcpy((*msg_out_be)->ifname, kDefaultIfcName, strlen(kDefaultIfcName));
 
   // Payload immediately follows the brcmf_event structure

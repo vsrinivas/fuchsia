@@ -20,6 +20,8 @@
 #include "core.h"
 #include <wifi/wifi-config.h>
 
+#define BRCMF_FWIL_BSSCFG_PREFIX "bsscfg:"
+
 zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const void* data,
                                    uint32_t len, int32_t* fwerr_ptr);
 zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,

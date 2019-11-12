@@ -285,7 +285,7 @@ zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint
 
 static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, const char* name, const void* data,
                                     uint32_t datalen, char* buf, uint32_t buflen) {
-  const char* prefix = "bsscfg:";
+  const char* prefix = BRCMF_FWIL_BSSCFG_PREFIX;
   char* p;
   uint32_t prefixlen;
   uint32_t namelen;
