@@ -153,11 +153,11 @@ void FrameRateEnumerator::iterator::Advance() {
 
     if (cur_flag_ == ASF_RANGE_FLAG_FPS_48000_FAMILY) {
       rates = RATES_48000_FAMILY;
-      rates_count = sizeof(RATES_48000_FAMILY);
+      rates_count = countof(RATES_48000_FAMILY);
     } else {
       ZX_DEBUG_ASSERT(cur_flag_ == ASF_RANGE_FLAG_FPS_44100_FAMILY);
       rates = RATES_44100_FAMILY;
-      rates_count = sizeof(RATES_44100_FAMILY);
+      rates_count = countof(RATES_44100_FAMILY);
     }
 
     if (range.flags & cur_flag_) {

@@ -9,6 +9,9 @@
 #include <lib/zx/clock.h>
 #include <threads.h>
 
+#include <set>
+
+#include <audio-proto-utils/format-utils.h>
 #include <audio-utils/audio-output.h>
 #include <zxtest/zxtest.h>
 
@@ -207,6 +210,56 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   audio_stream_cmd_get_gain_resp gain_state;
   channel_client->GetGain(&gain_state);
   ASSERT_EQ(gain_state.cur_gain, gain);
+}
+
+TEST(SimpleAudioTest, EnumerateMultipleRates) {
+  struct EnumerateRates : public MockSimpleAudio {
+    EnumerateRates(zx_device_t* parent) : MockSimpleAudio(parent) {}
+    zx_status_t Init() __TA_REQUIRES(domain_token()) override {
+      auto status = MockSimpleAudio::Init();
+
+      audio_stream_format_range_t range;
+
+      range.min_channels = kTestNumberOfChannels;
+      range.max_channels = kTestNumberOfChannels;
+      range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+      range.min_frames_per_second = 48000;
+      range.max_frames_per_second = 768000;
+      range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+
+      supported_formats_ = fbl::Vector<audio_stream_format_range_t>{range};
+      return status;
+    }
+  };
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<EnumerateRates>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  Device::SyncClient client(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  // After we get the channel we use audio::utils serialization until we convert to FIDL.
+  auto channel_client = audio::utils::AudioOutput::Create(1);
+  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+
+  fbl::Vector<audio_stream_format_range_t> ranges;
+  channel_client->GetSupportedFormats(&ranges);
+  ASSERT_EQ(1, ranges.size());
+  ASSERT_EQ(MockSimpleAudio::kTestNumberOfChannels, ranges[0].min_channels);
+  ASSERT_EQ(MockSimpleAudio::kTestNumberOfChannels, ranges[0].max_channels);
+  ASSERT_EQ(AUDIO_SAMPLE_FORMAT_16BIT, ranges[0].sample_formats);
+  ASSERT_EQ(48000, ranges[0].min_frames_per_second);
+  ASSERT_EQ(768000, ranges[0].max_frames_per_second);
+  ASSERT_EQ(ASF_RANGE_FLAG_FPS_48000_FAMILY, ranges[0].flags);
+
+  audio::utils::FrameRateEnumerator enumerator(ranges[0]);
+  std::set<uint32_t> rates;
+  for (uint32_t rate : enumerator) {
+    rates.insert(rate);
+  }
+  ASSERT_EQ(5, rates.size());
+  ASSERT_EQ(rates, std::set<uint32_t>({48'000, 96'000, 192'000, 384'000, 768'000}));
 }
 
 TEST(SimpleAudioTest, GetIds) {
