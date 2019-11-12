@@ -18,6 +18,7 @@ source_set("core") {
 
   sources = [
     "cfg/7000.c",
+    "cpp-wrapper.cc",
     "fuchsia_porting.h",
     "fw/init.c",
     "fw/notif-wait.c",
@@ -29,6 +30,7 @@ source_set("core") {
     "iwl-csr.h",
     "iwl-drv.c",
     "iwl-drv.h",
+    "iwl-eeprom-parse.c",
     "iwl-fh.h",
     "iwl-io.c",
     "iwl-io.h",
@@ -54,8 +56,10 @@ source_set("core") {
 
   deps = [
     "//garnet/lib/wlan/protocol:protocol",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices:driver",
     "//zircon/public/lib/ddk",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   public_deps = [

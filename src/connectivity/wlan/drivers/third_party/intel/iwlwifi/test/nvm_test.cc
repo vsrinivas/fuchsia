@@ -49,6 +49,16 @@ TEST_F(NvmTest, TestParsingDefaultNvm) {
   EXPECT_EQ(data->sku_cap_mimo_disabled, false);
 
   EXPECT_EQ(data->calib_version, 255);
+
+  // Band and channel info
+  // - 2G band
+  EXPECT_EQ(data->bands[NL80211_BAND_2GHZ].band, NL80211_BAND_2GHZ);
+  EXPECT_EQ(data->bands[NL80211_BAND_2GHZ].n_channels, 13);
+  EXPECT_EQ(data->bands[NL80211_BAND_2GHZ].channels[0].ch_num, 1);
+  // - 5G band
+  EXPECT_EQ(data->bands[NL80211_BAND_5GHZ].band, NL80211_BAND_5GHZ);
+  EXPECT_EQ(data->bands[NL80211_BAND_5GHZ].n_channels, 25);
+  EXPECT_EQ(data->bands[NL80211_BAND_5GHZ].channels[0].ch_num, 36);
 }
 
 }  // namespace

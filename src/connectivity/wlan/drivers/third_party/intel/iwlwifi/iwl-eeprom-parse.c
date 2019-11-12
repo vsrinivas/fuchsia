@@ -31,15 +31,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#include "iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 
-#include <linux/export.h>
-#include <linux/slab.h>
-#include <linux/types.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 
-#include "iwl-drv.h"
-#include "iwl-modparams.h"
-
+#if 0  // NEEDS_PORTING
 /* EEPROM offset definitions */
 
 /* indirect access definitions */
@@ -662,6 +659,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
 
   return n_channels;
 }
+#endif  // NEEDS_PORTING
 
 int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
                             int n_channels, enum nl80211_band band) {
@@ -684,6 +682,7 @@ int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supporte
   return n;
 }
 
+#if 0                           // NEEDS_PORTING
 #define MAX_BIT_RATE_40_MHZ 150 /* Mbps */
 #define MAX_BIT_RATE_20_MHZ 72  /* Mbps */
 
@@ -882,3 +881,4 @@ err_free:
   return NULL;
 }
 IWL_EXPORT_SYMBOL(iwl_parse_eeprom_data);
+#endif                          // NEEDS_PORTING

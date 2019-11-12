@@ -36,6 +36,7 @@
 
 #include <stdint.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/cpp-wrapper.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/cmdhdr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
@@ -94,14 +95,14 @@ enum nvm_sku_bits {
 /*
  * These are the channel numbers in the order that they are stored in the NVM
  */
-__UNUSED static const uint8_t iwl_nvm_channels[] = {
+static const uint8_t iwl_nvm_channels[] = {
     /* 2.4 GHz */
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     /* 5 GHz */
     36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149,
     153, 157, 161, 165};
 
-__UNUSED static const uint8_t iwl_ext_nvm_channels[] = {
+static const uint8_t iwl_ext_nvm_channels[] = {
     /* 2.4 GHz */
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     /* 5 GHz */
@@ -118,76 +119,24 @@ __UNUSED static const uint8_t iwl_ext_nvm_channels[] = {
 #define LAST_5GHZ_HT_FAMILY_8000 181
 #define N_HW_ADDR_MASK 0xF
 
-#if 0  // NEEDS_PORTING
 /* rate data (static) */
-static struct ieee80211_rate iwl_cfg80211_rates[] = {
-    {
-        .bitrate = 1 * 10,
-        .hw_value = 0,
-        .hw_value_short = 0,
-    },
-    {
-        .bitrate = 2 * 10,
-        .hw_value = 1,
-        .hw_value_short = 1,
-        .flags = IEEE80211_RATE_SHORT_PREAMBLE,
-    },
-    {
-        .bitrate = 5.5 * 10,
-        .hw_value = 2,
-        .hw_value_short = 2,
-        .flags = IEEE80211_RATE_SHORT_PREAMBLE,
-    },
-    {
-        .bitrate = 11 * 10,
-        .hw_value = 3,
-        .hw_value_short = 3,
-        .flags = IEEE80211_RATE_SHORT_PREAMBLE,
-    },
-    {
-        .bitrate = 6 * 10,
-        .hw_value = 4,
-        .hw_value_short = 4,
-    },
-    {
-        .bitrate = 9 * 10,
-        .hw_value = 5,
-        .hw_value_short = 5,
-    },
-    {
-        .bitrate = 12 * 10,
-        .hw_value = 6,
-        .hw_value_short = 6,
-    },
-    {
-        .bitrate = 18 * 10,
-        .hw_value = 7,
-        .hw_value_short = 7,
-    },
-    {
-        .bitrate = 24 * 10,
-        .hw_value = 8,
-        .hw_value_short = 8,
-    },
-    {
-        .bitrate = 36 * 10,
-        .hw_value = 9,
-        .hw_value_short = 9,
-    },
-    {
-        .bitrate = 48 * 10,
-        .hw_value = 10,
-        .hw_value_short = 10,
-    },
-    {
-        .bitrate = 54 * 10,
-        .hw_value = 11,
-        .hw_value_short = 11,
-    },
+static uint16_t iwl_cfg80211_rates[] = {
+    1 * 10,    // 1 Mbps
+    2 * 10,    // 2 Mbps
+    5.5 * 10,  // 5.5 Mbps
+    11 * 10,   // 11 Mbps
+    6 * 10,    // 6 Mbps
+    9 * 10,    // 9 Mbps
+    12 * 10,   // 12 Mbps
+    18 * 10,   // 18 Mbps
+    24 * 10,   // 24 Mbps
+    36 * 10,   // 36 Mbps
+    48 * 10,   // 48 Mbps
+    54 * 10,   // 54 Mbps
 };
 #define RATES_24_OFFS 0
 #define N_RATES_24 ARRAY_SIZE(iwl_cfg80211_rates)
-#define RATES_52_OFFS 4
+#define RATES_52_OFFS 4  // 5GHz band doesn't support legacy rates (1/2/5.5/11Mbps).
 #define N_RATES_52 (N_RATES_24 - RATES_52_OFFS)
 
 /**
@@ -242,6 +191,8 @@ static inline void iwl_nvm_print_channel_flags(struct device* dev, uint32_t leve
 
 static uint32_t iwl_get_channel_flags(uint8_t ch_num, int ch_idx, bool is_5ghz, uint16_t nvm_flags,
                                       const struct iwl_cfg* cfg) {
+  return 0;
+#if 0   // NEEDS_PORTING
   uint32_t flags = IEEE80211_CHAN_NO_HT40;
   uint32_t last_5ghz_ht = LAST_5GHZ_HT;
 
@@ -294,8 +245,15 @@ static uint32_t iwl_get_channel_flags(uint8_t ch_num, int ch_idx, bool is_5ghz, 
   }
 
   return flags;
+#endif  // NEEDS_PORTING
 }
 
+// Initializes the channel list in the NVM data structure according to:
+//
+// + Channel flags info in NVM blob,
+// + Channel list in this driver,
+// + Band flags
+//
 static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
                                 struct iwl_nvm_data* data, const __le16* const nvm_ch_flags,
                                 uint32_t sbands_flags) {
@@ -319,7 +277,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
   for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
     bool is_5ghz = (ch_idx >= num_2ghz_channels);
 
-    ch_flags = __le16_to_cpup(nvm_ch_flags + ch_idx);
+    ch_flags = le16_to_cpup(nvm_ch_flags + ch_idx);
 
     if (is_5ghz && !data->sku_cap_band_52ghz_enable) {
       continue;
@@ -347,9 +305,9 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
     channel = &data->channels[n_channels];
     n_channels++;
 
-    channel->hw_value = nvm_chan[ch_idx];
+    channel->ch_num = nvm_chan[ch_idx];
     channel->band = is_5ghz ? NL80211_BAND_5GHZ : NL80211_BAND_2GHZ;
-    channel->center_freq = ieee80211_channel_to_frequency(channel->hw_value, channel->band);
+    channel->center_freq = get_center_freq(channel->ch_num);
 
     /* Initialize regulatory-based run-time data */
 
@@ -366,13 +324,14 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
       channel->flags = 0;
     }
 
-    iwl_nvm_print_channel_flags(dev, IWL_DL_EEPROM, channel->hw_value, ch_flags);
-    IWL_DEBUG_EEPROM(dev, "Ch. %d: %ddBm\n", channel->hw_value, channel->max_power);
+    iwl_nvm_print_channel_flags(dev, IWL_DL_EEPROM, channel->ch_num, ch_flags);
+    IWL_DEBUG_EEPROM(dev, "Ch. %d: %ddBm\n", channel->ch_num, channel->max_power);
   }
 
   return n_channels;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_init_vht_hw_capab(struct iwl_trans* trans, struct iwl_nvm_data* data,
                                   struct ieee80211_sta_vht_cap* vht_cap, uint8_t tx_chains,
                                   uint8_t rx_chains) {
@@ -752,8 +711,6 @@ static void iwl_init_he_override(struct iwl_trans* trans, struct ieee80211_suppo
 static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
                             const __le16* nvm_ch_flags, uint8_t tx_chains, uint8_t rx_chains,
                             uint32_t sbands_flags) {
-  IWL_ERR(trans, "TODO(39658): unimplemented iwl_init_sbands()\n");
-#if 0   // NEEDS_PORTING
   struct device* dev = trans->dev;
   const struct iwl_cfg* cfg = trans->cfg;
   int n_channels;
@@ -766,17 +723,20 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   sband->bitrates = &iwl_cfg80211_rates[RATES_24_OFFS];
   sband->n_bitrates = N_RATES_24;
   n_used += iwl_init_sband_channels(data, sband, n_channels, NL80211_BAND_2GHZ);
+#if 0   // NEEDS_PORTING
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_2GHZ, tx_chains, rx_chains);
 
   if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
     iwl_init_he_hw_capab(sband, tx_chains, rx_chains);
   }
+#endif  // NEEDS_PORTING
 
   sband = &data->bands[NL80211_BAND_5GHZ];
   sband->band = NL80211_BAND_5GHZ;
   sband->bitrates = &iwl_cfg80211_rates[RATES_52_OFFS];
   sband->n_bitrates = N_RATES_52;
   n_used += iwl_init_sband_channels(data, sband, n_channels, NL80211_BAND_5GHZ);
+#if 0   // NEEDS_PORTING
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_5GHZ, tx_chains, rx_chains);
   if (data->sku_cap_11ac_enable && !iwlwifi_mod_params.disable_11ac) {
     iwl_init_vht_hw_capab(trans, data, &sband->vht_cap, tx_chains, rx_chains);
@@ -785,11 +745,11 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
     iwl_init_he_hw_capab(sband, tx_chains, rx_chains);
   }
+#endif  // NEEDS_PORTING
 
   if (n_channels != n_used) {
     IWL_ERR_DEV(dev, "NVM: used only %d of %d channels\n", n_used, n_channels);
   }
-#endif  // NEEDS_PORTING
 }
 
 static int iwl_get_sku(const struct iwl_cfg* cfg, const __le16* nvm_sw, const __le16* phy_sku) {

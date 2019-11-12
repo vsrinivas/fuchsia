@@ -14,12 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// TODO(WLAN-1082): Consolidate to one ieee80211.h
+// TODO(29700): Consolidate to one ieee80211.h
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define IEEE80211_CCMP_PN_LEN 6
 
@@ -139,10 +140,6 @@ struct cfg80211_chan_def {
   char dummy;
 };
 
-struct ieee80211_channel {
-  char dummy;
-};
-
 struct ieee80211_hdr {
   char dummy;
 };
@@ -155,8 +152,21 @@ struct ieee80211_p2p_noa_desc {
   char dummy;
 };
 
+// Channel info. Attributes of a channel.
+struct ieee80211_channel {
+  enum nl80211_band band;
+  uint32_t center_freq;  // unit: MHz.
+  uint16_t ch_num;       // channel number (starts from 1).
+  uint32_t flags;
+  int max_power;
+};
+
 struct ieee80211_supported_band {
-  char dummy;
+  enum nl80211_band band;
+  struct ieee80211_channel* channels;
+  int n_channels;
+  uint16_t* bitrates;
+  int n_bitrates;
 };
 
 struct ieee80211_tx_queue_params {
