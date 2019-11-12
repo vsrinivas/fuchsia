@@ -26,9 +26,19 @@ void Pause() { zx::nanosleep(zx::deadline_after(zx::msec(10))); }
 
 TEST(RealClock, GetTime) {
   Clock* clock = RealClock::Get();
+
+  // Fetch the current time.
   zx::time a = clock->Now();
-  zx::time b = clock->Now();
-  EXPECT_GT(b, a);
+
+  // Keep fetching the time until we see it change.
+  //
+  // Succesive calls to clock->Now() might return the same value, but we should never
+  // see it go backwards.
+  zx::time b;
+  do {
+    b = clock->Now();
+    EXPECT_GE(b, a);
+  } while (b <= a);
 }
 
 TEST(RealClock, Sleep) {
