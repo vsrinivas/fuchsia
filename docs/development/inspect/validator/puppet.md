@@ -37,7 +37,7 @@ which maintains the state necessary to control the Inspect library.
 
 ## Actor and the Inspect library
 
-'Actor` contains an `Inspector` (the Inspect library's entry-point object),
+`Actor` contains an `Inspector` (the Inspect library's entry-point object),
 a hashmap of `nodes`, and a hashmap of `properties`. It implements one
 function, `act()`, which contains a giant `match` statement ("switch" or "case"
 in other languages) to invoke each action that the library implements.
