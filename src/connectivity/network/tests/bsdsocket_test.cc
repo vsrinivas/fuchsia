@@ -152,7 +152,7 @@ TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
   ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0) << strerror(errno);
 }
 
-struct TOSOption {
+struct SockOption {
   int level;
   int option;
 };
@@ -166,6 +166,9 @@ struct SocketKind {
   int protocol;
 };
 
+constexpr int kSockOptOn = 1;
+constexpr int kSockOptOff = 0;
+
 class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
  protected:
   SocketOptsTest() {
@@ -177,19 +180,40 @@ class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
     return fbl::unique_fd(socket(s.domain, s.type, s.protocol));
   }
 
-  TOSOption GetTOSOption() {
-    TOSOption opt;
-    switch (GetParam().domain) {
-      case AF_INET:
-        opt.level = IPPROTO_IP;
-        opt.option = IP_TOS;
-        break;
-      case AF_INET6:
-        opt.level = IPPROTO_IPV6;
-        opt.option = IPV6_TCLASS;
-        break;
+  bool IsTCP() const {
+    return GetParam().protocol == IPPROTO_TCP;
+  }
+
+  bool IsIPv6() const {
+    return GetParam().domain == AF_INET6;
+  }
+
+  SockOption GetTOSOption() {
+    if (IsIPv6()) {
+      return {.level = IPPROTO_IPV6, .option = IPV6_TCLASS};
     }
-    return opt;
+    return {.level = IPPROTO_IP, .option = IP_TOS};
+  }
+
+  SockOption GetMcastLoopOption() {
+    if (IsIPv6()) {
+      return {.level = IPPROTO_IPV6, .option = IPV6_MULTICAST_LOOP};
+    }
+    return {.level = IPPROTO_IP, .option = IP_MULTICAST_LOOP};
+  }
+
+  SockOption GetMcastTTLOption() {
+    if (IsIPv6()) {
+      return {.level = IPPROTO_IPV6, .option = IPV6_MULTICAST_HOPS};
+    }
+    return {.level = IPPROTO_IP, .option = IP_MULTICAST_TTL};
+  }
+
+  SockOption GetMcastIfOption() {
+    if (IsIPv6()) {
+      return {.level = IPPROTO_IPV6, .option = IPV6_MULTICAST_IF};
+    }
+    return {.level = IPPROTO_IP, .option = IP_MULTICAST_IF};
   }
 };
 
@@ -296,7 +320,7 @@ TEST_P(SocketOptsTest, TOSDefault) {
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
 
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   int get = -1;
   socklen_t get_sz = sizeof(get);
   constexpr int kDefaultTOS = 0;
@@ -312,7 +336,7 @@ TEST_P(SocketOptsTest, SetTOS) {
 
   int set = 0xC0;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
 
   int get = -1;
@@ -328,7 +352,7 @@ TEST_P(SocketOptsTest, NullTOS) {
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
 
   socklen_t set_sz = sizeof(int);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   if (GetParam().domain == AF_INET) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), -1);
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
@@ -350,7 +374,7 @@ TEST_P(SocketOptsTest, ZeroTOS) {
 
   int set = 0;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int get = -1;
   socklen_t get_sz = sizeof(get);
@@ -368,7 +392,7 @@ TEST_P(SocketOptsTest, InvalidLargeTOS) {
   int set = 256;
   constexpr int kDefaultTOS = 0;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   if (GetParam().domain == AF_INET) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   } else {
@@ -389,7 +413,7 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
 
   int set = 0xFF;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect = static_cast<uint8_t>(set);
   if (GetParam().protocol == IPPROTO_TCP
@@ -399,7 +423,7 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
       // in parity with the Linux test-hosts that run a custom kernel.
       // But that is not the behavior of vanilla Linux kernels.
       // This ifdef can be removed when we migrate away from gvisor-netstack.
-      && GetParam().domain != AF_INET6
+      && !IsIPv6()
 #endif
       ) {
     expect &= ~INET_ECN_MASK;
@@ -418,7 +442,7 @@ TEST_P(SocketOptsTest, ZeroTOSOptionSize) {
 
   int set = 0xC0;
   socklen_t set_sz = 0;
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   if (GetParam().domain == AF_INET) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   } else {
@@ -439,7 +463,7 @@ TEST_P(SocketOptsTest, SmallTOSOptionSize) {
 
   int set = 0xC0;
   constexpr int kDefaultTOS = 0;
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   for (socklen_t i = 1; i < sizeof(int); i++) {
     int expect_tos;
     socklen_t expect_sz;
@@ -472,7 +496,7 @@ TEST_P(SocketOptsTest, LargeTOSOptionSize) {
   int* set = reinterpret_cast<int*>(buffer);
   // Point to a larger buffer so that the setsockopt does not overrun.
   *set = 0xC0;
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   for (socklen_t i = sizeof(int); i < 10; i++) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, set, i), 0) << strerror(errno);
     int get = -1;
@@ -493,7 +517,7 @@ TEST_P(SocketOptsTest, NegativeTOS) {
 
   int set = -1;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect;
   if (GetParam().domain == AF_INET) {
@@ -520,7 +544,7 @@ TEST_P(SocketOptsTest, InvalidNegativeTOS) {
 
   int set = -2;
   socklen_t set_sz = sizeof(set);
-  TOSOption t = GetTOSOption();
+  SockOption t = GetTOSOption();
   int expect;
   if (GetParam().domain == AF_INET) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
@@ -541,6 +565,246 @@ TEST_P(SocketOptsTest, InvalidNegativeTOS) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
+TEST_P(SocketOptsTest, MulticastLoopDefault) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetMcastLoopOption();
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetMulticastLoop) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetMcastLoopOption();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
+     << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
+    << strerror(errno);
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetMulticastLoopChar) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr char kSockOptOnChar = kSockOptOn;
+  constexpr char kSockOptOffChar = kSockOptOff;
+
+  SockOption t = GetMcastLoopOption();
+  int want;
+  if (IsIPv6()) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar,
+                         sizeof(kSockOptOffChar)), -1);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+    want = kSockOptOnChar;
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
+        << strerror(errno);
+    want = kSockOptOffChar;
+  }
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, want);
+
+  if (IsIPv6()) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar,
+                         sizeof(kSockOptOnChar)), -1);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
+        << strerror(errno);
+  }
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, MulticastTTLDefault) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, 1);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLMin) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kMin = 0;
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kMin, sizeof(kMin)), 0) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kMin);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLMax) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kMax = 255;
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kMax, sizeof(kMax)), 0) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kMax);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLNegativeOne) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kArbitrary = 6;
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), 0)
+    << strerror(errno);
+
+  constexpr int kNegOne = -1;
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kNegOne, sizeof(kNegOne)), 0)
+    << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, 1);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLBelowMin) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kBelowMin = -2;
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kBelowMin, sizeof(kBelowMin)), -1);
+  EXPECT_EQ(errno, EINVAL);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLAboveMax) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kAboveMax = 256;
+  SockOption t = GetMcastTTLOption();
+  EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kAboveMax, sizeof(kAboveMax)), -1);
+  EXPECT_EQ(errno, EINVAL);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr char kArbitrary = 6;
+  SockOption t = GetMcastTTLOption();
+  int want;
+  if (IsIPv6()) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), -1);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+    want = 1;
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), 0)
+        << strerror(errno);
+    want = kArbitrary;
+  }
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, want);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
                          ::testing::Values(
                               SocketKind{"IPv4 UDP", AF_INET, SOCK_DGRAM, IPPROTO_UDP},
@@ -554,15 +818,48 @@ TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
 
   ip_mreqn param_in = {};
   param_in.imr_ifindex = 1;
-  ASSERT_EQ(setsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
+  ASSERT_EQ(setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
       << strerror(errno);
 
   in_addr param_out = {};
   socklen_t len = sizeof(param_out);
-  ASSERT_EQ(getsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, &len), 0) << strerror(errno);
+  ASSERT_EQ(getsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, &len), 0) << strerror(errno);
   ASSERT_EQ(len, sizeof(param_out));
 
-  ASSERT_EQ(param_out.s_addr, INADDR_ANY);
+  EXPECT_EQ(param_out.s_addr, INADDR_ANY);
+}
+
+TEST(LocalhostTest, IP_MULTICAST_IF_ifaddr) {
+  int s;
+  ASSERT_GE(s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  ip_mreqn param_in = {};
+  param_in.imr_address.s_addr = htonl(INADDR_LOOPBACK);
+  ASSERT_EQ(setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
+      << strerror(errno);
+
+  in_addr param_out = {};
+  socklen_t len = sizeof(param_out);
+  ASSERT_EQ(getsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_out, &len), 0) << strerror(errno);
+  ASSERT_EQ(len, sizeof(param_out));
+
+  EXPECT_EQ(param_out.s_addr, param_in.imr_address.s_addr);
+}
+
+TEST(LocalhostTest, IPV6_MULTICAST_IF_ifindex) {
+  int s;
+  ASSERT_GE(s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
+
+  int param_in = 1;
+  ASSERT_EQ(setsockopt(s, IPPROTO_IPV6, IPV6_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
+      << strerror(errno);
+
+  int param_out = 0;
+  socklen_t len = sizeof(param_out);
+  ASSERT_EQ(getsockopt(s, IPPROTO_IPV6, IPV6_MULTICAST_IF, &param_out, &len), 0) << strerror(errno);
+  ASSERT_EQ(len, sizeof(param_out));
+
+  EXPECT_EQ(param_out, 1);
 }
 
 class ReuseTest

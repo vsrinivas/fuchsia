@@ -306,6 +306,32 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		}
 		return int32(v), nil
 
+	case C.IPV6_MULTICAST_IF:
+		var v tcpip.MulticastInterfaceOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(v.NIC), nil
+
+	case C.IPV6_MULTICAST_HOPS:
+		var v tcpip.MulticastTTLOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		return int32(v), nil
+
+	case C.IPV6_MULTICAST_LOOP:
+		var v tcpip.MulticastLoopOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		if v {
+			return int32(1), nil
+		}
+		return int32(0), nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
 
@@ -572,6 +598,47 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 			panic("unreachable")
 		}
 
+	case C.IPV6_MULTICAST_IF:
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+		return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
+			NIC: tcpip.NICID(v),
+		})
+
+	case C.IPV6_MULTICAST_HOPS:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+
+		if v == -1 {
+			// Linux translates -1 to 1.
+			v = 1
+		}
+
+		if v < 0 || v > 255 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		return ep.SetSockOpt(tcpip.MulticastTTLOption(v))
+
+	case C.IPV6_MULTICAST_LOOP:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+		return ep.SetSockOpt(tcpip.MulticastLoopOption(v != 0))
+
 	case
 		C.IPV6_IPSEC_POLICY,
 		C.IPV6_JOIN_ANYCAST,
@@ -634,6 +701,11 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 			// Linux translates -1 to 1.
 			v = 1
 		}
+
+		if v < 0 || v > 255 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
 		return ep.SetSockOpt(tcpip.MulticastTTLOption(v))
 
 	case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP, C.IP_MULTICAST_IF:
