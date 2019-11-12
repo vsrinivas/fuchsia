@@ -16,7 +16,7 @@
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/clearcut/uploader.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/local_aggregation/event_aggregator.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/observation_store/memory_observation_store.h"
@@ -66,7 +66,7 @@ cobalt::util::ConsistentProtoStore local_aggregate_proto_store(
 cobalt::util::ConsistentProtoStore obs_history_proto_store(
     "/tmp/obs_hist", std::make_unique<cobalt::util::PosixFileSystem>());
 
-cobalt::logger::EventAggregatorManager event_aggregator_manager(&encoder, &observation_writer,
+cobalt::local_aggregation::EventAggregatorManager event_aggregator_manager(&encoder, &observation_writer,
                                                                 &local_aggregate_proto_store,
                                                                 &obs_history_proto_store, 4);
 
