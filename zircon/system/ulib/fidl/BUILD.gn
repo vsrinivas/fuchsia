@@ -10,6 +10,7 @@ declare_args() {
 zx_library("fidl_base") {
   sdk = "source"
   sdk_publishable = true
+  host = true
   sdk_headers = [
     "lib/fidl/coding.h",
     "lib/fidl/txn_header.h",

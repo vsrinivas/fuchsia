@@ -68,6 +68,23 @@ if (is_fuchsia) {
       ":fidl-handle-policy-test-app",
     ]
   }
+} else if (current_os == host_os && current_cpu == host_cpu) {
+  # Some of the tests can run on host.
+  zx_test("fidl") {
+    sources = [
+      "abi_tests.cc",
+      "cpp_types_tests.cc",
+      "fidl_align_tests.cc",
+      "transformer_conformance_tests.cc",
+      "transformer_conformance_utils.cc",
+      "transformer_tests.cc",
+    ]
+    include_dirs = [ "generated" ]
+    deps = [
+      "$zx/system/ulib/fidl:fidl_base",
+      "$zx/system/ulib/unittest",
+    ]
+  }
 }
 
 fidl_library("example") {

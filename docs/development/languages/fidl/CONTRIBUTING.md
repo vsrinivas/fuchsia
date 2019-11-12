@@ -25,14 +25,14 @@ with tests in [//zircon/system/utest/fidl/][fidlc-tests].
 
 The back-end and runtime library locations are based on the target:
 
-Target    | Back-end                                               | Runtime Libraries
-----------|--------------------------------------------------------|------------------
-C         | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
-C++       | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
-Go        | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
-Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
-Dart      | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
-JavaScipt | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
+Target     | Back-end                                               | Runtime Libraries
+-----------|--------------------------------------------------------|------------------
+C          | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
+C++        | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
+Go         | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
+Rust       | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
+Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
+JavaScript | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
 ### Other FIDL Tools
 
@@ -276,6 +276,13 @@ Tab 2(shell)> runtests -t fidl-simple-test
 Tab 2(shell)> runtests -t fidl-test
 ```
 
+Some of the C runtime tests can run on host:
+```sh
+fx run-host-tests fidl-test
+```
+This only includes a few tests, so be sure to check the output to see if it is
+running the test you care about.
+
 ### C++ runtime
 
 You first need to have Fuchsia running in an emulator. Here are the steps:
@@ -389,19 +396,20 @@ fx build host-tools/gidl
 | fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test            | garnet/go/src/fidl/compiler/backend/syzkaller                           |
 | fidlgen syzkaller ir     | fx run-host-tests fidlgen_syzkaller_ir_test         | garnet/go/src/fidl/compiler/backend/syzkaller/ir                        |
 | fidlgen type definitions | fx run-host-tests fidlgen_types_test                | garnet/go/src/fidl/compiler/backend/types                               |
+| fidl c runtime host test | fx run-host-tests fidl-test                         | zircon/system/ulib/fidl                                                 |
 | c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests           | sdk/lib/fidl                                                            |
 | c++ bindings tests       | fx run-test fidl_tests                              | sdk/lib/fidl                                                            |
-| llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                        |
+| llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                               |
 | go bindings tests        | fx run-test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | fx run-test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
-| rust bindings            | fx run-test rust_fidl_tests                         |                                                                         |
+| rust bindings            | fx run-test rust_fidl_tests                         | garnet/public/lib/fidl/rust/fidl                                        |
 
 
 The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 
-| Name                      | Test Command                                                                                                 | Directories Covered     |
-|---------------------------|--------------------------------------------------------------------------------------------------------------|-------------------------|
-| fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug | zircon/system/host/fidl |
+| Name                      | Test Command                                                                                                  | Directories Covered     |
+|---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
+| fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug  | zircon/system/host/fidl |
 | fidl coding tables test   | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test                               | zircon/system/host/fidl |
 | fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
 | fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
