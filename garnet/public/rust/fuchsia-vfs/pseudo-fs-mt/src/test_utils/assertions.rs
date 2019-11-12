@@ -636,3 +636,31 @@ macro_rules! assert_channel_closed {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! assert_get_buffer {
+    ($proxy:expr, $flags:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let (status, buffer) = $proxy.get_buffer($flags).await.expect("`get_buffer()` failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        buffer
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_get_buffer_err {
+    ($proxy:expr, $flags:expr, $expected_status:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let (status, buffer) = $proxy.get_buffer($flags).await.expect("`get_buffer()` failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+        assert!(
+            buffer.is_none(),
+            "`get_buffer` returned a buffer along with an error code.\n\
+             buffer: {:?}",
+            buffer
+        );
+    }};
+}

@@ -25,12 +25,10 @@ pub const POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IWUSR;
 pub const POSIX_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
     POSIX_READ_ONLY_PROTECTION_ATTRIBUTES | POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES;
 
-/// Validate that the requested flags for a new connection are valid.  This validates flags against
-/// the flags of the parent connection, making sure that the access permission as not wider than
-/// those specified by `parent_flags`.  Parent connection flags are also used to determine if the
-/// new connection should be allowed to read the file (when `parent_flags` contains
-/// `OPEN_RIGHT_READABLE`), or to write into the file (when `parent_flags` contains
-/// `OPEN_RIGHT_WRITABLE`).
+/// Validate that the requested flags for a new connection are valid.  This function will make sure
+/// that `flags` only requests read access when `readable` is true, or only write access when
+/// `writable` is true, or either when both are true.  It also does some sanity checking and
+/// normalization, matching `flags` with the `mode` value.
 ///
 /// On success, returns the validated flags, with some ambiguities cleaned up.  On failure, it
 /// returns a [`Status`] indicating the problem.

@@ -7,6 +7,9 @@
 /// File nodes with per-connection buffers.
 pub mod pcb;
 
+/// File nodes backed by VMOs.
+pub mod vmo;
+
 pub mod test_utils;
 
 mod common;

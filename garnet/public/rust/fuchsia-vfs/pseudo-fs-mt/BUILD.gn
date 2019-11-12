@@ -28,6 +28,7 @@ rustc_library("pseudo-fs-mt") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
   test_deps = [ "//garnet/examples/fidl/services:echo-rustc" ]
