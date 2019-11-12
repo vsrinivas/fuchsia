@@ -6,14 +6,18 @@
 //! sending events to listeners, optionally configured with filters, about changes in the accounts
 //! presence and states during their lifetime.
 
-use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
-use fidl_fuchsia_identity_account::{AccountListenerOptions, AccountListenerProxy};
+use account_common::LocalAccountId;
+use fidl_fuchsia_identity_account::{
+    AccountListenerOptions, AccountListenerProxy, InitialAccountState,
+};
 use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
 use futures::lock::Mutex;
 use std::pin::Pin;
 
 use crate::inspect;
+
+// TODO(dnordstrom): Add a mechanism to publicize auth state changes.
 
 /// Events emitted on account listeners
 pub enum AccountEvent {
@@ -22,10 +26,6 @@ pub enum AccountEvent {
 
     /// AccountRemoved is emitted after an account has been removed.
     AccountRemoved(LocalAccountId),
-
-    /// AuthStateChanged is emitted after an account's auth state has changed.
-    #[allow(dead_code)]
-    AuthStateChanged(AccountAuthState),
 }
 
 /// The client end of an account listener.
@@ -44,7 +44,6 @@ impl Client {
         match event {
             AccountEvent::AccountAdded(_) => self.options.add_account,
             AccountEvent::AccountRemoved(_) => self.options.remove_account,
-            AccountEvent::AuthStateChanged(_) => false, // TODO: Implement
         }
     }
 
@@ -53,11 +52,12 @@ impl Client {
         event: &'a AccountEvent,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
         match event {
-            AccountEvent::AccountAdded(id) => self.listener.on_account_added(id.clone().into()),
-            AccountEvent::AccountRemoved(id) => self.listener.on_account_removed(id.clone().into()),
-            AccountEvent::AuthStateChanged(account_auth_state) => {
-                self.listener.on_auth_state_changed(&mut (&account_auth_state.clone()).into())
+            AccountEvent::AccountAdded(id) => {
+                let mut account_state =
+                    InitialAccountState { account_id: id.clone().into(), auth_state: None };
+                self.listener.on_account_added(&mut account_state)
             }
+            AccountEvent::AccountRemoved(id) => self.listener.on_account_removed(id.clone().into()),
         }
     }
 
@@ -112,14 +112,14 @@ impl AccountEventEmitter {
         &'a self,
         listener: AccountListenerProxy,
         options: AccountListenerOptions,
-        initial_auth_states: &'a Vec<AccountAuthState>,
+        initial_account_ids: &'a Vec<LocalAccountId>,
     ) -> Result<(), fidl::Error> {
         let mut clients_lock = self.clients.lock().await;
         let future = if options.initial_state {
-            let mut v: Vec<FidlAccountAuthState> = initial_auth_states
-                .into_iter()
-                .map(|auth_state| FidlAccountAuthState::from(auth_state))
-                .collect();
+            let mut v = initial_account_ids
+                .iter()
+                .map(|id| InitialAccountState { account_id: id.clone().into(), auth_state: None })
+                .collect::<Vec<_>>();
             FutureObj::new(Box::pin(listener.on_initialize(&mut v.iter_mut())))
         } else {
             FutureObj::new(Box::pin(ok(())))
@@ -136,7 +136,6 @@ impl AccountEventEmitter {
 mod tests {
     use super::*;
     use fidl::endpoints::*;
-    use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use futures::prelude::*;
@@ -145,14 +144,11 @@ mod tests {
     lazy_static! {
         static ref ACCOUNT_ID_ADD: LocalAccountId = LocalAccountId::new(1);
         static ref ACCOUNT_ID_REMOVE: LocalAccountId = LocalAccountId::new(2);
+        static ref TEST_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(3);
         static ref EVENT_ADDED: AccountEvent = AccountEvent::AccountAdded(ACCOUNT_ID_ADD.clone());
         static ref EVENT_REMOVED: AccountEvent =
             AccountEvent::AccountRemoved(ACCOUNT_ID_REMOVE.clone());
-        static ref EVENT_STATE_CHANGED: AccountEvent =
-            AccountEvent::AuthStateChanged(AccountAuthState { account_id: LocalAccountId::new(4) });
-        static ref AUTH_STATE: AccountAuthState =
-            AccountAuthState { account_id: LocalAccountId::new(6) };
-        static ref AUTH_STATES: Vec<AccountAuthState> = vec![AUTH_STATE.clone()];
+        static ref TEST_ACCOUNT_IDS: Vec<LocalAccountId> = vec![TEST_ACCOUNT_ID.clone()];
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -161,13 +157,13 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            granularity: AuthChangeGranularity { summary_changes: true },
+            scenario: None,
+            granularity: None,
         };
         let (listener, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(listener, options);
         assert_eq!(client.should_send(&EVENT_ADDED), true);
         assert_eq!(client.should_send(&EVENT_REMOVED), true);
-        assert_eq!(client.should_send(&EVENT_STATE_CHANGED), false);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -176,13 +172,13 @@ mod tests {
             initial_state: false,
             add_account: false,
             remove_account: false,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
         assert_eq!(client.should_send(&EVENT_ADDED), false);
         assert_eq!(client.should_send(&EVENT_REMOVED), false);
-        assert_eq!(client.should_send(&EVENT_STATE_CHANGED), false);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -191,13 +187,13 @@ mod tests {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
         assert_eq!(client.should_send(&EVENT_ADDED), false);
         assert_eq!(client.should_send(&EVENT_REMOVED), true);
-        assert_eq!(client.should_send(&EVENT_STATE_CHANGED), false);
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -206,7 +202,8 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let client = Client::new(client_end.into_proxy().unwrap(), options);
@@ -214,8 +211,10 @@ mod tests {
         // Expect only the AccountAdded event, the filter skips the AccountRemoved event
         let serve_fut = async move {
             let request = stream.try_next().await.unwrap();
-            if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
-                assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
+            if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
+                request
+            {
+                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -239,13 +238,15 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: false,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let options_2 = AccountListenerOptions {
             initial_state: true,
             add_account: false,
             remove_account: true,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let (client_end_1, mut stream_1) =
             create_request_stream::<AccountListenerMarker>().unwrap();
@@ -258,8 +259,10 @@ mod tests {
 
         let serve_fut_1 = async move {
             let request = stream_1.try_next().await.unwrap();
-            if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
-                assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
+            if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
+                request
+            {
+                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -271,20 +274,25 @@ mod tests {
 
         let serve_fut_2 = async move {
             let request = stream_2.try_next().await.unwrap();
-            if let Some(AccountListenerRequest::OnInitialize { account_auth_states, responder }) =
+            if let Some(AccountListenerRequest::OnInitialize { account_states, responder }) =
                 request
             {
                 assert_eq!(
-                    account_auth_states,
-                    vec![FidlAccountAuthState::from(&AUTH_STATE.clone())]
+                    account_states,
+                    vec![InitialAccountState {
+                        account_id: TEST_ACCOUNT_ID.clone().into(),
+                        auth_state: None
+                    }]
                 );
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
             };
             let request = stream_2.try_next().await.unwrap();
-            if let Some(AccountListenerRequest::OnAccountRemoved { id, responder }) = request {
-                assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_REMOVE.clone());
+            if let Some(AccountListenerRequest::OnAccountRemoved { account_id, responder }) =
+                request
+            {
+                assert_eq!(LocalAccountId::from(account_id), ACCOUNT_ID_REMOVE.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -300,7 +308,7 @@ mod tests {
                 total_opened: 0 as u64,
             }});
             assert!(account_event_emitter
-                .add_listener(listener_1, options_1, &AUTH_STATES)
+                .add_listener(listener_1, options_1, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
             assert_inspect_tree!(inspector, root : { listeners: contains {
@@ -308,7 +316,7 @@ mod tests {
                 total_opened: 1 as u64,
             }});
             assert!(account_event_emitter
-                .add_listener(listener_2, options_2, &AUTH_STATES)
+                .add_listener(listener_2, options_2, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
             assert_inspect_tree!(inspector, root : { listeners: {
@@ -332,18 +340,24 @@ mod tests {
             initial_state: false,
             add_account: true,
             remove_account: true,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();
         let inspector = Inspector::new();
         let account_event_emitter = AccountEventEmitter::new(inspector.root());
-        assert!(account_event_emitter.add_listener(listener, options, &AUTH_STATES).await.is_ok());
+        assert!(account_event_emitter
+            .add_listener(listener, options, &TEST_ACCOUNT_IDS)
+            .await
+            .is_ok());
 
         let serve_fut = async move {
             let request = stream.try_next().await.unwrap();
-            if let Some(AccountListenerRequest::OnAccountAdded { id, responder }) = request {
-                assert_eq!(LocalAccountId::from(id), ACCOUNT_ID_ADD.clone());
+            if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
+                request
+            {
+                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");

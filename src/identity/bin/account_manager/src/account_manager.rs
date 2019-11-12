@@ -4,20 +4,14 @@
 
 extern crate tempfile;
 
-use account_common::{
-    AccountAuthState, AccountManagerError, FidlAccountAuthState, FidlLocalAccountId,
-    LocalAccountId, ResultExt,
-};
+use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId, ResultExt};
 use failure::{format_err, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{
-    AppConfig, AuthState, AuthStateSummary, AuthenticationContextProviderMarker,
-    Status as AuthStatus,
-};
+use fidl_fuchsia_auth::{AppConfig, AuthenticationContextProviderMarker, Status as AuthStatus};
 use fidl_fuchsia_auth::{AuthProviderConfig, UserProfileInfo};
 use fidl_fuchsia_identity_account::{
-    AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
-    AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime,
+    AccountAuthState, AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
+    AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime, Scenario,
 };
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_inspect::{Inspector, Property};
@@ -42,10 +36,6 @@ lazy_static! {
     /// An empty vector means that the auth provider should use its default scopes.
     static ref APP_SCOPES: Vec<String> = Vec::default();
 }
-
-/// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
-/// available.
-const DEFAULT_AUTH_STATE: AuthState = AuthState { summary: AuthStateSummary::Unknown };
 
 /// The core component of the account system for Fuchsia.
 ///
@@ -113,8 +103,8 @@ impl AccountManager {
                 let mut response = self.get_account_ids().await.into_iter();
                 responder.send(&mut response)?;
             }
-            AccountManagerRequest::GetAccountAuthStates { responder } => {
-                let mut response = self.get_account_auth_states().await;
+            AccountManagerRequest::GetAccountAuthStates { scenario, responder } => {
+                let mut response = self.get_account_auth_states(scenario).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::GetAccount { id, context_provider, account, responder } => {
@@ -156,20 +146,15 @@ impl AccountManager {
         self.account_map.lock().await.get_account_ids().iter().map(|id| id.clone().into()).collect()
     }
 
-    async fn get_account_auth_states(&self) -> Result<Vec<FidlAccountAuthState>, ApiError> {
+    async fn get_account_auth_states(
+        &self,
+        _scenario: Scenario,
+    ) -> Result<Vec<AccountAuthState>, ApiError> {
         // TODO(jsankey): Collect authentication state from AccountHandler instances rather than
         // returning a fixed value. This will involve opening account handler connections (in
         // parallel) for all of the accounts where encryption keys for the account's data partition
         // are available.
-        let account_map = self.account_map.lock().await;
-        (Ok(account_map
-            .get_account_ids()
-            .iter()
-            .map(|id| FidlAccountAuthState {
-                account_id: id.clone().into(),
-                auth_state: DEFAULT_AUTH_STATE,
-            })
-            .collect()))
+        return Err(ApiError::UnsupportedOperation);
     }
 
     async fn get_account(
@@ -197,26 +182,20 @@ impl AccountManager {
         listener: ClientEnd<AccountListenerMarker>,
         options: AccountListenerOptions,
     ) -> Result<(), ApiError> {
-        let account_auth_states: Vec<AccountAuthState> = {
-            self.account_map
-                .lock()
-                .await
-                .get_account_ids()
-                .iter()
-                // TODO(dnordstrom): Get the real auth states
-                .map(|id| AccountAuthState { account_id: id.clone() })
-                .collect()
+        match (&options.scenario, &options.granularity) {
+            (None, Some(_)) => return Err(ApiError::InvalidRequest),
+            (Some(_), _) => return Err(ApiError::UnsupportedOperation),
+            (None, None) => {}
         };
+        let account_ids = self.account_map.lock().await.get_account_ids();
         let proxy = listener.into_proxy().map_err(|err| {
             warn!("Could not convert AccountListener client end to proxy {:?}", err);
             ApiError::InvalidRequest
         })?;
-        self.event_emitter.add_listener(proxy, options, &account_auth_states).await.map_err(
-            |err| {
-                warn!("Could not instantiate AccountListener client {:?}", err);
-                ApiError::Unknown
-            },
-        )?;
+        self.event_emitter.add_listener(proxy, options, &account_ids).await.map_err(|err| {
+            warn!("Could not instantiate AccountListener client {:?}", err);
+            ApiError::Unknown
+        })?;
         info!("AccountListener established");
         Ok(())
     }
@@ -400,9 +379,9 @@ mod tests {
     use super::*;
     use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
     use fidl::endpoints::{create_request_stream, RequestStream};
-    use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_identity_account::{
         AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
+        AuthChangeGranularity, InitialAccountState, Scenario, ThreatScenario,
     };
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
@@ -416,6 +395,15 @@ mod tests {
         /// Configuration for a set of fake auth providers used for testing.
         /// This can be populated later if needed.
         static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
+
+        static ref TEST_SCENARIO: Scenario =
+            Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
+
+        static ref TEST_GRANULARITY: AuthChangeGranularity = AuthChangeGranularity {
+            engagement_changes: true,
+            presence_changes: false,
+            summary_changes: true,
+        };
     }
 
     const FORCE_REMOVE_ON: bool = true;
@@ -483,7 +471,24 @@ mod tests {
             |proxy, _| {
                 async move {
                     assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                    assert_eq!(proxy.get_account_auth_states().await?, Ok(vec![]));
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    #[test]
+    fn test_unsupported_scenario() {
+        let data_dir = TempDir::new().unwrap();
+        request_stream_test(
+            create_accounts(vec![], data_dir.path(), &Inspector::new()),
+            |proxy, _test_object| {
+                async move {
+                    assert_eq!(proxy.get_account_ids().await?.len(), 0);
+                    assert_eq!(
+                        proxy.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
+                        Err(ApiError::UnsupportedOperation)
+                    );
                     Ok(())
                 }
             },
@@ -499,7 +504,6 @@ mod tests {
             |proxy, _test_object| {
                 async move {
                     assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                    assert_eq!(proxy.get_account_auth_states().await?, Ok(vec![]));
                     assert_inspect_tree!(inspector, root: contains {
                         accounts: {
                             active: 0 as u64,
@@ -550,7 +554,8 @@ mod tests {
             initial_state: true,
             add_account: true,
             remove_account: true,
-            granularity: AuthChangeGranularity { summary_changes: false },
+            scenario: None,
+            granularity: None,
         };
 
         let data_dir = TempDir::new().unwrap();
@@ -564,19 +569,15 @@ mod tests {
                     let serve_fut = async move {
                         let request = stream.try_next().await.expect("stream error");
                         if let Some(AccountListenerRequest::OnInitialize {
-                            account_auth_states,
+                            account_states,
                             responder,
                         }) = request
                         {
                             assert_eq!(
-                                account_auth_states,
+                                account_states,
                                 vec![
-                                    FidlAccountAuthState::from(&AccountAuthState {
-                                        account_id: LocalAccountId::new(1)
-                                    }),
-                                    FidlAccountAuthState::from(&AccountAuthState {
-                                        account_id: LocalAccountId::new(2)
-                                    }),
+                                    InitialAccountState { account_id: 1, auth_state: None },
+                                    InitialAccountState { account_id: 2, auth_state: None },
                                 ]
                             );
                             responder.send().unwrap();
@@ -598,6 +599,91 @@ mod tests {
                         );
                     };
                     join(request_fut, serve_fut).await;
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    /// Registers an account listener with invalid request arguments.
+    #[test]
+    fn test_account_listener_invalid_requests() {
+        let mut options = AccountListenerOptions {
+            initial_state: true,
+            add_account: true,
+            remove_account: true,
+            scenario: None,
+            granularity: Some(Box::new(TEST_GRANULARITY.clone())),
+        };
+
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        request_stream_test(
+            create_accounts(vec![1, 2], data_dir.path(), &inspector),
+            |proxy, _| {
+                async move {
+                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                    assert_eq!(
+                        proxy.register_account_listener(client_end, &mut options).await?,
+                        Err(ApiError::InvalidRequest)
+                    );
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    /// Registers an account listener with a scenario, which is currently unsupported.
+    #[test]
+    fn test_account_listener_scenario() {
+        let mut options = AccountListenerOptions {
+            initial_state: true,
+            add_account: true,
+            remove_account: true,
+            scenario: Some(Box::new(TEST_SCENARIO.clone())),
+            granularity: None,
+        };
+
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        request_stream_test(
+            create_accounts(vec![1, 2], data_dir.path(), &inspector),
+            |proxy, _| {
+                async move {
+                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                    assert_eq!(
+                        proxy.register_account_listener(client_end, &mut options).await?,
+                        Err(ApiError::UnsupportedOperation)
+                    );
+                    Ok(())
+                }
+            },
+        );
+    }
+
+    /// Registers an account listener with a scenario and a granularity, which is currently
+    /// unsupported.
+    #[test]
+    fn test_account_listener_scenario_granularity() {
+        let mut options = AccountListenerOptions {
+            initial_state: true,
+            add_account: true,
+            remove_account: true,
+            scenario: Some(Box::new(TEST_SCENARIO.clone())),
+            granularity: Some(Box::new(TEST_GRANULARITY.clone())),
+        };
+
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        request_stream_test(
+            create_accounts(vec![1, 2], data_dir.path(), &inspector),
+            |proxy, _| {
+                async move {
+                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                    assert_eq!(
+                        proxy.register_account_listener(client_end, &mut options).await?,
+                        Err(ApiError::UnsupportedOperation)
+                    );
                     Ok(())
                 }
             },

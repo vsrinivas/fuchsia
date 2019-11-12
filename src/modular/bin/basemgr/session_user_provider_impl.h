@@ -89,10 +89,11 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // OnAccountAdded, session_user_provider_impl will call |on_login_|.
   //
   // |fuchsia::identity::account::AccountListner|
-  void OnInitialize(std::vector<fuchsia::identity::account::AccountAuthState>,
+  void OnInitialize(std::vector<fuchsia::identity::account::InitialAccountState>,
                     OnInitializeCallback) override;
   // |fuchsia::identity::account::AccountListner|
-  void OnAccountAdded(uint64_t, OnAccountAddedCallback) override;
+  void OnAccountAdded(fuchsia::identity::account::InitialAccountState,
+                      OnAccountAddedCallback) override;
   // |fuchsia::identity::account::AccountListner|
   void OnAccountRemoved(uint64_t, OnAccountRemovedCallback) override;
   // |fuchsia::identity::account::AccountListner|

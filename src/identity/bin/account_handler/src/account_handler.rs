@@ -8,7 +8,7 @@ use crate::inspect;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt};
 use failure::{format_err, ResultExt as _};
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
+use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
@@ -56,10 +56,6 @@ pub struct AccountHandler {
 }
 
 impl AccountHandler {
-    /// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
-    /// available.
-    pub const DEFAULT_AUTH_STATE: AuthState = AuthState { summary: AuthStateSummary::Unknown };
-
     /// Constructs a new AccountHandler.
     pub fn new(lifetime: AccountLifetime, inspector: &Inspector) -> AccountHandler {
         let inspect = inspect::AccountHandler::new(inspector.root(), "uninitialized");
@@ -307,11 +303,15 @@ mod tests {
     use super::*;
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
+    use fidl_fuchsia_identity_account::{Scenario, ThreatScenario};
     use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
     use fuchsia_async as fasync;
     use fuchsia_inspect::testing::AnyProperty;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use std::sync::Arc;
+
+    const DEFAULT_SCENARIO: Scenario =
+        Scenario { include_test: false, threat_scenario: ThreatScenario::None };
 
     const FORCE_REMOVE_ON: bool = true;
     const FORCE_REMOVE_OFF: bool = false;
@@ -449,8 +449,8 @@ mod tests {
                     // The account channel should now be usable.
                     let account_proxy = account_client_end.into_proxy().unwrap();
                     assert_eq!(
-                        account_proxy.get_auth_state().await?,
-                        Ok(AccountHandler::DEFAULT_AUTH_STATE)
+                        account_proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
+                        Err(ApiError::UnsupportedOperation)
                     );
                     Ok(())
                 }
@@ -578,7 +578,10 @@ mod tests {
                     });
 
                     // Make sure that the channel is in fact closed.
-                    assert!(account_proxy.get_auth_state().await.is_err());
+                    assert!(account_proxy
+                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
+                        .await
+                        .is_err());
 
                     // We cannot remove twice.
                     assert_eq!(
@@ -633,7 +636,10 @@ mod tests {
                     assert!(proxy.terminate().is_err());
 
                     // Make sure that the channel closed too.
-                    assert!(account_proxy.get_auth_state().await.is_err());
+                    assert!(account_proxy
+                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
+                        .await
+                        .is_err());
                     Ok(())
                 }
             },

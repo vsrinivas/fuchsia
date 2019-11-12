@@ -15,16 +15,20 @@ using fuchsia.auth;
 /// system and is intended only for use by the most trusted parts of the system.
 [Discoverable]
 protocol AccountManager {
-    /// Returns a vector of all unlocked accounts provisioned on the current
-    /// device.
+    /// Returns a vector of all accounts provisioned on the current device.
     GetAccountIds()
         -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
 
-    /// Returns a vector of all unlocked accounts provisioned on the current
+    /// Returns a vector of all accounts provisioned on the current
     /// device and the current authentication state for each.
-    GetAccountAuthStates() -> (
-        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states
-        ) error Error;
+    ///
+    /// `scenario` The scenario to produce authentication states for.
+    ///
+    /// Returns: `account_auth_states` The current authentication state for each
+    ///                                account given the provided scenario.
+    GetAccountAuthStates(Scenario scenario)
+        -> (vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE
+            account_auth_states) error Error;
 
     /// Connects a channel to read properties of and perform operations on
     /// one account.
@@ -102,27 +106,42 @@ struct AccountAuthState {
     /// A unique identifier for the Fuchsia account on the current device.
     LocalAccountId account_id;
     /// An authentication state for the Fuchsia account.
-    // TODO(dnordstrom): Use fuchsia.identity.account.AuthState instead
-    fuchsia.auth.AuthState auth_state;
+    AuthState auth_state;
+};
+
+/// The initial state of an account, reported through an `AccountListener`.
+[MaxHandles = "0"]
+struct InitialAccountState {
+    /// A unique identifier for the Fuchsia account on the current device.
+    LocalAccountId account_id;
+    /// An authentication state for the Fuchsia account. It is only populated if
+    /// `AccountListenerOptions.scenario` was specified when the listener was
+    /// created.
+    AuthState? auth_state;
 };
 
 /// The configuration for an AccountListener, defining the set of events that it
 /// will receive.
 [MaxHandles = "0"]
 struct AccountListenerOptions {
-    /// If true, the listener will receive the initial auth state for all
-    /// accounts.
+    /// If true, the listener will receive an event containing the initial state
+    /// for all accounts. The initial auth states will be populated in this
+    /// event iff the scenario option is set.
     bool initial_state;
     /// If true, the listener will receive events when a new account is added
     /// to the device.
     bool add_account;
-    /// If true, the listener will receive events.
+    /// If true, the listener will receive events when an account is removed
+    /// from the device.
     bool remove_account;
+    /// The scenario to use for all AuthState data sent to the listener. If
+    /// scenario is not supplied no AuthState data will be populated.
+    Scenario? scenario;
     /// An `AuthChangeGranularity` expressing the magnitude of change in
     /// authentication state that will lead to AuthStateChange events.
-    // TODO(dnordstrom): Use fuchsia.identity.account.AuthChangeGranularity
-    // instead
-    fuchsia.auth.AuthChangeGranularity granularity;
+    /// If granularity is not populated AuthStateChange events will not be
+    /// sent. May only be populated if a scenario is provided.
+    AuthChangeGranularity? granularity;
 };
 
 /// A protocol to receive events when the set of accounts on a device or the
@@ -142,19 +161,23 @@ protocol AccountListener {
     /// AccountListener. When called, it will always be the first call on the
     /// channel. If no accounts are present on the device the vector will be
     /// empty.
+    ///
+    /// `account_states` The set of initial states.
     OnInitialize(
-        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states)
+        vector<InitialAccountState>:MAX_ACCOUNTS_PER_DEVICE account_states)
         -> ();
 
     /// A method that is called when a new account is added to the device.
     /// This method is only called if AccountListenerOptions.add_account was
     /// set when creating the AccountListener.
-    OnAccountAdded(LocalAccountId id) -> ();
+    ///
+    /// `account_state` The initial state for the newly added account.
+    OnAccountAdded(InitialAccountState account_state) -> ();
 
     /// A method that is called when a provisioned account is removed.
     /// This method is only called if AccountListenerOptions.remove_account was
     /// set when creating the AccountListener.
-    OnAccountRemoved(LocalAccountId id) -> ();
+    OnAccountRemoved(LocalAccountId account_id) -> ();
 
     /// A method that is called when the authentication state of any provisioned
     /// account changes.

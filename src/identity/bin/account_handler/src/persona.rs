@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::TokenManager;
 use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{
-    AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, TokenManagerMarker,
-};
+use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, TokenManagerMarker};
 use fidl_fuchsia_identity_account::{
-    AuthListenerMarker, Error as ApiError, Lifetime, PersonaRequest, PersonaRequestStream,
+    AuthChangeGranularity, AuthListenerMarker, AuthState, Error as ApiError, Lifetime,
+    PersonaRequest, PersonaRequestStream, Scenario,
 };
 use fidl_fuchsia_identity_keys::KeyManagerMarker;
 use fuchsia_inspect::{Node, NumericProperty};
@@ -127,18 +125,19 @@ impl Persona {
                 let response = self.get_lifetime();
                 responder.send(response)?;
             }
-            PersonaRequest::GetAuthState { responder } => {
-                let mut response = self.get_auth_state();
+            PersonaRequest::GetAuthState { scenario, responder } => {
+                let mut response = self.get_auth_state(scenario);
                 responder.send(&mut response)?;
             }
             PersonaRequest::RegisterAuthListener {
+                scenario,
                 listener,
                 initial_state,
                 granularity,
                 responder,
             } => {
                 let mut response =
-                    self.register_auth_listener(listener, initial_state, granularity);
+                    self.register_auth_listener(scenario, listener, initial_state, granularity);
                 responder.send(&mut response)?;
             }
             PersonaRequest::GetTokenManager { application_url, token_manager, responder } => {
@@ -158,20 +157,21 @@ impl Persona {
         Lifetime::from(self.lifetime.as_ref())
     }
 
-    fn get_auth_state(&self) -> Result<AuthState, ApiError> {
+    fn get_auth_state(&self, _scenario: Scenario) -> Result<AuthState, ApiError> {
         // TODO(jsankey): Return real authentication state once authenticators exist to create it.
-        Ok(AccountHandler::DEFAULT_AUTH_STATE)
+        Err(ApiError::UnsupportedOperation)
     }
 
     fn register_auth_listener(
         &self,
+        _scenario: Scenario,
         _listener: ClientEnd<AuthListenerMarker>,
         _initial_state: bool,
         _granularity: AuthChangeGranularity,
     ) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("RegisterAuthListener not yet implemented");
-        Err(ApiError::Internal)
+        Err(ApiError::UnsupportedOperation)
     }
 
     async fn get_token_manager<'a>(
@@ -238,11 +238,14 @@ mod tests {
     use crate::test_util::*;
     use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
-    use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy};
+    use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy, ThreatScenario};
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use std::path::PathBuf;
+
+    const DEFAULT_SCENARIO: Scenario =
+        Scenario { include_test: false, threat_scenario: ThreatScenario::None };
 
     /// Type to hold the common state require during construction of test objects and execution
     /// of a test, including an async executor and a temporary location in the filesystem.
@@ -348,7 +351,10 @@ mod tests {
         let mut test = Test::new();
         test.run(test.create_persona(), |proxy| {
             async move {
-                assert_eq!(proxy.get_auth_state().await?, Ok(AccountHandler::DEFAULT_AUTH_STATE));
+                assert_eq!(
+                    proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
                 Ok(())
             }
         })
@@ -364,12 +370,17 @@ mod tests {
                 assert_eq!(
                     proxy
                         .register_auth_listener(
+                            &mut DEFAULT_SCENARIO.clone(),
                             auth_listener_client_end,
                             true, /* include initial state */
-                            &mut AuthChangeGranularity { summary_changes: true }
+                            &mut AuthChangeGranularity {
+                                presence_changes: false,
+                                engagement_changes: false,
+                                summary_changes: true,
+                            }
                         )
                         .await?,
-                    Err(ApiError::Internal)
+                    Err(ApiError::UnsupportedOperation)
                 );
                 Ok(())
             }

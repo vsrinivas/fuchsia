@@ -272,16 +272,18 @@ fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(std::
 }
 
 void SessionUserProviderImpl::OnInitialize(
-    std::vector<fuchsia::identity::account::AccountAuthState>, OnInitializeCallback callback) {
+    std::vector<fuchsia::identity::account::InitialAccountState>, OnInitializeCallback callback) {
   callback();
   on_initialize_();
 }
 
-void SessionUserProviderImpl::OnAccountAdded(uint64_t account_id, OnAccountAddedCallback callback) {
+void SessionUserProviderImpl::OnAccountAdded(
+    fuchsia::identity::account::InitialAccountState account_state,
+    OnAccountAddedCallback callback) {
   // TODO(MF-311): Get rid of this once clients of UserProvider interface start
   // using AccountManager.
   fuchsia::modular::UserLoginParams params;
-  params.account_id = std::to_string(account_id);
+  params.account_id = std::to_string(account_state.account_id);
   // Base shell may also call Login with the newly added account, but the Login
   // flow should be resilient to multiple invocations.
   Login(std::move(params));

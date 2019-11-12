@@ -19,13 +19,11 @@ using fuchsia.sys;
 /// acknowledgements" FIDL design pattern.
 protocol AuthListener {
     /// A method that is called when the AccountListener is first connected.
-    // TODO(dnordstrom): Use fuchsia.identity.account.AuthState instead
-    OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
+    OnInitialize(AuthState auth_state) -> ();
 
     /// A method that is called when the authentication state of the account
     /// changes.
-    // TODO(dnordstrom): Use fuchsia.identity.account.AuthState instead
-    OnAuthStateChanged(fuchsia.auth.AuthState auth_state) -> ();
+    OnAuthStateChanged(AuthState auth_state) -> ();
 };
 
 /// A protocol that is extended by other protocols defining an entity
@@ -37,7 +35,11 @@ protocol AuthListener {
 [FragileBase]
 protocol AuthTarget {
     /// Returns the current `AuthState` of the target.
-    GetAuthState() -> (fuchsia.auth.AuthState auth_state) error Error;
+    ///
+    /// `scenario` The scenario to produce the authentication state for.
+    ///
+    /// Returns: `auth_state` The target's current authentication state.
+    GetAuthState(Scenario scenario) -> (AuthState auth_state) error Error;
 
     /// Connects a channel that will receive changes in the authentication
     /// state of the target.
@@ -48,12 +50,11 @@ protocol AuthTarget {
     /// `granularity` An `AuthChangeGranularity` expressing the magnitude of
     ///               change in authentication state than should lead to a
     ///               callback
-    // TODO(dnordstrom): Use fuchsia.identity.account.AuthChangeGranularity
-    // instead
     RegisterAuthListener(
+        Scenario scenario,
         AuthListener listener,
         bool initial_state,
-        fuchsia.auth.AuthChangeGranularity granularity)
+        AuthChangeGranularity granularity)
         -> () error Error;
 
     // TODO(AUTH-220): Add methods that request in increase in the authentication

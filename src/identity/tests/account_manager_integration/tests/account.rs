@@ -5,10 +5,11 @@
 use failure::{format_err, Error};
 use fidl::endpoints::{create_endpoints, create_request_stream};
 use fidl_fuchsia_auth::{
-    AuthStateSummary, AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
+    AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
 };
 use fidl_fuchsia_identity_account::{
-    AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime,
+    AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime, Scenario,
+    ThreatScenario,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, App};
@@ -29,6 +30,11 @@ lazy_static! {
 
     /// Arguments passed to account manager started in test environment.
     static ref ACCOUNT_MANAGER_ARGS: Vec<String> = vec![String::from("--dev-auth-providers")];
+
+    static ref TEST_SCENARIO: Scenario = Scenario {
+        include_test: false,
+        threat_scenario: ThreatScenario::BasicAttacker,
+    };
 }
 
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
@@ -157,11 +163,11 @@ async fn test_provision_new_account() -> Result<(), Error> {
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
 
-    // Auth state should be unknown for the new accounts
-    let auth_states = account_manager.get_account_auth_states().await?.unwrap();
-    assert_eq!(auth_states.len(), 2);
-    assert!(auth_states.iter().all(|state| state.auth_state.summary == AuthStateSummary::Unknown
-        && account_ids.contains(&state.account_id)));
+    // Auth state is not yet supported
+    assert_eq!(
+        account_manager.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
+        Err(ApiError::UnsupportedOperation)
+    );
 
     Ok(())
 }
@@ -187,11 +193,11 @@ async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
 
-    // Auth state should be unknown for the new accounts
-    let auth_states = account_manager.get_account_auth_states().await?.unwrap();
-    assert_eq!(auth_states.len(), 2);
-    assert!(auth_states.iter().all(|state| state.auth_state.summary == AuthStateSummary::Unknown
-        && account_ids.contains(&state.account_id)));
+    // Auth state is not yet supported
+    assert_eq!(
+        account_manager.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
+        Err(ApiError::UnsupportedOperation)
+    );
 
     Ok(())
 }
@@ -212,22 +218,16 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
-    let account_auth_state = account_proxy
-        .get_auth_state()
-        .await?
-        .map_err(|error| format_err!("Account.GetAuthState returned error: {:?}", error))?;
-    assert_eq!(account_auth_state.summary, AuthStateSummary::Unknown);
+    let account_auth_state = account_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?;
+    assert_eq!(account_auth_state, Err(ApiError::UnsupportedOperation));
     assert_eq!(account_proxy.get_lifetime().await?, lifetime);
 
     // Connect a channel to the account's default persona and verify it's usable.
     let (persona_client_end, persona_server_end) = create_endpoints()?;
     assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
     let persona_proxy = persona_client_end.into_proxy()?;
-    let persona_auth_state = persona_proxy
-        .get_auth_state()
-        .await?
-        .map_err(|error| format_err!("Persona.GetAuthState returned error: {:?}", error))?;
-    assert_eq!(persona_auth_state.summary, AuthStateSummary::Unknown);
+    let persona_auth_state = persona_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?;
+    assert_eq!(persona_auth_state, Err(ApiError::UnsupportedOperation));
     assert_eq!(persona_proxy.get_lifetime().await?, lifetime);
 
     Ok(())
