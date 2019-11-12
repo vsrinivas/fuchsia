@@ -46,7 +46,7 @@ class WlanInterface {
   void DdkRelease();
 
   static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);
-  static zx_status_t SetCountry(const wlanphy_country_t* country);
+  static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);
 
   // ZX_PROTOCOL_WLANIF_IMPL operations.
   zx_status_t Start(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);

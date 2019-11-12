@@ -168,7 +168,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
 }
 
 zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
-  return WlanInterface::SetCountry(country);
+  return WlanInterface::SetCountry(brcmf_pub_.get(), country);
 }
 
 void Device::DisableDispatcher() {

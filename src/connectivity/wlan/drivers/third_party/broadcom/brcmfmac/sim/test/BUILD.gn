@@ -115,6 +115,22 @@ executable("scan_test") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
+executable("set_cc_test") {
+  output_name = "set_cc_test"
+  testonly = true
+  sources = [
+    "set_cc_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
 unittest_package("brcmfmac_sim_test") {
   package_name = "brcmfmac_sim_test"
   deps = [
@@ -123,6 +139,7 @@ unittest_package("brcmfmac_sim_test") {
     ":lifecycle_test",
     ":scan_dwell_time_test",
     ":scan_test",
+    ":set_cc_test",
   ]
   tests = [
     {
@@ -143,6 +160,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "scan_test"
+      environments = basic_envs
+    },
+    {
+      name = "set_cc_test"
       environments = basic_envs
     },
   ]

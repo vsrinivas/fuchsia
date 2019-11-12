@@ -2657,128 +2657,22 @@ static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
   return ZX_OK;
 }
 
-/* Search through the given country code table and issue the iovar */
-static void brcmf_cfg80211_set_country(struct brcmf_cfg80211_info* cfg,
-                                       const wlanphy_country_t* country,
-                                       const cc_entry_t* cc_table) {
-  struct brcmf_if* ifp = cfg_to_if(cfg);
-  struct brcmf_fil_country_le ccreq;
-  zx_status_t err;
-  int32_t fw_err = 0;
-  const unsigned char* code = country->alpha2;
-  int i;
-
-  BRCMF_DBG(TRACE, "Enter: code=%c%c\n", code[0], code[1]);
-
-  // This is the default value in case the relevant entry is not found in the table.
-  ccreq.rev = 0;
-  // Search through the table until a valid or Null entry is found
-  for (i = 0; i < MAX_CC_TABLE_ENTRIES; i++) {
-    if (cc_table[i].cc_abbr[0] == 0) {
-      BRCMF_ERR("CC Entry for %.*s not found\n", sizeof(ccreq.ccode), ccreq.ccode);
-      break;
-    }
-    if (memcmp(cc_table[i].cc_abbr, code, WLANPHY_ALPHA2_LEN) == 0) {
-      ccreq.rev = cc_table[i].cc_rev;
-      break;
-    }
-  }
-  // It appears brcm firmware expects ccode and country_abbrev to have the same value
-  ccreq.ccode[0] = code[0];
-  ccreq.ccode[1] = code[1];
-  ccreq.ccode[2] = 0;
-  ccreq.country_abbrev[0] = code[0];
-  ccreq.country_abbrev[1] = code[1];
-  ccreq.country_abbrev[2] = 0;
-
-  // Log out the country code settings for reference
-  BRCMF_ERR("Country code set ccode %s, abbrev %s, rev %d\n", ccreq.ccode, ccreq.country_abbrev,
-            ccreq.rev);
-  // Set the country info in firmware
-  err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Firmware rejected country setting: %s fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    return;
-  }
-}
-
-// This function applies configured platform specific iovars to the firmware
-static void brcmf_set_init_cfg_params(brcmf_if* ifp, const iovar_entry_t* iovar_tbl) {
-  int i;
-  int32_t fw_err;
-  zx_status_t err;
-
-  // Go through the table until a null entry is found
-  for (i = 0; i < MAX_IOVAR_ENTRIES; i++) {
-    switch (iovar_tbl[i].iovar_type) {
-      case IOVAR_STR_TYPE: {
-        uint32_t cur_val;
-
-        // First, get the current value (for debugging)
-        err = brcmf_fil_iovar_int_get(ifp, iovar_tbl[i].iovar_str, &cur_val, &fw_err);
-        if (err != ZX_OK) {
-          BRCMF_ERR("iovar get error: %s, fw err %s\n", iovar_tbl[i].iovar_str,
-                    brcmf_fil_get_errstr(fw_err));
-        } else {
-          BRCMF_INFO("iovar %s get: %d new: %d\n", iovar_tbl[i].iovar_str, cur_val,
-                     iovar_tbl[i].val);
-          err = brcmf_fil_iovar_int_set(ifp, iovar_tbl[i].iovar_str, iovar_tbl[i].val, &fw_err);
-          if (err != ZX_OK) {
-            BRCMF_ERR("iovar set error: %s, fw err %s\n", iovar_tbl[i].iovar_str,
-                      brcmf_fil_get_errstr(fw_err));
-          }
-        }
-        break;
-      }
-      case IOVAR_CMD_TYPE: {
-        err = brcmf_fil_cmd_data_set(ifp, iovar_tbl[i].iovar_cmd, &iovar_tbl[i].val,
-                                     sizeof(iovar_tbl[i].val), &fw_err);
-        if (err != ZX_OK) {
-          BRCMF_ERR("iovar cmd set error: %d, fw err %s\n", iovar_tbl[i].iovar_cmd,
-                    brcmf_fil_get_errstr(fw_err));
-        }
-      }
-      case IOVAR_LIST_END_TYPE:
-        // End of list, done setting iovars
-        return;
-    }
-  }
-}
-
 // Country is initialized to US by default. This should be retrieved from location services
 // when available.
 zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
                            zx_handle_t* out_sme_channel) {
   struct brcmf_if* ifp;
-  wifi_config_t config;
-  size_t actual;
-  zx_status_t err;
 
   if (!ndev->sme_channel.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   ifp = ndev_to_if(ndev);
-  // Get Broadcom WiFi Metadata by calling the bus specific function
-  err =
-      ifp->drvr->bus_if->ops->get_wifi_metadata(ifp->drvr->zxdev, &config, sizeof(config), &actual);
-  if (err != ZX_OK && err != ZX_ERR_NOT_FOUND) {
-    memset(&config, 0, sizeof(config));
-    BRCMF_ERR("get metadata failed, err: %d\n", err);
-    return err;
-  } else if (err == ZX_OK && actual != sizeof(config)) {
-    BRCMF_ERR("meta data size err exp:%d act: %lu\n", sizeof(config), actual);
-    return ZX_ERR_IO;
-  }
 
   BRCMF_DBG(WLANIF, "Starting wlanif interface\n");
   ndev->if_proto = *ifc;
   brcmf_netdev_open(ndev);
   ndev->flags = IFF_UP;
 
-  const wlanphy_country_t country = {{'U', 'S'}};
-  brcmf_cfg80211_set_country(ndev_to_if(ndev)->drvr->config, &country, config.cc_table);
-  brcmf_set_init_cfg_params(ifp, config.iovar_table);
   ZX_DEBUG_ASSERT(out_sme_channel != nullptr);
   *out_sme_channel = ndev->sme_channel.release();
   return ZX_OK;
@@ -4028,7 +3922,8 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "Event code %d, status %d\n", e->event_code, e->status);
+  BRCMF_DBG(CONN, "Event code %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
   if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
       (e->event_code == BRCMF_E_DISASSOC_IND) || ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
     brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
@@ -4214,7 +4109,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
 
   cfg->scan_request = NULL;
-  cfg->pwr_save = false; // FIXME #37793: should be set per-platform
+  cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
   cfg->dongle_up = false; /* dongle is not up yet */
   err = brcmf_init_priv_mem(cfg);
   if (err != ZX_OK) {

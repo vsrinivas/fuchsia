@@ -19,6 +19,7 @@
 #include <cstring>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
@@ -201,10 +202,10 @@ zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info)
 }
 
 // static
-zx_status_t WlanInterface::SetCountry(const wlanphy_country_t* country) {
-  const zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  BRCMF_ERR("WlanInterface::SetCountry() returning %s\n", zx_status_get_string(status));
-  return status;
+zx_status_t WlanInterface::SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country) {
+  const unsigned char* code = country->alpha2;
+  BRCMF_ERR("WlanInterface::SetCountry() %c%c\n", code[0], code[1]);
+  return brcmf_set_country(drvr, country);
 }
 
 zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,

@@ -24,11 +24,11 @@
 #include <string>
 #include <vector>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 
 namespace wlan::brcmfmac {
 
@@ -76,6 +76,10 @@ class SimFirmware {
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
   int32_t GetPM();
 
+  // Firmware iovar accessors
+  zx_status_t IovarsSet(const char* name, const void* value, size_t value_len);
+  zx_status_t IovarsGet(const char* name, void* value_out, size_t value_len);
+
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
   void BusStop();
@@ -119,10 +123,6 @@ class SimFirmware {
   std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(size_t requested_size, size_t* offset_out);
   zx_status_t BcdcVarOp(brcmf_proto_bcdc_dcmd* msg, uint8_t* data, size_t len, bool is_set);
 
-  // Firmware iovar accessors
-  zx_status_t IovarsSet(const char* name, const void* value, size_t value_len);
-  zx_status_t IovarsGet(const char* name, void* value_out, size_t value_len);
-
   // Iovar handlers
   zx_status_t SetMacAddr(const uint8_t* mac_addr);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
@@ -163,8 +163,9 @@ class SimFirmware {
   std::array<uint8_t, ETH_ALEN> mac_addr_;
   ScanState scan_state_;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
-  int32_t power_mode_ = -1;  // -1 indicates value has not been set.
+  int32_t power_mode_ = -1;             // -1 indicates value has not been set.
   sim_iface_entry_t iface_tbl_[kMaxIfSupported];
+  struct brcmf_fil_country_le country_code_;
 };
 
 }  // namespace wlan::brcmfmac

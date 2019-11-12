@@ -50,10 +50,7 @@ static aml_sd_emmc_config_t config = {
 
 static const wifi_config_t wifi_config = {
     .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-    .iovar_table =
-        {
-            {IOVAR_LIST_END_TYPE, {{0}}, 0},
-        },
+    .iovar_table = {},
     .cc_table = {},
 };
 

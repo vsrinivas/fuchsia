@@ -82,9 +82,10 @@
 #define MAX_CC_TABLE_ENTRIES 64
 #define MAX_IOVAR_LEN 32
 enum {
-  IOVAR_STR_TYPE = 0,
+  // This ensures that a zero'd out table is always treated as empty.
+  IOVAR_LIST_END_TYPE = 0,
+  IOVAR_STR_TYPE,
   IOVAR_CMD_TYPE,
-  IOVAR_LIST_END_TYPE,
 };
 
 typedef struct iovar_entry {

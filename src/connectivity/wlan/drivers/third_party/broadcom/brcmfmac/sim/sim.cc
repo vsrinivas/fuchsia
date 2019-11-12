@@ -62,6 +62,8 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
                   },
               .cc_table =
                   {
+                      {"US", 842},
+                      {"WW", 999},
                       {"", 0},
                   },
           };

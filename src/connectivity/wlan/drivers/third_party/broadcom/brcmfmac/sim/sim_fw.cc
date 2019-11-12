@@ -26,6 +26,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
 namespace wlan::brcmfmac {
@@ -42,6 +43,7 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
                                      std::placeholders::_2, std::placeholders::_3),
   };
   hw_.SetCallbacks(handlers);
+  country_code_ = {};
 }
 
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
@@ -49,9 +51,7 @@ void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chiprev = 2;
 }
 
-int32_t SimFirmware::GetPM() {
-  return power_mode_;
-}
+int32_t SimFirmware::GetPM() { return power_mode_; }
 
 zx_status_t SimFirmware::BusPreinit() {
   // Currently nothing to do
@@ -364,8 +364,12 @@ zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t v
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
-  } else if (!std::strcmp(name, "escan"))
+  } else if (!std::strcmp(name, "escan")) {
     return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
+  } else if (!std::strcmp(name, "country")) {
+    auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
+    country_code_ = *cc_req;
+  }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_ERR("Ignoring request to set iovar '%s'\n", name);
@@ -378,6 +382,12 @@ zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t val
   if (!std::strcmp(name, "ver")) {
     if (value_len >= (strlen(kFirmwareVer) + 1)) {
       strlcpy(static_cast<char*>(value_out), kFirmwareVer, value_len);
+    } else {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else if (!std::strcmp(name, "country")) {
+    if (value_len >= (sizeof(brcmf_fil_country_le))) {
+      memcpy(value_out, &country_code_, sizeof(brcmf_fil_country_le));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
