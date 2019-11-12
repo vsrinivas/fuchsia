@@ -31,15 +31,9 @@ class ImagePipeSurface {
     uint32_t image_id{};
   };
 
-  ImagePipeSurface() {
-    std::vector<VkSurfaceFormatKHR> formats(
-        {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
-    supported_image_properties_ = {formats};
-  }
+  ImagePipeSurface() {}
 
   virtual ~ImagePipeSurface() = default;
-
-  SupportedImageProperties& supported_image_properties() { return supported_image_properties_; }
 
   VkFlags SupportedUsage() {
     return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -61,6 +55,8 @@ class ImagePipeSurface {
   virtual void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                             std::vector<zx::event> release_fences) = 0;
 
+  virtual SupportedImageProperties& GetSupportedImageProperties() = 0;
+
  protected:
   uint32_t next_image_id() {
     if (++next_image_id_ == 0) {
@@ -70,7 +66,6 @@ class ImagePipeSurface {
   }
 
  private:
-  SupportedImageProperties supported_image_properties_;
   uint32_t next_image_id_ = UINT32_MAX - 1;  // Exercise rollover
 };
 

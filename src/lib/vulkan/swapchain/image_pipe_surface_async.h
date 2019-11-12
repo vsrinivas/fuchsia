@@ -24,6 +24,10 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
     loop_.StartThread();
+    std::vector<VkSurfaceFormatKHR> formats(
+        {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
+         {VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
+    supported_image_properties_ = {formats};
   }
 
   bool Init() override;
@@ -38,6 +42,8 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
 
   void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                     std::vector<zx::event> release_fences) override;
+
+  SupportedImageProperties& GetSupportedImageProperties() override;
 
  private:
   void PresentNextImageLocked();
@@ -58,6 +64,7 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   std::vector<PendingPresent> queue_;
   bool present_pending_ = false;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  SupportedImageProperties supported_image_properties_;
 };
 
 }  // namespace image_pipe_swapchain

@@ -38,6 +38,8 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
   void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                     std::vector<zx::event> release_fences) override;
 
+  SupportedImageProperties& GetSupportedImageProperties() override;
+
  private:
   void ControllerError(zx_status_t status);
   void ControllerDisplaysChanged(std::vector<fuchsia::hardware::display::Info>,
@@ -60,6 +62,7 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
   uint64_t layer_id_ = 0;
   fuchsia::hardware::display::ControllerPtr display_controller_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  SupportedImageProperties supported_image_properties_;
 };
 
 }  // namespace image_pipe_swapchain

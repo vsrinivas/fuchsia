@@ -105,6 +105,22 @@ void ImagePipeSurfaceDisplay::ControllerDisplaysChanged(
   width_ = info[0].modes[0].horizontal_resolution;
   height_ = info[0].modes[0].vertical_resolution;
   display_id_ = info[0].id;
+  std::vector<VkSurfaceFormatKHR> formats;
+  auto pixel_format = reinterpret_cast<const int32_t*>(info[0].pixel_format.data());
+  for (unsigned i = 0; i < info[0].pixel_format.size(); i++) {
+    switch (pixel_format[i]) {
+      case ZX_PIXEL_FORMAT_RGB_x888:
+        formats.push_back({VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        break;
+      case ZX_PIXEL_FORMAT_BGR_888x:
+        formats.push_back({VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR});
+        break;
+      default:
+        // Ignore unknown formats.
+        break;
+    }
+  }
+  supported_image_properties_ = {formats};
   have_display_ = true;
 }
 
@@ -163,8 +179,24 @@ bool ImagePipeSurfaceDisplay::CreateImage(VkDevice device, VkLayerDispatchTable*
   fuchsia::hardware::display::ImageConfig image_config = {
       .width = image_info.width,
       .height = image_info.height,
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
   };
+  // Zircon and Vulkan format names use different component orders.
+  //
+  // Zircon format specifies the order and sizes of the components in a native type on a
+  // little-endian system, with the leftmost component stored in the most significant bits,
+  // and the rightmost in the least significant bits. For Vulkan, the leftmost component is
+  // stored at the lowest address and the rightmost component at the highest address.
+  switch (format) {
+    case VK_FORMAT_B8G8R8A8_UNORM:
+      image_config.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
+      break;
+    case VK_FORMAT_R8G8B8A8_UNORM:
+      image_config.pixel_format = ZX_PIXEL_FORMAT_BGR_888x;
+      break;
+    default:
+      // Unsupported format.
+      return false;
+  }
 #if defined(__x86_64__)
   // Must be consistent with intel-gpu-core.h
   const uint32_t kImageTypeXTiled = 1;
@@ -439,6 +471,10 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
   if (signal_event_id != fuchsia::hardware::display::invalidId) {
     display_controller_->ReleaseEvent(signal_event_id);
   }
+}
+
+SupportedImageProperties& ImagePipeSurfaceDisplay::GetSupportedImageProperties() {
+  return supported_image_properties_;
 }
 
 }  // namespace image_pipe_swapchain

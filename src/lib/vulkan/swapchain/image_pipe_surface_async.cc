@@ -240,6 +240,10 @@ void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::even
   }
 }
 
+SupportedImageProperties& ImagePipeSurfaceAsync::GetSupportedImageProperties() {
+  return supported_image_properties_;
+}
+
 void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   assert(!present_pending_);
 

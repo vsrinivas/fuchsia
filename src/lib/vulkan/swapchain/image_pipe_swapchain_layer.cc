@@ -497,7 +497,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface,
                                    uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats) {
   SupportedImageProperties& supported_properties =
-      reinterpret_cast<ImagePipeSurface*>(surface)->supported_image_properties();
+      reinterpret_cast<ImagePipeSurface*>(surface)->GetSupportedImageProperties();
   if (pSurfaceFormats == nullptr) {
     *pCount = supported_properties.formats.size();
     return VK_SUCCESS;
