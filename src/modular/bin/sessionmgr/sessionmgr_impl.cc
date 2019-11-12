@@ -39,8 +39,8 @@
 #include "src/modular/bin/sessionmgr/session_ctl.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
-#include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
+#include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
@@ -477,7 +477,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
           return;
         }
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
-      }));
+      },
+      [this]() { return terminating_; }));
   AtEnd(Reset(&user_intelligence_provider_impl_));
 
   entity_provider_runner_ =

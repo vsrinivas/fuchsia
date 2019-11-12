@@ -9,6 +9,7 @@
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/service_namespace.h>
+#include <zircon/status.h>
 
 #include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
@@ -50,11 +51,13 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
         puppet_master_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
-        intl_property_provider_connector)
+        intl_property_provider_connector,
+    fit::function<bool()> is_terminating_cb)
     : story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)),
-      intl_property_provider_connector_(std::move(intl_property_provider_connector)){};
+      intl_property_provider_connector_(std::move(intl_property_provider_connector)),
+      is_terminating_cb_(std::move(is_terminating_cb)){};
 
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
@@ -122,21 +125,29 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   agent_data->controller.set_error_handler([this, url](zx_status_t status) {
     auto it = session_agents_.find(url);
     FXL_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
+    FXL_LOG(INFO) << url << " session agent appears to have crashed, with status: "
+                  << zx_status_get_string(status);
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
     ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::Crash);
 
-    if (agent_data.restart.ShouldRetry()) {
-      FXL_LOG(INFO) << "Restarting " << url << "...";
-      StartSessionAgent(url);
+    if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
+      FXL_LOG(INFO) << "Not restarting " << url
+                    << " because UserIntelligenceProviderImpl is terminating.";
     } else {
-      FXL_LOG(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
-                       << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
-      ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
-      // Erase so that incoming connection requests fail fast rather than
-      // enqueue forever.
-      session_agents_.erase(it);
+      if (agent_data.restart.ShouldRetry()) {
+        FXL_LOG(INFO) << "Restarting " << url << "...";
+        StartSessionAgent(url);
+      } else {
+        FXL_LOG(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
+                         << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
+        ReportSessionAgentEvent(url,
+                                SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);
+        // Erase so that incoming connection requests fail fast rather than
+        // enqueue forever.
+        session_agents_.erase(it);
+      }
     }
   });
 }

@@ -7,6 +7,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/modular/testing/cpp/fake_agent.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
 #include "src/lib/files/glob.h"
@@ -174,6 +175,52 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   RunLoopUntil([&] { return !session_shell->is_running(); });
   RunLoopUntil([&] { return session_restarted && session_shell->is_running(); });
   EXPECT_FALSE(mock_admin.suspend_called());
+}
+
+TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
+  std::string fake_agent_url =
+      modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent_to_restart");
+
+  int launch_count = 0;
+
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.mutable_sessionmgr_config()->set_session_agents({fake_agent_url});
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+
+  std::unique_ptr<modular_testing::FakeAgent> fake_agent;
+  builder.InterceptComponent({
+      .url = fake_agent_url,
+      .sandbox_services =
+          {
+              fuchsia::modular::ComponentContext::Name_,
+              fuchsia::modular::AgentContext::Name_,
+          },
+      .launch_handler =
+          [&](fuchsia::sys::StartupInfo startup_info,
+              fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+                  intercepted_component) mutable {
+            launch_count++;
+            fake_agent =
+                std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
+                    .url = fake_agent_url,
+                });
+            fake_agent->BuildInterceptOptions().launch_handler(std::move(startup_info),
+                                                               std::move(intercepted_component));
+          },
+  });
+  builder.BuildAndRun(test_harness());
+
+  RunLoopUntil([&] { return !!fake_agent && fake_agent->is_running(); });
+
+  ASSERT_EQ(1, launch_count);
+
+  fake_agent->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
+  auto old_agent = std::move(fake_agent);
+  fake_agent.reset();
+
+  RunLoopUntil([&] { return !!fake_agent && fake_agent->is_running(); });
+
+  ASSERT_EQ(2, launch_count);
 }
 
 }  // namespace

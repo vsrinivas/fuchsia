@@ -32,7 +32,8 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
           puppet_master_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
-          intl_property_provider);
+          intl_property_provider,
+      fit::function<bool()> is_terminating_cb);
 
   ~UserIntelligenceProviderImpl() override = default;
 
@@ -95,6 +96,9 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
       puppet_master_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
+
+  // Return |true| to avoid automatically restarting session_agents_.
+  fit::function<bool()> is_terminating_cb_ = nullptr;
 
   // Framework fuchsia::modular::Agent controllers. Hanging onto these tells the
   // Framework we want the Agents to keep running.
