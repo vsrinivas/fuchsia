@@ -242,10 +242,18 @@ zx_status_t Display::Bind() {
 
   size_t length = strlen(kPipeName) + 1;
   memcpy(io_buffer_.virt(), kPipeName, length);
-  WriteLocked(static_cast<uint32_t>(length));
+  status = WriteLocked(static_cast<uint32_t>(length));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Pipe name write failed: %d\n", kTag, status);
+    return status;
+  }
 
   memcpy(io_buffer_.virt(), &kClientFlags, sizeof(kClientFlags));
-  WriteLocked(sizeof(kClientFlags));
+  status = WriteLocked(sizeof(kClientFlags));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Client flags write failed: %d\n", kTag, status);
+    return status;
+  }
 
   uint64_t next_display_id = kPrimaryDisplayId;
 
@@ -658,37 +666,61 @@ zx_status_t Display::DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* ou
 void Display::OnSignal(void* ctx, int32_t flags) {
   TRACE_DURATION("gfx", "Display::OnSignal", "flags", flags);
 
-  if (flags & (PIPE_WAKE_FLAG_READ | PIPE_WAKE_FLAG_CLOSED)) {
-    static_cast<Display*>(ctx)->OnReadable();
+  if (flags & (PIPE_WAKE_FLAG_READ | PIPE_WAKE_FLAG_WRITE | PIPE_WAKE_FLAG_CLOSED)) {
+    static_cast<Display*>(ctx)->OnReadOrWritable();
   }
 }
 
-void Display::OnReadable() {
-  TRACE_DURATION("gfx", "Display::OnReadable");
+void Display::OnReadOrWritable() {
+  TRACE_DURATION("gfx", "Display::OnReadOrWritable");
 
-  fbl::AutoLock lock(&read_lock_);
-  readable_cvar_.Signal();
+  fbl::AutoLock lock(&read_write_lock_);
+  readable_writable_cvar_.Signal();
 }
 
-void Display::WriteLocked(uint32_t cmd_size) {
+zx_status_t Display::WriteLocked(uint32_t cmd_size) {
   TRACE_DURATION("gfx", "Display::Write", "cmd_size", cmd_size);
 
+  fbl::AutoLock lock(&read_write_lock_);
+
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
-  buffer->id = id_;
-  buffer->cmd = PIPE_CMD_CODE_WRITE;
-  buffer->status = PIPE_ERROR_INVAL;
-  buffer->rw_params.ptrs[0] = io_buffer_.phys();
-  buffer->rw_params.sizes[0] = cmd_size;
-  buffer->rw_params.buffers_count = 1;
-  buffer->rw_params.consumed_size = 0;
-  pipe_.Exec(id_);
-  ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size == static_cast<int32_t>(cmd_size));
+  uint32_t remaining = cmd_size;
+  while (remaining) {
+    buffer->id = id_;
+    buffer->cmd = PIPE_CMD_CODE_WRITE;
+    buffer->status = PIPE_ERROR_INVAL;
+    buffer->rw_params.ptrs[0] = io_buffer_.phys() + cmd_size - remaining;
+    buffer->rw_params.sizes[0] = remaining;
+    buffer->rw_params.buffers_count = 1;
+    buffer->rw_params.consumed_size = 0;
+    pipe_.Exec(id_);
+
+    if (buffer->rw_params.consumed_size) {
+      remaining -= buffer->rw_params.consumed_size;
+      continue;
+    }
+
+    // Early out if error is not because of back-pressure.
+    if (buffer->status != PIPE_ERROR_AGAIN) {
+      zxlogf(ERROR, "%s: write to pipe buffer failed: %d\n", kTag, buffer->status);
+      return ZX_ERR_INTERNAL;
+    }
+
+    buffer->id = id_;
+    buffer->cmd = PIPE_CMD_CODE_WAKE_ON_WRITE;
+    buffer->status = PIPE_ERROR_INVAL;
+    pipe_.Exec(id_);
+
+    // Wait for pipe to become writable.
+    readable_writable_cvar_.Wait(&read_write_lock_);
+  }
+  return ZX_OK;
 }
 
 zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
   TRACE_DURATION("gfx", "Display::ReadResult");
 
-  fbl::AutoLock lock(&read_lock_);
+  fbl::AutoLock lock(&read_write_lock_);
 
   size_t length = sizeof(*result) * count;
   size_t remaining = length;
@@ -724,16 +756,19 @@ zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
     ZX_DEBUG_ASSERT(!buffer->status);
 
     // Wait for pipe to become readable.
-    readable_cvar_.Wait(&read_lock_);
+    readable_writable_cvar_.Wait(&read_write_lock_);
   }
 
   return ZX_OK;
 }
 
 zx_status_t Display::ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) {
-  TRACE_DURATION("gfx", "Display::ExecuteCommand", "cnd_size", cmd_size);
+  TRACE_DURATION("gfx", "Display::ExecuteCommand", "cmd_size", cmd_size);
 
-  WriteLocked(cmd_size);
+  zx_status_t status = WriteLocked(cmd_size);
+  if (status != ZX_OK) {
+    return status;
+  }
   return ReadResultLocked(result, 1);
 }
 
@@ -763,7 +798,7 @@ zx_status_t Display::CreateColorBufferLocked(uint32_t width, uint32_t height, ui
   return ExecuteCommandLocked(kSize_rcCreateColorBuffer, id);
 }
 
-void Display::OpenColorBufferLocked(uint32_t id) {
+zx_status_t Display::OpenColorBufferLocked(uint32_t id) {
   TRACE_DURATION("gfx", "Display::OpenColorBuffer", "id", id);
 
   auto cmd = static_cast<OpenColorBufferCmd*>(io_buffer_.virt());
@@ -771,10 +806,10 @@ void Display::OpenColorBufferLocked(uint32_t id) {
   cmd->size = kSize_rcOpenColorBuffer;
   cmd->id = id;
 
-  WriteLocked(kSize_rcOpenColorBuffer);
+  return WriteLocked(kSize_rcOpenColorBuffer);
 }
 
-void Display::CloseColorBufferLocked(uint32_t id) {
+zx_status_t Display::CloseColorBufferLocked(uint32_t id) {
   TRACE_DURATION("gfx", "Display::CloseColorBuffer", "id", id);
 
   auto cmd = static_cast<CloseColorBufferCmd*>(io_buffer_.virt());
@@ -782,7 +817,7 @@ void Display::CloseColorBufferLocked(uint32_t id) {
   cmd->size = kSize_rcCloseColorBuffer;
   cmd->id = id;
 
-  WriteLocked(kSize_rcCloseColorBuffer);
+  return WriteLocked(kSize_rcCloseColorBuffer);
 }
 
 zx_status_t Display::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode, uint32_t* result) {
@@ -831,7 +866,7 @@ zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint
   return ReadResultLocked(result, 1);
 }
 
-void Display::FbPostLocked(uint32_t id) {
+zx_status_t Display::FbPostLocked(uint32_t id) {
   TRACE_DURATION("gfx", "Display::FbPost", "id", id);
 
   auto cmd = static_cast<FbPostCmd*>(io_buffer_.virt());
@@ -839,7 +874,7 @@ void Display::FbPostLocked(uint32_t id) {
   cmd->size = kSize_rcFbPost;
   cmd->id = id;
 
-  WriteLocked(kSize_rcFbPost);
+  return WriteLocked(kSize_rcFbPost);
 }
 
 zx_status_t Display::CreateDisplayLocked(uint32_t* result) {
@@ -850,7 +885,10 @@ zx_status_t Display::CreateDisplayLocked(uint32_t* result) {
   cmd->size = kSize_rcCreateDisplay;
   cmd->size_display_id = sizeof(uint32_t);
 
-  WriteLocked(kSize_rcCreateDisplay);
+  zx_status_t status = WriteLocked(kSize_rcCreateDisplay);
+  if (status != ZX_OK) {
+    return status;
+  }
   return ReadResultLocked(result, 2);
 }
 
