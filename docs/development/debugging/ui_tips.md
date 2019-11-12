@@ -1,6 +1,6 @@
 # UI Debugging Tips
 
-For general debugging info see the [Fuchsia Debugging Workflow](/docs/development/workflows/debugging.md).
+For general debugging info see the [Fuchsia Debugging Workflow](/docs/development/debugging/debugging.md).
 
 ## Capture the Screen
 

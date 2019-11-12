@@ -6,5 +6,7 @@ toc:
   path: /docs/development/debugging/acpi.md
 - title: "Debugging tips"
   path: /docs/development/debugging/tips.md
+- title: "Debugging workflow"
+  path: /docs/development/debugging/debugging.md
 - title: "UI Debugging Tips"
   path: /docs/development/debugging/ui_tips.md

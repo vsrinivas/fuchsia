@@ -15,8 +15,6 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Multiple device setup](workflows/multi_device.md)
  - [Pushing a package](workflows/package_update.md)
  - [Working across different petals](workflows/working_across_petals.md)
- - [Debugging](workflows/debugging.md)
- - [Fuzz testing with LibFuzzer](workflows/libfuzzer.md)
  - [Build system](build/README.md)
  - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
  - [Testing FAQ](testing/faq.md)
@@ -67,6 +65,8 @@ This section covers Fuchsia development hardware targets.
 
 ## Testing
 
+ - [Debugging workflow](/docs/development/debugging/debugging.md)
+ - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/libfuzzer.md)
  - [Test components](testing/test_component.md)
  - [Test environments](testing/environments.md)
  - [Testability rubrics](testing/testability_rubric.md)

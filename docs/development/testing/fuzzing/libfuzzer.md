@@ -78,7 +78,7 @@ Optionally, you can also add an initial [corpus].  Without it, libFuzzer will st
 fuzzer and will (eventually) learn how to make appropriate inputs [on its own][thin-air].
 
 LibFuzzer then be able to generate, submit, and monitor inputs to the library code:
-![Coverage guided fuzzing](../../images/fuzzing/coverage-guided.png)
+![Coverage guided fuzzing](/docs/images/fuzzing/coverage-guided.png)
 
 Developer-provided components are in green.
 
@@ -464,8 +464,8 @@ become available.
 [compiler-rt]: https://compiler-rt.llvm.org/
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries
-[FIDL]: /docs/development/workflows/libfuzzer_fidl.md
-[fidl_fuzzing]: ../workflows/libfuzzer_fidl.md
+[FIDL]: /docs/development/testing/fuzzing/libfuzzer_fidl.md
+[fidl_fuzzing]: /docs/development/testing/fuzzing/libfuzzer_fidl.md
 [fuzz target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzz tool]: #q-how-do-i-run-a-fuzzer
 [fuzzed-data-provider]: https://github.com/llvm/llvm-project/blob/master/compiler-rt/include/fuzzer/FuzzedDataProvider.h

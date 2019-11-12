@@ -2,27 +2,28 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Test environments"
-  path: /docs/development/testing/environments.md
-- title: "Test component"
-  path: /docs/development/testing/test_component.md
-- title: "Running tests as components"
-  path: /docs/development/testing/running_tests_as_components.md
-- title: "Testing isolated cache storage"
-  path: /docs/development/testing/testing_isolated_cache_storage.md
-- title: "Testability rubrics"
-  path: /docs/development/testing/testability_rubric.md
-- title: "Fuchsia flaky test policy"
-  path: /docs/development/testing/test_flake_policy.md
-- title: "Testing: questions and answers"
-  path: /docs/development/testing/faq.md
-- title: "Zircon testing overview"
-  path: /docs/development/testing/testing.md
 - title: "Block device testing"
   path: /docs/development/testing/block_device_testing.md
 - title: "Entropy quality tests"
   path:  /docs/development/testing/entropy_quality_tests.md
-- title: "Fuzzing the FIDL host tools"
-  path:  /docs/development/testing/fuzzing_fidl.md
+- title: "Fuchsia flaky test policy"
+  path: /docs/development/testing/test_flake_policy.md
+- title: "Fuzzing"
+  section:
+  - include: /docs/development/testing/fuzzing/_toc.yaml
 - title: "NAND testing"
   path: /docs/development/testing/nand_testing.md
+- title: "Running tests as components"
+  path: /docs/development/testing/running_tests_as_components.md
+- title: "Test component"
+  path: /docs/development/testing/test_component.md
+- title: "Test environments"
+  path: /docs/development/testing/environments.md
+- title: "Testability rubrics"
+  path: /docs/development/testing/testability_rubric.md
+- title: "Testing isolated cache storage"
+  path: /docs/development/testing/testing_isolated_cache_storage.md
+- title: "Testing: questions and answers"
+  path: /docs/development/testing/faq.md
+- title: "Zircon testing overview"
+  path: /docs/development/testing/testing.md

@@ -1,4 +1,4 @@
-# Debugging
+# Debugging workflow
 
 ## Native code debugging
 

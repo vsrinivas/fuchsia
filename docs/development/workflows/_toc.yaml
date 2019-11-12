@@ -8,14 +8,8 @@ toc:
   path: /docs/development/workflows/build_and_pave_quickstart.md
 - title: "Cross translation unit static analysis in Zircon"
   path: /docs/development/workflows/ctu_analysis.md
-- title: "Debugging"
-  path: /docs/development/workflows/debugging.md
 - title: "fx workflows"
   path: /docs/development/workflows/fx.md
-- title: "LibFuzzer in Fuchsia"
-  path: /docs/development/workflows/libfuzzer.md
-- title: "LibFuzzer and FIDL"
-  path: /docs/development/workflows/libfuzzer_fidl.md
 - title: "Multi device setup"
   path: /docs/development/workflows/multi_device.md
 - title: "Working across different petals"
