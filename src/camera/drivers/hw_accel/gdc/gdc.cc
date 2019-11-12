@@ -66,7 +66,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
                                    const image_format_2_t* output_image_format_table_list,
                                    size_t output_image_format_table_count,
                                    uint32_t output_image_format_index,
-                                   const zx_handle_t* config_vmo_list, size_t config_vmo_count,
+                                   const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                                    const hw_accel_callback_t* callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -80,7 +80,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   zx_status_t status =
       task->Init(input_buffer_collection, output_buffer_collection, input_image_format,
                  output_image_format_table_list, output_image_format_table_count,
-                 output_image_format_index, config_vmo_list, config_vmo_count, callback, bti_);
+                 output_image_format_index, config_vmo_list, config_vmos_count, callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -141,7 +141,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   Stop();
 
   // Program the GDC configuration registers.
-  auto size = AxiWordAlign(task->GetConfigVmoPhysSize(task->output_format_index()));
+  auto size = AxiWordAlign(task->GetConfigVmoSize(task->output_format_index()));
   auto addr = AxiWordAlign(task->GetConfigVmoPhysAddr(task->output_format_index()));
   ConfigAddr::Get()
       .ReadFrom(gdc_mmio())

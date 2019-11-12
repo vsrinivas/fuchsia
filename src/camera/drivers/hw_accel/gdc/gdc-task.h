@@ -12,14 +12,19 @@
 namespace gdc {
 class GdcTask : public generictask::GenericTask {
  public:
+  ~GdcTask() {
+    for (auto config : config_contig_vmos_) {
+      ZX_ASSERT(ZX_OK == zx_handle_close(config.config_vmo));
+    }
+  }
   // Returns the physical address for the config VMO.
   zx_paddr_t GetConfigVmoPhysAddr(uint32_t output_format_index) const {
     return pinned_config_vmos_[output_format_index].region(0).phys_addr;
   }
 
-  // Returns the physical address for the config VMO.
-  uint64_t GetConfigVmoPhysSize(uint32_t output_format_index) const {
-    return pinned_config_vmos_[output_format_index].region(0).size;
+  // Returns the VMO size for the config VMO.
+  uint64_t GetConfigVmoSize(uint32_t output_format_index) const {
+    return config_contig_vmos_[output_format_index].size;
   }
 
   // Static function to create a task object.
@@ -27,7 +32,7 @@ class GdcTask : public generictask::GenericTask {
   // |output_buffer_collection|             : Output buffer collection.
   // [input_image_format]                   : Input image format.
   // [output_image_format]                  : Output image format.
-  // |config_vmo_list|                      : Array of configurations.
+  // |config_vmo_list|                      : Array of configurations info.
   // |config_vmo_count|                     : Number of config vmos.
   // |callback|                             : Callback function to call for this task.
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
@@ -35,14 +40,15 @@ class GdcTask : public generictask::GenericTask {
                    const image_format_2_t* input_image_format,
                    const image_format_2_t* output_image_format_table_list,
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
-                   const zx_handle_t* config_vmo_list, size_t config_vmo_count,
+                   const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                    const hw_accel_callback_t* callback, const zx::bti& bti);
 
  private:
-  zx_status_t PinConfigVmos(const zx_handle_t* config_vmo_list, size_t config_vmo_count,
+  zx_status_t PinConfigVmos(const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                             const zx::bti& bti);
+
   fbl::Array<fzl::PinnedVmo> pinned_config_vmos_;
-  std::vector<zx::vmo> config_contig_vmos_;
+  std::vector<gdc_config_info> config_contig_vmos_;
 };
 }  // namespace gdc
 

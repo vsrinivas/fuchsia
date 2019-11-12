@@ -34,7 +34,7 @@ class FakeGdc {
                                  const image_format_2_t* /*output_image_format_table_list*/,
                                  size_t /*output_image_format_table_count*/,
                                  uint32_t /*output_image_format_index*/,
-                                 const zx_handle_t* /*config_vmo_list*/,
+                                 const gdc_config_info* /*config_vmo_list*/,
                                  size_t /*config_vmo_count*/,
                                  const hw_accel_callback_t* /*callback*/,
                                  uint32_t* /*out_task_index*/) {
@@ -54,7 +54,7 @@ class FakeGdc {
                                  const image_format_2_t* output_image_format_table_list,
                                  size_t output_image_format_table_count,
                                  uint32_t output_image_format_index,
-                                 const zx_handle_t* config_vmo_list, size_t config_vmo_count,
+                                 const gdc_config_info* config_vmo_list, size_t config_vmo_count,
                                  const hw_accel_callback_t* callback, uint32_t* out_task_index) {
     return FakeGdc::GdcInitTask(input_buffer_collection, output_buffer_collection,
                                 input_image_format, output_image_format_table_list,

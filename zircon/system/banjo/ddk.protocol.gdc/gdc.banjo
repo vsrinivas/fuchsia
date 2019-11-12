@@ -7,6 +7,11 @@ using zx;
 using zircon.device.sysmem;
 using ddk.protocol.camerahwaccel;
 
+struct GdcConfigInfo {
+    handle<vmo> config_vmo;
+    uint32 size;
+};
+
 [Layout = "ddk-protocol"]
 protocol Gdc {
     // Registers the buffer collections and configuration which the GDC will be using
@@ -14,7 +19,7 @@ protocol Gdc {
     // returns a task index.
     // |input_buffer_collection| : Pool of VMOs as input to the GDC.
     // |output_buffer_collection| : Pool of VMOs as output to the GDC.
-    // |config_vmo| : Static configuration for GDC is stored in this vmo for this task.
+    // |config_vmos| : Static configuration for GDC is stored in this vmo for this task.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
     InitTask(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
@@ -22,7 +27,7 @@ protocol Gdc {
              zircon.device.sysmem.ImageFormat_2	input_image_format,
              vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
              uint32 output_image_format_index,
-             vector<handle<vmo>> config_vmo,
+             vector<GdcConfigInfo> config_vmos,
              ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.

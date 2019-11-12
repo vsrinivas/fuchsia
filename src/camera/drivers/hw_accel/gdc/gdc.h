@@ -73,9 +73,9 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
                           const image_format_2_t* input_image_format,
                           const image_format_2_t* output_image_format_table_list,
                           size_t output_image_format_table_count,
-                          uint32_t output_image_format_index, const zx_handle_t* config_vmo_list,
-                          size_t config_vmo_count, const hw_accel_callback_t* callback,
-                          uint32_t* out_task_index);
+                          uint32_t output_image_format_index,
+                          const gdc_config_info* config_vmo_list, size_t config_vmos_count,
+                          const hw_accel_callback_t* callback, uint32_t* out_task_index);
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
   void GdcRemoveTask(uint32_t task_index);
   void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);
