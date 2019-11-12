@@ -254,6 +254,7 @@ impl States {
                     self
                 }
             },
+            _ => self,
         }
     }
 

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[allow(unused)]
+mod channel_scheduler;
 mod frame_writer;
 mod state;
 
@@ -39,6 +41,7 @@ const MAX_EAPOL_FRAME_LEN: usize = 255;
 #[derive(Debug)]
 pub enum TimedEvent {
     Authenticating,
+    ChannelScheduler,
 }
 
 /// ClientConfig affects time duration used for different timeouts.
