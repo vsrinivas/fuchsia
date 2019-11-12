@@ -33,6 +33,7 @@ pub struct Player {
     events: PlayerEventStream,
     playing: bool,
     next_packet_flags: u32,
+    last_seq_played: u16,
 }
 
 #[derive(Debug, PartialEq)]
@@ -204,6 +205,7 @@ impl Player {
             current_offset: 0,
             playing: false,
             next_packet_flags: 0,
+            last_seq_played: 0,
         })
     }
 
@@ -228,6 +230,17 @@ impl Player {
     /// Accepts a payload which may contain multiple frames and breaks it into
     /// frames and sends it to media.
     pub fn push_payload(&mut self, payload: &[u8]) -> Result<(), Error> {
+        let rtp = RtpHeader::new(payload)?;
+
+        let seq = rtp.sequence_number();
+        let discontinuity = seq.wrapping_sub(self.last_seq_played.wrapping_add(1));
+
+        self.last_seq_played = seq;
+
+        if discontinuity > 0 && self.playing() {
+            self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+        };
+
         let mut offset = RtpHeader::LENGTH;
 
         if self.codec == AUDIO_ENCODING_SBC {
@@ -381,19 +394,25 @@ mod tests {
     /// the VMO payload buffer that was provided to the SimpleStreamSink.
     fn setup_player(
         exec: &mut fasync::Executor,
+        codec: &str,
     ) -> (Player, SimpleStreamSinkRequestStream, PlayerRequestStream, zx::Vmo) {
         const TEST_SAMPLE_FREQ: u32 = 48000;
 
         let (player_proxy, mut player_request_stream) =
             create_proxy_and_stream::<PlayerMarker>().expect("proxy pair creation");
         let mut player_new_fut =
-            Box::pin(Player::from_proxy("test".to_string(), TEST_SAMPLE_FREQ, player_proxy));
+            Box::pin(Player::from_proxy(codec.to_string(), TEST_SAMPLE_FREQ, player_proxy));
 
+        // player creation is done in stages, waiting for the below source/sink
+        // objects to be created. Just run the creation up until the first
+        // blocking point.
         assert!(exec.run_until_stalled(&mut player_new_fut).is_pending());
 
-        let player_req = exec
-            .run_singlethreaded(player_request_stream.select_next_some())
-            .expect("player request");
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player request message but got {:?}", x),
+        };
 
         let mut source_request_stream = match player_req {
             PlayerRequest::CreateElementarySource { source_request, .. } => source_request,
@@ -402,9 +421,11 @@ mod tests {
         .into_stream()
         .expect("a source request stream to be created from the request");
 
-        let source_req = exec
-            .run_singlethreaded(source_request_stream.select_next_some())
-            .expect("a source request");
+        let complete = exec.run_until_stalled(&mut source_request_stream.select_next_some());
+        let source_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected source request message but got {:?}", x),
+        };
 
         let (sink_request, sample_freq) = match source_req {
             ElementarySourceRequest::AddStream {
@@ -418,21 +439,26 @@ mod tests {
 
         assert_eq!(sample_freq, TEST_SAMPLE_FREQ);
 
-        let sink_req =
-            exec.run_singlethreaded(sink_request_stream.select_next_some()).expect("sink request");
+        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
+        let sink_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected sink req message but got {:?}", x),
+        };
 
         let sink_vmo = match sink_req {
             SimpleStreamSinkRequest::AddPayloadBuffer { payload_buffer, .. } => payload_buffer,
             _ => panic!("should have a PayloadBuffer"),
         };
 
-        let player_req = exec
-            .run_singlethreaded(player_request_stream.select_next_some())
-            .expect("player request");
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
 
         match player_req {
             PlayerRequest::SetSource { .. } => (),
-            _ => panic!("should be CreateElementarySource"),
+            _ => panic!("should be SetSource"),
         };
 
         player_request_stream
@@ -466,7 +492,7 @@ mod tests {
     fn test_player_setup() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        setup_player(&mut exec);
+        setup_player(&mut exec, "test");
     }
 
     #[test]
@@ -478,14 +504,17 @@ mod tests {
     fn test_send_frame() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        let (mut player, mut sink_request_stream, _, sink_vmo) = setup_player(&mut exec);
+        let (mut player, mut sink_request_stream, _, sink_vmo) = setup_player(&mut exec, "test");
 
         let payload = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         player.send_frame(payload).expect("send happens okay");
 
-        let sink_req =
-            exec.run_singlethreaded(sink_request_stream.select_next_some()).expect("sink request");
+        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
+        let sink_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected sink request message but got {:?}", x),
+        };
 
         let (offset, size) = match sink_req {
             SimpleStreamSinkRequest::SendPacketNoReply { packet, .. } => {
@@ -500,6 +529,69 @@ mod tests {
         sink_vmo.read(recv.as_mut_slice(), offset).expect("should be able to read packet data");
 
         assert_eq!(recv, payload, "received didn't match payload");
+    }
+
+    /// Helper function for pushing payloads to player and returning the packet flags
+    fn push_payload_get_flags(
+        payload: &[u8],
+        exec: &mut fasync::Executor,
+        player: &mut Player,
+        sink_request_stream: &mut SimpleStreamSinkRequestStream,
+    ) -> u32 {
+        player.push_payload(payload).expect("send happens okay");
+
+        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
+        let sink_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        match sink_req {
+            SimpleStreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
+            _ => panic!("should have received a packet"),
+        }
+    }
+
+    #[test]
+    /// Test that discontinuous packets are flagged as such. We do this by
+    /// sending packets through a Player and examining them after they come out
+    /// of the mock SimpleSourceStream interface.
+    fn test_packet_discontinuities() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (mut player, mut sink_request_stream, mut player_request_stream, _) =
+            setup_player(&mut exec, AUDIO_ENCODING_AACLATM);
+
+        player.play().expect("player plays");
+
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        match player_req {
+            PlayerRequest::Play { .. } => (),
+            _ => panic!("should be Play"),
+        };
+
+        // raw rtp header with sequence number of 1
+        let mut raw = [128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5];
+
+        let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+        // should not have a discontinuity yet
+        assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, 0);
+
+        // increment sequence number
+        raw[3] = 2;
+        let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+        // should not have a discontinuity yet
+        assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, 0);
+
+        // introduce discont
+        raw[3] = 8;
+        let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+        assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, STREAM_PACKET_FLAG_DISCONTINUITY);
     }
 
     #[test]
