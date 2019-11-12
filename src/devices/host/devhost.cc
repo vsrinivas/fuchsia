@@ -906,10 +906,19 @@ static void log_rpc_result(const char* opname, zx_status_t status,
   }
 }
 
-void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
+void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
+                          const device_make_visible_args_t* args) {
   const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return;
+  }
+
+  if (args && args->power_states && args->power_state_count != 0) {
+    dev->SetPowerStates(args->power_states, args->power_state_count);
+  }
+  if (args && args->performance_states && (args->performance_state_count != 0)) {
+    dev->SetPerformanceStates(args->performance_states,
+                                        args->performance_state_count);
   }
 
   // TODO(teisenbe): Handle failures here...

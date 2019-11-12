@@ -37,6 +37,7 @@ class TestPowerDriver : public DeviceType,
   }
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
+                              bool add_invisible,
                               AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
@@ -62,6 +63,7 @@ zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
 void TestPowerDriver::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
     ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
+    bool add_invisible,
     AddDeviceWithPowerArgsCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
   response.set_err(ZX_ERR_NOT_SUPPORTED);

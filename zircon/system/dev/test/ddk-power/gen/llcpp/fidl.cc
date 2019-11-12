@@ -279,13 +279,14 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDe
 
 }  // namespace
 template <>
-TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info) {
+TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceWithPowerArgsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
   AddDeviceWithPowerArgsRequest _request = {};
   _request.info = std::move(info);
   _request.perf_state_info = std::move(perf_state_info);
+  _request.make_visible = std::move(make_visible);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
@@ -296,16 +297,16 @@ TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPower
       TestDevice::InPlace::AddDeviceWithPowerArgs(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info) {
-  return ResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(info), std::move(perf_state_info));
+TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
+  return ResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(info), std::move(perf_state_info), std::move(make_visible));
 }
 
-TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info) {
-  return ResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(info), std::move(perf_state_info));
+TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
+  return ResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(info), std::move(perf_state_info), std::move(make_visible));
 }
 
 template <>
-TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddDeviceWithPowerArgsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddDeviceWithPowerArgsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -313,6 +314,7 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWi
   AddDeviceWithPowerArgsRequest _request = {};
   _request.info = std::move(info);
   _request.perf_state_info = std::move(perf_state_info);
+  _request.make_visible = std::move(make_visible);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
     Super::SetFailure(std::move(_linearize_result));
@@ -323,12 +325,12 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWi
       TestDevice::InPlace::AddDeviceWithPowerArgs(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(_response_buffer));
+TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(make_visible), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(_response_buffer));
+TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(make_visible), std::move(_response_buffer));
 }
 
 ::fidl::DecodeResult<TestDevice::AddDeviceWithPowerArgsResponse> TestDevice::InPlace::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer) {
@@ -553,7 +555,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       auto message = result.message.message();
-      impl->AddDeviceWithPowerArgs(std::move(message->info), std::move(message->perf_state_info),
+      impl->AddDeviceWithPowerArgs(std::move(message->info), std::move(message->perf_state_info), std::move(message->make_visible),
           Interface::AddDeviceWithPowerArgsCompleter::Sync(txn));
       return true;
     }

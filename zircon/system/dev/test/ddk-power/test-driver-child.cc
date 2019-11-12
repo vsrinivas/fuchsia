@@ -37,6 +37,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
 
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
+                              bool add_invisible,
                               AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
@@ -93,7 +94,7 @@ zx_status_t TestPowerDriverChild::DdkConfigureAutoSuspend(bool enable,
 
 void TestPowerDriverChild::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
-    ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
+    ::fidl::VectorView<DevicePerformanceStateInfo> perf_states, bool add_invisible,
     AddDeviceWithPowerArgsCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
   fbl::AllocChecker ac;
@@ -123,9 +124,14 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     performance_states[i].restore_latency = perf_state_info[i].restore_latency;
   }
 
-  zx_status_t status =
-      child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
-                     states.get(), count, performance_states.get(), perf_state_count);
+  zx_status_t status;
+  if (!add_invisible) {
+    status = child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
+                            states.get(), count, performance_states.get(), perf_state_count);
+  } else {
+    status = child2->DdkAdd("power-test-child-2", DEVICE_ADD_INVISIBLE);
+    child2->DdkMakeVisible(states.get(), count, performance_states.get(), perf_state_count);
+  }
   if (status != ZX_OK) {
     response.set_err(status);
   } else {

@@ -392,8 +392,16 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_composite(this->parent_, name, comp_desc);
   }
 
-  void DdkMakeVisible(const device_make_visible_args_t* args = nullptr) {
-    device_make_visible(zxdev(), args);
+  void DdkMakeVisible(const device_power_state_info_t* power_states = nullptr,
+                      const uint8_t power_state_count = 0,
+                      const device_performance_state_info_t* perf_power_states = nullptr,
+                      const uint8_t perf_power_state_count = 0) {
+    device_make_visible_args_t args = {};
+    args.power_states = power_states;
+    args.power_state_count = power_state_count;
+    args.performance_states = perf_power_states;
+    args.performance_state_count = perf_power_state_count;
+    device_make_visible(zxdev(), &args);
   }
 
   // Removes the device.

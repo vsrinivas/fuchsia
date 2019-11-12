@@ -183,7 +183,7 @@ __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
 __EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_make_visible(dev_ref);
+  devhost_make_visible(dev_ref, args);
 }
 
 __EXPORT void device_async_remove(zx_device_t* dev) {

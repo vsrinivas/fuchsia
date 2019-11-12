@@ -289,7 +289,8 @@ zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev,
                                     bool unbind_self) REQ_DM_LOCK;
 zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
+void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
+                          const device_make_visible_args_t* args);
 
 // State that is shared between the zx_device implementation and devhost-core.cpp
 void devhost_finalize() REQ_DM_LOCK;
