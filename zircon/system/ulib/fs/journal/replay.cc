@@ -157,7 +157,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   // Start parsing the journal, and replay as many entries as possible.
   uint64_t entry_start = info->start();
   uint64_t sequence_number = info->sequence_number();
-  FS_TRACE_INFO("replay: entry_start: %zu, sequence_number: %zu", entry_start, sequence_number);
+  FS_TRACE_INFO("replay: entry_start: %zu, sequence_number: %zu\n", entry_start, sequence_number);
   ReplayTree operation_tree;
   while (true) {
     // Attempt to parse the next entry in the journal. Eventually, we expect this to fail.
