@@ -1214,7 +1214,7 @@ static zx_status_t ufs_worker_thread(void* arg) {
   for (uint8_t lun = 0; lun < UFS_MAX_WLUN; lun++) {
     lun_blk_dev = &dev->lun_blk_devs[lun];
     if (lun_blk_dev->lun_id != INACTIVE_LUN)
-      device_make_visible(lun_blk_dev->zxdev);
+      device_make_visible(lun_blk_dev->zxdev, NULL);
   }
 
   return ZX_OK;

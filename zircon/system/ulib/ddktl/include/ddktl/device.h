@@ -392,7 +392,9 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_composite(this->parent_, name, comp_desc);
   }
 
-  void DdkMakeVisible() { device_make_visible(zxdev()); }
+  void DdkMakeVisible(const device_make_visible_args_t* args = nullptr) {
+    device_make_visible(zxdev(), args);
+  }
 
   // Removes the device.
   // This method may have the side-effect of destroying this object if the

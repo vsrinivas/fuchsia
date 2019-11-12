@@ -971,7 +971,7 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
   zxlogf(INFO, "nvme: max transfer per r/w op: %u blocks (%u bytes)\n", nvme->max_xfer,
          nvme->max_xfer * nvme->info.block_size);
 
-  device_make_visible(nvme->zxdev);
+  device_make_visible(nvme->zxdev, NULL);
   return ZX_OK;
 }
 

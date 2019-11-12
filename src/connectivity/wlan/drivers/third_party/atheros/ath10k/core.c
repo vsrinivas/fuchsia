@@ -2450,7 +2450,7 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
   BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
 
   // After core is registered, expose wlanphy interface.
-  device_make_visible(ar->zxdev);
+  device_make_visible(ar->zxdev, NULL);
 
   return ZX_OK;
 

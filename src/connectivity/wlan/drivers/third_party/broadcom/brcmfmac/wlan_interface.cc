@@ -143,7 +143,7 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
   interface->wdev_ = wdev;
   *out_interface = interface.get();
 
-  device_make_visible(interface->zxdev());
+  device_make_visible(interface->zxdev(), nullptr);
   interface.release();  // This now has its lifecycle managed by the devhost.
 
   return ZX_OK;

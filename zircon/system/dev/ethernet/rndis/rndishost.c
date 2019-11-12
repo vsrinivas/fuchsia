@@ -467,7 +467,7 @@ static int rndis_start_thread(void* arg) {
   mtx_unlock(&eth->mutex);
 
   free(buf);
-  device_make_visible(eth->zxdev);
+  device_make_visible(eth->zxdev, NULL);
   return ZX_OK;
 
 fail:

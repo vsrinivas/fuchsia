@@ -428,7 +428,7 @@ static int bcm_hci_start_thread(void* arg) {
   zx_handle_close(hci->command_channel);
   hci->command_channel = ZX_HANDLE_INVALID;
 
-  device_make_visible(hci->zxdev);
+  device_make_visible(hci->zxdev, NULL);
   return 0;
 
 fail:

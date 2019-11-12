@@ -393,7 +393,7 @@ static int usb_hub_thread(void* arg) {
     usb_hub_power_on_port(hub, i);
   }
 
-  device_make_visible(hub->zxdev);
+  device_make_visible(hub->zxdev, NULL);
 
   // bit field for port status bits
   uint8_t status_buf[128 / 8];

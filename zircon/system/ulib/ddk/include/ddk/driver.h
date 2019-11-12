@@ -164,6 +164,22 @@ typedef struct device_add_args {
   zx_handle_t client_remote;
 } device_add_args_t;
 
+typedef struct device_make_visible_args {
+  // List of power_states that the device supports.
+  // List cannot be more than MAX_DEVICE_POWER_STATES size.
+  const device_power_state_info_t* power_states;
+
+  // Number of power states in the list
+  uint8_t power_state_count;
+
+  // List of performant states that the device supports.
+  // List cannot be more than MAX_DEVICE_PERFORMANCE_STATES size.
+  const device_performance_state_info_t* performance_states;
+
+  // Number of performant power states in the list
+  uint8_t performance_state_count;
+} device_make_visible_args_t;
+
 struct zx_driver_rec {
   const zx_driver_ops_t* ops;
   zx_driver_t* driver;
@@ -206,7 +222,7 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 zx_status_t device_remove_deprecated(zx_device_t* device);
 
 zx_status_t device_rebind(zx_device_t* device);
-void device_make_visible(zx_device_t* device);
+void device_make_visible(zx_device_t* device, const device_make_visible_args_t* args);
 
 // Schedules the removal of the given device and all its descendents. When a device is
 // being removed, its |unbind| hook will be invoked.

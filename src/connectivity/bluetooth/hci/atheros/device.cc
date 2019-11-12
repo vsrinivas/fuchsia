@@ -259,7 +259,7 @@ zx_status_t Device::Remove(zx_status_t status, const char* note) {
 zx_status_t Device::Appear(const char* note) {
   fbl::AutoLock lock(&mutex_);
   errorf("Making visible\n");
-  device_make_visible(zxdev_);
+  device_make_visible(zxdev_, nullptr);
   infof("%s\n", note);
   firmware_loaded_ = true;
   return ZX_OK;

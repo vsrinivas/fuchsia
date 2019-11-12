@@ -16,7 +16,7 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) { __builtin_abort(); }
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) { __builtin_abort(); }
 
-__EXPORT void device_make_visible(zx_device_t* dev) { __builtin_abort(); }
+__EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) { __builtin_abort(); }
 
 __EXPORT void device_async_remove(zx_device_t* dev) { __builtin_abort(); }
 

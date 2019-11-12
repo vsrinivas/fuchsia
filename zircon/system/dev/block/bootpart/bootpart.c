@@ -252,7 +252,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
     }
 
     // make device visible after adding metadata
-    device_make_visible(device->zxdev);
+    device_make_visible(device->zxdev, NULL);
   }
 
   return ZX_OK;
