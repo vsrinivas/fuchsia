@@ -35,7 +35,10 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-trace-provider",
     "//src/lib/argh",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/mapped-vmo",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:paste",
   ]
 }

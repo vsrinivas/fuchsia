@@ -1,111 +1,980 @@
 {
-  "test_suite_name": "fuchsia.rust_inspect.benchmarks",
   "app": "fuchsia-pkg://fuchsia.com/rust_inspect_benchmarks#meta/rust_inspect_benchmarks.cmx",
-  "args": ["--iterations", "50000"],
-  "categories": ["benchmark"],
-  "duration": 30,
+  "args": [
+    "--iterations",
+    "50000"
+  ],
+  "test_suite_name": "fuchsia.rust_inspect.benchmarks",
   "measure": [
     {
-      "type": "duration",
-      "output_test_name": "Inspector/create",
+      "output_test_name": "Inspector/new",
       "event_name": "Inspector::new",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
-      "output_test_name": "Inspector/get_root",
+      "output_test_name": "Inspector/root",
       "event_name": "Inspector::root",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "Node/create_child",
+      "event_name": "Node::create_child",
       "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
       "output_test_name": "Node/create_int_property",
       "event_name": "Node::create_int_property",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
       "output_test_name": "Node/create_double_property",
       "event_name": "Node::create_double_property",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
       "output_test_name": "Node/create_uint_property",
       "event_name": "Node::create_uint_property",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "Node/drop",
+      "event_name": "Node::drop",
       "type": "duration",
-      "output_test_name": "IntProperty/add",
-      "event_name": "IntProperty::add",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
       "output_test_name": "IntProperty/set",
       "event_name": "IntProperty::set",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "IntProperty/add",
+      "event_name": "IntProperty::add",
       "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
       "output_test_name": "IntProperty/subtract",
       "event_name": "IntProperty::subtract",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
       "output_test_name": "IntProperty/drop",
       "event_name": "IntProperty::drop",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
-      "output_test_name": "DoubleProperty/add",
-      "event_name": "DoubleProperty::add",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
-      "output_test_name": "DoubleProperty/set",
-      "event_name": "DoubleProperty::set",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
-      "output_test_name": "DoubleProperty/subtract",
-      "event_name": "DoubleProperty::subtract",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
-      "output_test_name": "DoubleProperty/drop",
-      "event_name": "DoubleProperty::drop",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
-      "output_test_name": "UintProperty/add",
-      "event_name": "UintProperty::add",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "duration",
       "output_test_name": "UintProperty/set",
       "event_name": "UintProperty::set",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "UintProperty/add",
+      "event_name": "UintProperty::add",
       "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
       "output_test_name": "UintProperty/subtract",
       "event_name": "UintProperty::subtract",
+      "type": "duration",
       "event_category": "benchmark"
     },
     {
-      "type": "duration",
       "output_test_name": "UintProperty/drop",
       "event_name": "UintProperty::drop",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleProperty/set",
+      "event_name": "DoubleProperty::set",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleProperty/add",
+      "event_name": "DoubleProperty::add",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleProperty/subtract",
+      "event_name": "DoubleProperty::subtract",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleProperty/drop",
+      "event_name": "DoubleProperty::drop",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_array/32",
+      "event_name": "Node::create_int_array/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_array/32",
+      "event_name": "Node::create_double_array/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_array/32",
+      "event_name": "Node::create_uint_array/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/set/32",
+      "event_name": "IntArrayProperty::set/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/add/32",
+      "event_name": "IntArrayProperty::add/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/subtract/32",
+      "event_name": "IntArrayProperty::subtract/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/drop/32",
+      "event_name": "IntArrayProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/set/32",
+      "event_name": "UintArrayProperty::set/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/add/32",
+      "event_name": "UintArrayProperty::add/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/subtract/32",
+      "event_name": "UintArrayProperty::subtract/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/drop/32",
+      "event_name": "UintArrayProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/set/32",
+      "event_name": "DoubleArrayProperty::set/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/add/32",
+      "event_name": "DoubleArrayProperty::add/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/subtract/32",
+      "event_name": "DoubleArrayProperty::subtract/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/drop/32",
+      "event_name": "DoubleArrayProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_array/128",
+      "event_name": "Node::create_int_array/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_array/128",
+      "event_name": "Node::create_double_array/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_array/128",
+      "event_name": "Node::create_uint_array/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/set/128",
+      "event_name": "IntArrayProperty::set/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/add/128",
+      "event_name": "IntArrayProperty::add/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/subtract/128",
+      "event_name": "IntArrayProperty::subtract/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/drop/128",
+      "event_name": "IntArrayProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/set/128",
+      "event_name": "UintArrayProperty::set/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/add/128",
+      "event_name": "UintArrayProperty::add/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/subtract/128",
+      "event_name": "UintArrayProperty::subtract/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/drop/128",
+      "event_name": "UintArrayProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/set/128",
+      "event_name": "DoubleArrayProperty::set/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/add/128",
+      "event_name": "DoubleArrayProperty::add/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/subtract/128",
+      "event_name": "DoubleArrayProperty::subtract/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/drop/128",
+      "event_name": "DoubleArrayProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_array/240",
+      "event_name": "Node::create_int_array/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_array/240",
+      "event_name": "Node::create_double_array/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_array/240",
+      "event_name": "Node::create_uint_array/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/set/240",
+      "event_name": "IntArrayProperty::set/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/add/240",
+      "event_name": "IntArrayProperty::add/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/subtract/240",
+      "event_name": "IntArrayProperty::subtract/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntArrayProperty/drop/240",
+      "event_name": "IntArrayProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/set/240",
+      "event_name": "UintArrayProperty::set/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/add/240",
+      "event_name": "UintArrayProperty::add/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/subtract/240",
+      "event_name": "UintArrayProperty::subtract/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintArrayProperty/drop/240",
+      "event_name": "UintArrayProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/set/240",
+      "event_name": "DoubleArrayProperty::set/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/add/240",
+      "event_name": "DoubleArrayProperty::add/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/subtract/240",
+      "event_name": "DoubleArrayProperty::subtract/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleArrayProperty/drop/240",
+      "event_name": "DoubleArrayProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert/32",
+      "event_name": "IntLinearHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_overflow/32",
+      "event_name": "IntLinearHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_underflow/32",
+      "event_name": "IntLinearHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/drop/32",
+      "event_name": "IntLinearHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert/32",
+      "event_name": "UintLinearHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_overflow/32",
+      "event_name": "UintLinearHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_underflow/32",
+      "event_name": "UintLinearHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/drop/32",
+      "event_name": "UintLinearHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert/32",
+      "event_name": "DoubleLinearHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_overflow/32",
+      "event_name": "DoubleLinearHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_underflow/32",
+      "event_name": "DoubleLinearHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/drop/32",
+      "event_name": "DoubleLinearHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_linear_histogram/128",
+      "event_name": "Node::create_int_linear_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_linear_histogram/128",
+      "event_name": "Node::create_double_linear_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_linear_histogram/128",
+      "event_name": "Node::create_uint_linear_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert/128",
+      "event_name": "IntLinearHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_overflow/128",
+      "event_name": "IntLinearHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_underflow/128",
+      "event_name": "IntLinearHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/drop/128",
+      "event_name": "IntLinearHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert/128",
+      "event_name": "UintLinearHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_overflow/128",
+      "event_name": "UintLinearHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_underflow/128",
+      "event_name": "UintLinearHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/drop/128",
+      "event_name": "UintLinearHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert/128",
+      "event_name": "DoubleLinearHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_overflow/128",
+      "event_name": "DoubleLinearHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_underflow/128",
+      "event_name": "DoubleLinearHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/drop/128",
+      "event_name": "DoubleLinearHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_linear_histogram/240",
+      "event_name": "Node::create_int_linear_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_linear_histogram/240",
+      "event_name": "Node::create_double_linear_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_linear_histogram/240",
+      "event_name": "Node::create_uint_linear_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert/240",
+      "event_name": "IntLinearHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_overflow/240",
+      "event_name": "IntLinearHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/insert_underflow/240",
+      "event_name": "IntLinearHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntLinearHistogramProperty/drop/240",
+      "event_name": "IntLinearHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert/240",
+      "event_name": "UintLinearHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_overflow/240",
+      "event_name": "UintLinearHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/insert_underflow/240",
+      "event_name": "UintLinearHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintLinearHistogramProperty/drop/240",
+      "event_name": "UintLinearHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert/240",
+      "event_name": "DoubleLinearHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_overflow/240",
+      "event_name": "DoubleLinearHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/insert_underflow/240",
+      "event_name": "DoubleLinearHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleLinearHistogramProperty/drop/240",
+      "event_name": "DoubleLinearHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert/32",
+      "event_name": "IntExponentialHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_overflow/32",
+      "event_name": "IntExponentialHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_underflow/32",
+      "event_name": "IntExponentialHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/drop/32",
+      "event_name": "IntExponentialHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert/32",
+      "event_name": "UintExponentialHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_overflow/32",
+      "event_name": "UintExponentialHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_underflow/32",
+      "event_name": "UintExponentialHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/drop/32",
+      "event_name": "UintExponentialHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert/32",
+      "event_name": "DoubleExponentialHistogramProperty::insert/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_overflow/32",
+      "event_name": "DoubleExponentialHistogramProperty::insert_overflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_underflow/32",
+      "event_name": "DoubleExponentialHistogramProperty::insert_underflow/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/drop/32",
+      "event_name": "DoubleExponentialHistogramProperty::drop/32",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_exponential_histogram/128",
+      "event_name": "Node::create_int_exponential_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_exponential_histogram/128",
+      "event_name": "Node::create_double_exponential_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_exponential_histogram/128",
+      "event_name": "Node::create_uint_exponential_histogram/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert/128",
+      "event_name": "IntExponentialHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_overflow/128",
+      "event_name": "IntExponentialHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_underflow/128",
+      "event_name": "IntExponentialHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/drop/128",
+      "event_name": "IntExponentialHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert/128",
+      "event_name": "UintExponentialHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_overflow/128",
+      "event_name": "UintExponentialHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_underflow/128",
+      "event_name": "UintExponentialHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/drop/128",
+      "event_name": "UintExponentialHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert/128",
+      "event_name": "DoubleExponentialHistogramProperty::insert/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_overflow/128",
+      "event_name": "DoubleExponentialHistogramProperty::insert_overflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_underflow/128",
+      "event_name": "DoubleExponentialHistogramProperty::insert_underflow/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/drop/128",
+      "event_name": "DoubleExponentialHistogramProperty::drop/128",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_int_exponential_histogram/240",
+      "event_name": "Node::create_int_exponential_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_double_exponential_histogram/240",
+      "event_name": "Node::create_double_exponential_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_uint_exponential_histogram/240",
+      "event_name": "Node::create_uint_exponential_histogram/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert/240",
+      "event_name": "IntExponentialHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_overflow/240",
+      "event_name": "IntExponentialHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/insert_underflow/240",
+      "event_name": "IntExponentialHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "IntExponentialHistogramProperty/drop/240",
+      "event_name": "IntExponentialHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert/240",
+      "event_name": "UintExponentialHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_overflow/240",
+      "event_name": "UintExponentialHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/insert_underflow/240",
+      "event_name": "UintExponentialHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "UintExponentialHistogramProperty/drop/240",
+      "event_name": "UintExponentialHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert/240",
+      "event_name": "DoubleExponentialHistogramProperty::insert/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_overflow/240",
+      "event_name": "DoubleExponentialHistogramProperty::insert_overflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/insert_underflow/240",
+      "event_name": "DoubleExponentialHistogramProperty::insert_underflow/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "DoubleExponentialHistogramProperty/drop/240",
+      "event_name": "DoubleExponentialHistogramProperty::drop/240",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_string/4",
+      "event_name": "Node::create_string/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "StringProperty/set/4",
+      "event_name": "StringProperty::set/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "StringProperty/set_again/4",
+      "event_name": "StringProperty::set_again/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "StringProperty/drop/4",
+      "event_name": "StringProperty::drop/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/create_bytes/4",
+      "event_name": "Node::create_bytes/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "BytesProperty/set/4",
+      "event_name": "BytesProperty::set/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "BytesProperty/set_again/4",
+      "event_name": "BytesProperty::set_again/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "BytesProperty/drop/4",
+      "event_name": "BytesProperty::drop/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Heap/create_1mb_vmo",
+      "event_name": "Heap::create_1mb_vmo",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Heap/allocate_512k",
+      "event_name": "Heap::allocate_512k",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Heap/extend",
+      "event_name": "Heap::extend",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Heap/free",
+      "event_name": "Heap::free",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Heap/drop",
+      "event_name": "Heap::drop",
+      "type": "duration",
       "event_category": "benchmark"
     }
+  ],
+  "duration": 30,
+  "categories": [
+    "benchmark"
   ]
 }

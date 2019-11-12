@@ -31,7 +31,7 @@ use crate::format::block::Block;
 pub mod component;
 pub mod format;
 pub mod health;
-mod heap;
+pub mod heap;
 pub mod reader;
 pub mod trie;
 #[macro_use]
