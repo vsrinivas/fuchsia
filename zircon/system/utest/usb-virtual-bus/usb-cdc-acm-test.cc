@@ -71,8 +71,8 @@ class UsbCdcAcmTest : public zxtest::Test {
   }
 
   zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {
-    // time out in 50 milliseconds.
-    const auto timeout = zx::deadline_after(zx::msec(50));
+    // Time out in 5 seconds.
+    const auto timeout = zx::deadline_after(zx::sec(5));
     while (zx::clock::get_monotonic() < timeout) {
       *actual = read(fd, data, size);
       if (*actual != 0) {
