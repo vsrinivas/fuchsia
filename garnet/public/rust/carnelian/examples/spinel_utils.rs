@@ -95,7 +95,7 @@ pub trait Context {
     fn path_builder(&mut self) -> &mut dyn PathBuilder;
     fn raster_builder(&mut self) -> &mut dyn RasterBuilder;
     fn composition(&mut self, index: u32) -> &mut dyn Composition;
-    fn render(&mut self, index: u32, clear_color: &[f32; 4]);
+    fn render(&mut self, index: u32, clear: bool, clear_color: &[f32; 4]);
 }
 
 //
@@ -1159,7 +1159,7 @@ impl Context for SpinelContext {
         self.compositions.entry(index).or_insert_with(|| SpinelComposition::new(Rc::clone(context)))
     }
 
-    fn render(&mut self, index: u32, clear_color: &[f32; 4]) {
+    fn render(&mut self, index: u32, clear: bool, clear_color: &[f32; 4]) {
         let vulkan = &self.vulkan;
         let image = self.images.entry(index).or_insert_with(|| {
             Box::new(VulkanImage::new(
@@ -1186,7 +1186,6 @@ impl Context for SpinelContext {
             src_qfi: vk::QUEUE_FAMILY_IGNORED,
         };
         image.layout = vk::IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        // TODO(reveman): Only clear first frame.
         let rs_clear_color = vk::ClearColorValue { float32: *clear_color };
         let mut rs_image_clear = SpnVkRenderSubmitExtImagePreClear {
             ext: &mut rs_image_pre_barrier as *mut _ as *mut c_void,
@@ -1194,7 +1193,11 @@ impl Context for SpinelContext {
             color: &rs_clear_color,
         };
         let mut rs_image = SpnVkRenderSubmitExtImageRender {
-            ext: &mut rs_image_clear as *mut _ as *mut c_void,
+            ext: if clear {
+                &mut rs_image_clear as *mut _ as *mut c_void
+            } else {
+                &mut rs_image_pre_barrier as *mut _ as *mut c_void
+            },
             type_: SpnVkRenderSubmitExtType::SpnVkRenderSubmitExtTypeImageRender,
             image: image.image,
             image_info: vk::DescriptorImageInfo {
@@ -1604,7 +1607,7 @@ impl Context for MoldContext {
         self.compositions.entry(index).or_insert_with(|| MoldComposition::new())
     }
 
-    fn render(&mut self, index: u32, _clear_color: &[f32; 4]) {
+    fn render(&mut self, index: u32, _clear: bool, _clear_color: &[f32; 4]) {
         let buffer_collection = &mut self.buffer_collection;
         let image =
             self.images.entry(index).or_insert_with(|| MoldImage::new(buffer_collection, index));

@@ -12,7 +12,7 @@ use {
     failure::Error,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
-    std::{collections::BTreeMap, env, f32},
+    std::{cell::RefCell, collections::BTreeMap, env, f32, rc::Rc},
 };
 
 mod spinel_utils;
@@ -38,7 +38,6 @@ impl AppAssistant for ClockfaceAppAssistant {
     ) -> Result<ViewAssistantPtr, Error> {
         let (token, token_request) =
             create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-        // Duplicate local token for image collection.
         fb.borrow()
             .local_token
             .as_ref()
@@ -160,9 +159,8 @@ struct Hand {
     line: RoundedLine,
     elevation: f32,
     layer_id: u32,
-    raster: Option<Raster>,
-    shadow_layer_id: u32,
-    shadow_raster: Option<Raster>,
+    raster: Option<Rc<RefCell<Raster>>>,
+    shadow_raster: Option<Rc<RefCell<Raster>>>,
 }
 
 impl Hand {
@@ -183,7 +181,6 @@ impl Hand {
         context: &mut dyn Context,
         group_id: &GroupId,
         layer_id: u32,
-        shadow_layer_id: u32,
         thinkness: f32,
         length: f32,
         offset: f32,
@@ -198,9 +195,8 @@ impl Hand {
         );
 
         context.styling().group_layer(group_id, layer_id, color);
-        context.styling().group_layer(group_id, shadow_layer_id, &[0.0, 0.0, 0.0, color[3] * 0.1]);
 
-        Self { line, elevation, layer_id, raster: None, shadow_layer_id, shadow_raster: None }
+        Self { line, elevation, layer_id, raster: None, shadow_raster: None }
     }
 
     fn update(&mut self, context: &mut dyn Context, scale: f32, angle: f32, position: Point) {
@@ -209,12 +205,12 @@ impl Hand {
 
         let txty = Vector2D::new(position.x, position.y);
         let raster = Self::new_raster(raster_builder, &self.line.path, &rotation, &txty);
-        self.raster.replace(raster);
+        self.raster.replace(Rc::new(RefCell::new(raster)));
 
         let shadow_offset = self.elevation * scale;
         let txty = Vector2D::new(position.x + shadow_offset, position.y + shadow_offset * 2.0);
         let raster = Self::new_raster(raster_builder, &self.line.path, &rotation, &txty);
-        self.shadow_raster.replace(raster);
+        self.shadow_raster.replace(Rc::new(RefCell::new(raster)));
     }
 }
 
@@ -226,6 +222,8 @@ struct Scene {
     hour_index: usize,
     minute_index: usize,
     second_index: usize,
+    shadow_layer_ids: [u32; 2],
+    clear_layer_id: u32,
 }
 
 impl Scene {
@@ -237,15 +235,16 @@ impl Scene {
         const HOUR_HAND_LAYER_ID: u32 = 0;
         const MINUTE_HAND_LAYER_ID: u32 = HOUR_HAND_LAYER_ID + 1;
         const SECOND_HAND_LAYER_ID: u32 = MINUTE_HAND_LAYER_ID + 1;
-        const HOUR_HAND_SHADOW_LAYER_ID: u32 = SECOND_HAND_LAYER_ID + 1;
-        const MINUTE_HAND_SHADOW_LAYER_ID: u32 = HOUR_HAND_SHADOW_LAYER_ID + 1;
-        const SECOND_HAND_SHADOW_LAYER_ID: u32 = MINUTE_HAND_SHADOW_LAYER_ID + 1;
+        const SHADOW_LAYER_1_ID: u32 = SECOND_HAND_LAYER_ID + 1;
+        const SHADOW_LAYER_2_ID: u32 = SHADOW_LAYER_1_ID + 1;
+        const CLEAR_LAYER_ID: u32 = SHADOW_LAYER_2_ID + 1;
 
-        let group_id = context.styling().alloc_group(
-            HOUR_HAND_LAYER_ID,
-            SECOND_HAND_SHADOW_LAYER_ID,
-            &BACKGROUND_COLOR,
-        );
+        let group_id =
+            context.styling().alloc_group(HOUR_HAND_LAYER_ID, CLEAR_LAYER_ID, &BACKGROUND_COLOR);
+        context.styling().group_layer(&group_id, SHADOW_LAYER_1_ID, &[0.0, 0.0, 0.0, 0.05]);
+        context.styling().group_layer(&group_id, SHADOW_LAYER_2_ID, &[0.0, 0.0, 0.0, 0.05]);
+        context.styling().group_layer(&group_id, CLEAR_LAYER_ID, &BACKGROUND_COLOR);
+
         let radius = 0.4;
         let thinkness = radius / 20.0;
         let offset = radius / 5.0;
@@ -254,7 +253,6 @@ impl Scene {
             context,
             &group_id,
             HOUR_HAND_LAYER_ID,
-            HOUR_HAND_SHADOW_LAYER_ID,
             thinkness * 2.0,
             radius,
             offset,
@@ -265,7 +263,6 @@ impl Scene {
             context,
             &group_id,
             MINUTE_HAND_LAYER_ID,
-            MINUTE_HAND_SHADOW_LAYER_ID,
             thinkness,
             radius,
             0.0,
@@ -276,7 +273,6 @@ impl Scene {
             context,
             &group_id,
             SECOND_HAND_LAYER_ID,
-            SECOND_HAND_SHADOW_LAYER_ID,
             thinkness / 2.0,
             radius + offset,
             offset,
@@ -294,6 +290,8 @@ impl Scene {
             hour_index: std::usize::MAX,
             minute_index: std::usize::MAX,
             second_index: std::usize::MAX,
+            shadow_layer_ids: [SHADOW_LAYER_1_ID, SHADOW_LAYER_2_ID],
+            clear_layer_id: CLEAR_LAYER_ID,
         }
     }
 
@@ -341,11 +339,12 @@ impl Scene {
 struct Contents {
     index: u32,
     size: Size,
+    previous_rasters: Vec<Rc<RefCell<Raster>>>,
 }
 
 impl Contents {
     fn new(index: u32) -> Self {
-        Self { index, size: Size::zero() }
+        Self { index, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
     fn update(&mut self, context: &mut dyn Context, scene: &Scene, size: &Size) {
@@ -353,30 +352,59 @@ impl Contents {
         composition.unseal();
         composition.reset();
 
+        let mut needs_clear = false;
         if self.size != *size {
             self.size = *size;
             let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
             composition.set_clip(&clip);
+            needs_clear = true;
         }
 
-        composition.place(scene.hour_hand.raster.as_ref().unwrap(), scene.hour_hand.layer_id);
-        composition.place(
-            scene.hour_hand.shadow_raster.as_ref().unwrap(),
-            scene.hour_hand.shadow_layer_id,
-        );
-        composition.place(scene.minute_hand.raster.as_ref().unwrap(), scene.minute_hand.layer_id);
-        composition.place(
-            scene.minute_hand.shadow_raster.as_ref().unwrap(),
-            scene.minute_hand.shadow_layer_id,
-        );
-        composition.place(scene.second_hand.raster.as_ref().unwrap(), scene.second_hand.layer_id);
-        composition.place(
-            scene.second_hand.shadow_raster.as_ref().unwrap(),
-            scene.second_hand.shadow_layer_id,
-        );
+        // New rasters for this frame.
+        let hour_hand_raster = scene.hour_hand.raster.as_ref().unwrap().clone();
+        let hour_hand_shadow_raster = scene.hour_hand.shadow_raster.as_ref().unwrap().clone();
+        let minute_hand_raster = scene.minute_hand.raster.as_ref().unwrap().clone();
+        let minute_hand_shadow_raster = scene.minute_hand.shadow_raster.as_ref().unwrap().clone();
+        let second_hand_raster = scene.second_hand.raster.as_ref().unwrap().clone();
+        let second_hand_shadow_raster = scene.second_hand.shadow_raster.as_ref().unwrap().clone();
+
+        // Place new rasters.
+        composition.place(&hour_hand_raster.borrow(), scene.hour_hand.layer_id);
+        composition.place(&minute_hand_raster.borrow(), scene.minute_hand.layer_id);
+        composition.place(&second_hand_raster.borrow(), scene.second_hand.layer_id);
+
+        // Shadow layers.
+        // TODO: use txty when supported.
+        composition.place(&hour_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
+        composition.place(&minute_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
+        composition.place(&second_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
+        // Minute and is translucent and left out of second shadow layer in order to
+        // have it cast a lighter shadow.
+        composition.place(&hour_hand_shadow_raster.borrow(), scene.shadow_layer_ids[1]);
+        composition.place(&second_hand_shadow_raster.borrow(), scene.shadow_layer_ids[1]);
+
+        // Place previous rasters in clear layer.
+        // TODO: Replace with better partial update system.
+        // Make sure clear layer has at least one raster.
+        // TODO: Remove when mold is not requiring each layer to have a raster.
+        if self.previous_rasters.is_empty() {
+            composition.place(&hour_hand_raster.borrow(), scene.clear_layer_id);
+        }
+        for raster in self.previous_rasters.drain(..) {
+            composition.place(&raster.borrow(), scene.clear_layer_id);
+        }
+
         composition.seal();
 
-        context.render(self.index, &BACKGROUND_COLOR);
+        context.render(self.index, needs_clear, &BACKGROUND_COLOR);
+
+        // Keep reference to rasters for clearing.
+        self.previous_rasters.push(hour_hand_raster);
+        self.previous_rasters.push(hour_hand_shadow_raster);
+        self.previous_rasters.push(minute_hand_raster);
+        self.previous_rasters.push(minute_hand_shadow_raster);
+        self.previous_rasters.push(second_hand_raster);
+        self.previous_rasters.push(second_hand_shadow_raster);
     }
 }
 
