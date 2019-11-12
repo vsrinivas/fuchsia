@@ -20,6 +20,9 @@ namespace fidl_codec {
 //
 // Returns false if it cannot decode the message using the metadata associated
 // with the method.
+// If it cannot decode the message, |error_stream| will contain one or more errors which
+// have been thrown during the decoding. Each error starts with the absolute offset in the
+// buffer (where the error occured) and ends with a new line.
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
                    const zx_handle_info_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object, std::ostream& error_stream);
@@ -30,6 +33,9 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t
 //
 // Returns false if it cannot decode the message using the metadata associated
 // with the method.
+// If it cannot decode the message, |error_stream| will contain one or more errors which
+// have been thrown during the decoding. Each error starts with the absolute offset in the
+// buffer (where the error occured) and ends with a new line.
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
                     const zx_handle_info_t* handles, uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object, std::ostream& error_stream);
