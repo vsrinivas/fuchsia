@@ -16,14 +16,18 @@ use rayon::prelude::*;
 use rustc_hash::FxHashSet;
 
 use crate::{
-    painter::{Context, Painter},
     point::Point,
     raster::{Raster, RasterSegments},
     segment::Segment,
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
-pub use crate::painter::{ColorBuffer, PixelFormat};
+pub(crate) mod painter;
+
+use painter::{Context, Painter};
+
+// TODO(dragostis): Remove in later CL.
+pub use painter::{ColorBuffer, PixelFormat};
 
 pub(crate) const TILE_SIZE: usize = 32;
 pub(crate) const TILE_SHIFT: i32 = TILE_SIZE.trailing_zeros() as i32;

@@ -12,7 +12,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
-use crate::painter::FillRule;
+use super::FillRule;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]

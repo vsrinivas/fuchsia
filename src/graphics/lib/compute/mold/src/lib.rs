@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod painter;
 mod path;
 mod point;
 mod raster;
@@ -22,7 +21,7 @@ const PIXEL_SHIFT: i32 = PIXEL_WIDTH.trailing_zeros() as i32;
 // `GRID_LIMIT * PIXEL_WIDTH` must not exceed `i32::max_value()`.
 const GRID_LIMIT: i32 = 16_777_216 / PIXEL_WIDTH;
 
-pub use painter::{ColorBuffer, PixelFormat};
 pub use path::Path;
 pub use point::Point;
 pub use raster::{Raster, RasterInner};
+pub use tile::painter::{ColorBuffer, PixelFormat};
