@@ -176,6 +176,8 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
+        // TODO(29468): Use actual rates from device here.
+        rates: vec![],
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],

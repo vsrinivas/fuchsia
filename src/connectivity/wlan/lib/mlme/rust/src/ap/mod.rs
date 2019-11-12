@@ -25,6 +25,7 @@ use {
         },
         sequence::SequenceManager,
     },
+    wlan_ddk_compat::ddk_protocol_wlan_info,
     zerocopy::ByteSlice,
 };
 
@@ -380,6 +381,16 @@ impl Context {
 
     // MLME sender functions.
 
+    /// Sends MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3) to the SME.
+    pub fn send_mlme_start_conf(
+        &self,
+        result_code: fidl_mlme::StartResultCodes,
+    ) -> Result<(), Error> {
+        self.device.access_sme_sender(|sender| {
+            sender.send_start_conf(&mut fidl_mlme::StartConfirm { result_code })
+        })
+    }
+
     /// Sends MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4) to the SME.
     pub fn send_mlme_auth_ind(
         &self,
@@ -682,30 +693,56 @@ impl Ap {
 
     // MLME handler functions.
 
-    /// Handles MLME.START.request (IEEE Std 802.11-2016, 6.3.11.2) from the SME.
+    /// Handles MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2) from the SME.
     fn handle_mlme_start_req(&mut self, req: fidl_mlme::StartRequest) -> Result<(), Error> {
         if self.bss.is_some() {
             info!("MLME-START.request: BSS already started");
+            self.ctx
+                .send_mlme_start_conf(fidl_mlme::StartResultCodes::BssAlreadyStartedOrJoined)?;
             return Ok(());
         }
 
-        // TODO(37891): Support starting a BSS with RSN.
-        self.bss.replace(InfraBss::new(req.ssid.clone(), false));
+        if req.bss_type != fidl_mlme::BssTypes::Infrastructure {
+            info!("MLME-START.request: BSS type {:?} not supported", req.bss_type);
+            self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::NotSupported)?;
+            return Ok(());
+        }
 
-        // TODO(37891): Respond to the SME with status code.
+        self.bss.replace(InfraBss::new(req.ssid.clone(), req.rsne.is_some()));
+
+        self.ctx
+            .device
+            .configure_bss(ddk_protocol_wlan_info::WlanBssConfig {
+                bssid: self.ctx.bssid.0,
+                bss_type: ddk_protocol_wlan_info::WlanBssType::Infrastructure,
+                remote: false,
+            })
+            .map_err(|s| Error::Status(format!("falied to configure BSS"), s))?;
+
+        self.ctx
+            .device
+            .set_channel(ddk_protocol_wlan_info::WlanChannel {
+                primary: req.channel,
+
+                // TODO(40917): Correctly support this.
+                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                secondary80: 0,
+            })
+            .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
+
+        // TODO(37891): Support DTIM.
+
+        self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::Success)?;
 
         Ok(())
     }
 
+    /// Handles MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2) from the SME.
     fn handle_mlme_stop_req(&mut self, _req: fidl_mlme::StopRequest) -> Result<(), Error> {
         if self.bss.is_none() {
             info!("MLME-STOP.request: BSS not started");
         }
-
         self.bss = None;
-
-        // TODO(37891): Respond to the SME with status code.
-
         Ok(())
     }
 
@@ -824,6 +861,7 @@ mod tests {
             key::{KeyType, Protection},
             timer::FakeScheduler,
         },
+        fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::assert_variant,
     };
     const CLIENT_ADDR: MacAddr = [1u8; 6];
@@ -2045,6 +2083,114 @@ mod tests {
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
         ap.on_mac_frame(&[0][..], false);
+    }
+
+    #[test]
+    fn ap_handle_mlme_start_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        ap.handle_mlme_start_req(fidl_mlme::StartRequest {
+            ssid: b"coolnet".to_vec(),
+            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            beacon_period: 5,
+            dtim_period: 1,
+            channel: 2,
+            rates: vec![],
+            country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
+            mesh_id: vec![],
+            rsne: None,
+            phy: fidl_common::Phy::Erp,
+            cbw: fidl_common::Cbw::Cbw20,
+        })
+        .expect("expected Ap::handle_mlme_start_request OK");
+
+        assert!(ap.bss.is_some());
+        assert_eq!(
+            fake_device.bss_cfg,
+            Some(ddk_protocol_wlan_info::WlanBssConfig {
+                bssid: BSSID.0,
+                bss_type: ddk_protocol_wlan_info::WlanBssType::Infrastructure,
+                remote: false,
+            })
+        );
+        assert_eq!(
+            fake_device.wlan_channel,
+            ddk_protocol_wlan_info::WlanChannel {
+                primary: 2,
+                // TODO(40917): Correctly support this.
+                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                secondary80: 0,
+            }
+        );
+
+        let msg =
+            fake_device.next_mlme_msg::<fidl_mlme::StartConfirm>().expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::StartConfirm { result_code: fidl_mlme::StartResultCodes::Success },
+        );
+    }
+
+    #[test]
+    fn ap_handle_mlme_start_req_already_started() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+
+        ap.handle_mlme_start_req(fidl_mlme::StartRequest {
+            ssid: b"coolnet".to_vec(),
+            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            beacon_period: 5,
+            dtim_period: 1,
+            channel: 2,
+            rates: vec![],
+            country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
+            mesh_id: vec![],
+            rsne: None,
+            phy: fidl_common::Phy::Erp,
+            cbw: fidl_common::Cbw::Cbw20,
+        })
+        .expect("expected Ap::handle_mlme_start_request OK");
+
+        let msg =
+            fake_device.next_mlme_msg::<fidl_mlme::StartConfirm>().expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::StartConfirm {
+                result_code: fidl_mlme::StartResultCodes::BssAlreadyStartedOrJoined
+            },
+        );
+    }
+
+    #[test]
+    fn ap_handle_mlme_stop_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+
+        ap.handle_mlme_stop_req(fidl_mlme::StopRequest {
+            ssid: b"coolnet".to_vec(),
+        })
+            .expect("expected Ap::handle_mlme_stop_request OK");
+        assert!(ap.bss.is_none());
     }
 
     #[test]

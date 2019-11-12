@@ -227,7 +227,7 @@ pub fn fake_capability_info() -> CapabilityInfo {
 pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
     fidl_mlme::BandCapabilities {
         band_id: fidl_common::Band::WlanBand5Ghz,
-        rates: vec![],
+        rates: vec![1, 2, 3],
         base_frequency: 5000,
         channels: vec![],
         cap: fake_capability_info().0,

@@ -16,7 +16,7 @@ use rsn::*;
 
 use {
     crate::{
-        phy_selection::derive_phy_cbw_for_ap,
+        phy_selection::{derive_phy_cbw_for_ap, get_device_rates},
         responder::Responder,
         sink::MlmeSink,
         timer::{self, EventId, TimedEvent, Timer},
@@ -147,7 +147,12 @@ impl ApSme {
                     Ok(rsn_cfg) => rsn_cfg
                 };
 
-                let req = create_start_request(&op, &config.ssid, rsn_cfg.as_ref());
+                let req = create_start_request(
+                    &op,
+                    &config.ssid,
+                    rsn_cfg.as_ref(),
+                    get_device_rates(&ctx.device_info, op.chan),
+                );
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
                 let event = Event::Sme { event: SmeEvent::StartTimeout };
                 let start_timeout = ctx.timer.schedule(event);
@@ -490,6 +495,7 @@ fn create_start_request(
     op: &OpRadioConfig,
     ssid: &Ssid,
     ap_rsn: Option<&RsnCfg>,
+    rates: &[u8],
 ) -> fidl_mlme::StartRequest {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
@@ -507,6 +513,7 @@ fn create_start_request(
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op.chan.primary,
+        rates: rates.to_vec(),
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
