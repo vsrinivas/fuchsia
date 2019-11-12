@@ -950,6 +950,7 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.sysconf-test",
     ":test.sys.sysconfig-sync-client-test",
     ":test.sys.sysinfo-test",
+    ":test.sys.syslog-static-test",
     ":test.sys.syslog-test",
     ":test.sys.sysmem-test",
     ":test.sys.sysmem-unittest",

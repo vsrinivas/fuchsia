@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <lib/syslog/global.h>
+#include <lib/zx/socket.h>
 #include <poll.h>
 #include <unistd.h>
 
@@ -30,14 +31,41 @@ static bool ends_with(const char* str, const char* suffix) {
 bool test_log_init(void) {
   BEGIN_TEST;
   fx_log_reset_global_for_testing();
-  EXPECT_EQ(ZX_OK, fx_log_init(), "");
+#ifdef SYSLOG_STATIC
+  // Init without config does not work with syslog-static
+  zx_status_t expected = ZX_ERR_INVALID_ARGS;
+#else
+  zx_status_t expected = ZX_OK;
+#endif
+  EXPECT_EQ(expected, fx_log_init(), "");
+  END_TEST;
+}
+
+bool test_log_init_with_socket(void) {
+  BEGIN_TEST;
+  zx::socket socket0, socket1;
+  EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = socket1.release(),
+                               .tags = nullptr,
+                               .num_tags = 0};
+  fx_log_reset_global_for_testing();
+  EXPECT_EQ(ZX_OK, fx_log_init_with_config(&config), "");
   END_TEST;
 }
 
 bool test_log_enabled_macro(void) {
   BEGIN_TEST;
   fx_log_reset_global_for_testing();
-  EXPECT_EQ(ZX_OK, fx_log_init(), "");
+  zx::socket socket0, socket1;
+  EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = socket1.release(),
+                               .tags = nullptr,
+                               .num_tags = 0};
+  EXPECT_EQ(ZX_OK, fx_log_init_with_config(&config), "");
   if (FX_VLOG_IS_ENABLED(1)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
@@ -255,6 +283,7 @@ bool test_vlog_write(void) {
 
 BEGIN_TEST_CASE(syslog_tests)
 RUN_TEST(test_log_init)
+RUN_TEST(test_log_init_with_socket)
 RUN_TEST(test_log_simple_write)
 RUN_TEST(test_log_write)
 RUN_TEST(test_log_preprocessed_message)

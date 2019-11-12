@@ -123,6 +123,7 @@ group("ulib") {
     "sync",
     "sysconfig-client",
     "syslog",
+    "syslog:syslog-static",
     "sysmem-connector",
     "task-utils",
     "tee-client-api",

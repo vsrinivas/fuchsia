@@ -2,16 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+syslog_headers = [
+  "lib/syslog/global.h",
+  "lib/syslog/logger.h",
+  "lib/syslog/wire_format.h",
+]
+
 zx_library("syslog") {
   sdk = "shared"
   sdk_publishable = true
-  sdk_headers = [
-    "lib/syslog/global.h",
-    "lib/syslog/logger.h",
-    "lib/syslog/wire_format.h",
-  ]
+  sdk_headers = syslog_headers
   shared = true
   sources = [
+    "fdio_connect.cc",
     "fx_logger.cc",
     "global.cc",
     "logger.cc",
@@ -25,4 +28,25 @@ zx_library("syslog") {
     "$zx/system/ulib/zx",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}
+
+# This static library should have no shared library dependencies,
+# except libzircon, so it may be used from magma client driver libraries
+# such as the Vulkan ICD.
+# This library cannot connect to the logging service, so a console_fd
+# or log_service_channel must be provided at initialization.
+zx_library("syslog-static") {
+  sdk = "static"
+  sdk_headers = syslog_headers
+  sources = [
+    "fx_logger.cc",
+    "global.cc",
+    "logger.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  defines = [ "SYSLOG_STATIC" ]
 }

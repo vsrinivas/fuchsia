@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":syslog",
+    ":syslog-static",
   ]
 }
 
@@ -22,4 +23,20 @@ zx_test("syslog") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+}
+
+zx_test("syslog-static") {
+  sources = [
+    "syslog_socket_tests.cc",
+    "syslog_tests.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/syslog:syslog-static",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  defines = [ "SYSLOG_STATIC" ]
 }
