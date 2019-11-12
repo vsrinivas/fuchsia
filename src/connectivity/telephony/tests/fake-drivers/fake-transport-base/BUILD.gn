@@ -2,36 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-
-package("qmi-fake-transport") {
-  deprecated_system_image = true
-  testonly = true
-
-  deps = [
-    ":fake_qmi_driver",
-  ]
-
-  drivers = [
-    {
-      name = "qmi-fake-transport.so"
-    },
-  ]
-}
-
-driver_module("fake_qmi_driver") {
-  output_name = "qmi-fake-transport"
+static_library("fake-transport-base") {
   testonly = true
 
   sources = [
-    "driver.cc",
-    "fake-device.cc",
-    "fake-device.h",
+    "fake-transport-base.cc",
+    "fake-transport-base.h",
   ]
 
   deps = [
-    "//src/connectivity/telephony/tests/fake-drivers/fake-transport-base",
     "//src/devices:driver",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -45,6 +24,5 @@ driver_module("fake_qmi_driver") {
     "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
   ]
 
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

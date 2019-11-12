@@ -18,7 +18,7 @@
 #include "fake-device.h"
 
 zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
-  auto dev = std::make_unique<qmi_fake::Device>(device);
+  auto dev = std::make_unique<qmi_fake::QmiDevice>(device);
   auto status = dev->Bind();
   std::printf("%s\n", __func__);
   if (status != ZX_OK) {

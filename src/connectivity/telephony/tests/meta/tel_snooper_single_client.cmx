@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.tel.devmgr.IsolatedDevmgr": [
-                    "fuchsia-pkg://fuchsia.com/tel_devmgr_component_test#meta/tel_devmgr_component_test.cmx"
+                    "fuchsia-pkg://fuchsia.com/tel_devmgr_qmi_component_test#meta/tel_devmgr_qmi_component_test.cmx"
                 ],
                 "fuchsia.telephony.snoop.Snooper": [
                     "fuchsia-pkg://fuchsia.com/telephony-snooper#meta/telephony-snooper.cmx",

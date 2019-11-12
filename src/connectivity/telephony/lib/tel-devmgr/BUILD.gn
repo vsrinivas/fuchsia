@@ -32,7 +32,7 @@ package("tel_devmgr") {
   ]
 }
 
-package("tel_devmgr_component_test") {
+package("tel_devmgr_qmi_component_test") {
   testonly = true
 
   deps = [
@@ -50,8 +50,8 @@ package("tel_devmgr_component_test") {
 
   meta = [
     {
-      path = rebase_path("meta/tel_devmgr_component_test.cmx")
-      dest = "tel_devmgr_component_test.cmx"
+      path = rebase_path("meta/tel_devmgr_qmi_component_test.cmx")
+      dest = "tel_devmgr_qmi_component_test.cmx"
     },
   ]
 }
