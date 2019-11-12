@@ -241,8 +241,7 @@ void devhost_finalize() {
         std::string drv = dev->parent->get_rebind_drv_name().value_or("");
         zx_status_t status = devhost_device_bind(dev->parent, drv.c_str());
         if (status != ZX_OK) {
-          auto rebind = dev->take_rebind_conn();
-          if (rebind) {
+          if (auto rebind = dev->take_rebind_conn(); rebind) {
             rebind(status);
           }
         }
@@ -482,10 +481,15 @@ void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOC
     panic();
   }
   if (!(dev->flags & DEV_FLAG_UNBOUND)) {
-    printf("device: %p(%s): cannot reply to unbind, not in unbinding state, flags are 0x%x\n",
-           dev.get(), dev->name, dev->flags);
+    ZX_PANIC("device: %p(%s): cannot reply to unbind, not in unbinding state, flags are 0x%x\n",
+             dev.get(), dev->name, dev->flags);
+  }
+  if (dev->outstanding_transactions > 0) {
+    printf("device: %p(%s): cannot reply to unbind, currently has %d outstanding transactions\n",
+           dev.get(), dev->name, dev->outstanding_transactions.load());
     panic();
   }
+
 #if TRACE_ADD_REMOVE
   printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
 #endif
@@ -701,6 +705,12 @@ zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
     status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
                                    false /* wake_configured */, &raw_out);
     *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
+    // We expect 1 outstanding transaction (and a copy of it) for the suspend operation itself.
+    if (status == ZX_OK && dev->outstanding_transactions > 2) {
+      printf("device: %p(%s): cannot reply to suspend, currently has %d outstanding transactions\n",
+             dev.get(), dev->name, dev->outstanding_transactions.load());
+      panic();
+    }
   }
   return status;
 }

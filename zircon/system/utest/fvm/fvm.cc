@@ -1110,6 +1110,8 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   ValidateFVM(ramdisk_device());
 }
 
+// TODO(fxb/41215): Fix and re-enable
+#if 0
 // Test removing VPartitions within an FVM
 TEST_F(FvmTest, TestVPartitionDestroy) {
   constexpr uint64_t kBlockSize = 512;
@@ -1186,6 +1188,7 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
+#endif
 
 TEST_F(FvmTest, TestVPartitionQuery) {
   constexpr uint64_t kBlockSize = 512;

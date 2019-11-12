@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_HOST_DEVHOST_H_
 #define SRC_DEVICES_HOST_DEVHOST_H_
 
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -30,6 +29,7 @@
 #include <fbl/string.h>
 
 #include "async-loop-owned-rpc-handler.h"
+#include "devfs-connection.h"
 #include "devhost-context.h"
 #include "lock.h"
 #include "zx-device.h"
@@ -222,59 +222,13 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
                         CreateDeviceStubCompleter::Sync completer) override;
 };
 
-class DevfsConnection : public AsyncLoopOwnedRpcHandler<DevfsConnection>,
-                        public llcpp::fuchsia::device::Controller::Interface {
- public:
-  DevfsConnection() = default;
-
-  static void HandleRpc(std::unique_ptr<DevfsConnection> conn, async_dispatcher_t* dispatcher,
-                        async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal);
-
-  fbl::RefPtr<zx_device_t> dev;
-  size_t io_off = 0;
-  uint32_t flags = 0;
-
- private:
-  void Bind(::fidl::StringView driver, BindCompleter::Sync _completer) override;
-  void Rebind(::fidl::StringView driver, RebindCompleter::Sync _completer) override;
-  void ScheduleUnbind(ScheduleUnbindCompleter::Sync _completer) override;
-  void GetDriverName(GetDriverNameCompleter::Sync _completer) override;
-  void GetDeviceName(GetDeviceNameCompleter::Sync _completer) override;
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
-  void GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync _completer) override;
-  void GetEventHandle(GetEventHandleCompleter::Sync _completer) override;
-  void GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync _completer) override;
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync completer) override;
-  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
-                         SetDriverLogFlagsCompleter::Sync _completer) override;
-  void DebugSuspend(DebugSuspendCompleter::Sync _completer) override;
-  void DebugResume(DebugResumeCompleter::Sync _completer) override;
-  void RunCompatibilityTests(int64_t hook_wait_time,
-                             RunCompatibilityTestsCompleter::Sync _completer) override;
-  void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) override;
-  void SetPerformanceState(uint32_t requested_state,
-                           SetPerformanceStateCompleter::Sync _completer) override;
-
-  void UpdatePowerStateMapping(
-      ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping,
-      UpdatePowerStateMappingCompleter::Sync _completer) override;
-  void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync _completer) override;
-  void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
-               SuspendCompleter::Sync _completer) override;
-  void ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                            ConfigureAutoSuspendCompleter::Sync _completer) override;
-  void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
-              ResumeCompleter::Sync _complete) override;
-};
-
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
 // Attaches channel |c| to new state representing an open connection to |dev|.
 zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
                                    zx::channel c);
 
-zx_status_t devhost_start_connection(std::unique_ptr<DevfsConnection> ios, zx::channel h);
+zx_status_t devhost_start_connection(fbl::RefPtr<DevfsConnection> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
 // |client_remote| will only be a valid handle if the device was added with

@@ -97,6 +97,7 @@ zx_status_t TestDevice::TestRunTests(test_report_t* report) {
 void TestDevice::TestDestroy() {
   fbl::AutoLock guard(&remove_lock_);
   if (!has_been_removed_) {
+    output_.reset();
     DdkRemoveDeprecated();
     has_been_removed_ = true;
   }

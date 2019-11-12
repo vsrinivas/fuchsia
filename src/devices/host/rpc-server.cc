@@ -34,10 +34,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
-#include <fs/handler.h>
 
+#include "devfs-connection.h"
 #include "devhost.h"
-#include "devhost_fidl.h"
 #include "zx-device.h"
 
 namespace devmgr {
@@ -97,7 +96,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
   bool describe = flags & ZX_FS_FLAG_DESCRIBE;
   flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-  auto newconn = std::make_unique<DevfsConnection>();
+  auto newconn = fbl::MakeRefCounted<DevfsConnection>();
   if (!newconn) {
     r = ZX_ERR_NO_MEMORY;
     if (describe) {
@@ -181,7 +180,7 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   // Call device_close to let the driver execute its close hook.  This may
   // be the last reference to the device, causing it to be destroyed.
-  device_close(std::move(conn->dev), conn->flags);
+  device_close(conn->dev, conn->flags);
 
   fuchsia_io_NodeClose_reply(txn, ZX_OK);
   return ERR_DISPATCHER_DONE;
@@ -543,8 +542,8 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
     return status;
   }
 
-  DevhostTransaction transaction(txn);
-  auto conn = static_cast<DevfsConnection*>(cookie);
+  devmgr::Transaction transaction(txn);
+  auto* conn = static_cast<DevfsConnection*>(cookie);
   bool dispatched = llcpp::fuchsia::device::Controller::TryDispatch(conn, msg, &transaction);
   status = transaction.Status();
   if (dispatched) {
@@ -553,7 +552,8 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
     }
   }
 
-  return conn->dev->MessageOp(msg, txn);
+  auto ddk_connection = Connection::FromTxn(txn)->ToDdkConnection();
+  return conn->dev->MessageOp(msg, ddk_connection.Txn());
 }
 
 }  // namespace devmgr

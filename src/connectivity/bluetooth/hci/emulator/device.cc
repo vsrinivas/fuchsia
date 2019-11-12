@@ -174,7 +174,7 @@ void Device::Unbind() {
   fake_device_ = nullptr;
   UnpublishHci();
 
-  device_remove_deprecated(emulator_dev_);
+  device_async_remove(emulator_dev_);
   emulator_dev_ = nullptr;
 }
 

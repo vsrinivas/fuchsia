@@ -31,6 +31,7 @@ source_set("common") {
     "composite-device.cc",
     "connection-destroyer.cc",
     "core.cc",
+    "devfs-connection.cc",
     "devhost-context.cc",
     "devhost.cc",
     "device-controller-connection.cc",

@@ -32,13 +32,11 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
                zx::channel test_output = zx::channel()) {
   completer.Reply(status, std::move(test_output));
 
-  auto bind_conn = dev->take_bind_conn();
-  if (bind_conn) {
+  if (auto bind_conn = dev->take_bind_conn(); bind_conn) {
     bind_conn(status);
   }
 
-  auto rebind_conn = dev->take_rebind_conn();
-  if (rebind_conn) {
+  if (auto rebind_conn = dev->take_rebind_conn(); rebind_conn) {
     rebind_conn(status);
   }
 }
@@ -48,8 +46,8 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 void DeviceControllerConnection::CompleteCompatibilityTests(
     llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
     CompleteCompatibilityTestsCompleter::Sync _completer) {
-  auto compat_conn = dev()->PopTestCompatibilityConn();
-  if (compat_conn) {
+
+  if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
     compat_conn(static_cast<zx_status_t>(status));
   }
 }

@@ -25,27 +25,16 @@ using driver_integration_test::IsolatedDevmgr;
 
 namespace {
 
-namespace fuchsia = ::llcpp::fuchsia;
-
-const board_test::DeviceEntry kDeviceEntry = []() {
-  board_test::DeviceEntry entry = {};
-  strcpy(entry.name, "ddk-fidl");
-  entry.vid = PDEV_VID_TEST;
-  entry.pid = PDEV_PID_DDKFIDL_TEST;
-  entry.did = PDEV_DID_TEST_DDKFIDL;
-  return entry;
-}();
-
-// Test that the transaction does not incorrectly close handles during Reply.
-TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
+void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_path,
+                      const char* device_fs) {
   IsolatedDevmgr devmgr;
   zx_handle_t driver_channel;
 
   // Set the driver arguments.
   IsolatedDevmgr::Args args;
-  args.device_list.push_back(kDeviceEntry);
+  args.device_list.push_back(entry);
 
-  args.load_drivers.push_back("/boot/driver/fidl-llcpp-driver.so");
+  args.load_drivers.push_back(driver_path);
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
 
   // Create the isolated Devmgr.
@@ -54,8 +43,7 @@ TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
 
   // Wait for the driver to be created
   fbl::unique_fd fd;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                         "sys/platform/11:09:d/ddk-fidl", &fd);
+  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), device_fs, &fd);
   ASSERT_OK(status);
 
   // Get a FIDL channel to the device
@@ -83,10 +71,10 @@ TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
   ASSERT_OK(zx_channel_write(driver_channel, 0, &req, sizeof(req), nullptr, 0));
 
   // If the transaction incorrectly closes the sent handles, it will cause a policy violation.
-  // Waiting for the channel to be readable once isn't enough, there is still a very small amount of
-  // time before the transaction destructor runs. A second read ensures that the first succeeded.
-  // If a policy violation occurs, the second read below will fail as the driver channel will have
-  // been closed.
+  // Waiting for the channel to be readable once isn't enough, there is still a very small amount
+  // of time before the transaction destructor runs. A second read ensures that the first
+  // succeeded. If a policy violation occurs, the second read below will fail as the driver
+  // channel will have been closed.
   auto msg_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
   auto msg_handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
   uint32_t actual_bytes = 0;
@@ -110,4 +98,25 @@ TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
     ASSERT_OK(status);
   }
 }
+
+// Test that the transaction does not incorrectly close handles during Reply.
+TEST(FidlDDKDispatcherTest, SyncTransactionHandleTest) {
+  board_test::DeviceEntry entry = {};
+  strcpy(entry.name, "ddk-fidl");
+  entry.vid = PDEV_VID_TEST;
+  entry.pid = PDEV_PID_DDKFIDL_TEST;
+  entry.did = PDEV_DID_TEST_DDKFIDL;
+  CheckTransaction(entry, "/boot/driver/fidl-llcpp-driver.so", "sys/platform/11:09:d/ddk-fidl");
+}
+
+TEST(FidlDDKDispatcherTest, AsyncTransactionHandleTest) {
+  board_test::DeviceEntry entry = {};
+  strcpy(entry.name, "ddk-async-fidl");
+  entry.vid = PDEV_VID_TEST;
+  entry.pid = PDEV_PID_DDKFIDL_TEST;
+  entry.did = PDEV_DID_TEST_DDKASYNCFIDL;
+  CheckTransaction(entry, "/boot/driver/fidl-async-llcpp-driver.so",
+                   "sys/platform/11:09:15/ddk-async-fidl");
+}
+
 }  // namespace

@@ -176,6 +176,7 @@ aggregate_manifest("legacy-image") {
     ":driver.fake",
     ":driver.fake-usb-cdc-acm",
     ":driver.fallback",
+    ":driver.fidl-async-llcpp-driver",
     ":driver.fidl-llcpp-driver",
     ":driver.flash-programmer",
     ":driver.focaltech",

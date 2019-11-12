@@ -11,6 +11,7 @@
 #include <fbl/mutex.h>
 
 #include "composite-device.h"
+#include "devfs-connection.h"
 #include "devhost.h"
 
 zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {

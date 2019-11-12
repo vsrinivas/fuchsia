@@ -31,6 +31,8 @@
 #include <fbl/vector.h>
 #include <fs/handler.h>
 
+#include "devfs-connection.h"
+
 namespace devmgr {
 
 class CompositeDevice;
@@ -126,6 +128,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   void* ctx = nullptr;
 
   uint32_t flags = 0;
+
+  // Reference count of all outstanding transactions belonging to this device. These include read,
+  // write, and fidl message transactions.
+  std::atomic<uint32_t> outstanding_transactions = 0;
 
   zx::eventpair event;
   zx::eventpair local_event;
@@ -259,6 +265,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   fbl::Mutex rebind_conn_lock_;
 
   fit::callback<void(zx_status_t)> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
+
   std::optional<std::string> rebind_drv_name_ = std::nullopt;
 
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests

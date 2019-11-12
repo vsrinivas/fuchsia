@@ -341,8 +341,11 @@ typedef struct zx_protocol_device {
   // the duration of the message() call.  It must not be cached
   // and used later.
   //
-  // If this method returns anything other than ZX_OK, the underlying
-  // connection is closed.
+  // If this method wishes to respond asynchronously, the txn
+  // should be copied and the method should return ZX_ERR_ASYNC.
+  //
+  // If this method returns anything other than ZX_OK or
+  // ZX_ERR_ASYNC, the underlying connection is closed.
   //
   // This hook will only be executed on the devhost's main thread.
   zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);

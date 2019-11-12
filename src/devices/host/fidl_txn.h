@@ -33,7 +33,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
           This provides Devmgr with the correct status value.\n");
   }
 
-  void Reply(fidl::Message message) {
+  void Reply(fidl::Message message) override {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     const fidl_msg_t msg{
         .bytes = message.bytes().data(),
