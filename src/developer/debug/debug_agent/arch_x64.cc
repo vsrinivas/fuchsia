@@ -376,9 +376,10 @@ zx_status_t ArchProvider::InstallWatchpoint(zx::thread* thread,
                      << DebugRegistersToString(debug_regs);
 
   // x64 doesn't support ranges.
-  status = SetupWatchpoint(range.begin(), &debug_regs);
-  if (status != ZX_OK)
-    return status;
+  uint64_t size = range.end() - range.end();
+  auto [res, slot] = SetupWatchpoint(&debug_regs, range.begin(), size);
+  if (res != ZX_OK)
+    return res;
 
   DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);

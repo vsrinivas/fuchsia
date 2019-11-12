@@ -4,6 +4,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_UTILS_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_UTILS_H_
 
+#include <zircon/status.h>
+
 namespace debug_agent {
 
 // zx_status_t comparisong macro. Meand to be used with gtest, so that there is pretty printing for

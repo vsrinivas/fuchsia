@@ -45,16 +45,32 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // ZX_ERR_OUT_OF_RANGE will be returned.
 zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
-// Returns the state the debug registers should be if we added a watchpoint.
-// for |address|.
-// Returns ZX_ERR_ALREADY_BOUND if |address| is already installed.
+// Updated the state the debug registers should be if we added a watchpoint for |address|. Returns
+// wherther the operation was successful, and it if was, what register slot was updated.
+//
+// Address has to be correctly aligned according to |size|, otherwise ZX_ERR_OUT_OF_RANGE will be
+// returned. The possible values for size are:
+//
+// 1: 1 byte aligned.
+// 2: 2 byte aligned.
+// 4: 4 byte aligned.
+// 8: 8 byte aligned.
+//
+// Any other |size| values will return ZX_ERR_INVALID_ARGS.
+//
+// Returns ZX_ERR_ALREADY_BOUND if the |address|/|size| pair is already set.
 // Returns ZX_ERR_NO_RESOURCES if there are no registers left.
-zx_status_t SetupWatchpoint(uint64_t address, zx_thread_state_debug_regs_t*);
+std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t*, uint64_t address,
+                                            uint64_t size);
 
-// Removes an installed execution watchpoint for |address|.
-// If the address is not installed, no functional change will happen and
-// ZX_ERR_OUT_OF_RANGE will be returned.
-zx_status_t RemoveWatchpoint(uint64_t address, zx_thread_state_debug_regs_t*);
+// Removes an installed execution watchpoint for |address|. If the address is not installed, no
+// functional change will happen and ZX_ERR_NOT_FOUND will be returned.
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t*, uint64_t address, uint64_t size);
+
+// Aligns the given address according to the watchpoint size.
+uint64_t WatchpointAddressAlign(uint64_t address, uint64_t size);
+
+uint64_t GetWatchpointLength(uint64_t dr7, int slot);
 
 // Debug functions -------------------------------------------------------------
 

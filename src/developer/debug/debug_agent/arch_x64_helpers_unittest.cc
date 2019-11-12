@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
@@ -39,26 +40,6 @@ void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
       << ", expected: " << debug_ipc::ZxStatusToString(expected_result);
 }
 
-void SetupWatchpointTest(debug_ipc::FileLineFunction file_line,
-                         zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
-                         zx_status_t expected_result) {
-  zx_status_t result = SetupWatchpoint(address, debug_regs);
-  ASSERT_EQ(result, expected_result)
-      << "[" << file_line.ToString() << "] "
-      << "Got: " << debug_ipc::ZxStatusToString(result)
-      << ", expected: " << debug_ipc::ZxStatusToString(expected_result);
-}
-
-void RemoveWatchpointTest(debug_ipc::FileLineFunction file_line,
-                          zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
-                          zx_status_t expected_result) {
-  zx_status_t result = RemoveWatchpoint(address, debug_regs);
-  ASSERT_EQ(result, expected_result)
-      << "[" << file_line.ToString() << "] "
-      << "Got: " << debug_ipc::ZxStatusToString(result)
-      << ", expected: " << debug_ipc::ZxStatusToString(expected_result);
-}
-
 uint64_t GetHWBreakpointDR7Mask(size_t index) {
   FXL_DCHECK(index < 4);
   // Mask is: L = 1, RW = 00, LEN = 0
@@ -71,19 +52,6 @@ uint64_t GetHWBreakpointDR7Mask(size_t index) {
   return dr_masks[index];
 }
 
-uint64_t GetWatchpointDR7Mask(size_t index) {
-  FXL_DCHECK(index < 4);
-  FXL_DCHECK(index < 4);
-  // Mask is: L = 1, RW = 0b01, LEN = 10 (8 bytes).
-  static uint64_t masks[4] = {
-      X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
-      X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
-      X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
-      X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
-  };
-  return masks[index];
-}
-
 // Merges into |val| the flag values for active hw breakpoints within |indices|.
 uint64_t JoinDR7HWBreakpointMask(uint64_t val, std::initializer_list<size_t> indices = {}) {
   for (size_t index : indices) {
@@ -93,22 +61,6 @@ uint64_t JoinDR7HWBreakpointMask(uint64_t val, std::initializer_list<size_t> ind
 
   return val;
 }
-
-// Merges into |val| the flag values for active watchpoints within |indices|.
-uint64_t JoinDR7WatchpointMask(uint64_t val, std::initializer_list<size_t> indices = {}) {
-  for (size_t index : indices) {
-    FXL_DCHECK(index < 4);
-    val |= GetWatchpointDR7Mask(index);
-  }
-
-  return val;
-}
-
-constexpr uint64_t kAddress1 = 0x0123;
-constexpr uint64_t kAddress2 = 0x4567;
-constexpr uint64_t kAddress3 = 0x89ab;
-constexpr uint64_t kAddress4 = 0xcdef;
-constexpr uint64_t kAddress5 = 0xdeadbeef;
 
 }  // namespace
 
@@ -272,6 +224,12 @@ TEST(x64Helpers, WriteDebugRegs) {
 // HW Breakpoints --------------------------------------------------------------
 
 TEST(x64Helpers, SettingHWBreakpoints) {
+  constexpr uint64_t kAddress1 = 0x0123;
+  constexpr uint64_t kAddress2 = 0x4567;
+  constexpr uint64_t kAddress3 = 0x89ab;
+  constexpr uint64_t kAddress4 = 0xcdef;
+  constexpr uint64_t kAddress5 = 0xdeadbeef;
+
   zx_thread_state_debug_regs_t debug_regs = {};
 
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
@@ -327,6 +285,12 @@ TEST(x64Helpers, SettingHWBreakpoints) {
 }
 
 TEST(x64Helpers, RemovingHWBreakpoint) {
+  constexpr uint64_t kAddress1 = 0x0123;
+  constexpr uint64_t kAddress2 = 0x4567;
+  constexpr uint64_t kAddress3 = 0x89ab;
+  constexpr uint64_t kAddress4 = 0xcdef;
+  constexpr uint64_t kAddress5 = 0xdeadbeef;
+
   zx_thread_state_debug_regs_t debug_regs = {};
 
   // Previous state verifies the state of this calls.
@@ -405,223 +369,293 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
   EXPECT_EQ(debug_regs.dr6, 0u);
   EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
 
-  // Attempting to remove a watchpoint should not work.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(debug_regs.dr[0], kAddress5);
-  EXPECT_EQ(debug_regs.dr[1], kAddress2);
-  EXPECT_EQ(debug_regs.dr[2], kAddress1);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3}));
+  /* // Attempting to remove a watchpoint should not work. */
+  /* RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE); */
+  /* EXPECT_EQ(debug_regs.dr[0], kAddress5); */
+  /* EXPECT_EQ(debug_regs.dr[1], kAddress2); */
+  /* EXPECT_EQ(debug_regs.dr[2], kAddress1); */
+  /* EXPECT_EQ(debug_regs.dr[3], kAddress4); */
+  /* EXPECT_EQ(debug_regs.dr6, 0u); */
+  /* EXPECT_EQ(debug_regs.dr7, JoinDR7HWBreakpointMask(0, {0, 1, 2, 3})); */
 }
 
-// Watchpoints -----------------------------------------------------------------
+// Watchpoints -------------------------------------------------------------------------------------
 
 namespace {
 
-inline uint64_t AlignedAddress(uint64_t address) { return address & ~0b111; }
+bool CheckAddresses(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> addresses) {
+  FXL_DCHECK(addresses.size() == 4u);
+  bool has_errors = false;
+  for (int i = 0; i < 4; i++) {
+    if (regs.dr[i] != addresses[i]) {
+      ADD_FAILURE() << "Slot " << i << std::hex << ": Expected 0x" << addresses[i] << ", got: 0x"
+                    << regs.dr[i];
+      has_errors = true;
+    }
+  }
+
+  return !has_errors;
+}
+
+bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> lengths) {
+  FXL_DCHECK(lengths.size() == 4u);
+  bool has_errors = false;
+  for (int i = 0; i < 4; i++) {
+    uint64_t length = GetWatchpointLength(regs.dr7, i);
+    if (length != lengths[i]) {
+      ADD_FAILURE() << "Slot " << i << ": Expected " << lengths[i] << ", got: " << length;
+      has_errors = true;
+    }
+  }
+
+  return !has_errors;
+}
+
+bool CheckSetup(std::pair<zx_status_t, int> values, zx_status_t status, int slot = -1) {
+  if (values.first != status) {
+    ADD_FAILURE() << "Expected: " << zx_status_get_string(status)
+                  << ", got: " << zx_status_get_string(values.first);
+    return false;
+  }
+
+  if (values.second != slot) {
+    ADD_FAILURE() << "Expected slot " << slot << ", got: " << values.second;
+    return false;
+  }
+  return true;
+}
 
 }  // namespace
 
-TEST(x64Helpers, SettingWatchpoints) {
-  zx_thread_state_debug_regs_t debug_regs = {};
+TEST(x64Helpers_SettingWatchpoints, RangeValidation) {
+  zx_thread_state_debug_regs_t regs = {};
 
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], 0u);
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], 0u);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  EXPECT_EQ(debug_regs.dr7, JoinDR7WatchpointMask(0, {0}));
+  // Always aligned.
+  constexpr uint64_t kAddress = 0x100000;
 
-  // Adding the same breakpoint should detect that the same already exists.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_ERR_ALREADY_BOUND);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], 0u);
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], 0u);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  EXPECT_EQ(debug_regs.dr7, JoinDR7WatchpointMask(0, {0}));
-
-  // Continuing adding should append.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress2, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], 0u);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  EXPECT_EQ(debug_regs.dr7, JoinDR7WatchpointMask(0, {0, 1}));
-
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress3));
-  EXPECT_EQ(debug_regs.dr[3], 0u);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  EXPECT_EQ(debug_regs.dr7, JoinDR7WatchpointMask(0, {0, 1, 2}));
-
-  // Setup a HW breakpoint also.
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress3));
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
-
-  // No more registers left should not change anything.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress3));
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 0), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 1), ZX_OK, 0));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 2), ZX_OK, 1));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 3), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 4), ZX_OK, 2));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 5), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 6), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 7), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 8), ZX_OK, 3));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 9), ZX_ERR_INVALID_ARGS));
+  EXPECT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 10), ZX_ERR_INVALID_ARGS));
 }
 
-TEST(x64Helpers, RemovingWatchpoints) {
-  zx_thread_state_debug_regs_t debug_regs = {};
+TEST(x64Helpers_SettingWatchpoints, SetupMany) {
+  zx_thread_state_debug_regs_t regs = {};
 
-  // Previous state verifies the state of this calls.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress2, ZX_OK);
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
-  SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_NO_RESOURCES);
+  // Always aligned address.
+  constexpr uint64_t kAddress1 = 0x10000;
+  constexpr uint64_t kAddress2 = 0x20000;
+  constexpr uint64_t kAddress3 = 0x30000;
+  constexpr uint64_t kAddress4 = 0x40000;
+  constexpr uint64_t kAddress5 = 0x50000;
 
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress1, 0), ZX_ERR_INVALID_ARGS));
 
-  // Removing same watchpoint should not work.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress1, 1), ZX_OK, 0));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
 
-  // Removing an unknown address should warn and change nothing.
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa, ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress1, 1), ZX_ERR_ALREADY_BOUND));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
 
-  // Attempting to remove a HW breakpoint should not work.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    ASSERT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress2, 2), ZX_OK, 1));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
 
-  RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], 0u);
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress3, 4), ZX_OK, 2));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
 
-  // Adding again should work.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], 0u);
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress4, 8), ZX_OK, 3));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
 
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress5, 8), ZX_ERR_NO_RESOURCES));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
 
-  // Already exists should not change.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5, ZX_ERR_ALREADY_BOUND);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress3, 4), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 8}));
 
-  // No more resources.
-  SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_ERR_NO_RESOURCES);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[3], kAddress4);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    mask = JoinDR7HWBreakpointMask(mask, {3});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress5, 8), ZX_OK, 2));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
 
-  // Remove the breakpoint.
-  RemoveHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
-  EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
-  EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
-  EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
-  EXPECT_EQ(debug_regs.dr[3], 0u);
-  EXPECT_EQ(debug_regs.dr6, 0u);
-  {
-    uint64_t mask = JoinDR7WatchpointMask(0, {0, 1, 2});
-    EXPECT_EQ(debug_regs.dr7, mask);
-  }
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress3, 4), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+}
+
+// clang-format off
+TEST(x64Helpers_SettingWatchpoints, Alignment) {
+  zx_thread_state_debug_regs_t regs = {};
+
+  // 1-byte alignment.
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1000, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1001, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1002, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1003, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1004, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1005, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1006, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1007, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1008, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1009, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100a, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100b, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100c, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100d, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100e, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100f, 1), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1010, 1), ZX_OK, 0)); regs = {};
+
+  // 2-byte alignment.
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1000, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1001, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1002, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1003, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1004, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1005, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1006, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1007, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1008, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1009, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100a, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100b, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100c, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100d, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100e, 2), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100f, 2), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1010, 2), ZX_OK, 0)); regs = {};
+
+  // 4-byte alignment.
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1000, 4), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1001, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1002, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1003, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1004, 4), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1005, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1006, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1007, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1008, 4), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1009, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100a, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100b, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100c, 4), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100d, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100e, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100f, 4), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1010, 4), ZX_OK, 0)); regs = {};
+
+  // 8-byte alignment.
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1000, 8), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1001, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1002, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1003, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1004, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1005, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1006, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1007, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1008, 8), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1009, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100a, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100b, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100c, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100d, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100e, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x100f, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1010, 8), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1011, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1012, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1013, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1014, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1015, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1016, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1017, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1018, 8), ZX_OK, 0)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1019, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101a, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101b, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101c, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101d, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101e, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x101f, 8), ZX_ERR_OUT_OF_RANGE, -1)); regs = {};
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, 0x1020, 8), ZX_OK, 0)); regs = {};
+}
+
+// clang-format on
+
+TEST(x64Helpers_SettingWatchpoints, RangeIsDifferentWatchpoint) {
+  zx_thread_state_debug_regs_t regs = {};
+  constexpr uint64_t kAddress = 0x10000;
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 1), ZX_OK, 0));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 1), ZX_ERR_ALREADY_BOUND));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 2), ZX_OK, 1));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 2), ZX_ERR_ALREADY_BOUND));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 4), ZX_OK, 2));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 4), ZX_ERR_ALREADY_BOUND));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+
+  ASSERT_TRUE(CheckSetup(SetupWatchpoint(&regs, kAddress, 8), ZX_OK, 3));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, kAddress}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+
+  // Deleting is by range too.
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 2), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, kAddress, kAddress}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 2), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, kAddress, kAddress}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 1), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, kAddress}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 1), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, kAddress}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 8), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 1}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 8), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 1}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, kAddress, 4), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {0, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
 }
 
 }  // namespace arch

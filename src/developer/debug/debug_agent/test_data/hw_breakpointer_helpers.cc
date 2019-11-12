@@ -259,7 +259,6 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
     uint64_t aligned_address = address & static_cast<uint64_t>(~0b11);
     uint64_t diff = address - aligned_address;
 
-
     switch (diff) {
       case 0:
         SET_REG(0, &regs.dr7, BYTES_4, address);

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 
+#include <zircon/hw/debug/x86.h>
+
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch.h"
@@ -34,38 +36,18 @@ uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   return (dr7 & masks[index]) != 0;
 }
 
-// A HW breakpoint is configured by DR7RW<i> = 0b00.
-bool IsHWBreakpoint(uint64_t dr7, size_t index) {
-  FXL_DCHECK(index < 4);
-  switch (index) {
-    case 0:
-      return X86_FLAG_VALUE(dr7, DR7RW0) == 0;
-    case 1:
-      return X86_FLAG_VALUE(dr7, DR7RW1) == 0;
-    case 2:
-      return X86_FLAG_VALUE(dr7, DR7RW2) == 0;
-    case 3:
-      return X86_FLAG_VALUE(dr7, DR7RW3) == 0;
-    default:
-      break;
-  }
-
-  FXL_NOTREACHED();
-  return false;
-}
-
 // A watchpoint is configured by DR7RW<i> = 0b10 (write) or 0b11 (read/write).
 bool IsWatchpoint(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
   switch (index) {
     case 0:
-      return (X86_FLAG_VALUE(dr7, DR7RW0) & 1) == 1;
+      return (X86_FLAG_VALUE(dr7, DR7RW0) & 1) > 0;
     case 1:
-      return (X86_FLAG_VALUE(dr7, DR7RW1) & 1) == 1;
+      return (X86_FLAG_VALUE(dr7, DR7RW1) & 1) > 0;
     case 2:
-      return (X86_FLAG_VALUE(dr7, DR7RW2) & 1) == 1;
+      return (X86_FLAG_VALUE(dr7, DR7RW2) & 1) > 0;
     case 3:
-      return (X86_FLAG_VALUE(dr7, DR7RW3) & 1) == 1;
+      return (X86_FLAG_VALUE(dr7, DR7RW3) & 1) > 0;
     default:
       break;
   }
@@ -95,20 +77,6 @@ uint64_t HWBreakpointDR7SetMask(size_t index) {
       X86_FLAG_MASK(DR7L1),
       X86_FLAG_MASK(DR7L2),
       X86_FLAG_MASK(DR7L3),
-  };
-  return masks[index];
-}
-
-uint64_t WatchpointDR7SetMask(size_t index) {
-  FXL_DCHECK(index < 4);
-  // Mask is: L = 1, RW = 0b01, LEN = 10 (8 bytes).
-  // TODO(donosoc): This is only setting write-only watchpoints.
-  //                When enabled in the client, we need to allow read/write.
-  static uint64_t masks[4] = {
-      X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
-      X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
-      X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
-      X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
   };
   return masks[index];
 }
@@ -276,19 +244,116 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
 
 namespace {
 
-inline uint64_t AlignedAddress(uint64_t address) { return address & ~0b111; }
+// clang-format off
+
+// x86 uses the following bits to represent watchpoint lenghts:
+// 00: 1 byte.
+// 10: 2 bytes.
+// 11: 8 bytes.
+// 10: 4 bytes.
+//
+// The following functions translate between the both.
+
+inline uint64_t x86LenToLength(uint64_t len) {
+  switch (len) {
+    case 0: return 1;
+    case 1: return 2;
+    case 2: return 8;
+    case 3: return 4;
+  }
+
+  FXL_NOTREACHED() << "Invalid len: " << len;
+  return 0;
+}
+
+inline uint64_t LengthTox86Length(uint64_t len) {
+  switch (len) {
+    case 1: return 0;
+    case 2: return 1;
+    case 8: return 2;
+    case 4: return 3;
+  }
+
+  FXL_NOTREACHED() << "Invalid len: " << len;
+  return 0;
+}
+
+void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size) {
+  switch (slot) {
+    case 0: {
+      X86_DBG_CONTROL_L0_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW0_SET(dr7, 1);
+      X86_DBG_CONTROL_LEN0_SET(dr7, size ? LengthTox86Length(size) : 0);
+      return;
+    }
+    case 1: {
+      X86_DBG_CONTROL_L1_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW1_SET(dr7, 1);
+      X86_DBG_CONTROL_LEN1_SET(dr7, size ? LengthTox86Length(size) : 0);
+      return;
+    }
+    case 2: {
+      X86_DBG_CONTROL_L2_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW2_SET(dr7, 1);
+      X86_DBG_CONTROL_LEN2_SET(dr7, size ? LengthTox86Length(size) : 0);
+      return;
+    }
+    case 3: {
+      X86_DBG_CONTROL_L3_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW3_SET(dr7, 1);
+      X86_DBG_CONTROL_LEN3_SET(dr7, size ? LengthTox86Length(size) : 0);
+      return;
+    }
+  }
+
+  FXL_NOTREACHED() << "Invalid slot: " << slot;
+}
 
 }  // namespace
 
-zx_status_t SetupWatchpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
+uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
+  switch (slot) {
+    case 0: return x86LenToLength(X86_DBG_CONTROL_LEN0_GET(dr7));
+    case 1: return x86LenToLength(X86_DBG_CONTROL_LEN1_GET(dr7));
+    case 2: return x86LenToLength(X86_DBG_CONTROL_LEN2_GET(dr7));
+    case 3: return x86LenToLength(X86_DBG_CONTROL_LEN3_GET(dr7));
+  }
+
+  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  return -1;
+}
+
+uint64_t WatchpointAddressAlign(uint64_t address, uint64_t size) {
+  switch (size) {
+    case 1: return address;
+    case 2: return address & (uint64_t)(~0b1);
+    case 4: return address & (uint64_t)(~0b11);
+    case 8: return address & (uint64_t)(~0b111);
+  }
+
+  return 0;
+}
+// clang-format on
+
+std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
+                                            uint64_t address, uint64_t size) {
+  uint64_t aligned_address = WatchpointAddressAlign(address, size);
+  if (!aligned_address)
+    return {ZX_ERR_INVALID_ARGS, -1};
+
+  // Check alignment.
+  if (address != aligned_address)
+    return {ZX_ERR_OUT_OF_RANGE, -1};
+
   // Search for a free slot.
   int slot = -1;
   for (int i = 0; i < 4; i++) {
     if (HWDebugResourceEnabled(debug_regs->dr7, i)) {
       // If it's the same address, we don't need to do anything.
-      // For watchpoints, we need to compare against the aligned address.
-      if (debug_regs->dr[i] == AlignedAddress(address))
-        return ZX_ERR_ALREADY_BOUND;
+      // For watchpoints, we need to compare against the range.
+      if ((debug_regs->dr[i] == address) && GetWatchpointLength(debug_regs->dr7, i) == size) {
+        return {ZX_ERR_ALREADY_BOUND, -1};
+      }
     } else {
       slot = i;
       break;
@@ -296,32 +361,40 @@ zx_status_t SetupWatchpoint(uint64_t address, zx_thread_state_debug_regs_t* debu
   }
 
   if (slot == -1)
-    return ZX_ERR_NO_RESOURCES;
+    return {ZX_ERR_NO_RESOURCES, -1};
 
   // We found a slot, we bind the watchpoint.
-  debug_regs->dr[slot] = AlignedAddress(address);  // 8-byte aligned.
-  debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
-  debug_regs->dr7 |= WatchpointDR7SetMask(slot);
-  return ZX_OK;
+  debug_regs->dr[slot] = aligned_address;
+  SetWatchpointFlags(&debug_regs->dr7, slot, true, size);
+
+  return {ZX_OK, slot};
 }
 
-zx_status_t RemoveWatchpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
-  for (int i = 0; i < 4; i++) {
-    if (!HWDebugResourceEnabled(debug_regs->dr7, i) || IsHWBreakpoint(debug_regs->dr7, i)) {
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
+                             uint64_t size) {
+  uint64_t aligned_address = WatchpointAddressAlign(address, size);
+  if (!aligned_address)
+    return ZX_ERR_INVALID_ARGS;
+
+  for (int slot = 0; slot < 4; slot++) {
+    if (!IsWatchpoint(debug_regs->dr7, slot))
+      continue;
+
+    // Both address and length should match.
+    if ((debug_regs->dr[slot] != aligned_address) ||
+        GetWatchpointLength(debug_regs->dr7, slot) != size) {
       continue;
     }
 
-    if (debug_regs->dr[i] != AlignedAddress(address))
-      continue;
-
     // Clear this breakpoint.
-    debug_regs->dr[i] = 0;
-    debug_regs->dr7 &= HWDebugResourceD7ClearMask(i);
+    debug_regs->dr[slot] = 0;
+    SetWatchpointFlags(&debug_regs->dr7, slot, false, 0);
+    debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
     return ZX_OK;
   }
 
   // We didn't find the address.
-  return ZX_ERR_OUT_OF_RANGE;
+  return ZX_ERR_NOT_FOUND;
 }
 
 // Debug functions -------------------------------------------------------------
