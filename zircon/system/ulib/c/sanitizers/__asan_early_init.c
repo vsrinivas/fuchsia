@@ -97,21 +97,44 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
 __EXPORT
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) { return shadow_bounds; }
 
+NO_ASAN static void decommit_if_zero(uintptr_t page) {
+  const uint64_t *ptr = (uint64_t *)page;
+  for (int i = 0; i < PAGE_SIZE / sizeof(uint64_t); i++) {
+    if (ptr[i] != 0)
+      return;
+  }
+
+  zx_status_t status = _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT,
+                                        page - shadow_bounds.shadow_base, PAGE_SIZE, NULL, 0);
+  if (status != ZX_OK) {
+    __builtin_trap();
+  }
+}
+
 __EXPORT
-void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t threshold) {
+NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t threshold) {
   const uintptr_t shadow_base = base >> ASAN_SHADOW_SHIFT;
   if (shadow_base < shadow_bounds.shadow_base) {
     __builtin_trap();
   }
   const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
   if (!value && shadow_size >= threshold && shadow_size >= PAGE_SIZE) {
+    // TODO(41009): Handle shadow_size < PAGE_SIZE.
     uintptr_t page_start = (shadow_base + PAGE_SIZE - 1) & -PAGE_SIZE;
     uintptr_t page_end = (shadow_base + shadow_size) & -PAGE_SIZE;
-    // We're directly clearing the partial pages...
-    __unsanitized_memset((void*)shadow_base, 0, page_start - shadow_base);
-    __unsanitized_memset((void*)page_end, 0, shadow_base + shadow_size - page_end);
-    // ...and telling the kernel to drop all the whole pages to stop using
-    // the memory and get fresh zero-fill pages on the next write.
+    // Memset the partial pages, and decommit them if they are zero-pages.
+    if (page_start - shadow_base > 0) {
+      __unsanitized_memset((void *)shadow_base, 0, page_start - shadow_base);
+      decommit_if_zero(page_start - PAGE_SIZE);
+    }
+
+    if (shadow_base + shadow_size - page_end > 0) {
+      __unsanitized_memset((void *)page_end, 0, shadow_base + shadow_size - page_end);
+      decommit_if_zero(page_end);
+    }
+
+    // Decommit the whole pages always, so the next time we use them we will get
+    // fresh zero-pages.
     zx_status_t status =
         _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT, page_start - shadow_bounds.shadow_base,
                          page_end - page_start, NULL, 0);
@@ -119,7 +142,7 @@ void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t 
       __builtin_trap();
     }
   } else {
-    __unsanitized_memset((void*)shadow_base, value, shadow_size);
+    __unsanitized_memset((void *)shadow_base, value, shadow_size);
   }
 }
 
