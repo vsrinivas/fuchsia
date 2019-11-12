@@ -6,6 +6,9 @@ zx_library("fs") {
   sdk = "source"
   sdk_headers = [
     "fs/internal/connection.h",
+    "fs/internal/directory_connection.h",
+    "fs/internal/file_connection.h",
+    "fs/internal/node_connection.h",
     "fs/client.h",
     "fs/handler.h",
     "fs/lazy_dir.h",
@@ -54,10 +57,13 @@ zx_library("fs") {
   if (is_fuchsia) {
     sources += [
       "connection.cc",
+      "file_connection.cc",
+      "directory_connection.cc",
       "handler.cc",
       "lazy_dir.cc",
       "managed_vfs.cc",
       "mount.cc",
+      "node_connection.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
       "remote_dir.cc",
@@ -113,10 +119,13 @@ if (is_fuchsia) {
     ]
     sources = [
       "connection.cc",
+      "directory_connection.cc",
+      "file_connection.cc",
       "handler.cc",
       "lazy_dir.cc",
       "managed_vfs.cc",
       "mount.cc",
+      "node_connection.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
       "remote_dir.cc",

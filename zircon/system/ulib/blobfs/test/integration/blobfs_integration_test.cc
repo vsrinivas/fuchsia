@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
@@ -1011,11 +1012,14 @@ void RunInvalidOperationsTest() {
   ASSERT_LT(utime(info->path, nullptr), 0);
 
   // Test that a file cannot unmount the entire blobfs.
+  // Instead, the file channel will be forcibly closed as we attempt to call an unknown FIDL method.
+  // Hence we clone the fd into a |canary_channel| which we know will have its peer closed.
+  zx::channel canary_channel;
+  ASSERT_OK(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()));
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
-  ASSERT_OK(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status));
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, status);
-  fd = caller.release();
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fuchsia_io_DirectoryAdminUnmount(canary_channel.get(), &status));
+  zx_signals_t pending;
+  EXPECT_OK(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending));
 
   // Access the file once more, after these operations.
   ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));

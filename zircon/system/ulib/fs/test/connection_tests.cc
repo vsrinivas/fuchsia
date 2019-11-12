@@ -25,6 +25,32 @@ zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
 zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
 
+// Example vnode that supports protocol negotiation.
+// Here the vnode may be opened as a file or a directory.
+class FileOrDirectory : public fs::Vnode {
+ public:
+  FileOrDirectory() = default;
+
+  fs::VnodeProtocolSet GetProtocols() const final {
+    return fs::VnodeProtocol::kFile | fs::VnodeProtocol::kDirectory;
+  }
+
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights,
+                                     fs::VnodeRepresentation* info) final {
+    switch (protocol) {
+      case fs::VnodeProtocol::kFile:
+        *info = fs::VnodeRepresentation::File();
+        break;
+      case fs::VnodeProtocol::kDirectory:
+        *info = fs::VnodeRepresentation::Directory();
+        break;
+      default:
+        ZX_ASSERT_MSG(false, "Unreachable");
+    }
+    return ZX_OK;
+  }
+};
+
 class VfsTestSetup : public zxtest::Test {
  public:
   // Setup file structure with one directory and one file. Note: On creation
@@ -34,8 +60,10 @@ class VfsTestSetup : public zxtest::Test {
     root_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
     dir_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
     file_ = fbl::AdoptRef<fs::Vnode>(new fs::BufferedPseudoFile(&DummyReader, &DummyWriter));
+    file_or_dir_ = fbl::AdoptRef<FileOrDirectory>(new FileOrDirectory());
     root_->AddEntry("dir", dir_);
     root_->AddEntry("file", file_);
+    root_->AddEntry("file_or_dir", file_or_dir_);
   }
 
   zx_status_t ConnectClient(zx::channel server_end) {
@@ -54,6 +82,7 @@ class VfsTestSetup : public zxtest::Test {
   fbl::RefPtr<fs::PseudoDir> root_;
   fbl::RefPtr<fs::PseudoDir> dir_;
   fbl::RefPtr<fs::Vnode> file_;
+  fbl::RefPtr<FileOrDirectory> file_or_dir_;
 };
 
 using ConnectionTest = VfsTestSetup;
@@ -142,30 +171,76 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
   ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
   ASSERT_OK(ConnectClient(std::move(server_end)));
 
-  // Connect to Directory
+  // Read/write flags on a Directory connection using File protocol Get/SetFlags should fail.
+  {
+    zx::channel dc1, dc2;
+    ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
+    ASSERT_OK(fdio_open_at(client_end.get(), "dir",
+                          fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
+
+    auto dir_get_result = fio::File::Call::GetFlags(zx::unowned_channel(dc1));
+    EXPECT_NOT_OK(dir_get_result.status());
+  }
+
+  {
+    zx::channel dc1, dc2;
+    ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
+    ASSERT_OK(fdio_open_at(client_end.get(), "dir",
+                          fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
+
+    auto dir_set_result =
+        fio::File::Call::SetFlags(zx::unowned_channel(dc1), fio::OPEN_FLAG_APPEND);
+    EXPECT_NOT_OK(dir_set_result.status());
+  }
+}
+
+TEST_F(ConnectionTest, NegotiateProtocol) {
+  // Create connection to vfs
+  zx::channel client_end, server_end;
+  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  ASSERT_OK(ConnectClient(std::move(server_end)));
+
+  // Helper method to monitor the OnOpen event, used by the tests below
+  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo*)> cb) {
+    zx_status_t event_status = fio::Node::Call::HandleEvents(std::move(channel),
+                                                             fio::Node::EventHandlers{
+        .on_open = [&](zx_status_t status, fio::NodeInfo* info) {
+          EXPECT_OK(status);
+          EXPECT_NE(info, nullptr);
+          if (info) {
+            cb(info);
+          }
+          return ZX_OK;
+        },
+        .unknown = []() { return ZX_ERR_INVALID_ARGS; }
+    });
+    // Expect that |on_open| was received
+    EXPECT_EQ(ZX_OK, event_status);
+  };
+
+  constexpr uint32_t kOpenMode = 0755;
+
+  // Connect to polymorphic node as a directory, by passing |OPEN_FLAG_DIRECTORY|.
   zx::channel dc1, dc2;
   ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
-  ASSERT_OK(fdio_open_at(client_end.get(), "dir",
-                         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
+  ASSERT_OK(fio::Directory::Call::Open(
+      zx::unowned_channel(client_end),
+      fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY, kOpenMode,
+      fidl::StringView("file_or_dir"), std::move(dc2)).status());
+  expect_on_open(zx::unowned_channel(dc1), [](fio::NodeInfo* info) {
+    EXPECT_TRUE(info->is_directory());
+  });
 
-  // Read/write/read directory flags using File protocol Get/SetFlags
-  // TODO(fxb/34613): Currently, connection.h handles multiplexing Node/File/Directory
-  // calls to the same underlying object, and thus the following tests pass.
-  // However, this is incorrect behavior that only works due to the current
-  // connection implementation. File operations should not be able to be called
-  // on Directory objects. Change these tests once connection.h functionality
-  // is split in ulib/fs rework.
-  auto dir_get_result = fio::File::Call::GetFlags(zx::unowned_channel(dc1));
-  EXPECT_OK(dir_get_result.Unwrap()->s);
-  EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dir_get_result.Unwrap()->flags);
-
-  auto dir_set_result = fio::File::Call::SetFlags(zx::unowned_channel(dc1), fio::OPEN_FLAG_APPEND);
-  EXPECT_OK(dir_set_result.Unwrap()->s);
-
-  dir_get_result = fio::File::Call::GetFlags(zx::unowned_channel(dc1));
-  EXPECT_OK(dir_get_result.Unwrap()->s);
-  EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND,
-            dir_get_result.Unwrap()->flags);
+  // Connect to polymorphic node as a file, by passing |OPEN_FLAG_NOT_DIRECTORY|.
+  zx::channel fc1, fc2;
+  ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
+  ASSERT_OK(fio::Directory::Call::Open(
+      zx::unowned_channel(client_end),
+      fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY, kOpenMode,
+      fidl::StringView("file_or_dir"), std::move(fc2)).status());
+  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo* info) {
+    EXPECT_TRUE(info->is_file());
+  });
 }
 
 }  // namespace

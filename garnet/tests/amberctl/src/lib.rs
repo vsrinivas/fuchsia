@@ -220,12 +220,18 @@ impl TestEnv {
     }
 
     async fn run_amberctl_add_src(&self, source: types::SourceConfig) {
-        let mut config_file = tempfile::tempfile().expect("temp config file to create");
+        let config_dir = tempfile::tempdir().expect("temp config dir to create");
+        let file_path = config_dir.path().join("test.json");
+        let mut config_file = File::create(file_path).expect("temp config file to create");
         serde_json::to_writer(&mut config_file, &source).expect("source config to serialize");
+        drop(config_file);
 
         self._run_amberctl(
             amberctl()
-                .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
+                .add_dir_to_namespace(
+                    "/configs".to_string(),
+                    File::open(config_dir.path()).expect("temp config dir to exist"),
+                )
                 .expect("static /configs to mount")
                 .arg("add_src")
                 .arg("-f=/configs/test.json"),
@@ -234,12 +240,18 @@ impl TestEnv {
     }
 
     async fn run_amberctl_add_repo_config(&self, source: types::SourceConfig) {
-        let mut config_file = tempfile::tempfile().expect("temp config file to create");
+        let config_dir = tempfile::tempdir().expect("temp config dir to create");
+        let file_path = config_dir.path().join("test.json");
+        let mut config_file = File::create(file_path).expect("temp config file to create");
         serde_json::to_writer(&mut config_file, &source).expect("source config to serialize");
+        drop(config_file);
 
         self._run_amberctl(
             amberctl()
-                .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
+                .add_dir_to_namespace(
+                    "/configs".to_string(),
+                    File::open(config_dir.path()).expect("temp config dir to exist"),
+                )
                 .expect("static /configs to mount")
                 .arg("add_repo_cfg")
                 .arg("-f=/configs/test.json"),

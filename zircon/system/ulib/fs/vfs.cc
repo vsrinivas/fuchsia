@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/auto_call.h>
 #include <fs/debug.h>
@@ -22,11 +23,12 @@
 #include <threads.h>
 #include <zircon/assert.h>
 
-#include <utility>
-
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fs/internal/connection.h>
+#include <fs/internal/directory_connection.h>
+#include <fs/internal/file_connection.h>
+#include <fs/internal/node_connection.h>
 #include <fs/remote.h>
 #endif
 
@@ -439,7 +441,6 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
 
 zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
                        Vnode::ValidatedOptions options) {
-  zx_status_t status;
   // |ValidateOptions| was called, hence at least one protocol must be supported.
   auto candidate_protocols = options->protocols() & vnode->GetProtocols();
   ZX_DEBUG_ASSERT(candidate_protocols.any());
@@ -450,19 +451,59 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
   } else {
     protocol = vnode->Negotiate(candidate_protocols);
   }
+
+  // Send an |fuchsia.io/OnOpen| event if requested.
+  if (options->flags.describe) {
+    OnOpenMsg response;
+    memset(&response, 0, sizeof(response));
+    response.primary.s = ZX_OK;
+    zx_handle_t extra = ZX_HANDLE_INVALID;
+    internal::Describe(vnode, protocol, *options, &response, &extra);
+    uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
+    channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
+  }
+
   // If |node_reference| is specified, serve |fuchsia.io/Node| even for
   // |VnodeProtocol::kConnector| nodes.
-  if (options->flags.node_reference || protocol != VnodeProtocol::kConnector) {
-    auto connection = std::make_unique<internal::Connection>(this, std::move(vnode),
-                                                             std::move(channel), options.value());
-    status = connection->Serve();
-    if (status == ZX_OK) {
-      RegisterConnection(std::move(connection));
-    }
-  } else {
-    status = vnode->ConnectService(std::move(channel));
+  if (!options->flags.node_reference && protocol == VnodeProtocol::kConnector) {
+    return vnode->ConnectService(std::move(channel));
   }
-  return status;
+
+  auto connection = ([&, this] () -> std::unique_ptr<internal::Connection> {
+    switch (protocol) {
+      case VnodeProtocol::kFile:
+      case VnodeProtocol::kDevice:
+      case VnodeProtocol::kTty:
+      // In memfs and bootfs, memory objects (vmo-files) appear to support |fuchsia.io/File.Read|.
+      // Therefore choosing a file connection here is the closest approximation.
+      case VnodeProtocol::kMemory:
+        return std::make_unique<internal::FileConnection>(this, std::move(vnode),
+                                                          std::move(channel), protocol, *options);
+      case VnodeProtocol::kDirectory:
+        return std::make_unique<internal::DirectoryConnection>(this, std::move(vnode),
+                                                                std::move(channel), protocol,
+                                                                *options);
+      case VnodeProtocol::kConnector:
+      case VnodeProtocol::kPipe:
+        return std::make_unique<internal::NodeConnection>(this, std::move(vnode),
+                                                          std::move(channel), protocol, *options);
+      case VnodeProtocol::kSocket:
+        // The posix socket protocol is used by netstack and served through the
+        // src/lib/component/go library.
+        ZX_PANIC("fuchsia.posix.socket/Control is not implemented");
+    }
+#ifdef __GNUC__
+    // GCC does not infer that the above switch statement will always return by
+    // handling all defined enum members.
+    __builtin_abort();
+#endif
+  })();
+  zx_status_t status = connection->StartDispatching();
+  if (status != ZX_OK) {
+    return status;
+  }
+  RegisterConnection(std::move(connection));
+  return ZX_OK;
 }
 
 void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {
