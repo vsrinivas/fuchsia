@@ -52,6 +52,7 @@ typedef struct zx_policy_basic {
 ```
 
 Where *condition* is one of
+
 + **ZX_POL_BAD_HANDLE** a process under this job is attempting to
   issue a syscall with an invalid handle.  In this case,
   **ZX_POL_ACTION_ALLOW** and **ZX_POL_ACTION_DENY** are equivalent:
