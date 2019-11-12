@@ -1117,7 +1117,8 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
 }
 
 // We cannot capture protected content, so we expect a black screenshot instead.
-TEST_F(ScenicPixelTest, ProtectedImage) {
+// TODO(40926): Reenable after flakiness is resolved.
+TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
