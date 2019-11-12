@@ -546,6 +546,16 @@ impl TryFrom<&str> for CapabilityPath {
     }
 }
 
+impl fmt::Display for CapabilityPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if &self.dirname == "/" {
+            write!(f, "/{}", self.basename)
+        } else {
+            write!(f, "{}/{}", self.dirname, self.basename)
+        }
+    }
+}
+
 impl UseDecl {
     pub fn path(&self) -> Option<&CapabilityPath> {
         let path = match self {
@@ -588,13 +598,9 @@ impl From<&CapabilityName> for CapabilityName {
     }
 }
 
-impl fmt::Display for CapabilityPath {
+impl fmt::Display for CapabilityName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if &self.dirname == "/" {
-            write!(f, "/{}", self.basename)
-        } else {
-            write!(f, "{}/{}", self.dirname, self.basename)
-        }
+        f.write_str(&self.0)
     }
 }
 

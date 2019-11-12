@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{framework::*, model::*, startup::BuiltinRootCapabilities, root_realm_post_destroy_notifier::*},
+    crate::{
+        framework::*,
+        model::{runner::Runner, *},
+        root_realm_post_destroy_notifier::*,
+        startup::BuiltinRootCapabilities,
+    },
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -90,7 +95,11 @@ impl Model {
 
     pub async fn wait_for_root_realm_destroy(&self) {
         let mut notifier = self.notifier.lock().await;
-        notifier.take().expect("A root realm can only be destroyed once").wait_for_root_realm_destroy().await;
+        notifier
+            .take()
+            .expect("A root realm can only be destroyed once")
+            .wait_for_root_realm_destroy()
+            .await;
     }
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is
@@ -283,10 +292,11 @@ impl Model {
     /// Resolves the instance if necessary, starts the component instance, updates the `Execution`,
     /// and returns a binding and all child realms that must be bound because they had `eager`
     /// startup.
-    async fn bind_inner<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
+    async fn bind_inner(&self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
+        // Resolve the component from its URL.
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-        // The realm's lock needs to be held during `Runner::start` until the `Execution` is set in
-        // case there are concurrent calls to `bind_inner`.
+
+        // Set up the realm's state.
         let decl = {
             let mut state = realm.lock_state().await;
             if state.is_none() {
@@ -294,6 +304,10 @@ impl Model {
             }
             state.as_ref().unwrap().decl().clone()
         };
+
+        // Fetch the component's runner.
+        let runner = realm.resolve_runner(self).await?;
+
         {
             let mut execution = realm.lock_execution().await;
             if execution.is_shut_down() {
@@ -303,41 +317,19 @@ impl Model {
                 // TODO: Add binding to the execution once we track bindings.
                 return Ok(vec![]);
             }
-            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
-            execution.runtime = Some(if decl.program.is_some() {
-                let (outgoing_dir_client, outgoing_dir_server) =
-                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-                let (runtime_dir_client, runtime_dir_server) =
-                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-                let mut namespace = IncomingNamespace::new(component.package)?;
-                let ns = namespace.populate(self.clone(), &realm.abs_moniker, &decl).await?;
-                let runtime = Runtime::start_from(
-                    component.resolved_url,
-                    Some(namespace),
-                    Some(DirectoryProxy::from_channel(
-                        fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-                    )),
-                    Some(DirectoryProxy::from_channel(
-                        fasync::Channel::from_channel(runtime_dir_client).unwrap(),
-                    )),
-                    exposed_dir,
-                )?;
-                let start_info = fsys::ComponentStartInfo {
-                    resolved_url: Some(runtime.resolved_url.clone()),
-                    program: data::clone_option_dictionary(&decl.program),
-                    ns: Some(ns),
-                    outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-                    runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
-                };
-                self.elf_runner.start(start_info).await?;
-                runtime
-            } else {
-                // Although this component has no runtime environment, it is still possible to bind
-                // to it, which may trigger bindings to its children. For consistency, we still
-                // consider the component to be "executing" in this case.
-                Runtime::start_from(component.resolved_url, None, None, None, exposed_dir)?
-            });
-        };
+            execution.runtime = Some(
+                self.init_execution_runtime(
+                    &realm.abs_moniker,
+                    component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
+                    component.package,
+                    &decl,
+                    runner.as_ref(),
+                )
+                .await?,
+            );
+        }
+
+        // Return a list of children that should be eagerly bound.
         let state = realm.lock_state().await;
         let eager_child_realms: Vec<_> = state
             .as_ref()
@@ -349,5 +341,49 @@ impl Model {
             })
             .collect();
         Ok(eager_child_realms)
+    }
+
+    /// Return a configured Runtime for a component.
+    async fn init_execution_runtime(
+        &self,
+        abs_moniker: &AbsoluteMoniker,
+        url: String,
+        package: Option<fsys::Package>,
+        decl: &cm_rust::ComponentDecl,
+        runner: &(dyn Runner + Send + Sync),
+    ) -> Result<Runtime, ModelError> {
+        // Create incoming/outgoing directories, and populate them.
+        let exposed_dir = ExposedDir::new(self, abs_moniker, decl.clone())?;
+        let (outgoing_dir_client, outgoing_dir_server) =
+            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let (runtime_dir_client, runtime_dir_server) =
+            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+        let mut namespace = IncomingNamespace::new(package)?;
+        let ns = namespace.populate(self.clone(), abs_moniker, decl).await?;
+
+        // Set up channels into/out of the new component.
+        let runtime = Runtime::start_from(
+            url,
+            Some(namespace),
+            Some(DirectoryProxy::from_channel(
+                fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+            )),
+            Some(DirectoryProxy::from_channel(
+                fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+            )),
+            exposed_dir,
+        )?;
+        let start_info = fsys::ComponentStartInfo {
+            resolved_url: Some(runtime.resolved_url.clone()),
+            program: data::clone_option_dictionary(&decl.program),
+            ns: Some(ns),
+            outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+            runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
+        };
+
+        // Ask the runner to launch the runtime.
+        runner.start(start_info).await?;
+
+        Ok(runtime)
     }
 }

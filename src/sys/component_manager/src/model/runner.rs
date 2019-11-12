@@ -64,3 +64,16 @@ impl RunnerError {
         RunnerError::ComponentRuntimeDirectoryError { err: err.into().into() }
     }
 }
+
+/// A null runner for components without a runtime environment.
+///
+/// Such environments, even though they don't execute any code, can still be
+/// used by other components to bind to, which in turn may trigger further
+/// bindings to its children.
+pub struct NullRunner {}
+
+impl Runner for NullRunner {
+    fn start(&self, _start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(async { Ok(()) })
+    }
+}

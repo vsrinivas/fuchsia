@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseRunnerDecl, UseStorageDecl},
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -127,6 +127,39 @@ impl Realm {
         let state = state.as_mut().expect("resolve_meta_dir: not resolved");
         state.meta_dir = Some(meta_dir.clone());
         Ok(Some(meta_dir))
+    }
+
+    /// Resolves a runner for this component.
+    pub async fn resolve_runner(
+        &self,
+        model: &Model,
+    ) -> Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError> {
+        // Fetch component declaration.
+        let state = self.lock_state().await;
+        let decl = state.as_ref().expect("resolve_runner: not resolved").decl();
+
+        // Return an error if there are any explicit "use" runner declarations.
+        //
+        // TODO(fxb/4761): Resolve the runner component if we find one.
+        for use_decl in decl.uses.iter() {
+            if let UseDecl::Runner(UseRunnerDecl { source_name }) = use_decl {
+                return Err(ModelError::unsupported(format!(
+                    "attempted to use custom runner '{}', but they are not implemented yet",
+                    source_name
+                )));
+            }
+        }
+
+        // Otherwise, fall back to some defaults.
+        //
+        // If we have a binary defined, use the ELF loader. Otherwise, just use the
+        // NullRunner.
+        //
+        // TODO(fxb/4761): We want all runners to be routed. This should eventually be removed.
+        match decl.program {
+            Some(_) => Ok(model.elf_runner.clone()),
+            None => Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>),
+        }
     }
 
     /// Register an action on a realm.
@@ -510,16 +543,12 @@ pub struct Runtime {
 
 impl Runtime {
     pub fn start_from(
-        resolved_url: Option<String>,
+        resolved_url: String,
         namespace: Option<IncomingNamespace>,
         outgoing_dir: Option<DirectoryProxy>,
         runtime_dir: Option<DirectoryProxy>,
         exposed_dir: ExposedDir,
     ) -> Result<Self, ModelError> {
-        if resolved_url.is_none() {
-            return Err(ModelError::ComponentInvalid);
-        }
-        let url = resolved_url.unwrap();
-        Ok(Runtime { resolved_url: url, namespace, outgoing_dir, runtime_dir, exposed_dir })
+        Ok(Runtime { resolved_url, namespace, outgoing_dir, runtime_dir, exposed_dir })
     }
 }
