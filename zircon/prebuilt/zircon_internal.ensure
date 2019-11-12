@@ -82,7 +82,7 @@ fuchsia_internal/firmware/optee/sherlock/aa6aa795-9ab7-41a9-9138-320e37bffb11/de
 
 # video_firmware TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
-fuchsia_internal/firmware/optee/sherlock/526fc4fc-7ee6-4a12-96e3-83da9565bce8/dev AXIFfob6NTTl4yYiqcut8oQVGKGOVndeCrXe8l_SVG0C
+fuchsia_internal/firmware/optee/sherlock/526fc4fc-7ee6-4a12-96e3-83da9565bce8/dev NXpjvwKuVkGHr7SzNQG-zdW4JXBrQoDplkShec5_o0AC
 
 # clearTVP TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
