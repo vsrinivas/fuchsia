@@ -5,6 +5,7 @@
 use {
     clonable_error::ClonableError,
     failure::{Error, Fail},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys,
     futures::future::BoxFuture,
 };
@@ -16,7 +17,11 @@ use {
 /// TODO: Consider defining an internal representation for `fsys::ComponentStartInfo` so as to
 /// further isolate the `Model` from FIDL interfacting concerns.
 pub trait Runner {
-    fn start(&self, start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>>;
+    fn start(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> BoxFuture<Result<(), RunnerError>>;
 }
 
 /// Errors produced by `Runner`.
@@ -73,7 +78,11 @@ impl RunnerError {
 pub struct NullRunner {}
 
 impl Runner for NullRunner {
-    fn start(&self, _start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
+    fn start(
+        &self,
+        _start_info: fsys::ComponentStartInfo,
+        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> BoxFuture<Result<(), RunnerError>> {
         Box::pin(async { Ok(()) })
     }
 }

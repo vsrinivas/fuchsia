@@ -19,6 +19,7 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     std::{
+        boxed::Box,
         collections::{HashMap, HashSet},
         convert::TryFrom,
         sync::Arc,
@@ -171,7 +172,11 @@ impl MockRunner {
         self.failing_urls.insert(format!("test:///{}_resolved", name));
     }
 
-    async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
+    async fn start_async(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> Result<(), RunnerError> {
         let resolved_url = start_info.resolved_url.unwrap();
         if self.failing_urls.contains(&resolved_url) {
             return Err(RunnerError::component_launch_error(resolved_url, format_err!("ouch")));
@@ -195,7 +200,11 @@ impl MockRunner {
 }
 
 impl Runner for MockRunner {
-    fn start(&self, start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(self.start_async(start_info))
+    fn start(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_chan: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(self.start_async(start_info, server_chan))
     }
 }

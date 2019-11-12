@@ -29,10 +29,11 @@ use {
     futures::{
         future::{AbortHandle, Abortable, BoxFuture},
         lock::Mutex,
+        TryStreamExt,
     },
     library_loader,
     log::warn,
-    std::{iter, path::Path},
+    std::{boxed::Box, iter, path::Path},
 };
 
 // TODO(fsamuel): We might want to store other things in this struct in the
@@ -330,7 +331,11 @@ impl ElfRunner {
         ))
     }
 
-    async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
+    async fn start_async(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> Result<(), RunnerError> {
         let resolved_url =
             get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -371,8 +376,8 @@ impl ElfRunner {
 
             Ok(process_koid)
         }
-            .await
-            .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
+        .await
+        .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
         if let Some(runtime_dir) = runtime_dir {
             self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
@@ -380,13 +385,38 @@ impl ElfRunner {
             instances.push(runtime_dir);
         }
 
+        let server_stream = server_end.into_stream().expect("failed to convert");
+        fasync::spawn(async move {
+            let _ = serve_controller(server_stream);
+        });
+
         Ok(())
     }
 }
 
+async fn serve_controller(
+    mut server_stream: fsys::ComponentControllerRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) = server_stream.try_next().await? {
+        match request {
+            fsys::ComponentControllerRequest::Stop { control_handle: _ } => {
+                println!("stop request");
+            }
+            fsys::ComponentControllerRequest::Kill { control_handle: _ } => {
+                println!("kill request");
+            }
+        }
+    }
+    Ok(())
+}
+
 impl Runner for ElfRunner {
-    fn start(&self, start_info: fsys::ComponentStartInfo) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(self.start_async(start_info))
+    fn start(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(self.start_async(start_info, server_end))
     }
 }
 
@@ -432,7 +462,7 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{ClientEnd, Proxy},
+        fidl::endpoints::{create_endpoints, ClientEnd, Proxy},
         fuchsia_async as fasync, io_util,
     };
 
@@ -516,11 +546,17 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
+        let (_client_endpoint, server_endpoint) =
+            create_endpoints::<fsys::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
 
         // TODO: This test currently results in a bunch of log spew when this test process exits
         // because this does not stop the component, which means its loader service suddenly goes
         // away. Stop the component when the Runner trait provides a way to do so.
-        runner.start_async(start_info).await.expect("hello_world_test start failed");
+        runner
+            .start_async(start_info, server_endpoint)
+            .await
+            .expect("hello_world_test start failed");
 
         // Verify that args are added to the runtime directory.
         assert_eq!("foo", read_file(&runtime_dir_proxy, "args/0").await);
@@ -554,11 +590,14 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
-        runner
-            .start_async(start_info)
-            .await
-            .expect_err("hello_world_fail_test succeeded unexpectedly");
-        Ok(())
+        let (_client_endpoint, server_endpoint) =
+            create_endpoints::<fsys::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
+
+        match runner.start_async(start_info, server_endpoint).await {
+            Ok(_) => Err(format_err!("hello_world_fail_test succeeded unexpectedly")),
+            Err(_) => Ok(()),
+        }
     }
 
     fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {

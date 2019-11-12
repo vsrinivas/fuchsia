@@ -11,7 +11,7 @@ use {
     },
     cm_rust::{data, CapabilityPath},
     failure::format_err,
-    fidl::endpoints::{Proxy, ServerEnd},
+    fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_runtime::HandleType,
@@ -382,6 +382,11 @@ impl Model {
         let mut namespace = IncomingNamespace::new(package)?;
         let ns = namespace.populate(self.clone(), abs_moniker, decl).await?;
 
+        let (client_endpoint, server_endpoint) =
+            create_endpoints::<fsys::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
+        let controller =
+            client_endpoint.into_proxy().expect("failed to create ComponentControllerProxy");
         // Set up channels into/out of the new component.
         let runtime = Runtime::start_from(
             url,
@@ -393,6 +398,7 @@ impl Model {
                 fasync::Channel::from_channel(runtime_dir_client).unwrap(),
             )),
             exposed_dir,
+            Some(controller),
         )?;
         let start_info = fsys::ComponentStartInfo {
             resolved_url: Some(runtime.resolved_url.clone()),
@@ -403,7 +409,7 @@ impl Model {
         };
 
         // Ask the runner to launch the runtime.
-        runner.start(start_info).await?;
+        runner.start(start_info, server_endpoint).await?;
 
         Ok(runtime)
     }

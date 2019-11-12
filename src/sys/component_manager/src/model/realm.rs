@@ -539,6 +539,8 @@ pub struct Runtime {
     pub runtime_dir: Option<DirectoryProxy>,
     /// Hosts a directory mapping the component's exposed capabilities.
     pub exposed_dir: ExposedDir,
+    /// Used to interact with the Runner to influence the component's execution
+    pub controller: Option<fsys::ComponentControllerProxy>,
 }
 
 impl Runtime {
@@ -548,7 +550,15 @@ impl Runtime {
         outgoing_dir: Option<DirectoryProxy>,
         runtime_dir: Option<DirectoryProxy>,
         exposed_dir: ExposedDir,
+        controller: Option<fsys::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
-        Ok(Runtime { resolved_url, namespace, outgoing_dir, runtime_dir, exposed_dir })
+        Ok(Runtime {
+            resolved_url: resolved_url,
+            namespace,
+            outgoing_dir,
+            runtime_dir,
+            exposed_dir,
+            controller,
+        })
     }
 }
