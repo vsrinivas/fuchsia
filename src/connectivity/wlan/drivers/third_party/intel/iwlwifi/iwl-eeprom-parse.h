@@ -34,6 +34,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 struct iwl_nvm_data {
@@ -68,7 +70,7 @@ struct iwl_nvm_data {
 
   bool lar_enabled;
   bool vht160_supported;
-  struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
+  struct ieee80211_supported_band bands[WLAN_INFO_BAND_COUNT];
   struct ieee80211_channel channels[];
 };
 
@@ -90,10 +92,10 @@ struct iwl_nvm_data* iwl_parse_eeprom_data(struct device* dev, const struct iwl_
 
 // Setup the 'sband' structure (channel list and numbers) from the NVM 'data'.
 int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
-                            int n_channels, enum nl80211_band band);
+                            int n_channels, wlan_info_band_t band);
 
 void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
-                          struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
+                          struct ieee80211_sta_ht_cap* ht_info, wlan_info_band_t band,
                           uint8_t tx_chains, uint8_t rx_chains);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_

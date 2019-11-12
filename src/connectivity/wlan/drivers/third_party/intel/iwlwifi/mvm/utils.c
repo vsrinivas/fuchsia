@@ -196,25 +196,27 @@ static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
     IWL_DECLARE_RATE_INFO(36), IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
 };
 
-zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band,
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info_band_t band,
                                                 int* ptr_idx) {
   int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
   int idx;
   int band_offset = 0;
 
   // Sanity-check
-  if (band >= NUM_NL80211_BANDS) {
+  if (band >= WLAN_INFO_BAND_COUNT) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (!ptr_idx) {
     return ZX_ERR_INVALID_ARGS;
   }
+#if 0   // NEEDS_PORTING
   if (band == NL80211_BAND_60GHZ) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+#endif  // NEEDS_PORTING
 
   /* Legacy rate format, search for match in table */
-  if (band == NL80211_BAND_5GHZ) {
+  if (band == WLAN_INFO_BAND_5GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   }
   for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++) {

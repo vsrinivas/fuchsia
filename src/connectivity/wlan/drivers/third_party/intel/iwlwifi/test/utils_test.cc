@@ -36,31 +36,34 @@ TEST_F(UtilsTest, LegacyToDot11) {
   int idx;  // 802.11 index
 
   // The band is out of range
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, NUM_NL80211_BANDS, &idx), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_BAND_COUNT, &idx),
+            ZX_ERR_OUT_OF_RANGE);
 
   // Invalid pointer
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, NL80211_BAND_5GHZ, nullptr),
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_BAND_5GHZ, nullptr),
             ZX_ERR_INVALID_ARGS);
 
+#if 0   // NEEDS_PORTING
   // Not supported 60GHz
   EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, NL80211_BAND_60GHZ, &idx), ZX_ERR_NOT_SUPPORTED);
+#endif  // NEEDS_PORTING
 
   // 2.4 GHz: data rate: 1 MHz ~ 54 MHz
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mhz */, NL80211_BAND_2GHZ, &idx), ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mhz */, WLAN_INFO_BAND_2GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 0);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mhz */, NL80211_BAND_2GHZ, &idx), ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mhz */, WLAN_INFO_BAND_2GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 11);
 
   // 5 GHz: data rate: 6 MHz ~ 54 MHz
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(13 /* 6 Mhz */, NL80211_BAND_5GHZ, &idx), ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(13 /* 6 Mhz */, WLAN_INFO_BAND_5GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 0);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mhz */, NL80211_BAND_5GHZ, &idx), ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mhz */, WLAN_INFO_BAND_5GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 7);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mhz */, NL80211_BAND_5GHZ, &idx),
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mhz */, WLAN_INFO_BAND_5GHZ, &idx),
             ZX_ERR_NOT_FOUND);
 
   // Not in the table
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0 /* random number */, NL80211_BAND_5GHZ, &idx),
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0 /* random number */, WLAN_INFO_BAND_5GHZ, &idx),
             ZX_ERR_NOT_FOUND);
 }
 

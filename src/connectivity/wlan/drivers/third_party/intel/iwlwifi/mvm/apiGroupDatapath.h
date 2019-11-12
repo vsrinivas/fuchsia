@@ -44,6 +44,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
+
 /* ***************************************************************************
  * 0x0F - GRP_DATAPATH_TLC_MNG_CONFIG_CMD
  *************************************************************************** */
@@ -171,7 +173,7 @@ typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
   // unused for HE.
   U08 reserved1[1];
 
-  enum nl80211_band band;
+  wlan_info_band_t band;
 } TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_

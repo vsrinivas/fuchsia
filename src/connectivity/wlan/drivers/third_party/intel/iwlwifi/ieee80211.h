@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <ddk/hw/wlan/wlaninfo.h>
+
 #define IEEE80211_CCMP_PN_LEN 6
 
 #define IEEE80211_MAX_CHAINS 4
@@ -33,14 +35,6 @@
 #define IEEE80211_NUM_TIDS 16
 
 #define IEEE80211_MAX_RTS_THRESHOLD 2353
-
-enum nl80211_band {
-  NL80211_BAND_2GHZ,
-  NL80211_BAND_5GHZ,
-  NL80211_BAND_60GHZ,
-
-  NUM_NL80211_BANDS,
-};
 
 enum nl80211_chan_width {
   NL80211_CHAN_WIDTH_20_NOHT,
@@ -154,7 +148,7 @@ struct ieee80211_p2p_noa_desc {
 
 // Channel info. Attributes of a channel.
 struct ieee80211_channel {
-  enum nl80211_band band;
+  wlan_info_band_t band;
   uint32_t center_freq;  // unit: MHz.
   uint16_t ch_num;       // channel number (starts from 1).
   uint32_t flags;
@@ -162,7 +156,7 @@ struct ieee80211_channel {
 };
 
 struct ieee80211_supported_band {
-  enum nl80211_band band;
+  wlan_info_band_t band;
   struct ieee80211_channel* channels;
   int n_channels;
   uint16_t* bitrates;
