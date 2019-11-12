@@ -8,11 +8,6 @@ use {
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     failure::{format_err, Error},
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth_avdtp::{
-        PeerControllerMarker, PeerControllerRequest, PeerControllerRequestStream, PeerError,
-        PeerManagerRequest, PeerManagerRequestStream,
-    },
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
@@ -21,15 +16,14 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_contrib::nodes::ManagedNode,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
         select, Future, FutureExt, StreamExt,
     },
-    futures::{stream::TryStreamExt, TryFutureExt},
     lazy_static::lazy_static,
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     std::{
         collections::hash_map::{self, Entry},
         collections::{HashMap, HashSet},
@@ -53,12 +47,12 @@ fn get_cobalt_logger() -> CobaltSender {
     COBALT_SENDER.clone()
 }
 
-use crate::types::ControlHandleManager;
-
+mod avdtp_controller;
 mod inspect_types;
 mod peer;
 mod player;
-mod types;
+
+use crate::avdtp_controller::AvdtpControllerPool;
 
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
@@ -447,264 +441,6 @@ type PeerMap = HashMap<PeerId, peer::Peer>;
 // Profiles of AVDTP peers that have been discovered but not connected
 type ProfilesMap = HashMap<PeerId, Option<ProfileDescriptor>>;
 
-async fn handle_controller_request(
-    avdtp: Arc<avdtp::Peer>,
-    request: PeerControllerRequest,
-    endpoint_id: &avdtp::StreamEndpointId,
-) -> Result<(), fidl::Error> {
-    match request {
-        PeerControllerRequest::SetConfiguration { responder } => {
-            let generic_capabilities = vec![avdtp::ServiceCapability::MediaTransport];
-            match avdtp.set_configuration(endpoint_id, endpoint_id, &generic_capabilities).await {
-                Ok(resp) => fx_log_info!("SetConfiguration successful: {:?}", resp),
-                Err(e) => {
-                    fx_log_info!("Stream {} set_configuration failed: {:?}", endpoint_id, e);
-                    match e {
-                        avdtp::Error::RemoteConfigRejected(_, _) => {}
-                        _ => responder.send(&mut Err(PeerError::ProtocolError))?,
-                    }
-                }
-            }
-        }
-        PeerControllerRequest::GetConfiguration { responder } => {
-            match avdtp.get_configuration(endpoint_id).await {
-                Ok(service_capabilities) => {
-                    fx_log_info!(
-                        "Service capabilities from GetConfiguration: {:?}",
-                        service_capabilities
-                    );
-                }
-                Err(e) => {
-                    fx_log_info!("Stream {} get_configuration failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::GetCapabilities { responder } => {
-            match avdtp.get_capabilities(endpoint_id).await {
-                Ok(service_capabilities) => {
-                    fx_log_info!(
-                        "Service capabilities from GetCapabilities {:?}",
-                        service_capabilities
-                    );
-                }
-                Err(e) => {
-                    fx_log_info!("Stream {} get_capabilities failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::GetAllCapabilities { responder } => {
-            match avdtp.get_all_capabilities(endpoint_id).await {
-                Ok(service_capabilities) => {
-                    fx_log_info!(
-                        "Service capabilities from GetAllCapabilities: {:?}",
-                        service_capabilities
-                    );
-                }
-                Err(e) => {
-                    fx_log_info!("Stream {} get_all_capabilities failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::SuspendStream { responder } => {
-            let suspend_vec = [endpoint_id.clone()];
-            match avdtp.suspend(&suspend_vec[..]).await {
-                Ok(resp) => fx_log_info!("SuspendStream was successful {:?}", resp),
-                Err(e) => {
-                    fx_log_info!("Stream {} suspend failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::ReconfigureStream { responder } => {
-            // Only one frequency, channel mode, block length, subband,
-            // and allocation for reconfigure (A2DP 4.3.2)
-            let generic_capabilities = vec![avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: vec![0x11, 0x15, 2, 250],
-            }];
-            match avdtp.reconfigure(endpoint_id, &generic_capabilities[..]).await {
-                Ok(resp) => fx_log_info!("Reconfigure was successful {:?}", resp),
-                Err(e) => {
-                    fx_log_info!("Stream {} reconfigure failed: {:?}", endpoint_id, e);
-                    match e {
-                        avdtp::Error::RemoteConfigRejected(_, _) => {}
-                        _ => responder.send(&mut Err(PeerError::ProtocolError))?,
-                    }
-                }
-            }
-        }
-        PeerControllerRequest::ReleaseStream { responder } => {
-            match avdtp.close(endpoint_id).await {
-                Ok(resp) => fx_log_info!("ReleaseStream was successful: {:?}", resp),
-                Err(e) => {
-                    fx_log_info!("Stream {} release failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::EstablishStream { responder } => {
-            match avdtp.open(endpoint_id).await {
-                Ok(resp) => fx_log_info!("EstablishStream was successful: {:?}", resp),
-                Err(e) => {
-                    fx_log_info!("Stream {} establish failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-        PeerControllerRequest::SuspendAndReconfigure { responder } => {
-            let suspend_vec = [endpoint_id.clone()];
-            match avdtp.suspend(&suspend_vec[..]).await {
-                Ok(resp) => {
-                    fx_log_info!("Suspend was successful {:?}", resp);
-                    // Only one frequency, channel mode, block length, subband,
-                    // and allocation for reconfigure (A2DP 4.3.2)
-                    let generic_capabilities = vec![avdtp::ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                        codec_extra: vec![0x11, 0x15, 2, 250],
-                    }];
-
-                    match avdtp.reconfigure(endpoint_id, &generic_capabilities[..]).await {
-                        Ok(resp) => fx_log_info!("Reconfigure was successful {:?}", resp),
-                        Err(e) => {
-                            fx_log_info!("Stream {} reconfigure failed: {:?}", endpoint_id, e);
-                            responder.send(&mut Err(PeerError::ProtocolError))?;
-                        }
-                    }
-                }
-                Err(e) => {
-                    fx_log_info!("Stream {} suspend failed: {:?}", endpoint_id, e);
-                    responder.send(&mut Err(PeerError::ProtocolError))?;
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-struct AvdtpController {
-    fidl_stream: PeerControllerRequestStream,
-    peer_id: PeerId,
-}
-
-impl AvdtpController {
-    fn new(fidl_stream: PeerControllerRequestStream, peer_id: PeerId) -> Self {
-        Self { fidl_stream, peer_id }
-    }
-
-    async fn route_fidl_requests(&mut self, remotes: Arc<RwLock<PeerMap>>) -> Result<(), Error> {
-        let mut streams = None;
-        while let Some(req) = self.fidl_stream.next().await {
-            let avdtp_peer = {
-                let read = remotes.read();
-                read.get(&self.peer_id).ok_or(avdtp::Error::PeerDisconnected)?.avdtp_peer()
-            };
-
-            if streams.is_none() {
-                // Discover the streams
-                streams = Some(avdtp_peer.discover().await?);
-            }
-
-            // Only need to handle requests for one stream
-            let info = match streams.as_ref().expect("should be some").first() {
-                Some(stream_info) => stream_info,
-                None => {
-                    // Try to discover again next time.
-                    streams = None;
-                    continue;
-                }
-            };
-
-            fx_log_info!("handle_controller_request for id: {:?}, {:?}", self.peer_id, info);
-            let fut = handle_controller_request(avdtp_peer, req?, info.id());
-            if let Err(e) = fut.await {
-                fx_log_warn!("{} Error handling request: {:?}", self.peer_id, e);
-            }
-        }
-        fx_log_info!(
-            "route_fidl_requests: Finished processing input stream with id: {:?}",
-            self.peer_id
-        );
-        Ok(())
-    }
-}
-
-fn spawn_avdtp_peer_controller(
-    fidl_stream: PeerControllerRequestStream,
-    remotes: Arc<RwLock<PeerMap>>,
-    peer_id: PeerId,
-) {
-    fx_log_info!("spawn_avdtp_peer_controller: {:?}.", peer_id);
-    let remotes = remotes.clone();
-    fasync::spawn(
-        async move {
-            let mut con = AvdtpController::new(fidl_stream, peer_id);
-            con.route_fidl_requests(remotes).await?;
-            Ok(())
-        }
-        .boxed()
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
-    );
-}
-
-/// Control implementation to handle fidl requests.
-/// State is stored in the remotes object.
-async fn start_control_service(
-    mut stream: PeerManagerRequestStream,
-    remotes: Arc<RwLock<PeerMap>>,
-) -> Result<(), failure::Error> {
-    while let Some(req) = stream.try_next().await? {
-        match req {
-            PeerManagerRequest::GetPeer { peer_id, handle, control_handle: _ } => {
-                // Use id here to propagate throughout as key into PeerMap.
-                // If the id does not exist, close the channel as the peer has not been connected yet.
-                let handle_to_client: fidl::endpoints::ServerEnd<PeerControllerMarker> = handle;
-                let peer_id: PeerId = peer_id.into();
-                fx_log_info!("GetPeer: Creating peer controller for peer with id {}.", peer_id);
-
-                match handle_to_client.into_stream() {
-                    Err(err) => fx_log_warn!(
-                        "Error. Unable to create server endpoint from stream: {:?}.",
-                        err
-                    ),
-                    Ok(client_stream) => {
-                        spawn_avdtp_peer_controller(client_stream, remotes.clone(), peer_id)
-                    }
-                }
-            }
-            PeerManagerRequest::ConnectedPeers { responder } => {
-                let mut connected_peers: Vec<fidl_fuchsia_bluetooth::PeerId> =
-                    remotes.read().keys().cloned().map(Into::into).collect();
-                responder.send(&mut connected_peers.iter_mut())?;
-                fx_log_info!("ConnectedPeers request. Peers: {:?}", connected_peers);
-            }
-        }
-    }
-    // event_listener will now be dropped, closing the listener.
-    Ok(())
-}
-
-fn control_service(
-    stream: PeerManagerRequestStream,
-    remotes: Arc<RwLock<PeerMap>>,
-    pm_handle: Arc<RwLock<ControlHandleManager>>,
-) {
-    // Before we start, save the control handle to the manager.
-    // This allows the a2dp component to notify the client for the OnPeerConnected event.
-    let control_handle = stream.control_handle().clone();
-    pm_handle.write().insert(control_handle);
-
-    fasync::spawn(
-        start_control_service(stream, remotes.clone())
-            .unwrap_or_else(|e| fx_log_err!("Failed to spawn {:?}", e)),
-    )
-}
-
 /// Decodes a media stream by starting a Player and transferring media stream packets from AVDTP
 /// to the player.  Restarts the player on player errors.
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
@@ -790,19 +526,16 @@ async fn main() -> Result<(), Error> {
     // Stateful objects for tracking connected peers
     let remotes: Arc<RwLock<PeerMap>> = Arc::new(RwLock::new(HashMap::new()));
     let profiles: Arc<RwLock<ProfilesMap>> = Arc::new(RwLock::new(HashMap::new()));
-    let pm_control_handle: Arc<RwLock<ControlHandleManager>> =
-        Arc::new(RwLock::new(ControlHandleManager::new()));
 
-    // Copy of state for pm = PeerManager control listener
-    let pm_remotes = remotes.clone();
-    let pm_handle = pm_control_handle.clone();
+    let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
     let inspect = inspect::Inspector::new();
     let mut fs = ServiceFs::new();
     inspect.export(&mut fs);
-    fs.dir("svc").add_fidl_service(move |s| {
-        control_service(s, pm_remotes.clone(), pm_control_handle.clone())
-    });
+
+    let pool_clone = controller_pool.clone();
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
+
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
@@ -900,16 +633,9 @@ async fn main() -> Result<(), Error> {
                             }
                         }
 
-                        entry.insert(peer);
+                        controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
 
-                        // Upon peer connected from ProfileEvent::OnConnected, send an event to the
-                        // PeerManager event listener
-                        let wpm_handle = pm_handle.write();
-                        if let Some(handle) = &wpm_handle.handle {
-                            if let Err(e) = handle.send_on_peer_connected(&mut peer_id.into()) {
-                                fx_log_info!("Peer connected callback failed: {:?}", e);
-                            }
-                        }
+                        entry.insert(peer);
                     }
                 }
             }
