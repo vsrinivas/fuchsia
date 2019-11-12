@@ -120,7 +120,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
 
 class TestVP9 {
  public:
-  static void Decode(bool use_parser, const char* input_filename, const char* filename) {
+  static void Decode(bool use_parser, bool use_compressed_output, const char* input_filename,
+                     const char* filename) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -129,7 +130,9 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream,
+                                       use_compressed_output),
+          true);
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE, /*is_secure=*/false));
 
@@ -147,29 +150,30 @@ class TestVP9 {
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
     bool frames_returned = false;  // Protected by video->video_decoder_lock_
-    std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
+    std::vector<std::weak_ptr<VideoFrame>> frames_to_return;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frames_to_return, &frame_count, &wait_valid,
-           &frames_returned](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DLOG("Got frame %d\n", frame_count);
-            EXPECT_EQ(320u, frame->display_width);
-            EXPECT_EQ(240u, frame->display_height);
+      video->video_decoder_->SetFrameReadyNotifier([&video, &frames_to_return, &frame_count,
+                                                    &wait_valid, &frames_returned,
+                                                    filename](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d\n", frame_count);
+        EXPECT_EQ(320u, frame->display_width);
+        EXPECT_EQ(240u, frame->display_height);
+        (void)filename;
 #if DUMP_VIDEO_TO_FILE
-            DumpVideoFrameToFile(frame, filename);
+        DumpVideoFrameToFile(frame.get(), filename);
 #endif
-            if (frames_returned)
-              ReturnFrame(video.get(), frame);
-            else
-              frames_to_return.push_back(frame);
-            if (frame_count == 241)
-              wait_valid.set_value();
+        if (frames_returned)
+          ReturnFrame(video.get(), frame);
+        else
+          frames_to_return.push_back(frame);
+        if (frame_count == 241)
+          wait_valid.set_value();
 
-            if (frame_count % 5 == 0)
-              SetReallocateBuffersNextFrameForTesting(video.get());
-          });
+        if (frame_count % 5 == 0)
+          SetReallocateBuffersNextFrameForTesting(video.get());
+      });
     }
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);
@@ -202,8 +206,11 @@ class TestVP9 {
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      for (auto frame : frames_to_return) {
-        video->video_decoder_->ReturnFrame(frame);
+      for (auto& frame : frames_to_return) {
+        std::shared_ptr<VideoFrame> locked_ptr(frame.lock());
+        if (locked_ptr) {
+          video->video_decoder_->ReturnFrame(std::move(locked_ptr));
+        }
       }
       frames_returned = true;
     }
@@ -227,7 +234,8 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream, false),
+          true);
     }
 
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
@@ -297,7 +305,8 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream), true);
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream, false),
+          true);
     }
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
@@ -369,7 +378,8 @@ class TestVP9 {
 
     for (uint32_t i = 0; i < 2; i++) {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto decoder = std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream);
+      auto decoder =
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream, false);
       decoder->SetFrameDataProvider(&frame_provider);
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       video->swapped_out_instances_.push_back(
@@ -514,15 +524,22 @@ class TestVP9 {
   }
 };
 
-TEST(VP9, Decode) { TestVP9::Decode(true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv"); }
+class VP9Compression : public ::testing::TestWithParam</*compressed_output=*/bool> {};
 
-TEST(VP9, DecodeNoParser) {
-  TestVP9::Decode(false, "video_test_data/test-25fps.vp9", "/tmp/bearvp9noparser.yuv");
+TEST_P(VP9Compression, Decode) {
+  TestVP9::Decode(true, GetParam(), "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
 }
 
-TEST(VP9, Decode10Bit) {
-  TestVP9::Decode(false, "video_test_data/test-25fps.vp9_2", "/tmp/bearvp9noparser.yuv");
+TEST_P(VP9Compression, DecodeNoParser) {
+  TestVP9::Decode(false, GetParam(), "video_test_data/test-25fps.vp9", "/tmp/bearvp9noparser.yuv");
 }
+
+TEST_P(VP9Compression, Decode10Bit) {
+  TestVP9::Decode(false, GetParam(), "video_test_data/test-25fps.vp9_2",
+                  "/tmp/bearvp9noparser.yuv");
+}
+
+INSTANTIATE_TEST_SUITE_P(VP9CompressionOptional, VP9Compression, ::testing::Bool());
 
 TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }
 

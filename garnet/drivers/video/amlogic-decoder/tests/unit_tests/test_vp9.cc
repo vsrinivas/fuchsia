@@ -94,13 +94,14 @@ class Vp9UnitTest {
         .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus, video.get());
-    auto decoder = std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream);
+    auto decoder =
+        std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream, false);
     decoder->InitLoopFilter();
     // This should be the 32nd value written to this register.
     EXPECT_EQ(0x3fc13ebeu, HevcDblkCfg9::Get().ReadFrom(fake_owner.dosbus()).reg_value());
   }
 
-  static void InitializeMemory() {
+  static void InitializeMemory(bool use_compressed_output) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
@@ -113,7 +114,8 @@ class Vp9UnitTest {
         .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
     DosRegisterIo dosbus(dosbus_mmio);
     FakeOwner fake_owner(&dosbus, video.get());
-    auto decoder = std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream);
+    auto decoder = std::make_unique<Vp9Decoder>(&fake_owner, Vp9Decoder::InputType::kSingleStream,
+                                                use_compressed_output);
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
     EXPECT_EQ(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
     EXPECT_FALSE(fake_owner.have_set_protected());
@@ -133,4 +135,5 @@ class Vp9UnitTest {
 };
 
 TEST(Vp9UnitTest, LoopFilter) { Vp9UnitTest::LoopFilter(); }
-TEST(Vp9UnitTest, InitializeMemory) { Vp9UnitTest::InitializeMemory(); }
+TEST(Vp9UnitTest, InitializeMemory) { Vp9UnitTest::InitializeMemory(false); }
+TEST(Vp9UnitTest, InitializeMemoryCompressed) { Vp9UnitTest::InitializeMemory(true); }

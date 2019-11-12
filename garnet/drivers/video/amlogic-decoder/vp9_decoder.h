@@ -64,7 +64,7 @@ class Vp9Decoder : public VideoDecoder {
     kSwappedOut,
   };
 
-  explicit Vp9Decoder(Owner* owner, InputType input_type);
+  Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
@@ -202,6 +202,10 @@ class Vp9Decoder : public VideoDecoder {
     // This shared_ptr<> must not actually be shared outside of while
     // video_decoder_lock_ is held.  See previous paragraphs.
     std::shared_ptr<VideoFrame> frame;
+
+    // This is a frame that was received from sysmem and will next be decoded
+    // into.
+    std::shared_ptr<VideoFrame> on_deck_frame;
     // With the MMU enabled the compressed frame header is stored separately
     // from the data itself, allowing the data to be allocated in noncontiguous
     // memory.
@@ -216,6 +220,12 @@ class Vp9Decoder : public VideoDecoder {
     uint32_t hw_width = 0;
     uint32_t hw_height = 0;
     int32_t client_refcount = 0;
+
+    // Redueces refcount and releases |frame| if it's not necessary anymore.
+    void Deref();
+
+    // Releases |frame| if it's not currently being used as a reference frame.
+    void ReleaseIfNonreference();
   };
 
   struct MpredBuffer {
@@ -285,6 +295,8 @@ class Vp9Decoder : public VideoDecoder {
   // codec_adapter_vp9.  We re-try PrepareNewFrame() during ReturnFrame() even
   // if no refcount on any Frame has reached 0
   bool waiting_for_output_ready_ = false;
+  // Waiting for InitializedFrameBuffers to be called with a new size.
+  bool waiting_for_new_frames_ = false;
 
   // This is the count of frames decoded since this object was created.
   uint32_t decoded_frame_count_ = 0;
@@ -312,6 +324,8 @@ class Vp9Decoder : public VideoDecoder {
   // Each frame that's being decoded can reference 3 of the frames that are in
   // reference_frame_map_.
   Frame* current_reference_frames_[3] = {};
+
+  bool use_compressed_output_ = {};
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_

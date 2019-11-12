@@ -325,7 +325,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased);
+  auto decoder =
+      std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased, false);
   decoder->SetFrameDataProvider(this);
   decoder->SetIsCurrentOutputBufferCollectionUsable(
       fit::bind_member(this, &CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable));
@@ -345,8 +346,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     // invalidate call here instead of two with no downsides.
     //
     // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                     frame->stride * frame->coded_height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                      frame->stride * frame->coded_height / 2);
 
@@ -369,10 +369,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
       packet->ClearTimestampIsh();
     }
 
-    if (frame->coded_width != coded_width_ ||
-        frame->coded_height != coded_height_ ||
-        frame->stride != stride_ ||
-        frame->display_width != display_width_ ||
+    if (frame->coded_width != coded_width_ || frame->coded_height != coded_height_ ||
+        frame->stride != stride_ || frame->display_width != display_width_ ||
         frame->display_height != display_height_) {
       coded_width_ = frame->coded_width;
       coded_height_ = frame->coded_height;
@@ -384,7 +382,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 
     events_->onCoreCodecOutputPacket(packet, false, false);
   });
-  decoder->SetEosHandler([this]{OnCoreCodecEos();});
+  decoder->SetEosHandler([this] { OnCoreCodecEos(); });
   decoder->SetErrorHandler(
       [this] { OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN); });
   decoder->SetCheckOutputReady([this] {
@@ -404,9 +402,9 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     }
 
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
-    status = video_->AllocateStreamBuffer(
-        instance->stream_buffer(), 512 * PAGE_SIZE, /*use_parser=*/false,
-        /*is_secure=*/false);
+    status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE,
+                                          /*use_parser=*/false,
+                                          /*is_secure=*/false);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
@@ -760,8 +758,8 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
   }  // ~lock
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    video_->video_decoder()->InitializedFrames(std::move(frames), coded_width,
-                                               coded_height, stride);
+    video_->video_decoder()->InitializedFrames(std::move(frames), coded_width, coded_height,
+                                               stride);
   }  // ~lock
 }
 
@@ -921,8 +919,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // Always flush through padding before calling UpdateDecodeSize or else the
     // decoder may not see the data because it's stuck in a fifo somewhere and
     // we can get hangs.
-    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes,
-                                              sizeof(kFlushThroughZeroes))) {
+    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
@@ -948,9 +945,11 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   }
 }
 
-bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
-    uint32_t frame_count, uint32_t coded_width, uint32_t coded_height, uint32_t stride,
-    uint32_t display_width, uint32_t display_height) {
+bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t frame_count,
+                                                            uint32_t coded_width,
+                                                            uint32_t coded_height, uint32_t stride,
+                                                            uint32_t display_width,
+                                                            uint32_t display_height) {
   // We don't ask codec_impl about this, because as far as codec_impl is
   // concerned, the output buffer collection might not be used for video
   // frames.  We could have common code for video decoders but for now we just
@@ -1008,24 +1007,24 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
     // Let it probably fail later when trying to re-negotiate buffers.
     return false;
   }
-  if (coded_width * coded_height > info.settings.image_format_constraints.max_coded_width_times_coded_height) {
+  if (coded_width * coded_height >
+      info.settings.image_format_constraints.max_coded_width_times_coded_height) {
     // Let it probably fail later when trying to re-negotiate buffers.
     return false;
   }
   return true;
 }
 
-zx_status_t CodecAdapterVp9::InitializeFramesHandler(
-    ::zx::bti bti, uint32_t frame_count, uint32_t coded_width,
-    uint32_t coded_height, uint32_t stride, uint32_t display_width,
-    uint32_t display_height, bool has_sar, uint32_t sar_width,
-    uint32_t sar_height) {
+zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
+                                                     uint32_t coded_width, uint32_t coded_height,
+                                                     uint32_t stride, uint32_t display_width,
+                                                     uint32_t display_height, bool has_sar,
+                                                     uint32_t sar_width, uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
   // output.  We want to notice if up to this point we've been decoding into
   // buffers smaller than this.  By noticing here, we avoid requiring the client
   // to re-allocate buffers just before EOS.
-  if (display_width == kEndOfStreamWidth &&
-      display_height == kEndOfStreamHeight) {
+  if (display_width == kEndOfStreamWidth && display_height == kEndOfStreamHeight) {
     bool is_output_end_of_stream = false;
     {  // scope lock
       std::lock_guard<std::mutex> lock(lock_);

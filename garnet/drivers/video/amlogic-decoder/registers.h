@@ -5,9 +5,10 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_REGISTERS_H_
 
+#include <lib/mmio/mmio.h>
+
 #include <ddk/mmio-buffer.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 
 template <class RegType>
 class TypedRegisterAddr;
@@ -368,6 +369,7 @@ REGISTER_NAME(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
 DEFINE_REGISTER(HevcdMppAncCanvasDataAddr, DosRegisterIo, 0x34c1);
 
 REGISTER_NAME(HevcdMppDecompCtl1, DosRegisterIo, 0x34c2)
+  DEF_BIT(31, use_uncompressed);
   DEF_BIT(4, paged_mode); // Allocate compressed pages on demand.
   DEF_BIT(3, smem_mode);
 };
