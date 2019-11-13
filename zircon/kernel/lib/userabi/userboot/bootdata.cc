@@ -12,6 +12,7 @@
 #include "util.h"
 
 namespace {
+  constexpr const char kZbiDecompressedName[] = "zbi-decompressed";
 
 class EngineService {
  public:
@@ -69,9 +70,11 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
         break;
 
       case ZBI_TYPE_STORAGE_BOOTFS: {
+
         zx::vmo bootfs_vmo;
         if (bootdata.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
+          bootfs_vmo.set_property(ZX_PROP_NAME, kZbiDecompressedName, sizeof(kZbiDecompressedName)-1);
           check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
           status = Decompressor(job, engine_vmo, vdso_vmo)(*zx::unowned_vmo{bootdata_vmo},
                                                            off + sizeof(bootdata), bootdata.length,
