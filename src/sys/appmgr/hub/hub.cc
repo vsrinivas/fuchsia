@@ -20,7 +20,7 @@ zx_status_t Hub::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
 
 zx_status_t Hub::AddEntry(fbl::String name, fbl::String value) {
   return dir_->AddEntry(std::move(name),
-                        fbl::AdoptRef(new fs::UnbufferedPseudoFile([value](fbl::String* output) {
+                        fbl::AdoptRef(new fs::BufferedPseudoFile([value](fbl::String* output) {
                           *output = value;
                           return ZX_OK;
                         })));
