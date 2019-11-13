@@ -186,6 +186,10 @@ set_defaults("fuzzer") {
 #     [boolean] Indicates whether to also build fuzzer binaries on host.
 #     Defaults to false.
 #
+#   host_only (optional)
+#     [boolean] Indicates whether to skip the Fuchsia fuzzers package. Implies `fuzz_host`.
+#     Defaults to false.
+#
 #   generated_test_package (optional)
 #     [string] The name of a package of fuzzer tests to create.
 #
@@ -224,11 +228,16 @@ template("fuzzers_package") {
     deps = []
     fuzzers = []
     host = defined(invoker.fuzz_host) && invoker.fuzz_host
+    host_only = defined(invoker.host_only) && invoker.host_only
     host_deps = []
     host_outputs = []
     tests = []
     test_meta = []
     test_deps = []
+  }
+
+  if (pkg.host_only) {
+    pkg.host = true
   }
 
   # Collect the selected fuzzers listed in this package based on the variants
@@ -305,21 +314,33 @@ template("fuzzers_package") {
     not_needed([ "selected" ])
   }
 
+  if (pkg.host && pkg.host_deps != []) {
+    # Treat host fuzzers as tools. If we get to the point of having name
+    # collisions, we'll need to extend `install_host_tools` to allow copying to
+    # specific subdirectories of `host_tools_dir`
+    install_host_tools("host_${pkg.name}") {
+      testonly = true
+      deps = pkg.host_deps
+      outputs = pkg.host_outputs
+    }
+  }
+
   if (pkg.deps == []) {
     # Dummy package for non-fuzzed builds
     group(target_name) {
     }
     not_needed(invoker, "*")
+  } else if (pkg.host_only) {
+    # Simple group for host-only builds
+    group(target_name) {
+      testonly = true
+      deps = [
+        ":host_${pkg.name}",
+      ]
+    }
+    not_needed(invoker, "*")
   } else {
     if (pkg.host) {
-      # Treat host fuzzers as tools. If we get to the point of having name
-      # collisions, we'll need to extend `install_host_tools` to allow copying to
-      # specific subdirectories of `host_tools_dir`
-      install_host_tools("host_${target_name}") {
-        testonly = true
-        deps = pkg.host_deps
-        outputs = pkg.host_outputs
-      }
       pkg.deps += [ ":host_${pkg.name}" ]
     }
 
