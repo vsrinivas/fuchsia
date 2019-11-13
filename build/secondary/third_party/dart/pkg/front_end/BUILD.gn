@@ -17,15 +17,7 @@ dart_library("front_end") {
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/source_span",
+    "//third_party/dart/pkg/_fe_analyzer_shared",
     "//third_party/dart/pkg/kernel",
   ]
-
-  # fxb/41072: This is to make it a soft-transition and a temporary fix.
-  # Will no longer be needed after the linked issue gets addressed.
-  if ("True" ==
-      exec_script("checkdir.py",
-                  [ rebase_path("//third_party/dart/pkg/_fe_analyzer_shared") ],
-                  "trim string")) {
-    deps += [ "//third_party/dart/pkg/_fe_analyzer_shared" ]
-  }
 }
