@@ -167,7 +167,55 @@ class Ssh {
       throw PortForwardException(
           'localhost:$port',
           '$target:$remotePort',
-          'Failed to Cancel Port Forward. '
+          'Failed to cancel Port Forward. '
+              'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
+    }
+  }
+
+  /// Forwards TCP connections from the DUT's [remotePort] to the local [port].
+  ///
+  /// [PortForwardException] is thrown in case of error.
+  Future<int> forwardRemotePort(
+      {@required int remotePort, @required int port, int tries = 5}) async {
+    _log.fine('Forwarding TCP port: $target:$remotePort -> localhost:$port');
+    await retry(
+      () => _forwardRemotePort(remotePort, port),
+      retryIf: (e) => e is PortForwardException,
+      maxAttempts: tries,
+    );
+    return port;
+  }
+
+  /// Forwards a port from the DUT to the host without retries.
+  Future<void> _forwardRemotePort(int remotePort, int port) async {
+    final result = await Process.run(
+        'ssh', makeRemoteForwardArgs(remotePort, port, cancel: false),
+        runInShell: true);
+    if (result.exitCode != 0) {
+      throw PortForwardException(
+          '$target:$remotePort',
+          'localhost:$port',
+          'Failed to initiate Remote Port Forward. '
+              'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
+    }
+  }
+
+  /// Cancels a TCP remote port forward.
+  ///
+  /// Completes to PortForwardException in case of failure.
+  Future<void> cancelRemotePortForward(
+      {@required int remotePort, @required int port}) async {
+    _log.fine('Canceling TCP port forward: '
+        '$target:$remotePort -> localhost:$port');
+
+    final result = await Process.run(
+        'ssh', makeRemoteForwardArgs(remotePort, port, cancel: true),
+        runInShell: true);
+    if (result.exitCode != 0) {
+      throw PortForwardException(
+          '$target:$remotePort',
+          'localhost:$port',
+          'Failed to cancel Remote Port Forward. '
               'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
     }
   }
@@ -208,6 +256,19 @@ class Ssh {
         '-N',
         // TCP port forward from local to remote.
         '-L', 'localhost:$localPort:localhost:$remotePort',
+        // Forwarding with -O makes sure we are reusing the same connection.
+        '-O', cancel ? 'cancel' : 'forward',
+      ];
+
+  @visibleForTesting
+  List<String> makeRemoteForwardArgs(int remotePort, int localPort,
+          {bool cancel = false}) =>
+      _makeBaseArgs() +
+      [
+        // Do Not run a command.
+        '-N',
+        // TCP port forward from remote to local.
+        '-R', 'localhost:$remotePort:localhost:$localPort',
         // Forwarding with -O makes sure we are reusing the same connection.
         '-O', cancel ? 'cancel' : 'forward',
       ];

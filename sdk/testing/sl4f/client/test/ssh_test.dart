@@ -38,5 +38,21 @@ void main(List<String> args) {
       expect(args, containsAllInOrder(['-L', 'localhost:1:localhost:2']));
       expect(args, containsAllInOrder(['-O', 'cancel']));
     });
+
+    test('remote port forwarding args includes ports', () async {
+      final ssh = Ssh('1.2.3.4', '/path/to/p/key');
+
+      final args = ssh.makeRemoteForwardArgs(1, 2);
+      expect(args, containsAllInOrder(['-R', 'localhost:1:localhost:2']));
+      expect(args, containsAllInOrder(['-O', 'forward']));
+    });
+
+    test('cancelling remote port forwarding args includes ports', () async {
+      final ssh = Ssh('1.2.3.4', '/path/to/p/key');
+
+      final args = ssh.makeRemoteForwardArgs(1, 2, cancel: true);
+      expect(args, containsAllInOrder(['-R', 'localhost:1:localhost:2']));
+      expect(args, containsAllInOrder(['-O', 'cancel']));
+    });
   });
 }
