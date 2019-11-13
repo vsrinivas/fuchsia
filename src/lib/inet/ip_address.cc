@@ -357,6 +357,27 @@ IpAddress::IpAddress(const fuchsia::net::IpAddress* addr) {
   }
 }
 
+bool IpAddress::is_mapped_from_v4() const {
+  // A V6 address mapped from a V4 address takes the form 0::ffff:xxxx:xxxx, where the x's make
+  // up the V4 address.
+  return is_v6() && v6_.s6_addr16[0] == 0 && v6_.s6_addr16[1] == 0 && v6_.s6_addr16[2] == 0 &&
+         v6_.s6_addr16[3] == 0 && v6_.s6_addr16[4] == 0 && v6_.s6_addr16[5] == 0xffff;
+}
+
+IpAddress IpAddress::mapped_v4_address() const {
+  FXL_DCHECK(is_mapped_from_v4());
+  auto bytes = as_bytes();
+  return IpAddress(bytes[12], bytes[13], bytes[14], bytes[15]);
+}
+
+IpAddress IpAddress::mapped_as_v6() const {
+  FXL_DCHECK(is_v4());
+  auto bytes = as_bytes();
+  // The words passed in to this constructor are stored in big-endian order.
+  return IpAddress(0, 0, 0, 0, 0, 0xffff, static_cast<uint16_t>(bytes[0]) << 8 | bytes[1],
+                   static_cast<uint16_t>(bytes[2]) << 8 | bytes[3]);
+}
+
 bool IpAddress::is_loopback() const {
   switch (family_) {
     case AF_INET:

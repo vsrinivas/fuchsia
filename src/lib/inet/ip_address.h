@@ -73,6 +73,16 @@ class IpAddress {
   // Indicates whether this address is a V6 address.
   bool is_v6() const { return family() == AF_INET6; }
 
+  // Indicates whether this address is a V6 address that is mapped from a V4 address.
+  bool is_mapped_from_v4() const;
+
+  // Returns the V4 address from a V6 address that is mapped from a V4 address. Calling this method
+  // is only permitted if this address returns true from |is_mapped_from_v4|.
+  IpAddress mapped_v4_address() const;
+
+  // Returns the V6 address that is the mapping of this address, which must be a V4 address.
+  IpAddress mapped_as_v6() const;
+
   // Indicates whether this address is a loopback address.
   bool is_loopback() const;
 

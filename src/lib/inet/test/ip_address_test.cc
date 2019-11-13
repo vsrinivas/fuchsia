@@ -199,5 +199,19 @@ TEST(IpAddressTest, StringRoundTrip) {
   }
 }
 
+// Tests |is_mapped_from_v4|, |mapped_v4_address|, and |mapped_as_v6|.
+TEST(IpAddressTest, MappedV4Address) {
+  EXPECT_FALSE(IpAddress(1, 2, 3, 4).is_mapped_from_v4());
+  EXPECT_FALSE(IpAddress(0x1234, 0, 0, 0, 0, 0, 0, 0x5678).is_mapped_from_v4());
+  EXPECT_FALSE(IpAddress::FromString("0::fffe:0:0").is_mapped_from_v4());
+  EXPECT_FALSE(IpAddress::FromString("0::ffef:0:0").is_mapped_from_v4());
+  EXPECT_FALSE(IpAddress::FromString("0::feff:0:0").is_mapped_from_v4());
+  EXPECT_FALSE(IpAddress::FromString("0::efff:0:0").is_mapped_from_v4());
+  EXPECT_TRUE(IpAddress::FromString("0::ffff:0:0").is_mapped_from_v4());
+  EXPECT_EQ(IpAddress(0, 0, 0, 0), IpAddress::FromString("0::ffff:0:0").mapped_v4_address());
+  EXPECT_EQ(IpAddress(1, 2, 3, 4), IpAddress::FromString("0::ffff:102:304").mapped_v4_address());
+  EXPECT_EQ(IpAddress::FromString("0::ffff:102:304"), IpAddress(1, 2, 3, 4).mapped_as_v6());
+}
+
 }  // namespace test
 }  // namespace inet
