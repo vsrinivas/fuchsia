@@ -203,13 +203,9 @@ const std::string& GetBoardName() {
   return s_board_name;
 }
 
-bool is_board_astro() {
-  return GetBoardName() == "astro";
-}
+bool is_board_astro() { return GetBoardName() == "astro"; }
 
-bool is_board_sherlock() {
-  return GetBoardName() == "sherlock";
-}
+bool is_board_sherlock() { return GetBoardName() == "sherlock"; }
 
 bool is_board_astro_or_sherlock() {
   if (is_board_astro()) {
@@ -707,8 +703,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
   ASSERT_EQ(status, ZX_OK, "");
 
   zx::channel token_client_3;
@@ -718,8 +714,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
 
   // Client 3 is used to test a participant that doesn't set any constraints
   // and only wants a notification that the allocation is done.
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_3.release());
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_3.release());
   ASSERT_EQ(status, ZX_OK, "");
 
   zx::channel collection_client_1;
@@ -1013,8 +1009,8 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
   ASSERT_EQ(status, ZX_OK, "");
 
   zx::channel collection_client_1;
@@ -1346,8 +1342,8 @@ extern "C" bool test_sysmem_cpu_usage_and_no_buffer_memory_constraints(void) {
   status = zx::channel::create(0, &token_client_2, &token_server_2);
   ASSERT_EQ(status, ZX_OK, "");
 
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
   ASSERT_EQ(status, ZX_OK, "");
 
   zx::channel collection_client_1;
@@ -1765,8 +1761,8 @@ extern "C" bool test_sysmem_none_usage_with_separate_other_usage_succeeds(void) 
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
-      token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
   ASSERT_EQ(status, ZX_OK, "");
 
   zx::channel collection_client_1;

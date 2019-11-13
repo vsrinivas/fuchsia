@@ -369,7 +369,9 @@ class BufferCollectionToken final {
     // to attenuate the rights available to a participant.  This may not be the
     // only mechanism that attenuates rights on the VMO handles obtainable via
     // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
+    // to gain rights that the participant doesn't already have.  The value
+    // ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
+    // be applied.
     //
     // `token_request` is the server end of a BufferCollectionToken channel.
     // The client end of this channel acts as another handle to the same logical
@@ -431,7 +433,9 @@ class BufferCollectionToken final {
     // to attenuate the rights available to a participant.  This may not be the
     // only mechanism that attenuates rights on the VMO handles obtainable via
     // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
+    // to gain rights that the participant doesn't already have.  The value
+    // ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
+    // be applied.
     //
     // `token_request` is the server end of a BufferCollectionToken channel.
     // The client end of this channel acts as another handle to the same logical
@@ -525,7 +529,9 @@ class BufferCollectionToken final {
     // to attenuate the rights available to a participant.  This may not be the
     // only mechanism that attenuates rights on the VMO handles obtainable via
     // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
+    // to gain rights that the participant doesn't already have.  The value
+    // ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
+    // be applied.
     //
     // `token_request` is the server end of a BufferCollectionToken channel.
     // The client end of this channel acts as another handle to the same logical
@@ -587,7 +593,9 @@ class BufferCollectionToken final {
     // to attenuate the rights available to a participant.  This may not be the
     // only mechanism that attenuates rights on the VMO handles obtainable via
     // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
+    // to gain rights that the participant doesn't already have.  The value
+    // ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
+    // be applied.
     //
     // `token_request` is the server end of a BufferCollectionToken channel.
     // The client end of this channel acts as another handle to the same logical
@@ -680,7 +688,9 @@ class BufferCollectionToken final {
     // to attenuate the rights available to a participant.  This may not be the
     // only mechanism that attenuates rights on the VMO handles obtainable via
     // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
+    // to gain rights that the participant doesn't already have.  The value
+    // ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
+    // be applied.
     //
     // `token_request` is the server end of a BufferCollectionToken channel.
     // The client end of this channel acts as another handle to the same logical

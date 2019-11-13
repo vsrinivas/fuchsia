@@ -37,7 +37,11 @@ zx_status_t BufferCollectionToken::Duplicate(uint32_t rights_attenuation_mask,
     FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::Duplicate() attempted when is_done_");
     return ZX_OK;
   }
-  parent()->CreateBufferCollectionToken(parent_, rights_attenuation_mask_ & rights_attenuation_mask,
+  auto duplicate_rights_attenuation_mask = rights_attenuation_mask_;
+  if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
+    duplicate_rights_attenuation_mask &= rights_attenuation_mask;
+  }
+  parent()->CreateBufferCollectionToken(parent_, duplicate_rights_attenuation_mask,
                                         std::move(buffer_collection_token_request));
   return ZX_OK;
 }
