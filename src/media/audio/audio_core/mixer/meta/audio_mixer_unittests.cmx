@@ -3,6 +3,8 @@
         "binary": "test/audio_mixer_unittests"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

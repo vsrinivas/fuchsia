@@ -14,6 +14,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]

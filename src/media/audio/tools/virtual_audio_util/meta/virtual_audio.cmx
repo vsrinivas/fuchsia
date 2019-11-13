@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.virtualaudio.Control",
             "fuchsia.virtualaudio.Input",
             "fuchsia.virtualaudio.Output"

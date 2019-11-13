@@ -3,6 +3,8 @@
         "binary": "test/output_sink_tests"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

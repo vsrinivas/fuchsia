@@ -11,6 +11,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

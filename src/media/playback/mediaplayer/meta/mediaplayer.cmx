@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.net.oldhttp.HttpService",

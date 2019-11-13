@@ -3,6 +3,8 @@
         "binary": "test/chunk_input_stream_tests"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

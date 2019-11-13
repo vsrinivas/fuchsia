@@ -14,6 +14,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioTestDevmgr",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",

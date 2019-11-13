@@ -9,6 +9,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]

@@ -17,6 +17,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sysmem.Allocator"
         ]

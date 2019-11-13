@@ -329,8 +329,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithoutVolumeCurve) {
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithoutVolumeCurve.data(),
                                kConfigWithoutVolumeCurve.size()));
 
-  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename),
-               "Schema validation error");
+  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }
 
 TEST(ProcessConfigLoaderTest, RejectConfigWithUnknownKeys) {
@@ -353,8 +352,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithUnknownKeys) {
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithExtraKeys.data(),
                                kConfigWithExtraKeys.size()));
 
-  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename),
-               "Schema validation error");
+  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }
 
 }  // namespace
