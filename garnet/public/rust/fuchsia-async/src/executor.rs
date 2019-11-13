@@ -793,13 +793,7 @@ impl fmt::Debug for EHandle {
 }
 
 impl Spawn for EHandle {
-    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
-        <&EHandle>::spawn_obj(&mut &*self, f)
-    }
-}
-
-impl<'a> Spawn for &'a EHandle {
-    fn spawn_obj(&mut self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
+    fn spawn_obj(&self, f: FutureObj<'static, ()>) -> Result<(), SpawnError> {
         Inner::spawn(&self.inner, f);
         Ok(())
     }

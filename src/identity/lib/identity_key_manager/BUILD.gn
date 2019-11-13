@@ -17,6 +17,6 @@ rustc_library("identity_key_manager") {
     "//src/identity/lib/identity_common",
     "//src/lib/test_util",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }

@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, AsyncReadExt},
+    futures::io::{AllowStdIo, copy},
 };
 
 pub fn create_url_request<S: ToString>(url_string: S) -> http::UrlRequest {
@@ -61,7 +61,7 @@ pub async fn fetch_and_discard_url(
 
     // discard the bytes
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = socket.copy_into(&mut stdio_sink).await?;
+    let bytes_received = copy(socket, &mut stdio_sink).await?;
     let stop_time = zx::Time::get(zx::ClockId::Monotonic);
 
     let time_nanos = (stop_time - start_time).into_nanos() as u64;

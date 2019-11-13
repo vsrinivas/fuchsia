@@ -19,7 +19,7 @@ rustc_binary("work_scheduler_client_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -39,7 +39,7 @@ rustc_library("work_scheduler_test_hook") {
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
   ]
 }
@@ -65,7 +65,7 @@ rustc_test("work_scheduler_integration_test_bin") {
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:url",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",

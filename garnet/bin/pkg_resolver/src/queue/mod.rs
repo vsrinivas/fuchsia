@@ -391,7 +391,7 @@ mod tests {
 
         let (processor, enqueue) = work_queue(3, do_work);
 
-        let mut tasks = FuturesUnordered::new();
+        let tasks = FuturesUnordered::new();
 
         tasks.push(enqueue.push("a".into(), ()));
         tasks.push(enqueue.push("a".into(), ()));
@@ -536,7 +536,7 @@ mod tests {
     }
 
     fn spawn_test_work_queue<K, C, O>(
-        mut spawner: LocalSpawner,
+        spawner: LocalSpawner,
         concurrency: usize,
     ) -> (WorkSender<K, C, O>, TestRunningTasks<K, C, O>, TestQueueResults<K>)
     where

@@ -113,12 +113,27 @@
         {
             "crate_name": "futures",
             "crate_type": "lib",
-            "package_name": "futures-preview"
+            "package_name": "futures"
+        },
+        {
+            "crate_name": "futures_executor",
+            "crate_type": "lib",
+            "package_name": "futures-executor"
+        },
+        {
+            "crate_name": "futures_io",
+            "crate_type": "lib",
+            "package_name": "futures-io"
         },
         {
             "crate_name": "futures_test",
             "crate_type": "lib",
-            "package_name": "futures-test-preview"
+            "package_name": "futures-test"
+        },
+        {
+            "crate_name": "futures_util",
+            "crate_type": "lib",
+            "package_name": "futures-util"
         },
         {
             "crate_name": "getopts",
@@ -615,12 +630,27 @@
         {
             "crate_name": "futures",
             "crate_type": "lib",
-            "package_name": "futures-preview"
+            "package_name": "futures"
+        },
+        {
+            "crate_name": "futures_executor",
+            "crate_type": "lib",
+            "package_name": "futures-executor"
+        },
+        {
+            "crate_name": "futures_io",
+            "crate_type": "lib",
+            "package_name": "futures-io"
         },
         {
             "crate_name": "futures_test",
             "crate_type": "lib",
-            "package_name": "futures-test-preview"
+            "package_name": "futures-test"
+        },
+        {
+            "crate_name": "futures_util",
+            "crate_type": "lib",
+            "package_name": "futures-util"
         },
         {
             "crate_name": "handlebars",

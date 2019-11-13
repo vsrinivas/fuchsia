@@ -84,7 +84,7 @@ rustc_test("shortcut_test_bin") {
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
   source_root = "tests/tests.rs"
 }

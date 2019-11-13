@@ -17,7 +17,7 @@ rustc_binary("test_manager_test_bin") {
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/sys/test_manager:lib",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
   ]
 }
 

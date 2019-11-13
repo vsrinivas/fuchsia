@@ -31,8 +31,11 @@ criterion = { version = "0.2", default-features = false }
 csv = "1.0.7"
 difference = "2.0.0"
 failure = "0.1.1"
-futures-preview = { version = "=0.3.0-alpha.19", features = ["async-await", "io-compat"] }
-futures-test-preview = "=0.3.0-alpha.19"
+futures = { version = "0.3.1", features = ["io-compat"] }
+futures-executor = "0.3.1"
+futures-io = "0.3.1"
+futures-test = "0.3.1"
+futures-util = { version = "0.3.1", features = ["io-compat"] }
 heck = "0.3.1"
 itertools = "0.8"
 json5 = "0.2.4"

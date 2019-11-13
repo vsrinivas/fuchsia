@@ -109,7 +109,7 @@ fn main() -> Result<(), Error> {
         &channel_inspect_state,
     )));
 
-    let mut futures = FuturesUnordered::new();
+    let futures = FuturesUnordered::new();
 
     let (blob_fetch_queue, blob_fetcher) =
         crate::cache::make_blob_fetch_queue(cache.clone(), MAX_CONCURRENT_BLOB_FETCHES);

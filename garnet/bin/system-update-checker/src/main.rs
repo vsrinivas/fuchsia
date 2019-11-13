@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
         fx_log_err!("while updating the target channel: {}", e);
     }
 
-    let mut futures = FuturesUnordered::new();
+    let futures = FuturesUnordered::new();
 
     let (current_channel_manager, current_channel_notifier) =
         channel::build_current_channel_manager_and_notifier(

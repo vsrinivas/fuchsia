@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component as component,
     fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, AsyncReadExt},
+    futures::io::AllowStdIo,
 };
 
 fn print_headers(resp: &http::UrlResponse) {
@@ -69,7 +69,7 @@ async fn http_get(url: String) -> Result<(), Error> {
         response_body_mode: http::ResponseBodyMode::Stream,
     };
 
-	let loader_proxy = http::UrlLoaderProxy::new(proxy);
+    let loader_proxy = http::UrlLoaderProxy::new(proxy);
     let resp = loader_proxy.start(&mut req).await?;
     if let Some(e) = resp.error {
         let code = e.code;
@@ -90,7 +90,7 @@ async fn http_get(url: String) -> Result<(), Error> {
 
     // Copy the bytes from the socket to stdout
     let mut stdio = AllowStdIo::new(std::io::stdout());
-    socket.copy_into(&mut stdio).await?;
+    futures::io::copy(socket, &mut stdio).await?;
     println!("\n>>> EOF <<<");
 
     Ok(())

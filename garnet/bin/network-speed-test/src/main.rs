@@ -11,7 +11,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, AsyncReadExt},
+    futures::io::{AllowStdIo, copy},
     serde_derive::Serialize,
     std::process,
     structopt::StructOpt,
@@ -128,7 +128,7 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
 
     // discard the bytes
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = socket.copy_into(&mut stdio_sink).await?;
+    let bytes_received = copy(socket, &mut stdio_sink).await?;
     let stop_time = zx::Time::get(zx::ClockId::Monotonic);
 
     let time_nanos = (stop_time - start_time).into_nanos() as u64;
