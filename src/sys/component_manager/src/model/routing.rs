@@ -19,6 +19,7 @@ const SERVICE_OPEN_FLAGS: u32 =
     fio::OPEN_FLAG_DESCRIBE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
 /// Describes the source of a capability, for any type of capability.
+#[derive(Debug)]
 enum OfferSource<'a> {
     // TODO(CF-908): Enable this once unified services are implemented.
     #[allow(dead_code)]
@@ -30,6 +31,7 @@ enum OfferSource<'a> {
 }
 
 /// Describes the source of a capability, as determined by `find_capability_source`
+#[derive(Debug)]
 enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
@@ -349,6 +351,7 @@ async fn find_framework_capability<'a>(
 }
 
 /// Holds state about the current position when walking the tree.
+#[derive(Debug)]
 struct WalkPosition {
     /// The capability declaration as it's represented in the current component.
     capability: RoutedCapability,

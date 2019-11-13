@@ -26,7 +26,7 @@ pub enum Error {
 /// Each capability type has a corresponding `CapabilityPath` in the component
 /// manaager's namespace. Note that this path may not be unique as capabilities can
 /// compose.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ComponentManagerCapability {
     Service(CapabilityPath),
     LegacyService(CapabilityPath),
