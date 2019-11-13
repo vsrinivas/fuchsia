@@ -46,6 +46,7 @@ zx_status_t GuestConsole::Start() {
   // we send will be ignored until the guest is ready.
   status = WaitForAny(kTestTimeout);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed waiting for any output on the serial console";
     return status;
   }
 
@@ -56,6 +57,7 @@ zx_status_t GuestConsole::Start() {
   do {
     status = WaitForAny(kSerialStableDelay);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+      FXL_LOG(ERROR) << "Failed waiting for serial console to stabilize";
       return status;
     }
   } while (status == ZX_OK);
@@ -85,27 +87,32 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
     return status;
   }
 
-  status = WaitForMarker(full_command);
+  std::string intermediate_result;
+  status = WaitForMarker(full_command, &intermediate_result);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command echo: " << status;
+    FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
-  status = WaitForMarker(header + "\n");
+  status = WaitForMarker(header + "\n", &intermediate_result);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command header: " << status;
+    FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
   status = WaitForMarker(footer + "\n", result);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command footer: " << status;
+    FXL_LOG(ERROR) << "Received: \"" << result << "\"";
     return status;
   }
 
-  status = WaitForMarker(prompt);
+  status = WaitForMarker(prompt, &intermediate_result);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command prompt: " << status;
+    FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
@@ -140,6 +147,7 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* 
     std::string buff;
     zx_status_t status = socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
     if (status != ZX_OK) {
+      *result = output;
       return status;
     }
     Logger::Get().Write(buff);
