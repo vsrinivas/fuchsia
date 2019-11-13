@@ -526,8 +526,11 @@ REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
 DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980)
 DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981)
 DEFINE_REGISTER(ParserVideoWp, ParserRegisterIo, 0x2982)
+DEFINE_REGISTER(ParserVideoRp, ParserRegisterIo, 0x2983)
 
 REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
+  // Determines if the parser should swap around the endianness of the video output.
+  DEF_FIELD(3, 1, video_write_endianness);
   DEF_BIT(0, video_manual_read_ptr_update);
 };
 

@@ -78,6 +78,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // CanvasEntry::Owner implementation.
   void FreeCanvas(CanvasEntry* canvas) override;
 
+  // Parser::Owner implementation.
+  [[nodiscard]] bool is_parser_gated() const override { return is_parser_gated_; }
+
   // The pts manager has its own locking, so don't worry about the video decoder
   // lock.
   __WARN_UNUSED_RESULT PtsManager* pts_manager() __TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -99,6 +102,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t InitializeEsParser();
 
   __WARN_UNUSED_RESULT Parser* parser() { return parser_.get(); }
+
+  void UngateParserClock();
+  void GateParserClock();
 
   __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
@@ -203,6 +209,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   DecoderCore* core_ = nullptr;
 
   std::unique_ptr<Parser> parser_;
+  bool is_parser_gated_ = true;
 
   __TA_GUARDED(video_decoder_lock_)
   std::unique_ptr<DecoderInstance> current_instance_;

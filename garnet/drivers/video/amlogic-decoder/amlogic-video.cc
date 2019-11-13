@@ -125,12 +125,17 @@ void AmlogicVideo::UngateClocks() {
   HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(true).WriteTo(hiubus_.get());
   HhiGclkMpeg1::Get()
       .ReadFrom(hiubus_.get())
-      .set_u_parser_top(true)
       .set_aiu(0xff)
       .set_demux(true)
       .set_audio_in(true)
       .WriteTo(hiubus_.get());
   HhiGclkMpeg2::Get().ReadFrom(hiubus_.get()).set_vpu_interrupt(true).WriteTo(hiubus_.get());
+  UngateParserClock();
+}
+
+void AmlogicVideo::UngateParserClock() {
+  is_parser_gated_ = false;
+  HhiGclkMpeg1::Get().ReadFrom(hiubus_.get()).set_u_parser_top(true).WriteTo(hiubus_.get());
 }
 
 void AmlogicVideo::GateClocks() {
@@ -143,6 +148,12 @@ void AmlogicVideo::GateClocks() {
       .set_audio_in(false)
       .WriteTo(hiubus_.get());
   HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(false).WriteTo(hiubus_.get());
+  GateParserClock();
+}
+
+void AmlogicVideo::GateParserClock() {
+  is_parser_gated_ = true;
+  HhiGclkMpeg1::Get().ReadFrom(hiubus_.get()).set_u_parser_top(false).WriteTo(hiubus_.get());
 }
 
 void AmlogicVideo::ClearDecoderInstance() {

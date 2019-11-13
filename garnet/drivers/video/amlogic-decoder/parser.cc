@@ -30,6 +30,7 @@ Parser::~Parser() {
 
 // This parser handles MPEG elementary streams.
 zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
+  assert(!owner_->is_parser_gated());
   Reset1Register::Get().FromValue(0).set_parser(true).WriteTo(owner_->mmio()->reset);
   FecInputControl::Get().FromValue(0).WriteTo(owner_->mmio()->demux);
   TsHiuCtl::Get()
@@ -72,19 +73,21 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
 
   ParserControl::Get().FromValue(ParserControl::kAutoSearch).WriteTo(owner_->mmio()->parser);
 
-  // Set up output fifo.
-  uint32_t buffer_address = truncate_to_32(instance->stream_buffer()->buffer().phys_base());
-  ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(owner_->mmio()->parser);
-  ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + instance->stream_buffer()->buffer().size() - 8)
-      .WriteTo(owner_->mmio()->parser);
+  if (instance) {
+    // Set up output fifo.
+    uint32_t buffer_address = truncate_to_32(instance->stream_buffer()->buffer().phys_base());
+    ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(owner_->mmio()->parser);
+    ParserVideoEndPtr::Get()
+        .FromValue(buffer_address + instance->stream_buffer()->buffer().size() - 8)
+        .WriteTo(owner_->mmio()->parser);
 
-  ParserEsControl::Get()
-      .ReadFrom(owner_->mmio()->parser)
-      .set_video_manual_read_ptr_update(false)
-      .WriteTo(owner_->mmio()->parser);
+    ParserEsControl::Get()
+        .ReadFrom(owner_->mmio()->parser)
+        .set_video_manual_read_ptr_update(false)
+        .WriteTo(owner_->mmio()->parser);
 
-  instance->core()->InitializeParserInput();
+    instance->core()->InitializeParserInput();
+  }
 
   // 512 bytes includes some padding to force the parser to read it completely.
   constexpr uint32_t kSearchPatternSize = 512;
@@ -115,6 +118,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
         std::lock_guard<std::mutex> lock(parser_running_lock_);
         if (!parser_running_)
           continue;
+        assert(!owner_->is_parser_gated());
         // Continue holding parser_running_lock_ to ensure a cancel doesn't
         // execute while signaling is happening.
         auto status = ParserIntStatus::Get().ReadFrom(owner_->mmio()->parser);
@@ -136,6 +140,28 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
 
   return ZX_OK;
 }
+
+void Parser::SetOutputLocation(zx_paddr_t paddr, uint32_t len) {
+  uint32_t buffer_start = truncate_to_32(paddr);
+  ParserVideoStartPtr::Get().FromValue(buffer_start).WriteTo(owner_->mmio()->parser);
+  // Prevent the parser from writing off the end of the buffer. Seems like it
+  // probably needs to be 8-byte aligned.
+  constexpr uint32_t kEndOfBufferOffset = 8;
+  ParserVideoEndPtr::Get()
+      .FromValue(buffer_start + len - kEndOfBufferOffset)
+      .WriteTo(owner_->mmio()->parser);
+  ParserVideoWp::Get().FromValue(buffer_start).WriteTo(owner_->mmio()->parser);
+  // The read pointer isn't really used unless the output buffer wraps around.
+  ParserVideoRp::Get().FromValue(buffer_start).WriteTo(owner_->mmio()->parser);
+
+  // Keeps bytes in the same order as they were input.
+  ParserEsControl::Get()
+      .ReadFrom(owner_->mmio()->parser)
+      .set_video_manual_read_ptr_update(true)
+      .set_video_write_endianness(0x7)
+      .WriteTo(owner_->mmio()->parser);
+}
+
 zx_status_t Parser::ParseVideo(void* data, uint32_t len) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
   {
@@ -169,6 +195,7 @@ zx_status_t Parser::ParseVideo(void* data, uint32_t len) {
 // The caller of this method must know that the physical range is entirely
 // within a VMO that's pinned for at least the duration of this call.
 zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
+  assert(!owner_->is_parser_gated());
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
   {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
@@ -200,6 +227,11 @@ zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
   ZX_ASSERT(ZX_ERR_TIMED_OUT == parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
                                                                 zx::time(), nullptr));
 
+  {
+    std::lock_guard<std::mutex> lock(parser_running_lock_);
+    parser_running_ = true;
+  }
+
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
       .WriteTo(owner_->mmio()->parser);
@@ -208,11 +240,6 @@ zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
       .set_len(io_buffer_size(&search_pattern_, 0))
       .set_fetch_endian(7)
       .WriteTo(owner_->mmio()->parser);
-
-  {
-    std::lock_guard<std::mutex> lock(parser_running_lock_);
-    parser_running_ = true;
-  }
 
   return ZX_OK;
 }
@@ -270,6 +297,7 @@ void Parser::CancelParsing() {
   if (!parser_running_) {
     return;
   }
+  assert(!owner_->is_parser_gated());
 
   DECODE_ERROR("Parser cancelled\n");
   parser_running_ = false;

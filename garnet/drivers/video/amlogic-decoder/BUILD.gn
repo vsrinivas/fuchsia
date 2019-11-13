@@ -156,6 +156,7 @@ if (target_cpu == "arm64") {
     sources = [
       "tests/integration/test_h264.cc",
       "tests/integration/test_mpeg2.cc",
+      "tests/integration/test_parser.cc",
       "tests/integration/test_vp9.cc",
       "tests/test_support.cc",
       "tests/unit_tests/test_binding.cc",

@@ -29,6 +29,7 @@ class Parser final {
    public:
     virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
+    [[nodiscard]] virtual bool is_parser_gated() const = 0;
   };
 
   Parser(Owner* owner, zx::handle interrupt_handle);
@@ -57,6 +58,7 @@ class Parser final {
   __WARN_UNUSED_RESULT
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
+  void SetOutputLocation(zx_paddr_t paddr, uint32_t len);
 
  private:
   Owner* owner_;
