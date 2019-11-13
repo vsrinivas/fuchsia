@@ -63,6 +63,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
     "//src/diagnostics/lib/selectors",
     "//third_party/rust_crates:failure",
@@ -142,6 +143,7 @@ group("tests") {
   public_deps = [
     ":archivist_tests",
     "//src/diagnostics/archivist/tests:logger_integration_tests",
+    "//src/diagnostics/archivist/tests/data_stats",
     "//src/diagnostics/archivist/tests/inspect_reader_integration:inspect_reader_integration_tests",
   ]
 }

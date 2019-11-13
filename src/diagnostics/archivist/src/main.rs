@@ -4,20 +4,18 @@
 
 //! The Archivist collects and stores diagnostic data from components.
 
-#![allow(dead_code)]
 #![warn(missing_docs)]
 
 use {
-    archivist_lib::{archive, configs, diagnostics, inspect, logs},
+    archivist_lib::{archive, configs, data_stats, diagnostics, inspect, logs},
     failure::Error,
-    fidl::endpoints::create_proxy,
     fidl_fuchsia_diagnostics_inspect::Selector,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_zircon as zx,
     futures::{future, FutureExt, StreamExt},
     io_util, selectors,
-    std::path::PathBuf,
     std::sync::{Arc, RwLock},
 };
 
@@ -50,16 +48,6 @@ fn main() -> Result<(), Error> {
         )?,
     );
 
-    // Publish stats on global storage.
-    fs.add_remote(
-        "global_data",
-        storage_inspect_proxy("global_data".to_string(), PathBuf::from("/global_data"))?,
-    );
-    fs.add_remote(
-        "global_tmp",
-        storage_inspect_proxy("global_tmp".to_string(), PathBuf::from("/global_tmp"))?,
-    );
-
     let all_selectors: Vec<Arc<Selector>> = match selectors::parse_selectors(INSPECT_ALL_SELECTORS)
     {
         Ok(selectors) => selectors.into_iter().map(|selector| Arc::new(selector)).collect(),
@@ -79,6 +67,10 @@ fn main() -> Result<(), Error> {
 
     let archivist_threads: usize =
         archivist_configuration.num_threads.unwrap_or(DEFAULT_NUM_THREADS);
+
+    if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
+        data_stats::add_stats_nodes(&mut fs, to_summarize)?;
+    }
 
     let archivist_state =
         archive::ArchivistState::new(archivist_configuration, all_inspect_repository.clone())?;
@@ -100,24 +92,14 @@ fn main() -> Result<(), Error> {
             inspect_reader_server.spawn_reader_server(stream)
         });
 
+    let (out_dir_raw, out_dir_remote) = zx::Channel::create()?;
+    let out_dir = DirectoryProxy::new(fasync::Channel::from_channel(out_dir_raw)?);
+    fs.serve_connection(out_dir_remote)?;
     fs.take_and_serve_directory_handle()?;
 
-    executor.run(
-        future::try_join(fs.collect::<()>().map(Ok), archive::run_archivist(archivist_state)),
-        archivist_threads,
-    )?;
+    let running_archivist = archive::run_archivist(archivist_state, out_dir);
+    let running_service_fs = fs.collect::<()>().map(Ok);
+    let both = future::try_join(running_service_fs, running_archivist);
+    executor.run(both, archivist_threads)?;
     Ok(())
-}
-
-// Returns a DirectoryProxy that contains a dynamic inspect file with stats on files stored under
-// `path`.
-fn storage_inspect_proxy(name: String, path: PathBuf) -> Result<DirectoryProxy, Error> {
-    let (proxy, server) =
-        create_proxy::<DirectoryMarker>().expect("failed to create directoryproxy");
-
-    fasync::spawn(async move {
-        diagnostics::publish_data_directory_stats(name, path, server.into_channel().into()).await;
-    });
-
-    Ok(proxy)
 }

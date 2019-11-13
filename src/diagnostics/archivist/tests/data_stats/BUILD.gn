@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "archivist_data_stats_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+test_package("archivist_data_stats_test") {
+  deps = [
+    ":bin",
+    "//src/diagnostics/archivist:bin",
+  ]
+
+  binaries = [
+    {
+      name = "archivist"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/archivist_with_test_config.cmx"
+      dest = "archivist_with_test_config.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "archivist_data_stats_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("data_stats") {
+  testonly = true
+  public_deps = [
+    ":archivist_data_stats_test",
+  ]
+}

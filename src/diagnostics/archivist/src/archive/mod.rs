@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{collection, configs, diagnostics, inspect},
+    crate::{
+        collection::{self, ComponentEvent, ComponentEventData, InspectReaderData},
+        configs, diagnostics, inspect,
+    },
     chrono::prelude::*,
     failure::{self, format_err, Error},
+    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
@@ -567,19 +571,8 @@ impl ArchivistState {
         let mut group_stats = writer.get_archive().get_event_group_stats()?;
 
         let log = writer.get_log();
-        diagnostics::set_current_group(log.get_log_file_path(), &log.get_stats());
-
-        // Do not include the current group in the stats.
         group_stats.remove(&log.get_log_file_path().to_string_lossy().to_string());
-
         diagnostics::set_group_stats(&group_stats);
-
-        for (_, group_stat) in &group_stats {
-            diagnostics::add_stats(&group_stat);
-        }
-
-        // Add the counts for the current group.
-        diagnostics::add_stats(&log.get_stats());
 
         let mut log_node = BoundedListNode::new(
             diagnostics::root().create_child("events"),
@@ -611,7 +604,7 @@ impl ArchivistState {
 }
 
 fn populate_inspect_repo(
-    state: &mut Arc<Mutex<ArchivistState>>,
+    state: &Arc<Mutex<ArchivistState>>,
     inspect_reader_data: collection::InspectReaderData,
 ) -> Result<(), Error> {
     let state = state.lock().unwrap();
@@ -630,29 +623,21 @@ fn populate_inspect_repo(
 }
 
 async fn process_event(
-    mut state: Arc<Mutex<ArchivistState>>,
-    event: collection::ComponentEvent,
+    state: Arc<Mutex<ArchivistState>>,
+    event: ComponentEvent,
 ) -> Result<(), Error> {
     match event {
-        collection::ComponentEvent::Existing(data) => {
-            return archive_event(&mut state, "EXISTING", data).await
-        }
-        collection::ComponentEvent::Start(data) => {
-            return archive_event(&mut state, "START", data).await
-        }
-        collection::ComponentEvent::Stop(data) => {
-            return archive_event(&mut state, "STOP", data).await
-        }
-        collection::ComponentEvent::OutDirectoryAppeared(data) => {
-            return populate_inspect_repo(&mut state, data)
-        }
-    };
+        ComponentEvent::Existing(data) => archive_event(&state, "EXISTING", data).await,
+        ComponentEvent::Start(data) => archive_event(&state, "START", data).await,
+        ComponentEvent::Stop(data) => archive_event(&state, "STOP", data).await,
+        ComponentEvent::OutDirectoryAppeared(data) => populate_inspect_repo(&state, data),
+    }
 }
 
 async fn archive_event(
-    state: &mut Arc<Mutex<ArchivistState>>,
+    state: &Arc<Mutex<ArchivistState>>,
     event_name: &str,
-    event_data: collection::ComponentEventData,
+    event_data: ComponentEventData,
 ) -> Result<(), Error> {
     let mut state = state.lock().unwrap();
 
@@ -685,22 +670,19 @@ async fn archive_event(
 
                     log = log.add_event_file(path, &contents);
                 }
+                collection::Data::File(contents) => {
+                    log = log.add_event_file(path, &contents);
+                }
             }
         }
     }
 
-    let event_stat = log.build()?;
     let current_group_stats = state.writer.get_log().get_stats();
-    diagnostics::update_current_group(&current_group_stats);
-    diagnostics::add_stats(&event_stat);
 
     if current_group_stats.size >= state.configuration.max_event_group_size_bytes {
         let (path, stats) = state.writer.rotate_log()?;
         inspect_log!(state.log_node, event:"Rotated log",
                      new_path: path.to_string_lossy().to_string());
-        let log = state.writer.get_log();
-        diagnostics::set_current_group(log.get_log_file_path(), &log.get_stats());
-        diagnostics::add_stats(&log.get_stats());
         state.add_group_stat(&path, stats);
     }
 
@@ -735,7 +717,6 @@ async fn archive_event(
                     }
                     Ok(stat) => {
                         current_archive_size -= stat.size;
-                        diagnostics::subtract_stats(&stat);
                         state.remove_group_stat(&PathBuf::from(&path));
                         inspect_log!(state.log_node, event: "Garbage collected group",
                                      path: &path,
@@ -754,7 +735,48 @@ async fn archive_event(
     Ok(())
 }
 
-pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
+fn collect_own_inspect(
+    state: &Arc<Mutex<ArchivistState>>,
+    self_out_dir: DirectoryProxy,
+) -> Result<(), Error> {
+    let mut data_dirs = vec![];
+    if let Some(dirs) = &state.lock().unwrap().configuration.summarized_dirs {
+        for name in dirs.keys() {
+            let proxy = io_util::open_directory(
+                &self_out_dir,
+                name.as_ref(),
+                io_util::OPEN_RIGHT_READABLE,
+            )?;
+
+            data_dirs.push(InspectReaderData {
+                absolute_moniker: vec!["archivist.cmx".into()],
+                component_name: "archivist.cmx".into(),
+                component_id: "self".into(),
+                component_hierarchy_path: Path::new("/out").join(name),
+                data_directory_proxy: Some(proxy),
+            });
+        }
+    }
+
+    for dir in data_dirs {
+        if let Err(why) = populate_inspect_repo(state, dir) {
+            let mut state = state.lock().unwrap();
+            inspect_log!(
+                state.log_node,
+                event: "Failed to populate repo",
+                result: format!("{:?}", why)
+            );
+            eprintln!("Failed to populate repo: {:?}", why);
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn run_archivist(
+    archivist_state: ArchivistState,
+    self_out_dir: DirectoryProxy,
+) -> Result<(), Error> {
     let state = Arc::new(Mutex::new(archivist_state));
     component::health().set_starting_up();
 
@@ -770,6 +792,8 @@ pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error>
             eprintln!("Collection ended with result {:?}", e);
         }
     }));
+
+    collect_own_inspect(&state, self_out_dir)?;
 
     component::health().set_ok();
 

@@ -51,7 +51,7 @@ static ARCHIVIST_NAME: &str = "archivist.cmx";
 static COMPONENT_MANAGER_NAME: &str = "component_manager.cmx";
 
 /// Represents the data associated with a component event.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct ComponentEventData {
     /// The path to the component's realm.
     pub realm_path: RealmPath,
@@ -64,6 +64,18 @@ pub struct ComponentEventData {
 
     /// Extra data about this event (to be stored in extra files in the archive).
     pub component_data_map: Option<DataMap>,
+}
+
+impl PartialEq for ComponentEventData {
+    /// Check ComponentEventData for equality.
+    ///
+    /// We implement this manually so that we can avoid requiring equality comparison on
+    /// `component_data_map`.
+    fn eq(&self, other: &Self) -> bool {
+        self.realm_path == other.realm_path
+            && self.component_name == other.component_name
+            && self.component_id == other.component_id
+    }
 }
 
 #[derive(Debug)]
@@ -99,13 +111,19 @@ pub type DataMap = HashMap<String, Data>;
 /// passed by the collectors to processors.
 ///
 /// This may be extended to new types of data.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum Data {
     /// Empty data, for testing.
     Empty,
 
     /// A VMO containing data associated with the event.
     Vmo(zx::Vmo),
+
+    /// A file containing data associated with the event.
+    ///
+    /// Because we can't synchronously retrieve file contents like we can for VMOs, this holds
+    /// the full file contents. Future changes should make streaming ingestion feasible.
+    File(Vec<u8>),
 }
 
 /// An event that occurred to a component.

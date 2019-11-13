@@ -4,7 +4,13 @@
 
 #![allow(dead_code)]
 
-use {failure::Error, json5, serde_derive::Deserialize, std::fs, std::path::PathBuf};
+use {
+    failure::Error,
+    json5,
+    serde_derive::Deserialize,
+    std::path::PathBuf,
+    std::{collections::BTreeMap, fs},
+};
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
@@ -16,6 +22,9 @@ pub struct Config {
 
     /// Number of threads the archivist has available to use.
     pub num_threads: Option<usize>,
+
+    /// Paths to summarize in our own diagnostics output.
+    pub summarized_dirs: Option<BTreeMap<String, String>>,
 }
 
 pub fn parse_config(path: impl Into<PathBuf>) -> Result<Config, Error> {
@@ -50,18 +59,26 @@ mod tests {
                   // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
-                  "num_threads": 4
+                  "num_threads": 4,
+                  "summarized_dirs": {
+                      "global_data": "/global_data",
+                      "global_tmp": "/global_tmp"
+                  }
                 }"#;
+        let mut expected_dirs: BTreeMap<String, String> = BTreeMap::new();
+        expected_dirs.insert("global_data".into(), "/global_data".into());
+        expected_dirs.insert("global_tmp".into(), "/global_tmp".into());
 
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
         assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
         assert_eq!(parsed_config.num_threads, Some(4));
+        assert_eq!(parsed_config.summarized_dirs, Some(expected_dirs));
     }
 
     #[test]
-    fn parse_valid_config_missing_num_threads() {
+    fn parse_valid_config_missing_optional() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
         fs::create_dir(&config_path).unwrap();

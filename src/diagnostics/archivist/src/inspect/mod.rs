@@ -93,7 +93,23 @@ impl InspectDataCollector {
                             Data::Vmo(vmofile.vmo),
                         );
                     }
-                    _ => {}
+                    NodeInfo::File(_) => {
+                        let contents = io_util::read_file_bytes(&file_proxy).await?;
+                        self.maybe_add(
+                            Path::new(&entry.name)
+                                .file_name()
+                                .unwrap()
+                                .to_string_lossy()
+                                .to_string(),
+                            Data::File(contents),
+                        );
+                    }
+                    ty @ _ => {
+                        eprintln!(
+                            "found an inspect file '{}' of unexpected type {:?}",
+                            &entry.name, ty
+                        );
+                    }
                 },
                 Err(_) => {}
             }
@@ -380,6 +396,12 @@ impl ReaderServer {
                                             Ok(snapshot) => acc.push(snapshot),
                                             _ => {}
                                         },
+                                        Data::File(contents) => {
+                                            match Snapshot::try_from(contents) {
+                                                Ok(snapshot) => acc.push(snapshot),
+                                                _ => {}
+                                            }
+                                        }
                                         Data::Empty => {}
                                     }
                                     acc

@@ -5,6 +5,7 @@
 pub mod archive;
 pub mod collection;
 pub mod configs;
+pub mod data_stats;
 pub mod diagnostics;
 pub mod inspect;
 pub mod logs;

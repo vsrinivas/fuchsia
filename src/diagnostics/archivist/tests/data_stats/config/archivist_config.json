@@ -4,11 +4,9 @@
   // Maximum size a single archive event group can be.
   "max_event_group_size_bytes": 262144,
   // Number of threads available to Archive.
-  "num_threads": 4,
+  "num_threads": 1,
   // Directories to summarize in the archivist's diagnostics.
   "summarized_dirs": {
-    "archive": "/data/archive",
-    "global_data": "/global_data",
-    "global_tmp": "/global_tmp"
+    "test_data": "/test_data"
   }
 }
