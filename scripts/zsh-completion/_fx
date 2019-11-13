@@ -2,7 +2,7 @@
 
 __fx_nodename() {
   # TODO: allow configuration of node names with zstyle
-  local -a nodenames=( $(${fuchsia_dir}/out/build-zircon/tools/netls | awk '/device/ { print $2; }') )
+  local -a nodenames=( $(${fuchsia_build_dir}.zircon/tools/netls | awk '/device/ { print $2; }') )
   _describe 'nodename' nodenames
 }
 
