@@ -165,8 +165,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
                                kConfigWithRoutingPolicy.size()));
 
-  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename),
-               "Not all output usages are supported in the config");
+  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
