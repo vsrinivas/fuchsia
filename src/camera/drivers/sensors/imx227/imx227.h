@@ -80,13 +80,14 @@ class Imx227Device : public DeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent,
                             std::unique_ptr<Imx227Device>* device_out);
+  static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);
+  static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
   // Methods required by the ddk mixins
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // Testing interface will need to use this to check
-  // the status of the sensor.
+  // Testing interface will need to use this to check the status of the sensor.
   bool IsSensorInitialized() { return initialized_; }
 
   // Methods for ZX_PROTOCOL_CAMERA_SENSOR
@@ -104,6 +105,17 @@ class Imx227Device : public DeviceType,
                                             size_t modes_count, size_t* out_modes_actual);
 
  private:
+  // I2C Helpers
+  uint16_t Read16(uint16_t addr);
+  uint8_t Read8(uint16_t addr);
+  void Write8(uint16_t addr, uint8_t val);
+
+  // Other
+  zx_status_t InitPdev(zx_device_t* parent);
+  zx_status_t InitSensor(uint8_t idx);
+  void ShutDown();
+  bool ValidateSensorID();
+
   friend class Imx227DeviceTester;
 
   // Sensor Context
@@ -119,15 +131,6 @@ class Imx227Device : public DeviceType,
 
   // Sensor Status
   bool initialized_ = false;
-
-  // I2C Helpers
-  uint8_t ReadReg(uint16_t addr);
-  void WriteReg(uint16_t addr, uint8_t val);
-
-  zx_status_t InitPdev(zx_device_t* parent);
-  zx_status_t InitSensor(uint8_t idx);
-  void ShutDown();
-  bool ValidateSensorID();
 };
 
 }  // namespace camera

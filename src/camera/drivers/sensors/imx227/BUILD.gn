@@ -5,11 +5,11 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("imx227-driver") {
+driver_module("imx227_driver") {
   output_name = "imx227"
   sources = [
-    "imx227_tester.cc",
     "imx227.cc",
+    "imx227_test.cc",
   ]
   deps = [
     "//src/devices:driver",
@@ -18,6 +18,7 @@ driver_module("imx227-driver") {
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/mmio",
@@ -31,6 +32,7 @@ driver_module("imx227-driver") {
     "//zircon/system/banjo/ddk.protocol.mipicsi",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/fidl/fuchsia-driver-test:c",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -41,7 +43,7 @@ package("imx227") {
   deprecated_system_image = true
 
   deps = [
-    ":imx227-driver",
+    ":imx227_driver",
   ]
 
   drivers = [

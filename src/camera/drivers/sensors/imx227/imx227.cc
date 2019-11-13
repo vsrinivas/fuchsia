@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <lib/device-protocol/i2c.h>
+#include <lib/driver-unit-test/utils.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -22,7 +23,6 @@
 #include <hw/reg.h>
 
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
-#include "src/camera/drivers/sensors/imx227/imx227_tester.h"
 
 namespace camera {
 
@@ -89,7 +89,16 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
   return ZX_OK;
 }
 
-uint8_t Imx227Device::ReadReg(uint16_t addr) {
+uint16_t Imx227Device::Read16(uint16_t addr) {
+  const uint8_t kRegUpper = Read8(addr);
+  const uint8_t kRegLower = Read8(addr + 1);
+  if (kRegUpper < 0 | kRegLower < 0) {
+    return -1;
+  }
+  return kRegUpper << kByteShift | kRegLower;
+}
+
+uint8_t Imx227Device::Read8(uint16_t addr) {
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   uint16_t buf = htobe16(addr);
@@ -103,7 +112,7 @@ uint8_t Imx227Device::ReadReg(uint16_t addr) {
   return val;
 }
 
-void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
+void Imx227Device::Write8(uint16_t addr, uint8_t val) {
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   // First two bytes are the address, third one is the value to be written.
@@ -122,8 +131,7 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
 }
 
 bool Imx227Device::ValidateSensorID() {
-  auto sensor_id = static_cast<uint16_t>((ReadReg(kSensorModelIdReg) << kByteShift) |
-                                         ReadReg(kSensorModelIdReg + 1));
+  uint16_t sensor_id = Read16(kSensorModelIdReg);
   if (sensor_id != kSensorId) {
     zxlogf(ERROR, "Imx227Device: Invalid sensor ID\n");
     return false;
@@ -148,12 +156,12 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
         if (sequence->value == 0 && sequence->len == 0) {
           init_command = false;
         } else {
-          WriteReg(address, value);
+          Write8(address, value);
         }
         break;
       }
       default:
-        WriteReg(address, value);
+        Write8(address, value);
         break;
     }
     sequence++;
@@ -260,17 +268,15 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
       ctx_.hdr_flag = 0;
       break;
     }
-    // TODO(braval) : Support other modes.
+    // TODO(41260) : Support other modes.
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
 
   ctx_.param.active.width = supported_modes[mode].resolution.width;
   ctx_.param.active.height = supported_modes[mode].resolution.height;
-  ctx_.HMAX = static_cast<uint16_t>(ReadReg(kLineLengthPckReg) << kByteShift |
-                                    ReadReg(kLineLengthPckReg + 1));
-  ctx_.VMAX = static_cast<uint16_t>(ReadReg(kFrameLengthLinesReg) << kByteShift |
-                                    ReadReg(kFrameLengthLinesReg + 1));
+  ctx_.HMAX = Read16(kLineLengthPckReg);
+  ctx_.VMAX = Read16(kFrameLengthLinesReg);
   ctx_.int_max = 0x0ADE;  // Max allowed for 30fps = 2782 (dec), 0x0ADE (hex)
   ctx_.int_time_min = 1;
   ctx_.int_time_limit = ctx_.int_max;
@@ -322,7 +328,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
   }
   zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
   ctx_.streaming_flag = 1;
-  WriteReg(kModeSelectReg, 0x01);
+  Write8(kModeSelectReg, 0x01);
   return ZX_OK;
 }
 
@@ -331,7 +337,7 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
     return ZX_ERR_BAD_STATE;
   }
   ctx_.streaming_flag = 0;
-  WriteReg(kModeSelectReg, 0x00);
+  Write8(kModeSelectReg, 0x00);
   return ZX_OK;
 }
 
@@ -340,7 +346,7 @@ int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) { return ZX_ERR_NO
 int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
-  // TODO(braval): Add support for this.
+  // TODO(41260): Add support for this.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -390,9 +396,9 @@ void Imx227Device::DdkRelease() {
   delete this;
 }
 
-zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
-  std::unique_ptr<Imx227Device> sensor_device;
-  zx_status_t status = Imx227Device::Create(ctx, device, &sensor_device);
+zx_status_t Imx227Device::CreateAndBind(void* ctx, zx_device_t* parent) {
+  std::unique_ptr<Imx227Device> device;
+  zx_status_t status = Imx227Device::Create(ctx, parent, &device);
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d\n", status);
     return status;
@@ -401,35 +407,27 @@ zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
       {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR},
   }};
 
-// Run the unit tests for this device
-// TODO(braval): CAM-44 (Run only when build flag enabled)
-// This needs to be replaced with run unittests hooks when
-// the framework is available.
-#if 0
-      status = Imx227DeviceTester::RunTests(sensor_device.get());
-      if (status != ZX_OK) {
-          zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
-          return status;
-      }
-#endif
-
-  status =
-      sensor_device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props.data(), props.size());
+  status = device->DdkAdd("imx227", DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props.data(), props.size());
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d\n", status);
     return status;
   }
   zxlogf(INFO, "imx227 driver added\n");
 
-  // camera_sensor_device intentionally leaked as it is now held by DevMgr.
-  __UNUSED auto* dev = sensor_device.release();
+  // `device` intentionally leaked as it is now held by DevMgr.
+  __UNUSED auto* dev = device.release();
   return ZX_OK;
+}
+
+bool Imx227Device::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
+  return driver_unit_test::RunZxTests("Imx227Tests", parent, channel);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = imx227_bind;
+  ops.bind = Imx227Device::CreateAndBind;
+  ops.run_unit_tests = Imx227Device::RunUnitTests;
   return ops;
 }();
 
