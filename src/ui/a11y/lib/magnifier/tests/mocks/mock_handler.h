@@ -12,7 +12,7 @@
 #include <lib/zx/time.h>
 
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/ui/a11y/lib/magnifier/tests/util/clip_space_transform.h"
+#include "src/ui/a11y/lib/magnifier/tests/mocks/clip_space_transform.h"
 
 namespace accessibility_test {
 

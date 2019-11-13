@@ -43,14 +43,30 @@ source_set("mock_handler") {
   ]
 
   public_deps = [
+    ":clip_space_transform",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
-    "//src/ui/a11y/lib/magnifier/tests/util:clip_space_transform",
     "//zircon/public/lib/zx",
   ]
 
   deps = [
     "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("clip_space_transform") {
+  testonly = true
+
+  public = [
+    "clip_space_transform.h",
+  ]
+
+  sources = [
+    "clip_space_transform.cc",
+  ]
+
+  public_deps = [
+    "//src/ui/lib/glm_workaround",
   ]
 }

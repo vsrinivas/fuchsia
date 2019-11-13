@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_CLIP_SPACE_TRANSFORM_H_
-#define SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_CLIP_SPACE_TRANSFORM_H_
+#ifndef SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_CLIP_SPACE_TRANSFORM_H_
+#define SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_CLIP_SPACE_TRANSFORM_H_
 
 #include <ostream>
 
@@ -29,4 +29,4 @@ std::ostream& operator<<(std::ostream& o, const ClipSpaceTransform& t);
 
 }  // namespace accessibility_test
 
-#endif  // SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_CLIP_SPACE_TRANSFORM_H_
+#endif  // SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_CLIP_SPACE_TRANSFORM_H_

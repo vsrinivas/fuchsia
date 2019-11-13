@@ -239,6 +239,12 @@ void Magnifier::RegisterHandler(
   UpdateTransform();
 }
 
+void Magnifier::ZoomOutIfMagnified() {
+  if (is_magnified()) {
+    TransitionOutOfZoom();
+  }
+}
+
 void Magnifier::OnDefeat() {
   FX_DCHECK(arena_member_);
   // Indicate that we don't want to receive further events until the next contest.

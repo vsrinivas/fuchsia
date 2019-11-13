@@ -2,29 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("util") {
+group("testing") {
   testonly = true
 
   public_deps = [
-    ":clip_space_transform",
     ":formatting",
     ":input",
-  ]
-}
-
-source_set("clip_space_transform") {
-  testonly = true
-
-  public = [
-    "clip_space_transform.h",
-  ]
-
-  sources = [
-    "clip_space_transform.cc",
-  ]
-
-  public_deps = [
-    "//src/ui/lib/glm_workaround",
   ]
 }
 

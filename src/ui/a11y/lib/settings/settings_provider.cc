@@ -153,7 +153,7 @@ void SettingsProvider::AddWatcher(
   watchers_.AddInterfacePtr(std::move(watcher_proxy));
 }
 
-fuchsia::accessibility::SettingsPtr SettingsProvider::GetSettings() {
+fuchsia::accessibility::SettingsPtr SettingsProvider::GetSettings() const {
   auto settings_ptr = fuchsia::accessibility::Settings::New();
   settings_.Clone(settings_ptr.get());
   return settings_ptr;

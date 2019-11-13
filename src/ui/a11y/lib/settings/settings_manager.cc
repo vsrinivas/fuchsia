@@ -19,7 +19,7 @@ void SettingsManager::Watch(
   settings_provider_.AddWatcher(std::move(watcher));
 }
 
-fuchsia::accessibility::SettingsPtr SettingsManager::GetSettings() {
+fuchsia::accessibility::SettingsPtr SettingsManager::GetSettings() const {
   return settings_provider_.GetSettings();
 }
 

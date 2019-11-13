@@ -85,6 +85,7 @@ void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings&
   if (systemSettings.has_enable_magnification()) {
     settings_provider_ptr_->SetMagnificationEnabled(systemSettings.enable_magnification(),
                                                     InternalSettingsCallback);
+    ToggleMagnifierSetting(systemSettings.enable_magnification());
   }
   if (systemSettings.has_color_correction()) {
     switch (systemSettings.color_correction()) {
@@ -120,7 +121,10 @@ void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result resul
 
 void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
 
-fuchsia::accessibility::SettingsPtr App::GetSettings() { return settings_manager_.GetSettings(); }
+fuchsia::accessibility::SettingsPtr App::GetSettings() const {
+  return settings_manager_.GetSettings();
+}
+
 void App::OnScreenReaderEnabled(bool enabled) {
   // Reset SemanticsTree and registered views in SemanticsManagerImpl.
   semantics_manager_.SetSemanticsManagerEnabled(enabled);
@@ -134,24 +138,54 @@ void App::OnScreenReaderEnabled(bool enabled) {
   }
 }
 
-void App::OnAccessibilityPointerEventListenerEnabled(bool enabled) {
-  if (enabled) {
+void App::AddPointerEventListener() {
+  if (pointer_event_clients_++ == 0) {
     gesture_manager_ = std::make_unique<a11y::GestureManager>();
     pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
     magnifier_.arena_member(gesture_manager_->arena()->Add(&magnifier_));
-  } else {
+  }
+}
+
+void App::ReleasePointerEventListener() {
+  FX_DCHECK(pointer_event_clients_ > 0);
+
+  if (--pointer_event_clients_ == 0) {
     magnifier_.arena_member(nullptr);
     gesture_manager_.reset();
   }
 }
 
-void App::ToggleScreenReaderSetting(bool new_screen_reader_enabled_value) {
-  fuchsia::accessibility::SettingsPtr settings_ptr = settings_manager_.GetSettings();
-  const bool old_screen_reader_enabled_value =
-      settings_ptr->has_screen_reader_enabled() && settings_ptr->screen_reader_enabled();
-  if (new_screen_reader_enabled_value != old_screen_reader_enabled_value) {
-    OnAccessibilityPointerEventListenerEnabled(new_screen_reader_enabled_value);
-    OnScreenReaderEnabled(new_screen_reader_enabled_value);
+void App::ToggleScreenReaderSetting(bool enabled) {
+  const auto settings = settings_manager_.GetSettings();
+  const bool old_enabled =
+      settings->has_screen_reader_enabled() && settings->screen_reader_enabled();
+
+  if (enabled != old_enabled) {
+    if (enabled) {
+      AddPointerEventListener();
+      gesture_manager_->arena()->event_handling_policy(
+          a11y::GestureArena::EventHandlingPolicy::kConsumeEvents);
+    } else {
+      gesture_manager_->arena()->event_handling_policy(
+          a11y::GestureArena::EventHandlingPolicy::kRejectEvents);
+      ReleasePointerEventListener();
+    }
+    OnScreenReaderEnabled(enabled);
+  }
+}
+
+void App::ToggleMagnifierSetting(bool enabled) {
+  const auto settings = settings_manager_.GetSettings();
+  const bool old_enabled =
+      settings->has_magnification_enabled() && settings->magnification_enabled();
+
+  if (enabled != old_enabled) {
+    if (enabled) {
+      AddPointerEventListener();
+    } else {
+      ReleasePointerEventListener();
+      magnifier_.ZoomOutIfMagnified();
+    }
   }
 }
 

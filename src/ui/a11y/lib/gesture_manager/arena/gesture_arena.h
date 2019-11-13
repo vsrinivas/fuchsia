@@ -221,7 +221,7 @@ class GestureArena {
   // stream of pointer events is handled (e.g., is consumed or rejected).
   explicit GestureArena(
       PointerEventRouter::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {},
-      EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kConsumeEvents);
+      EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kRejectEvents);
   ~GestureArena() = default;
 
   // Adds a new recognizer to participate in the arena. The arena returns a
@@ -231,6 +231,9 @@ class GestureArena {
 
   // Returns all arena members.
   const std::vector<std::unique_ptr<ArenaMember>>& arena_members() const { return arena_members_; }
+
+  // Changes the event handling policy for empty arenas.
+  void event_handling_policy(EventHandlingPolicy value) { event_handling_policy_ = value; }
 
   // Dispatches a new pointer event to this arena. This event gets sent to all
   // arena members which are active at the moment.

@@ -19,6 +19,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
@@ -30,6 +31,9 @@ using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::NodePtr;
 using fuchsia::accessibility::semantics::Role;
+using fuchsia::ui::input::accessibility::EventHandling;
+using fuchsia::ui::input::accessibility::PointerEventListener;
+using fuchsia::ui::input::accessibility::PointerEventListenerPtr;
 
 const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
 constexpr int kMaxLogBufferSize = 1024;
@@ -53,10 +57,45 @@ class AppUnitTest : public gtest::TestLoopFixture {
         .reference = std::move(eventpair_),
     });
   }
+
+  void SendPointerEvents(PointerEventListener* listener, const std::vector<PointerParams>& events) {
+    for (const auto& params : events) {
+      SendPointerEvent(listener, params);
+    }
+  }
+
+  void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
+    listener->OnEvent(ToPointerEvent(params, input_event_time_++));
+  }
+
+  // Sends a gesture that wouldn't be recognized by any accessibility feature, for testing arena
+  // configuration.
+  //
+  // Returns the |handled| argument of the (last) resulting |OnStreamHandled| invocation.
+  //
+  // Yo dawg, I heard you like pointer event listener pointers, so I took a pointer to your pointer
+  // event listener pointer so you can receive events while you receive events (while honoring the
+  // C++ style guide).
+  std::optional<EventHandling> SendUnrecognizedGesture(PointerEventListenerPtr* listener) {
+    std::optional<EventHandling> event_handling;
+    listener->events().OnStreamHandled =
+        [&event_handling](uint32_t, uint32_t, EventHandling handled) { event_handling = handled; };
+
+    SendPointerEvents(listener->get(), Zip({TapEvents(1, {}), TapEvents(2, {})}));
+
+    RunLoopUntilIdle();
+    return event_handling;
+  }
+
   zx::eventpair eventpair_, eventpair_peer_;
-  sys::ComponentContext *context_;
+  sys::ComponentContext* context_;
   sys::testing::ComponentContextProvider context_provider_;
   fuchsia::ui::views::ViewRef view_ref_;
+
+ private:
+  // We don't actually use these times. If we did, we'd want to more closely correlate them with
+  // fake time.
+  uint64_t input_event_time_ = 0;
 };
 
 // Create a test node with only a node id and a label.
@@ -108,8 +147,8 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  vfs::PseudoDir *debug_dir = context_->outgoing()->debug_dir();
-  vfs::internal::Node *test_node;
+  vfs::PseudoDir* debug_dir = context_->outgoing()->debug_dir();
+  vfs::internal::Node* test_node;
   ASSERT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
 
   char buffer[kMaxLogBufferSize];
@@ -196,37 +235,104 @@ TEST_F(AppUnitTest, OffersTtsManagerServices) {
   ASSERT_TRUE(tts_manager.is_bound());
 }
 
-// This test makes sure that the accessibility pointer event listener is
-// registered whenever the screen reader is enabled. Once the screen reader is
-// deactivated, the listener closes the connection.
-TEST_F(AppUnitTest, RegistersAccessibilityPointerEventListener) {
-  MockPointerEventRegistry mock_pointer_event_registry(&context_provider_);
+TEST_F(AppUnitTest, NoListenerInitially) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
 
-  // Create a mock setUI & configure initial settings (screen reader off).
-  MockSetUIAccessibility mock_setui(&context_provider_);
-  fuchsia::settings::AccessibilitySettings accessibilitySettings;
-  accessibilitySettings.set_screen_reader(false);
-  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  setui.Set({}, [](auto) {});
 
-  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
   RunLoopUntilIdle();
+  EXPECT_FALSE(registry.listener())
+      << "No listener should be registered in the beginning, as there is no accessibility service "
+         "enabled.";
+}
 
-  // No listener should be registered in the beginning, as there is no
-  // accessibility service enabled.
-  EXPECT_FALSE(mock_pointer_event_registry.IsListenerRegistered());
+TEST_F(AppUnitTest, ListenerForScreenReader) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
 
-  // Turn on screen reader via setUI
-  accessibilitySettings.set_screen_reader(true);
-  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  setui.Set(std::move(settings), [](auto) {});
+
   RunLoopUntilIdle();
+  ASSERT_TRUE(registry.listener());
+  EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::CONSUMED);
+}
 
-  // When the screen reader is turned on, the listener is also on.
-  EXPECT_TRUE(mock_pointer_event_registry.IsListenerRegistered());
+TEST_F(AppUnitTest, ListenerForMagnifier) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
 
-  accessibilitySettings.set_screen_reader(false);
-  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
   RunLoopUntilIdle();
-  EXPECT_FALSE(mock_pointer_event_registry.IsListenerRegistered());
+  ASSERT_TRUE(registry.listener());
+  EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::REJECTED);
+}
+
+TEST_F(AppUnitTest, ListenerForAll) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
+
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(registry.listener());
+  EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::CONSUMED);
+}
+
+TEST_F(AppUnitTest, NoListenerAfterAllRemoved) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
+
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
+  settings.set_screen_reader(false);
+  settings.set_enable_magnification(false);
+  setui.Set(std::move(settings), [](auto) {});
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(registry.listener());
+}
+
+// Covers a couple additional edge cases around the listener ref count.
+TEST_F(AppUnitTest, ListenerRefCount) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
+
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
+  settings.set_screen_reader(false);
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(registry.listener());
+  EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::REJECTED);
+
+  settings.set_enable_magnification(false);
+  setui.Set(std::move(settings), [](auto) {});
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(registry.listener());
 }
 
 // This test makes sure that the accessibility manager is watching for settings updates from setUI.

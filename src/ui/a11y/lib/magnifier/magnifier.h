@@ -46,6 +46,9 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   void RegisterHandler(
       fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) override;
 
+  // Used when magnification is toggled off, to restore the presentation to an umagnified state.
+  void ZoomOutIfMagnified();
+
  private:
   // Magnification is enabled by a triple 1-finger tap or a double 3-finger tap.
   // Once it is enabled, zoom can be adjusted by pinching, and the view can be

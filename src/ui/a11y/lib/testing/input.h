@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_INPUT_H_
-#define SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_INPUT_H_
+#ifndef SRC_UI_A11Y_LIB_TESTING_INPUT_H_
+#define SRC_UI_A11Y_LIB_TESTING_INPUT_H_
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -48,7 +48,7 @@ std::vector<T> operator*(size_t n, const std::vector<T>& v) {
 
 template <typename T = PointerParams>  // Need to default because type inference can't reach into
                                        // nested arg type.
-std::vector<T> zip(const std::vector<std::vector<T>>& vv) {
+std::vector<T> Zip(const std::vector<std::vector<T>>& vv) {
   std::vector<T> acc;
   size_t size = 0;
   for (const auto& v : vv) {
@@ -87,4 +87,4 @@ fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerPara
 
 }  // namespace accessibility_test
 
-#endif  // SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_UTIL_INPUT_H_
+#endif  // SRC_UI_A11Y_LIB_TESTING_INPUT_H_

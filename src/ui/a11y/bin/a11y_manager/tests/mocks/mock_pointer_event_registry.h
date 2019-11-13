@@ -20,8 +20,7 @@ class MockPointerEventRegistry : public fuchsia::ui::input::accessibility::Point
   explicit MockPointerEventRegistry(sys::testing::ComponentContextProvider* context);
   ~MockPointerEventRegistry() = default;
 
-  // Returns true if the listener is registered, false otherwise.
-  bool IsListenerRegistered() const { return listener_ && listener_.is_bound(); }
+  fuchsia::ui::input::accessibility::PointerEventListenerPtr& listener() { return listener_; }
 
  private:
   // |fuchsia.ui.input.accessibility.PointerEventRegistry|

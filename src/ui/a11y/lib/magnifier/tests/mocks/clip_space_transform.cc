@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/magnifier/tests/util/clip_space_transform.h"
+#include "src/ui/a11y/lib/magnifier/tests/mocks/clip_space_transform.h"
 
 namespace accessibility_test {
 

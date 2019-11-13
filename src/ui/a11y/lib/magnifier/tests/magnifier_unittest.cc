@@ -17,9 +17,8 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_handler.h"
-#include "src/ui/a11y/lib/magnifier/tests/util/clip_space_transform.h"
-#include "src/ui/a11y/lib/magnifier/tests/util/formatting.h"
-#include "src/ui/a11y/lib/magnifier/tests/util/input.h"
+#include "src/ui/a11y/lib/testing/formatting.h"
+#include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 #include <glm/gtc/epsilon.hpp>
@@ -154,7 +153,7 @@ TEST_F(MagnifierTest, Trigger2x3) {
   MockHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
-  SendPointerEvents(2 * zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}));
+  SendPointerEvents(2 * Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}));
   RunLoopFor(kTestTransitionPeriod);
   EXPECT_EQ(handler.transform().scale, a11y::Magnifier::kDefaultScale);
 }
@@ -195,7 +194,7 @@ TEST_F(MagnifierTest, InteractionBeforeLateHandler) {
   static_assert(.2f > a11y::Magnifier::kDragThreshold,
                 "Need to increase jitter to exceed drag threshold.");
   // Starts with a two-finger tap, with one finger moving a little and back to where it started.
-  const auto jitterDrag = zip({DownEvents(1, {}), TapEvents(2, {})}) +
+  const auto jitterDrag = Zip({DownEvents(1, {}), TapEvents(2, {})}) +
                           MoveEvents(1, {}, {.2f, .2f}) + MoveEvents(1, {.2f, .2f}, {}) +
                           UpEvents(1, {});
 
@@ -361,7 +360,7 @@ TEST_F(MagnifierTest, ClampPan) {
   const auto transform = handler.transform();
 
   // Now attempt to pan with a swipe towards the lower left.
-  SendPointerEvents(zip({TapEvents(1, {1, -1}), DragEvents(2, {1, -1}, {-1, 1})}));
+  SendPointerEvents(Zip({TapEvents(1, {1, -1}), DragEvents(2, {1, -1}, {-1, 1})}));
   RunLoopFor(kFramePeriod);
   EXPECT_EQ(handler.transform(), transform) << "Clamped pan should not have moved.";
 }
@@ -376,7 +375,7 @@ TEST_F(MagnifierTest, Pan) {
   ClipSpaceTransform transform = handler.transform();
 
   // Now attempt to pan with a swipe towards the upper right.
-  SendPointerEvents(zip({TapEvents(1, {-1, 1}), DragEvents(2, {-1, 1}, {1, -1})}));
+  SendPointerEvents(Zip({TapEvents(1, {-1, 1}), DragEvents(2, {-1, 1}, {1, -1})}));
   RunLoopFor(kFramePeriod);
   transform.x += 2;
   transform.y -= 2;
@@ -414,7 +413,7 @@ TEST_F(MagnifierTest, PinchZoom) {
 
   static_assert(2 * a11y::Magnifier::kDefaultScale < a11y::Magnifier::kMaxScale,
                 "Need to adjust test zoom level to be less than max scale.");
-  SendPointerEvents(zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
+  SendPointerEvents(Zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
   RunLoopFor(kFramePeriod);
 
   static constexpr float epsilon =
@@ -431,7 +430,7 @@ TEST_F(MagnifierTest, RememberZoom) {
   SendPointerEvents(3 * TapEvents(1, {}));
   RunLoopFor(kTestTransitionPeriod);
 
-  SendPointerEvents(zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
+  SendPointerEvents(Zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
   RunLoopFor(kFramePeriod);
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -453,7 +452,7 @@ TEST_F(MagnifierTest, MinZoom) {
 
   static_assert(.1f * a11y::Magnifier::kDefaultScale < a11y::Magnifier::kMinScale,
                 "Need to adjust test gesture to reach min scale.");
-  SendPointerEvents(zip({DragEvents(1, {-1, 0}, {-.1f, 0}), DragEvents(2, {1, 0}, {.1f, 0})}));
+  SendPointerEvents(Zip({DragEvents(1, {-1, 0}, {-.1f, 0}), DragEvents(2, {1, 0}, {.1f, 0})}));
   RunLoopFor(kFramePeriod);
 
   EXPECT_EQ(handler.transform().scale, a11y::Magnifier::kMinScale);
@@ -468,7 +467,7 @@ TEST_F(MagnifierTest, MaxZoom) {
 
   static_assert(a11y::Magnifier::kDefaultScale > .1f * a11y::Magnifier::kMaxScale,
                 "Need to adjust test gesture to reach max scale.");
-  SendPointerEvents(zip({DragEvents(1, {-.1f, 0}, {-1, 0}), DragEvents(2, {.1f, 0}, {1, 0})}));
+  SendPointerEvents(Zip({DragEvents(1, {-.1f, 0}, {-1, 0}), DragEvents(2, {.1f, 0}, {1, 0})}));
   RunLoopFor(kFramePeriod);
 
   EXPECT_EQ(handler.transform().scale, a11y::Magnifier::kMaxScale);
@@ -485,7 +484,7 @@ TEST_F(MagnifierTest, ClampZoom) {
 
   static_assert(a11y::Magnifier::kDefaultScale > 1.5f * a11y::Magnifier::kMinScale,
                 "Need to adjust test zoom level to be greater than min scale.");
-  SendPointerEvents(zip({DragEvents(1, {0, -.3f}, {0, -.2f}), DragEvents(2, {0, .3f}, {0, .2f})}));
+  SendPointerEvents(Zip({DragEvents(1, {0, -.3f}, {0, -.2f}), DragEvents(2, {0, .3f}, {0, .2f})}));
   RunLoopFor(kFramePeriod);
 
   static constexpr float epsilon =
@@ -509,9 +508,9 @@ TEST_F(MagnifierTest, TransitionOut) {
   RunLoopFor(kTestTransitionPeriod);
 
   // zoom it
-  SendPointerEvents(zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
+  SendPointerEvents(Zip({DragEvents(1, {-.1f, 0}, {-.2f, 0}), DragEvents(2, {.1f, 0}, {.2f, 0})}));
   // pan it
-  SendPointerEvents(zip({TapEvents(1, {1, -1}), DragEvents(2, {1, -1}, {-1, 1})}));
+  SendPointerEvents(Zip({TapEvents(1, {1, -1}), DragEvents(2, {1, -1}, {-1, 1})}));
 
   // Zoom will issue Present immediately, so we need to wait an extra frame for the pan to be issued
   // and then for the next Present to be available.
@@ -616,7 +615,7 @@ TEST_F(MagnifierArenaTest, Accept3x1) {
 
 // 2x3 should be accepted as soon as the last pointer of the last tap comes down.
 TEST_F(MagnifierArenaTest, Accept2x3) {
-  SendPointerEvents(zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}) +
+  SendPointerEvents(Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}) +
                     DownEvents(1, {}) + DownEvents(2, {}));
   EXPECT_FALSE(input_handling());
   SendPointerEvents(DownEvents(3, {}));

@@ -23,7 +23,7 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
 
   void AddWatcher(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher);
 
-  fuchsia::accessibility::SettingsPtr GetSettings();
+  fuchsia::accessibility::SettingsPtr GetSettings() const;
 
  private:
   // |fuchsia::accessibility::SettingsProvider|

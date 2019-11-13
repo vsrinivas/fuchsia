@@ -34,7 +34,7 @@ class App {
   ~App();
 
   // Returns a copy of current set of settings owned by A11y Manager.
-  fuchsia::accessibility::SettingsPtr GetSettings();
+  fuchsia::accessibility::SettingsPtr GetSettings() const;
 
  private:
   // Callback for Setui's Watch() method.
@@ -47,6 +47,8 @@ class App {
   // Changes screen reader status when settings change.
   void ToggleScreenReaderSetting(bool enabled);
 
+  void ToggleMagnifierSetting(bool enabled);
+
   // Converts setui color blindess type to the relevant accessibility color correction mode.
   fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
       fuchsia::settings::ColorBlindnessType color_blindness_type);
@@ -55,10 +57,12 @@ class App {
   // the pointer when Screen Reader is disabled.
   void OnScreenReaderEnabled(bool enabled);
 
-  // When enabled, starts the Accessibility Pointer Event Listener and
-  // instantiates |gesture_manager_|. When disabled, it disconnects the Listener
-  // and res resets |gesture_manager_|.
-  void OnAccessibilityPointerEventListenerEnabled(bool enabled);
+  // Adds a client of accessibility pointer events. Connects the Accessibility Pointer Event
+  // Listener and gesture manager when the first client is added.
+  void AddPointerEventListener();
+  // Releases a client of accessibility pointer events. Disconnects the Accessibility Pointer Event
+  // Listener and gesture manager once the number of clients reaches zero.
+  void ReleasePointerEventListener();
 
   // Makes changes to internal settings based on new settings from SetUI. This is not particularly
   // efficient since the existing internal API forces a new call to watchers for each changed
@@ -86,6 +90,8 @@ class App {
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
+  size_t pointer_event_clients_ = 0;
+
   fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
 
   // Interface between a11y manager and Root presenter to register a
