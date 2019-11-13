@@ -101,8 +101,8 @@ impl RoutedCapability {
             .collect()
     }
 
-    /// Returns the `OfferDecl` that offers the capability in `child_offer` to `child_name`, if it
-    /// exists.
+    /// Given a parent ComponentDecl, returns the `OfferDecl` that offers this capability to
+    /// `child_moniker`, if it exists.
     pub fn find_offer_source<'a>(
         &self,
         decl: &'a ComponentDecl,
@@ -216,18 +216,7 @@ impl RoutedCapability {
         target: &OfferTarget,
         target_path: &CapabilityPath,
     ) -> bool {
-        match target {
-            OfferTarget::Child(target_child_name) => match child_moniker.collection() {
-                Some(_) => false,
-                None => target_child_name == child_moniker.name() && paths.contains(target_path),
-            },
-            OfferTarget::Collection(target_collection_name) => match child_moniker.collection() {
-                Some(collection) => {
-                    target_collection_name == collection && paths.contains(target_path)
-                }
-                None => false,
-            },
-        }
+        paths.contains(target_path) && target_matches_moniker(target, child_moniker)
     }
 
     fn is_offer_legacy_service_or_directory_match(
@@ -236,16 +225,7 @@ impl RoutedCapability {
         target: &OfferTarget,
         target_path: &CapabilityPath,
     ) -> bool {
-        match target {
-            OfferTarget::Child(target_child_name) => match child_moniker.collection() {
-                Some(_) => false,
-                None => target_path == path && target_child_name == child_moniker.name(),
-            },
-            OfferTarget::Collection(target_collection_name) => match child_moniker.collection() {
-                Some(collection) => target_path == path && target_collection_name == collection,
-                None => false,
-            },
-        }
+        path == target_path && target_matches_moniker(target, child_moniker)
     }
 
     fn is_offer_storage_match(
@@ -257,13 +237,18 @@ impl RoutedCapability {
         // The types must match...
         parent_type == child_type &&
         // ...and the child/collection names must match.
-        match (parent_target, child_moniker.collection()) {
-            (OfferTarget::Child(target_child_name), None) =>
-                target_child_name == child_moniker.name(),
-            (OfferTarget::Collection(target_collection_name), Some(collection)) =>
-                target_collection_name == collection,
-            _ => false
+        target_matches_moniker(parent_target, child_moniker)
+    }
+}
+
+/// Returns if `parent_target` refers to a the child `child_moniker`.
+fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
+    match (parent_target, child_moniker.collection()) {
+        (OfferTarget::Child(target_child_name), None) => target_child_name == child_moniker.name(),
+        (OfferTarget::Collection(target_collection_name), Some(collection)) => {
+            target_collection_name == collection
         }
+        _ => false,
     }
 }
 
