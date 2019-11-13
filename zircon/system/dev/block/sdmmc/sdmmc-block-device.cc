@@ -297,7 +297,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
     uint32_t response;
     zx_status_t st = sdmmc_.SdmmcSendStatus(&response);
     if (st != ZX_OK) {
-      zxlogf(SPEW, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d\n", st);
+      zxlogf(ERROR, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d\n", st);
       return st;
     }
 
