@@ -32,7 +32,7 @@ pub enum PropertyFormat {
 }
 
 /// Disposition of a Link value.
-#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum LinkNodeDisposition {
     Child = 0,
     Inline = 1,

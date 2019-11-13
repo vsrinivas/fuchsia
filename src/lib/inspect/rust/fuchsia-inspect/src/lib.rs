@@ -13,17 +13,17 @@ use {
         heap::Heap,
         state::State,
     },
+    derivative::Derivative,
     failure::{format_err, Error},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_syslog::macros::*,
     fuchsia_zircon::{self as zx, HandleBased},
+    futures::future::BoxFuture,
     mapped_vmo::Mapping,
     parking_lot::Mutex,
     paste,
     std::{cmp::max, sync::Arc},
 };
-
-pub use crate::state::{LazyNodeCompleter, LazyNodeContextFn};
 
 #[cfg(test)]
 use crate::format::block::Block;
@@ -46,6 +46,27 @@ pub struct Inspector {
 
     /// The VMO backing the inspector
     pub(in crate) vmo: Option<zx::Vmo>,
+}
+
+/// Holds a list of inspect types that won't change.
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq, Eq)]
+struct ValueList {
+    #[derivative(PartialEq = "ignore")]
+    #[derivative(Debug = "ignore")]
+    values: Mutex<Vec<Box<dyn InspectType>>>,
+}
+
+impl ValueList {
+    /// Creates a new empty value list.
+    pub fn new() -> Self {
+        Self { values: Mutex::new(vec![]) }
+    }
+
+    /// Stores an inspect type that won't change.
+    pub fn record(&mut self, value: impl InspectType + 'static) {
+        self.values.lock().push(Box::new(value));
+    }
 }
 
 /// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
@@ -86,6 +107,19 @@ impl Inspector {
             .unwrap_or(None)
     }
 
+    /// Returns a VMO holding a copy of the data in this inspector.
+    ///
+    /// The copied VMO will be read-only.
+    pub fn copy_vmo(&self) -> Option<zx::Vmo> {
+        self.copy_vmo_data().and_then(|data| {
+            if let Ok(vmo) = zx::Vmo::create(data.len() as u64) {
+                vmo.write(&data, 0).ok().map(|_| vmo)
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns a copy of the bytes stored in the VMO for this inspector.
     ///
     /// The output will be truncated to only those bytes that are needed to accurately read the
@@ -104,15 +138,15 @@ impl Inspector {
     /// Exports the VMO backing this Inspector at the standard location in the
     /// supplied ServiceFs.
     pub fn export<ServiceObjTy: ServiceObjTrait>(&self, service_fs: &mut ServiceFs<ServiceObjTy>) {
-        self.vmo
-            .as_ref()
-            .ok_or(format_err!("Cannot expose No-Op Inspector"))
+        self.duplicate_vmo()
+            .ok_or(format_err!("Failed to duplicate VMO"))
             .and_then(|vmo| {
+                let size = vmo.get_size()?;
                 service_fs.dir("objects").add_vmo_file_at(
                     "root.inspect",
-                    vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+                    vmo,
                     0, /* vmo offset */
-                    vmo.get_size()?,
+                    size,
                 );
                 Ok(())
             })
@@ -124,6 +158,14 @@ impl Inspector {
     /// Get the root of the VMO object.
     pub fn root(&self) -> &Node {
         &self.root_node
+    }
+
+    pub fn root_mut(&mut self) -> &mut Node {
+        &mut self.root_node
+    }
+
+    pub(in crate) fn state(&self) -> Option<Arc<Mutex<State>>> {
+        self.root().inner.as_ref().map(|inner| inner.state.clone())
     }
 
     /// Creates a new No-Op inspector
@@ -147,9 +189,12 @@ impl Inspector {
     }
 }
 
+/// Trait implemented by all inspect types.
+pub trait InspectType: Send + Sync {}
+
 /// Trait implemented by all inspect types. It provides constructor functions that are not
 /// intended for use outside the crate.
-trait InspectType {
+trait InspectTypeInternal {
     type Inner;
 
     fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
@@ -158,13 +203,13 @@ trait InspectType {
     fn unwrap_ref(&self) -> &Self::Inner;
 }
 
-/// Utility for generating the implementation of all inspect types:
+/// Utility for generating the implementation of all inspect types (including the struct):
 ///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
 ///    appropiate internal constructors.
 ///  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
 ///    for the wrapped type.
 macro_rules! inspect_type_impl {
-    ($(#[$attr:meta])* struct $name:ident) => {
+    ($(#[$attr:meta])* struct $name:ident $($field:ident : $field_type:ty = $field_init:expr,)*) => {
         paste::item! {
             $(#[$attr])*
             /// NOTE: do not rely on PartialEq implementation for true comparison.
@@ -172,6 +217,7 @@ macro_rules! inspect_type_impl {
             #[derive(Debug, PartialEq, Eq)]
             pub struct $name {
                 inner: Option<[<Inner $name>]>,
+                $($field: $field_type,)*
             }
 
             #[cfg(test)]
@@ -189,14 +235,17 @@ macro_rules! inspect_type_impl {
                 }
             }
 
-            impl InspectType for $name {
+            impl InspectType for $name {}
+
+            impl InspectTypeInternal for $name {
                 type Inner = [<Inner $name>];
 
                 fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
                     Self {
                         inner: Some([<Inner $name>] {
-                            state, block_index
-                        })
+                            state, block_index,
+                        }),
+                        $($field: $field_init,)*
                     }
                 }
 
@@ -205,7 +254,7 @@ macro_rules! inspect_type_impl {
                 }
 
                 fn new_no_op() -> Self {
-                    Self { inner: None }
+                    Self { inner: None, $($field: $field_init,)* }
                 }
 
                 fn unwrap_ref(&self) -> &Self::Inner {
@@ -258,6 +307,11 @@ macro_rules! create_numeric_property_fn {
                             .ok()
                     })
                     .unwrap_or([<$name_cap Property>]::new_no_op())
+            }
+
+            pub fn [<record_ $name >](&mut self, name: impl AsRef<str>, value: $type) {
+                let property = self.[<create_ $name>](name, value);
+                self.record_value(property);
             }
         }
     };
@@ -372,7 +426,8 @@ macro_rules! create_lazy_property_fn {
     ($fn_suffix:ident, $disposition:ident) => {
         paste::item! {
             #[must_use]
-            pub fn [<create_lazy_ $fn_suffix>](&self, name: impl AsRef<str>, callback: LazyNodeContextFn) -> LazyNode {
+            pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
+            where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
                 self.inner.as_ref().and_then(|inner| {
                     inner
                         .state
@@ -388,6 +443,13 @@ macro_rules! create_lazy_property_fn {
                 })
                 .unwrap_or(LazyNode::new_no_op())
             }
+
+            pub fn [<record_lazy_ $fn_suffix>]<F>(
+                &mut self, name: impl AsRef<str>, callback: F)
+            where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
+                let property = self.[<create_lazy_ $fn_suffix>](name, callback);
+                self.record_value(property);
+            }
         }
     }
 }
@@ -395,6 +457,7 @@ macro_rules! create_lazy_property_fn {
 inspect_type_impl!(
     /// Inspect API Node data type.
     struct Node
+    recorded_values : Option<ValueList> = None,
 );
 
 inspect_type_impl!(
@@ -421,6 +484,11 @@ impl Node {
                     .ok()
             })
             .unwrap_or(Node::new_no_op())
+    }
+
+    /// Keeps track of the given property for the lifetime of the node.
+    pub fn record(&mut self, property: impl InspectType + 'static) {
+        self.record_value(property);
     }
 
     /// Add a lazy node property to this node:
@@ -477,6 +545,12 @@ impl Node {
             .unwrap_or(StringProperty::new_no_op())
     }
 
+    /// Creates and saves a string property for the lifetime of the node.
+    pub fn record_string(&mut self, name: impl AsRef<str>, value: impl AsRef<str>) {
+        let property = self.create_string(name, value);
+        self.record_value(property);
+    }
+
     /// Add a byte vector property to this node.
     #[must_use]
     pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
@@ -496,6 +570,22 @@ impl Node {
                     .ok()
             })
             .unwrap_or(BytesProperty::new_no_op())
+    }
+
+    /// Creates and saves a bytes property for the lifetime of the node.
+    pub fn record_bytes(&mut self, name: impl AsRef<str>, value: impl AsRef<[u8]>) {
+        let property = self.create_bytes(name, value);
+        self.record_value(property);
+    }
+
+    fn record_value(&mut self, value: impl InspectType + 'static) {
+        if let Some(ref mut recorded_values) = self.recorded_values {
+            recorded_values.record(value);
+        } else {
+            let mut value_list = ValueList::new();
+            value_list.record(value);
+            self.recorded_values = Some(value_list);
+        }
     }
 }
 
@@ -853,6 +943,7 @@ mod tests {
             heap::Heap,
         },
         fuchsia_component::server::ServiceObj,
+        futures::prelude::*,
         mapped_vmo::Mapping,
     };
 
@@ -1306,7 +1397,8 @@ mod tests {
         let node = inspector.root().create_child("node");
         let node_block = node.get_block().unwrap();
         {
-            let lazy_node = node.create_lazy_values("lazy", Box::new(|_| {}));
+            let lazy_node =
+                node.create_lazy_values("lazy", || async move { Ok(Inspector::new()) }.boxed());
             let lazy_node_block = lazy_node.get_block().unwrap();
             assert_eq!(lazy_node_block.block_type(), BlockType::LinkValue);
             assert_eq!(
@@ -1325,7 +1417,8 @@ mod tests {
         let node = inspector.root().create_child("node");
         let node_block = node.get_block().unwrap();
         {
-            let lazy_node = node.create_lazy_child("lazy", Box::new(|_| {}));
+            let lazy_node =
+                node.create_lazy_child("lazy", || async move { Ok(Inspector::new()) }.boxed());
             let lazy_node_block = lazy_node.get_block().unwrap();
             assert_eq!(lazy_node_block.block_type(), BlockType::LinkValue);
             assert_eq!(
@@ -1336,5 +1429,39 @@ mod tests {
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn value_list_record() {
+        let inspector = Inspector::new();
+        let child = inspector.root().create_child("test");
+        let mut value_list = ValueList::new();
+        assert!(value_list.values.lock().is_empty());
+        value_list.record(child);
+        assert_eq!(value_list.values.lock().len(), 1);
+    }
+
+    #[test]
+    fn record() {
+        let mut inspector = Inspector::new();
+        let property = inspector.root().create_uint("a", 1);
+        inspector.root_mut().record_uint("b", 2);
+        {
+            let mut child = inspector.root().create_child("child");
+            child.record(property);
+            child.record_double("c", 3.14);
+            assert_inspect_tree!(inspector, root: {
+                a: 1u64,
+                b: 2u64,
+                child: {
+                    c: 3.14,
+                }
+            });
+        }
+        // `child` went out of scope, meaning it was deleted.
+        // Property `a` should be gone as well, given that it was being tracked by `child`.
+        assert_inspect_tree!(inspector, root: {
+            b: 2u64,
+        });
     }
 }

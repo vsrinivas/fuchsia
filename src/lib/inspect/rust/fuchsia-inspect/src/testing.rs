@@ -480,11 +480,11 @@ mod tests {
 
     #[test]
     fn test_expr_key_syntax() {
-        let node_hierarchy = NodeHierarchy {
-            name: "key".to_string(),
-            properties: vec![Property::String("@time".to_string(), "1.000".to_string())],
-            children: vec![],
-        };
+        let node_hierarchy = NodeHierarchy::new(
+            "key",
+            vec![Property::String("@time".to_string(), "1.000".to_string())],
+            vec![],
+        );
         assert_inspect_tree!(node_hierarchy, key: {
             "@time": "1.000"
         });
@@ -492,11 +492,11 @@ mod tests {
 
     #[test]
     fn test_var_key_syntax() {
-        let node_hierarchy = NodeHierarchy {
-            name: "key".to_string(),
-            properties: vec![Property::String("@time".to_string(), "1.000".to_string())],
-            children: vec![],
-        };
+        let node_hierarchy = NodeHierarchy::new(
+            "key",
+            vec![Property::String("@time".to_string(), "1.000".to_string())],
+            vec![],
+        );
         let time_key = "@time";
         assert_inspect_tree!(node_hierarchy, key: {
             var time_key: "1.000"
@@ -505,10 +505,9 @@ mod tests {
 
     #[test]
     fn test_arrays() {
-        let node_hierarchy = NodeHierarchy {
-            name: "key".to_string(),
-            children: vec![],
-            properties: vec![
+        let node_hierarchy = NodeHierarchy::new(
+            "key",
+            vec![
                 Property::UintArray(
                     "@uints".to_string(),
                     ArrayValue::new(vec![1, 2, 3], ArrayFormat::Default),
@@ -522,7 +521,8 @@ mod tests {
                     ArrayValue::new(vec![1.3, 2.5, -3.6], ArrayFormat::Default),
                 ),
             ],
-        };
+            vec![],
+        );
         assert_inspect_tree!(node_hierarchy, key: {
             "@uints": vec![1u64, 2, 3],
             "@ints": vec![-2i64, -4, 0],
@@ -532,10 +532,9 @@ mod tests {
 
     #[test]
     fn test_histograms() {
-        let node_hierarchy = NodeHierarchy {
-            name: "key".to_string(),
-            children: vec![],
-            properties: vec![
+        let node_hierarchy = NodeHierarchy::new(
+            "key",
+            vec![
                 Property::UintArray(
                     "@linear-uints".to_string(),
                     ArrayValue::new(vec![1, 2, 3, 4, 5], ArrayFormat::LinearHistogram),
@@ -564,7 +563,8 @@ mod tests {
                     ),
                 ),
             ],
-        };
+            vec![],
+        );
         assert_inspect_tree!(node_hierarchy, key: {
             "@linear-uints": vec![1u64, 2, 3, 4, 5],
             "@linear-ints": vec![6i64, 7, 8, 9],
@@ -582,35 +582,35 @@ mod tests {
     }
 
     fn simple_tree() -> NodeHierarchy {
-        NodeHierarchy {
-            name: "key".to_string(),
-            properties: vec![
+        NodeHierarchy::new(
+            "key",
+            vec![
                 Property::String("sub".to_string(), "sub_value".to_string()),
                 Property::String("sub2".to_string(), "sub2_value".to_string()),
             ],
-            children: vec![],
-        }
+            vec![],
+        )
     }
 
     fn complex_tree() -> NodeHierarchy {
-        NodeHierarchy {
-            name: "key".to_string(),
-            properties: vec![
+        NodeHierarchy::new(
+            "key",
+            vec![
                 Property::String("sub".to_string(), "sub_value".to_string()),
                 Property::String("sub2".to_string(), "sub2_value".to_string()),
             ],
-            children: vec![
-                NodeHierarchy {
-                    name: "child1".to_string(),
-                    properties: vec![Property::Int("child1_sub".to_string(), 10i64)],
-                    children: vec![],
-                },
-                NodeHierarchy {
-                    name: "child2".to_string(),
-                    properties: vec![Property::Uint("child2_sub".to_string(), 20u64)],
-                    children: vec![],
-                },
+            vec![
+                NodeHierarchy::new(
+                    "child1",
+                    vec![Property::Int("child1_sub".to_string(), 10i64)],
+                    vec![],
+                ),
+                NodeHierarchy::new(
+                    "child2",
+                    vec![Property::Uint("child2_sub".to_string(), 20u64)],
+                    vec![],
+                ),
             ],
-        }
+        )
     }
 }

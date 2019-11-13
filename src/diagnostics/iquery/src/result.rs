@@ -106,10 +106,7 @@ mod tests {
     #[test]
     fn get_query_hierarchy() {
         let result = test_result(vec!["a".to_string(), "b".to_string()]);
-        assert_eq!(
-            result.get_query_hierarchy(),
-            Some(&NodeHierarchy { name: "b".to_string(), children: vec![], properties: vec![] })
-        );
+        assert_eq!(result.get_query_hierarchy(), Some(&NodeHierarchy::new("b", vec![], vec![])));
         let result = test_result(vec!["c".to_string(), "b".to_string()]);
         assert_eq!(result.get_query_hierarchy(), None);
     }
@@ -121,19 +118,15 @@ mod tests {
                 path: PathBuf::from("/hub/c/test.cmx/123/objects"),
                 parts,
             },
-            hierarchy: Some(NodeHierarchy {
-                name: "root".to_string(),
-                properties: vec![],
-                children: vec![NodeHierarchy {
-                    name: "a".to_string(),
-                    properties: vec![],
-                    children: vec![NodeHierarchy {
-                        name: "b".to_string(),
-                        children: vec![],
-                        properties: vec![],
-                    }],
-                }],
-            }),
+            hierarchy: Some(NodeHierarchy::new(
+                "root",
+                vec![],
+                vec![NodeHierarchy::new(
+                    "a",
+                    vec![],
+                    vec![NodeHierarchy::new("b", vec![], vec![])],
+                )],
+            )),
         }
     }
 }

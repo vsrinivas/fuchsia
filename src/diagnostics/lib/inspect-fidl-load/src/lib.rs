@@ -97,7 +97,7 @@ async fn read_node(proxy: InspectProxy) -> Result<PartialNodeHierarchy, Error> {
     }));
 
     let pending_children = proxy.list_children().await?;
-    let hierarchy = NodeHierarchy { name: object.name, properties, children: vec![] };
+    let hierarchy = NodeHierarchy::new(&object.name, properties, vec![]);
     Ok(PartialNodeHierarchy { proxy, hierarchy, pending_children })
 }
 
@@ -227,7 +227,7 @@ mod tests {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| eprintln!("error running inspect server: {:?}", e)),
+            .unwrap_or_else(|e: Error| eprintln!("error running inspect server: {:?}", e)),
         );
     }
 }

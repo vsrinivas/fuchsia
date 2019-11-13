@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        format::{block::PropertyFormat, block_type::BlockType},
+        format::{
+            block::{LinkNodeDisposition, PropertyFormat},
+            block_type::BlockType,
+        },
         reader::snapshot::{ScannedBlock, Snapshot},
         trie::*,
         utils, Inspector,
@@ -27,14 +30,10 @@ pub use crate::format::block::ArrayFormat;
 #[allow(missing_docs)]
 pub mod snapshot;
 
-/// Each item of the iterator returns pairs (Vec<String>, Property) where the string vector
-/// are the names of nodes in the path in the inspect hierarchy to get to that property.
-type PropertyIterator<'a> = TrieIterableType<'a, String, Property, NodeHierarchyIterator<'a>>;
-
 /// A hierarchy of Inspect Nodes.
 ///
 /// Each hierarchy consists of properties, and a map of named child hierarchies.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NodeHierarchy {
     /// The name of this node.
     pub name: String,
@@ -44,15 +43,56 @@ pub struct NodeHierarchy {
 
     /// The children of this node.
     pub children: Vec<NodeHierarchy>,
+
+    /// Links of this node.
+    pub(in crate) links: Vec<LinkValue>,
+
+    /// Values that were impossible to load.
+    pub missing: Vec<MissingValue>,
+}
+
+/// A value that couldn't be loaded in the hierarchy and the reason.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MissingValue {
+    /// Specific reason why the value couldn't be loaded.
+    reason: MissingValueReason,
+
+    /// The name of the value.
+    name: String,
+}
+
+/// Reasons why the value couldn't be loaded.
+#[derive(Clone, Debug, PartialEq)]
+pub enum MissingValueReason {
+    /// A referenced hierarchy in the link was not found.
+    LinkNotFound,
+
+    /// A linked hierarchy couldn't be parsed.
+    LinkParseFailure,
+
+    /// A linked hierarchy was invalid.
+    LinkInvalid,
 }
 
 impl NodeHierarchy {
     pub fn new_root() -> Self {
-        NodeHierarchy { name: "root".to_string(), properties: vec![], children: vec![] }
+        NodeHierarchy::new("root", vec![], vec![])
     }
 
-    fn new(name: impl Into<String>) -> Self {
-        NodeHierarchy { name: name.into(), properties: vec![], children: vec![] }
+    pub fn new(
+        name: impl Into<String>,
+        properties: Vec<Property>,
+        children: Vec<NodeHierarchy>,
+    ) -> Self {
+        Self { name: name.into(), properties, children, links: vec![], missing: vec![] }
+    }
+
+    pub async fn try_from_inspector(inspector: Inspector) -> Result<Self, Error> {
+        NodeHierarchyLoader::load(inspector).await
+    }
+
+    fn empty() -> Self {
+        NodeHierarchy::new("", vec![], vec![])
     }
 
     /// Sorts the properties and children of the node hierarchy by name.
@@ -85,7 +125,7 @@ impl NodeHierarchy {
         match (0..self.children.len()).find(|&i| self.children[i].name == name.into()) {
             Some(matching_index) => Some(&mut self.children[matching_index]),
             None => {
-                self.children.push(NodeHierarchy::new(name.into()));
+                self.children.push(NodeHierarchy::new(name.into(), vec![], vec![]));
                 Some(
                     self.children
                         .last_mut()
@@ -132,8 +172,12 @@ impl NodeHierarchy {
     }
 
     // Provides an iterator over the node hierarchy returning properties in pre-order.
-    pub fn property_iter(&self) -> PropertyIterator {
+    pub fn property_iter(&self) -> impl Iterator<Item = (Vec<&String>, &Property)> {
         TrieIterableType { iterator: NodeHierarchyIterator::new(&self), _marker: PhantomData }
+    }
+
+    fn add_missing(&mut self, reason: MissingValueReason, name: String) {
+        self.missing.push(MissingValue { reason, name });
     }
 }
 
@@ -174,6 +218,7 @@ impl<'a> NodeHierarchyIterator<'a> {
 
 impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
     type Node = NodeHierarchy;
+
     fn is_initialized(&self) -> bool {
         self.iterator_initialized
     }
@@ -238,6 +283,18 @@ impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub(in crate) struct LinkValue {
+    /// The name of the link.
+    pub name: String,
+
+    /// The content of the link.
+    pub content: String,
+
+    /// The disposition of the link in the hierarchy when evaluated.
+    pub disposition: LinkNodeDisposition,
+}
+
 /// A named property. Each of the fields consists of (name, value).
 #[derive(Debug, PartialEq, Clone)]
 pub enum Property {
@@ -284,6 +341,128 @@ pub struct ArrayBucket<T> {
 impl<T> ArrayBucket<T> {
     fn new(floor: T, upper: T, count: T) -> Self {
         Self { floor, upper, count }
+    }
+}
+
+struct NodeHierarchyLoader {
+    work_stack: Vec<LoaderStep>,
+}
+
+struct LoaderStep {
+    inspector: Inspector,
+    hierarchy: NodeHierarchy,
+    link_value: Option<LinkValue>,
+}
+
+impl NodeHierarchyLoader {
+    /// Loads an inspector tree by following all the lazy links in the hierarchy.
+    pub async fn load(inspector: Inspector) -> Result<NodeHierarchy, Error> {
+        let hierarchy = inspector
+            .vmo
+            .as_ref()
+            .ok_or(format_err!("failed to read root"))
+            .and_then(|vmo| NodeHierarchy::try_from(vmo))?;
+        let work_stack = vec![LoaderStep { inspector, link_value: None, hierarchy }];
+        Ok(Self { work_stack }.reduce().await)
+    }
+
+    async fn reduce(mut self) -> NodeHierarchy {
+        while !self.work_stack.is_empty() {
+            let current_step = self.work_stack.pop().unwrap();
+            if current_step.link_value.is_none() && current_step.hierarchy.links.is_empty() {
+                // The node is complete and given that there's no link value,
+                // it's the root.
+                return current_step.hierarchy;
+            } else if current_step.hierarchy.links.is_empty() {
+                // This hierarchy is complete, add it to the parent
+                // based on the disposition.
+                self.add_hierarchy_to_parent(
+                    current_step.hierarchy,
+                    current_step.link_value.unwrap(),
+                );
+            } else {
+                // The node is not complete and still has pending links to expand.
+                // Read the next linked tree, push the parent back into the stack
+                // and the child on top of the stack to expand it in the next iter.
+                self.explore_next(current_step).await;
+            }
+        }
+        // This should never be reached either way.
+        panic!("failed to load hierarchy")
+    }
+
+    fn add_hierarchy_to_parent(&mut self, mut hierarchy: NodeHierarchy, link_value: LinkValue) {
+        let parent_step = self.work_stack.last_mut().unwrap();
+        match link_value.disposition {
+            LinkNodeDisposition::Child => {
+                hierarchy.name = link_value.name;
+                parent_step.hierarchy.children.push(hierarchy);
+            }
+            LinkNodeDisposition::Inline => {
+                for property in hierarchy.properties {
+                    parent_step.hierarchy.properties.push(property);
+                }
+                for child in hierarchy.children {
+                    parent_step.hierarchy.children.push(child);
+                }
+            }
+        }
+    }
+
+    async fn load_tree(
+        &self,
+        inspector: &Inspector,
+        name: impl Into<String>,
+    ) -> Result<Inspector, Error> {
+        let name = name.into();
+        let result = inspector.state().and_then(|state| {
+            let state = state.lock();
+            state.callbacks.get(&name).map(|cb| cb())
+        });
+        match result {
+            Some(cb_result) => cb_result.await,
+            None => bail!("failed to load tree"),
+        }
+    }
+
+    async fn explore_next(&mut self, mut current_step: LoaderStep) {
+        // Safe to unwrap. Assuming this fn is *only* called as part of `expand`.
+        let child_link_value = current_step.hierarchy.links.pop().unwrap();
+        match self.load_tree(&current_step.inspector, &child_link_value.content).await {
+            Err(_) => {
+                current_step
+                    .hierarchy
+                    .add_missing(MissingValueReason::LinkNotFound, child_link_value.name);
+                self.work_stack.push(current_step);
+            }
+            Ok(child_inspector) => {
+                let vmo_result = child_inspector.vmo.as_ref();
+                if vmo_result.is_none() {
+                    current_step
+                        .hierarchy
+                        .add_missing(MissingValueReason::LinkInvalid, child_link_value.name);
+                    self.work_stack.push(current_step);
+                    return;
+                }
+                match NodeHierarchy::try_from(vmo_result.unwrap()) {
+                    Ok(child_hierarchy) => {
+                        self.work_stack.push(current_step);
+                        self.work_stack.push(LoaderStep {
+                            inspector: child_inspector,
+                            link_value: Some(child_link_value),
+                            hierarchy: child_hierarchy,
+                        });
+                    }
+                    Err(_) => {
+                        current_step.hierarchy.add_missing(
+                            MissingValueReason::LinkParseFailure,
+                            child_link_value.name,
+                        );
+                        self.work_stack.push(current_step);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -427,6 +606,9 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
             BlockType::PropertyValue => {
                 result.parse_property(&block)?;
             }
+            BlockType::LinkValue => {
+                result.parse_link(&block)?;
+            }
             _ => {}
         }
     }
@@ -457,7 +639,7 @@ struct ScannedNode {
 
 impl ScannedNode {
     fn new() -> Self {
-        ScannedNode { hierarchy: NodeHierarchy::new_root(), child_nodes_count: 0, parent_index: 0 }
+        ScannedNode { hierarchy: NodeHierarchy::empty(), child_nodes_count: 0, parent_index: 0 }
     }
 
     /// Sets the name and parent index of the node.
@@ -568,7 +750,6 @@ impl<'a> ScanResult<'a> {
                 let value = block.double_value()?;
                 parent.hierarchy.properties.push(Property::Double(name, value));
             }
-            // TODO(CF-798): array types.
             _ => {}
         }
         Ok(())
@@ -646,6 +827,19 @@ impl<'a> ScanResult<'a> {
         }
         Ok(())
     }
+
+    fn parse_link(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+        let content = self
+            .snapshot
+            .get_block(block.link_content_index()?)
+            .ok_or(format_err!("failed to get link content block"))?
+            .name_contents()?;
+        let disposition = block.link_node_disposition()?;
+        parent.hierarchy.links.push(LinkValue { name, content, disposition });
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -657,10 +851,12 @@ mod tests {
             format::{bitfields::Payload, constants},
             ArrayProperty, ExponentialHistogramParams, HistogramProperty, LinearHistogramParams,
         },
+        fuchsia_async as fasync,
+        futures::prelude::*,
     };
 
-    #[test]
-    fn read_vmo() {
+    #[fasync::run_singlethreaded(test)]
+    async fn read_vmo() {
         let inspector = Inspector::new();
         let root = inspector.root();
         let _root_int = root.create_int("int-root", 3);
@@ -707,58 +903,26 @@ mod tests {
             child3_uint_array.insert(*x);
         }
 
-        let result = NodeHierarchy::try_from(&inspector).unwrap();
+        let result = NodeHierarchy::try_from_inspector(inspector).await.unwrap();
 
-        assert_eq!(
-            result,
-            NodeHierarchy {
-                name: "root".to_string(),
-                properties: vec![
-                    Property::Int("int-root".to_string(), 3),
-                    Property::DoubleArray(
-                        "property-double-array".to_string(),
-                        ArrayValue::new(double_array_data, ArrayFormat::Default),
-                    ),
-                ],
-                children: vec![
-                    NodeHierarchy {
-                        name: "child-1".to_string(),
-                        properties: vec![
-                            Property::Uint("property-uint".to_string(), 10),
-                            Property::Double("property-double".to_string(), -3.4),
-                            Property::String("property-string".to_string(), string_data),
-                            Property::IntArray(
-                                "property-int-array".to_string(),
-                                ArrayValue::new(
-                                    vec![1, 2, 1, 1, 1, 1, 1],
-                                    ArrayFormat::LinearHistogram
-                                ),
-                            ),
-                        ],
-                        children: vec![NodeHierarchy {
-                            name: "child-1-1".to_string(),
-                            properties: vec![
-                                Property::Int("property-int".to_string(), -9),
-                                Property::Bytes("property-bytes".to_string(), bytes_data),
-                                Property::UintArray(
-                                    "property-uint-array".to_string(),
-                                    ArrayValue::new(
-                                        vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
-                                        ArrayFormat::ExponentialHistogram
-                                    ),
-                                ),
-                            ],
-                            children: vec![],
-                        },],
-                    },
-                    NodeHierarchy {
-                        name: "child-2".to_string(),
-                        properties: vec![Property::Double("property-double".to_string(), 5.8),],
-                        children: vec![],
-                    },
-                ],
+        assert_inspect_tree!(result, root: {
+            "int-root": 3i64,
+            "property-double-array": double_array_data,
+            "child-1": {
+                "property-uint": 10u64,
+                "property-double": -3.4,
+                "property-string": string_data,
+                "property-int-array": vec![1i64, 2, 1, 1, 1, 1, 1],
+                "child-1-1": {
+                    "property-int": -9i64,
+                    "property-bytes": bytes_data,
+                    "property-uint-array": vec![1u64, 1, 2, 0, 1, 1, 2, 0, 0],
+                }
+            },
+            "child-2": {
+                "property-double": 5.8,
             }
-        );
+        })
     }
 
     #[test]
@@ -768,18 +932,18 @@ mod tests {
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
 
-        let test_hierarchy = NodeHierarchy {
-            name: "root".to_string(),
-            properties: vec![
+        let test_hierarchy = NodeHierarchy::new(
+            "root".to_string(),
+            vec![
                 Property::Int("int-root".to_string(), 3),
                 Property::DoubleArray(
                     "property-double-array".to_string(),
                     ArrayValue::new(double_array_data.clone(), ArrayFormat::Default),
                 ),
             ],
-            children: vec![NodeHierarchy {
-                name: "child-1".to_string(),
-                properties: vec![
+            vec![NodeHierarchy::new(
+                "child-1".to_string(),
+                vec![
                     Property::Uint("property-uint".to_string(), 10),
                     Property::Double("property-double".to_string(), -3.4),
                     Property::String("property-string".to_string(), string_data.clone()),
@@ -788,9 +952,9 @@ mod tests {
                         ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
                     ),
                 ],
-                children: vec![NodeHierarchy {
-                    name: "child-1-1".to_string(),
-                    properties: vec![
+                vec![NodeHierarchy::new(
+                    "child-1-1".to_string(),
+                    vec![
                         Property::Int("property-int".to_string(), -9),
                         Property::Bytes("property-bytes".to_string(), bytes_data.clone()),
                         Property::UintArray(
@@ -801,10 +965,10 @@ mod tests {
                             ),
                         ),
                     ],
-                    children: vec![],
-                }],
-            }],
-        };
+                    vec![],
+                )],
+            )],
+        );
 
         let mut results_vec = vec![
             (
@@ -880,8 +1044,8 @@ mod tests {
 
         // Now we will excavate the bytes that comprise the string property, then mess with them on
         // purpose to produce an invalid UTF8 string in the property.
-        let vmo = inspector.vmo.as_ref().unwrap();
-        let snapshot = Snapshot::try_from(vmo).expect("getting snapshot");
+        let vmo = inspector.vmo.unwrap();
+        let snapshot = Snapshot::try_from(&vmo).expect("getting snapshot");
         let block = snapshot.get_block(prop.block_index()).expect("getting block");
 
         // The first byte of the actual property string is at this byte offset in the VMO.
@@ -902,14 +1066,11 @@ mod tests {
 
         assert_eq!(
             nh,
-            NodeHierarchy {
-                name: "root".to_string(),
-                properties: vec![Property::String(
-                    "property".to_string(),
-                    "\u{FFFD}ello world".to_string()
-                )],
-                children: vec![],
-            },
+            NodeHierarchy::new(
+                "root",
+                vec![Property::String("property".to_string(), "\u{FFFD}ello world".to_string())],
+                vec![],
+            ),
         );
     }
 
@@ -919,7 +1080,7 @@ mod tests {
         let root = inspector.root();
         let array = root.create_int_array("int-array", 3);
 
-        let vmo = inspector.vmo.as_ref().unwrap();
+        let vmo = inspector.vmo.unwrap();
         let vmo_size = vmo.get_size()?;
         let mut buf = vec![0u8; vmo_size as usize];
         vmo.read(&mut buf[..], /*offset=*/ 0)?;
@@ -970,8 +1131,8 @@ mod tests {
         assert_eq!(buckets[3], ArrayBucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 });
     }
 
-    #[test]
-    fn add_to_hierarchy() {
+    #[fasync::run_singlethreaded(test)]
+    async fn add_to_hierarchy() {
         let mut hierarchy = NodeHierarchy::new_root();
         let prop_1 = Property::String("x".to_string(), "foo".to_string());
         let path_1 = vec!["root", "one"];
@@ -1018,49 +1179,49 @@ mod tests {
 
     #[test]
     fn sort_hierarchy() {
-        let mut hierarchy = NodeHierarchy {
-            name: "root".to_string(),
-            properties: vec![
+        let mut hierarchy = NodeHierarchy::new(
+            "root",
+            vec![
                 Property::String("x".to_string(), "foo".to_string()),
                 Property::Uint("c".to_string(), 3),
                 Property::Int("z".to_string(), -4),
             ],
-            children: vec![
-                NodeHierarchy {
-                    name: "foo".to_string(),
-                    properties: vec![
+            vec![
+                NodeHierarchy::new(
+                    "foo",
+                    vec![
                         Property::Int("11".to_string(), -4),
                         Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
                         Property::Double("0".to_string(), 8.1),
                     ],
-                    children: vec![],
-                },
-                NodeHierarchy { name: "bar".to_string(), properties: vec![], children: vec![] },
+                    vec![],
+                ),
+                NodeHierarchy::new("bar", vec![], vec![]),
             ],
-        };
+        );
 
         hierarchy.sort();
 
-        let sorted_hierarchy = NodeHierarchy {
-            name: "root".to_string(),
-            properties: vec![
+        let sorted_hierarchy = NodeHierarchy::new(
+            "root",
+            vec![
                 Property::Uint("c".to_string(), 3),
                 Property::String("x".to_string(), "foo".to_string()),
                 Property::Int("z".to_string(), -4),
             ],
-            children: vec![
-                NodeHierarchy { name: "bar".to_string(), properties: vec![], children: vec![] },
-                NodeHierarchy {
-                    name: "foo".to_string(),
-                    properties: vec![
+            vec![
+                NodeHierarchy::new("bar", vec![], vec![]),
+                NodeHierarchy::new(
+                    "foo",
+                    vec![
                         Property::Double("0".to_string(), 8.1),
                         Property::Int("11".to_string(), -4),
                         Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
                     ],
-                    children: vec![],
-                },
+                    vec![],
+                ),
             ],
-        };
+        );
         assert_eq!(sorted_hierarchy, hierarchy);
     }
 
@@ -1075,5 +1236,129 @@ mod tests {
         assert_eq!(buckets[3], ArrayBucket { floor: 8, upper: 32, count: 3 });
         assert_eq!(buckets[4], ArrayBucket { floor: 32, upper: 128, count: 4 });
         assert_eq!(buckets[5], ArrayBucket { floor: 128, upper: i64::max_value(), count: 5 });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn lazy_nodes() -> Result<(), Error> {
+        let mut inspector = Inspector::new();
+        inspector.root_mut().record_int("int", 3);
+        let mut child = inspector.root_mut().create_child("child");
+        child.record_double("double", 1.5);
+        inspector.root_mut().record_lazy_child("lazy", || {
+            async move {
+                let mut inspector = Inspector::new();
+                inspector.root_mut().record_uint("uint", 5);
+                inspector.root_mut().record_lazy_values("nested-lazy-values", || {
+                    async move {
+                        let mut inspector = Inspector::new();
+                        inspector.root_mut().record_string("string", "test");
+                        let mut child = inspector.root().create_child("nested-lazy-child");
+                        let array = child.create_int_array("array", 3);
+                        array.set(0, 1);
+                        child.record(array);
+                        inspector.root_mut().record(child);
+                        Ok(inspector)
+                    }
+                    .boxed()
+                });
+                Ok(inspector)
+            }
+            .boxed()
+        });
+
+        inspector.root_mut().record_lazy_values("lazy-values", || {
+            async move {
+                let mut inspector = Inspector::new();
+                let mut child = inspector.root().create_child("lazy-child-1");
+                child.record_string("test", "testing");
+                inspector.root_mut().record(child);
+                inspector.root_mut().record_uint("some-uint", 3);
+                inspector.root_mut().record_lazy_values("nested-lazy-values", || {
+                    async move {
+                        let mut inspector = Inspector::new();
+                        inspector.root_mut().record_int("lazy-int", -3);
+                        let mut child = inspector.root().create_child("one-more-child");
+                        child.record_double("lazy-double", 4.3);
+                        inspector.root_mut().record(child);
+                        Ok(inspector)
+                    }
+                    .boxed()
+                });
+                inspector.root_mut().record_lazy_child("nested-lazy-child", || {
+                    async move {
+                        let inspector = Inspector::new();
+                        // This will go out of scope and is not recorded, so it shouldn't appear.
+                        let _double = inspector.root().create_double("double", -1.2);
+                        Ok(inspector)
+                    }
+                    .boxed()
+                });
+                Ok(inspector)
+            }
+            .boxed()
+        });
+
+        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        assert_inspect_tree!(hierarchy, root: {
+            int: 3i64,
+            child: {
+                double: 1.5,
+            },
+            lazy: {
+                uint: 5u64,
+                string: "test",
+                "nested-lazy-child": {
+                    array: vec![1i64, 0, 0],
+                }
+            },
+            "some-uint": 3u64,
+            "lazy-child-1": {
+                test: "testing",
+            },
+            "lazy-int": -3i64,
+            "one-more-child": {
+                "lazy-double": 4.3,
+            },
+            "nested-lazy-child": {
+            }
+        });
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn missing_value_invalid() -> Result<(), Error> {
+        let inspector = Inspector::new();
+        let _lazy_child = inspector.root().create_lazy_child("lazy", || {
+            async move {
+                // For the sake of the test, force an invalid vmo.
+                Ok(Inspector::new_no_op())
+            }
+            .boxed()
+        });
+        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        assert_eq!(hierarchy.missing.len(), 1);
+        assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkInvalid);
+        assert_inspect_tree!(hierarchy, root: {});
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn missing_value_parse_failure() -> Result<(), Error> {
+        let inspector = Inspector::new();
+        let _lazy_child = inspector.root().create_lazy_child("lazy", || {
+            async move {
+                // Write an invalid header that will cause its parsing to fail.
+                let inspector = Inspector::new();
+                inspector.vmo.as_ref().unwrap().write(&[0x0f], 0).unwrap();
+                Ok(inspector)
+            }
+            .boxed()
+        });
+        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        assert_eq!(hierarchy.missing.len(), 1);
+        assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkParseFailure);
+        assert_inspect_tree!(hierarchy, root: {});
+        Ok(())
     }
 }

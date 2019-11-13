@@ -197,12 +197,16 @@ mod tests {
 
     fn get_hierarchies() -> (NodeHierarchy, NodeHierarchy) {
         (
-            NodeHierarchy {
-                name: "root".to_string(),
-                children: vec![
-                    NodeHierarchy {
-                        name: "a".to_string(),
-                        properties: vec![
+            NodeHierarchy::new(
+                "root",
+                vec![Property::UintArray(
+                    "array".to_string(),
+                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
+                )],
+                vec![
+                    NodeHierarchy::new(
+                        "a",
+                        vec![
                             Property::Double("double".to_string(), 2.5),
                             Property::DoubleArray(
                                 "histogram".to_string(),
@@ -212,11 +216,11 @@ mod tests {
                                 ),
                             ),
                         ],
-                        children: vec![],
-                    },
-                    NodeHierarchy {
-                        name: "b".to_string(),
-                        properties: vec![
+                        vec![],
+                    ),
+                    NodeHierarchy::new(
+                        "b",
+                        vec![
                             Property::Int("int".to_string(), -2),
                             Property::String("string".to_string(), "some value".to_string()),
                             Property::IntArray(
@@ -224,19 +228,15 @@ mod tests {
                                 ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
                             ),
                         ],
-                        children: vec![],
-                    },
+                        vec![],
+                    ),
                 ],
-                properties: vec![Property::UintArray(
-                    "array".to_string(),
-                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
-                )],
-            },
-            NodeHierarchy {
-                name: "y".to_string(),
-                properties: vec![Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab])],
-                children: vec![],
-            },
+            ),
+            NodeHierarchy::new(
+                "y",
+                vec![Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab])],
+                vec![],
+            ),
         )
     }
 

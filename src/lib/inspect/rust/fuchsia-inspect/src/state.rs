@@ -14,6 +14,7 @@ use {
     },
     derivative::Derivative,
     failure::{bail, Error},
+    futures::future::BoxFuture,
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     std::{
@@ -25,14 +26,9 @@ use {
     },
 };
 
-/// Provided to lazy node callbacks so they provide their node.
-pub trait LazyNodeCompleter {
-    /// Called in the callback of lazy nodes with the inspector that was filled.
-    fn done(&self, inspector: &Inspector);
-}
-
 /// Callback used to fill inspector lazy nodes.
-pub type LazyNodeContextFn = Box<dyn Fn(Box<dyn LazyNodeCompleter>) -> () + 'static + Send>;
+pub type LazyNodeContextFnArc =
+    Arc<dyn Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send>;
 
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 #[derive(Derivative)]
@@ -43,7 +39,7 @@ pub struct State {
     next_unique_link_id: AtomicU64,
 
     #[derivative(Debug = "ignore")]
-    callbacks: HashMap<String, LazyNodeContextFn>,
+    pub(in crate) callbacks: HashMap<String, LazyNodeContextFnArc>,
 }
 
 /// Locks the VMO Header blcok, executes the given codeblock and unblocks it.
@@ -238,17 +234,20 @@ impl State {
 
     /// Allocate a LINK block with the given |name| and |parent_index| and keep track
     /// of the callback that will fill it.
-    pub fn create_lazy_node(
+    pub fn create_lazy_node<F>(
         &mut self,
         name: &str,
         parent_index: u32,
         disposition: LinkNodeDisposition,
-        callback: LazyNodeContextFn,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+        callback: F,
+    ) -> Result<Block<Arc<Mapping>>, Error>
+    where
+        F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static,
+    {
         with_header_lock!(self, {
             let content = self.unique_link_name(name);
             let link = self.allocate_link(name, &content, disposition, parent_index)?;
-            self.callbacks.insert(content, callback);
+            self.callbacks.insert(content, Arc::from(callback));
             Ok(link)
         })
     }
@@ -475,7 +474,18 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::reader::snapshot::Snapshot, failure::bail, std::convert::TryFrom};
+    use {
+        super::*,
+        crate::{
+            assert_inspect_tree,
+            reader::{snapshot::Snapshot, NodeHierarchy},
+            Inspector,
+        },
+        failure::bail,
+        fuchsia_async as fasync,
+        futures::prelude::*,
+        std::convert::TryFrom,
+    };
 
     #[test]
     fn test_create() {
@@ -936,16 +946,33 @@ mod tests {
         assert!(state.header.check_locked(false).is_ok());
     }
 
-    #[test]
-    fn test_link() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_link() {
         // Intialize state and create a link block.
         let mut state = get_state(4096);
         let block = state
-            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, Box::new(|_| {}))
+            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, || {
+                async move {
+                    let mut inspector = Inspector::new();
+                    inspector.root_mut().record_uint("a", 1);
+                    Ok(inspector)
+                }
+                .boxed()
+            })
             .unwrap();
 
-        // Verify the callback was saved.
+        // Verify the callback was properly saved.
         assert!(state.callbacks.get("link-name-0").is_some());
+        let callback = state.callbacks.get("link-name-0").unwrap();
+        match callback().await {
+            Ok(inspector) => {
+                let hierarchy = NodeHierarchy::try_from(inspector.vmo.as_ref().unwrap()).unwrap();
+                assert_inspect_tree!(hierarchy, root: {
+                    a: 1u64,
+                });
+            }
+            Err(_) => assert!(false),
+        }
 
         // Verify link block.
         assert_eq!(block.block_type(), BlockType::LinkValue);
@@ -990,7 +1017,9 @@ mod tests {
 
         // Verify adding another link generates a different ID regardless of the params.
         state
-            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, Box::new(|_| {}))
+            .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, || {
+                async move { Ok(Inspector::new()) }.boxed()
+            })
             .unwrap();
         let content_block = state.heap.get_block(4).unwrap();
         assert_eq!(content_block.name_contents().unwrap(), "link-name-1");
