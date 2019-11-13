@@ -379,12 +379,12 @@ class BufferCollectionToken final {
     // additional logical participant to be in the same process.
     //
     // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
+    // created tokens to other participants (or to other Allocator channels),
     // the client should send a Sync() and wait for its response.  The Sync()
     // call can be made on the token, or on the BufferCollection obtained by
     // passing this token to BindSharedCollection().  Either will ensure that
     // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
+    // other participant sends the token to the server via separate Allocator
     // channel.  If a client is using FIDL C generated code and doesn't want to
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
@@ -441,12 +441,12 @@ class BufferCollectionToken final {
     // additional logical participant to be in the same process.
     //
     // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
+    // created tokens to other participants (or to other Allocator channels),
     // the client should send a Sync() and wait for its response.  The Sync()
     // call can be made on the token, or on the BufferCollection obtained by
     // passing this token to BindSharedCollection().  Either will ensure that
     // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
+    // other participant sends the token to the server via separate Allocator
     // channel.  If a client is using FIDL C generated code and doesn't want to
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
@@ -535,12 +535,12 @@ class BufferCollectionToken final {
     // additional logical participant to be in the same process.
     //
     // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
+    // created tokens to other participants (or to other Allocator channels),
     // the client should send a Sync() and wait for its response.  The Sync()
     // call can be made on the token, or on the BufferCollection obtained by
     // passing this token to BindSharedCollection().  Either will ensure that
     // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
+    // other participant sends the token to the server via separate Allocator
     // channel.  If a client is using FIDL C generated code and doesn't want to
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
@@ -597,12 +597,12 @@ class BufferCollectionToken final {
     // additional logical participant to be in the same process.
     //
     // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
+    // created tokens to other participants (or to other Allocator channels),
     // the client should send a Sync() and wait for its response.  The Sync()
     // call can be made on the token, or on the BufferCollection obtained by
     // passing this token to BindSharedCollection().  Either will ensure that
     // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
+    // other participant sends the token to the server via separate Allocator
     // channel.  If a client is using FIDL C generated code and doesn't want to
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
@@ -690,12 +690,12 @@ class BufferCollectionToken final {
     // additional logical participant to be in the same process.
     //
     // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
+    // created tokens to other participants (or to other Allocator channels),
     // the client should send a Sync() and wait for its response.  The Sync()
     // call can be made on the token, or on the BufferCollection obtained by
     // passing this token to BindSharedCollection().  Either will ensure that
     // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
+    // other participant sends the token to the server via separate Allocator
     // channel.  If a client is using FIDL C generated code and doesn't want to
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event

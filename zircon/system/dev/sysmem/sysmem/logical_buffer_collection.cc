@@ -121,7 +121,7 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
 // start processing the messages the client may have already sent toward the
 // BufferCollection, we want to process all the messages the client may have
 // already sent toward the BufferCollectionToken.  This comes up because the
-// BufferCollectionToken and Allocator2 are separate channels.
+// BufferCollectionToken and Allocator are separate channels.
 //
 // We know that fidl_server will process all messages before it processes the
 // close - it intentionally delays noticing the close until no messages are
