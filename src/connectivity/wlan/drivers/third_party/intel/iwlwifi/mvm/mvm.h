@@ -139,7 +139,7 @@ struct iwl_mvm_phy_ctxt {
   uint16_t color;
   uint32_t ref;
 
-  enum nl80211_chan_width width;
+  wlan_channel_bandwidth_t width;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   /* Frequency Manager tx power limit*/
