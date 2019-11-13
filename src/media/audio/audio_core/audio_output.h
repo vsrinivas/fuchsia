@@ -92,12 +92,12 @@ class AudioOutput : public AudioDevice {
 
   void ForEachLink(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupTrim(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void SetupTrim(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

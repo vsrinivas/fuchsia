@@ -232,11 +232,12 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // If we have not set up for this renderer yet, do so. If the setup fails for any reason, stop
       // processing packets for this renderer.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix) ? SetupMix(mixer) : SetupTrim(mixer);
-        if (!setup_done) {
-          // Clear our ramps, if we exit with error?
-          break;
+        if (task_type == TaskType::Mix) {
+          SetupMix(mixer);
+        } else {
+          SetupTrim(mixer);
         }
+        setup_done = true;
       }
 
       // Now process the packet at the front of the renderer's queue. If the packet has been
@@ -271,15 +272,13 @@ void AudioOutput::ForEachLink(TaskType task_type) {
   }
 }
 
-bool AudioOutput::SetupMix(Mixer* mixer) {
+void AudioOutput::SetupMix(Mixer* mixer) {
   TRACE_DURATION("audio", "AudioOutput::SetupMix");
   // If we need to recompose our transformation from destination frame space to source fractional
   // frames, do so now.
   FX_DCHECK(mixer);
   UpdateDestTrans(cur_mix_job_, &mixer->bookkeeping());
   cur_mix_job_.frames_produced = 0;
-
-  return true;
 }
 
 bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
@@ -473,7 +472,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   return consumed_source;
 }
 
-bool AudioOutput::SetupTrim(Mixer* mixer) {
+void AudioOutput::SetupTrim(Mixer* mixer) {
   TRACE_DURATION("audio", "AudioOutput::SetupTrim");
   // Compute the cutoff time used to decide whether to trim packets. ForEachLink has already updated
   // our transformation, no need for us to do so here.
@@ -488,8 +487,6 @@ bool AudioOutput::SetupTrim(Mixer* mixer) {
   // unless user defined a playback rate where the ratio of media-ticks-to-local-ticks is greater
   // than one.
   trim_threshold_ = mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks);
-
-  return true;
 }
 
 bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
