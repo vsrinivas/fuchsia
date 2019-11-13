@@ -41,6 +41,16 @@ class Mt8167GpioDevice : public DeviceType,
         iocfg_(iocfg_mmio),
         eint_(eint_mmio) {}
 
+  explicit Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio, mmio_buffer_t eint_mmio)
+      : DeviceType(parent),
+        gpio_mmio_(gpio_mmio),
+        dir_(gpio_mmio),
+        out_(gpio_mmio),
+        in_(gpio_mmio),
+        pull_en_(gpio_mmio),
+        pull_sel_(gpio_mmio),
+        eint_(eint_mmio) {}
+
   zx_status_t Bind();
   zx_status_t Init();
 
@@ -71,7 +81,7 @@ class Mt8167GpioDevice : public DeviceType,
   const GpioInReg in_;
   const GpioPullEnReg pull_en_;
   const GpioPullSelReg pull_sel_;
-  const IoConfigReg iocfg_;
+  const std::optional<const IoConfigReg> iocfg_;
   const ExtendedInterruptReg eint_;
   zx::interrupt int_;
   zx::port port_;

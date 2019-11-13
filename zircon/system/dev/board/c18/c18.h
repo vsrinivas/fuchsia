@@ -7,6 +7,7 @@
 
 #include <threads.h>
 
+#include <ddk/protocol/gpioimpl.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
 
@@ -28,10 +29,12 @@ class C18 : public C18Type {
   zx_status_t Start();
 
   static zx_status_t SocInit();
+  zx_status_t GpioInit();
 
   int Thread();
 
   ddk::PBusProtocolClient pbus_;
+  gpio_impl_protocol_t gpio_impl_;
   thrd_t thread_;
 };
 

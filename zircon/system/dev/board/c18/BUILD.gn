@@ -4,12 +4,15 @@
 
 zx_driver("c18") {
   sources = [
+    "c18-gpio.cc",
     "c18-soc.cc",
     "c18.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
     "$zx/system/dev/lib/mt8183",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/zircon",

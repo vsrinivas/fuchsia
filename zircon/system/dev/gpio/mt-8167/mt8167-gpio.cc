@@ -70,30 +70,32 @@ zx_status_t Mt8167GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
       break;
   }
 
-  // If not supported above, try IO Config.
-  // TODO(andresoportus): We only support enable/disable pull through the GPIO protocol, so
-  // until we allow passing particular pull amounts we can specify here different pull amounts
-  // for particular GPIOs.
-  PullAmount pull_amount = kPull10K;
-  if (index >= 40 && index <= 43) {
-    pull_amount = kPull75K;
-  }
-  switch (pull_mode) {
-    case GPIO_NO_PULL:
-      if (iocfg_.PullDisable(index)) {
-        return ZX_OK;
-      }
-      break;
-    case GPIO_PULL_UP:
-      if (iocfg_.PullEnable(index, pull_amount) && iocfg_.SetPullUp(index)) {
-        return ZX_OK;
-      }
-      break;
-    case GPIO_PULL_DOWN:
-      if (iocfg_.PullEnable(index, pull_amount) && iocfg_.SetPullDown(index)) {
-        return ZX_OK;
-      }
-      break;
+  if (iocfg_) {
+    // If not supported above, try IO Config.
+    // TODO(andresoportus): We only support enable/disable pull through the GPIO protocol, so
+    // until we allow passing particular pull amounts we can specify here different pull amounts
+    // for particular GPIOs.
+    PullAmount pull_amount = kPull10K;
+    if (index >= 40 && index <= 43) {
+      pull_amount = kPull75K;
+    }
+    switch (pull_mode) {
+      case GPIO_NO_PULL:
+        if (iocfg_->PullDisable(index)) {
+          return ZX_OK;
+        }
+        break;
+      case GPIO_PULL_UP:
+        if (iocfg_->PullEnable(index, pull_amount) && iocfg_->SetPullUp(index)) {
+          return ZX_OK;
+        }
+        break;
+      case GPIO_PULL_DOWN:
+        if (iocfg_->PullEnable(index, pull_amount) && iocfg_->SetPullDown(index)) {
+          return ZX_OK;
+        }
+        break;
+    }
   }
 
   return ZX_ERR_NOT_SUPPORTED;
@@ -303,30 +305,48 @@ zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
     return status;
   }
 
+  pdev_device_info_t info;
+  status = pdev_get_device_info(&pdev, &info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s pdev_get_device_info failed %d \n", __FUNCTION__, status);
+    return status;
+  }
+
+  int mmioindex = 0;
+
   mmio_buffer_t gpio_mmio;
-  status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
+  mmio_buffer_t iocfg_mmio;
+  mmio_buffer_t eint_mmio;
+
+  status = pdev_map_mmio_buffer(&pdev, mmioindex++, ZX_CACHE_POLICY_UNCACHED_DEVICE, &gpio_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s gpio pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
     return status;
   }
 
-  mmio_buffer_t iocfg_mmio;
-  status = pdev_map_mmio_buffer(&pdev, 1, ZX_CACHE_POLICY_UNCACHED_DEVICE, &iocfg_mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s iocfg pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
-    return status;
+  if (info.mmio_count == 3) {
+    status = pdev_map_mmio_buffer(&pdev, mmioindex++, ZX_CACHE_POLICY_UNCACHED_DEVICE, &iocfg_mmio);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s iocfg pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
+      return status;
+    }
   }
 
-  mmio_buffer_t eint_mmio;
-  status = pdev_map_mmio_buffer(&pdev, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
+  status = pdev_map_mmio_buffer(&pdev, mmioindex++, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev_map_mmio_buffer gpio failed %d\n", __FUNCTION__, status);
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, gpio_mmio, iocfg_mmio,
+  std::unique_ptr<gpio::Mt8167GpioDevice> dev;
+
+  if (info.mmio_count == 3) {
+    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, gpio_mmio, iocfg_mmio,
                                                               eint_mmio);
+  } else {
+    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, gpio_mmio, eint_mmio);
+  }
   if (!ac.check()) {
     zxlogf(ERROR, "mt8167_gpio_bind: ZX_ERR_NO_MEMORY\n");
     return ZX_ERR_NO_MEMORY;

@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -68,6 +68,8 @@ fbl::String GetTestFilter() {
     return "*Hikey960*";
   } else if (!strcmp(board_name, "Nocturne")) {
     return "*Nocturne*";
+  } else if (!strcmp(board_name, "c18")) {
+    return "*C18*";
   }
 
   return "Unknown";
@@ -428,6 +430,14 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/acpi/acpi-lid/hid-device-000",
       "sys/platform/acpi/acpi-pwrbtn/hid-device-000",
       "sys/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, C18Test) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/0d:00:1/mt8167-gpio",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
