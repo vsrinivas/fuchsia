@@ -484,6 +484,15 @@ struct Regression8TableWithUnionSize12Aligned4 {
     TableWithUnionSize12Aligned4 value;
 };
 
+struct Unions {
+    StringUnion u;
+    StringUnion? nullable_u;
+};
+
+struct Result {
+    Unions unions;
+};
+
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);
@@ -501,4 +510,8 @@ protocol FakeProtocol {
         uint32 after);
 
     SendFakeLauncherCreateComponentRequest(LauncherInfo info, handle h);
+
+    // This method tests a simplified version of the result returned in the
+    // EchoStructWithErrorSuccessCase test in the compatibility tests
+    ResultMethod() -> (Result value) error uint32;
 };

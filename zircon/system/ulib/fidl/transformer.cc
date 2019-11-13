@@ -1243,8 +1243,8 @@ class OldToV1 final : public TransformerBase {
 
     // Write: xunion tag & envelope.
     const uint32_t dst_inline_field_size = [&] {
-      if (src_field.type && src_field.type->type_tag == fidl::kFidlTypeUnion) {
-        return 24u;
+      if (src_field.type) {
+        return AltInlineSize(src_field.type, position);
       } else {
         return src_coded_union.size - src_coded_union.data_offset - src_field.padding;
       }
