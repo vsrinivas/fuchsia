@@ -55,3 +55,27 @@ package("tel_devmgr_qmi_component_test") {
     },
   ]
 }
+
+package("tel_devmgr_at_component_test") {
+  testonly = true
+
+  deps = [
+    ":devmgr_manifest",
+    "//src/lib/isolated_devmgr",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/tel_devmgr_at_component_test.cmx")
+      dest = "tel_devmgr_at_component_test.cmx"
+    },
+  ]
+}

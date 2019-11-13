@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("fake-at-driver-test") {
+  name = "tel_fake_at_driver_test"
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/connectivity/telephony/lib/qmi",
+    "//src/connectivity/telephony/tests/tel-dev:tel_dev",
+    "//third_party/rust_crates:futures",
+  ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}

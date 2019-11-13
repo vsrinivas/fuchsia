@@ -1,0 +1,32 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tel.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/tel_devmgr_at_component_test#meta/tel_devmgr_at_component_test.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/tel_fake_at_driver_test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/at-transport",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tel.devmgr.IsolatedDevmgr"
+        ],
+        "system": [
+            "driver/at-fake-transport.so"
+        ]
+    }
+}

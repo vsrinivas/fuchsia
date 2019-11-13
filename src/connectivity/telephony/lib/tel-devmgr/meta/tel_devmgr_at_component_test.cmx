@@ -1,0 +1,28 @@
+{
+    "program": {
+        "args": [
+            "--svc_name=fuchsia.tel.devmgr.IsolatedDevmgr",
+            "--add_namespace=/system/driver",
+            "--sys_device=/boot/driver/platform-bus.so",
+            "--search_driver=/boot/driver",
+            "--load_driver=/system/driver/at-fake-transport.so",
+            "--device_vid_pid_did=11:f:16",
+            "--wait_for=class/at-transport/000"
+        ],
+        "binary": "bin/isolated_devmgr"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ],
+        "system": [
+            "driver"
+        ]
+    }
+}

@@ -146,6 +146,7 @@ DDK_PROTOCOL_DEF(SPI_IMPL,                122, "spi-impl", 0)
 DDK_PROTOCOL_DEF(SECURE_MEM,              123, "securemem", 0)
 DDK_PROTOCOL_DEF(DEVHOST_TEST,            124,  "tdh", 0)
 DDK_PROTOCOL_DEF(SERIAL_IMPL_ASYNC,       125, "serial-impl-async", 0)
+DDK_PROTOCOL_DEF(AT_TRANSPORT,            126, "at-transport", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

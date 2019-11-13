@@ -14,6 +14,7 @@ test_package("telephony-tests") {
 
   public_deps = [
     ":devmgr-manifest",
+    "component-integration:fake-at-driver-test",
     "component-integration:fake-qmi-query",
     "component-integration:snooper",
     "driver-integration:telephony-qmi-usb-integration-test",
@@ -28,6 +29,10 @@ test_package("telephony-tests") {
     },
     {
       name = "tel_fake_qmi_query"
+      environments = basic_envs
+    },
+    {
+      name = "tel_fake_at_driver_test"
       environments = basic_envs
     },
     {

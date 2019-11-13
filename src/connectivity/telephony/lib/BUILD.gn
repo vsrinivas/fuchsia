@@ -14,6 +14,7 @@ group("tel_devmgr") {
   testonly = true
   deps = [
     "tel-devmgr:tel_devmgr",
+    "tel-devmgr:tel_devmgr_at_component_test",
     "tel-devmgr:tel_devmgr_qmi_component_test",
   ]
 }

@@ -5,6 +5,7 @@
 group("fake-drivers") {
   testonly = true
   deps = [
+    "at-fake-transport",
     "usb-qmi-function",
   ]
 }
