@@ -4,6 +4,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <stdio.h>
@@ -15,34 +19,29 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <zircon/device/block.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
+
+#include <utility>
 
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fs-test-utils/fixture.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <zircon/device/block.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
-
 #include <fs-management/mount.h>
+#include <fs-test-utils/fixture.h>
 #include <ramdevice-client/ramdisk.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 const mount_options_t test_mount_options = {
-  .readonly = false,
-  .verbose_mount = false,
-  .collect_metrics = false,
-  .wait_until_ready = true,
-  .create_mountpoint = false,
-  .enable_journal = true,
+    .readonly = false,
+    .verbose_mount = false,
+    .collect_metrics = false,
+    .wait_until_ready = true,
+    .create_mountpoint = false,
+    .enable_journal = true,
 };
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
@@ -50,6 +49,7 @@ fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
   options.use_fvm = true;
   options.fs_format = false;
   options.fs_mount = false;
+  options.isolated_devmgr = true;
   return options;
 }
 
@@ -98,9 +98,7 @@ void MountUnmountShared(size_t block_size) {
   ASSERT_EQ(unlink(mount_path), 0);
 }
 
-TEST(MountUnmountCase, MountUnmount) {
-  ASSERT_NO_FATAL_FAILURES(MountUnmountShared(512));
-}
+TEST(MountUnmountCase, MountUnmount) { ASSERT_NO_FATAL_FAILURES(MountUnmountShared(512)); }
 
 TEST(MountUnmountLargeBlockCase, MountUnmountLargeBlock) {
   ASSERT_NO_FATAL_FAILURES(MountUnmountShared(8192));
@@ -139,8 +137,7 @@ TEST(FmountFunmountCase, FmountFunmount) {
 
   int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
-            ZX_OK);
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(fumount(mountfd), ZX_OK);
   ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
@@ -208,8 +205,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   ASSERT_GT(fd, 0);
   mountfd = open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async),
-            ZX_OK);
+  ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &test_mount_options, launch_stdio_async), ZX_OK);
   // Awesome, that worked. But we shouldn't be able to mount again!
   fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
@@ -543,8 +539,8 @@ TEST(MountBlockReadonlyCase, MountBlockReadonly) {
 
   bool read_only = false;
   bool enable_journal = false;
-  ASSERT_NO_FATAL_FAILURES(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, enable_journal,
-                                      mount_path));
+  ASSERT_NO_FATAL_FAILURES(
+      MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, enable_journal, mount_path));
 
   // We can't modify the file.
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
@@ -662,13 +658,14 @@ void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_coun
 }
 
 class PartitionOverFvmWithRamdiskFixture : public zxtest::Test {
-public:
+ public:
   const char* partition_path() const { return fixture_->partition_path().c_str(); }
   static void SetUpTestCase() {}
   static void TearDownTestCase() {}
-protected:
+
+ protected:
   void SetUp() override {
-    fixture_ = new fs_test_utils::Fixture(PartitionOverFvmWithRamdisk());
+    fixture_ = std::make_unique<fs_test_utils::Fixture>(PartitionOverFvmWithRamdisk());
     ASSERT_EQ(fixture_->SetUpTestCase(), ZX_OK);
     ASSERT_EQ(fixture_->SetUp(), ZX_OK);
   }
@@ -676,36 +673,36 @@ protected:
     ASSERT_EQ(fixture_->TearDown(), ZX_OK);
     ASSERT_EQ(fixture_->TearDownTestCase(), ZX_OK);
   }
-private:
-  fs_test_utils::Fixture* fixture_;
+
+ private:
+  std::unique_ptr<fs_test_utils::Fixture> fixture_;
 };
 
 using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 
 // Reformat the partition using a number of slices and verify that there are as many slices as
 // originally pre-allocated.
-//
+
 // FIXME(fxb/39457): re-enable when de-flaked
-// TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
-//   mkfs_options_t options = default_mkfs_options;
-//   size_t base_slices = 0;
-//   ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync,
-//                  &default_mkfs_options));
-//   fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
-//   ASSERT_TRUE(partition_fd);
-//   fzl::UnownedFdioCaller caller(partition_fd.get());
-//   ASSERT_NO_FATAL_FAILURES(
-//       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
-//   options.fvm_data_slices += 10;
-// 
-//   ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
-//   size_t allocated_slices = 0;
-//   ASSERT_NO_FATAL_FAILURES(
-//       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &allocated_slices));
-//   EXPECT_GE(allocated_slices, base_slices + 10);
-// 
-//   disk_format_t actual_format = detect_disk_format(partition_fd.get());
-//   ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
-// }
+TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
+  mkfs_options_t options = default_mkfs_options;
+  size_t base_slices = 0;
+  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options));
+  fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
+  ASSERT_TRUE(partition_fd);
+  fzl::UnownedFdioCaller caller(partition_fd.get());
+  ASSERT_NO_FATAL_FAILURES(
+      GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
+  options.fvm_data_slices += 10;
+
+  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
+  size_t allocated_slices = 0;
+  ASSERT_NO_FATAL_FAILURES(
+      GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &allocated_slices));
+  EXPECT_GE(allocated_slices, base_slices + 10);
+
+  disk_format_t actual_format = detect_disk_format(partition_fd.get());
+  ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
+}
 
 }  // namespace
