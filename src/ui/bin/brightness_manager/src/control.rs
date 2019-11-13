@@ -111,8 +111,7 @@ impl Control {
         }
 
         // TODO(b/138455663): remove this when the driver changes.
-        let adjusted_value =
-            convert_to_scaled_value_based_on_max_brightness(value, self.max_brightness);
+        let adjusted_value = self.convert_to_scaled_value_based_on_max_brightness(value);
         let nits = num_traits::clamp(adjusted_value, 0, self.max_brightness as u16);
         let backlight_clone = self.backlight.clone();
         self.set_brightness_abort_handle = Some(set_brightness(nits, backlight_clone, false).await);
@@ -134,8 +133,20 @@ impl Control {
                 fx_log_err!("Failed to get brightness: {}", e);
                 self.max_brightness
             });
-            convert_from_scaled_value_based_on_max_brightness(brightness, self.max_brightness)
+            self.convert_from_scaled_value_based_on_max_brightness(brightness)
         }
+    }
+
+    /// Converts from our FIDL's 0.0-1.0 value to backlight's 0-max_brightness value
+    fn convert_to_scaled_value_based_on_max_brightness(&self, value: f32) -> u16 {
+        let value = num_traits::clamp(value, 0.0, 1.0);
+        (value * self.max_brightness as f32) as u16
+    }
+
+    /// Converts from backlight's 0-max_brightness value to our FIDL's 0.0-1.0 value
+    fn convert_from_scaled_value_based_on_max_brightness(&self, value: f64) -> f64 {
+        let value = num_traits::clamp(value, 0.0, self.max_brightness);
+        value / self.max_brightness
     }
 }
 
@@ -151,24 +162,7 @@ impl ControlTrait for Control {
     }
 }
 
-// TODO(kpt) Move all the folllowing functions into Control. This is delayed so that in the CL
-// for the creation of this code the reviewer can see more easily that the code is unchanged
-// after the extraction from main.rs.
-
-/// Converts from our FIDL's 0.0-1.0 value to backlight's 0-max_brightness value
-fn convert_to_scaled_value_based_on_max_brightness(value: f32, max_brightness: f64) -> u16 {
-    let value = num_traits::clamp(value, 0.0, 1.0);
-    (value * max_brightness as f32) as u16
-}
-
-/// Converts from backlight's 0-max_brightness value to our FIDL's 0.0-1.0 value
-fn convert_from_scaled_value_based_on_max_brightness(value: f64, max_brightness: f64) -> f64 {
-    let value = num_traits::clamp(value, 0.0, max_brightness);
-    value / max_brightness
-}
-
 // TODO(kpt) Move this and other functions into Control so that they can share the struct
-
 /// Runs the main auto-brightness code.
 /// This task monitors its running boolean and terminates if it goes false.
 fn start_auto_brightness_task(
@@ -380,6 +374,19 @@ mod tests {
         (v * 10.0).round() / 10.0
     }
 
+    fn generate_control_struct() -> Control {
+        let (sensor, _backlight) = set_mocks(400, 253.0);
+        let set_brightness_abort_handle = None::<AbortHandle>;
+        let (auto_brightness_abort_handle, _abort_registration) = AbortHandle::new_pair();
+        Control {
+            sensor,
+            backlight: _backlight,
+            set_brightness_abort_handle,
+            auto_brightness_on: true,
+            auto_brightness_abort_handle,
+            max_brightness: 250.0,
+        }
+    }
     #[test]
     fn test_brightness_curve() {
         assert_eq!(1, brightness_curve_lux_to_nits(0, 250.0));
@@ -442,19 +449,21 @@ mod tests {
 
     #[test]
     fn test_to_old_backlight_value() {
-        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(0.0, 250.0));
-        assert_eq!(125, convert_to_scaled_value_based_on_max_brightness(0.5, 250.0));
-        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(1.0, 250.0));
+        let control = generate_control_struct();
+        assert_eq!(0, control.convert_to_scaled_value_based_on_max_brightness(0.0));
+        assert_eq!(125, control.convert_to_scaled_value_based_on_max_brightness(0.5));
+        assert_eq!(250, control.convert_to_scaled_value_based_on_max_brightness(1.0));
         // Out of bounds
-        assert_eq!(0, convert_to_scaled_value_based_on_max_brightness(-0.5, 250.0));
-        assert_eq!(250, convert_to_scaled_value_based_on_max_brightness(2.0, 250.0));
+        assert_eq!(0, control.convert_to_scaled_value_based_on_max_brightness(-0.5));
+        assert_eq!(250, control.convert_to_scaled_value_based_on_max_brightness(2.0));
     }
 
     #[test]
     fn test_from_old_backlight_value() {
-        assert_eq!(0.0, approx(convert_from_scaled_value_based_on_max_brightness(0.0, 250.0)));
-        assert_eq!(0.5, approx(convert_from_scaled_value_based_on_max_brightness(125.0, 250.0)));
-        assert_eq!(1.0, approx(convert_from_scaled_value_based_on_max_brightness(250.0, 250.0)));
+        let control = generate_control_struct();
+        assert_eq!(0.0, approx(control.convert_from_scaled_value_based_on_max_brightness(0.0)));
+        assert_eq!(0.5, approx(control.convert_from_scaled_value_based_on_max_brightness(125.0)));
+        assert_eq!(1.0, approx(control.convert_from_scaled_value_based_on_max_brightness(250.0)));
     }
 
     #[fasync::run_singlethreaded(test)]
