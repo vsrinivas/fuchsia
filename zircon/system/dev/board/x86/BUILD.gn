@@ -51,7 +51,7 @@ zx_driver("platform-bus-x86") {
     "acpi-dev/dev-battery.cc",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
-    "acpi-dev/dev-ec.c",
+    "acpi-dev/dev-ec.cc",
     "acpi-dev/dev-lid.cc",
     "acpi-dev/dev-lid.h",
     "acpi-dev/dev-pwrbtn.cc",

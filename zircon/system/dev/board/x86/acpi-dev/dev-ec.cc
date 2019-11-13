@@ -154,7 +154,7 @@ static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* event) {
 
 static ACPI_STATUS ec_space_setup_handler(ACPI_HANDLE Region, UINT32 Function, void* HandlerContext,
                                           void** ReturnContext) {
-  acpi_ec_device_t* dev = HandlerContext;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(HandlerContext);
   *ReturnContext = dev;
 
   if (Function == ACPI_REGION_ACTIVATE) {
@@ -171,7 +171,7 @@ static ACPI_STATUS ec_space_setup_handler(ACPI_HANDLE Region, UINT32 Function, v
 static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRESS Address,
                                             UINT32 BitWidth, UINT64* Value, void* HandlerContext,
                                             void* RegionContext) {
-  acpi_ec_device_t* dev = HandlerContext;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(HandlerContext);
 
   if (BitWidth != 8 && BitWidth != 16 && BitWidth != 32 && BitWidth != 64) {
     return AE_BAD_PARAMETER;
@@ -195,7 +195,8 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
   uint8_t* value_bytes = (uint8_t*)Value;
   if (Function == ACPI_WRITE) {
     for (size_t i = 0; i < bytes; ++i) {
-      zx_status_t zx_status = execute_write_op(dev, Address + i, value_bytes[i]);
+      zx_status_t zx_status =
+          execute_write_op(dev, static_cast<uint8_t>(Address + i), value_bytes[i]);
       if (zx_status != ZX_OK) {
         status = AE_ERROR;
         goto finish;
@@ -204,7 +205,8 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
   } else {
     *Value = 0;
     for (size_t i = 0; i < bytes; ++i) {
-      zx_status_t zx_status = execute_read_op(dev, Address + i, value_bytes + i);
+      zx_status_t zx_status =
+          execute_read_op(dev, static_cast<uint8_t>(Address + i), value_bytes + i);
       if (zx_status != ZX_OK) {
         status = AE_ERROR;
         goto finish;
@@ -238,7 +240,7 @@ static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev) {
 }
 
 static int acpi_ec_thread(void* arg) {
-  acpi_ec_device_t* dev = arg;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(arg);
   UINT32 global_lock;
 
   while (1) {
@@ -293,7 +295,7 @@ exiting_without_lock:
 }
 
 static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, void* ctx) {
-  acpi_ec_device_t* dev = ctx;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
   zx_object_signal(dev->interrupt_event, 0, IRQ_RECEIVED);
   return ACPI_REENABLE_GPE;
 }
@@ -318,10 +320,10 @@ static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE ec_handle, ACPI_HANDLE* gpe_block
    * evaluates to either an integer specifying bit in the GPEx_STS blocks
    * to use, or a package specifying which GPE block and which bit inside
    * that block to use. */
-  ACPI_OBJECT* gpe_obj = buffer.Pointer;
+  ACPI_OBJECT* gpe_obj = static_cast<ACPI_OBJECT*>(buffer.Pointer);
   if (gpe_obj->Type == ACPI_TYPE_INTEGER) {
     *gpe_block = NULL;
-    *gpe = gpe_obj->Integer.Value;
+    *gpe = static_cast<uint32_t>(gpe_obj->Integer.Value);
   } else if (gpe_obj->Type == ACPI_TYPE_PACKAGE) {
     if (gpe_obj->Package.Count != 2) {
       goto bailout;
@@ -335,7 +337,7 @@ static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE ec_handle, ACPI_HANDLE* gpe_block
       goto bailout;
     }
     *gpe_block = block_obj->Reference.Handle;
-    *gpe = gpe_num_obj->Integer.Value;
+    *gpe = static_cast<uint32_t>(gpe_num_obj->Integer.Value);
   } else {
     goto bailout;
   }
@@ -355,7 +357,7 @@ struct ec_ports_callback_ctx {
 };
 
 static ACPI_STATUS get_ec_ports_callback(ACPI_RESOURCE* Resource, void* Context) {
-  struct ec_ports_callback_ctx* ctx = Context;
+  struct ec_ports_callback_ctx* ctx = static_cast<ec_ports_callback_ctx*>(Context);
 
   if (Resource->Type == ACPI_RESOURCE_TYPE_END_TAG) {
     return AE_OK;
@@ -403,7 +405,7 @@ static ACPI_STATUS get_ec_ports(ACPI_HANDLE ec_handle, uint16_t* data_port, uint
 }
 
 static void acpi_ec_release(void* ctx) {
-  acpi_ec_device_t* dev = ctx;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
 
   if (dev->ec_space_setup) {
     AcpiRemoveAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC, ec_space_request_handler);
@@ -429,7 +431,7 @@ static void acpi_ec_release(void* ctx) {
 }
 
 static zx_status_t acpi_ec_suspend(void* ctx, uint32_t flags) {
-  acpi_ec_device_t* dev = ctx;
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
 
   if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -450,16 +452,18 @@ static zx_status_t acpi_ec_suspend(void* ctx, uint32_t flags) {
   return ZX_OK;
 }
 
-static zx_protocol_device_t acpi_ec_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = acpi_ec_release,
-    .suspend = acpi_ec_suspend,
-};
+static zx_protocol_device_t acpi_ec_device_proto = [] {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.release = acpi_ec_release;
+  ops.suspend = acpi_ec_suspend;
+  return ops;
+}();
 
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   xprintf("acpi-ec: init\n");
 
-  acpi_ec_device_t* dev = calloc(1, sizeof(acpi_ec_device_t));
+  acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(calloc(1, sizeof(acpi_ec_device_t)));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -471,6 +475,8 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     acpi_ec_release(dev);
     return err;
   }
+
+  int ret;
 
   ACPI_STATUS status = get_ec_gpe_info(acpi_handle, &dev->gpe_block, &dev->gpe);
   if (status != AE_OK) {
@@ -501,7 +507,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
   /* TODO(teisenbe): This thread should ideally be at a high priority, since
      it takes the ACPI global lock which is shared with SMM. */
-  int ret = thrd_create_with_name(&dev->evt_thread, acpi_ec_thread, dev, "acpi-ec-evt");
+  ret = thrd_create_with_name(&dev->evt_thread, acpi_ec_thread, dev, "acpi-ec-evt");
   if (ret != thrd_success) {
     xprintf("acpi-ec: Failed to create thread\n");
     acpi_ec_release(dev);
@@ -518,15 +524,16 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   }
   dev->ec_space_setup = true;
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "acpi-ec",
-      .ctx = dev,
-      .ops = &acpi_ec_device_proto,
-      .proto_id = ZX_PROTOCOL_MISC,
-  };
+  {
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "acpi-ec";
+    args.ctx = dev;
+    args.ops = &acpi_ec_device_proto;
+    args.proto_id = ZX_PROTOCOL_MISC;
 
-  status = device_add(parent, &args, &dev->zxdev);
+    status = device_add(parent, &args, &dev->zxdev);
+  }
   if (status != ZX_OK) {
     xprintf("acpi-ec: could not add device! err=%d\n", status);
     acpi_ec_release(dev);
