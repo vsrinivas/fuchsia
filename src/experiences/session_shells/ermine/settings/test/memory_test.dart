@@ -53,7 +53,7 @@ void main() {
 int get gB => pow(1024, 3);
 
 mem.Stats _buildStats(double used) {
-  // ignore: missing_required_param
+  // ignore: missing_required_param, missing_required_param_with_details
   return mem.Stats(
     totalBytes: 1 * gB,
     freeBytes: (used * gB).toInt(),
