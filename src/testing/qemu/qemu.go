@@ -161,14 +161,8 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 	return X64, fmt.Errorf("unknown target CPU: %s", name)
 }
 
-// Create creates an instance of QEMU with the given parameters.
-func (d *Distribution) Create(params Params) *Instance {
-	path := d.systemPath(params.Arch)
-	args := []string{}
-	if params.ZBI == "" {
-		panic("ZBI must be specified")
-	}
-	args = append(args, "-kernel", d.kernelPath(params.Arch), "-initrd", params.ZBI)
+func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []string {
+	args = append(args, "-kernel", d.kernelPath(params.Arch))
 	args = append(args, "-m", "2048", "-nographic", "-smp", "4,threads=2",
 		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
 		"-cpu", "Haswell,+smap,-check,-fsgsbase")
@@ -177,15 +171,150 @@ func (d *Distribution) Create(params Params) *Instance {
 	} else {
 		args = append(args, "-net", "none")
 	}
+	return args
+}
+
+func getCommonKernelCmdline(params Params) string {
 	cmdline := "kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true"
 	if params.AppendCmdline != "" {
 		cmdline += " "
 		cmdline += params.AppendCmdline
 	}
-	args = append(args, "-append", cmdline)
+	return cmdline
+}
+
+// Create creates an instance of QEMU with the given parameters.
+func (d *Distribution) Create(params Params) *Instance {
+	path := d.systemPath(params.Arch)
+	args := []string{}
+	if params.ZBI == "" {
+		panic("ZBI must be specified")
+	}
+	args = append(args, "-initrd", params.ZBI)
+	args = d.appendCommonQemuArgs(params, args)
+	args = append(args, "-append", getCommonKernelCmdline(params))
 	return &Instance{
 		cmd: exec.Command(path, args...),
 	}
+}
+
+// Creates and runs an instance of QEMU that runs a single command and results
+// the log that results from doing so.
+// and `minfs` to be included in the BUILD.gn file (see disable_syscall_test's
+// BUILD file.)
+func (d *Distribution) RunNonInteractive(
+	toRun string,
+	hostPathMinfsBinary string,
+	hostPathZbiBinary string,
+	params Params) (string, error) {
+	// This mode is non-interactive and is intended specifically to test the case
+	// where the serial port has been disabled. The following modifications are
+	// made to the QEMU invocation compared with Create()/Start():
+	// - amalgamate the given ZBI into a larger one that includes an additional
+	//   entry of a script which includes commands to run.
+	// - that script mounts a disk created on the host in /tmp, and runs the
+	//   given command with output redirected to a file also on the /tmp disk
+	// - the script triggers shutdown of the machine
+	// - after qemu shutdown, the log file is extracted and returned.
+	//
+	// In order to achive this, here we need to create the host minfs
+	// filesystem, write the commands to run, build the augmented .zbi to
+	// be used to boot. We then use Start() and wait for shutdown.
+	// Finally, extract and return the log from the minfs disk.
+
+	// Make the temp files we need.
+	tmpFsFile, err := ioutil.TempFile(os.TempDir(), "*.fs")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpFsFile.Name())
+
+	tmpRuncmds, err := ioutil.TempFile(os.TempDir(), "runcmds_*")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpRuncmds.Name())
+
+	tmpZbi, err := ioutil.TempFile(os.TempDir(), "*.zbi")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpZbi.Name())
+
+	tmpLog, err := ioutil.TempFile(os.TempDir(), "log.*.txt")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpLog.Name())
+
+	// Write runcmds that mounts the results disk, runs the requested command, and
+	// shuts down.
+	tmpRuncmds.WriteString(`mkdir /tmp/testdata-fs
+waitfor class=block topo=/dev/sys/pci/00:06.0/virtio-block/block timeout=60000
+mount /dev/sys/pci/00:06.0/virtio-block/block /tmp/testdata-fs
+`)
+	tmpRuncmds.WriteString(toRun + " >/tmp/testdata-fs/log.txt\n")
+	tmpRuncmds.WriteString(`umount /tmp/testdata-fs
+dm poweroff
+`)
+
+	// Make a minfs filesystem to mount in the target.
+	cmd := exec.Command(hostPathMinfsBinary, tmpFsFile.Name()+"@100M", "mkfs")
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	// Create the new initrd that references the runcmds file.
+	cmd = exec.Command(
+		hostPathZbiBinary, "-o", tmpZbi.Name(),
+		params.ZBI,
+		"-e", "runcmds="+tmpRuncmds.Name())
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	// Build up the qemu command line from common arguments and the extra goop to
+	// add the temporary disk at 00:06.0. This follows how infra runs qemu with an
+	// extra disk via botanist.
+	path := d.systemPath(params.Arch)
+	args := []string{}
+	args = append(args, "-initrd", tmpZbi.Name())
+	args = d.appendCommonQemuArgs(params, args)
+	args = append(args, "-object", "iothread,id=resultiothread")
+	args = append(args, "-drive",
+		"id=resultdisk,file="+tmpFsFile.Name()+",format=raw,if=none,cache=unsafe,aio=threads")
+	args = append(args, "-device", "virtio-blk-pci,drive=resultdisk,iothread=resultiothread,addr=6.0")
+
+	cmdline := getCommonKernelCmdline(params)
+	cmdline += " zircon.autorun.boot=/boot/bin/sh+/boot/runcmds"
+	args = append(args, "-append", cmdline)
+
+	i := &Instance{cmd: exec.Command(path, args...)}
+	err = i.Start()
+	if err != nil {
+		return "", err
+	}
+	defer i.Kill()
+
+	err = i.cmd.Wait()
+	if err != nil {
+		return "", err
+	}
+
+	os.Remove(tmpLog.Name()) // `minfs` will refuse to overwrite a local file, so delete first.
+	cmd = exec.Command(hostPathMinfsBinary, tmpFsFile.Name(), "cp", "::/log.txt", tmpLog.Name())
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	ret, err := ioutil.ReadFile(tmpLog.Name())
+	if err != nil {
+		return "", err
+	}
+	return string(ret), nil
 }
 
 // Start the QEMU instance.

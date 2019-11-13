@@ -32,11 +32,38 @@ if (is_linux) {
     }
   }
 
+  copy("copy_misc_tools") {
+    visibility = [ ":*" ]
+
+    sources = [
+      "$zircon_root_build_dir/tools/minfs",
+      "$zircon_root_build_dir/tools/zbi",
+    ]
+    outputs = [
+      "$root_out_dir/test_data/tools/{{source_file_part}}",
+    ]
+  }
+
+  group("misc_tools") {
+    deps = [
+      ":copy_misc_tools",
+    ]
+
+    metadata = {
+      test_runtime_deps = [
+        "$root_out_dir/test_data/tools/zbi",
+        "$root_out_dir/test_data/tools/minfs",
+      ]
+    }
+  }
   go_test("disable_syscalls_tests") {
     gopackages = [ "fuchsia.googlesource.com/tests/disable_syscalls" ]
     deps = [
       ":lib",
     ]
-    non_go_deps = [ ":syscall_zbi" ]
+    non_go_deps = [
+      ":syscall_zbi",
+      ":misc_tools",
+    ]
   }
 }

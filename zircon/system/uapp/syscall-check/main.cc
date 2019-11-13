@@ -19,7 +19,9 @@ int main(int argc, char** argv) {
   // TODO(scottmg): Add an output backend to kazoo to emit a full list of stub
   // calls to include here.
   size_t actual;
+  SYSCALL_STATUS(zx_debug_read, (ZX_HANDLE_INVALID, nullptr, 0, &actual));
   SYSCALL_STATUS(zx_debug_send_command, (ZX_HANDLE_INVALID, nullptr, 0));
+  SYSCALL_STATUS(zx_debug_write, (nullptr, 0));
   SYSCALL_STATUS(zx_ktrace_control, (ZX_HANDLE_INVALID, 0, 0, nullptr));
   SYSCALL_STATUS(zx_ktrace_read, (ZX_HANDLE_INVALID, nullptr, 0, 0, &actual));
   SYSCALL_STATUS(zx_ktrace_write, (ZX_HANDLE_INVALID, 0, 0, 0));

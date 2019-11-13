@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"fuchsia.googlesource.com/testing/qemu"
@@ -19,6 +20,22 @@ func zbiPath(t *testing.T) string {
 	return filepath.Join(exPath, "../zedboot.zbi")
 }
 
+func toolPath(t *testing.T, name string) string {
+	ex, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+		return ""
+	}
+	exPath := filepath.Dir(ex)
+	return filepath.Join(exPath, "test_data", "tools", name)
+}
+
+func ensureContains(t *testing.T, output string, lookFor string) {
+	if !strings.Contains(output, lookFor) {
+		t.Fatalf("output did not contain '%s'", lookFor)
+	}
+}
+
 func TestDisableDebuggingSyscalls(t *testing.T) {
 	distro, err := qemu.Unpack()
 	if err != nil {
@@ -30,31 +47,29 @@ func TestDisableDebuggingSyscalls(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: "kernel.enable-debugging-syscalls=false",
-	})
-
-	i.Start()
+	output, err := distro.RunNonInteractive(
+		"/boot/bin/syscall-check",
+		toolPath(t, "minfs"),
+		toolPath(t, "zbi"),
+		qemu.Params{
+			Arch:          arch,
+			ZBI:           zbiPath(t),
+			AppendCmdline: "kernel.enable-debugging-syscalls=false",
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
 
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
-
-	// Check status of syscalls by doing a test call, and ensure disabled.
-	i.RunCommand("/boot/bin/syscall-check")
-	i.WaitForLogMessage("zx_debug_send_command: disabled")
-	i.WaitForLogMessage("zx_ktrace_control: disabled")
-	i.WaitForLogMessage("zx_ktrace_read: disabled")
-	i.WaitForLogMessage("zx_ktrace_write: disabled")
-	i.WaitForLogMessage("zx_mtrace_control: disabled")
-	i.WaitForLogMessage("zx_process_write_memory: disabled")
-	i.WaitForLogMessage("zx_system_mexec: disabled")
-	i.WaitForLogMessage("zx_system_mexec_payload_get: disabled")
+	ensureContains(t, output, "zx_debug_read: disabled")
+	ensureContains(t, output, "zx_debug_send_command: disabled")
+	ensureContains(t, output, "zx_debug_write: disabled")
+	ensureContains(t, output, "zx_ktrace_control: disabled")
+	ensureContains(t, output, "zx_ktrace_read: disabled")
+	ensureContains(t, output, "zx_ktrace_write: disabled")
+	ensureContains(t, output, "zx_mtrace_control: disabled")
+	ensureContains(t, output, "zx_process_write_memory: disabled")
+	ensureContains(t, output, "zx_system_mexec: disabled")
+	ensureContains(t, output, "zx_system_mexec_payload_get: disabled")
 }
 
 func TestEnableDebuggingSyscalls(t *testing.T) {
@@ -68,29 +83,27 @@ func TestEnableDebuggingSyscalls(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
-		Arch:          arch,
-		ZBI:           zbiPath(t),
-		AppendCmdline: "kernel.enable-debugging-syscalls=true",
-	})
-
-	i.Start()
+	output, err := distro.RunNonInteractive(
+		"/boot/bin/syscall-check",
+		toolPath(t, "minfs"),
+		toolPath(t, "zbi"),
+		qemu.Params{
+			Arch:          arch,
+			ZBI:           zbiPath(t),
+			AppendCmdline: "kernel.enable-debugging-syscalls=true",
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
 
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("vc: Successfully attached")
-
-	// Check status of syscalls by doing a test call, and ensure enabled.
-	i.RunCommand("/boot/bin/syscall-check")
-	i.WaitForLogMessage("zx_debug_send_command: enabled")
-	i.WaitForLogMessage("zx_ktrace_control: enabled")
-	i.WaitForLogMessage("zx_ktrace_read: enabled")
-	i.WaitForLogMessage("zx_ktrace_write: enabled")
-	i.WaitForLogMessage("zx_mtrace_control: enabled")
-	i.WaitForLogMessage("zx_process_write_memory: enabled")
-	i.WaitForLogMessage("zx_system_mexec: enabled")
-	i.WaitForLogMessage("zx_system_mexec_payload_get: enabled")
+	ensureContains(t, output, "zx_debug_read: enabled")
+	ensureContains(t, output, "zx_debug_send_command: enabled")
+	ensureContains(t, output, "zx_debug_write: enabled")
+	ensureContains(t, output, "zx_ktrace_control: enabled")
+	ensureContains(t, output, "zx_ktrace_read: enabled")
+	ensureContains(t, output, "zx_ktrace_write: enabled")
+	ensureContains(t, output, "zx_mtrace_control: enabled")
+	ensureContains(t, output, "zx_process_write_memory: enabled")
+	ensureContains(t, output, "zx_system_mexec: enabled")
+	ensureContains(t, output, "zx_system_mexec_payload_get: enabled")
 }

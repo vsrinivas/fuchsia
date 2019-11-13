@@ -35,6 +35,10 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
                            user_out_ptr<size_t> len) {
   LTRACEF("ptr %p\n", ptr.get());
 
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
   if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
@@ -65,6 +69,10 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
 // zx_status_t zx_debug_write
 zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
+
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   if (len > kMaxDebugWriteSize)
     len = kMaxDebugWriteSize;
