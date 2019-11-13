@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/runtime_flag.h>
 
 #include <iostream>
 #include <sstream>
@@ -263,6 +264,10 @@ TEST_F(WireParserTest, ParseSingleString) {
 // Scalar Tests
 
 namespace {
+
+std::string Version() {
+  return fidl_global_get_should_write_union_as_xunion() ? "v1" : "v0";
+}
 
 template <class T>
 std::string ValueToJson(const std::string& key, T value) {
@@ -826,7 +831,7 @@ u8u16struct GetU8U16UnionStruct(int8_t i) {
 
 std::string IntUnionIntPretty(const std::string& name, int u, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = " + Version() + "!{ " +
             ValueToPretty("variant_i", "int32", u) + " }\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -835,7 +840,7 @@ std::string IntUnionIntPretty(const std::string& name, int u, int v) {
 
 std::string StructUnionIntPretty(const std::string& name, const char* u1, const char* u2, int v) {
   std::string result = "{\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = " + Version() + "!{\n";
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
@@ -851,7 +856,7 @@ std::string StructUnionIntPretty(const std::string& name, const char* u1, const 
 std::string IntIntUnionPretty(const std::string& name, int v, int u) {
   std::string result = "{\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = " + Version() + "!{ " +
             ValueToPretty("variant_i", "int32", u) + " }\n";
   result += "}";
   return result;
@@ -860,7 +865,7 @@ std::string IntIntUnionPretty(const std::string& name, int v, int u) {
 std::string IntStructUnionPretty(const std::string& name, int v, const char* u1, const char* u2) {
   std::string result = "{\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
-  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{\n";
+  result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = " + Version() + "!{\n";
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
@@ -944,9 +949,9 @@ TEST_DECODE_WIRE(
     R"({"a":[{"variant_i":"1234"},null,{"variant_tss":{"value1":"harpo","value2":"chico"}}]})",
     "{\n"
     "  a: #gre#array<test.fidlcodec.examples/IntStructUnion>#rst# = [\n"
-    "    v0!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }\n"
-    "    v0!#blu#null#rst#\n"
-    "    v0!{\n"
+    "    " + Version() + "!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }\n"
+    "    " + Version() + "!#blu#null#rst#\n"
+    "    " + Version() + "!{\n"
     "      variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n"
     "        value1: #gre#string#rst# = #red#\"harpo\"#rst#\n"
     "        value2: #gre#string#rst# = #red#\"chico\"#rst#\n"
@@ -961,7 +966,7 @@ TEST_F(WireParserTest, BadU8U16UnionStruct) {
                             "{\n"
                             "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
                             "    u: #gre#test.fidlcodec.examples/U8U16Union#rst# = "
-                            "v0!{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
+                            "" + Version() + "!{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
                             "  }\n"
                             "}",
                             16, GetU8U16UnionStruct(12));
@@ -989,7 +994,7 @@ T GetUInt16Union(uint16_t i) {
 std::string ShortUnionPretty(const std::string& name, const char* field, const char* type, int u,
                              int v) {
   std::string result = "{\n";
-  result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = v0!{ " +
+  result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = " + Version() + "!{ " +
             ValueToPretty(field, type, u) + " }\n";
   result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
@@ -1111,7 +1116,8 @@ std::string TablePretty(std::optional<int16_t> first_int16, std::optional<std::s
       result += "    }\n";
     }
     if (third_union_val.has_value()) {
-      result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = v0!{\n";
+      result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = " + Version()
+                + "!{\n";
       result += "      " + ValueToPretty("variant_i", "int32", *third_union_val) + "\n";
       result += "    }\n";
     }
