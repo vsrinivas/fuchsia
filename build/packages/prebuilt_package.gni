@@ -1,6 +1,15 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/compiled_action.gni")
+
+declare_args() {
+  # To ensure that everything can be built without debug symbols present we
+  # gate weather or not these are consumed on a build argument. When set,
+  # unpack_debug_archives creates an additional build step that unpacks
+  # debug archives in tar.bzip2 format into the .build-id directory
+  unpack_debug_archives = false
+}
 
 # Generate a signed, sealed package file from a prebuilt archive.
 #
@@ -8,6 +17,9 @@
 #
 #   archive (required)
 #     Path to archive containing a package.
+#
+#   debug_archive (optional)
+#     Path to archive containing a .build-id directory for the package.
 #
 #   package_name (optional)
 #     Name of the package.
@@ -32,6 +44,57 @@ template("prebuilt_package") {
   pkg = {
     package_name = pkg_name
     package_version = 0
+  }
+
+  unpack_action_name = target_name + ".debug-archive"
+  if (defined(invoker.debug_archive) && unpack_debug_archives) {
+    compiled_action(unpack_action_name) {
+      tool = "//tools/debug/unpack_debug_symbols"
+      manifest = "$target_gen_dir/${target_name}_binaries.json"
+      outputs = [
+        manifest,
+      ]
+      inputs = [
+        invoker.debug_archive,
+      ]
+      args = [
+        "-build-id-dir",
+        ".build-id",
+        "-cpu",
+        target_cpu,
+        "-os",
+        target_os,
+        "-debug-archive",
+        rebase_path(invoker.debug_archive, root_build_dir),
+        "-output-manifest",
+        rebase_path(manifest, root_build_dir),
+      ]
+      metadata = {
+        prebuilt_packages = [
+          {
+            archive = invoker.archive
+            debug_archive = invoker.debug_archive
+            if (defined(invoker.package_name)) {
+              package_name = invoker.package_name
+            }
+            binaries = rebase_path(manifest, root_build_dir)
+          },
+        ]
+      }
+    }
+  } else {
+    group(unpack_action_name) {
+      metadata = {
+        prebuilt_packages = [
+          {
+            archive = invoker.archive
+            if (defined(invoker.package_name)) {
+              package_name = invoker.package_name
+            }
+          },
+        ]
+      }
+    }
   }
 
   action(target_name) {
@@ -73,6 +136,7 @@ template("prebuilt_package") {
     ]
 
     deps = [
+      ":$unpack_action_name($default_toolchain)",
       "//garnet/go/src/pm:pm_bin($host_toolchain)",
     ]
     if (defined(invoker.deps)) {

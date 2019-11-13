@@ -175,9 +175,44 @@ build_api_module("api") {
     ":fuzzers",
     ":images",
     ":platforms",
+    ":prebuilt_packages",
     ":tests",
     ":tool_paths",
     ":zircon",
+  ]
+}
+
+# This describes where to find all prebuilt packages and optionally where to
+# find the debug information for those packages.
+#
+# If debug information is present then `binaries` will point to another json
+# file which is almost a subset of the format seen at //zircon:binaries except
+# that `elf_build_id` is not a file pointer but instead the actual build ID.
+# This binary only has the `cpu`, `debug`, `os` and modified `elf_build_id`
+# fields. All fields but `elf_build_id` have the same meaning as in
+# //zircon:binaries except for `elf_build_id` which has the discussed meaning.
+#
+# The actual prebuilt_packages api module has the following schema:
+#
+# Type: list(scope)
+#
+#   archive
+#     Required: The path to the prebuilt fuchsia package. This is always a
+#     far file.
+#
+#   binaries
+#     Optional: The path to the json file which has the format described
+#     above.
+#
+#   debug_archive
+#     Optional: The path the the archive of debug binaries from which
+#     `binaries` was generated.
+build_api_module("prebuilt_packages") {
+  testonly = true
+  data_keys = [ "prebuilt_packages" ]
+  deps = [
+    "//build/images:packages",
+    "//sdk",
   ]
 }
 
@@ -393,6 +428,7 @@ group("default") {
     ":build_time_checks",
     "//build:tests",
     "//build/images:packages",
+
     # TODO(pylaligand): remove this when the images are used by system assembly.
     "//build/unification/images",
     "//sdk",

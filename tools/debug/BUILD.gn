@@ -11,6 +11,7 @@ group("tools") {
     "//tools/debug/covargs",
     "//tools/debug/dump_breakpad_symbols",
     "//tools/debug/symbolize",
+    "//tools/debug/unpack_debug_symbols",
     "//tools/debug/upload_debug_symbols",
   ]
 }
