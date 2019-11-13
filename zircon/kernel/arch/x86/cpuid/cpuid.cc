@@ -84,7 +84,7 @@ ManufacturerInfo CpuId::ReadManufacturerInfo() const {
 ProcessorId CpuId::ReadProcessorId() const { return ProcessorId(CallCpuId(1)); }
 
 Features CpuId::ReadFeatures() const {
-  return Features(CallCpuId(1), CallCpuId(7), CallCpuId(ExtendedLeaf<1>()),
+  return Features(CallCpuId(1), CallCpuId(6), CallCpuId(7), CallCpuId(ExtendedLeaf<1>()),
                   CallCpuId(ExtendedLeaf<8>()));
 }
 
@@ -156,8 +156,9 @@ uint8_t ProcessorId::local_apic_id() const {
   return ExtractBits<31, 24, uint8_t>(registers_.ebx());
 }
 
-Features::Features(Registers leaf1, Registers leaf7, Registers leaf8_01, Registers leaf8_08)
-    : leaves_{leaf1, leaf7, leaf8_01, leaf8_08} {}
+Features::Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers leaf8_01,
+                   Registers leaf8_08)
+    : leaves_{leaf1, leaf6, leaf7, leaf8_01, leaf8_08} {}
 
 uint8_t Features::max_logical_processors_in_package() const {
   return ExtractBits<23, 16, uint8_t>(leaves_[LEAF1].ebx());

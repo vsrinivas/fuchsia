@@ -145,6 +145,7 @@ bool test_cpus_fallback() {
     .leaf0 = {},
     .leaf1 = {},
     .leaf4 = {},
+    .leaf6 = {},
     .leaf7 = {},
     .leafB = {},
     .leaf8_0 = {.reg = {0x80000008, 0x0, 0x0}},

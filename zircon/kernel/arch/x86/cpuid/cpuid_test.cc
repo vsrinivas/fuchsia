@@ -212,7 +212,8 @@ bool test_intel_topology_leaf4() {
   auto manufacturer = ManufacturerInfo(modifiedLeaf0, data.leaf8_0);
   EXPECT_EQ(4u, manufacturer.highest_cpuid_leaf());
 
-  Topology topology(manufacturer, Features(data.leaf1, data.leaf7, data.leaf8_1, data.leaf8_8),
+  Topology topology(manufacturer,
+                    Features(data.leaf1, data.leaf6, data.leaf7, data.leaf8_1, data.leaf8_8),
                     data.leaf4, data.leafB, data.leaf8_8, data.leaf8_1D, data.leaf8_1E);
 
   const auto levels_opt = topology.levels();

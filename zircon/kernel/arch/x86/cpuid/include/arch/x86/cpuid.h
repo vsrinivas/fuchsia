@@ -93,10 +93,15 @@ class ProcessorId {
 // Extracts feature flags from EAX=1 call and extended feature flags calls.
 // See docs for full listing of possible features, this class is not
 // comprehensive, things are added as they are required.
+//
+// The most recent Intel CPUID bit assignments are in the
+// "Intel® Architecture Instruction Set Extensions and Future Features Programming Reference",
+// https://software.intel.com/sites/default/files/managed/c5/15/architecture-instruction-set-extensions-programming-reference.pdf
 class Features {
  public:
   enum LeafIndex {
     LEAF1,  // Feature Information
+    LEAF6,  // Thermal and Power Management Leaf
     LEAF7,  // Structured Extended Feature Flags
     LEAF8_01,
     LEAF8_08,
@@ -171,6 +176,14 @@ class Features {
   static constexpr Feature RDRAND = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 30};
   static constexpr Feature HYPERVISOR = {.leaf = LEAF1, .reg = Registers::ECX, .bit = 31};
 
+  static constexpr Feature TURBO = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 1};
+  static constexpr Feature HWP = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 7};
+  static constexpr Feature HWP_PREF = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 10};
+  static constexpr Feature HWP_PKG = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 11};
+  static constexpr Feature HWP_REQ_FAST = {.leaf = LEAF6, .reg = Registers::EAX, .bit = 18};
+  static constexpr Feature MPERFAPERF = {.leaf = LEAF6, .reg = Registers::ECX, .bit = 0};
+  static constexpr Feature EPB = {.leaf = LEAF6, .reg = Registers::ECX, .bit = 3};
+
   static constexpr Feature FSGSBASE = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 0};
   static constexpr Feature SGX = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 2};
   static constexpr Feature BMI1 = {.leaf = LEAF7, .reg = Registers::EBX, .bit = 3};
@@ -236,7 +249,8 @@ class Features {
   static constexpr Feature AMD_VIRT_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 25};
   static constexpr Feature AMD_SSB_NO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 26};
 
-  Features(Registers leaf1, Registers leaf7, Registers leaf8_01, Registers leaf8_08);
+  Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers leaf8_01,
+           Registers leaf8_08);
 
   inline bool HasFeature(Feature feature) const {
     DEBUG_ASSERT_MSG(
@@ -250,7 +264,7 @@ class Features {
   uint8_t max_logical_processors_in_package() const;
 
  private:
-  static constexpr size_t kLeafCount = 4;
+  static constexpr size_t kLeafCount = 5;
 
   const Registers leaves_[kLeafCount];
 };
@@ -310,7 +324,7 @@ class Topology {
 
  protected:
   // Used for testing.
-  Topology() : info_({}, {}), features_({}, {}, {}, {}) {}
+  Topology() : info_({}, {}), features_({}, {}, {}, {}, {}) {}
 
  private:
   std::optional<Levels> IntelLevels() const;
