@@ -53,6 +53,8 @@ func TestDisableDebuggingSyscalls(t *testing.T) {
 	i.WaitForLogMessage("zx_ktrace_write: disabled")
 	i.WaitForLogMessage("zx_mtrace_control: disabled")
 	i.WaitForLogMessage("zx_process_write_memory: disabled")
+	i.WaitForLogMessage("zx_system_mexec: disabled")
+	i.WaitForLogMessage("zx_system_mexec_payload_get: disabled")
 }
 
 func TestEnableDebuggingSyscalls(t *testing.T) {
@@ -89,4 +91,6 @@ func TestEnableDebuggingSyscalls(t *testing.T) {
 	i.WaitForLogMessage("zx_ktrace_write: enabled")
 	i.WaitForLogMessage("zx_mtrace_control: enabled")
 	i.WaitForLogMessage("zx_process_write_memory: enabled")
+	i.WaitForLogMessage("zx_system_mexec: enabled")
+	i.WaitForLogMessage("zx_system_mexec_payload_get: enabled")
 }

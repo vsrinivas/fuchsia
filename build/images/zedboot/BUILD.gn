@@ -175,8 +175,10 @@ zbi("zbi") {
       },
     ]
   }
-  cmdline = [ "netsvc.disable=false" ] + zedboot_cmdline_args +
-            board_zedboot_cmdline_args
+  cmdline = [
+              "netsvc.disable=false",
+              "kernel.enable-debugging-syscalls=true",
+            ] + zedboot_cmdline_args + board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
   metadata = {

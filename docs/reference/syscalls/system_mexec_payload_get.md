@@ -29,6 +29,10 @@ ZBI before passing that image to [`zx_system_mexec()`].
 
 *buffer* and *buffer_size* must point to a buffer that is no longer than 16KiB.
 
+To use the `zx_system_mexec_payload_get()` function, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -38,6 +42,9 @@ ZBI before passing that image to [`zx_system_mexec()`].
 ## RETURN VALUE
 
 `zx_system_mexec_payload_get()` returns **ZX_OK** on success.
+
+**ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+on the kernel command line.
 
 ## SEE ALSO
 

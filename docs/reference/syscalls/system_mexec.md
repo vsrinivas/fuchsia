@@ -33,6 +33,10 @@ contained within *bootimage_vmo* to a location in physical memory and branch
 directly into the new kernel while providing the address of the loaded initrd
 to the new kernel.
 
+To use the `zx_system_mexec()` function, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -46,6 +50,9 @@ to the new kernel.
 ## RETURN VALUE
 
 `zx_system_mexec()` shall not return upon success.
+
+**ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+on the kernel command line.
 
 ## SEE ALSO
 

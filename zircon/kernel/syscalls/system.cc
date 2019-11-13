@@ -256,7 +256,11 @@ void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) { stashed_crashlog = ktl::m
 // zx_status_t zx_system_mexec_payload_get
 zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void> user_buffer,
                                          size_t buffer_size) {
-  // Highly privilidged, only root resource should have access.
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Highly priviliged, only root resource should have access.
   zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
   if (result != ZX_OK) {
     return result;
@@ -311,6 +315,10 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
 // zx_status_t zx_system_mexec
 zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
                              zx_handle_t bootimage_vmo) {
+  if (!DebuggingSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // TODO(ZX-971): finer grained validation
   zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
   if (result != ZX_OK)

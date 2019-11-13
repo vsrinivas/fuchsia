@@ -25,6 +25,8 @@ int main(int argc, char** argv) {
   SYSCALL_STATUS(zx_ktrace_write, (ZX_HANDLE_INVALID, 0, 0, 0));
   SYSCALL_STATUS(zx_mtrace_control, (ZX_HANDLE_INVALID, 0, 0, 0, nullptr, 0));
   SYSCALL_STATUS(zx_process_write_memory, (ZX_HANDLE_INVALID, 0, nullptr, 0, &actual));
+  SYSCALL_STATUS(zx_system_mexec, (ZX_HANDLE_INVALID, ZX_HANDLE_INVALID, ZX_HANDLE_INVALID));
+  SYSCALL_STATUS(zx_system_mexec_payload_get, (ZX_HANDLE_INVALID, nullptr, 0));
 
 #undef SYSCALL_STATUS
 

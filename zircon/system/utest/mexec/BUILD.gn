@@ -80,6 +80,7 @@ zbi_test("zbi-parent-image") {
   assert(current_cpu != "")
   args = [
     "bootsvc.next=test/core/zbi-parent-test",
+    "kernel.enable-debugging-syscalls=true",  # Enables mexec.
     "kernel.mexec-force-high-ramdisk=true",  # Force the child to put the RD in high memory
   ]
   deps = [
