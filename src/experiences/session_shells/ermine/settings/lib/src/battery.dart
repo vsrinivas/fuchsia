@@ -46,10 +46,10 @@ class Battery extends UiSpec {
   }
 
   static Spec _specForBattery(double value, bool charging) {
-    final batteryText = '${value.toStringAsFixed(0)}%';
     if (value.isNaN || value == 0) {
       return null;
     }
+    final batteryText = '${value.toStringAsFixed(0)}%';
     if (value == 100) {
       return Spec(title: _title, groups: [
         Group(title: _title, values: [
@@ -85,6 +85,7 @@ class Battery extends UiSpec {
 class BatteryModel {
   final VoidCallback onChange;
   final BatteryInfoWatcherBinding _binding;
+  final BatteryManagerProxy _monitor;
 
   double _battery;
   bool charging;
@@ -93,14 +94,15 @@ class BatteryModel {
     @required this.onChange,
     BatteryInfoWatcherBinding binding,
     BatteryManagerProxy monitor,
-  }) : _binding = binding ?? BatteryInfoWatcherBinding() {
-    monitor
+  })  : _binding = binding ?? BatteryInfoWatcherBinding(),
+        _monitor = monitor {
+    _monitor
       ..watch(_binding.wrap(_BatteryInfoWatcherImpl(this)))
-      ..getBatteryInfo().then(_updateBattery)
-      ..ctrl.close();
+      ..getBatteryInfo().then(_updateBattery);
   }
 
   void dispose() {
+    _monitor.ctrl.close();
     _binding.close();
   }
 
@@ -111,9 +113,14 @@ class BatteryModel {
   }
 
   void _updateBattery(BatteryInfo info) {
-    final chargeStatus = info.chargeStatus;
-    charging = chargeStatus == ChargeStatus.charging;
-    battery = info.levelPercent;
+    if (info.levelPercent.isNaN) {
+      _monitor.ctrl.close();
+      _binding.close();
+    } else {
+      final chargeStatus = info.chargeStatus;
+      charging = chargeStatus == ChargeStatus.charging;
+      battery = info.levelPercent;
+    }
   }
 }
 
