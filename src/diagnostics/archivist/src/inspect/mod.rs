@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 use {
     crate::collection::*,
-    crate::selector_evaluator,
-    crate::selectors,
     failure::{self, err_msg, format_err, Error},
     fidl_fuchsia_diagnostics_inspect::{
         DisplaySettings, FormatSettings, ReaderError, ReaderRequest, ReaderRequestStream,
@@ -20,6 +18,7 @@ use {
     inspect_formatter::{self, HierarchyData, HierarchyFormatter, JsonFormatter},
     io_util,
     regex::{Regex, RegexSet},
+    selectors,
     std::convert::TryFrom,
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex, RwLock},
@@ -193,7 +192,7 @@ impl InspectDataRepository {
         component_hierachy_path: PathBuf,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
-        let matched_selectors = selector_evaluator::match_component_moniker_against_selectors(
+        let matched_selectors = selectors::match_component_moniker_against_selectors(
             &absolute_moniker,
             &self.static_selectors,
         );

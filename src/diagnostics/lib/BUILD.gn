@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "inspect-fidl-load:tests",
     "inspect-formatter:tests",
+    "selectors:tests",
   ]
 }

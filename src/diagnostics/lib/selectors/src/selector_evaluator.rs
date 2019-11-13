@@ -6,7 +6,6 @@
 #![allow(unused_variables)]
 
 use {
-    crate::collection::RealmPath,
     failure::{format_err, Error},
     fidl_fuchsia_diagnostics::{PathSelectionNode, PatternMatcher},
     fidl_fuchsia_diagnostics_inspect::Selector,

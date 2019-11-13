@@ -8,7 +8,7 @@
 #![warn(missing_docs)]
 
 use {
-    archivist_lib::{archive, configs, diagnostics, inspect, logs, selectors},
+    archivist_lib::{archive, configs, diagnostics, inspect, logs},
     failure::Error,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_diagnostics_inspect::Selector,
@@ -16,7 +16,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{future, FutureExt, StreamExt},
-    io_util,
+    io_util, selectors,
     std::path::PathBuf,
     std::sync::{Arc, RwLock},
 };

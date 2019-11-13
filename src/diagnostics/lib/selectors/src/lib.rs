@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod archive;
-pub mod collection;
-pub mod configs;
-pub mod diagnostics;
-pub mod inspect;
-pub mod logs;
+mod selector_evaluator;
+mod selectors;
+
+pub use {selector_evaluator::*, selectors::*};

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/selectors_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}
