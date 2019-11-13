@@ -58,6 +58,11 @@ Gesture::Delta Gesture::UpdatePointer(PointerId pointer_id, const glm::vec2& pos
       p.relative = p.absolute - centroid_;
       p.distance = glm::length(p.relative);
 
+      // TODO(rosswang): The following has singular behavior when pointers have the same
+      // coordinates, which can in particular happen during testing. In such cases while it makes
+      // mathematical sense for rotation and scale to be NaN/infinite, perhaps we should default
+      // them to identity values.
+
       // For small displacements, this approximates radians.
       delta.rotation +=
           (old_relative.x * p.relative.y - old_relative.y * p.relative.x) / old_distance;

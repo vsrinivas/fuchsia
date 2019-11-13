@@ -8,6 +8,7 @@ group("lib") {
   public_deps = [
     "configuration",
     "gesture_manager",
+    "magnifier",
     "screen_reader",
     "semantics",
     "settings",
@@ -29,6 +30,7 @@ test_package("a11y_lib_tests") {
     "gesture_manager/arena/tests",
     "gesture_manager/recognizers/tests",
     "gesture_manager/tests",
+    "magnifier/tests",
     "screen_reader/tests",
     "semantics/tests",
     "settings/tests",
@@ -64,6 +66,30 @@ test_package("a11y_lib_tests") {
 
   tests = [
     {
+      name = "configuration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "gesture_arena_tests"
+      environments = basic_envs
+    },
+    {
+      name = "gesture_manager_tests"
+      environments = basic_envs
+    },
+    {
+      name = "gesture_recognizers_tests"
+      environments = basic_envs
+    },
+    {
+      name = "magnifier_tests"
+      environments = basic_envs
+    },
+    {
+      name = "screen_reader_tests"
+      environments = basic_envs
+    },
+    {
       name = "semantics_manager_tests"
       environments = basic_envs
     },
@@ -73,26 +99,6 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "tts_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_arena_tests"
-      environments = basic_envs
-    },
-    {
-      name = "screen_reader_tests"
-      environments = basic_envs
-    },
-    {
-      name = "gesture_recognizers_tests"
-      environments = basic_envs
-    },
-    {
-      name = "configuration_tests"
       environments = basic_envs
     },
   ]

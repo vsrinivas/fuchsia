@@ -18,6 +18,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/configuration/color_transform_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
+#include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/settings/settings_manager.h"
@@ -78,12 +79,14 @@ class App {
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
+  a11y::Magnifier magnifier_;
 
   // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
+  fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
 
   // Interface between a11y manager and Root presenter to register a
   // accessibility pointer event listener.

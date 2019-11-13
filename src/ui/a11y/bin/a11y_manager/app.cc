@@ -23,6 +23,7 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       log_engine_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       settings_manager_bindings_.GetHandler(&settings_manager_));
+  startup_context_->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
 
   // Register a11y manager as a settings provider.
   settings_manager_.RegisterSettingProvider(settings_provider_ptr_.NewRequest());
@@ -137,7 +138,9 @@ void App::OnAccessibilityPointerEventListenerEnabled(bool enabled) {
   if (enabled) {
     gesture_manager_ = std::make_unique<a11y::GestureManager>();
     pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
+    magnifier_.arena_member(gesture_manager_->arena()->Add(&magnifier_));
   } else {
+    magnifier_.arena_member(nullptr);
     gesture_manager_.reset();
   }
 }

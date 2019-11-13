@@ -41,6 +41,8 @@ class GestureManager : public fuchsia::ui::input::accessibility::PointerEventLis
   // Returns a pointer to the gesture handler, which can be used to bind actions to gestures.
   GestureHandler* gesture_handler() { return &gesture_handler_; }
 
+  GestureArena* arena() { return &arena_; }
+
  private:
   // Binding to the listener implemented by this class. This object is owned
   // here instead in an external BindingSet so that FIDL events can be called.

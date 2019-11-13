@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("magnifier") {
+  public = [
+    "magnifier.h",
+  ]
+
+  sources = [
+    "magnifier.cc",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/callback",
+    "//src/lib/ui/input:gesture",
+    "//src/ui/a11y/lib/gesture_manager/arena",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/gesture_manager:util",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fbl",
+  ]
+}

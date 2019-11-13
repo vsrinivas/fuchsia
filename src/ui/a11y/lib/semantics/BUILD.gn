@@ -15,6 +15,7 @@ source_set("semantics") {
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.math",
     "//src/ui/a11y/lib/util",
+    "//src/ui/scenic/lib/gfx",
   ]
 
   deps = [
@@ -26,6 +27,5 @@ source_set("semantics") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
-    "//src/ui/scenic/lib/gfx",
   ]
 }

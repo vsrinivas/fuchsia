@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("util") {
+  testonly = true
+
+  public_deps = [
+    ":clip_space_transform",
+    ":formatting",
+    ":input",
+  ]
+}
+
+source_set("clip_space_transform") {
+  testonly = true
+
+  public = [
+    "clip_space_transform.h",
+  ]
+
+  sources = [
+    "clip_space_transform.cc",
+  ]
+
+  public_deps = [
+    "//src/ui/lib/glm_workaround",
+  ]
+}
+
+source_set("formatting") {
+  testonly = true
+
+  public = [
+    "formatting.h",
+  ]
+
+  sources = [
+    "formatting.cc",
+  ]
+
+  public_deps = [
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("input") {
+  testonly = true
+
+  public = [
+    "input.h",
+  ]
+
+  sources = [
+    "input.cc",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//src/ui/lib/glm_workaround",
+  ]
+}

@@ -230,7 +230,7 @@ class GestureArena {
   ArenaMember* Add(GestureRecognizer* recognizer);
 
   // Returns all arena members.
-  const std::vector<std::unique_ptr<ArenaMember>>& arena_members() { return arena_members_; }
+  const std::vector<std::unique_ptr<ArenaMember>>& arena_members() const { return arena_members_; }
 
   // Dispatches a new pointer event to this arena. This event gets sent to all
   // arena members which are active at the moment.

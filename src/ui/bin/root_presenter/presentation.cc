@@ -439,6 +439,8 @@ void Presentation::SetClipSpaceTransform(float x, float y, float scale,
   clip_space_transform_ = {{x, y}, scale};
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
+  // TODO(35521): In the future, this may need to be downsampled as |Present| calls must be
+  // throttled, at which point the |SetClipSpaceTransformCallback|s should be consolidated.
   session_->Present(0, [callback = std::move(callback)](auto) { callback(); });
 }
 

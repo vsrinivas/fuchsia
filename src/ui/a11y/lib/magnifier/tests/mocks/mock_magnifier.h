@@ -15,6 +15,7 @@ class MockMagnifier : public fuchsia::accessibility::testing::Magnifier_TestBase
   fuchsia::accessibility::MagnificationHandlerPtr& handler() { return handler_; }
 
  private:
+  // |fuchsia::accessibility::testing::Magnifier_TestBase|
   void NotImplemented_(const std::string& name) override;
 
   // |fuchsia::accessibility::Magnifier|

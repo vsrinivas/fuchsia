@@ -2,7 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("mocks") {
+group("mocks") {
+  testonly = true
+
+  public_deps = [
+    ":mock_handler",
+    ":mock_magnifier",
+  ]
+}
+
+source_set("mock_magnifier") {
   testonly = true
 
   public = [
@@ -15,6 +24,30 @@ source_set("mocks") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("mock_handler") {
+  testonly = true
+
+  public = [
+    "mock_handler.h",
+  ]
+
+  sources = [
+    "mock_handler.cc",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/callback",
+    "//src/ui/a11y/lib/magnifier/tests/util:clip_space_transform",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [
