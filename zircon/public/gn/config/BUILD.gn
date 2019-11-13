@@ -407,14 +407,11 @@ config("default_warnings") {
     "-Wall",
     "-Wextra",
     "-Wno-unused-parameter",
-    "-Werror=unused-label",
-    "-Werror=return-type",
 
     # TODO(37765): Temporarily disable this warning to unblock the GCC roll.
     "-Wno-address-of-packed-member",
   ]
   cflags_c = [
-    "-Werror=implicit-function-declaration",
     "-Wstrict-prototypes",
     "-Wwrite-strings",
   ]
