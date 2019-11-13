@@ -12,7 +12,8 @@ group("test") {
     ":audio_admin_tests",
     ":audio_core_hardware_tests",
     ":audio_device_service_tests",
-    ":audio_device_tests",
+
+    #TODO(41059): ":audio_device_tests",
     ":audio_fidl_tests",
     ":audio_pipeline_tests",
   ]
