@@ -283,6 +283,11 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_UNKNOWN;
   }
 
+  // check if the partition is big enough to hold the header in the first place
+  if (HEADER_SIZE > info.block_size * info.block_count) {
+    return DISK_FORMAT_UNKNOWN;
+  }
+
   // We expect to read HEADER_SIZE bytes, but we may need to read
   // extra to read a multiple of the underlying block size.
   const size_t buffer_size =

@@ -84,6 +84,27 @@ TEST(AddDeviceTestCase, AddUnknownPartition) {
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
 }
 
+// Tests adding a device which is smaller than the expected header size
+TEST(AddDeviceTestCase, AddSmallDevice) {
+  class SmallDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) override {
+      fuchsia_hardware_block_BlockInfo info = {};
+      info.flags = 0;
+      info.block_size = 512;
+      info.block_count = 1;
+      *out_info = info;
+      return ZX_OK;
+    }
+  };
+  SmallDevice device;
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.Add());
+}
+
 // Tests adding a device with a GPT format.
 TEST(AddDeviceTestCase, AddGPTDevice) {
   class GptDevice : public MockBlockDevice {
