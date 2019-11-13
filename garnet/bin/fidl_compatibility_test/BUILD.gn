@@ -44,8 +44,7 @@ template("hlcpp_compatibility_test_server") {
 
     meta = [
       {
-        # Always use the same source CMX.
-        path = "meta/fidl_compatibility_test_server_cpp.cmx"
+        path = invoker.source_cmx
         dest = package_target_name + ".cmx"
       },
     ]
@@ -81,10 +80,11 @@ executable("fidl_compatibility_test_executable") {
 }
 
 hlcpp_compatibility_test_server("compatibility_test_server_cpp") {
+  source_cmx = "meta/fidl_compatibility_test_server_cpp.cmx"
 }
 
 hlcpp_compatibility_test_server("compatibility_test_server_cpp_write_xunion") {
-  configs = [ "//sdk/lib/fidl/cpp:write_unions_as_xunions" ]
+  source_cmx = "meta/fidl_compatibility_test_server_cpp_write_xunion.cmx"
 }
 
 executable("compatibility_test_server_llcpp_bin") {

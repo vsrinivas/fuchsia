@@ -2,6 +2,7 @@
     "program": {
         "args": [
             "cpp",
+            "cpp_write_xunion",
             "go",
             "llcpp",
             "llcpp_write_xunion",

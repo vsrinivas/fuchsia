@@ -386,6 +386,14 @@ class EchoServerApp : public Echo {
 }  // namespace fidl
 
 int main(int argc, const char** argv) {
+  if (argc == 2 && std::string(argv[1]) == "write_xunion") {
+    std::cout << "HLCPP compatibility test server is in xunion (v1 wire-format) mode" << std::endl;
+    fidl_global_set_should_write_union_as_xunion(true);
+  } else {
+    std::cout << "HLCPP compatibility test server is in union (old wire-format) mode" << std::endl;
+    fidl_global_set_should_write_union_as_xunion(false);
+  }
+
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

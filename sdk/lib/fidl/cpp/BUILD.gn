@@ -9,10 +9,6 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-config("write_unions_as_xunions") {
-  defines = [ "FIDL_WRITE_UNIONS_AS_XUNIONS" ]
-}
-
 sdk_source_set("cpp") {
   category = "partner"
 
