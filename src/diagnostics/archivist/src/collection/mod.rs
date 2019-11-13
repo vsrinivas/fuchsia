@@ -802,14 +802,14 @@ mod tests {
 
         fs::create_dir_all(path.join("r/app/1/c/archivist.cmx/12/out")).unwrap();
 
-        fs::create_dir_all(path.join("r/app/1/c/component_manager.cmx/12/out")).unwrap();
-
         // Test that the appearence of the archivist component is recorded but not
         // the appearence of its out directory.
         assert_eq!(
             make_start_with_realm(vec!["app".to_string()], "archivist.cmx", "12", None),
             component_events.next().await.unwrap()
         );
+
+        fs::create_dir_all(path.join("r/app/1/c/component_manager.cmx/12/out")).unwrap();
 
         // Test that the appearence of the component_manager component is recorded but not
         // the appearence of its out directory.
