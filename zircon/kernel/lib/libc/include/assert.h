@@ -8,11 +8,17 @@
 #ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ASSERT_H_
 #define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ASSERT_H_
 
+// For a description of which asserts are enabled at which debug levels, see the documentation for
+// GN build argument |assert_level|.
+
 #include <debug.h>
 #include <zircon/compiler.h>
 
 #define PANIC(args...) panic(args)
 
+// Assert that |x| is true, else panic.
+//
+// ASSERT is always enabled and |x| will be evaluated regardless of any build arguments.
 #define ASSERT(x)                                                      \
   do {                                                                 \
     if (unlikely(!(x))) {                                              \
@@ -20,6 +26,9 @@
     }                                                                  \
   } while (0)
 
+// Assert that |x| is true, else panic with the given message.
+//
+// ASSERT_MSG is always enabled and |x| will be evaluated regardless of any build arguments.
 #define ASSERT_MSG(x, msg, msgargs...)                                                     \
   do {                                                                                     \
     if (unlikely(!(x))) {                                                                  \
@@ -27,14 +36,17 @@
     }                                                                                      \
   } while (0)
 
-// conditionally implement DEBUG_ASSERT based on LK_DEBUGLEVEL in kernel space
-// user space does not currently implement DEBUG_ASSERT
+// Conditionally implement DEBUG_ASSERT based on LK_DEBUGLEVEL in kernel space.
 #ifdef LK_DEBUGLEVEL
 #define DEBUG_ASSERT_IMPLEMENTED (LK_DEBUGLEVEL > 1)
 #else
 #define DEBUG_ASSERT_IMPLEMENTED 0
 #endif
 
+// Assert that |x| is true, else panic.
+//
+// Depending on build arguments, DEBUG_ASSERT may or may not be enabled. When disabled, |x| will not
+// be evaluated.
 #define DEBUG_ASSERT(x)                                                      \
   do {                                                                       \
     if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                        \
@@ -42,6 +54,10 @@
     }                                                                        \
   } while (0)
 
+// Assert that |x| is true, else panic with the given message.
+//
+// Depending on build arguments, DEBUG_ASSERT_MSG may or may not be enabled. When disabled, |x| will
+// not be evaluated.
 #define DEBUG_ASSERT_MSG(x, msg, msgargs...)                                                     \
   do {                                                                                           \
     if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                                            \
