@@ -1084,6 +1084,7 @@ group("fidl_compatibility_test_server_llcpp") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_llcpp",
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_llcpp_write_xunion",
   ]
 }
 
