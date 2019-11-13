@@ -54,6 +54,7 @@
 #define X86_MSR_IA32_MCG_STATUS 0x0000017a         /* global machine check status */
 #define X86_MSR_IA32_MISC_ENABLE 0x000001a0        /* enable/disable misc processor features */
 #define X86_MSR_IA32_TEMPERATURE_TARGET 0x000001a2 /* Temperature target */
+#define X86_MSR_IA32_ENERGY_PERF_BIAS 0x000001b0   /* Energy / Performance Bias */
 #define X86_MSR_IA32_MTRR_PHYSBASE0 0x00000200     /* MTRR PhysBase0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK0 0x00000201     /* MTRR PhysMask0 */
 #define X86_MSR_IA32_MTRR_PHYSMASK9 0x00000213     /* MTRR PhysMask9 */

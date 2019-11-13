@@ -15,6 +15,7 @@
 #include <arch/x86/cpuid.h>
 #include <arch/x86/cpuid_test_data.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
@@ -105,7 +106,7 @@ class FakeMsrAccess : public MsrAccess {
     DEBUG_ASSERT(0);  // Unexpected MSR write
   }
 
-  ktl::array<FakeMsr, 3> msrs_;
+  ktl::array<FakeMsr, 4> msrs_;
   bool no_writes_ = false;
 };
 
@@ -646,6 +647,31 @@ static bool test_amd_platform_init() {
   END_TEST;
 }
 
+static bool test_hwp_init() {
+  BEGIN_TEST;
+
+  // TODO: Use cpu_id::CpuId for HWP enumeration, when it supports LEAF6.
+  if (x86_feature_test(X86_FEATURE_HWP_PREF) && x86_feature_test(X86_FEATURE_PERF_BIAS)) {
+    // This test only runs when the underlying platform supports HWP and EPB.
+    FakeMsrAccess fake_msrs = {};
+    fake_msrs.msrs_[0] = {X86_MSR_IA32_ENERGY_PERF_BIAS, 0x6};
+    fake_msrs.msrs_[1] = {X86_MSR_IA32_PM_ENABLE, 0x0};
+    fake_msrs.msrs_[2] = {X86_MSR_IA32_HWP_CAPABILITIES, 0x110000FEull};  // min = 0x11, max=0xfe
+    fake_msrs.msrs_[3] = {X86_MSR_IA32_HWP_REQUEST, 0x0ull};
+
+    x86_intel_hwp_init(&fake_msrs);
+    EXPECT_EQ(fake_msrs.read_msr(X86_MSR_IA32_PM_ENABLE), 1u);  // HWP enabled.
+    uint64_t fake_hwp_request = fake_msrs.read_msr(X86_MSR_IA32_HWP_REQUEST);
+    // Expect IA32_ENERGY_PERF_BIAS = 0x6 mapped to 0x80 EPP, min/max perf just copied from caps.
+    EXPECT_EQ((fake_hwp_request & 0xFF000000ull) >> 24, 0x80u);
+    EXPECT_EQ((fake_hwp_request & 0x00FF0000ull) >> 16, 0x00u);
+    EXPECT_EQ((fake_hwp_request & 0x0000FF00ull) >> 8, 0xFEu);
+    EXPECT_EQ((fake_hwp_request & 0x000000FFull), 0x11u);
+  }
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -662,4 +688,5 @@ UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
+UNITTEST("test HWP init", test_hwp_init)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");

@@ -203,8 +203,8 @@ void x86_intel_init_percpu(void) {
     x86_intel_cpu_set_ssbd(&cpuid, &msr);
   }
 
-  if (gCmdline.GetBool("cpu.hwp", false)) {
-    x86_intel_hwp_init();
+  if (gCmdline.GetBool("cpu.hwp", true)) {
+    x86_intel_hwp_init(&msr);
   }
 }
 
