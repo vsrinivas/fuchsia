@@ -7,7 +7,8 @@
             "go_write_xunion",
             "llcpp",
             "llcpp_write_xunion",
-            "rust"
+            "rust",
+            "rust_write_xunion"
         ],
         "binary": "test/fidl_compatibility_test"
     },

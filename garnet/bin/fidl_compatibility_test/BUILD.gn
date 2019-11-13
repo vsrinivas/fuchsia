@@ -183,6 +183,23 @@ package("fidl_compatibility_test_server_rust") {
   binary = "compatibility_test_server_rust"
 }
 
+package("fidl_compatibility_test_server_rust_write_xunion") {
+  deps = [
+    ":compatibility_test_server_rust_bin",
+  ]
+
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_server_rust_write_xunion.cmx"
+      dest = "fidl_compatibility_test_server_rust_write_xunion.cmx"
+    },
+  ]
+
+  testonly = true
+
+  binary = "compatibility_test_server_rust"
+}
+
 test_package("fidl_compatibility_test") {
   deps = [
     ":fidl_compatibility_test_executable",

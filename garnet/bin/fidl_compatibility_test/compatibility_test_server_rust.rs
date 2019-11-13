@@ -16,6 +16,7 @@ use {
         server::ServiceFs,
     },
     futures::{StreamExt, TryStreamExt},
+    std::sync::atomic::Ordering,
     std::thread,
 };
 
@@ -205,6 +206,13 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
 }
 
 fn main() -> Result<(), Error> {
+    let argv: Vec<String> = std::env::args().collect();
+    if argv.len() == 2 {
+        assert_eq!(argv[1], "write_xunion");
+        fidl::encoding::ENCODE_UNIONS_USING_XUNION_FORMAT.store(true, Ordering::Relaxed);
+    }
+    println!("argv={:?}", argv);
+
     const STACK_SIZE: usize = 512 * 1024;
 
     // Create a child thread with a larger stack size to accomodate large structures being built.

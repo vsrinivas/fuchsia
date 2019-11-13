@@ -681,6 +681,7 @@ group("fidl_compatibility_test_server_rust") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust",
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust_write_xunion",
   ]
 }
 
@@ -1059,6 +1060,7 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
     "//garnet/public/rust/fuchsia-vfs:fuchsia-vfs-tests",
     "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
+
     #"//garnet/public/rust/tuf:rust-tuf-tests",
   ]
 }
