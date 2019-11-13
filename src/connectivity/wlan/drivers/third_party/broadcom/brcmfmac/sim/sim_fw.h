@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -56,27 +57,37 @@ class SimFirmware {
                                                const common::MacAddr& bssid)>;
   using ScanDoneHandler = std::function<void()>;
 
-  struct ScanState {
-    // HOME means listening to home channel between scan channels
-    enum { STOPPED, SCANNING, HOME } state = STOPPED;
-
+  struct ScanOpts {
     // Unique scan identifier
     uint16_t sync_id;
+
+    bool is_active;
+
+    // Optional filters
+    std::optional<brcmf_ssid_le> ssid;
+    std::optional<common::MacAddr> bssid;
 
     // Time per channel
     zx::duration dwell_time;
 
     // When a scan is in progress, the total number of channels being scanned
-    std::unique_ptr<std::vector<uint16_t>> channels;
-
-    // Next channel to scan (from channels)
-    size_t channel_index;
+    std::vector<uint16_t> channels;
 
     // Function to call when we receive a beacon while scanning
     ScanResultHandler on_result_fn;
 
     // Function to call when we have finished scanning
     ScanDoneHandler on_done_fn;
+  };
+
+  struct ScanState {
+    // HOME means listening to home channel between scan channels
+    enum { STOPPED, SCANNING, HOME } state = STOPPED;
+
+    std::unique_ptr<ScanOpts> opts;
+
+    // Next channel to scan (from channels)
+    size_t channel_index;
   };
 
  public:
@@ -141,9 +152,7 @@ class SimFirmware {
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
 
   // Generic scan operations
-  zx_status_t ScanStart(uint16_t sync_id, bool is_active, zx::duration dwell_time,
-                        const std::vector<uint16_t>& channels, ScanResultHandler on_result_fn,
-                        ScanDoneHandler on_done_fn);
+  zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanNextChannel();
 
   // Escan operations

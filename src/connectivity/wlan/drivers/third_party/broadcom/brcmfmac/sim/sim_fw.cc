@@ -417,20 +417,18 @@ zx_status_t SimFirmware::SetMacAddr(const uint8_t* mac_addr) {
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::ScanStart(uint16_t sync_id, bool is_active, zx::duration dwell_time,
-                                   const std::vector<uint16_t>& channels,
-                                   ScanResultHandler on_result_fn, ScanDoneHandler on_done_fn) {
+zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
   if (scan_state_.state != ScanState::STOPPED) {
     // Can't start a scan while another is in progress
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (is_active) {
+  if (opts->is_active) {
     BRCMF_ERR("Only explicit passive scanning is supported. Ignoring request\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (channels.size() < 1) {
+  if (opts->channels.size() < 1) {
     // No channels provided. I'm not sure what will happen here on real firmware -- either it will
     // use default channels or refuse to scan.
     BRCMF_ERR("No channels provided to escan start request - ignoring\n");
@@ -438,22 +436,18 @@ zx_status_t SimFirmware::ScanStart(uint16_t sync_id, bool is_active, zx::duratio
   }
 
   // Configure state
-  scan_state_.sync_id = sync_id;
-  scan_state_.channels = std::make_unique<std::vector<uint16_t>>(channels);
-  scan_state_.channel_index = 0;
   scan_state_.state = ScanState::SCANNING;
-  scan_state_.dwell_time = dwell_time;
-  scan_state_.on_result_fn = on_result_fn;
-  scan_state_.on_done_fn = on_done_fn;
+  scan_state_.opts = std::move(opts);
+  scan_state_.channel_index = 0;
 
   // Start scan
-  brcmu_chan chan = {.chspec = (*scan_state_.channels)[scan_state_.channel_index++]};
+  brcmu_chan chan = {.chspec = scan_state_.opts->channels[scan_state_.channel_index++]};
   d11_inf_.decchspec(&chan);
   hw_.SetChannel(chan.chnum);
   hw_.EnableRx();
   std::function<void()>* callback = new std::function<void()>;
   *callback = std::bind(&SimFirmware::ScanNextChannel, this);
-  hw_.RequestCallback(callback, scan_state_.dwell_time);
+  hw_.RequestCallback(callback, scan_state_.opts->dwell_time);
 
   return ZX_OK;
 }
@@ -468,18 +462,20 @@ void SimFirmware::ScanNextChannel() {
       // We don't yet support intermittent scanning
       return;
     case ScanState::SCANNING:
-      if (scan_state_.channel_index >= scan_state_.channels->size()) {
+      if (scan_state_.channel_index >= scan_state_.opts->channels.size()) {
         // Scanning complete
         hw_.DisableRx();
-        scan_state_.on_done_fn();
+        scan_state_.state = ScanState::STOPPED;
+        scan_state_.opts->on_done_fn();
+        scan_state_.opts = nullptr;
       } else {
         // Scan next channel
-        brcmu_chan chan = {.chspec = (*scan_state_.channels)[scan_state_.channel_index++]};
+        brcmu_chan chan = {.chspec = scan_state_.opts->channels[scan_state_.channel_index++]};
         d11_inf_.decchspec(&chan);
         hw_.SetChannel(chan.chnum);
         std::function<void()>* callback = new std::function<void()>;
         *callback = std::bind(&SimFirmware::ScanNextChannel, this);
-        hw_.RequestCallback(callback, scan_state_.dwell_time);
+        hw_.RequestCallback(callback, scan_state_.opts->dwell_time);
       }
   }
 }
@@ -516,14 +512,16 @@ zx_status_t SimFirmware::HandleEscanRequest(const brcmf_escan_params_le* escan_p
 // iterating until we have scanned all channels.
 zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params,
                                     size_t params_len) {
-  bool is_active;
+  auto scan_opts = std::make_unique<ScanOpts>();
+
+  scan_opts->sync_id = sync_id;
 
   switch (params->scan_type) {
   case BRCMF_SCANTYPE_ACTIVE:
-    is_active = true;
+    scan_opts->is_active = true;
     break;
   case BRCMF_SCANTYPE_PASSIVE:
-    is_active = false;
+    scan_opts->is_active = false;
     break;
   default:
     BRCMF_ERR("Invalid scan type requested: %d\n", params->scan_type);
@@ -533,33 +531,30 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
   size_t num_channels = params->channel_num & BRCMF_SCAN_PARAMS_COUNT_MASK;
 
   // Configure state
-  std::vector<uint16_t> channels(&params->channel_list[0], &params->channel_list[num_channels]);
+  scan_opts->channels.resize(num_channels);
+  std::copy(&params->channel_list[0], &params->channel_list[num_channels],
+            scan_opts->channels.data());
 
   // Determine dwell time. If specified in the request, use that value. Otherwise, if a default
   // dwell time has been specified, use that value. Otherwise, fail.
-  zx::duration dwell_time;
   if (params->passive_time == static_cast<uint32_t>(-1)) {
     if (default_passive_time_ == static_cast<uint32_t>(-1)) {
       BRCMF_ERR("Attempt to use default passive time, iovar hasn't been set yet\n");
       return ZX_ERR_INVALID_ARGS;
     }
-    dwell_time = zx::msec(default_passive_time_);
+    scan_opts->dwell_time = zx::msec(default_passive_time_);
   } else {
-    dwell_time = zx::msec(params->passive_time);
+    scan_opts->dwell_time = zx::msec(params->passive_time);
   }
 
-  ScanResultHandler result_handler = std::bind(&SimFirmware::EscanResultSeen, this,
-                                               std::placeholders::_1, std::placeholders::_2,
-                                               std::placeholders::_3);
-  ScanDoneHandler done_handler = std::bind(&SimFirmware::EscanComplete, this);
-  return ScanStart(sync_id, is_active, dwell_time, channels, result_handler, done_handler);
+  scan_opts->on_result_fn = std::bind(&SimFirmware::EscanResultSeen, this, std::placeholders::_1,
+                                      std::placeholders::_2, std::placeholders::_3);
+  scan_opts->on_done_fn = std::bind(&SimFirmware::EscanComplete, this);
+  return ScanStart(std::move(scan_opts));
 }
 
 void SimFirmware::EscanComplete() {
   brcmf_event_msg_be* msg_be;
-
-  scan_state_.state = ScanState::STOPPED;
-  scan_state_.channels.reset();
 
   auto buf = CreateEventBuffer(0, &msg_be, nullptr);
   msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
@@ -570,7 +565,7 @@ void SimFirmware::EscanComplete() {
 
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                            const common::MacAddr& bssid) {
-  scan_state_.on_result_fn(channel, ssid, bssid);
+  scan_state_.opts->on_result_fn(channel, ssid, bssid);
 }
 
 // Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
@@ -598,7 +593,7 @@ void SimFirmware::EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid
   auto scan_result = reinterpret_cast<brcmf_escan_result_le*>(&buffer_data[scan_result_offset]);
   scan_result->buflen = scan_result_size;
   scan_result->version = BRCMF_BSS_INFO_VERSION;
-  scan_result->sync_id = scan_state_.sync_id;
+  scan_result->sync_id = scan_state_.opts->sync_id;
   scan_result->bss_count = 1;
 
   struct brcmf_bss_info_le* bss_info = &scan_result->bss_info_le;
