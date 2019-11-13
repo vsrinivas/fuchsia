@@ -53,20 +53,19 @@ class SimFirmware {
 
   struct ScanState {
     // HOME means listening to home channel between scan channels
-    enum { STOPPED, SCANNING, HOME } state_ = STOPPED;
+    enum { STOPPED, SCANNING, HOME } state = STOPPED;
 
     // Unique scan identifier
-    uint16_t sync_id_;
+    uint16_t sync_id;
 
-    // Keeps track of the parameters used for a scan-in-proress
-    brcmf_scan_params_le* params_;
-    size_t params_len_;
+    // Time per channel
+    zx::duration dwell_time;
 
     // When a scan is in progress, the total number of channels being scanned
-    size_t channel_count_;
+    std::unique_ptr<std::vector<uint16_t>> channels;
 
-    // Next channel to scan (from params_.channel_list)
-    size_t channel_index_;
+    // Next channel to scan (from channels)
+    size_t channel_index;
   };
 
  public:
