@@ -13,15 +13,12 @@ executable("basemgr_launcher_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/modular_config",
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -31,7 +28,6 @@ executable("basemgr_launcher_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/async-default",
   ]
 }
@@ -66,9 +62,6 @@ executable("basemgr_launcher_test") {
     "//garnet/public/lib/test_runner/cpp",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/sys/cpp/testing:integration",

@@ -247,6 +247,7 @@ void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserP
 }
 
 void BasemgrImpl::Shutdown() {
+  FXL_LOG(INFO) << "BASEMGR SHUTDOWN";
   // Prevent the shutdown sequence from running twice.
   if (state_ == State::SHUTTING_DOWN) {
     return;

@@ -3,6 +3,9 @@
         "binary": "bin/basemgr_launcher"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.sys.Launcher"
         ]

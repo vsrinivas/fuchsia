@@ -4,13 +4,11 @@
 
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/identity/account/cpp/fidl.h>
-#include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 
+#include <src/lib/files/glob.h>
 #include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
@@ -77,29 +75,29 @@ TEST_F(BasemgrLauncherTest, BaseShellArg) {
   RunLoopUntil([&] { return intercepted; });
 }
 
-// TODO(fxb/41236): This test doesn't check that basemgr is torn down, just that it can be started
-// again with basemgr_launcher.
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
-  constexpr char kInterceptUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
-
-  // Setup intercepting base shell
-  bool intercepted = false;
-  ASSERT_TRUE(interceptor_.InterceptURL(
-      kInterceptUrl, "",
-      [&intercepted](fuchsia::sys::StartupInfo startup_info,
-                     std::unique_ptr<sys::testing::InterceptedComponent> component) {
-        intercepted = true;
-      }));
+  constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
 
   // Launch and intercept basemgr.
   RunBasemgrLauncher({});
-  RunLoopUntil([&] { return intercepted; });
 
-  // Ensure that you can run basemgr_launcher again without failure.
-  intercepted = false;
+  // Get the exact service path, which includes a unique id, of the basemgr instance.
+  std::string service_path;
+  RunLoopUntil([&] {
+    files::Glob glob(kBasemgrHubPathForTests);
+    if (glob.size() == 1) {
+      service_path = *glob.begin();
+      return true;
+    }
+    return false;
+  });
+
   RunBasemgrLauncher({});
 
-  RunLoopUntil([&] { return intercepted; });
+  // Check that the first instance of basemgr no longer exists in the hub and that it has been
+  // replaced with another instance.
+  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
+  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 1; });
 }
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.

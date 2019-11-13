@@ -3,6 +3,9 @@
         "binary": "test/basemgr_launcher_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

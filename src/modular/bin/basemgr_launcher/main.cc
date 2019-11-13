@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fit/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -18,33 +14,26 @@
 
 #include <iostream>
 #include <regex>
-#include <string>
-#include <vector>
 
 #include <src/lib/files/glob.h>
 #include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <src/modular/lib/modular_config/modular_config.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
-constexpr char kBasemgrHubGlob[] = "/hub/c/basemgr.cmx/*";
-constexpr char kBasemgrRegex[] = "/basemgr.cmx/(\\d+)";
+constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 
-std::string FindDebugServicesForPath(const char* glob_str, const char* regex_str) {
+std::string FindBasemgrDebugService() {
   glob_t globbuf;
-  FXL_CHECK(glob(glob_str, 0, nullptr, &globbuf) == 0);
-  std::regex name_regex(regex_str);
+  FXL_CHECK(glob(kBasemgrHubPath, 0, nullptr, &globbuf) == 0);
   std::string service_path = globbuf.gl_pathv[0];
-  std::smatch match;
-  FXL_CHECK(std::regex_search(service_path, match, name_regex)) << service_path;
   globfree(&globbuf);
   return service_path;
 }
 
 void ShutdownBasemgr() {
   // Get a connection to basemgr in order to shut it down.
-  std::string service_path = FindDebugServicesForPath(kBasemgrHubGlob, kBasemgrRegex);
+  std::string service_path = FindBasemgrDebugService();
 
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   auto request = basemgr.NewRequest().TakeChannel();
@@ -96,7 +85,7 @@ fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command
     if (opt.name == modular_config::kBaseShell) {
       basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(opt.value);
     } else {
-      return fit::error<std::string>(GetUsage());
+      return fit::error(GetUsage());
     }
   }
 
@@ -108,7 +97,7 @@ fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  bool basemgr_is_running = files::Glob(kBasemgrHubGlob).size() != 0;
+  bool basemgr_is_running = files::Glob(kBasemgrHubPath).size() != 0;
   if (basemgr_is_running) {
     ShutdownBasemgr();
   }
