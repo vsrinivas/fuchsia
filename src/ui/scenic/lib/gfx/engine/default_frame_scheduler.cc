@@ -391,7 +391,9 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
         update_results.sessions_to_reschedule.insert(session_results.sessions_to_reschedule.begin(),
                                                      session_results.sessions_to_reschedule.end());
 
-        MoveAllItemsFromQueueToQueue(&session_results.present_callbacks, &callbacks_this_frame_);
+        MoveAllItemsFromQueueToQueue(&session_results.present1_callbacks,
+                                     &present1_callbacks_this_frame_);
+        MoveAllItemsFromQueueToQueue(&session_results.present2_infos, &present2_infos_this_frame_);
       });
 
   // Push updates that (e.g.) had unreached fences back onto the queue to be retried next frame.
@@ -413,7 +415,16 @@ void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx::time presentation_
 
 void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time presentation_time,
                                                                    uint64_t frame_number) {
-  MoveAllItemsFromQueueToQueue(&callbacks_this_frame_, &pending_callbacks_);
+  MoveAllItemsFromQueueToQueue(&present1_callbacks_this_frame_, &pending_present1_callbacks_);
+
+  // Populate the Present2 multimap.
+  while (!present2_infos_this_frame_.empty()) {
+    auto element = std::move(present2_infos_this_frame_.front());
+
+    pending_present2_infos_.insert(std::make_pair(element.session_id(), std::move(element)));
+    present2_infos_this_frame_.pop();
+  }
+
   ApplyToCompactedVector(&session_updaters_,
                          [presentation_time, frame_number](SessionUpdater* updater) {
                            updater->PrepareFrame(presentation_time, frame_number);
@@ -422,12 +433,41 @@ void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time pres
 
 void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
     fuchsia::images::PresentationInfo presentation_info) {
-  while (!pending_callbacks_.empty()) {
+  // Handle Present1 and |fuchsia::images::ImagePipe::PresentImage| callbacks.
+  while (!pending_present1_callbacks_.empty()) {
     // TODO(SCN-1346): Make this unique per session via id().
     TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
-    pending_callbacks_.front()(presentation_info);
-    pending_callbacks_.pop();
+    pending_present1_callbacks_.front()(presentation_info);
+    pending_present1_callbacks_.pop();
   }
+
+  // Handle per-Present2() |Present2Info|s.
+  // This outer loop iterates through all unique |SessionId|s that have pending Present2 updates.
+  SessionId current_session = 0;
+  for (auto it = pending_present2_infos_.begin(); it != pending_present2_infos_.end();
+       it = pending_present2_infos_.upper_bound(current_session)) {
+    current_session = it->first;
+
+    // This inner loop creates a vector of the corresponding |Present2Info|s and coalesces them.
+    std::vector<Present2Info> present2_infos = {};
+    auto [start_iter, end_iter] = pending_present2_infos_.equal_range(current_session);
+    for (auto iter = start_iter; iter != end_iter; ++iter) {
+      present2_infos.push_back(std::move(iter->second));
+    }
+    pending_present2_infos_.erase(start_iter, end_iter);
+
+    FXL_DCHECK(present2_callback_map_.find(current_session) != present2_callback_map_.end());
+    // TODO(SCN-1346): Make this unique per session via id().
+    TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
+
+    fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
+        scenic_impl::Present2Info::CoalescePresent2Infos(
+            std::move(present2_infos), zx::time(presentation_info.presentation_time));
+
+    // Invoke the Session's OnFramePresented event.
+    present2_callback_map_[current_session](std::move(frame_presented_info));
+  }
+  FXL_DCHECK(pending_present2_infos_.size() == 0u);
 }
 
 void DefaultFrameScheduler::UpdateManager::SetOnFramePresentedCallbackForSession(

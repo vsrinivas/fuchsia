@@ -9,8 +9,6 @@ source_set("scenic") {
     "event_reporter.cc",
     "event_reporter.h",
     "forward_declarations.h",
-    "present2_info.cc",
-    "present2_info.h",
     "scenic.cc",
     "scenic.h",
     "session.cc",
@@ -20,6 +18,7 @@ source_set("scenic") {
   ]
 
   public_deps = [
+    ":present2_info",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -37,5 +36,17 @@ source_set("scenic") {
     "//src/lib/fsl",
     "//src/lib/inspect_deprecated",
     "//zircon/public/lib/trace",
+  ]
+}
+
+source_set("present2_info") {
+  sources = [
+    "forward_declarations.h",
+    "present2_info.cc",
+    "present2_info.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
   ]
 }

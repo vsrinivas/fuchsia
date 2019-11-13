@@ -101,14 +101,44 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
                                        std::vector<zx::event> acquire_fences,
                                        std::vector<zx::event> release_events,
                                        fuchsia::ui::scenic::Session::PresentCallback callback) {
-  TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
-                 debug_name_, "requested time", requested_presentation_time.get());
-
   // TODO(35521) If the client has no Present()s left, kill the session.
   if (++presents_in_flight_ > kMaxPresentsInFlight) {
     error_reporter_->ERROR() << "Present() called with no more presents left. In the future(Bug "
                                 "35521) this will terminate the session.";
   }
+
+  // When we call the PresentCallback, decrement the number of presents the client has in flight.
+  fuchsia::ui::scenic::Session::PresentCallback new_callback =
+      [this, callback = std::move(callback)](fuchsia::images::PresentationInfo info) {
+        --presents_in_flight_;
+        callback(info);
+      };
+
+  return ScheduleUpdateCommon(requested_presentation_time, std::move(commands),
+                              std::move(acquire_fences), std::move(release_events),
+                              std::move(new_callback));
+}
+
+bool Session::ScheduleUpdateForPresent2(zx::time requested_presentation_time,
+                                        std::vector<::fuchsia::ui::gfx::Command> commands,
+                                        std::vector<zx::event> acquire_fences,
+                                        std::vector<zx::event> release_fences,
+                                        Present2Info present2_info) {
+  zx::time present_received_time = zx::time(async_now(async_get_default_dispatcher()));
+  present2_info.SetPresentReceivedTime(present_received_time);
+
+  return ScheduleUpdateCommon(requested_presentation_time, std::move(commands),
+                              std::move(acquire_fences), std::move(release_fences),
+                              std::move(present2_info));
+}
+
+bool Session::ScheduleUpdateCommon(zx::time requested_presentation_time,
+                                   std::vector<::fuchsia::ui::gfx::Command> commands,
+                                   std::vector<zx::event> acquire_fences,
+                                   std::vector<zx::event> release_fences,
+                                   std::variant<PresentCallback, Present2Info> presentation_info) {
+  TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
+                 debug_name_, "requested time", requested_presentation_time.get());
 
   // Logic verifying client requests presents in-order.
   zx::time last_scheduled_presentation_time = last_applied_update_presentation_time_;
@@ -140,19 +170,11 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
   ++scheduled_update_count_;
   TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, scheduled_update_count_));
 
-  // When we call the PresentCallback, decrement the number of remaining times the client can call
-  // Present().
-  fuchsia::ui::scenic::Session::PresentCallback new_callback =
-      [this, callback = std::move(callback)](fuchsia::images::PresentationInfo info) {
-        --presents_in_flight_;
-        callback(info);
-      };
+  inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
 
   scheduled_updates_.push(Update{requested_presentation_time, std::move(commands),
-                                 std::move(acquire_fence_set), std::move(release_events),
-                                 std::move(new_callback)});
-
-  inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
+                                 std::move(acquire_fence_set), std::move(release_fences),
+                                 std::move(presentation_info)});
 
   return true;
 }
@@ -177,6 +199,7 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= target_presentation_time) {
     auto& update = scheduled_updates_.front();
+
     FXL_DCHECK(last_applied_update_presentation_time_ <= update.presentation_time);
 
     if (!update.acquire_fences->ready()) {
@@ -208,9 +231,18 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     fences_to_release_on_next_update_ = std::move(update.release_fences);
 
     last_applied_update_presentation_time_ = update.presentation_time;
-    // Collect callbacks to be returned by |Engine::UpdateSessions()| as part
-    // of the |Session::UpdateResults| struct.
-    update_results.callbacks.push(std::move(update.present_callback));
+
+    // Collect Present1 callbacks to be returned by |Engine::UpdateSessions()| as part
+    // of the |Session::UpdateResults| struct. Or, if it is a Present2, collect the |Present2Info|s.
+    if (auto present_callback = std::get_if<PresentCallback>(&update.present_information)) {
+      update_results.present1_callbacks.push(std::move(*present_callback));
+    } else {
+      auto present2_info = std::get_if<Present2Info>(&update.present_information);
+      FXL_DCHECK(present2_info);
+      present2_info->SetLatchedTime(latched_time);
+      update_results.present2_infos.push(std::move(*present2_info));
+    }
+
     update_results.needs_render = true;
     scheduled_updates_.pop();
 

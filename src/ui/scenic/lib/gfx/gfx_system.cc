@@ -256,9 +256,11 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         // callbacks.
       }
       //  Collect the callbacks to be passed back in the |UpdateResults|.
-      MoveAllItemsFromQueueToQueue(&apply_results.callbacks, &update_results.present_callbacks);
+      MoveAllItemsFromQueueToQueue(&apply_results.present1_callbacks,
+                                   &update_results.present1_callbacks);
+      MoveAllItemsFromQueueToQueue(&apply_results.present2_infos, &update_results.present2_infos);
       MoveAllItemsFromQueueToQueue(&apply_results.image_pipe_callbacks,
-                                   &update_results.present_callbacks);
+                                   &update_results.present1_callbacks);
     }
 
     if (apply_results.needs_render) {

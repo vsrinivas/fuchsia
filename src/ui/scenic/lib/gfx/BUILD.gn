@@ -246,6 +246,7 @@ source_set("gfx") {
     "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",
+    "//src/ui/scenic/lib/scenic:present2_info",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
@@ -326,6 +327,7 @@ source_set("frame_scheduler") {
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/scenic:present2_info",
 
     # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
     "//src/ui/lib/escher",

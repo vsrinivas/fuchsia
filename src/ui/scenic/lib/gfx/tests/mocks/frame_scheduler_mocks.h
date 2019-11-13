@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_FRAME_SCHEDULER_MOCKS_H_
-#define SRC_UI_SCENIC_LIB_GFX_TESTS_FRAME_SCHEDULER_MOCKS_H_
+#ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_
+#define SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_
 
 #include <set>
 #include <unordered_map>
+#include <variant>
 
 #include "src/ui/scenic/lib/gfx/displays/display.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
@@ -97,6 +98,8 @@ class MockSessionUpdater : public SessionUpdater {
   std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx::time presentation_time,
                                                     zx::time acquire_fence_time);
 
+  void AddPresent2Info(Present2Info info, zx::time presentation_time, zx::time acquire_fence_time);
+
   // By default, rendering is enabled and |UpdateSessions()| will return ".needs_render = true" if
   // any session updates were applied.  This allows a test to override that behavior to
   // unconditionally disable rendering.
@@ -140,7 +143,16 @@ class MockSessionUpdater : public SessionUpdater {
     // Callback that will be invoked when UpdateManager::SignalPresentCallbacks() is called.
     OnPresentedCallback callback;
   };
+
+  struct Present2Update {
+    zx::time target_presentation_time;
+    zx::time fences_done_time;
+
+    Present2Info present2_info;
+  };
+
   std::map<SessionId, std::queue<Update>> updates_;
+  std::map<SessionId, std::queue<Present2Update>> present2_updates_;
 
   // Stores session IDs that were passed to |UpdateSessions()|, but for which no corresponding
   // updates were registered.
@@ -159,7 +171,7 @@ class MockFrameRenderer : public FrameRenderer {
 
   // |FrameRenderer|
   RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings,
-                                zx::time presentation_time)  override;
+                                zx::time presentation_time) override;
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
@@ -211,4 +223,4 @@ class MockFrameRenderer : public FrameRenderer {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_FRAME_SCHEDULER_MOCKS_H_
+#endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_FRAME_SCHEDULER_MOCKS_H_

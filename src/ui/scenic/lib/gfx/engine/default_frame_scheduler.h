@@ -133,8 +133,11 @@ class DefaultFrameScheduler : public FrameScheduler {
     std::priority_queue<SessionUpdate, std::vector<SessionUpdate>, std::greater<SessionUpdate>>
         updatable_sessions_;
 
-    std::queue<OnPresentedCallback> callbacks_this_frame_;
-    std::queue<OnPresentedCallback> pending_callbacks_;
+    std::queue<OnPresentedCallback> present1_callbacks_this_frame_;
+    std::queue<OnPresentedCallback> pending_present1_callbacks_;
+
+    std::queue<Present2Info> present2_infos_this_frame_;
+    std::multimap<SessionId, Present2Info> pending_present2_infos_;
 
     std::map<scenic_impl::SessionId, OnFramePresentedCallback> present2_callback_map_;
   };

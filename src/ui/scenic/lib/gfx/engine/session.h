@@ -10,6 +10,7 @@
 
 #include <optional>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -27,6 +28,7 @@
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/scenic/present2_info.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
@@ -49,7 +51,8 @@ class Session {
     bool success;
     bool all_fences_ready;
     bool needs_render;
-    std::queue<PresentCallback> callbacks;
+    std::queue<PresentCallback> present1_callbacks;
+    std::queue<Present2Info> present2_infos;
     std::queue<PresentImageCallback> image_pipe_callbacks;
   };
 
@@ -92,12 +95,19 @@ class Session {
   ResourceMap* resources() { return &resources_; }
   const ResourceMap* resources() const { return &resources_; }
 
-  // Called by SessionHandler::Present().  Stashes the arguments without
-  // applying them; they will later be applied by ApplyScheduledUpdates().
+  // Called by SessionHandler::Present().  Stashes the arguments without applying them; they will
+  // later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdateForPresent(zx::time presentation_time,
                                 std::vector<::fuchsia::ui::gfx::Command> commands,
                                 std::vector<zx::event> acquire_fences,
                                 std::vector<zx::event> release_fences, PresentCallback callback);
+
+  // Called by SessionHandler::Present2(). Like Present(), it stashes the arguments without
+  // applying them; they will later be applied by ApplyScheduledUpdates().
+  bool ScheduleUpdateForPresent2(zx::time requested_presentation_time,
+                                 std::vector<::fuchsia::ui::gfx::Command> commands,
+                                 std::vector<zx::event> acquire_fences,
+                                 std::vector<zx::event> release_fences, Present2Info present2_info);
 
   // Called by Engine() when it is notified by the FrameScheduler that a frame should be rendered
   // for the specified |actual_presentation_time|. Returns ApplyUpdateResult.success as true if
@@ -164,6 +174,12 @@ class Session {
   // Notify SceneGraph about accumulated ViewHolder/ViewRef updates, but do not apply them yet.
   void StageViewTreeUpdates(SceneGraph* scene_graph);
 
+  bool ScheduleUpdateCommon(zx::time requested_presentation_time,
+                            std::vector<::fuchsia::ui::gfx::Command> commands,
+                            std::vector<zx::event> acquire_fences,
+                            std::vector<zx::event> release_fences,
+                            std::variant<PresentCallback, Present2Info> presentation_info);
+
   struct Update {
     zx::time presentation_time;
 
@@ -171,10 +187,10 @@ class Session {
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     std::vector<zx::event> release_fences;
 
-    // Callback to report when the update has been applied in response to
-    // an invocation of |Session.Present()|.
-    PresentCallback present_callback;
+    // Holds either Present1's |fuchsia::ui::scenic::PresentCallback| or Present2's |Present2Info|.
+    std::variant<PresentCallback, Present2Info> present_information;
   };
+
   bool ApplyUpdate(CommandContext* command_context,
                    std::vector<::fuchsia::ui::gfx::Command> commands);
   std::queue<Update> scheduled_updates_;

@@ -30,10 +30,6 @@ class Present2Info {
   static fuchsia::scenic::scheduling::FramePresentedInfo CoalescePresent2Infos(
       std::vector<Present2Info> present2_infos, zx::time presentation_time);
 
-  // Sorts a queue of |Present2Info|s by session_id.
-  static std::map<SessionId, std::vector<Present2Info>> SortPresent2Infos(
-      std::queue<Present2Info> input);
-
   // Set the PresentReceivedInfo fields. These must be called exactly once per |Present2Info|.
   void SetPresentReceivedTime(zx::time present_received_time);
   void SetLatchedTime(zx::time latched_time);

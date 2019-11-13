@@ -34,6 +34,19 @@ void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> 
     buffered_commands_.clear();
   }
 }
+
+void SessionHandler::Present2(zx_time_t requested_presentation_time,
+                              std::vector<zx::event> acquire_fences,
+                              std::vector<zx::event> release_fences) {
+  if (!session_->ScheduleUpdateForPresent2(
+          zx::time(requested_presentation_time), std::move(buffered_commands_),
+          std::move(acquire_fences), std::move(release_fences), Present2Info(session_->id()))) {
+    KillSession();
+  } else {
+    buffered_commands_.clear();
+  }
+}
+
 void SessionHandler::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
   session_->SetOnFramePresentedCallback(std::move(callback));
 }

@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/id.h"
+#include "src/ui/scenic/lib/scenic/present2_info.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -39,7 +40,10 @@ class SessionUpdater {
     std::unordered_set<SessionId> sessions_to_reschedule;
     // A list of callbacks that should be invoked once the rendered frame is presented (or if the
     // frame is dropped, once the next frame is presented).
-    std::queue<OnPresentedCallback> present_callbacks;
+    std::queue<OnPresentedCallback> present1_callbacks;
+    // A list of objects containing information needed for the OnFramePresented event associated
+    // with one or more Present2 calls.
+    std::queue<Present2Info> present2_infos;
   };
 
   virtual ~SessionUpdater() = default;

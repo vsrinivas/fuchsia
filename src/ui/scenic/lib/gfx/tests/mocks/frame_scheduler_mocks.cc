@@ -22,6 +22,38 @@ SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
       continue;
     }
 
+    // A client can only be using either Present or Present2 at one time.
+    FXL_CHECK(updates_.find(session_id) == updates_.end() ||
+              present2_updates_.find(session_id) == present2_updates_.end());
+
+    // Handle Present2 updates separately from Present1 updates.
+    if (present2_updates_.find(session_id) != present2_updates_.end()) {
+      auto& queue = present2_updates_[session_id];
+      while (!queue.empty()) {
+        auto& update = queue.front();
+
+        if (update.target_presentation_time > presentation_time) {
+          // Wait until the target presentation_time is reached before "updating".
+          break;
+        } else if (update.fences_done_time > presentation_time) {
+          // Fences aren't ready, so reschedule this session.
+          results.sessions_to_reschedule.insert(session_id);
+          break;
+        } else {
+          // "Apply update" and push the Present2Info.
+          results.present2_infos.push(std::move(update.present2_info));
+
+          // Since an update was applied, the scene must be re-rendered (unless this is suppressed
+          // for testing purposes).
+          results.needs_render = !rendering_suppressed_;
+        }
+        queue.pop();
+      }
+
+      // Skip the remaining Present1 logic.
+      continue;
+    }
+
     if (updates_.find(session_id) == updates_.end() || updates_[session_id].empty()) {
       EXPECT_TRUE(be_relaxed_about_unexpected_session_updates_)
           << "wasn't expecting update for session: " << session_id;
@@ -47,7 +79,7 @@ SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
 
         // Wrap the test-provided callback in a closure that updates |num_callback_invocations_|.
         FXL_CHECK(update.callback);
-        results.present_callbacks.push(std::move(update.callback));
+        results.present1_callbacks.push(std::move(update.callback));
         FXL_CHECK(!update.callback);
 
         // Since an update was applied, the scene must be re-rendered (unless this is suppressed for
@@ -81,6 +113,12 @@ std::shared_ptr<const MockSessionUpdater::CallbackStatus> MockSessionUpdater::Ad
        }});
 
   return status;
+}
+
+void MockSessionUpdater::AddPresent2Info(Present2Info info, zx::time presentation_time,
+                                         zx::time acquire_fence_time) {
+  present2_updates_[info.session_id()].push(
+      {presentation_time, acquire_fence_time, std::move(info)});
 }
 
 RenderFrameResult MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_timings,

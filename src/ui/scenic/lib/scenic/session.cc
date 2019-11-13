@@ -40,7 +40,10 @@ void Session::InitializeOnFramePresentedCallback() {
     info.num_presents_allowed = num_presents_allowed_;
     binding_.events().OnFramePresented(std::move(info));
   };
-  GetTempSessionDelegate()->SetOnFramePresentedCallback(std::move(cb));
+
+  // Some tests don't initialize |TempSesionDelegate|s, so be defensive here.
+  if (auto temp_session_delegate = GetTempSessionDelegate())
+    temp_session_delegate->SetOnFramePresentedCallback(std::move(cb));
 }
 
 void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
@@ -78,8 +81,26 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
 void Session::Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
                        std::vector<zx::event> release_fences,
                        zx_duration_t requested_prediction_span, Present2Callback callback) {
-  FXL_NOTIMPLEMENTED();
-  return;
+  if (!valid_)
+    return;
+
+  // Kill the Session if they have no more presents left.
+  if (--num_presents_allowed_ < 0) {
+    FXL_LOG(ERROR) << "No presents left";
+    valid_ = false;
+    GetTempSessionDelegate()->KillSession();
+    return;
+  }
+
+  // After decrementing |num_presents_allowed_|, fire the immediate callback.
+  auto future_presentation_infos =
+      GetTempSessionDelegate()->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
+  if (callback)
+    callback({std::move(future_presentation_infos), num_presents_allowed_});
+
+  // Schedule the update.
+  GetTempSessionDelegate()->Present2(requested_presentation_time, std::move(acquire_fences),
+                                     std::move(release_fences));
 }
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
@@ -212,8 +233,7 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
 
 TempSessionDelegate* Session::GetTempSessionDelegate() {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  FXL_DCHECK(dispatcher);
-  return static_cast<TempSessionDelegate*>(dispatcher.get());
+  return dispatcher ? static_cast<TempSessionDelegate*>(dispatcher.get()) : nullptr;
 }
 
 }  // namespace scenic_impl

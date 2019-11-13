@@ -51,6 +51,22 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
       "time=1.");
 }
 
+TEST_F(SessionTest, SchedulePresent2UpdatesOutOfOrder) {
+  const SessionId session_id = 1;
+
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_FALSE(session()->ScheduleUpdateForPresent2(
+      zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
+  ExpectLastReportedError(
+      "scenic_impl::gfx::Session: Present called with out-of-order "
+      "presentation "
+      "time. requested presentation time=0, last scheduled presentation "
+      "time=1.");
+}
+
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   EXPECT_TRUE(session()->ScheduleUpdateForPresent(
       zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
@@ -61,13 +77,63 @@ TEST_F(SessionTest, ScheduleUpdateInOrder) {
   ExpectLastReportedError(nullptr);
 }
 
-TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
+TEST_F(SessionTest, SchedulePresent2UpdateInOrder) {
+  const SessionId session_id = 1;
+
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
+  ExpectLastReportedError(nullptr);
+}
+
+TEST_F(SessionTest, ScheduledUpdate_ShouldBeAppliedOnTime) {
   const zx::time presentation_time = zx::time(100);
   const zx::time latched_time = zx::time(100);
 
   EXPECT_TRUE(session()->ScheduleUpdateForPresent(
       presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
       std::vector<zx::event>(), [](auto) {}));
+
+  sys::testing::ComponentContextProvider app_context;
+  SceneGraph scene_graph(app_context.context());
+  auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                        /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
+  auto update_result =
+      session()->ApplyScheduledUpdates(&command_context, presentation_time, latched_time);
+  EXPECT_TRUE(update_result.success);
+  EXPECT_TRUE(update_result.needs_render);
+}
+
+TEST_F(SessionTest, ScheduledPresent2Update_ShouldBeAppliedOnTime) {
+  const zx::time presentation_time = zx::time(100);
+  const zx::time latched_time = zx::time(100);
+  const SessionId session_id = 1;
+
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
+
+  sys::testing::ComponentContextProvider app_context;
+  SceneGraph scene_graph(app_context.context());
+  auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                        /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
+  auto update_result =
+      session()->ApplyScheduledUpdates(&command_context, presentation_time, latched_time);
+  EXPECT_TRUE(update_result.success);
+  EXPECT_TRUE(update_result.needs_render);
+}
+
+TEST_F(SessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime) {
+  const zx::time presentation_time = zx::time(100);
+  const zx::time latched_time = zx::time(100);
+  const SessionId session_id = 1;
+
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), Present2Info(session_id)));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
@@ -135,23 +201,44 @@ TEST_F(SessionTest, Labeling) {
   EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength), shape_node->label());
 }
 
-// TODO(35521) Re-enable.
-TEST_F(SessionTest, DISABLED_TooManyPresentsInFlight_ShouldNotWork) {
-  const zx::time presentation_time = zx::time(1);
+TEST_F(SessionTest, Present2Updates_AreScheduledInOrder) {
+  const SessionId session_id = 1;
+  const zx::time requested_presentation_time = zx::time(32);
+  const zx::time latched_time = zx::time(16);
 
-  // Max out the maximum allotted presents in flight.
+  // Schedule the maximum amount of presents, incrementing the clock by one each time.
   for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
-    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-        std::vector<zx::event>(), [](auto) {}));
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
+        requested_presentation_time, std::vector<::fuchsia::ui::gfx::Command>(),
+        std::vector<zx::event>(), std::vector<zx::event>(), Present2Info(session_id)));
+
+    // Advance the clock one nanosecond in between each scheduled update.
+    RunLoopFor(zx::duration(1));
   }
 
-  EXPECT_EQ(session()->presents_in_flight(), session()->kMaxPresentsInFlight);
+  // Apply the updates.
+  sys::testing::ComponentContextProvider app_context;
+  SceneGraph scene_graph(app_context.context());
+  auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                        /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
+  auto update_result =
+      session()->ApplyScheduledUpdates(&command_context, requested_presentation_time, latched_time);
 
-  // This should fail.
-  EXPECT_FALSE(session()->ScheduleUpdateForPresent(
-      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+  // Ensure that all 5 were applied, and that they are in order by present_received_time.
+  EXPECT_EQ(update_result.present2_infos.size(), 5u);
+  zx_time_t expected_present_received_time = 0;
+  while (!update_result.present2_infos.empty()) {
+    auto elem = update_result.present2_infos.front().TakePresentReceivedInfo();
+
+    EXPECT_EQ(elem.present_received_time(), expected_present_received_time);
+    EXPECT_EQ(elem.latched_time(), latched_time.get());
+
+    update_result.present2_infos.pop();
+    ++expected_present_received_time;
+  }
+
+  EXPECT_TRUE(update_result.success);
+  EXPECT_TRUE(update_result.needs_render);
 }
 
 // TODO(35521) Re-enable final check below.
@@ -180,9 +267,9 @@ TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
 
   // Fire some of the callbacks ourselves.
   size_t updated_count = 0;
-  while (!update_result.callbacks.empty() && updated_count < 2) {
-    update_result.callbacks.front()(presentation_info);
-    update_result.callbacks.pop();
+  while (!update_result.present1_callbacks.empty() && updated_count < 2) {
+    update_result.present1_callbacks.front()(presentation_info);
+    update_result.present1_callbacks.pop();
 
     ++updated_count;
   }

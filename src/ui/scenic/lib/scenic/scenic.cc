@@ -73,6 +73,8 @@ void Scenic::CreateSessionImmediately(
   }
   session->SetCommandDispatchers(std::move(dispatchers));
 
+  session->InitializeOnFramePresentedCallback();
+
   sessions_[session.get()] = std::move(session);
 }
 

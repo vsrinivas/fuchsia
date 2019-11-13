@@ -6,12 +6,14 @@
 #define SRC_UI_SCENIC_LIB_SCENIC_COMMAND_DISPATCHER_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/scenic/lib/scenic/forward_declarations.h"
 
 namespace scenic_impl {
+
 using OnFramePresentedCallback =
     fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
@@ -69,12 +71,18 @@ class TempSessionDelegate : public CommandDispatcher {
                        std::vector<zx::event> release_fences,
                        fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
+  virtual void Present2(zx_time_t requested_presentation_time,
+                        std::vector<zx::event> acquire_fences,
+                        std::vector<zx::event> release_fences) = 0;
+
   virtual void SetDebugName(const std::string& debug_name) = 0;
 
   virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
       zx::duration requested_prediction_span) = 0;
 
   virtual void SetOnFramePresentedCallback(OnFramePresentedCallback callback) = 0;
+
+  virtual void KillSession() = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);

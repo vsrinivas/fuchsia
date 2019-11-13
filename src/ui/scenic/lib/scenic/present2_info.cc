@@ -43,22 +43,4 @@ fuchsia::scenic::scheduling::FramePresentedInfo Present2Info::CoalescePresent2In
   return frame_presented_info;
 }
 
-std::map<SessionId, std::vector<Present2Info>> Present2Info::SortPresent2Infos(
-    std::queue<Present2Info> input) {
-  std::map<SessionId, std::vector<Present2Info>> present2_map = {};
-
-  while (!input.empty()) {
-    auto elem = std::move(input.front());
-    if (present2_map.find(elem.session_id()) == present2_map.end()) {
-      present2_map[elem.session_id()] = std::vector<Present2Info>{};
-    }
-
-    present2_map[elem.session_id()].push_back(std::move(elem));
-
-    input.pop();
-  }
-
-  return present2_map;
-}
-
 }  // namespace scenic_impl
