@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
+
 static_library("expr") {
   sources = [
     "bitfield.cc",
@@ -147,4 +149,18 @@ source_set("tests") {
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuzzer("expr_parser_fuzzer") {
+  sources = [
+    "expr_parser_fuzzer.cc",
+  ]
+  deps = [
+    ":expr",
+  ]
+}
+
+fuzzers_package("expr_fuzzers") {
+    fuzzers = [ ":expr_parser_fuzzer" ]
+    host_only=true
 }

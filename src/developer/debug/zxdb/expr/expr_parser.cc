@@ -578,7 +578,11 @@ std::vector<std::string> ExprParser::ParseTemplateList(ExprTokenType stop_before
                                  tokens_[type_result.unmatched_error_token].value().c_str()));
       return {};
     } else if (cur_ == type_result.end_token) {
-      SetError(cur_token(), "Expected template parameter.");
+      if (!at_end()) {
+        SetError(cur_token(), "Expected template parameter.");
+      } else {
+        SetError(ExprToken(), "Expected template parameter.");
+      }
       return {};
     }
     cur_ = type_result.end_token;
@@ -929,7 +933,7 @@ void ExprParser::SetError(const ExprToken& token, std::string msg) {
 }
 
 bool ExprParser::IsCurTokenShiftRight() const {
-  if (cur_ > tokens_.size() - 2)
+  if (tokens_.size() < 2 || cur_ > tokens_.size() - 2)
     return false;  // Not enough room for two tokens.
 
   if (tokens_[cur_].type() != ExprTokenType::kGreater ||
