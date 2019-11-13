@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::parser_common::{
-    all_consuming, bool_literal, compound_identifier, map_err, numeric_literal, string_literal,
+    bool_literal, compound_identifier, many_until_eof, map_err, numeric_literal, string_literal,
     using_list, ws, BindParserError, CompoundIdentifier, Include,
 };
 use nom::{
@@ -144,11 +144,12 @@ fn statement(input: &str) -> IResult<&str, Statement, BindParserError> {
 }
 
 fn program(input: &str) -> IResult<&str, Ast, BindParserError> {
-    let statements = many1(ws(statement));
-    map(all_consuming(tuple((ws(using_list), statements))), |(using, statements)| Ast {
-        using,
-        statements,
-    })(input)
+    let (input, using) = ws(using_list)(input)?;
+    let (input, statements) = many_until_eof(ws(statement))(input)?;
+    if statements.is_empty() {
+        return Err(nom::Err::Error(BindParserError::NoStatements(input.to_string())));
+    }
+    Ok(("", Ast { using, statements }))
 }
 
 #[cfg(test)]
@@ -530,19 +531,18 @@ mod test {
 
         #[test]
         fn empty() {
-            // TODO(fxb/35146): Improve the error type that is returned here.
             assert_eq!(
                 program(""),
-                Err(nom::Err::Error(BindParserError::AcceptKeyword("".to_string())))
+                Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
 
         #[test]
         fn requires_statement() {
-            // Must have an statement.
+            // Must have a statement.
             assert_eq!(
                 program("using a;"),
-                Err(nom::Err::Error(BindParserError::AcceptKeyword("".to_string())))
+                Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
 

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use crate::parser_common::{
-    all_consuming, bool_literal, compound_identifier, identifier, map_err, numeric_literal,
+    bool_literal, compound_identifier, identifier, many_until_eof, map_err, numeric_literal,
     string_literal, using_list, ws, BindParserError, CompoundIdentifier, Include,
 };
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until},
     combinator::{map, opt, value},
-    multi::{many0, separated_nonempty_list},
+    multi::separated_nonempty_list,
     sequence::{delimited, separated_pair, terminated, tuple},
     IResult,
 };
@@ -173,7 +173,7 @@ fn library_name(input: &str) -> IResult<&str, CompoundIdentifier, BindParserErro
 
 fn library(input: &str) -> IResult<&str, Ast, BindParserError> {
     map(
-        all_consuming(tuple((ws(library_name), ws(using_list), many0(ws(declaration))))),
+        tuple((ws(library_name), ws(using_list), many_until_eof(ws(declaration)))),
         |(name, using, declarations)| Ast { name, using, declarations },
     )(input)
 }
@@ -917,9 +917,7 @@ mod test {
             // Must parse entire input.
             assert_eq!(
                 library("library a; using b.c as d; invalid input"),
-                Err(nom::Err::Error(BindParserError::UnrecognisedInput(
-                    "invalid input".to_string()
-                )))
+                Err(nom::Err::Error(BindParserError::Type("invalid input".to_string())))
             );
         }
 

@@ -73,7 +73,7 @@ pub enum BindParserError {
     ConditionOp(String),
     ConditionValue(String),
     AcceptKeyword(String),
-    UnrecognisedInput(String),
+    NoStatements(String),
     Unknown(String, ErrorKind),
 }
 
@@ -132,17 +132,27 @@ pub fn using_list(input: &str) -> IResult<&str, Vec<Include>, BindParserError> {
     many0(ws(using))(input)
 }
 
-// Reimplementation of nom::combinator::all_consuming with BindParserError error type.
-pub fn all_consuming<'a, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, O, BindParserError>
+/// Applies the parser `f` until reaching the end of the input. `f` must always make progress (i.e.
+/// consume input) and many_until_eof will panic if it doesn't, to prevent infinite loops. Returns
+/// the results of `f` in a Vec.
+pub fn many_until_eof<'a, O, F>(
+    f: F,
+) -> impl Fn(&'a str) -> IResult<&'a str, Vec<O>, BindParserError>
 where
     F: Fn(&'a str) -> IResult<&'a str, O, BindParserError>,
 {
-    move |input: &'a str| {
-        let (input, res) = f(input)?;
-        if input.len() == 0 {
-            Ok((input, res))
-        } else {
-            Err(nom::Err::Error(BindParserError::UnrecognisedInput(input.to_string())))
+    move |mut input: &'a str| {
+        let mut result = vec![];
+        loop {
+            if input.len() == 0 {
+                return Ok((input, result));
+            }
+            let (next_input, res) = f(input)?;
+            if input.len() == next_input.len() {
+                panic!("many_until_eof called on an optional parser. This will result in an infinite loop");
+            }
+            input = next_input;
+            result.push(res);
         }
     }
 }
