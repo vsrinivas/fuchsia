@@ -51,6 +51,11 @@ class SimFirmware {
     uint8_t msg_[BRCMF_DCMD_MAXLEN];
   };
 
+  using ScanResultHandler = std::function<void(const wlan_channel_t& channel,
+                                               const wlan_ssid_t& ssid,
+                                               const common::MacAddr& bssid)>;
+  using ScanDoneHandler = std::function<void()>;
+
   struct ScanState {
     // HOME means listening to home channel between scan channels
     enum { STOPPED, SCANNING, HOME } state = STOPPED;
@@ -66,6 +71,12 @@ class SimFirmware {
 
     // Next channel to scan (from channels)
     size_t channel_index;
+
+    // Function to call when we receive a beacon while scanning
+    ScanResultHandler on_result_fn;
+
+    // Function to call when we have finished scanning
+    ScanDoneHandler on_done_fn;
   };
 
  public:
@@ -129,9 +140,16 @@ class SimFirmware {
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
 
+  // Generic scan operations
+  zx_status_t ScanStart(uint16_t sync_id, bool is_active, zx::duration dwell_time,
+                        const std::vector<uint16_t>& channels, ScanResultHandler on_result_fn,
+                        ScanDoneHandler on_done_fn);
+  void ScanNextChannel();
+
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
-  void EscanNextChannel();
+  void EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                       const common::MacAddr& bssid);
   void EscanComplete();
 
   // Handlers for events from hardware
