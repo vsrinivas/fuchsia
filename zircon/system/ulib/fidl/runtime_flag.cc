@@ -12,7 +12,11 @@ namespace {
 // TODO(39159): At this stage of wire-format migration, bindings default to sending the old
 // union wire-format unless explicitly configured to send v1. Flip this to send v1 eventually.
 // NOTE: the |{false}|-style direct initialization is to support C++14 compilers.
+#ifdef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT
+std::atomic<bool> write_union_as_xunion{true};
+#else
 std::atomic<bool> write_union_as_xunion{false};
+#endif
 
 }  // namespace
 

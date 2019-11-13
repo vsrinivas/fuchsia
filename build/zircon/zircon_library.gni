@@ -16,6 +16,11 @@ declare_args() {
   # which could introduce subtle issues.
   # TODO(3203): make aliasing the default behavior.
   zircon_public_lib_aliases = false
+
+  # TODO(fxb/41298): This is a temporary change to activate writing the
+  # v1 FIDL wire-format selectively. Remove this when all bindings start
+  # writing v1 wire-format by default.
+  fidl_write_v1_wireformat = false
 }
 
 # Define a library in //zircon/public/lib/$target_name/BUILD.gn.
@@ -210,6 +215,13 @@ template("zircon_library") {
       metadata = {
         zircon_lib_dirs = zx_lib_dirs
       }
+    }
+
+    # TODO(fxb/41298): This is a temporary change to activate writing the
+    # v1 FIDL wire-format selectively. Remove this when all bindings start
+    # writing v1 wire-format by default.
+    if (library == "fidl_base" && type == "static_library" && fidl_write_v1_wireformat) {
+      defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
     }
   }
 

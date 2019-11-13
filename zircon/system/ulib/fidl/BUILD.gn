@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  fidl_write_v1_wireformat = false
+}
+
 # Base library used by both Fuchsia and host
 zx_library("fidl_base") {
   sdk = "source"
@@ -41,6 +45,9 @@ zx_library("fidl_base") {
   deps = [
     "$zx/system/ulib/zircon",
   ]
+  if (fidl_write_v1_wireformat) {
+    defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
+  }
 }
 
 zx_library("fidl") {
