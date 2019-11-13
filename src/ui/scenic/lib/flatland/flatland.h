@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
+#include "src/ui/scenic/lib/flatland/topology_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
@@ -77,13 +78,13 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink>,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink>>;
 
-  // Pass the same ObjectLinker to multiple Flatland instances to allow them to link to each other
-  // through token transactions (e.g., LinkToParent(), CreateLink()).
-  explicit Flatland(const std::shared_ptr<ObjectLinker>& linker);
+  // Passing the same ObjectLinker and TopologySystem to multiple Flatland instances will allow them
+  // to link to each other through operations that involve tokens and parent/child relationships
+  // (e.g., by calling LinkToParent() and CreateLink()).
+  explicit Flatland(const std::shared_ptr<ObjectLinker>& linker,
+                    const std::shared_ptr<TopologySystem>& system);
 
-  // For unit tests, this Flatland instance will not be able to link to other instances, either
-  // through LinkToParent() or CreateLink().
-  Flatland();
+  ~Flatland() = default;
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
   // move it. Disable all copy and move operations.
@@ -152,6 +153,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // An object linker shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<ObjectLinker> linker_;
 
+  // A topology system shared between Flatland instances, so that child edges can be made between
+  // them.
+  std::shared_ptr<TopologySystem> topology_system_;
+
   // The set of operations that are pending a call to Present().
   std::vector<fit::function<bool()>> pending_operations_;
 
@@ -169,7 +174,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A unique transform for this instance, the link_origin_ is part of the transform_graph_, and
   // will never be released or changed during the course of the instance's lifetime. This makes it a
   // fixed attachment point for cross-instance Links.
-  TransformHandle link_origin_;
+  const TransformHandle link_origin_;
 
   // A mapping from user-generated id to ChildLink.
   LinkMap child_links_;

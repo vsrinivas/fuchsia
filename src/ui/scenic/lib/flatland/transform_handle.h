@@ -24,16 +24,24 @@ class TransformHandle {
  public:
   TransformHandle() = default;
 
-  TransformHandle(uint64_t transform_id) : transform_id_(transform_id) {}
+  TransformHandle(uint64_t graph_id, uint64_t transform_id)
+      : graph_id_(graph_id), transform_id_(transform_id) {}
 
-  bool operator==(const TransformHandle& rhs) const { return transform_id_ == rhs.transform_id_; }
-  bool operator!=(const TransformHandle& rhs) const { return transform_id_ != rhs.transform_id_; }
-  bool operator<(const TransformHandle& rhs) const { return transform_id_ < rhs.transform_id_; }
+  bool operator==(const TransformHandle& rhs) const {
+    return graph_id_ == rhs.graph_id_ && transform_id_ == rhs.transform_id_;
+  }
+  bool operator!=(const TransformHandle& rhs) const {
+    return graph_id_ != rhs.graph_id_ || transform_id_ != rhs.transform_id_;
+  }
+  bool operator<(const TransformHandle& rhs) const {
+    return graph_id_ < rhs.graph_id_ || transform_id_ < rhs.transform_id_;
+  }
 
  private:
   friend class std::hash<flatland::TransformHandle>;
   friend std::ostream& std::operator<<(std::ostream& out, const flatland::TransformHandle& h);
 
+  uint64_t graph_id_ = 0;
   uint64_t transform_id_ = 0;
 };
 
@@ -45,7 +53,7 @@ namespace std {
 template <>
 struct hash<flatland::TransformHandle> {
   size_t operator()(const flatland::TransformHandle& h) const noexcept {
-    return hash<uint64_t>{}(h.transform_id_);
+    return hash<uint64_t>{}(h.graph_id_) ^ hash<uint64_t>{}(h.transform_id_);
   }
 };
 

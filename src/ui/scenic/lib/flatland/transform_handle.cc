@@ -7,7 +7,7 @@
 namespace std {
 
 ostream& operator<<(ostream& out, const flatland::TransformHandle& h) {
-  out << h.transform_id_;
+  out << "(" << h.graph_id_ << ":" << h.transform_id_ << ")";
   return out;
 }
 

@@ -11,11 +11,11 @@
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
-using fuchsia::ui::scenic::internal::ContentLinkStatus;
-using fuchsia::ui::scenic::internal::Flatland_Present_Result;
-using FlatlandTestLoop = gtest::TestLoopFixture;
+using flatland::TopologySystem;
 using fuchsia::ui::scenic::internal::ContentLink;
+using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
+using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
@@ -52,18 +52,31 @@ void CreateLink(const std::shared_ptr<Flatland::ObjectLinker>& linker, Flatland*
   PRESENT((*parent), true);
   PRESENT((*child), true);
 }
+
+class FlatlandTest : public gtest::TestLoopFixture {
+ public:
+  FlatlandTest()
+      : linker_(std::make_shared<Flatland::ObjectLinker>()),
+        system_(std::make_shared<TopologySystem>()) {}
+
+  Flatland CreateFlatland() { return Flatland(linker_, system_); }
+
+  const std::shared_ptr<Flatland::ObjectLinker> linker_;
+  const std::shared_ptr<TopologySystem> system_;
+};
+
 }  // namespace
 
 namespace flatland {
 namespace test {
 
-TEST(FlatlandTest, PresentShouldReturnOne) {
-  Flatland flatland;
+TEST_F(FlatlandTest, PresentShouldReturnOne) {
+  Flatland flatland = CreateFlatland();
   PRESENT(flatland, true);
 }
 
-TEST(FlatlandTest, CreateAndReleaseTransformValidCases) {
-  Flatland flatland;
+TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kId1 = 1;
   const uint64_t kId2 = 2;
@@ -114,8 +127,8 @@ TEST(FlatlandTest, CreateAndReleaseTransformValidCases) {
   PRESENT(flatland, true);
 }
 
-TEST(FlatlandTest, CreateAndReleaseTransformErrorCases) {
-  Flatland flatland;
+TEST_F(FlatlandTest, CreateAndReleaseTransformErrorCases) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kId1 = 1;
   const uint64_t kId2 = 2;
@@ -136,8 +149,8 @@ TEST(FlatlandTest, CreateAndReleaseTransformErrorCases) {
   PRESENT(flatland, false);
 }
 
-TEST(FlatlandTest, AddAndRemoveChildValidCases) {
-  Flatland flatland;
+TEST_F(FlatlandTest, AddAndRemoveChildValidCases) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kIdParent = 1;
   const uint64_t kIdChild1 = 2;
@@ -183,8 +196,8 @@ TEST(FlatlandTest, AddAndRemoveChildValidCases) {
   PRESENT(flatland, true);
 }
 
-TEST(FlatlandTest, AddAndRemoveChildErrorCases) {
-  Flatland flatland;
+TEST_F(FlatlandTest, AddAndRemoveChildErrorCases) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kIdParent = 1;
   const uint64_t kIdChild = 2;
@@ -225,8 +238,8 @@ TEST(FlatlandTest, AddAndRemoveChildErrorCases) {
   PRESENT(flatland, false);
 }
 
-TEST(FlatlandTest, MultichildUsecase) {
-  Flatland flatland;
+TEST_F(FlatlandTest, MultichildUsecase) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kIdParent1 = 1;
   const uint64_t kIdParent2 = 2;
@@ -255,8 +268,8 @@ TEST(FlatlandTest, MultichildUsecase) {
   PRESENT(flatland, true);
 }
 
-TEST(FlatlandTest, CycleDetector) {
-  Flatland flatland;
+TEST_F(FlatlandTest, CycleDetector) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kId1 = 1;
   const uint64_t kId2 = 2;
@@ -322,8 +335,8 @@ TEST(FlatlandTest, CycleDetector) {
   }
 }
 
-TEST(FlatlandTest, SetRootTransform) {
-  Flatland flatland;
+TEST_F(FlatlandTest, SetRootTransform) {
+  Flatland flatland = CreateFlatland();
 
   const uint64_t kId1 = 1;
   const uint64_t kIdNotCreated = 2;
@@ -355,9 +368,8 @@ TEST(FlatlandTest, SetRootTransform) {
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTestLoop, GraphLinkReplaceWithoutConnection) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-  Flatland flatland(linker);
+TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
+  Flatland flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -384,9 +396,8 @@ TEST_F(FlatlandTestLoop, GraphLinkReplaceWithoutConnection) {
   // TODO(37597): Test for cleanup of previous link here.
 }
 
-TEST_F(FlatlandTestLoop, ContentLinkIdIsZero) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-  Flatland flatland(linker);
+TEST_F(FlatlandTest, ContentLinkIdIsZero) {
+  Flatland flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -400,9 +411,8 @@ TEST_F(FlatlandTestLoop, ContentLinkIdIsZero) {
   RunLoopUntilIdle();
 }
 
-TEST_F(FlatlandTestLoop, ContentLinkIdCollision) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-  Flatland flatland(linker);
+TEST_F(FlatlandTest, ContentLinkIdCollision) {
+  Flatland flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -431,11 +441,9 @@ TEST_F(FlatlandTestLoop, ContentLinkIdCollision) {
 
 // This code doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
-TEST_F(FlatlandTestLoop, ValidParentToChildFlow) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-
-  Flatland parent(linker);
-  Flatland child(linker);
+TEST_F(FlatlandTest, ValidParentToChildFlow) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -470,11 +478,9 @@ TEST_F(FlatlandTestLoop, ValidParentToChildFlow) {
 
 // This code doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
-TEST_F(FlatlandTestLoop, ValidChildToParentFlow) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-
-  Flatland parent(linker);
-  Flatland child(linker);
+TEST_F(FlatlandTest, ValidChildToParentFlow) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -506,16 +512,15 @@ TEST_F(FlatlandTestLoop, ValidChildToParentFlow) {
   EXPECT_TRUE(status_updated);
 }
 
-TEST_F(FlatlandTestLoop, SetLinkPropertiesDefaultBehavior) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
+TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
 
   const uint64_t kLinkId = 1;
 
-  Flatland parent(linker);
-  Flatland child(linker);
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(linker, &parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(linker_, &parent, &child, kLinkId, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const float kDefaultSize = 1.0f;
@@ -578,16 +583,15 @@ TEST_F(FlatlandTestLoop, SetLinkPropertiesDefaultBehavior) {
   }
 }
 
-TEST_F(FlatlandTestLoop, SetLinkPropertiesMultisetBehavior) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
+TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
 
   const uint64_t kLinkId = 1;
 
-  Flatland parent(linker);
-  Flatland child(linker);
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(linker, &parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(linker_, &parent, &child, kLinkId, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const float kFinalSize = 100.0f;
@@ -653,19 +657,17 @@ TEST_F(FlatlandTestLoop, SetLinkPropertiesMultisetBehavior) {
   EXPECT_EQ(1, num_updates);
 }
 
-TEST_F(FlatlandTestLoop, SetLinkPropertiesOnMultipleChildren) {
-  auto linker = std::make_shared<Flatland::ObjectLinker>();
-
+TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   const int kNumChildren = 3;
   const uint64_t kLinkIds[3] = {1, 2, 3};
 
-  Flatland parent(linker);
-  Flatland children[kNumChildren] = {Flatland(linker), Flatland(linker), Flatland(linker)};
+  Flatland parent = CreateFlatland();
+  Flatland children[kNumChildren] = {CreateFlatland(), CreateFlatland(), CreateFlatland()};
   fidl::InterfacePtr<ContentLink> content_link[kNumChildren];
   fidl::InterfacePtr<GraphLink> graph_link[kNumChildren];
 
   for (int i = 0; i < kNumChildren; ++i) {
-    CreateLink(linker, &parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
+    CreateLink(linker_, &parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
   }
   RunLoopUntilIdle();
 

@@ -8,9 +8,13 @@
 
 namespace flatland {
 
+TransformGraph::TransformGraph() : TransformGraph(0) {}
+
+TransformGraph::TransformGraph(uint64_t graph_id) : graph_id_(graph_id) {}
+
 TransformHandle TransformGraph::CreateTransform() {
   FXL_DCHECK(is_valid_);
-  TransformHandle retval(next_transform_id_++);
+  TransformHandle retval(graph_id_, next_transform_id_++);
   FXL_DCHECK(!working_set_.count(retval));
   working_set_.insert(retval);
   live_set_.insert(retval);

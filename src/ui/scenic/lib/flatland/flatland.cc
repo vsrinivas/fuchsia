@@ -22,12 +22,12 @@ namespace flatland {
 // unit square.
 static constexpr float kDefaultLayoutSize = 1.0f;
 
-Flatland::Flatland() : Flatland(/* linker */ nullptr) {}
-
-Flatland::Flatland(const std::shared_ptr<ObjectLinker>& linker) : linker_(linker) {
-  // This link origin lives for the entirety of this Flatland instance.
-  link_origin_ = transform_graph_.CreateTransform();
-}
+Flatland::Flatland(const std::shared_ptr<ObjectLinker>& linker,
+                   const std::shared_ptr<TopologySystem>& system)
+    : linker_(linker),
+      topology_system_(system),
+      transform_graph_(system->CreateGraph()),
+      link_origin_(transform_graph_.CreateTransform()) {}
 
 void Flatland::Present(PresentCallback callback) {
   bool success = true;

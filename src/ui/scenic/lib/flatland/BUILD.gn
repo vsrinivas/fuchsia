@@ -7,6 +7,8 @@ source_set("flatland") {
     "flatland.cc",
     "flatland.h",
     "hanging_get_helper.h",
+    "topology_system.cc",
+    "topology_system.h",
     "transform_graph.cc",
     "transform_graph.h",
     "transform_handle.cc",
