@@ -182,7 +182,7 @@ impl RoutingTest {
         collection: &'a str,
         decl: ChildDecl,
     ) {
-        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
             .await;
@@ -204,7 +204,7 @@ impl RoutingTest {
         name: &'a str,
         instance: InstanceId,
     ) {
-        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let instance_moniker = moniker.child(ChildMoniker::new(
             name.to_string(),
@@ -231,7 +231,7 @@ impl RoutingTest {
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
             .await;
@@ -387,7 +387,7 @@ impl RoutingTest {
         moniker: AbsoluteMoniker,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
-        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
         Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
@@ -404,7 +404,7 @@ impl RoutingTest {
     /// Checks that a use declaration of `path` at `moniker` can be opened with
     /// Fuchsia file operations.
     pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
-        let component_name = Self::bind_instance(&self.model, &moniker).await;
+        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
             .await;
@@ -463,10 +463,14 @@ impl RoutingTest {
         }
     }
 
-    pub async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
-        let expected_res: Result<(), ModelError> = Ok(());
-        assert_eq!(format!("{:?}", model.bind(moniker).await), format!("{:?}", expected_res),);
-        moniker.path().last().expect("didn't expect a root component").name().to_string()
+    /// Atempt to bind the instance associated with the given moniker.
+    ///
+    /// On success, returns the short name of the component.
+    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, failure::Error> {
+        let name =
+            moniker.path().last().expect("didn't expect a root component").name().to_string();
+        self.model.bind(moniker).await?;
+        Ok(name)
     }
 
     pub fn resolved_url(component_name: &str) -> String {
