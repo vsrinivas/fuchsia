@@ -5,6 +5,8 @@
 
 #include <zircon/status.h>
 
+#include "src/developer/debug/debug_agent/object_provider.h"
+
 using namespace fuchsia::exception;
 
 namespace debug_agent {
@@ -50,7 +52,10 @@ zx_status_t LimboProvider::Init() {
   connection_.Bind(process_limbo.Unbind().TakeChannel());
 
   // |this| owns the connection, so it's guaranteed to outlive it.
-  connection_.set_error_handler([this](zx_status_t status) { Reset(); });
+  connection_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Got error on limbo: " << zx_status_get_string(status);
+    Reset();
+  });
 
   WatchActive();
   WatchLimbo();
@@ -85,19 +90,52 @@ const std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata>& LimboPr
   return limbo_;
 }
 
+// WatchLimbo --------------------------------------------------------------------------------------
+
+namespace {
+
+ProcessExceptionMetadata DuplicateException(const ProcessExceptionMetadata& exception) {
+  ProcessExceptionMetadata result = {};
+  result.set_info(exception.info());
+
+  if (exception.has_process()) {
+    zx::process process;
+    exception.process().duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
+    result.set_process(std::move(process));
+  }
+
+  if (exception.has_thread()) {
+    zx::thread thread;
+    exception.thread().duplicate(ZX_RIGHT_SAME_RIGHTS, &thread);
+    result.set_thread(std::move(thread));
+  }
+
+  return result;
+}
+
+}  // namespace
+
 void LimboProvider::WatchLimbo() {
   connection_->WatchProcessesWaitingOnException(
       // |this| owns the connection, so it's guaranteed to outlive it.
       [this](ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
         if (result.is_err()) {
-          FXL_LOG(INFO) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
+          FXL_LOG(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
         } else {
           // Add the exceptions to the limbo.
           std::vector<fuchsia::exception::ProcessExceptionMetadata> new_exceptions;
           for (auto& exception : result.response().exception_list) {
             zx_koid_t process_koid = exception.info().process_koid;
-            limbo_[process_koid] = std::move(exception);
+
+            auto [it, inserted] = limbo_.insert({process_koid, std::move(exception)});
+
+            // Only track new processes if we're going to inform it through a callback.
+            if (on_enter_limbo_ && inserted)
+              new_exceptions.push_back(DuplicateException(it->second));
           }
+
+          if (on_enter_limbo_)
+            on_enter_limbo_(std::move(new_exceptions));
         }
 
         // Re-issue the hanging get.

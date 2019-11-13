@@ -5,7 +5,7 @@
                 "fuchsia.boot.RootJob"
             ]
         }
-     },
+    },
     "program": {
         "binary": "test/debug_agent_integration_tests"
     },

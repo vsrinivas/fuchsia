@@ -23,6 +23,9 @@ namespace debug_agent {
 // exception occurred. We call this process Just In Time Debugging (JITD).
 class LimboProvider {
  public:
+  using OnEnterLimboCallback =
+      fit::function<void(std::vector<fuchsia::exception::ProcessExceptionMetadata>)>;
+
   explicit LimboProvider(std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~LimboProvider();
 
@@ -33,6 +36,10 @@ class LimboProvider {
   // |error_handler| will only be used if |Init| was successful. Once the error handler has been
   // issued, this provider is considered invalid and Init should be called again.
   virtual zx_status_t Init();
+
+  // Callback to be called whenever new processes enter the connected limbo. See |on_enter_limbo_|
+  // for more details.
+  void set_on_enter_limbo(OnEnterLimboCallback cb) { on_enter_limbo_ = std::move(cb); }
 
   // Limbo can fail to initialize (eg. failed to connect). There is no point querying an invalid
   // limbo provider, so callers should check for validity before using it. If the limbo is invalid,
@@ -61,6 +68,12 @@ class LimboProvider {
   // synchronous inteface, we need to keep track of the current state in order to be able to
   // return it immediatelly.
   std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> limbo_;
+
+  // Callback to be triggered whenever a new process enters the the limbo. Provides the list of
+  // new processes that just entered the limbo on this event. |Limbo()| is up to date at the moment
+  // of this callback.
+  OnEnterLimboCallback on_enter_limbo_;
+
   bool is_limbo_active_ = false;
 
   fuchsia::exception::ProcessLimboPtr connection_;

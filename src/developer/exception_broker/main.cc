@@ -29,9 +29,18 @@ int main() {
   // Crete a new handler for each connection.
   fidl::BindingSet<ProcessLimbo, std::unique_ptr<ProcessLimboHandler>> limbo_bindings;
   auto& limbo_manager = broker->limbo_manager();
+
+  // Everytime a new request comes for this service, we create a new handler. This permits us to
+  // track per-connection state.
   context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<ProcessLimbo>(
       [&limbo_manager, &limbo_bindings](fidl::InterfaceRequest<ProcessLimbo> request) {
+        // Create a new handler exclusive to this connection.
         auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager.GetWeakPtr());
+
+        // Track this handler in the limbo manager, so it can be notified about events.
+        limbo_manager.AddHandler(handler->GetWeakPtr());
+
+        // Add the handler to the bindings, which is where the fidl calls come through.
         limbo_bindings.AddBinding(std::move(handler), std::move(request));
       }));
 
