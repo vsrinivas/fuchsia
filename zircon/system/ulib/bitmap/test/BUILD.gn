@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
     ":bitmap",
+    ":raw-bitmap-fuzzer",
   ]
 }
 
@@ -21,5 +23,13 @@ zx_test("bitmap") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+fuzzer("raw-bitmap-fuzzer") {
+  sources = [
+    "raw-bitmap-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/bitmap",
   ]
 }
