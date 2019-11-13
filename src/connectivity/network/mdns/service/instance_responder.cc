@@ -63,8 +63,13 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
 }
 
 void InstanceResponder::Quit() {
-  SendGoodbye();
+  if (started()) {
+    SendGoodbye();
+  }
+  
   RemoveSelf(instance_full_name_);
+
+  publisher_ = nullptr;
 }
 
 void InstanceResponder::ReportSuccess(bool success) {

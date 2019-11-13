@@ -193,7 +193,7 @@ void MdnsServiceImpl::PublishServiceInstance(
   if (!mdns_.PublishServiceInstance(service, instance, perform_probe, publisher.get())) {
     fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
     result.set_err(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY);
-    callback(std::move(result));
+    publisher->callback_(std::move(result));
     return;
   }
 

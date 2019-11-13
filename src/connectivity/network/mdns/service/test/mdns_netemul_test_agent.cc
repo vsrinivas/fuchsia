@@ -21,6 +21,7 @@
 const std::string kLocalArgument = "--local";
 const std::string kRemoteArgument = "--remote";
 const std::string kServiceName = "_mdnstest._udp.";
+const std::string kTransientServiceName = "_mdnstest2._udp.";
 const std::string kInstanceName = "mdns_test_instance_name";
 const uint16_t kPort = 1234;
 const std::vector<std::string> kText = {"chowder", "hammock", "beanstalk"};
@@ -218,6 +219,29 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
     // Ensure that the service guards against reannouncing when the instance probe hasn't yet
     // completed to avoid regressing b/144188577.
     responder_binding_.events().Reannounce();
+
+    // Publish a second responder and drop the responder handle immediately. This ensures that the
+    // service can handle the responder going away when probing is still underway.
+    fidl::Binding<fuchsia::net::mdns::PublicationResponder> transient_responder_binding(this);
+    transient_responder_binding.Bind(responder_handle.NewRequest());
+    transient_responder_binding.set_error_handler([this](zx_status_t status) {
+      std::cerr << "Transient responder channel disconnected unexpectedly, status " << status
+                << ".\n";
+      Quit(1);
+    });
+
+    publisher_->PublishServiceInstance(
+        kTransientServiceName, kInstanceName, true, std::move(responder_handle),
+        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
+          if (result.is_response()) {
+            std::cout << "Transient instance successfully published.\n";
+          } else {
+            std::cerr << "PublishServiceInstance failed, err " << result.err() << ".\n";
+            Quit(1);
+          }
+        });
+
+    transient_responder_binding.Unbind();
   }
 
  private:
