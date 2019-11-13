@@ -30,61 +30,74 @@ extern "C" {
 // 1) Create a VkSurfaceKHR then call vk_swapchain_create(...) with appropriate
 //    configuration arguments passed as a vk_swapchain_config_t pointer.
 //
-// 2) Retrieve swapchain surface information with
-//    vk_swapchain_get_surface_info() or one of the individual getter
-//    functions (e.g. vk_swapchain_get_image_count(),
-//    vk_swapchain_get_image_view(), etc).
+// 2) Retrieve swapchain surface information with one of the individual getter
+//    functions (e.g. vk_swapchain_get_image_count(), vk_swapchain_get_image_view(), etc).
 //
-// 3) Call vk_swapchain_enable_image_command_buffers() to let the swapchain
-//    create one command buffer per swapchain image, which can later be
-//    retrieved through vk_swapchain_get_image_command_buffer(). Note that
-//    these are created for the graphics queue.
+// 3) To render to a swapchain, the hard way, do the following:
 //
-//    NOTE: This is optional, and provided as a convenience. The caller can
-//    also chose to create its own set of command buffers instead.
+//     - Call vk_swapchain_acquire_next_image() to acquire the index
+//       of the new swapchain image.
 //
-// 4) Call vk_swapchain_enable_image_framebuffers() to let the swapchain
-//    create one VkFramebuffer per swapchain image, each one of them associated
-//    with the same render pass.
+//     - Perform one or more queue submits to render something to
+//       the image (using vk_swapchain_get_image() and
+//       vk_swapchain_get_image_view() to retrieve handles to the
+//       coresponding VkImage and VkImageView, respectively).
 //
-//    NOTE: This is also provided as a convenience. The caller can chose to
-//    create its own framebuffers created from the results of
-//    vk_swapchain_get_image_view() instead.
+//       NOTE: The first submit *must* wait on
+//       vk_swapchain_get_image_acquired_semaphore(), because the
+//       image might not be ready for access yet after
+//       vk_swapchain_acquire_next_image() returns.
 //
-// 5) For every frame that needs to be presented:
+//       NOTE2: The last submit *must* signal
+//       vk_swapchain_get_image_rendered_semaphore(), because it
+//       is waited on to present the image.
 //
-//    a) First call vk_swapchain_prepare_next_image() which will return the
-//       index of the next swapchain image to render to. The image and/or its
-//       image view can be retrieved with vk_swapchain_get_image().
+//     - Call vk_swapchain_present_image() to send the content of
+//       the current swapchain image for presentation. Note that this
+//       will always wait on vk_swapchain_get_image_rendered_semaphore()
 //
-//    b) Render into the image with whatever means necessary. For example
-//       by using the command buffer and framebuffers enabled in steps 3)
-//       and 4) above.
+//    Usage example:
 //
-//    c) Call either vk_swapchain_submit_image() or
-//       vk_swapchain_submit_image_with_buffers().
+//        // Acquire next swapchain image
+//        uint32_t image_index;
+//        if (!vk_swapchain_acquire_next_image(swapchain, &image_index)) {
+//           // exit rendering loop.
+//        }
 //
-//       The first one uses the default command buffers enabled through
-//       vk_swapchain_enable_image_command_buffers() (which you should have
-//       setup yourself before).
+//        // Begin one or more command buffers, fill them with commands.
 //
-//       The second one allows you to use your own command buffers.
+//        // Submit the command buffer(s), waiting and signalling the
+//        // right semaphores.
 //
-//       Both calls perform a vkQueueSubmit() on the graphics queue that
-//       will properly synchronize with the presentation engine and the
-//       swapchain image.
+//        VkSemaphore waitSemaphore =
+//            vk_swapchain_get_image_acquired_semaphore(swapchain);
 //
-//    d) Call vk_swapchain_present_image() to send a presentation request
-//       to the presentation engine for the current image.
+//        VkSemaphore signalSemaphore =
+//            vk_swapchain_get_image_rendered_semaphore(swapchain);
 //
-//   Note that the implementation supports, for maximum throughput, several
-//   frames being rendered concurrently through the GPU, using the |max_frames|
-//   parameter in vk_swapchain_config_t. This corresponds to the FRAME_LAG
-//   constant in the Vulkan Tutorial / Vulkan cube example programs.
+//        const VkSubmitInfo submitInfo = {
+//          .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+//          ...
+//          .waitSemaphoreCount = 1,
+//          .pWaitSemaphores = &waitSemaphore,
+//          .pWaitDstStageMask = ...,
+//          ...
+//          .signalSemaphoreCount = 1,
+//          .pSignalSemaphores = &signalSemaphore,
+//        };
+//        vkQueueSubmit(queue, 1, &submitInfo, ...);
 //
-// See the vk_triangle_test and vk_transfer_test examples for usage exmaples.
+//        // Send rendered image to presentation.
+//        vk_swapchain_present_image(swapchain);
 //
-typedef struct vk_swapchain_t vk_swapchain_t;
+//
+// 4) Convenience functions are provided in "vk_swapchain_queue.h" to make
+//    this easier for simple applications. See documentation comments there.
+//
+// Also see the vk_triangle_test and vk_transfer_test examples for examples.
+//
+
+typedef struct vk_swapchain vk_swapchain_t;
 
 typedef struct
 {
@@ -117,7 +130,20 @@ typedef struct
   // looking at |surface_format.format| after swapchain creation.
   VkFormat pixel_format;
 
-  // TODO(digit): Provide a way to suggest a favorite surface format.
+  // Set to true to disable synchronization to the vertical blanking period.
+  // Will result in tearing, but useful for benchmarking. Ignored if
+  // |disable_present| is set.
+  bool disable_vsync;
+
+  // If not 0, this is taken as the required image usage bits for the
+  // swapchain creation. Default will be VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.
+  VkImageUsageFlags image_usage_flags;
+
+  // Set to true to transition the layout of all swapchain images to
+  // VK_LAYOUT_PRESENT_SRC_KHR in vk_swapchain_create(). By default, they
+  // will be in VK_LAYOUT_UNDEFINED layout.
+  bool use_presentation_layout;
+
   // TODO(digit): Provide a way to suggest a favorite presentation mode.
   // TODO(digit): Provide a way to provide an old swapchain to support resizes.
 
@@ -138,37 +164,19 @@ vk_swapchain_print(const vk_swapchain_t * swapchain);
 extern void
 vk_swapchain_destroy(vk_swapchain_t * swapchain);
 
-// Information about the swapchain's surface returned by
-// vk_swapchain_get_surface_info().
-//
-// |surface_extent| is the presentation surface's extent.
-// |surface_format| is its pixel format and colorspace.
-// |image_count| is the number of swapchain images.
-// |frame_count| is the max number of frames that can be pushed to the GPU
-// concurrently, and will be the maximum of either |image_count| or the
-// |config.max_frames| value passed when calling vk_swapchain_create().
-typedef struct
-{
-  VkExtent2D         surface_extent;
-  VkSurfaceFormatKHR surface_format;
-  uint32_t           image_count;
-  uint32_t           frame_count;
-} vk_swapchain_surface_info_t;
-
-// Retrieve surface-specific information as a struct.
-// Alternatively, use single-return helpers below.
-extern vk_swapchain_surface_info_t
-vk_swapchain_get_surface_info(const vk_swapchain_t * swapchain);
-
+// Retrieve swapchain surface extent.
 extern VkExtent2D
 vk_swapchain_get_extent(const vk_swapchain_t * swapchain);
 
+// Retrieve swapchain surface format and color space.
 extern VkSurfaceFormatKHR
 vk_swapchain_get_format(const vk_swapchain_t * swapchain);
 
+// Retrieve number of swapchain images.
 extern uint32_t
 vk_swapchain_get_image_count(const vk_swapchain_t * swapchain);
 
+// Retrieve number of sync frames (will be <= the image count).
 extern uint32_t
 vk_swapchain_get_frame_count(const vk_swapchain_t * swapchain);
 
@@ -177,126 +185,66 @@ vk_swapchain_get_frame_count(const vk_swapchain_t * swapchain);
 extern VkSwapchainKHR
 vk_swapchain_get_swapchain_khr(const vk_swapchain_t * swapchain);
 
-// Information associated with each swapchain image, as
-// returned by vk_swapchain_get_image_data().
-//
-// |image| and |image_view| are the corresponding VkImage and VkImageView,
-// which are retrieved and created automatically by the swapchain instance.
-//
-// |command_buffer| is VK_NULL_HANDLE unless
-// vk_swapchain_enable_image_command_buffers() is called (see related doc).
-//
-// |framebuffer| is VK_NULL_HANDLE unless
-// vk_swapchain_enable_image_framebuffers() is called (see related doc).
-//
-typedef struct
-{
-  VkImage         image;
-  VkImageView     image_view;
-  VkCommandBuffer command_buffer;
-  VkFramebuffer   framebuffer;
-} vk_swapchain_image_data_t;
-
-// Retrieve swapchain image-specific data as a struct.
-// Alternatively, use the single-return helpers below to get the same values.
-// IMPORTANT: |image_index| should be less than |surface_info.image_count| or
-// the function will abort.
-extern vk_swapchain_image_data_t
-vk_swapchain_get_image_data(const vk_swapchain_t * swapchain, uint32_t image_index);
-
+// Retrieve VkImage associated with swapchain image at |image_index|.
+// Requires |image_index < image_count|.
 extern VkImage
 vk_swapchain_get_image(const vk_swapchain_t * swapchain, uint32_t image_index);
 
+// Retrieve VkImageView associated with swapchain image at |image_index|.
+// Requires |image_index < image_count|.
 extern VkImageView
 vk_swapchain_get_image_view(const vk_swapchain_t * swapchain, uint32_t image_index);
 
-// Create a set of command buffers for the graphics queue, one per swapchain image.
-// These can later be retrieved with vk_swapchain_enable_image_command_buffers(),
-// and will be deallocated automatically by vk_swapchain_destroy().
+// NOTE: For simpler cases, consider using vk_swapchain_prepare_next_image() and
+// vk_swapchain_submit_and_present_image() instead.
 //
-// NOTE: It is up to the caller to actually setup (i.e. record commands in) these
-// buffers.
-extern void
-vk_swapchain_enable_image_command_buffers(vk_swapchain_t * swapchain,
-                                          uint32_t         graphics_queue_family,
-                                          uint32_t         graphics_queue_index);
-
-// Retrieve the VkQueue created by a call to vk_swapchain_enable_image_command_buffers()
-// or VK_NULL_HANDLE otherwise.
-extern VkQueue
-vk_swapchain_get_graphics_queue(const vk_swapchain_t * swapchain);
-
-// Retrieve the command buffer associated with swapchain image identified by |image_index|.
-// Aborts if |image_index| is invalid. Returns VK_NULL_HANDLE if vk_swapchain_enable_image_command_buffers()
-// was not called.
-extern VkCommandBuffer
-vk_swapchain_get_image_command_buffer(const vk_swapchain_t * swapchain, uint32_t image_index);
-
-// Create a set of framebuffers, one per swapchain image, each one of them
-// being associated with the same |render_pass|. These can later be retrieved
-// with vk_swapchain_enable_image_framebuffers(), and will be destroyed
-// automatically by vk_swapchain_destroy().
-extern void
-vk_swapchain_enable_image_framebuffers(vk_swapchain_t * swapchain, VkRenderPass render_pass);
-
-// Retrieve the framebuffer associated with a given swapchain image.
-// Aborts if |image_index| is invalid. Returns VK_NULL_HANDLE if
-// vk_swapchain_enable_image_framebuffers() was never called.
-extern VkFramebuffer
-vk_swapchain_get_image_framebuffer(const vk_swapchain_t * swapchain, uint32_t image_index);
-
-// Retrieve a new swapchain image index. This only blocks
-// On success, returns true and sets |*image_index| to a valid swapchain index
-// and |*command_buffer| to the corresponding command buffer.
-// On failure (i.e. window resizing), return false.
+// Acquire the next swapchain image. On failure, i.e. if the display surface was
+// resized or invalidated, return false. Otherwise, return true and sets
+// |*p_image_index| to the swapchain image index. The latter can also be
+// retrieved as vk_swapchain_get_image_index().
+//
+// IMPORTANT: The caller should then queue one or more submits, but the first
+// one must wait on the vk_swapchain_get_image_acquired() semaphore, and the
+// last one must signal the vk_swapchain_get_image_rendered() semaphore.
 extern bool
-vk_swapchain_prepare_next_image(vk_swapchain_t * swapchain, uint32_t * image_index);
+vk_swapchain_acquire_next_image(vk_swapchain_t * swapchain, uint32_t * p_image_index);
 
-// Submit the current swapchain image's, using the corresponding command buffer
-// that is normally returned by vk_swapchain_get_image_command_buffer().
-// NOTE: Callers should use vk_swapchain_submit_image_with_buffers() if a
-// different set of command buffers is needed for this image.
-extern void
-vk_swapchain_submit_image(vk_swapchain_t * swapchain);
-
-// Tell the swapchain to present the current image. On success, return true,
-// false otherwise (i.e. if the window was resized).
-extern bool
-vk_swapchain_present_image(vk_swapchain_t * swapchain);
-
-////////////////////////////////////////////////////////////////////////////
-//
-// NOTE: The following functions are useful if one does *not* want to use
-// use vk_swapchain_submit_image(). This can happen if one wants to send
-// additional command buffers to the graphics queue (e.g. when using Skia).
-//
-// A good understanding of how Vulkan swapchain synchronization works is
-// recommended before using these!!
-//
-// IMPORTANT: The current swapchain image changes every time you call
-// vk_swapchain_prepare_next_image(). This will affect the values returned
-// by the functions below!
-
-// Return the fence that is signaled to indicate rendering operations on the
-// current swapchain image can start. This is waited on, and the reset, by
-// vk_swapchain_prepare_next_image() before acquiring the image. It is also
-// used by vk_swapchain_submit_image(). If the latter is not used, it should be
-// signaled by the client, for example by using it in a vkQueueSubmit() call.
-//
-extern VkFence
-vk_swapchain_get_image_rendered_fence(const vk_swapchain_t * swapchain);
+// Return the current swapchain image index. The one returned when calling
+// vk_swapchain_acquire_next_image().
+extern uint32_t
+vk_swapchain_get_image_index(const vk_swapchain_t * swapchain);
 
 // Return the semaphore used to wait for the current swapchain image acquisition.
-// This is the semaphore that vk_swapchain_submit_image() will use for waiting.
+// This is the semaphore that vk_swapchain_submit_and_present_image() will use for
+// waiting, or that any queue submit performed after
+// vk_swapchain_acquire_next_image() should wait on.
 extern VkSemaphore
 vk_swapchain_get_image_acquired_semaphore(const vk_swapchain_t * swapchain);
 
 // Return the semaphore used to signal rendering completion for the current
 // swapchain image. This is the semaphore that is waited on by
-// vk_swapchain_present_image(), and which is also signaled by
-// vk_swapchain_submit_image().
+// vk_swapchain_present_image(), and which is also signaled internally by
+// vk_swapchain_submit_and_present_image().
 extern VkSemaphore
 vk_swapchain_get_image_rendered_semaphore(const vk_swapchain_t * swapchain);
+
+// Return the semaphore used to wait for the current swapchain image acquisition
+// and transfer ownership to the caller. The next call to
+// vk_swapchain_acquire_next_image() will create a new semaphore on demand.
+// This is necessary because certain libraries, like Skia, insist on owning
+// the semaphores they wait on.
+extern VkSemaphore
+vk_swapchain_take_image_acquired_semaphore(vk_swapchain_t * swapchain);
+
+// Same as above for the semaphore returned by vk_swapchain_get_image_rendered_semaphore().
+extern VkSemaphore
+vk_swapchain_take_image_rendered_semaphore(vk_swapchain_t * swapchain);
+
+// Present the current swapchain image after waiting for
+// vk_swapchain_get_image_rendered_semaphore(), which should have been
+// signaled by a previous submit performed by the caller.
+extern bool
+vk_swapchain_present_image(vk_swapchain_t * swapchain);
 
 //
 //

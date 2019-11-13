@@ -22,7 +22,22 @@ class SkiaTestAppImpl;
 //
 class SkiaTestApp {
  public:
-  SkiaTestApp(const char * app_name, bool is_debug, uint32_t window_width, uint32_t window_height);
+  struct Config
+  {
+    const char * app_name;
+    uint32_t     window_width;
+    uint32_t     window_height;
+    bool         enable_debug;
+    bool         disable_vsync;
+  };
+
+  explicit SkiaTestApp(const Config & config);
+
+  // Deprecated constructor!
+  SkiaTestApp(const char * app_name, bool is_debug, uint32_t window_width, uint32_t window_height)
+      : SkiaTestApp(Config{ app_name, window_width, window_height, is_debug, false })
+  {
+  }
 
   virtual ~SkiaTestApp();
 

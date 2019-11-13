@@ -52,10 +52,13 @@ source_set("common_vk") {
   public = [
     "common/vk_app_state.h",
     "common/vk_buffer.h",
+    "common/vk_format_matcher.h",
     "common/vk_image.h",
     "common/vk_sampler.h",
     "common/vk_strings.h",
+    "common/vk_surface.h",
     "common/vk_swapchain.h",
+    "common/vk_swapchain_queue.h",
     "common/vk_utils.h",
   ]
   sources = [
@@ -63,14 +66,20 @@ source_set("common_vk") {
     "common/vk_app_state.h",
     "common/vk_buffer.c",
     "common/vk_buffer.h",
+    "common/vk_format_matcher.c",
+    "common/vk_format_matcher.h",
     "common/vk_image.c",
     "common/vk_image.h",
     "common/vk_sampler.c",
     "common/vk_sampler.h",
     "common/vk_strings.c",
     "common/vk_strings.h",
+    "common/vk_surface.c",
+    "common/vk_surface.h",
     "common/vk_swapchain.c",
     "common/vk_swapchain.h",
+    "common/vk_swapchain_queue.c",
+    "common/vk_swapchain_queue.h",
     "common/vk_utils.c",
     "common/vk_utils.h",
   ]
@@ -107,6 +116,7 @@ graphics_compute_unittests("common_vk_unittests") {
   sources = [
     "common/vk_app_state_unittest.cc",
     "common/vk_buffer_unittest.cc",
+    "common/vk_format_matcher_unittest.cc",
     "common/vk_image_unittest.cc",
     "common/vk_sampler_unittest.cc",
     "common/vk_strings_unittest.cc",

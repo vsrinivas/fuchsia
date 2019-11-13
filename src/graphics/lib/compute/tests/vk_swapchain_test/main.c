@@ -58,8 +58,6 @@ main(int argc, char const * argv[])
 
   vk_swapchain_t * swapchain = vk_swapchain_create(&swapchain_config);
 
-  vk_swapchain_enable_image_command_buffers(swapchain, app_state.qfi, 0);
-
   vk_swapchain_print(swapchain);
 
   vk_swapchain_destroy(swapchain);

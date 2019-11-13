@@ -7,6 +7,7 @@
 
 #include "tests/common/vk_app_state.h"
 #include "tests/common/vk_swapchain.h"
+#include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
 
 // Include the auto-generated constant arrays containing our compiled shaders.
@@ -297,14 +298,23 @@ main(int argc, char const * argv[])
 
   // Setup command buffers and framebuffers for this application.
 
-  vk_swapchain_enable_image_framebuffers(swapchain, render_pass);
-  vk_swapchain_enable_image_command_buffers(swapchain, app_state.qfi, 0);
+  vk_swapchain_queue_t * swapchain_queue =
+    vk_swapchain_queue_create(&(const vk_swapchain_queue_config_t){
+      .swapchain    = swapchain,
+      .queue_family = app_state.qfi,
+      .queue_index  = 0,
+      .device       = app_state.d,
+      .allocator    = app_state.ac,
+
+      .enable_framebuffers = render_pass,
+    });
 
   uint32_t image_count = vk_swapchain_get_image_count(swapchain);
 
-  for (uint32_t n = 0; n < image_count; ++n)
+  for (uint32_t nn = 0; nn < image_count; ++nn)
     {
-      VkCommandBuffer buffer = vk_swapchain_get_image_command_buffer(swapchain, n);
+      const vk_swapchain_queue_image_t * image  = vk_swapchain_queue_get_image(swapchain_queue, nn);
+      VkCommandBuffer                    buffer = image->command_buffer;
 
       const VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -313,9 +323,9 @@ main(int argc, char const * argv[])
       vk(BeginCommandBuffer(buffer, &beginInfo));
 
       const VkRenderPassBeginInfo renderPassInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = render_pass,
-        .framebuffer = vk_swapchain_get_image_framebuffer(swapchain, n),
+        .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass  = render_pass,
+        .framebuffer = image->framebuffer,
         .renderArea = {
             .offset = {0, 0},
             .extent = surface_extent,
@@ -337,9 +347,7 @@ main(int argc, char const * argv[])
 
   while (vk_app_state_poll_events(&app_state))
     {
-      uint32_t image_index;
-
-      if (!vk_swapchain_prepare_next_image(swapchain, &image_index))
+      if (!vk_swapchain_queue_acquire_next_image(swapchain_queue))
         {
           // Window was resized! For now just exit!!
           // TODO(digit): Handle resize!!
@@ -347,9 +355,7 @@ main(int argc, char const * argv[])
         }
 
       // Nothing to do here, just submit the current image's command buffer!
-      vk_swapchain_submit_image(swapchain);
-
-      vk_swapchain_present_image(swapchain);
+      vk_swapchain_queue_submit_and_present_image(swapchain_queue);
 
       // Print a small tick every two seconds (assuming a 60hz swapchain) to
       // check that everything is working, even if the image is static at this
@@ -371,6 +377,7 @@ main(int argc, char const * argv[])
   // Dispose of Vulkan resources
   //
 
+  vk_swapchain_queue_destroy(swapchain_queue);
   vk_swapchain_destroy(swapchain);
 
   vkDestroyPipeline(device, graphics_pipeline, allocator);

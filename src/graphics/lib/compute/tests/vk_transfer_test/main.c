@@ -8,6 +8,7 @@
 #include "tests/common/vk_app_state.h"
 #include "tests/common/vk_buffer.h"
 #include "tests/common/vk_swapchain.h"
+#include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
 #include "triangle_shaders.h"
 
@@ -232,6 +233,10 @@ create_graphics_pipeline(VkDevice                      device,
 //
 //
 
+//
+//
+//
+
 static void
 fill_buffer(vk_buffer_t * buffer, uint32_t width, uint32_t height, uint32_t counter)
 {
@@ -290,8 +295,9 @@ main(int argc, char const * argv[])
     .graphics_queue_family = app_state.qfi,
     .graphics_queue_index  = 0,
 
-    .surface_khr = vk_app_state_create_surface(&app_state, 800, 600),
-    .max_frames  = 2,
+    .image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    .surface_khr       = vk_app_state_create_surface(&app_state, 800, 600),
+    .max_frames        = 2,
   });
 
   VkDevice                      device         = app_state.d;
@@ -305,9 +311,16 @@ main(int argc, char const * argv[])
   VkPipeline graphics_pipeline =
     create_graphics_pipeline(device, allocator, surface_extent, render_pass, pipeline_layout);
 
-  vk_swapchain_enable_image_framebuffers(swapchain, render_pass);
+  vk_swapchain_queue_t * swapchain_queue =
+    vk_swapchain_queue_create(&(const vk_swapchain_queue_config_t){
+      .swapchain    = swapchain,
+      .queue_family = app_state.qfi,
+      .queue_index  = 0,
+      .device       = device,
+      .allocator    = allocator,
 
-  vk_swapchain_enable_image_command_buffers(swapchain, app_state.qfi, 0);
+      .enable_framebuffers = render_pass,
+    });
 
   vk_swapchain_print(swapchain);
 
@@ -321,7 +334,7 @@ main(int argc, char const * argv[])
   vk_buffer_alloc_host_coherent(
     &my_buffer,
     my_buffer_size,
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
     app_state.pd,
     device,
     allocator);
@@ -331,9 +344,10 @@ main(int argc, char const * argv[])
 
   while (vk_app_state_poll_events(&app_state))
     {
-      uint32_t image_index = 0;
+      const vk_swapchain_queue_image_t * image =
+        vk_swapchain_queue_acquire_next_image(swapchain_queue);
 
-      if (!vk_swapchain_prepare_next_image(swapchain, &image_index))
+      if (!image)
         {
           // Window was resized! For now just exit!!
           // TODO(digit): Handle resize!!
@@ -355,9 +369,9 @@ main(int argc, char const * argv[])
 
       // Step 1)
       {
-        VkCommandBuffer buffer      = vk_swapchain_get_image_command_buffer(swapchain, image_index);
-        VkFramebuffer   framebuffer = vk_swapchain_get_image_framebuffer(swapchain, image_index);
-        VkImage         swapchain_image = vk_swapchain_get_image(swapchain, image_index);
+        VkCommandBuffer buffer          = image->command_buffer;
+        VkFramebuffer   framebuffer     = image->framebuffer;
+        VkImage         swapchain_image = image->image;
 
         const VkCommandBufferBeginInfo beginInfo = {
           .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -481,9 +495,7 @@ main(int argc, char const * argv[])
       fill_buffer(&my_buffer, buffer_width, buffer_height, counter);
       vk_buffer_flush_all(&my_buffer);
 
-      vk_swapchain_submit_image(swapchain);
-
-      vk_swapchain_present_image(swapchain);
+      vk_swapchain_queue_submit_and_present_image(swapchain_queue);
 
       counter++;
     }
@@ -498,6 +510,7 @@ main(int argc, char const * argv[])
 
   vk_buffer_free(&my_buffer);
 
+  vk_swapchain_queue_destroy(swapchain_queue);
   vk_swapchain_destroy(swapchain);
 
   vkDestroyPipeline(device, graphics_pipeline, allocator);
