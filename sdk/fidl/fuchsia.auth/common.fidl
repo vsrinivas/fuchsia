@@ -4,54 +4,6 @@
 
 library fuchsia.auth;
 
-/// A high level assessment of whether the human that owns a Fuchsia account is
-/// present and engaged.
-///
-/// Note this enum is currently defined to enable multi-user experimentation.
-/// Substantial work is required before any realistic use cases.
-enum AuthStateSummary {
-    /// No information (either affirming or dissenting) is available about the
-    /// current presence or engagement of the account owner.
-    UNKNOWN = 0;
-
-    /// The account owner has been marked as present by some test or experimental
-    /// authentication mechanism. This state should not be used to grant access
-    /// to any sensitive user information.
-    TEST_PRESENT = 10000;
-
-    /// The account owner has been marked as not-present by some test or
-    /// experimental authentication mechanism.
-    TEST_ABSENT = 10001;
-
-    // TODO(jsankey): Add additional values to represent realistic
-    //                authentication states.
-};
-
-/// An assessment of the current presence and engagement of the human that owns
-/// a Fuchsia account, including the system's confidence in that assessment and
-/// its timeliness.
-///
-/// Note this struct is currently defined to enable multi-user experimentation.
-/// Substantial work is required before any realistic use cases.
-struct AuthState {
-    /// A high level assessment of whether the human that owns a Fuchsia account
-    /// is present and engaged.
-    AuthStateSummary summary;
-
-    // TODO(jsankey): Add additional fields to express timeliness, confidence,
-    //                and authentication mechanism.
-};
-
-/// An expression of the types of changes an auth state that should be reported
-/// over listener interfaces. By default no changes will be reported.
-struct AuthChangeGranularity {
-    /// If true, any changes in the `AuthStateSummary` enumeration will be
-    /// reported.
-    bool summary_changes;
-
-    // TODO(jsankey): Expand to include other types of change.
-};
-
 /// A unique identifier for an account with some service provider, comprised of
 /// the identity of the service provider and an account identity supplied by that
 /// service provider.
