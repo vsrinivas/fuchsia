@@ -72,7 +72,7 @@ async fn base_resolver_test() -> Result<(), Error> {
     let (echo_proxy, echo_server_end) = create_proxy::<fidl_echo::EchoMarker>()?;
     let svc_path = "/svc/fidl.examples.echo.Echo".try_into().unwrap();
     model
-        .bind_instance_open_outgoing(
+        .bind_open_outgoing(
             echo_server_realm,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,

@@ -93,7 +93,7 @@ pub async fn open_isolated_storage(
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     model
-        .bind_instance_open_outgoing(
+        .bind_open_outgoing(
             dir_source_realm.clone(),
             FLAGS,
             open_mode,
@@ -135,7 +135,7 @@ pub async fn delete_isolated_storage(
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     model
-        .bind_instance_open_outgoing(
+        .bind_open_outgoing(
             dir_source_realm.clone(),
             FLAGS,
             MODE_TYPE_DIRECTORY,

@@ -51,14 +51,15 @@ async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTes
 
 impl TestRunner {
     async fn new(root_component_url: &str) -> Result<Self, Error> {
-        let (_model, _builtin_environment) = create_model(root_component_url).await?;
-        let work_scheduler_test_hook = install_work_scheduler_test_hook(&_model).await;
+        let (model, _builtin_environment) = create_model(root_component_url).await?;
+        let work_scheduler_test_hook = install_work_scheduler_test_hook(&model).await;
 
-        let res = _model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
+        let root_moniker = model::AbsoluteMoniker::root();
+        let res = model.bind(&root_moniker).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", expected_res), format!("{:?}", res));
 
-        Ok(Self { _model, _builtin_environment, work_scheduler_test_hook })
+        Ok(Self { _model: model, _builtin_environment, work_scheduler_test_hook })
     }
 }
 

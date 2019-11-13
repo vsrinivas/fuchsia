@@ -52,8 +52,9 @@ async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnviro
         startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
             .await?;
     builtin_environment.bind_hub_to_outgoing_dir(&model).await?;
+    let root_moniker = AbsoluteMoniker::root();
     model
-        .look_up_and_bind_instance(AbsoluteMoniker::root())
+        .bind(&root_moniker)
         .await
         .map_err(|e| Error::from(e))
         .context(format!("failed to bind to root component {}", args.root_component_url))?;

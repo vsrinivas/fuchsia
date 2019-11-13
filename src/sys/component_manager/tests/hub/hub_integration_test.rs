@@ -87,7 +87,8 @@ impl TestRunner {
         let (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver) =
             register_breakpoints(&model, event_types).await;
 
-        let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
+        let root_moniker = model::AbsoluteMoniker::root();
+        let res = model.bind(&root_moniker).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 

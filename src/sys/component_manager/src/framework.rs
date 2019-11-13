@@ -178,7 +178,7 @@ impl RealmCapabilityHostInner {
         };
         if let Some(child_realm) = child_realm {
             model
-                .bind_instance_open_exposed(child_realm, exposed_dir.into_channel())
+                .bind_open_exposed(child_realm, exposed_dir.into_channel())
                 .await
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
@@ -190,7 +190,7 @@ impl RealmCapabilityHostInner {
                         fsys::Error::InstanceCannotStart
                     }
                     e => {
-                        error!("bind_instance_open_exposed() failed: {}", e);
+                        error!("bind_open_exposed() failed: {}", e);
                         fsys::Error::Internal
                     }
                 })?;
@@ -391,7 +391,7 @@ mod tests {
 
             // Look up and bind to realm.
             let realm = model.look_up_realm(&realm_moniker).await.expect("failed to look up realm");
-            model.bind_instance(realm.clone()).await.expect("failed to bind to realm");
+            model.bind(&realm.abs_moniker).await.expect("failed to bind to realm");
 
             // Host framework service.
             let (realm_proxy, stream) =

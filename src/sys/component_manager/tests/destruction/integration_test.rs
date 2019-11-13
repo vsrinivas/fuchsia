@@ -46,7 +46,8 @@ async fn destruction() -> Result<(), Error> {
     model.root_realm.hooks.install(test_hook.hooks()).await;
     model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
 
-    model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await?;
+    let root_moniker = model::AbsoluteMoniker::root();
+    model.bind(&root_moniker).await?;
 
     // Wait for `coll:root` to be destroyed.
     breakpoint_receiver

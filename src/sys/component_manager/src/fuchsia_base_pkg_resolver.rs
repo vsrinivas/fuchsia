@@ -60,7 +60,7 @@ impl FuchsiaPkgResolver {
                 ResolverError::component_not_available(component_package_url.to_string(), e)
             })?;
             model
-                .bind_instance_open_outgoing(
+                .bind_open_outgoing(
                     realm,
                     OPEN_RIGHT_READABLE,
                     MODE_TYPE_DIRECTORY,

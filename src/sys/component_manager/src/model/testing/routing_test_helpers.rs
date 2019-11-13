@@ -465,10 +465,7 @@ impl RoutingTest {
 
     pub async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
         let expected_res: Result<(), ModelError> = Ok(());
-        assert_eq!(
-            format!("{:?}", model.look_up_and_bind_instance(moniker.clone()).await),
-            format!("{:?}", expected_res),
-        );
+        assert_eq!(format!("{:?}", model.bind(moniker).await), format!("{:?}", expected_res),);
         moniker.path().last().expect("didn't expect a root component").name().to_string()
     }
 
@@ -802,7 +799,7 @@ pub mod capability_util {
             .look_up_realm(abs_moniker)
             .await
             .expect(&format!("realm not found {}", abs_moniker));
-        model.bind_instance(realm.clone()).await.expect("failed to bind instance");
+        model.bind(abs_moniker).await.expect("failed to bind instance");
         let execution = realm.lock_execution().await;
         let runtime = execution.runtime.as_ref().expect("not resolved");
         let flags = OPEN_RIGHT_READABLE;

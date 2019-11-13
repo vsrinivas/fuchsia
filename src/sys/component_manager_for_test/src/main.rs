@@ -42,7 +42,8 @@ async fn main() -> Result<(), Error> {
             .await?;
     builtin_environment.bind_hub(&model, Some(server_chan.into())).await?;
 
-    match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
+    let root_moniker = AbsoluteMoniker::root();
+    match model.bind(&root_moniker).await {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates).
