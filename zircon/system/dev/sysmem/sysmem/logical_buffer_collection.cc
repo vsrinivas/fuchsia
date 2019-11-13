@@ -7,8 +7,11 @@
 #include <lib/image-format/image_format.h>
 #include <limits.h>  // PAGE_SIZE
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <limits>  // std::numeric_limits
+
+#include <fbl/algorithm.h>
 
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
@@ -1539,6 +1542,14 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
 zx_status_t LogicalBufferCollection::AllocateVmo(
     MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings,
     zx::vmo* child_vmo) {
+  // Physical VMOs only support slices where the size (and offset) are page_size aligned,
+  // so we should also round up when allocating.
+  auto rounded_size_bytes = fbl::round_up(settings->buffer_settings.size_bytes, ZX_PAGE_SIZE);
+  if (rounded_size_bytes < settings->buffer_settings.size_bytes) {
+    LogError("size_bytes overflows when rounding to multiple of page_size");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   // raw_vmo may itself be a child VMO of an allocator's overall contig VMO,
   // but that's an internal detail of the allocator.  The ZERO_CHILDREN signal
   // will only be set when all direct _and indirect_ child VMOs are fully
@@ -1546,12 +1557,12 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // avoids races with handle close, and means there also aren't any
   // mappings left).
   zx::vmo raw_parent_vmo;
-  zx_status_t status = allocator->Allocate(settings->buffer_settings.size_bytes, &raw_parent_vmo);
+  zx_status_t status = allocator->Allocate(rounded_size_bytes, &raw_parent_vmo);
   if (status != ZX_OK) {
     LogError(
         "allocator->Allocate failed - size_bytes: %u "
         "status: %d",
-        settings->buffer_settings.size_bytes, status);
+        rounded_size_bytes, status);
     // sanitize to ZX_ERR_NO_MEMORY regardless of why.
     status = ZX_ERR_NO_MEMORY;
     return status;
@@ -1619,8 +1630,8 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   }
 
   zx::vmo local_child_vmo;
-  status = cooked_parent_vmo.create_child(ZX_VMO_CHILD_SLICE, 0,
-                                          settings->buffer_settings.size_bytes, &local_child_vmo);
+  status =
+      cooked_parent_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, rounded_size_bytes, &local_child_vmo);
   if (status != ZX_OK) {
     LogError("zx::vmo::create_child() failed - status: %d", status);
     return status;

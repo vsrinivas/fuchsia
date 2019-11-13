@@ -2104,7 +2104,7 @@ extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
   constexpr uint32_t kBufferCount = 4;
   constraints->min_buffer_count_for_camping = kBufferCount;
   constraints->has_buffer_memory_constraints = true;
-  constexpr uint32_t kBufferSizeBytes = 64 * 1024;
+  constexpr uint32_t kBufferSizeBytes = 64 * 1024 - 1;
   constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
       .min_size_bytes = kBufferSizeBytes,
       .max_size_bytes = 128 * 1024,
@@ -2140,13 +2140,14 @@ extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
             fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC, "");
   EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
+  auto expected_size = fbl::round_up(kBufferSizeBytes, ZX_PAGE_SIZE);
   for (uint32_t i = 0; i < 64; ++i) {
     if (i < kBufferCount) {
       EXPECT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
       uint64_t size_bytes = 0;
       status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
       ASSERT_EQ(status, ZX_OK, "");
-      EXPECT_EQ(size_bytes, kBufferSizeBytes, "");
+      EXPECT_EQ(size_bytes, expected_size, "");
     } else {
       EXPECT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
     }
