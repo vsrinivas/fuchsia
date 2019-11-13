@@ -326,6 +326,9 @@ impl<'a> ValidationContext<'a> {
                     u.source_path.as_ref(),
                     u.target_path.as_ref(),
                 );
+                if u.rights.is_none() {
+                    self.errors.push(Error::missing_field("UseDirectoryDecl", "rights"));
+                }
             }
             fsys::UseDecl::Storage(u) => match u.type_ {
                 None => self.errors.push(Error::missing_field("UseStorageDecl", "type")),
@@ -518,6 +521,15 @@ impl<'a> ValidationContext<'a> {
                     e.target.as_ref(),
                     prev_target_paths,
                 );
+
+                match e.source.as_ref() {
+                    Some(fsys::Ref::Self_(_)) => {
+                        if e.rights.is_none() {
+                            self.errors.push(Error::missing_field("ExposeDirectoryDecl", "rights"));
+                        }
+                    }
+                    _ => {}
+                }
             }
             fsys::ExposeDecl::Runner(e) => {
                 self.validate_expose_runner_fields(
@@ -657,6 +669,14 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_path.as_ref(),
                 );
+                match o.source.as_ref() {
+                    Some(fsys::Ref::Self_(_)) => {
+                        if o.rights.is_none() {
+                            self.errors.push(Error::missing_field("OfferDirectoryDecl", "rights"));
+                        }
+                    }
+                    _ => {}
+                }
             }
             fsys::OfferDecl::Storage(o) => {
                 self.validate_storage_offer_fields(
@@ -1077,6 +1097,7 @@ fn check_url(
 mod tests {
     use {
         super::*,
+        fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeRunnerDecl,
@@ -1347,6 +1368,7 @@ mod tests {
                         source: None,
                         source_path: None,
                         target_path: None,
+                        rights: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: None,
@@ -1372,6 +1394,7 @@ mod tests {
                 Error::missing_field("UseDirectoryDecl", "source"),
                 Error::missing_field("UseDirectoryDecl", "source_path"),
                 Error::missing_field("UseDirectoryDecl", "target_path"),
+                Error::missing_field("UseDirectoryDecl", "rights"),
                 Error::missing_field("UseStorageDecl", "type"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseRunnerDecl", "source_name"),
@@ -1395,6 +1418,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: Some(StorageType::Cache),
@@ -1456,6 +1480,7 @@ mod tests {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: Some(StorageType::Cache),
@@ -1501,6 +1526,7 @@ mod tests {
                         source_path: None,
                         target_path: None,
                         target: None,
+                        rights: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: None,
@@ -1560,6 +1586,7 @@ mod tests {
                         source_path: Some("/data".to_string()),
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1578,6 +1605,24 @@ mod tests {
                 Error::extraneous_field("ExposeLegacyServiceDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeRunnerDecl", "source.child.collection"),
+            ])),
+        },
+        test_validate_exposes_rights => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/data/a".to_string()),
+                        target_path: Some("/data/b".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        rights: None,
+                    })
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ExposeDirectoryDecl", "rights"),
             ])),
         },
         test_validate_exposes_invalid_identifiers => {
@@ -1610,6 +1655,7 @@ mod tests {
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1659,12 +1705,14 @@ mod tests {
                         source_path: Some("/e".to_string()),
                         target_path: Some("/f".to_string()),
                         target: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
                         source_path: Some("/g".to_string()),
                         target_path: Some("/h".to_string()),
                         target: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
@@ -1718,6 +1766,7 @@ mod tests {
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         target: Some(Ref::Realm(RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1776,6 +1825,7 @@ mod tests {
                         source_path: Some("/data/netstack".to_string()),
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1810,6 +1860,7 @@ mod tests {
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1822,6 +1873,7 @@ mod tests {
                         source_path: Some("/svc/logger3".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1901,6 +1953,7 @@ mod tests {
                         source_path: None,
                         target: None,
                         target_path: None,
+                        rights: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: None,
@@ -2003,6 +2056,7 @@ mod tests {
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef {})),
@@ -2013,6 +2067,7 @@ mod tests {
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2074,6 +2129,28 @@ mod tests {
                 Error::field_too_long("OfferRunnerDecl", "target_name"),
             ])),
         },
+        test_validate_offers_rights => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![OfferDecl::Directory(OfferDirectoryDecl {
+                    source: Some(Ref::Self_(SelfRef{})),
+                    source_path: Some("/data/assets".to_string()),
+                    target: Some(Ref::Child(
+                       ChildRef {
+                           name: "logger".to_string(),
+                           collection: None,
+                       }
+                    )),
+                    target_path: Some("/data".to_string()),
+                    rights: None,
+                })]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_child("OfferDirectoryDecl", "target", "logger"),
+                Error::missing_field("OfferDirectoryDecl", "rights"),
+            ])),
+        },
         test_validate_offers_extraneous => {
             input = {
                 let mut decl = new_component_decl();
@@ -2119,6 +2196,7 @@ mod tests {
                             }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2204,6 +2282,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2315,6 +2394,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                 ]);
                 decl.storage = Some(vec![
@@ -2382,6 +2462,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2398,6 +2479,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2489,6 +2571,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2497,6 +2580,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),

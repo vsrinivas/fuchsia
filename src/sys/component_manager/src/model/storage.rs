@@ -251,6 +251,7 @@ mod tests {
             model::testing::test_helpers::{self, default_component_decl},
         },
         cm_rust::*,
+        fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::StorageType,
         std::convert::{TryFrom, TryInto},
     };
@@ -284,6 +285,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     })],
                     ..default_component_decl()
                 },
@@ -405,6 +407,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     })],
                     ..default_component_decl()
                 },

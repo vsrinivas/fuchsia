@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.io2;
+
 /// Declares a capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
 /// itself, or one of its other children.
@@ -82,6 +84,9 @@ table OfferDirectoryDecl {
     ///
     /// Must be an absolute path starting with /.
     4: string:MAX_PATH_LENGTH target_path;
+
+    /// The rights this directory should be offered with, required iff `source == self`.
+    5: fuchsia.io2.Rights rights;
 };
 
 /// Declares a storage capability offered by a component to one of its children,

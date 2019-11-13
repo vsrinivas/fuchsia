@@ -14,6 +14,7 @@ rustc_library("cm_rust") {
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust_crates:failure",
+    "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
 }
 

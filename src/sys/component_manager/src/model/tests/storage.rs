@@ -6,7 +6,7 @@ use {
     crate::model::moniker::RelativeMoniker,
     crate::model::testing::{routing_test_helpers::*, test_helpers::*},
     cm_rust::*,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
 };
 
@@ -131,6 +131,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 children: vec![ChildDecl {
                     name: "b".to_string(),
@@ -362,6 +363,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 ..default_component_decl()
             },
@@ -409,6 +411,7 @@ async fn use_in_collection_from_parent() {
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 children: vec![ChildDecl {
                     name: "b".to_string(),
@@ -733,6 +736,7 @@ async fn storage_multiple_types() {
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 ..default_component_decl()
             },
@@ -892,6 +896,7 @@ async fn directories_are_not_storage() {
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 children: vec![ChildDecl {
                     name: "b".to_string(),
@@ -1001,6 +1006,7 @@ async fn dir_offered_from_nonexecutable() {
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 children: vec![ChildDecl {
                     name: "b".to_string(),

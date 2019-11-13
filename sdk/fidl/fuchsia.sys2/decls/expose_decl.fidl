@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.io2;
+
 /// Declares a capability exposed to either a component's containing realm or to the framework.
 /// For example, a legacy service exposed by the component at runtime.
 xunion ExposeDecl {
@@ -82,6 +84,9 @@ table ExposeDirectoryDecl {
     ///
     /// Must be an absolute path starting with /.
     4: string:MAX_PATH_LENGTH target_path;
+
+    /// The rights to expose this directory with, required iff `source == self`.
+    5: fuchsia.io2.Rights rights;
 };
 
 /// Declares a runner exposed to a component's containing realm, such as a

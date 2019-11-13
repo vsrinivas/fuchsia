@@ -198,7 +198,7 @@ mod tests {
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fuchsia_async as fasync,
+        fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
         fuchsia_zircon as zx,
         std::{convert::TryFrom, iter},
@@ -215,6 +215,7 @@ mod tests {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
+                    rights: fio2::Operations::Connect,
                 }),
                 UseDecl::LegacyService(UseLegacyServiceDecl {
                     source: UseSource::Realm,
@@ -281,12 +282,14 @@ mod tests {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 }),
                 ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                     source: ExposeSource::Self_,

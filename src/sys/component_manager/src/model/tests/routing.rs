@@ -20,7 +20,8 @@ use {
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
     log::*,
     std::{
@@ -229,6 +230,7 @@ async fn use_from_parent() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Self_,
@@ -259,6 +261,7 @@ async fn use_from_parent() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -313,6 +316,7 @@ async fn use_from_grandparent() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Self_,
@@ -338,6 +342,7 @@ async fn use_from_grandparent() {
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Realm,
@@ -362,6 +367,7 @@ async fn use_from_grandparent() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -484,6 +490,7 @@ async fn use_from_sibling_no_root() {
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Child("d".to_string()),
@@ -515,6 +522,7 @@ async fn use_from_sibling_no_root() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -534,6 +542,7 @@ async fn use_from_sibling_no_root() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
@@ -578,6 +587,7 @@ async fn use_from_sibling_root() {
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Child("b".to_string()),
@@ -610,6 +620,7 @@ async fn use_from_sibling_root() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
@@ -629,6 +640,7 @@ async fn use_from_sibling_root() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -675,6 +687,7 @@ async fn use_from_niece() {
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Child("b".to_string()),
@@ -707,6 +720,7 @@ async fn use_from_niece() {
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Child("d".to_string()),
@@ -731,6 +745,7 @@ async fn use_from_niece() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -750,6 +765,7 @@ async fn use_from_niece() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
@@ -805,6 +821,7 @@ async fn use_kitchen_sink() {
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                 ],
                 children: vec![
@@ -832,6 +849,7 @@ async fn use_kitchen_sink() {
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Realm,
@@ -845,6 +863,7 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 children: vec![
                     ChildDecl {
@@ -871,6 +890,7 @@ async fn use_kitchen_sink() {
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Child("g".to_string()),
@@ -902,6 +922,7 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
                 })],
                 ..default_component_decl()
             },
@@ -914,6 +935,7 @@ async fn use_kitchen_sink() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -932,6 +954,7 @@ async fn use_kitchen_sink() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1018,6 +1041,7 @@ async fn use_from_component_manager_namespace() {
                         source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/foo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Realm,
@@ -1042,6 +1066,7 @@ async fn use_from_component_manager_namespace() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1096,6 +1121,7 @@ async fn use_not_offered() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1141,6 +1167,7 @@ async fn use_offer_source_not_exposed() {
                         source: OfferDirectorySource::Child("b".to_string()),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1173,6 +1200,7 @@ async fn use_offer_source_not_exposed() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1231,6 +1259,7 @@ async fn use_offer_source_not_offered() {
                         source: OfferDirectorySource::Realm,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1255,6 +1284,7 @@ async fn use_offer_source_not_offered() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1312,6 +1342,7 @@ async fn use_from_expose() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1336,6 +1367,7 @@ async fn use_from_expose() {
                         source: ExposeSource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1380,6 +1412,7 @@ async fn use_from_expose_to_framework() {
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source: OfferServiceSource::Child("b".to_string()),
@@ -1412,6 +1445,7 @@ async fn use_from_expose_to_framework() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target: ExposeTarget::Framework,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
@@ -1431,6 +1465,7 @@ async fn use_from_expose_to_framework() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1476,6 +1511,7 @@ async fn offer_from_non_executable() {
                         source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1500,6 +1536,7 @@ async fn offer_from_non_executable() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1545,6 +1582,7 @@ async fn use_in_collection() {
                         source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1575,6 +1613,7 @@ async fn use_in_collection() {
                         source: OfferDirectorySource::Realm,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Collection("coll".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1597,6 +1636,7 @@ async fn use_in_collection() {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: fio2::Operations::Connect,
                 })],
                 ..default_component_decl()
             },
@@ -1667,6 +1707,7 @@ async fn use_in_collection_not_offered() {
                         source: OfferDirectorySource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: OfferTarget::Child("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     OfferDecl::LegacyService(OfferLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1706,6 +1747,7 @@ async fn use_in_collection_not_offered() {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: fio2::Operations::Connect,
                     }),
                     UseDecl::LegacyService(UseLegacyServiceDecl {
                         source: UseSource::Realm,
@@ -1764,6 +1806,7 @@ async fn expose_from_self_and_child() {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar/hippo").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Child("c".to_string()),
@@ -1789,6 +1832,7 @@ async fn expose_from_self_and_child() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
@@ -1861,6 +1905,7 @@ async fn use_not_exposed() {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,

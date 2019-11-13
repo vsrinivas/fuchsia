@@ -484,7 +484,7 @@ impl<'a> ValidationContext<'a> {
         // Verify all right tokens are valid.
         let mut rights = HashSet::new();
         for right_token in rights_clause.iter() {
-            match cml::map_cml_right_token(right_token) {
+            match cml::parse_right_token(right_token) {
                 Some(rights_expanded) => {
                     for right in rights_expanded.into_iter() {
                         if !rights.insert(right) {

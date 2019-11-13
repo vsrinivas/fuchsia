@@ -17,6 +17,7 @@ rustc_library("cm_fidl_translator") {
     "//third_party/rust_crates:json5",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
 
   test_deps = [ "//src/lib/test_util" ]

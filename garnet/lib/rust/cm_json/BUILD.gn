@@ -24,6 +24,7 @@ rustc_library("cm_json") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:url",
+    "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
 
   non_rust_deps = [ ":cm_schema_json" ]

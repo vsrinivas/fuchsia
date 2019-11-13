@@ -112,55 +112,71 @@ pub fn parse_reference<'a>(value: &'a str) -> Option<Ref> {
     }
 }
 
-/// Converts a valid cml right (including aliases) into a cm::Rights expansion. This function will
+/// Converts a valid cml right (including aliases) into a Vec<cm::Right> expansion. This function will
 /// expand all valid right aliases and pass through non-aliased rights through to
 /// Rights::map_token. None will be returned for invalid rights.
-pub fn map_cml_right_token(token: &str) -> Option<cm::Rights> {
+pub fn parse_right_token(token: &str) -> Option<Vec<cm::Right>> {
     match token {
-        "r*" => Some(cm::Rights(vec![
+        "r*" => Some(vec![
             cm::Right::Connect,
             cm::Right::Enumerate,
             cm::Right::Traverse,
             cm::Right::ReadBytes,
             cm::Right::GetAttributes,
-        ])),
-        "w*" => Some(cm::Rights(vec![
+        ]),
+        "w*" => Some(vec![
             cm::Right::Connect,
             cm::Right::Enumerate,
             cm::Right::Traverse,
             cm::Right::WriteBytes,
             cm::Right::ModifyDirectory,
-        ])),
-        "x*" => Some(cm::Rights(vec![
+            cm::Right::UpdateAttributes,
+        ]),
+        "x*" => Some(vec![
             cm::Right::Connect,
             cm::Right::Enumerate,
             cm::Right::Traverse,
             cm::Right::Execute,
-        ])),
-        "rw*" => Some(cm::Rights(vec![
+        ]),
+        "rw*" => Some(vec![
             cm::Right::Connect,
             cm::Right::Enumerate,
             cm::Right::Traverse,
             cm::Right::ReadBytes,
             cm::Right::WriteBytes,
+            cm::Right::ModifyDirectory,
             cm::Right::GetAttributes,
             cm::Right::UpdateAttributes,
-        ])),
-        "rx*" => Some(cm::Rights(vec![
+        ]),
+        "rx*" => Some(vec![
             cm::Right::Connect,
             cm::Right::Enumerate,
             cm::Right::Traverse,
             cm::Right::ReadBytes,
             cm::Right::GetAttributes,
             cm::Right::Execute,
-        ])),
+        ]),
         _ => {
             if let Some(right) = cm::Rights::map_token(token) {
-                return Some(cm::Rights(vec![right]));
+                return Some(vec![right]);
             }
             None
         }
     }
+}
+
+/// Converts a set of cml right tokens (including aliases) into a well formed cm::Rights expansion.
+/// This function will expand all valid right aliases and pass through non-aliased rights through to
+/// Rights::map_token. A cm::RightsValidationError will be returned on invalid rights.
+pub fn parse_rights(right_tokens: &Vec<String>) -> Result<cm::Rights, cm::RightsValidationError> {
+    let mut rights = Vec::<cm::Right>::new();
+    for right_token in right_tokens.iter() {
+        match parse_right_token(right_token) {
+            Some(mut expanded_rights) => rights.append(&mut expanded_rights),
+            None => return Err(cm::RightsValidationError::UnknownRight),
+        }
+    }
+    cm::Rights::new(rights)
 }
 
 #[derive(Deserialize, Debug)]
@@ -428,6 +444,101 @@ mod tests {
         assert_eq!(parse_as_ref("\"#child\"")?, Ref::Named(Name::new("child")));
 
         assert_matches!(parse_as_ref(r#""invalid""#), Err(_));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_rights() -> Result<(), Error> {
+        assert_eq!(
+            parse_rights(&vec!["r*".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::GetAttributes,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["w*".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::WriteBytes,
+                cm::Right::ModifyDirectory,
+                cm::Right::UpdateAttributes,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["x*".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::Execute,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["rw*".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::WriteBytes,
+                cm::Right::ModifyDirectory,
+                cm::Right::GetAttributes,
+                cm::Right::UpdateAttributes,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["rx*".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::GetAttributes,
+                cm::Right::Execute,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["rw*".to_owned(), "execute".to_owned()])?,
+            cm::Rights(vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::WriteBytes,
+                cm::Right::ModifyDirectory,
+                cm::Right::GetAttributes,
+                cm::Right::UpdateAttributes,
+                cm::Right::Execute,
+            ])
+        );
+        assert_eq!(
+            parse_rights(&vec!["connect".to_owned()])?,
+            cm::Rights(vec![cm::Right::Connect])
+        );
+        assert_eq!(
+            parse_rights(&vec!["connect".to_owned(), "read_bytes".to_owned()])?,
+            cm::Rights(vec![cm::Right::Connect, cm::Right::ReadBytes])
+        );
+        assert_matches!(parse_rights(&vec![]), Err(cm::RightsValidationError::EmptyRight));
+        assert_matches!(
+            parse_rights(&vec!["connec".to_owned()]),
+            Err(cm::RightsValidationError::UnknownRight)
+        );
+        assert_matches!(
+            parse_rights(&vec!["connect".to_owned(), "connect".to_owned()]),
+            Err(cm::RightsValidationError::DuplicateRight)
+        );
+        assert_matches!(
+            parse_rights(&vec!["rw*".to_owned(), "connect".to_owned()]),
+            Err(cm::RightsValidationError::DuplicateRight)
+        );
 
         Ok(())
     }

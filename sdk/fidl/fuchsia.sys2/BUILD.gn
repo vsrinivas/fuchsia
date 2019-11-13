@@ -17,6 +17,7 @@ fidl("fuchsia.sys2") {
   public_deps = [
     "//sdk/fidl/fuchsia.data",
     "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io2",
   ]
 
   sources = [

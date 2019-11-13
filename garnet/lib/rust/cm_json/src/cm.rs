@@ -1,10 +1,11 @@
 use failure::Fail;
+use fidl_fuchsia_io2 as fio2;
 use serde::de;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::HashSet;
 use std::fmt;
-use std::iter::{FromIterator, IntoIterator};
+use std::iter::IntoIterator;
 use url;
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -73,7 +74,7 @@ pub enum Right {
 }
 
 /// Rights define what permissions are available to exposed, offered or used routes.
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Rights(pub Vec<Right>);
 
 /// A component instance's startup mode.
@@ -192,6 +193,8 @@ pub struct UseDirectory {
     pub source_path: Path,
     /// Used directory target path.
     pub target_path: Path,
+    /// Used rights for the directory.
+    pub rights: Rights,
 }
 
 /// Used storage capability. See [`UseStorageDecl`].
@@ -269,6 +272,8 @@ pub struct ExposeDirectory {
     pub source_path: Path,
     pub target_path: Path,
     pub target: ExposeTarget,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rights: Option<Rights>,
 }
 
 /// Exposed runner capability. See [`ExposeRunnerDecl`].
@@ -338,6 +343,9 @@ pub struct OfferDirectory {
     pub target: Ref,
     /// Offered capability target path.
     pub target_path: Path,
+    /// Offered rights on the directory, optional if not offered from self.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rights: Option<Rights>,
 }
 
 /// Offered storage capability. See [`OfferStorageDecl`].
@@ -677,10 +685,10 @@ impl<'de> de::Deserialize<'de> for Url {
 /// The error representing a failed validation of a `Path` string.
 #[derive(Debug, Fail)]
 pub enum RightsValidationError {
-    /// A right property was provided but was empty.
+    /// A right property was provided but was empty. See [`Rights::new`].
     #[fail(display = "A right property was provided but was empty.")]
     EmptyRight,
-    /// A right was provided which isn't known. See [`Rights::new`].
+    /// A right was provided which isn't known. See [`Rights::from`].
     #[fail(display = "A right was provided which isn't known.")]
     UnknownRight,
     /// A right was provided twice. See [`Rights::new`].
@@ -707,7 +715,7 @@ impl<'de> de::Deserialize<'de> for Rights {
                 while let Some(value) = s.next_element()? {
                     rights_vec.push(value);
                 }
-                Rights::new(rights_vec).map_err(|err| {
+                Rights::from(rights_vec).map_err(|err| {
                     let msg = match err {
                         RightsValidationError::EmptyRight => {
                             "a right property was provided but was empty"
@@ -728,26 +736,36 @@ impl<'de> de::Deserialize<'de> for Rights {
 }
 
 impl Rights {
-    /// Creates a `Rights` from a `Vec<String>, returning an `Err` if the strings fails validation.
-    /// The strings must be non-empty and represent valid keywords. Right aliases are noti
-    /// accepted at the cm level.
-    pub fn new(rights: Vec<String>) -> Result<Self, RightsValidationError> {
+    /// Creates a `Rights` from a `Vec<Right>, returning an `Err` if the rights fails validation.
+    /// The rights must be non-empty and not contain duplicates.
+    pub fn new(rights: Vec<Right>) -> Result<Self, RightsValidationError> {
         if rights.is_empty() {
             return Err(RightsValidationError::EmptyRight);
         }
         let mut seen_rights = HashSet::with_capacity(rights.len());
-        for right_token in rights.iter() {
-            match Rights::map_token(right_token) {
+        for right in rights.iter() {
+            if seen_rights.contains(&right) {
+                return Err(RightsValidationError::DuplicateRight);
+            }
+            seen_rights.insert(right);
+        }
+        Ok(Self(rights))
+    }
+
+    /// Creates a `Rights` from a `Vec<String>, returning an `Err` if the strings fails validation.
+    /// The strings must be non-empty and represent valid keywords. Right aliases are noti
+    /// accepted at the cm level.
+    pub fn from(tokens: Vec<String>) -> Result<Self, RightsValidationError> {
+        let mut rights = Vec::<Right>::new();
+        for token in tokens.iter() {
+            match Rights::map_token(token) {
                 Some(right) => {
-                    if seen_rights.contains(&right) {
-                        return Err(RightsValidationError::DuplicateRight);
-                    }
-                    seen_rights.insert(right);
+                    rights.push(right);
                 }
                 None => return Err(RightsValidationError::UnknownRight),
             }
         }
-        Ok(Self(Vec::from_iter(seen_rights.iter().cloned())))
+        Self::new(rights)
     }
 
     pub fn value(&self) -> &Vec<Right> {
@@ -769,6 +787,38 @@ impl Rights {
             "write_bytes" => Some(Right::WriteBytes),
             _ => None,
         }
+    }
+}
+
+/// Converts a cm::Right into a fil_fuchsia_io2::Operations type using a 1:1 mapping.
+impl Into<fio2::Operations> for Right {
+    fn into(self) -> fio2::Operations {
+        match self {
+            Right::Admin => fio2::Operations::Admin,
+            Right::Connect => fio2::Operations::Connect,
+            Right::Enumerate => fio2::Operations::Enumerate,
+            Right::Execute => fio2::Operations::Execute,
+            Right::GetAttributes => fio2::Operations::GetAttributes,
+            Right::ModifyDirectory => fio2::Operations::ModifyDirectory,
+            Right::ReadBytes => fio2::Operations::ReadBytes,
+            Right::Traverse => fio2::Operations::Traverse,
+            Right::UpdateAttributes => fio2::Operations::UpdateAttributes,
+            Right::WriteBytes => fio2::Operations::WriteBytes,
+        }
+    }
+}
+
+impl Into<Option<fio2::Operations>> for Rights {
+    fn into(self) -> Option<fio2::Operations> {
+        let head = self.value().first();
+        if head.is_none() {
+            return None;
+        }
+        let mut operations: fio2::Operations = head.unwrap().clone().into();
+        for right in self.into_iter() {
+            operations |= right.into();
+        }
+        Some(operations)
     }
 }
 

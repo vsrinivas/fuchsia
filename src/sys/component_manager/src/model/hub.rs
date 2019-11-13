@@ -636,7 +636,7 @@ mod tests {
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
         fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
         fuchsia_zircon as zx,
         std::{convert::TryFrom, iter, path::Path},
@@ -880,6 +880,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_path: CapabilityPath::try_from("/hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: fio2::Operations::Connect,
                     })],
                     ..default_component_decl()
                 },
@@ -941,6 +942,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
+                            rights: fio2::Operations::Connect,
                         }),
                         UseDecl::LegacyService(UseLegacyServiceDecl {
                             source: UseSource::Realm,
@@ -951,6 +953,7 @@ mod tests {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                            rights: fio2::Operations::Connect,
                         }),
                     ],
                     ..default_component_decl()
@@ -1007,6 +1010,7 @@ mod tests {
                             source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                             target: ExposeTarget::Realm,
+                            rights: Some(fio2::Operations::Connect),
                         }),
                     ],
                     ..default_component_decl()

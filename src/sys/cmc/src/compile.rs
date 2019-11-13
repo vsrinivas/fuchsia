@@ -117,10 +117,12 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
             let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
+            let rights = extract_use_rights(use_)?;
             Ok(cm::Use::Directory(cm::UseDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
+                rights,
             }))
         } else if let Some(p) = use_.storage() {
             Ok(cm::Use::Storage(cm::UseStorage {
@@ -159,11 +161,13 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 target,
             }))
         } else if let Some(p) = expose.directory() {
+            let rights = extract_expose_rights(expose)?;
             Ok(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 target,
+                rights,
             }))
         } else if let Some(p) = expose.runner() {
             Ok(cm::Expose::Runner(cm::ExposeRunner {
@@ -218,6 +222,7 @@ fn translate_offer(
                     source: source.clone(),
                     target,
                     target_path: cm::Path::new(target_id)?,
+                    rights: extract_offer_rights(offer)?,
                 }));
             }
         } else if let Some(p) = offer.storage() {
@@ -308,6 +313,26 @@ fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     }
 }
 
+fn extract_use_rights(in_obj: &cml::Use) -> Result<cm::Rights, Error> {
+    match in_obj.rights.as_ref() {
+        Some(right_tokens) => match cml::parse_rights(right_tokens) {
+            Ok(rights) => Ok(rights),
+            _ => Err(Error::internal("Rights provided to use are not well formed.")),
+        },
+        None => Err(Error::internal("No use rights provided but required for used directories")),
+    }
+}
+
+fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Error> {
+    match in_obj.rights.as_ref() {
+        Some(rights_tokens) => match cml::parse_rights(rights_tokens) {
+            Ok(rights) => Ok(Some(rights)),
+            _ => Err(Error::internal("Rights provided to expose are not well formed.")),
+        },
+        None => Ok(None),
+    }
+}
+
 fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
@@ -319,6 +344,16 @@ where
         cml::Ref::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         cml::Ref::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
         _ => Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", in_obj.from()))),
+    }
+}
+
+fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error> {
+    match in_obj.rights.as_ref() {
+        Some(rights_tokens) => match cml::parse_rights(rights_tokens) {
+            Ok(rights) => Ok(Some(rights)),
+            _ => Err(Error::internal("Rights provided to offer are not well formed.")),
+        },
+        None => Ok(None),
     }
 }
 
@@ -566,7 +601,10 @@ mod tests {
                     "realm": {}
                 },
                 "source_path": "/data/assets",
-                "target_path": "/data/assets"
+                "target_path": "/data/assets",
+                "rights": [
+                    "read_bytes"
+                ]
             }
         },
         {
@@ -575,7 +613,10 @@ mod tests {
                     "realm": {}
                 },
                 "source_path": "/data/config",
-                "target_path": "/data/config"
+                "target_path": "/data/config",
+                "rights": [
+                    "read_bytes"
+                ]
             }
         },
         {
@@ -662,7 +703,14 @@ mod tests {
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "framework"
+                "target": "framework",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
             }
         },
         {
@@ -1199,7 +1247,14 @@ mod tests {
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "realm"
+                "target": "realm",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
             }
         }
     ],
@@ -1304,7 +1359,7 @@ mod tests {
                 { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
         compile_test(input, &output, false);
     }
 

@@ -10,6 +10,7 @@ fostr_fidl("fuchsia.sys2") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.data",
     "//garnet/public/lib/fostr/fidl/fuchsia.io",
+    "//garnet/public/lib/fostr/fidl/fuchsia.io2",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
   ]
 }

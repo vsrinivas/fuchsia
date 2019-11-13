@@ -1,6 +1,7 @@
 use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
+use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
     ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
@@ -54,6 +55,16 @@ fn main() {
                 source_path: Some("/volumes/blobfs".to_string()),
                 target_path: Some("/volumes/blobfs".to_string()),
                 target: Some(Ref::Framework(FrameworkRef {})),
+                rights: Some(
+                    fio2::Operations::Connect
+                        | fio2::Operations::ReadBytes
+                        | fio2::Operations::WriteBytes
+                        | fio2::Operations::GetAttributes
+                        | fio2::Operations::UpdateAttributes
+                        | fio2::Operations::Enumerate
+                        | fio2::Operations::Traverse
+                        | fio2::Operations::ModifyDirectory,
+                ),
             }),
         ];
         let offers = vec![

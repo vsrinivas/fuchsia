@@ -54,7 +54,17 @@
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs",
-                "target": "framework"
+                "target": "framework",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "write_bytes",
+                    "modify_directory",
+                    "get_attributes",
+                    "update_attributes"
+                ]
             }
         }
     ],

@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.io2;
+
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
 xunion UseDecl {
@@ -74,6 +76,9 @@ table UseDirectoryDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:MAX_PATH_LENGTH target_path;
+
+    /// The rights required by the component to use this directory.
+    4: fuchsia.io2.Rights rights;
 };
 
 /// Declares storage used by a component, which was offered to the component's

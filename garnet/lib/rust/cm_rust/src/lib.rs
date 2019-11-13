@@ -5,7 +5,7 @@
 use {
     cm_fidl_validator,
     failure::Fail,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
@@ -403,6 +403,7 @@ fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
                       source: UseSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
+                      rights: fio2::Operations,
                   });
 fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
                   fsys::UseRunnerDecl,
@@ -425,6 +426,7 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       source_path: CapabilityPath,
                       target: ExposeTarget,
                       target_path: CapabilityPath,
+                      rights: Option<fio2::Operations>,
                   });
 fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
                   fsys::ExposeRunnerDecl,
@@ -457,6 +459,7 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
                       source_path: CapabilityPath,
                       target: OfferTarget,
                       target_path: CapabilityPath,
+                      rights: Option<fio2::Operations>,
                   });
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
                   fsys::OfferRunnerDecl,
@@ -495,6 +498,8 @@ fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fdata::Dictionary);
+fidl_translations_opt_type!(fio2::Operations);
+fidl_translations_identical!(Option<fio2::Operations>);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 
 /// A path to a capability.
@@ -1305,6 +1310,7 @@ mod tests {
                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
+                       rights: Some(fio2::Operations::Connect),
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
@@ -1336,6 +1342,7 @@ mod tests {
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
                        target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                       rights: Some(fio2::Operations::Connect),
                    }),
                    fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1384,6 +1391,7 @@ mod tests {
                            fsys::CollectionRef { name: "modular".to_string() }
                        )),
                        target_path: Some("/data".to_string()),
+                       rights: Some(fio2::Operations::Connect),
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
@@ -1496,6 +1504,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
+                            rights: fio2::Operations::Connect,
                         }),
                         UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
                         UseDecl::Storage(UseStorageDecl::Meta),
@@ -1515,6 +1524,7 @@ mod tests {
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                             target: ExposeTarget::Framework,
+                            rights: Some(fio2::Operations::Connect),
                         }),
                         ExposeDecl::Runner(ExposeRunnerDecl {
                             source: ExposeSource::Child("netstack".to_string()),
@@ -1549,6 +1559,7 @@ mod tests {
                             source_path: "/data/dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
                             target_path: "/data".try_into().unwrap(),
+                            rights: Some(fio2::Operations::Connect),
                         }),
                         OfferDecl::Storage(OfferStorageDecl::Cache(
                             OfferStorage {

@@ -129,6 +129,7 @@ impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
+            rights: self.rights.into(),
         })
     }
 }
@@ -177,6 +178,10 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
             target: Some(self.target.cm_into()?),
+            rights: match self.rights {
+                Some(rights) => rights.into(),
+                None => None,
+            },
         })
     }
 }
@@ -221,6 +226,10 @@ impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
             source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
             target_path: Some(self.target_path.into()),
+            rights: match self.rights {
+                Some(rights) => rights.into(),
+                None => None,
+            },
         })
     }
 }
@@ -418,6 +427,7 @@ fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_io2 as fio2;
     use serde_json::json;
     use test_util::assert_matches;
 
@@ -619,7 +629,8 @@ mod tests {
                                 "realm": {}
                             },
                             "source_path": "/data/assets",
-                            "target_path": "/data"
+                            "target_path": "/data",
+                            "rights": ["connect", "write_bytes"]
                         }
                     },
                     {
@@ -628,7 +639,8 @@ mod tests {
                                 "framework": {}
                             },
                             "source_path": "/pkg",
-                            "target_path": "/pkg"
+                            "target_path": "/pkg",
+                            "rights": ["connect", "read_bytes"]
                         }
                     },
                     {
@@ -670,11 +682,13 @@ mod tests {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/data/assets".to_string()),
                         target_path: Some("/data".to_string()),
+                        rights: Some(fio2::Operations::Connect | fio2::Operations::WriteBytes),
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/pkg".to_string()),
                         target_path: Some("/pkg".to_string()),
+                        rights: Some(fio2::Operations::Connect | fio2::Operations::ReadBytes),
                     }),
                     fsys::UseDecl::Storage(fsys::UseStorageDecl {
                         type_: Some(fsys::StorageType::Cache),
@@ -733,7 +747,8 @@ mod tests {
                             },
                             "source_path": "/volumes/blobfs",
                             "target_path": "/volumes/blobfs",
-                            "target": "framework"
+                            "target": "framework",
+                            "rights": ["connect"]
                         }
                     },
                     {
@@ -788,6 +803,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                         target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                         source_name: Some("elf".to_string()),
@@ -840,7 +856,8 @@ mod tests {
                                     "name": "modular"
                                 }
                             },
-                            "target_path": "/data/config"
+                            "target_path": "/data/config",
+                            "rights": ["connect"]
                         }
                     },
                     {
@@ -1028,6 +1045,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
+                        rights: None,
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1038,6 +1056,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data/config".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1334,7 +1353,7 @@ mod tests {
                                 "realm": {}
                             },
                             "source_path": "/fonts/CoolFonts",
-                            "target_path": "/svc/fuchsia.fonts.Provider"
+                            "target_path": "/svc/fuchsia.fonts.Provider",
                         }
                     }
                 ],
@@ -1346,7 +1365,8 @@ mod tests {
                             },
                             "source_path": "/volumes/blobfs",
                             "target_path": "/volumes/blobfs",
-                            "target": "realm"
+                            "target": "realm",
+                            "rights": ["connect"]
                         }
                     }
                 ],
@@ -1429,6 +1449,7 @@ mod tests {
                         source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
                         target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                 ];
                 let offers = vec![
