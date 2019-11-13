@@ -42,6 +42,11 @@ to *offset*+*size*, which resets that range's bytes to 0. Requires the **ZX_RIGH
 This is only supported for vmos created from [`zx_vmo_create()`] which do not have non-slice
 children, and for slice children of such vmos. Provided range must be page aligned.
 
+**ZX_VMO_OP_ZERO_RANGE** - Resets the range of bytes in the VMO from *offset* to *offset*+*size* to
+0. This is semantically equivalent to writing 0's with
+[`zx_vmo_write()`](/docs/reference/syscalls/vmo_write.md), except that it is able to be done more
+efficiently and save memory by de-duping to shared zero pages. Requires the **ZX_RIGHT_WRITE** right.
+
 **ZX_VMO_OP_LOCK** - Presently unsupported.
 
 **ZX_VMO_OP_UNLOCK** - Presently unsupported.
@@ -86,7 +91,8 @@ value is returned.
 
 **ZX_ERR_OUT_OF_RANGE**  An invalid memory range specified by *offset* and *size*.
 
-**ZX_ERR_NO_MEMORY**  Allocations to commit pages for **ZX_VMO_OP_COMMIT** failed.
+**ZX_ERR_NO_MEMORY**  Allocations to commit pages for **ZX_VMO_OP_COMMIT** or
+**ZX_VMO_OP_ZERO_RANGE** failed.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 

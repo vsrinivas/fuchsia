@@ -200,6 +200,11 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
         return ZX_ERR_ACCESS_DENIED;
       }
       return vmo_->CleanInvalidateCache(offset, size);
+    case ZX_VMO_OP_ZERO:
+      if ((rights & ZX_RIGHT_WRITE) == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      return vmo_->ZeroRange(offset, size);
     default:
       return ZX_ERR_INVALID_ARGS;
   }

@@ -20,9 +20,11 @@
 #include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
+#include "helpers.h"
+
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
-namespace {
+namespace vmo_test {
 
 // Some tests below rely on sampling the memory statistics and having only the
 // page allocations directly incurred by the test code happen during the test.
@@ -108,67 +110,6 @@ class VmoClone2TestCase : public zxtest::Test {
 };
 
 zx::unowned_resource VmoClone2TestCase::root_resource_;
-
-void VmoWrite(const zx::vmo& vmo, uint32_t data, uint64_t offset = 0) {
-  zx_status_t status = vmo.write(static_cast<void*>(&data), offset, sizeof(data));
-  ASSERT_OK(status, "write failed");
-}
-
-void VmoCheck(const zx::vmo& vmo, uint32_t expected, uint64_t offset = 0) {
-  uint32_t data;
-  zx_status_t status = vmo.read(static_cast<void*>(&data), offset, sizeof(data));
-  ASSERT_OK(status, "read failed");
-  ASSERT_EQ(expected, data);
-}
-
-// Creates a vmo with |page_count| pages and writes (page_index + 1) to each page.
-void InitPageTaggedVmo(uint32_t page_count, zx::vmo* vmo) {
-  zx_status_t status;
-  status = zx::vmo::create(page_count * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, vmo);
-  ASSERT_OK(status, "create failed");
-  for (unsigned i = 0; i < page_count; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(*vmo, i + 1, i * ZX_PAGE_SIZE));
-  }
-}
-
-size_t VmoNumChildren(const zx::vmo& vmo) {
-  zx_info_vmo_t info;
-  if (vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
-    return UINT64_MAX;
-  }
-  return info.num_children;
-}
-
-size_t VmoCommittedBytes(const zx::vmo& vmo) {
-  zx_info_vmo_t info;
-  if (vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
-    return UINT64_MAX;
-  }
-  return info.committed_bytes;
-}
-
-// Simple class for managing vmo mappings w/o any external dependencies.
-class Mapping {
- public:
-  ~Mapping() {
-    if (addr_) {
-      ZX_ASSERT(zx::vmar::root_self()->unmap(addr_, len_) == ZX_OK);
-    }
-  }
-
-  zx_status_t Init(const zx::vmo& vmo, size_t len) {
-    zx_status_t status =
-        zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr_);
-    len_ = len;
-    return status;
-  }
-
-  uint32_t* ptr() { return reinterpret_cast<uint32_t*>(addr_); }
-
- private:
-  uint64_t addr_ = 0;
-  size_t len_ = 0;
-};
 
 // Helper function which checks that the give vmo is contiguous.
 template <size_t N>
@@ -1851,4 +1792,4 @@ TEST_F(VmoClone2TestCase, Uncached) {
   ASSERT_EQ(*vmo_mapping.ptr(), kOriginalData);
 }
 
-}  // namespace
+}  // namespace vmo_test

@@ -105,6 +105,7 @@ class VmObjectPaged final : public VmObject {
 
   zx_status_t CommitRange(uint64_t offset, uint64_t len) override;
   zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
+  zx_status_t ZeroRange(uint64_t offset, uint64_t len) override;
 
   zx_status_t Pin(uint64_t offset, uint64_t len) override;
   void Unpin(uint64_t offset, uint64_t len) override;
@@ -210,6 +211,8 @@ class VmObjectPaged final : public VmObject {
   // the past in page list with any pages that should be freed.
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len, list_node_t& free_list)
       TA_REQ(lock_);
+  zx_status_t ZeroRangeLocked(uint64_t offset, uint64_t len, list_node_t* free_list,
+                              Guard<fbl::Mutex>* guard) TA_REQ(lock_);
 
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
       // Walks the parent chain to get the root page source, which confuses analysis.
@@ -236,7 +239,8 @@ class VmObjectPaged final : public VmObject {
 
   // internal read/write routine that takes a templated copy function to help share some code
   template <typename T>
-  zx_status_t ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc);
+  zx_status_t ReadWriteInternalLocked(uint64_t offset, size_t len, bool write, T copyfunc,
+                                      Guard<fbl::Mutex>* guard) TA_REQ(lock_);
 
   // Searches for info for initialization of a page being commited into |this| at |offset|.
   //
@@ -281,6 +285,17 @@ class VmObjectPaged final : public VmObject {
                                 vm_page_t* page, uint64_t owner_offset)
       // Walking through the ancestors confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
+
+  // This is an optimized wrapper around CloneCowPageLocked for when an initial content page needs
+  // to be forked to preserve the COW invariant, but you know you are immediately going to overwrite
+  // the forked page with zeros.
+  //
+  // The optimization it can make is that it can fork the page up to the parent and then, instead
+  // of forking here and then having to immediately free the page, it can insert a marker here and
+  // set the split bits in the parent page as if it had been forked.
+  zx_status_t CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* free_list,
+                                       VmObjectPaged* page_owner, vm_page_t* page,
+                                       uint64_t owner_offset) TA_REQ(lock_);
 
   // Returns true if |page| (located at |offset| in this vmo) is only accessible by one
   // child, where 'accessible' is defined by ::CloneCowPageLocked.
@@ -339,6 +354,13 @@ class VmObjectPaged final : public VmObject {
   VmObjectPaged* PagedParentOfSliceLocked(uint64_t* offset)
       // Calling into the parent confuses analysis
       TA_NO_THREAD_SAFETY_ANALYSIS;
+
+  // Zeroes a partial range in a page. May use CallUnlocked on the passed in guard. The page to zero
+  // is looked up using page_base_offset, and will be committed if needed. The range of
+  // [zero_start_offset, zero_end_offset) is relative to the page and so [0, PAGE_SIZE) would zero
+  // the entire page.
+  zx_status_t ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
+                              uint64_t zero_end_offset, Guard<fbl::Mutex>* guard) TA_REQ(lock_);
 
   // Outside of initialization/destruction, hidden vmos always have two children. For
   // clarity, whichever child is first in the list is the 'left' child, and whichever

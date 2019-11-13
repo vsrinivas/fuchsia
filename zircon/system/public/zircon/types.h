@@ -188,6 +188,7 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_CACHE_INVALIDATE       ((uint32_t)7u)
 #define ZX_VMO_OP_CACHE_CLEAN            ((uint32_t)8u)
 #define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE ((uint32_t)9u)
+#define ZX_VMO_OP_ZERO                   ((uint32_t)10u)
 
 // VM Object clone flags
 #define ZX_VMO_CLONE_COPY_ON_WRITE        ((uint32_t)1u << 0)

@@ -115,6 +115,10 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
   return ZX_OK;
 }
 
+bool SlotHasPinnedPage(VmPageOrMarker* slot) {
+  return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
+}
+
 }  // namespace
 
 VmObjectPaged::VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
@@ -1448,6 +1452,56 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
   }
 }
 
+zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* free_list,
+                                                    VmObjectPaged* page_owner, vm_page_t* page,
+                                                    uint64_t owner_offset) {
+  DEBUG_ASSERT(parent_);
+
+  // Ensure we have a slot as we'll need it later.
+  VmPageOrMarker* slot = page_list_.LookupOrAllocate(offset);
+
+  if (!slot) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  // We cannot be forking a page to here if there's already something.
+  DEBUG_ASSERT(slot->IsEmpty());
+
+  // Need to make sure the page is duplicated as far as our parent. Then we can pretend
+  // that we have forked it into us by setting the marker.
+  VmObjectPaged* typed_parent = AsVmObjectPaged(parent_);
+  AssertHeld(typed_parent->lock_);
+  DEBUG_ASSERT(typed_parent);
+
+  if (page_owner != parent_.get()) {
+    page = AsVmObjectPaged(parent_)->CloneCowPageLocked(offset + parent_offset_, free_list,
+                                                        page_owner, page, owner_offset);
+    if (page == nullptr) {
+      return ZX_ERR_NO_MEMORY;
+    }
+  }
+
+  bool left = this == &(typed_parent->left_child_locked());
+  // Page is in our parent. Check if its uni accessible, if so we can free it.
+  if (typed_parent->IsUniAccessibleLocked(page, offset + parent_offset_)) {
+    // Make sure we didn't already merge the page in this direction.
+    DEBUG_ASSERT(!(left && page->object.cow_left_split));
+    DEBUG_ASSERT(!(!left && page->object.cow_right_split));
+    vm_page* removed = typed_parent->page_list_.RemovePage(offset + parent_offset_).ReleasePage();
+    DEBUG_ASSERT(removed == page);
+    list_add_tail(free_list, &removed->queue_node);
+  } else {
+    if (left) {
+      page->object.cow_left_split = 1;
+    } else {
+      page->object.cow_right_split = 1;
+    }
+  }
+  // Insert the zero marker.
+  *slot = VmPageOrMarker::Marker();
+  return ZX_OK;
+}
+
 void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t page_owner_offset,
                                              VmObjectPaged* last_contig,
                                              uint64_t last_contig_offset) {
@@ -1945,6 +1999,273 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   return ZX_OK;
 }
 
+zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+  list_node_t list;
+  list_initialize(&list);
+  zx_status_t status;
+  {
+    Guard<fbl::Mutex> guard{&lock_};
+    status = ZeroRangeLocked(offset, len, &list, &guard);
+  }
+  if (status == ZX_OK) {
+    pmm_free(&list);
+  } else {
+    DEBUG_ASSERT(list_is_empty(&list));
+  }
+  return status;
+}
+
+zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
+                                           uint64_t zero_end_offset, Guard<fbl::Mutex>* guard) {
+  DEBUG_ASSERT(zero_start_offset < zero_end_offset);
+  DEBUG_ASSERT(zero_end_offset <= PAGE_SIZE);
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(page_base_offset));
+  DEBUG_ASSERT(page_base_offset < size_);
+
+  VmPageOrMarker* slot = page_list_.Lookup(page_base_offset);
+
+  if (slot && slot->IsMarker()) {
+    // This is already considered zero so no need to redundantly zero again.
+    return ZX_OK;
+  }
+  // If we don't have a committed page we need to check our parent.
+  if (!slot || !slot->IsPage()) {
+    VmObject* page_owner;
+    uint64_t owner_offset;
+    if (!FindInitialPageContentLocked(page_base_offset, VMM_PF_FLAG_WRITE, &page_owner,
+                                      &owner_offset)) {
+      // Parent doesn't have a page either, so nothing to do this is already zero.
+      return ZX_OK;
+    }
+  }
+  // Need to actually zero out bytes in the page.
+  return ReadWriteInternalLocked(
+      page_base_offset + zero_start_offset, zero_end_offset - zero_start_offset, true,
+      [](void* dst, size_t offset, size_t len, Guard<fbl::Mutex>* guard) -> zx_status_t {
+        // We're memsetting the *kernel* address of an allocated page, so we know that this
+        // cannot fault. memset may not be the most efficient, but we don't expect to be doing
+        // this very often.
+        memset(dst, 0, len);
+        return ZX_OK;
+      },
+      guard);
+}
+
+zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_node_t* free_list,
+                                           Guard<fbl::Mutex>* guard) {
+  // Zeroing a range behaves as if it were an efficient zx_vmo_write. As we cannot write to uncached
+  // vmo, we also cannot zero an uncahced vmo.
+  if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Trim the size and validate it is in range of the vmo.
+  uint64_t new_len;
+  if (!TrimRange(offset, len, size_, &new_len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // Forward any operations on slices up to the original non slice parent.
+  if (is_slice()) {
+    uint64_t parent_offset;
+    VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(parent->lock_);
+    return parent->ZeroRangeLocked(offset + parent_offset, new_len, free_list, guard);
+  }
+
+  // Construct our initial range. Already checked the range above so we know it cannot overflow.
+  uint64_t start = offset;
+  uint64_t end = start + new_len;
+
+  // Unmap any page that is touched by this range in any of our, or our childrens, mapping regions.
+  // This ensures that for any pages we are able to zero through decommiting we do not have free'd
+  // pages still being mapped in.
+  RangeChangeUpdateLocked(start, end - start, RangeChangeOp::Unmap);
+
+  // If we're zeroing at the end of our parent range we can update to reflect this similar to a
+  // resize. This does not work if we are a slice, but we checked for that earlier. Whilst this does
+  // not actually zero the range in question, it makes future zeroing of the range far more
+  // efficient, which is why we do it first.
+  // parent_limit_ is a page aligned offset and so we can only reduce it to a rounded up value of
+  // start.
+  uint64_t rounded_start = ROUNDUP_PAGE_SIZE(start);
+  if (rounded_start < parent_limit_ && end >= parent_limit_) {
+    if (parent_ && parent_->is_hidden()) {
+      // Release any COW pages that are no longer necessary. This will also
+      // update the parent limit.
+      ReleaseCowParentPagesLocked(rounded_start, parent_limit_, free_list);
+    } else {
+      parent_limit_ = rounded_start;
+    }
+  }
+
+  // Helper that checks and establishes our invariants. We use this after calling functions that
+  // may have temporarily released the lock.
+  auto establish_invariants = [this, start, end]() TA_REQ(lock_) {
+    if (end > size_) {
+      return ZX_ERR_BAD_STATE;
+    }
+    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+      return ZX_ERR_BAD_STATE;
+    }
+    RangeChangeUpdateLocked(start, end - start, RangeChangeOp::Unmap);
+    return ZX_OK;
+  };
+
+  uint64_t start_page_base = ROUNDDOWN(start, PAGE_SIZE);
+  uint64_t end_page_base = ROUNDDOWN(end, PAGE_SIZE);
+
+  if (unlikely(start_page_base != start)) {
+    // Need to handle the case were end is unaligned and on the same page as start
+    if (unlikely(start_page_base == end_page_base)) {
+      return ZeroPartialPage(start_page_base, start - start_page_base, end - start_page_base,
+                             guard);
+    }
+    zx_status_t status =
+        ZeroPartialPage(start_page_base, start - start_page_base, PAGE_SIZE, guard);
+    if (status == ZX_OK) {
+      status = establish_invariants();
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+    start = start_page_base + PAGE_SIZE;
+  }
+
+  if (unlikely(end_page_base != end)) {
+    zx_status_t status = ZeroPartialPage(end_page_base, 0, end - end_page_base, guard);
+    if (status == ZX_OK) {
+      status = establish_invariants();
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+    end = end_page_base;
+  }
+
+  // Now that we have a page aligned range we can try and do the more efficient decommit. We prefer
+  // decommit as it performs work in the order of the number of committed pages, instead of work in
+  // the order of size of the range. An error from DecommitRangeLocked indicates that the VMO is not
+  // of a form that decommit can safely be performed without exposing data that we shouldn't between
+  // children and parents, but no actual state will have been changed.
+  // Should decommit succeed we are done, otherwise we will have to handle each offset individually.
+  zx_status_t status = DecommitRangeLocked(start, end - start, *free_list);
+  if (status == ZX_OK) {
+    return ZX_OK;
+  }
+
+  for (offset = start; offset < end; offset += PAGE_SIZE) {
+    VmPageOrMarker* slot = page_list_.Lookup(offset);
+
+    const bool can_see_parent = parent_ && offset < parent_limit_;
+
+    // This is a lambda as it only makes sense to talk about parent mutability when we have a parent
+    // for this offset.
+    auto parent_immutable = [can_see_parent, this]() TA_REQ(lock_) {
+      DEBUG_ASSERT(can_see_parent);
+      return parent_->is_hidden();
+    };
+
+    // Finding the initial page content is expensive, but we only need to call it
+    // under certain circumstances scattered in the code below. The lambda
+    // get_initial_page_content() will lazily fetch and cache the details. This
+    // avoids us calling it when we don't need to, or calling it more than once.
+    struct InitialPageContent {
+      bool inited = false;
+      VmObject* page_owner;
+      uint64_t owner_offset;
+      vm_page_t* page;
+    } initial_content_;
+    auto get_initial_page_content = [&initial_content_, can_see_parent, this, offset]()
+                                        TA_REQ(lock_) -> const InitialPageContent& {
+      if (!initial_content_.inited) {
+        DEBUG_ASSERT(can_see_parent);
+        initial_content_.page =
+            FindInitialPageContentLocked(offset, VMM_PF_FLAG_WRITE, &initial_content_.page_owner,
+                                         &initial_content_.owner_offset);
+        initial_content_.inited = true;
+      }
+      return initial_content_;
+    };
+
+    auto parent_has_content = [get_initial_page_content]() TA_REQ(lock_) {
+      return get_initial_page_content().page != nullptr;
+    };
+
+    // If there's already a marker then we can avoid any second guessing and leave the marker alone.
+    if (slot && slot->IsMarker()) {
+      continue;
+    }
+
+    // In the ideal case we can zero by making there be an Empty slot in our page list, so first
+    // see if we can do that. This is true when there is nothing pinned and either:
+    //  * This offset does not relate to our parent
+    //  * This offset does relate to our parent, but our parent is immutable and is currently zero
+    //    at this offset.
+    if (!SlotHasPinnedPage(slot) &&
+        (!can_see_parent || (parent_immutable() && !parent_has_content()))) {
+      if (slot && slot->IsPage()) {
+        list_add_tail(free_list, &page_list_.RemovePage(offset).ReleasePage()->queue_node);
+      }
+      continue;
+    }
+    // The only time we would reach either and *not* have a parent is if the page is pinned
+    DEBUG_ASSERT(SlotHasPinnedPage(slot) || parent_);
+
+    // Now we know that we need to do something active to make this zero, either through a marker or
+    // a page. First make sure we have a slot to modify.
+    if (!slot) {
+      slot = page_list_.LookupOrAllocate(offset);
+      if (unlikely(!slot)) {
+        return ZX_ERR_NO_MEMORY;
+      }
+    }
+
+    // Ideally we will use a marker, but we can only do this if we can point to a committed page
+    // to justify the allocation of the marker (i.e. we cannot allocate infinite markers with no
+    // committed pages). A committed page in this case exists if the parent has any content.
+    if (SlotHasPinnedPage(slot) || !parent_has_content()) {
+      if (slot->IsPage()) {
+        // Zero the existing page.
+        ZeroPage(slot->Page());
+        continue;
+      }
+      // Allocate a new page, it will be zeroed in the process.
+      vm_page_t* p;
+      bool result = AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), free_list, &p);
+      if (!result) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      *slot = VmPageOrMarker::Page(p);
+      continue;
+    }
+    DEBUG_ASSERT(parent_ && parent_has_content());
+
+    // We are able to insert a marker, but if our page content is from a hidden owner we need to
+    // perform slightly more complex cow forking.
+    const InitialPageContent& content = get_initial_page_content();
+    if (slot->IsEmpty() && content.page_owner->is_hidden()) {
+      // We know it is paged because we just checked that it was hidden.
+      VmObjectPaged* typed_owner = static_cast<VmObjectPaged*>(content.page_owner);
+      zx_status_t result = CloneCowPageAsZeroLocked(offset, free_list, typed_owner, content.page,
+                                                    content.owner_offset);
+      if (result != ZX_OK) {
+        return result;
+      }
+      continue;
+    }
+
+    // Remove any page that could be hanging around in the slot before we make it a marker.
+    if (slot->IsPage()) {
+      list_add_tail(free_list, &slot->ReleasePage()->queue_node);
+    }
+    *slot = VmPageOrMarker::Marker();
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
@@ -2375,10 +2696,9 @@ void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
 // the return value. A return of ZX_ERR_SHOULD_WAIT implies that the attempted copy should be tried
 // again at the exact same offsets.
 template <typename T>
-zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc) {
+zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, bool write,
+                                                   T copyfunc, Guard<fbl::Mutex>* guard) {
   canary_.Assert();
-
-  Guard<fbl::Mutex> guard{&lock_};
 
   uint64_t end_offset;
   if (add_overflow(offset, len, &end_offset)) {
@@ -2418,7 +2738,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
                       &page_request, nullptr, &pa);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Must block on asynchronous page requests whilst not holding the lock.
-      guard.CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
+      guard->CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
       if (status != ZX_OK) {
         return status;
       }
@@ -2437,7 +2757,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
 
     // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
     // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it.
-    status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, &guard);
+    status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, guard);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Recheck properties. If all is good we cannot simply retry the copy as the underlying page
@@ -2476,7 +2796,9 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
     return ZX_OK;
   };
 
-  return ReadWriteInternal(offset, len, false, read_routine);
+  Guard<fbl::Mutex> guard{&lock_};
+
+  return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
 }
 
 zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) {
@@ -2495,7 +2817,9 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
     return ZX_OK;
   };
 
-  return ReadWriteInternal(offset, len, true, write_routine);
+  Guard<fbl::Mutex> guard{&lock_};
+
+  return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
 zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
@@ -2580,7 +2904,9 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     return result;
   };
 
-  return ReadWriteInternal(offset, len, false, read_routine);
+  Guard<fbl::Mutex> guard{&lock_};
+
+  return ReadWriteInternalLocked(offset, len, false, read_routine, &guard);
 }
 
 zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
@@ -2604,7 +2930,9 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     return result;
   };
 
-  return ReadWriteInternal(offset, len, true, write_routine);
+  Guard<fbl::Mutex> guard{&lock_};
+
+  return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
 zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {

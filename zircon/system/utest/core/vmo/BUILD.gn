@@ -11,6 +11,7 @@ source_set("vmo") {
     "vmo-clone2.cc",
     "vmo-signal.cc",
     "vmo-slice.cc",
+    "vmo-zero.cc",
     "vmo.cc",
   ]
   deps = [

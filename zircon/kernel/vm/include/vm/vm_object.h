@@ -103,6 +103,9 @@ class VmObject : public fbl::RefCounted<VmObject>,
   // free a range of the vmo back to the default state
   virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
+  // Zero a range of the VMO. May release physical pages in the process.
+  virtual zx_status_t ZeroRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
   // Pin the given range of the vmo.  If any pages are not committed, this
   // returns a ZX_ERR_NO_MEMORY.
   virtual zx_status_t Pin(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
