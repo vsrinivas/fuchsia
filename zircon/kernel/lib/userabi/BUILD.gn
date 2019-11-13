@@ -126,6 +126,9 @@ template("rodso") {
 
       metadata = {
         generated_sources = rebase_path(outputs, root_build_dir)
+
+        # Prevent deps from propagating up to code that uses this action.
+        manifest_barrier = []
       }
     }
 

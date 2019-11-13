@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/package.gni")
-import("$zx/public/gn/test/zbi_test.gni")
 import("$zx/public/gn/zbi.gni")
 
 package("bootsvc") {
@@ -37,8 +36,8 @@ zx_executable("bin") {
   deps = [
     ":util",
     "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-kernel:llcpp",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-kernel:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
@@ -62,7 +61,9 @@ zx_executable("bin") {
   ]
 }
 
+# This is also used by code in test/.
 source_set("util") {
+  visibility = [ "./*" ]
   sources = [
     "util.cc",
     "util.h",
@@ -75,116 +76,4 @@ source_set("util") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/zx",
   ]
-}
-
-group("tests") {
-  testonly = true
-  data_deps = [
-    ":bootsvc-unit-test",
-    ":bootsvc-integration-tests",
-  ]
-}
-
-zx_test("bootsvc-unit-test") {
-  output_name = "bootsvc-unit-test"
-  sources = [
-    "unit-test.cc",
-  ]
-  deps = [
-    ":util",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",
-  ]
-}
-
-zx_executable("bootsvc-integration-test") {
-  testonly = true
-  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-  sources = [
-    "integration-test.cc",
-  ]
-  deps = [
-    ":util",
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/safemath",
-  ]
-}
-
-# The bootsvc integration tests exercises reading several different kinds of
-# entries from the ZBI.  Make sure we include one of each, so that we can test
-# that bootsvc is exposing access to them correctly.
-zbi_input("integration-test-factory-item") {
-  visibility = [ ":*" ]
-  type = "BOOTFS_FACTORY"
-  args = [ "--entry=IAmAFactoryItemHooray" ]
-}
-
-zbi_input("integration-test-crashlog") {
-  visibility = [ ":*" ]
-  type = "CRASHLOG"
-  args = [ "--entry=IAmACrashLogButNotAVeryLongOne" ]
-}
-
-# This file must contain a trailing newline, but you can't inline that in a
-# shell command with --entry, so generate a file and pass that as the argument
-# when building the bootsvc-integration-tests zbi.
-generated_file("bootsvc-integration-test-image-arg") {
-  outputs = [
-    "$target_out_dir/$target_name.txt",
-  ]
-  contents = "testkey=testvalue$0x0a"  # trailing newline is required!
-}
-
-zbi_input("integration-test-image-arg") {
-  deps = [
-    ":bootsvc-integration-test-image-arg",
-  ]
-  visibility = [ ":*" ]
-  type = "IMAGE_ARGS"
-  args = [ "$target_out_dir/bootsvc-integration-test-image-arg.txt" ]
-}
-
-zbi_test("bootsvc-integration-tests") {
-  assert(current_cpu != "")
-
-  args = [
-    "userboot=bin/bootsvc",
-    "bootsvc.next=bin/bootsvc-integration-test,testargument",
-  ]
-  deps = [
-    # We need a zircon kernel to get off the ground at all.
-    "$zx/kernel",
-
-    # Include bootsvc itself, since that's what we're testing here.
-    ":bin",
-
-    # Include the integration test binary, which bootsvc will launch.
-    ":bootsvc-integration-test",
-
-    # Include the three additional ZBI items that we test the behavior of in
-    # the integration test.
-    ":integration-test-crashlog",
-    ":integration-test-factory-item",
-    ":integration-test-image-arg",
-
-    # Pull in the dependencies of devcoordinator so that we can test
-    # requesting libdriver.so # from the bootsvc loader service.
-    # This could possibly be smaller, but seems pretty reasonable.
-    "$zx/system/core/devmgr/component",
-    "$zx/system/core/miscsvc",
-    "$zx/system/core/netsvc",
-    "$zx/system/core/netsvc:device-name-provider",
-    "$zx/system/core/pwrbtn-monitor",
-    "$zx/system/core/svchost",
-    "$zx/system/core/virtcon:virtual-console",
-  ]
-
-  output_dir = root_build_dir
-  output_name = "bootsvc-integration-tests-$current_cpu"
 }

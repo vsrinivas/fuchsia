@@ -20,7 +20,7 @@ if (current_cpu != "") {
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/kernel/target/arm64/board/as370:as370-boot-shim-test",
       "$zx/kernel/target/arm64/board/visalia:visalia-boot-shim-test",
-      "$zx/system/core/bootsvc:tests",
+      "$zx/system/core/bootsvc/test",
       "$zx/system/core/console:console-test",
       "$zx/system/core/devmgr/fshost:block-watcher-test",
       "$zx/system/core/devmgr/fshost:fshost-metrics-test",

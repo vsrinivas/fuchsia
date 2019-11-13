@@ -8,7 +8,7 @@
 #include <unittest/unittest.h>
 #include <zircon/types.h>
 
-#include "util.h"
+#include "../util.h"
 
 namespace {
 

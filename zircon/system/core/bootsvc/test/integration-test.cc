@@ -30,7 +30,7 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
-#include "util.h"
+#include "../util.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 

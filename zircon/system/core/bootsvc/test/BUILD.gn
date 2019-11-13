@@ -1,0 +1,139 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/test/zbi_test.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":bootsvc-integration-tests",
+    ":bootsvc-unit-test",
+  ]
+}
+
+zx_test("bootsvc-unit-test") {
+  output_name = "bootsvc-unit-test"
+  sources = [
+    "unit-test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/unittest",
+    "..:util",
+  ]
+}
+
+zx_executable("bootsvc-integration-test") {
+  testonly = true
+  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+  sources = [
+    "integration-test.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/third_party/ulib/safemath",
+    "..:util",
+  ]
+}
+
+# This collects all the runtime dependencies of bootsvc-integration-test,
+# to bring them into a test ZBI.
+zbi_input("integration-test-deps") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [
+    # Include the three additional ZBI items that we test the behavior of in
+    # the integration test.
+    ":integration-test-crashlog",
+    ":integration-test-factory-item",
+    ":integration-test-image-arg",
+
+    # Pull in the dependencies of devcoordinator so that we can test
+    # requesting libdriver.so from the bootsvc loader service.
+    # This could possibly be smaller, but seems pretty reasonable.
+    "$zx/system/core/devmgr/component",
+    "$zx/system/core/miscsvc",
+    "$zx/system/core/netsvc",
+    "$zx/system/core/netsvc:device-name-provider",
+    "$zx/system/core/pwrbtn-monitor",
+    "$zx/system/core/svchost",
+    "$zx/system/core/virtcon:virtual-console",
+  ]
+}
+
+# The bootsvc integration tests exercises reading several different kinds of
+# entries from the ZBI.  Make sure we include one of each, so that we can test
+# that bootsvc is exposing access to them correctly.
+zbi_input("integration-test-factory-item") {
+  visibility = [ ":*" ]
+  testonly = true
+  type = "BOOTFS_FACTORY"
+  args = [ "--entry=IAmAFactoryItemHooray" ]
+}
+
+zbi_input("integration-test-crashlog") {
+  visibility = [ ":*" ]
+  testonly = true
+  type = "CRASHLOG"
+  args = [ "--entry=IAmACrashLogButNotAVeryLongOne" ]
+}
+
+# This file must contain a trailing newline, but you can't inline that in a
+# shell command with --entry, so generate a file and pass that as the argument
+# when building the bootsvc-integration-tests zbi.
+generated_file("bootsvc-integration-test-image-arg") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  outputs = [
+    "$target_out_dir/$target_name.txt",
+  ]
+
+  # Writing out a list rather than a string means it gets a trailing newline.
+  contents = [ "testkey=testvalue" ]
+}
+
+zbi_input("integration-test-image-arg") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [
+    ":bootsvc-integration-test-image-arg",
+  ]
+  type = "IMAGE_ARGS"
+  sources = get_target_outputs(deps[0])
+}
+
+zbi_test("bootsvc-integration-tests") {
+  assert(current_cpu != "")
+
+  args = [
+    "userboot=bin/bootsvc",
+    "bootsvc.next=bin/bootsvc-integration-test,testargument",
+  ]
+  deps = [
+    # We need a zircon kernel to get off the ground at all.
+    "$zx/kernel",
+
+    # Include bootsvc itself, since that's what we're testing here.  Note
+    # that this uses the package() target for bootsvc, which comes with its
+    # own data_deps to exercise the `userboot.root` option to find bootsvc
+    # and its libraries inside a package directory in the BOOTFS.
+    "..",
+
+    # Include the integration test binary, which bootsvc will launch.
+    ":bootsvc-integration-test",
+
+    # Include the test's own runtime dependencies.
+    ":integration-test-deps",
+  ]
+
+  output_dir = root_build_dir
+  output_name = "$target_name-$current_cpu"
+}
