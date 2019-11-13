@@ -32,7 +32,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.terminal:fuchsia.terminal-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
