@@ -22,7 +22,7 @@ use {
     regex::{Regex, RegexSet},
     std::convert::TryFrom,
     std::path::{Path, PathBuf},
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, Mutex, RwLock},
 };
 
 type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, RegexSet, Vec<Regex>)>;
@@ -274,15 +274,12 @@ impl InspectDataRepository {
 #[derive(Clone)]
 pub struct ReaderServer {
     pub active_selectors: Arc<Mutex<Vec<Selector>>>,
-    pub inspect_repo: Arc<Mutex<InspectDataRepository>>,
+    pub inspect_repo: Arc<RwLock<InspectDataRepository>>,
 }
 
 impl ReaderServer {
-    pub fn new(inspect_repo: Arc<Mutex<InspectDataRepository>>) -> Self {
-        ReaderServer {
-            inspect_repo: inspect_repo,
-            active_selectors: Arc::new(Mutex::new(Vec::new())),
-        }
+    pub fn new(inspect_repo: Arc<RwLock<InspectDataRepository>>) -> Self {
+        ReaderServer { inspect_repo, active_selectors: Arc::new(Mutex::new(Vec::new())) }
     }
 
     /// Add a new selector to the active-selectors list.
@@ -364,7 +361,7 @@ impl ReaderServer {
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into the futures.
         let inspect_repo_data = {
-            let locked_inspect_repo = self.inspect_repo.lock().unwrap();
+            let locked_inspect_repo = self.inspect_repo.read().unwrap();
             locked_inspect_repo.fetch_data()
         };
 
@@ -674,7 +671,7 @@ mod tests {
                     .add("test.inspect".to_string(), absolute_moniker, path, out_dir_proxy)
                     .unwrap();
 
-                let reader_server = ReaderServer::new(Arc::new(Mutex::new(inspect_repo)));
+                let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)));
 
                 let format_settings = FormatSettings {
                     format: Some(DisplaySettings::Text(TextSettings { indent: 4 })),

@@ -20,7 +20,7 @@ use {
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, Mutex, RwLock},
 };
 
 pub static ARCHIVE_PATH: &str = "/data/archive";
@@ -555,13 +555,13 @@ pub struct ArchivistState {
     group_stats: EventFileGroupStatsMap,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
+    inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
+        inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
     ) -> Result<Self, Error> {
         let mut writer = ArchiveWriter::open(ARCHIVE_PATH)?;
         let mut group_stats = writer.get_archive().get_event_group_stats()?;
@@ -615,7 +615,7 @@ fn populate_inspect_repo(
     inspect_reader_data: collection::InspectReaderData,
 ) -> Result<(), Error> {
     let state = state.lock().unwrap();
-    let mut inspect_repo = state.inspect_repository.lock().unwrap();
+    let mut inspect_repo = state.inspect_repository.write().unwrap();
 
     // The InspectReaderData should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.

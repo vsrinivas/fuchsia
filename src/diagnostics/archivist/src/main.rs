@@ -18,7 +18,7 @@ use {
     futures::{future, FutureExt, StreamExt},
     io_util,
     std::path::PathBuf,
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, RwLock},
 };
 
 static INSPECT_ALL_SELECTORS: &str = "/config/data/pipelines/all/";
@@ -69,7 +69,7 @@ fn main() -> Result<(), Error> {
     // The repository that will serve as the data transfer between the archivist server
     // and all services needing access to inspect data.
     let all_inspect_repository =
-        Arc::new(Mutex::new(inspect::InspectDataRepository::new(all_selectors)));
+        Arc::new(RwLock::new(inspect::InspectDataRepository::new(all_selectors)));
 
     let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)
     {
