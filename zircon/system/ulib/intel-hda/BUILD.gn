@@ -6,7 +6,6 @@ zx_library("intel-hda") {
   sources = [
     "codec-utils/codec-driver-base.cc",
     "codec-utils/stream-base.cc",
-    "utils/clock.cc",
     "utils/codec-caps.cc",
     "utils/status.cc",
     "utils/utils.cc",
@@ -15,6 +14,7 @@ zx_library("intel-hda") {
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "$zx/system/banjo/ddk.protocol.intelhda.codec",
     "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/ulib/abs_clock",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/zx",
@@ -37,7 +37,6 @@ group("test") {
 zx_test("intel-hda-utils-test") {
   testonly = true
   sources = [
-    "utils/clock_test.cc",
     "utils/status_or_test.cc",
     "utils/status_test.cc",
     "utils/utils_test.cc",

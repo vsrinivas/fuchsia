@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef INTEL_HDA_UTILS_CLOCK_H_
-#define INTEL_HDA_UTILS_CLOCK_H_
+#ifndef ABS_CLOCK_CLOCK_H_
+#define ABS_CLOCK_CLOCK_H_
 
 #include <lib/zx/time.h>
 #include <zircon/time.h>
 
 #include <memory>
 
-namespace audio::intel_hda {
+namespace abs_clock {
 
 struct FakeClockState;
 
@@ -76,6 +76,6 @@ class FakeClock : public Clock {
   const std::unique_ptr<FakeClockState> state_;
 };
 
-}  // namespace audio::intel_hda
+}  // namespace abs_clock
 
-#endif  // INTEL_HDA_UTILS_CLOCK_H_
+#endif  // ABS_CLOCK_CLOCK_H_

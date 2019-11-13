@@ -11,12 +11,13 @@
 
 #include <utility>
 
+#include <abs_clock/clock.h>
 #include <fbl/algorithm.h>
-
-#include "intel-hda/utils/clock.h"
 
 namespace audio {
 namespace intel_hda {
+
+using abs_clock::Clock;
 
 zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval, WaitConditionFn cond,
                           Clock* clock) {

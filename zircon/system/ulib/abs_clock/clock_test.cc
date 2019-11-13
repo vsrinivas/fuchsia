@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "intel-hda/utils/clock.h"
+#include "abs_clock/clock.h"
 
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
@@ -14,7 +14,7 @@
 
 #include <zxtest/zxtest.h>
 
-namespace audio::intel_hda {
+namespace abs_clock {
 namespace {
 
 // Introduce a small pause in the program, giving other threads a chance
@@ -140,4 +140,4 @@ TEST(FakeClock, MultipleThreadsSleeping) {
 }
 
 }  // namespace
-}  // namespace audio::intel_hda
+}  // namespace abs_clock

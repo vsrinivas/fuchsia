@@ -17,6 +17,7 @@ group("ulib") {
     "$zx/system/dev/audio/lib",
     "$zx/system/dev/lib",
     "$zx/third_party/ulib",
+    "abs_clock",
     "async",
     "async:async-cpp",
     "async:async-default",

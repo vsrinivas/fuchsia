@@ -125,6 +125,7 @@ if (current_cpu != "") {
       "$zx/system/uapp/disk-pave:install-disk-image-test",
       "$zx/system/uapp/nand-util:nand-util-test",
       "$zx/system/uapp/thermal-cli:thermal-cli-test",
+      "$zx/system/ulib/abs_clock:test",
       "$zx/system/ulib/affine/test",
       "$zx/system/ulib/async-loop/test",
       "$zx/system/ulib/async-testing/test",

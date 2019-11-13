@@ -15,15 +15,18 @@
 #include <type_traits>
 #include <utility>
 
+#include <abs_clock/clock.h>
 #include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <intel-hda/utils/clock.h>
 #include <intel-hda/utils/codec-caps.h>
 
 namespace audio {
 namespace intel_hda {
+
+using abs_clock::Clock;
+using abs_clock::RealClock;
 
 static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
 using WaitConditionFn = fbl::InlineFunction<bool(), MAX_HANDLER_CAPTURE_SIZE>;

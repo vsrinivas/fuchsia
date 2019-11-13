@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "intel-hda/utils/clock.h"
+#include "abs_clock/clock.h"
 
 #include <lib/sync/completion.h>
 #include <zircon/compiler.h>
@@ -16,7 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-namespace audio::intel_hda {
+namespace abs_clock {
 
 struct SleepingThread {
   zx::time wake_time;               // Time to wake this thread.
@@ -89,4 +89,4 @@ void FakeClock::SleepUntil(zx::time deadline) {
   sync_completion_wait(&notification, ZX_TIME_INFINITE);
 }
 
-}  // namespace audio::intel_hda
+}  // namespace abs_clock
