@@ -865,13 +865,7 @@
             "type": "object",
             "required": [
                 "xunion_ordinal",
-                "reserved",
-                "name",
-                "type",
-                "size",
-                "max_out_of_line",
-                "alignment",
-                "offset"
+                "reserved"
             ],
             "properties": {
                 "xunion_ordinal": {
@@ -982,13 +976,7 @@
             "type": "object",
             "required": [
                 "ordinal",
-                "reserved",
-                "name",
-                "type",
-                "size",
-                "max_out_of_line",
-                "alignment",
-                "offset"
+                "reserved"
             ],
             "properties": {
                 "ordinal": {
