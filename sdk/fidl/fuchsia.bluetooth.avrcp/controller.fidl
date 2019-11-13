@@ -109,8 +109,20 @@ protocol AbsoluteVolumeHandler {
 /// Connections are internally managed and may be shared by multiple clients.
 /// The actual connection may be opened on-demand after any command here is called.
 protocol Controller {
-    /// Returns the remote PlayerApplicationSettings.
-    GetPlayerApplicationSettings() -> (PlayerApplicationSettings settings) error ControllerError;
+    /// Returns currently set player application setting values for the `attribute_ids`.
+    /// If no `attribute_ids` are provided, this method will query the TG for all valid
+    /// attribute ID's, and return the currently set player application setting values.
+    GetPlayerApplicationSettings(vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attribute_ids)
+        -> (PlayerApplicationSettings current_settings) error ControllerError;
+
+    /// Sets the player application settings specified by `requested_settings`. Only
+    /// settings specified in the input `requested_settings` will be overwritten.
+    /// Returns the actual settings that were set.
+    /// Settings provided in the `requested_settings` that are unsupported or unknown
+    /// will not be set; the returned `set_settings` will include only the settings
+    /// that were successfully set on the remote target.
+    SetPlayerApplicationSettings(PlayerApplicationSettings requested_settings)
+        -> (PlayerApplicationSettings set_settings) error ControllerError;
 
     /// Returns the currently playing media attributes.
     /// May send either the GetElementAttributes or GetItemAttributes command depending on what

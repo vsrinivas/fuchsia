@@ -74,7 +74,13 @@ impl AvrcpClientController {
 
     async fn handle_fidl_request(&mut self, request: ControllerRequest) -> Result<(), Error> {
         match request {
-            ControllerRequest::GetPlayerApplicationSettings { responder } => {
+            ControllerRequest::GetPlayerApplicationSettings { attribute_ids: _, responder } => {
+                responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
+            }
+            ControllerRequest::SetPlayerApplicationSettings {
+                requested_settings: _,
+                responder,
+            } => {
                 responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
             }
             ControllerRequest::GetMediaAttributes { responder } => {
@@ -278,8 +284,8 @@ pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: Contro
             acc.run().await?;
             Ok(())
         }
-            .boxed()
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .boxed()
+        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
     );
 }
 
@@ -294,8 +300,8 @@ pub fn spawn_test_avrcp_client_controller(
             acc.run().await?;
             Ok(())
         }
-            .boxed()
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .boxed()
+        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
     );
 }
 

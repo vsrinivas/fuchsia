@@ -4,7 +4,7 @@
 
 library fuchsia.bluetooth.avrcp;
 
-// Types are intented match how they are defined in the BT AVRCP 1.6.2 spec
+// Types are intended match how they are defined in the BT AVRCP 1.6.2 spec
 // and the 1394-TA AV\C Panel specification.
 // Deviations are called out in comments.
 
@@ -98,11 +98,71 @@ enum ScanMode : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-struct PlayerApplicationSettings {
-    bool equalizer;
-    RepeatStatusMode repeat_status_mode;
-    ShuffleMode shuffle_mode;
-    ScanMode scan_mode;
+enum Equalizer : uint8 {
+    OFF = 0x01;
+    ON = 0x02;
+};
+
+/// The maximum number of custom attributes that can be used.
+/// Defined by AVRCP 1.6.2 Appendix F.
+const uint64 MAX_CUSTOM_ATTRIBUTES = 127;
+
+/// The maximum number of possible values an attribute can take on.
+/// Defined by AVRCP 1.6.2 Sec 6.5.2
+const uint64 MAX_ATTRIBUTE_VALUES = 255;
+
+/// The total number of attributes that can be set. The custom attributes + the 4
+/// defined attributes, `PlayerApplicationSettingAttributeId`. 4 + 127 = 131.
+const uint64 MAX_ATTRIBUTES = 131;
+
+/// 0x80 - 0xFF is reserved for custom player application settings.
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+enum PlayerApplicationSettingAttributeId : uint8 {
+    EQUALIZER = 0x01;
+    REPEAT_STATUS_MODE = 0x02;
+    SHUFFLE_MODE = 0x03;
+    SCAN_MODE = 0x04;
+};
+
+/// The custom attribute value and its description.
+struct CustomAttributeValue {
+    string:255 description;
+    uint8 value;
+};
+
+/// Specification allowed player application settings.
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+table CustomPlayerApplicationSetting {
+    /// The attribute id for the custom setting. Must be between 0x80-0xFF, as
+    /// defined in AVRCP 1.6.2 Appendix F.
+    1: uint8 attribute_id;
+
+    /// The string descriptor of the custom attribute.
+    2: string:255 attribute_name;
+
+    /// The possible values the custom attribute can take.
+    3: vector<CustomAttributeValue>:MAX_ATTRIBUTE_VALUES possible_values;
+
+    /// The current value that the custom setting is set to.
+    4: uint8 current_value;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+table PlayerApplicationSettings {
+    /// The equalizer status of the remote target.
+    1: Equalizer equalizer;
+
+    /// The repeat mode status of the remote target.
+    2: RepeatStatusMode repeat_status_mode;
+
+    /// The shuffle mode status of the remote target.
+    3: ShuffleMode shuffle_mode;
+
+    /// The scan mode status of the remote target.
+    4: ScanMode scan_mode;
+
+    /// Custom settings that are specification allowed.
+    5: vector<CustomPlayerApplicationSetting>:MAX_CUSTOM_ATTRIBUTES custom_settings;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix E (media attributes).
