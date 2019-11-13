@@ -48,7 +48,7 @@ source_set("smbios") {
 
 zx_driver("platform-bus-x86") {
   sources = [
-    "acpi-dev/dev-battery.c",
+    "acpi-dev/dev-battery.cc",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
     "acpi-dev/dev-ec.c",
@@ -115,7 +115,8 @@ zx_test("x86-battery-test") {
   output_name = "x86-battery-test"
   test_group = "ddk"
   sources = [
-    "acpi-dev/dev-battery-test.c",
+    "acpi-dev/dev-battery-test.cc",
+    "acpi-dev/dev-battery.cc",
   ]
   configs += [ ":config" ]
   deps = [

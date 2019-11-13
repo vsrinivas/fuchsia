@@ -1,25 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "dev-battery.c"
+
+#include "dev-battery.h"
 
 #include <dirent.h>
 #include <zircon/syscalls/port.h>
 
+#include <ddk/debug.h>
+#include <ddk/device.h>
 #include <zxtest/zxtest.h>
 
 #define SIGNAL_WAIT_TIMEOUT (5000u)
+
+namespace acpi_battery {
 
 acpi_battery_device_t* dev;
 
 ACPI_STATUS AcpiFakeEvaluateObject(ACPI_HANDLE handle, char* key, ACPI_OBJECT_LIST* args,
                                    ACPI_BUFFER* buffer) {
   if (strcmp("_STA", key) == 0) {  // device status - e.g battery removed
-    ACPI_OBJECT* obj = buffer->Pointer;
+    ACPI_OBJECT* obj = static_cast<ACPI_OBJECT*>(buffer->Pointer);
     EXPECT_NOT_NULL(obj);
     obj->Integer.Value = 0u;
   } else if (strcmp("_BST", key) == 0) {  // battery status info
-    ACPI_OBJECT* pkg = buffer->Pointer;
+    ACPI_OBJECT* pkg = static_cast<ACPI_OBJECT*>(buffer->Pointer);
     EXPECT_EQ(pkg->Package.Count, 4);
     ACPI_OBJECT* elem = pkg->Package.Elements;
     EXPECT_NOT_NULL(elem);
@@ -31,7 +36,7 @@ ACPI_STATUS AcpiFakeEvaluateObject(ACPI_HANDLE handle, char* key, ACPI_OBJECT_LI
 }
 
 void create_battery_device(void) {
-  dev = calloc(1, sizeof(acpi_battery_device_t));
+  dev = static_cast<acpi_battery_device_t*>(calloc(1, sizeof(acpi_battery_device_t)));
   EXPECT_NOT_NULL(dev, "Failed to allocate memory for battery device");
 
   ACPI_HANDLE acpi_handle = NULL;
@@ -91,10 +96,9 @@ void verify_battery_change_signal(uint32_t level, uint32_t state) {
   elements[3].Type = ACPI_TYPE_INTEGER;
   elements[3].Integer.Value = 5;
 
-  ACPI_OBJECT pkg = {
-      .Package.Count = 4,
-      .Package.Elements = elements,
-  };
+  ACPI_OBJECT pkg;
+  pkg.Package.Count = 4;
+  pkg.Package.Elements = elements;
   pkg.Type = ACPI_TYPE_PACKAGE;
 
   ACPI_ALLOCATE_ZEROED((ACPI_SIZE)(sizeof(pkg)));
@@ -148,6 +152,8 @@ TEST(TestCase, TestSignalOnBatteryDisconnect) {
 
   teardown();
 }
+
+}  // namespace acpi_battery
 
 // required stubs for faking ddk
 zx_driver_rec_t __zircon_driver_rec__ = {};
