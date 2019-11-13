@@ -54,8 +54,8 @@ class AudioDevice : public AudioObject {
   bool activated() const { return activated_; }
 
   // AudioObjects with Type::Output must override this; this version should never be called.
-  virtual zx::duration min_clock_lead_time() const {
-    FX_CHECK(false) << "min_clock_lead_time() not supported on AudioDevice";
+  virtual zx::duration min_lead_time() const {
+    FX_CHECK(false) << "min_lead_time() not supported on AudioDevice";
     return zx::nsec(0);
   }
 

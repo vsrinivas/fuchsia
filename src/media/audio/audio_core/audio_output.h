@@ -25,7 +25,7 @@ class AudioOutput : public AudioDevice {
   ~AudioOutput() override = default;
 
   // Minimum clock lead time for this output
-  zx::duration min_clock_lead_time() const override { return min_clock_lead_time_; }
+  zx::duration min_lead_time() const override { return min_lead_time_; }
 
  protected:
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry);
@@ -85,7 +85,7 @@ class AudioOutput : public AudioDevice {
   async::TaskClosureMethod<AudioOutput, &AudioOutput::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain().token()){this};
 
-  zx::duration min_clock_lead_time_;
+  zx::duration min_lead_time_;
 
  private:
   enum class TaskType { Mix, Trim };

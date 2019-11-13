@@ -74,15 +74,13 @@ class FakeAudioOutput : public FakeAudioDevice {
     return ZX_OK;
   }
 
-  void SetMinClockLeadTime(zx::duration min_clock_lead_time) {
-    min_clock_lead_time_ = min_clock_lead_time;
-  }
+  void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
   // Must implement, because this class descends from AudioDevice, not AudioOutput
-  zx::duration min_clock_lead_time() const override { return min_clock_lead_time_; }
+  zx::duration min_lead_time() const override { return min_lead_time_; }
 
  private:
-  zx::duration min_clock_lead_time_;
+  zx::duration min_lead_time_;
 };
 
 }  // namespace media::audio::testing

@@ -82,7 +82,7 @@ class AudioRendererImpl : public AudioObject,
 
  protected:
   // Hook called when the minimum clock lead time requirement changes.
-  void ReportNewMinClockLeadTime();
+  void ReportNewMinLeadTime();
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
 
@@ -130,7 +130,7 @@ class AudioRendererImpl : public AudioObject,
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
   // requirement, report it to our users (if they care).
-  void RecomputeMinClockLeadTime();
+  void RecomputeMinLeadTime();
 
   bool IsOperating();
   bool ValidateConfig();

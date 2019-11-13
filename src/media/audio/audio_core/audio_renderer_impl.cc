@@ -120,22 +120,22 @@ AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time) {
   return {std::make_pair(ref_clock_to_frac_frames_, ref_clock_to_frac_frames_gen_.get())};
 }
 
-void AudioRendererImpl::RecomputeMinClockLeadTime() {
-  TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinClockLeadTime");
+void AudioRendererImpl::RecomputeMinLeadTime() {
+  TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
   ForEachDestLink([&cur_lead_time](auto& link) {
     if (link.GetDest()->is_output()) {
       const auto output = fbl::RefPtr<AudioDevice>::Downcast(link.GetDest());
 
-      cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time());
+      cur_lead_time = std::max(cur_lead_time, output->min_lead_time());
     }
   });
 
   if (min_lead_time_ != cur_lead_time) {
-    REP(SettingRendererMinClockLeadTime(*this, cur_lead_time));
+    REP(SettingRendererMinLeadTime(*this, cur_lead_time));
     min_lead_time_ = cur_lead_time;
-    ReportNewMinClockLeadTime();
+    ReportNewMinLeadTime();
   }
 }
 
@@ -825,7 +825,7 @@ void AudioRendererImpl::PauseNoReply() {
 
 void AudioRendererImpl::OnLinkAdded() {
   volume_manager_.NotifyStreamChanged(this);
-  RecomputeMinClockLeadTime();
+  RecomputeMinLeadTime();
 }
 
 bool AudioRendererImpl::GetStreamMute() const { return mute_; }
@@ -933,7 +933,7 @@ void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
 
   min_lead_time_events_enabled_ = enabled;
   if (enabled) {
-    ReportNewMinClockLeadTime();
+    ReportNewMinLeadTime();
   }
 }
 
@@ -946,10 +946,8 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   callback(min_lead_time_.to_nsecs());
 }
 
-// For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
-// this amount -- we don't also need mixing to occur early.
-void AudioRendererImpl::ReportNewMinClockLeadTime() {
-  TRACE_DURATION("audio", "AudioRendererImpl::ReportNewMinClockLeadTime");
+void AudioRendererImpl::ReportNewMinLeadTime() {
+  TRACE_DURATION("audio", "AudioRendererImpl::ReportNewMinLeadTime");
   if (min_lead_time_events_enabled_) {
     AUD_VLOG_OBJ(TRACE, this);
 

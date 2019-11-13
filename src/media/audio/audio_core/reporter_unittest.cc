@@ -366,7 +366,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                   PropertyList(UnorderedElementsAre(
                       UintIs("sample format", 0), UintIs("channels", 0),
                       UintIs("frames per second", 0), DoubleIs("gain db", 0.0), UintIs("muted", 0),
-                      UintIs("calls to SetGainWithRamp", 0), UintIs("min clock lead time (ns)", 0),
+                      UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
                       DoubleIs("pts continuity threshold (s)", 0.0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
@@ -385,7 +385,7 @@ TEST_F(ReporterTest, RendererMetrics) {
   under_test_.SettingRendererGainWithRamp(renderer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
   under_test_.SettingRendererMute(renderer, true);
-  under_test_.SettingRendererMinClockLeadTime(renderer, zx::nsec(1000000));
+  under_test_.SettingRendererMinLeadTime(renderer, zx::nsec(1000000));
   under_test_.SettingRendererPtsContinuityThreshold(renderer, 5.0);
 
   EXPECT_THAT(
@@ -410,7 +410,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), UintIs("muted", 1),
                       UintIs("calls to SetGainWithRamp", 2),
-                      UintIs("min clock lead time (ns)", 1000000),
+                      UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0))))))))))));
 }
 

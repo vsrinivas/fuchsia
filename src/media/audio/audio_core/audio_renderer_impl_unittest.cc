@@ -101,7 +101,7 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
   auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
 
   // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
-  fake_output->SetMinClockLeadTime(kMinLeadTime);
+  fake_output->SetMinLeadTime(kMinLeadTime);
 
   // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
   // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
