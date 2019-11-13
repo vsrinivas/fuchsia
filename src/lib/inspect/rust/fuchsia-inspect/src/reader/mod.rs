@@ -1288,23 +1288,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn lazy_nodes() -> Result<(), Error> {
-        let mut inspector = Inspector::new();
-        inspector.root_mut().record_int("int", 3);
-        let mut child = inspector.root_mut().create_child("child");
+        let inspector = Inspector::new();
+        inspector.root().record_int("int", 3);
+        let child = inspector.root().create_child("child");
         child.record_double("double", 1.5);
-        inspector.root_mut().record_lazy_child("lazy", || {
+        inspector.root().record_lazy_child("lazy", || {
             async move {
-                let mut inspector = Inspector::new();
-                inspector.root_mut().record_uint("uint", 5);
-                inspector.root_mut().record_lazy_values("nested-lazy-values", || {
+                let inspector = Inspector::new();
+                inspector.root().record_uint("uint", 5);
+                inspector.root().record_lazy_values("nested-lazy-values", || {
                     async move {
-                        let mut inspector = Inspector::new();
-                        inspector.root_mut().record_string("string", "test");
-                        let mut child = inspector.root().create_child("nested-lazy-child");
+                        let inspector = Inspector::new();
+                        inspector.root().record_string("string", "test");
+                        let child = inspector.root().create_child("nested-lazy-child");
                         let array = child.create_int_array("array", 3);
                         array.set(0, 1);
                         child.record(array);
-                        inspector.root_mut().record(child);
+                        inspector.root().record(child);
                         Ok(inspector)
                     }
                     .boxed()
@@ -1314,25 +1314,25 @@ mod tests {
             .boxed()
         });
 
-        inspector.root_mut().record_lazy_values("lazy-values", || {
+        inspector.root().record_lazy_values("lazy-values", || {
             async move {
-                let mut inspector = Inspector::new();
-                let mut child = inspector.root().create_child("lazy-child-1");
+                let inspector = Inspector::new();
+                let child = inspector.root().create_child("lazy-child-1");
                 child.record_string("test", "testing");
-                inspector.root_mut().record(child);
-                inspector.root_mut().record_uint("some-uint", 3);
-                inspector.root_mut().record_lazy_values("nested-lazy-values", || {
+                inspector.root().record(child);
+                inspector.root().record_uint("some-uint", 3);
+                inspector.root().record_lazy_values("nested-lazy-values", || {
                     async move {
-                        let mut inspector = Inspector::new();
-                        inspector.root_mut().record_int("lazy-int", -3);
-                        let mut child = inspector.root().create_child("one-more-child");
+                        let inspector = Inspector::new();
+                        inspector.root().record_int("lazy-int", -3);
+                        let child = inspector.root().create_child("one-more-child");
                         child.record_double("lazy-double", 4.3);
-                        inspector.root_mut().record(child);
+                        inspector.root().record(child);
                         Ok(inspector)
                     }
                     .boxed()
                 });
-                inspector.root_mut().record_lazy_child("nested-lazy-child", || {
+                inspector.root().record_lazy_child("nested-lazy-child", || {
                     async move {
                         let inspector = Inspector::new();
                         // This will go out of scope and is not recorded, so it shouldn't appear.

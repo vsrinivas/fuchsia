@@ -27,7 +27,7 @@
 //! use fuchsia_inspect as inspect;
 //! use fuchsia_inspect::health;
 //!
-//! let mut inspector = /* the inspector of your choice */
+//! let inspector = /* the inspector of your choice */
 //! let mut root = inspector.root();  // Or perhaps a different Inspect Node of your choice.
 //! let mut health = health::Node::new(root);
 //!

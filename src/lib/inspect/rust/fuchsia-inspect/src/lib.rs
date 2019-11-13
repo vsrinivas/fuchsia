@@ -54,18 +54,24 @@ pub struct Inspector {
 struct ValueList {
     #[derivative(PartialEq = "ignore")]
     #[derivative(Debug = "ignore")]
-    values: Mutex<Vec<Box<dyn InspectType>>>,
+    values: Mutex<Option<Vec<Box<dyn InspectType>>>>,
 }
 
 impl ValueList {
     /// Creates a new empty value list.
     pub fn new() -> Self {
-        Self { values: Mutex::new(vec![]) }
+        Self { values: Mutex::new(None) }
     }
 
     /// Stores an inspect type that won't change.
-    pub fn record(&mut self, value: impl InspectType + 'static) {
-        self.values.lock().push(Box::new(value));
+    pub fn record(&self, value: impl InspectType + 'static) {
+        let boxed_value = Box::new(value);
+        let mut values_lock = self.values.lock();
+        if let Some(ref mut values) = *values_lock {
+            values.push(boxed_value);
+        } else {
+            *values_lock = Some(vec![boxed_value]);
+        }
     }
 }
 
@@ -158,10 +164,6 @@ impl Inspector {
     /// Get the root of the VMO object.
     pub fn root(&self) -> &Node {
         &self.root_node
-    }
-
-    pub fn root_mut(&mut self) -> &mut Node {
-        &mut self.root_node
     }
 
     pub(in crate) fn state(&self) -> Option<Arc<Mutex<State>>> {
@@ -309,9 +311,9 @@ macro_rules! create_numeric_property_fn {
                     .unwrap_or([<$name_cap Property>]::new_no_op())
             }
 
-            pub fn [<record_ $name >](&mut self, name: impl AsRef<str>, value: $type) {
+            pub fn [<record_ $name >](&self, name: impl AsRef<str>, value: $type) {
                 let property = self.[<create_ $name>](name, value);
-                self.record_value(property);
+                self.record(property);
             }
         }
     };
@@ -445,10 +447,10 @@ macro_rules! create_lazy_property_fn {
             }
 
             pub fn [<record_lazy_ $fn_suffix>]<F>(
-                &mut self, name: impl AsRef<str>, callback: F)
+                &self, name: impl AsRef<str>, callback: F)
             where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
                 let property = self.[<create_lazy_ $fn_suffix>](name, callback);
-                self.record_value(property);
+                self.record(property);
             }
         }
     }
@@ -457,7 +459,7 @@ macro_rules! create_lazy_property_fn {
 inspect_type_impl!(
     /// Inspect API Node data type.
     struct Node
-    recorded_values : Option<ValueList> = None,
+    recorded_values : ValueList = ValueList::new(),
 );
 
 inspect_type_impl!(
@@ -487,8 +489,8 @@ impl Node {
     }
 
     /// Keeps track of the given property for the lifetime of the node.
-    pub fn record(&mut self, property: impl InspectType + 'static) {
-        self.record_value(property);
+    pub fn record(&self, property: impl InspectType + 'static) {
+        self.recorded_values.record(property);
     }
 
     /// Add a lazy node property to this node:
@@ -546,9 +548,9 @@ impl Node {
     }
 
     /// Creates and saves a string property for the lifetime of the node.
-    pub fn record_string(&mut self, name: impl AsRef<str>, value: impl AsRef<str>) {
+    pub fn record_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) {
         let property = self.create_string(name, value);
-        self.record_value(property);
+        self.record(property);
     }
 
     /// Add a byte vector property to this node.
@@ -573,19 +575,9 @@ impl Node {
     }
 
     /// Creates and saves a bytes property for the lifetime of the node.
-    pub fn record_bytes(&mut self, name: impl AsRef<str>, value: impl AsRef<[u8]>) {
+    pub fn record_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) {
         let property = self.create_bytes(name, value);
-        self.record_value(property);
-    }
-
-    fn record_value(&mut self, value: impl InspectType + 'static) {
-        if let Some(ref mut recorded_values) = self.recorded_values {
-            recorded_values.record(value);
-        } else {
-            let mut value_list = ValueList::new();
-            value_list.record(value);
-            self.recorded_values = Some(value_list);
-        }
+        self.record(property);
     }
 }
 
@@ -1435,19 +1427,19 @@ mod tests {
     fn value_list_record() {
         let inspector = Inspector::new();
         let child = inspector.root().create_child("test");
-        let mut value_list = ValueList::new();
-        assert!(value_list.values.lock().is_empty());
+        let value_list = ValueList::new();
+        assert!(value_list.values.lock().is_none());
         value_list.record(child);
-        assert_eq!(value_list.values.lock().len(), 1);
+        assert_eq!(value_list.values.lock().as_ref().unwrap().len(), 1);
     }
 
     #[test]
     fn record() {
-        let mut inspector = Inspector::new();
+        let inspector = Inspector::new();
         let property = inspector.root().create_uint("a", 1);
-        inspector.root_mut().record_uint("b", 2);
+        inspector.root().record_uint("b", 2);
         {
-            let mut child = inspector.root().create_child("child");
+            let child = inspector.root().create_child("child");
             child.record(property);
             child.record_double("c", 3.14);
             assert_inspect_tree!(inspector, root: {

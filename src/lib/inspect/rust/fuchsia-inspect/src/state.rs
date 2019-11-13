@@ -952,8 +952,8 @@ mod tests {
         let block = state
             .create_lazy_node("link-name", 0, LinkNodeDisposition::Inline, || {
                 async move {
-                    let mut inspector = Inspector::new();
-                    inspector.root_mut().record_uint("a", 1);
+                    let inspector = Inspector::new();
+                    inspector.root().record_uint("a", 1);
                     Ok(inspector)
                 }
                 .boxed()

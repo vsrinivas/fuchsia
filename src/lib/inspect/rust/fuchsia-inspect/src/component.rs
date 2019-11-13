@@ -143,4 +143,13 @@ mod tests {
             }
         });
     }
+
+    #[test]
+    fn record_on_inspector() {
+        let inspector = super::inspector();
+        inspector.root().record_int("a", 1);
+        assert_inspect_tree!(inspector, root: {
+            a: 1i64,
+        })
+    }
 }
