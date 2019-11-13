@@ -18,28 +18,19 @@ const (
 	repoAddCmdTemplate = "pkgctl repo add --file %s"
 )
 
-// Configurer is used to remotely configure a package repository.
-type Configurer struct {
-	shell shell
-}
-
-// NewConfigurer returns a configurer, given an SSH client.
-func NewConfigurer(client *ssh.Client) (*Configurer, error) {
+// AddFromConfig writes the given config to the given remote install path and
+// adds it as an update source.
+func AddFromConfig(client *ssh.Client, config *Config, installPath string) error {
 	sh, err := newRemoteShell(client)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &Configurer{shell: sh}, nil
+	defer sh.close()
+	return addFromConfig(config, installPath, sh)
 }
 
-func (c *Configurer) Close() error {
-	return c.shell.close()
-}
-
-// Configure writes the given config to the associated remote filesystem
-// and adds it as an update source.
-func (c Configurer) Configure(config *RepositoryConfig, remote string) error {
-	w, err := c.shell.writerAt(remote)
+func addFromConfig(config *Config, installPath string, sh shell) error {
+	w, err := sh.writerAt(installPath)
 	if err != nil {
 		return err
 	}
@@ -52,7 +43,7 @@ func (c Configurer) Configure(config *RepositoryConfig, remote string) error {
 	if _, err := w.Write(b); err != nil {
 		return err
 	}
-	return c.shell.run(repoAddCmd(remote))
+	return sh.run(repoAddCmd(installPath))
 }
 
 func repoAddCmd(file string) string {
@@ -62,7 +53,6 @@ func repoAddCmd(file string) string {
 type shell interface {
 	writerAt(string) (io.WriteCloser, error)
 	run(string) error
-	close() error
 }
 
 type remoteShell struct {
