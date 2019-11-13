@@ -39,6 +39,11 @@ import("//build/rust/rustc_artifact.gni")
 #   output_name (optional)
 #     Name of the output file.
 #
+#   with_lto (optional)
+#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
+#     "fat". This value takes precedence over GN args or the default value for the
+#     type of build (debug or release).
+#
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
@@ -77,6 +82,7 @@ template("rustc_staticlib") {
                              "with_unit_tests",
                              "output_name",
                              "source_root",
+                             "with_lto",
                              "testonly",
                              "features",
                            ])

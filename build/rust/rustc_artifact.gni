@@ -209,7 +209,7 @@ template("rustc_artifact") {
     }
   }
 
-  if (type == "bin") {
+  if (type == "bin" || type == "staticlib") {
     if (rust_override_lto != "") {
       with_lto = rust_override_lto
       if (defined(invoker.with_lto)) {
