@@ -17,7 +17,7 @@ namespace {
 #define TERM_RIGHT "\x1b[C"
 
 // Dummy completion functions that return two completions.
-std::vector<std::string> CompletionCallback(const std::string& line) {
+std::vector<std::string> AutocompleteCallback(const std::string& line) {
   std::vector<std::string> result;
   result.push_back("one");
   result.push_back("two");
@@ -26,9 +26,9 @@ std::vector<std::string> CompletionCallback(const std::string& line) {
 
 }  // namespace
 
-class TestLineInput : public LineInputBase {
+class TestLineInput : public LineInputEditor {
  public:
-  TestLineInput(const std::string& prompt) : LineInputBase(prompt) {}
+  TestLineInput(const std::string& prompt) : LineInputEditor(prompt) {}
 
   void ClearOutput() { output_.clear(); }
   std::string GetAndClearOutput() {
@@ -72,7 +72,7 @@ TEST(LineInput, CursorCommands) {
   EXPECT_FALSE(input.OnInput('a'));
   EXPECT_FALSE(input.OnInput('b'));
   EXPECT_TRUE(input.OnInput('\r'));
-  EXPECT_EQ("ab", input.line());
+  EXPECT_EQ("ab", input.GetLine());
 
   input.BeginReadLine();
   EXPECT_FALSE(input.OnInputStr("abcd"));
@@ -105,13 +105,13 @@ TEST(LineInput, CursorCommands) {
   // Backspace.
   EXPECT_FALSE(input.OnInput(127));  // Backspace.
   EXPECT_EQ(3u, input.pos());
-  EXPECT_EQ("abc", input.line());
+  EXPECT_EQ("abc", input.GetLine());
 
   // Delete. This one also tests the line refresh commands.
   EXPECT_FALSE(input.OnInput(1));  // Home.
   input.ClearOutput();
   EXPECT_FALSE(input.OnInputStr("\x1b[3~"));
-  EXPECT_EQ("bc", input.line());
+  EXPECT_EQ("bc", input.GetLine());
   // "7C" at the end means cursor is at the 7th character (the "b").
   EXPECT_EQ("\rPrompt bc\x1b[0K\r\x1B[7C", input.GetAndClearOutput());
   EXPECT_EQ(0u, input.pos());
@@ -133,17 +133,17 @@ TEST(LineInput, CtrlD) {
 
   EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "ab|d"
-  EXPECT_EQ("abd", input.line());
+  EXPECT_EQ("abd", input.GetLine());
   EXPECT_EQ(2u, input.pos());
 
   EXPECT_FALSE(input.OnInputStr("\x1b[C"));  // Right.
   // "abd|"
   EXPECT_EQ(3u, input.pos());
-  EXPECT_EQ("abd", input.line());
+  EXPECT_EQ("abd", input.GetLine());
 
   EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // No change when hit Ctrl+D at the end of the line.
-  EXPECT_EQ("abd", input.line());
+  EXPECT_EQ("abd", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Erase everything and then exit.
@@ -154,23 +154,23 @@ TEST(LineInput, CtrlD) {
 
   EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|bd"
-  EXPECT_EQ("bd", input.line());
+  EXPECT_EQ("bd", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
   EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|d"
-  EXPECT_EQ("d", input.line());
+  EXPECT_EQ("d", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
   EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
   // "|"
-  EXPECT_EQ("", input.line());
+  EXPECT_EQ("", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
   // Ctrl+D on an empty line is exit.
 
   EXPECT_TRUE(input.OnInput(4));  // Ctrl+D
-  EXPECT_TRUE(input.eof());
+  EXPECT_TRUE(input.IsEof());
 }
 
 TEST(LineInput, History) {
@@ -185,12 +185,12 @@ TEST(LineInput, History) {
   EXPECT_FALSE(input.OnInputStr(TERM_UP TERM_UP));
 
   // Should have selected the first line and the cursor should be at the end.
-  EXPECT_EQ("one", input.line());
+  EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Append a letter and accept it.
   input.OnInputStr("s\r");
-  input.AddToHistory(input.line());
+  input.AddToHistory(input.GetLine());
 
   // Start editing a new line with some input.
   input.BeginReadLine();
@@ -201,92 +201,92 @@ TEST(LineInput, History) {
   //  two
   //  ones
   //  three
-  EXPECT_EQ("three", input.line());
+  EXPECT_EQ("three", input.GetLine());
   EXPECT_FALSE(input.OnInputStr(TERM_UP));
-  EXPECT_EQ("ones", input.line());
+  EXPECT_EQ("ones", input.GetLine());
   EXPECT_FALSE(input.OnInputStr(TERM_UP));
-  EXPECT_EQ("two", input.line());
+  EXPECT_EQ("two", input.GetLine());
   EXPECT_FALSE(input.OnInputStr(TERM_UP));
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // From here, these are extra to
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // test that going beyond the top
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // stays stopped.
-  EXPECT_EQ("ones", input.line());
+  EXPECT_EQ("ones", input.GetLine());
 
   // Going back to the bottom (also doing one extra one to test the boundary).
   EXPECT_FALSE(input.OnInputStr(TERM_DOWN TERM_DOWN TERM_DOWN TERM_DOWN));
 
   // Should have gotten the original non-accepted input back.
-  EXPECT_EQ("three", input.line());
+  EXPECT_EQ("three", input.GetLine());
 }
 
 TEST(LineInput, HistoryEdgeCases) {
   TestLineInput input("");
 
   input.AddToHistory("one");
-  ASSERT_EQ(input.history().size(), 2u);
+  ASSERT_EQ(input.GetHistory().size(), 2u);
 
   // If input is empty, it should not add to history.
   input.AddToHistory("");
-  ASSERT_EQ(input.history().size(), 2u);
+  ASSERT_EQ(input.GetHistory().size(), 2u);
 
   // Same input should not work.
   input.AddToHistory("one");
-  ASSERT_EQ(input.history().size(), 2u);
+  ASSERT_EQ(input.GetHistory().size(), 2u);
 
   // A past input should work.
   input.AddToHistory("two");
-  ASSERT_EQ(input.history().size(), 3u);
+  ASSERT_EQ(input.GetHistory().size(), 3u);
   input.AddToHistory("one");
-  ASSERT_EQ(input.history().size(), 4u);
+  ASSERT_EQ(input.GetHistory().size(), 4u);
 }
 
 TEST(LineInput, Completions) {
   TestLineInput input("");
-  input.set_completion_callback(&CompletionCallback);
+  input.SetAutocompleteCallback(&AutocompleteCallback);
 
   input.BeginReadLine();
   input.OnInput('z');
 
   // Send one tab, should get the first suggestion.
   input.OnInput(9);
-  EXPECT_EQ("one", input.line());
+  EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Second suggestion.
   input.OnInput(9);
-  EXPECT_EQ("two", input.line());
+  EXPECT_EQ("two", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Again should go back to original text.
   input.OnInput(9);
-  EXPECT_EQ("z", input.line());
+  EXPECT_EQ("z", input.GetLine());
   EXPECT_EQ(1u, input.pos());
 
   // Should wrap around to the first suggestion.
   input.OnInput(9);
-  EXPECT_EQ("one", input.line());
+  EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Typing should append.
   input.OnInput('s');
-  EXPECT_EQ("ones", input.line());
+  EXPECT_EQ("ones", input.GetLine());
   EXPECT_EQ(4u, input.pos());
 
   // Tab again should give the same suggestions.
   input.OnInput(9);
-  EXPECT_EQ("one", input.line());
+  EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
   // Send an escape sequence "left" which should accept the suggestion and
   // execute the sequence.
   input.OnInputStr("\x1b[D");
-  EXPECT_EQ("one", input.line());
+  EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(2u, input.pos());
 }
 
 TEST(LineInput, Scroll) {
   TestLineInput input("ABCDE");
-  input.set_max_cols(10);
+  input.SetMaxCols(10);
 
   input.BeginReadLine();
   input.ClearOutput();
@@ -313,12 +313,12 @@ TEST(LineInput, NegAck) {
 
   // Empty should remain with them prompt.
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 
   // Adding characters and then Control-U should clear.
   input.OnInputStr("12345");
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 
   // In the middle of the line should clear until the cursor.
   input.OnInputStr("0123456789");
@@ -327,7 +327,7 @@ TEST(LineInput, NegAck) {
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
-  EXPECT_EQ(input.line(), "6789");
+  EXPECT_EQ(input.GetLine(), "6789");
   EXPECT_EQ(input.pos(), 0u);
 }
 
@@ -339,42 +339,42 @@ TEST(LineInput, EndOfTransimission) {
   input.SetLine("First Second Third");
   input.SetPos(0);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "First Second Third");
+  EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "rst Second Third");
+  EXPECT_EQ(input.GetLine(), "rst Second Third");
 
   //                  v
   input.SetLine("First Second Third");
   input.SetPos(5);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), " Second Third");
+  EXPECT_EQ(input.GetLine(), " Second Third");
 
   //                     v
   input.SetLine("First Second Third");
   input.SetPos(8);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "First cond Third");
+  EXPECT_EQ(input.GetLine(), "First cond Third");
 
   //                         v
   input.SetLine("First Second Third");
   input.SetPos(12);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "First  Third");
+  EXPECT_EQ(input.GetLine(), "First  Third");
 
   //                            v
   input.SetLine("First Second Third");
   input.SetPos(15);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "First Second ird");
+  EXPECT_EQ(input.GetLine(), "First Second ird");
 
   //                               v
   input.SetLine("First Second Third");
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
-  EXPECT_EQ(input.line(), "First Second ");
+  EXPECT_EQ(input.GetLine(), "First Second ");
 }
 
 TEST(LineInput, Transpose) {
@@ -385,25 +385,25 @@ TEST(LineInput, Transpose) {
   input.SetLine("First Second Third");
   input.SetPos(0);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
-  EXPECT_EQ(input.line(), "First Second Third");
+  EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //              v
   input.SetLine("First Second Third");
   input.SetPos(1);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
-  EXPECT_EQ(input.line(), "First Second Third");
+  EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
-  EXPECT_EQ(input.line(), "iFrst Second Third");
+  EXPECT_EQ(input.GetLine(), "iFrst Second Third");
 
   //                               v
   input.SetLine("First Second Third");
   input.SetPos(18);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
-  EXPECT_EQ(input.line(), "First Second Thidr");
+  EXPECT_EQ(input.GetLine(), "First Second Thidr");
 }
 
 TEST(LineInput, DeleteEnd) {
@@ -414,36 +414,36 @@ TEST(LineInput, DeleteEnd) {
   input.SetLine("First Second Third");
   input.SetPos(0);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "Fi");
+  EXPECT_EQ(input.GetLine(), "Fi");
 
   //                  v
   input.SetLine("First Second Third");
   input.SetPos(5);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "First");
+  EXPECT_EQ(input.GetLine(), "First");
 
   //                     v
   input.SetLine("First Second Third");
   input.SetPos(8);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "First Se");
+  EXPECT_EQ(input.GetLine(), "First Se");
 
   //                         v
   input.SetLine("First Second Third");
   input.SetPos(12);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "First Second");
+  EXPECT_EQ(input.GetLine(), "First Second");
 
   //                               v
   input.SetLine("First Second Third");
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
-  EXPECT_EQ(input.line(), "First Second Third");
+  EXPECT_EQ(input.GetLine(), "First Second Third");
 }
 
 TEST(LineInput, CancelCommand) {
@@ -454,19 +454,19 @@ TEST(LineInput, CancelCommand) {
   input.SetLine("First Second Third");
   input.SetPos(0);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 
   //                               v
   input.SetLine("First Second Third");
   input.SetPos(18);
   EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
-  EXPECT_EQ(input.line(), "");
+  EXPECT_EQ(input.GetLine(), "");
 }
 
 TEST(LineInput, ReverseHistory_Select) {
@@ -495,7 +495,7 @@ TEST(LineInput, ReverseHistory_Select) {
   ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyEnter));
   ASSERT_FALSE(input.in_reverse_history_mode());
   // Pos:                 |               v
-  EXPECT_EQ(input.line(), "prefix postfix3");
+  EXPECT_EQ(input.GetLine(), "prefix postfix3");
   EXPECT_EQ(input.pos(), 15u);
 }
 

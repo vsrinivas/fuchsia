@@ -52,21 +52,33 @@ size_t GetTerminalMaxCols(int fileno) {
 
 }  // namespace
 
-LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {
+LineInputEditor::LineInputEditor(const std::string& prompt) : prompt_(prompt) {
   // Start with a blank item at [0] which is where editing will take place.
   history_.emplace_front();
 }
 
-LineInputBase::~LineInputBase() { EnsureNoRawMode(); }
+LineInputEditor::~LineInputEditor() { EnsureNoRawMode(); }
 
-void LineInputBase::BeginReadLine() {
+void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
+  autocomplete_callback_ = std::move(cb);
+}
+
+void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
+
+bool LineInputEditor::IsEof() const { return eof_; }
+
+const std::string& LineInputEditor::GetLine() const { return history_[history_index_]; }
+
+const std::deque<std::string>& LineInputEditor::GetHistory() const { return history_; }
+
+void LineInputEditor::BeginReadLine() {
   FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
 
   ResetLineState();
   RepaintLine();
 }
 
-bool LineInputBase::OnInput(char c) {
+bool LineInputEditor::OnInput(char c) {
   FXL_DCHECK(editing_);  // BeginReadLine not called.
   FXL_DCHECK(visible_);  // Don't call while hidden.
 
@@ -126,8 +138,8 @@ bool LineInputBase::OnInput(char c) {
     case SpecialCharacters::kKeyTab:
       HandleTab();
       break;
-    case SpecialCharacters::kKeyNewline: // == Ctrl + J
-    case SpecialCharacters::kKeyEnter:   // == Ctrl + M
+    case SpecialCharacters::kKeyNewline:  // == Ctrl + J
+    case SpecialCharacters::kKeyEnter:    // == Ctrl + M
       HandleEnter();
       return true;
     case SpecialCharacters::kKeyControlN:
@@ -162,7 +174,7 @@ bool LineInputBase::OnInput(char c) {
   return false;
 }
 
-void LineInputBase::AddToHistory(const std::string& line) {
+void LineInputEditor::AddToHistory(const std::string& line) {
   if (line.empty())
     return;
 
@@ -178,7 +190,7 @@ void LineInputBase::AddToHistory(const std::string& line) {
   history_.emplace_front();
 }
 
-void LineInputBase::Hide() {
+void LineInputEditor::Hide() {
   FXL_DCHECK(visible_);  // Hide() called more than once.
   visible_ = false;
 
@@ -193,7 +205,7 @@ void LineInputBase::Hide() {
   EnsureNoRawMode();
 }
 
-void LineInputBase::Show() {
+void LineInputEditor::Show() {
   FXL_DCHECK(!visible_);  // Show() called more than once.
   visible_ = true;
   if (!editing_)
@@ -201,7 +213,7 @@ void LineInputBase::Show() {
   RepaintLine();
 }
 
-void LineInputBase::HandleEscapedInput(char c) {
+void LineInputEditor::HandleEscapedInput(char c) {
   // Escape sequences are two bytes, buffer until we have both.
   escape_sequence_.push_back(c);
   if (escape_sequence_.size() < 2)
@@ -257,7 +269,7 @@ void LineInputBase::HandleEscapedInput(char c) {
   escape_sequence_.clear();
 }
 
-void LineInputBase::HandleBackspace() {
+void LineInputEditor::HandleBackspace() {
   if (pos_ == 0)
     return;
   pos_--;
@@ -265,14 +277,14 @@ void LineInputBase::HandleBackspace() {
   RepaintLine();
 }
 
-void LineInputBase::HandleDelete() {
+void LineInputEditor::HandleDelete() {
   if (pos_ < cur_line().size()) {
     cur_line().erase(pos_, 1);
     RepaintLine();
   }
 }
 
-void LineInputBase::HandleEnter() {
+void LineInputEditor::HandleEnter() {
   Write("\r\n");
 
   if (history_.size() == max_history_)
@@ -283,12 +295,12 @@ void LineInputBase::HandleEnter() {
   editing_ = false;
 }
 
-void LineInputBase::HandleTab() {
-  if (!completion_callback_)
+void LineInputEditor::HandleTab() {
+  if (!autocomplete_callback_)
     return;  // Can't do completions.
 
   if (!completion_mode_) {
-    completions_ = completion_callback_(cur_line());
+    completions_ = autocomplete_callback_(cur_line());
     completion_index_ = 0;
     if (completions_.empty())
       return;  // No completions, don't enter completion mode.
@@ -314,13 +326,13 @@ void LineInputBase::HandleTab() {
   RepaintLine();
 }
 
-void LineInputBase::HandleNegAck() {
+void LineInputEditor::HandleNegAck() {
   cur_line() = cur_line().substr(pos_);
   pos_ = 0;
   RepaintLine();
 }
 
-void LineInputBase::HandleEndOfTransimission() {
+void LineInputEditor::HandleEndOfTransimission() {
   const auto& line = cur_line();
   if (line.empty())
     return;
@@ -347,12 +359,12 @@ void LineInputBase::HandleEndOfTransimission() {
   RepaintLine();
 }
 
-void LineInputBase::HandleEndOfFile() {
+void LineInputEditor::HandleEndOfFile() {
   eof_ = true;
   editing_ = false;
 }
 
-void LineInputBase::HandleReverseHistory(char c) {
+void LineInputEditor::HandleReverseHistory(char c) {
   if (reading_escaped_input_) {
     // Escape sequences are two bytes, buffer until we have both.
     escape_sequence_.push_back(c);
@@ -414,7 +426,7 @@ void LineInputBase::HandleReverseHistory(char c) {
   RepaintLine();
 };
 
-void LineInputBase::StartReverseHistoryMode() {
+void LineInputEditor::StartReverseHistoryMode() {
   FXL_DCHECK(!reverse_history_mode_);
   reverse_history_mode_ = true;
   reverse_history_index_ = 0;
@@ -423,7 +435,7 @@ void LineInputBase::StartReverseHistoryMode() {
   RepaintLine();
 }
 
-void LineInputBase::EndReverseHistoryMode(bool accept_suggestion) {
+void LineInputEditor::EndReverseHistoryMode(bool accept_suggestion) {
   FXL_DCHECK(reverse_history_mode_);
   reverse_history_mode_ = false;
 
@@ -435,7 +447,7 @@ void LineInputBase::EndReverseHistoryMode(bool accept_suggestion) {
   }
 }
 
-void LineInputBase::SearchNextReverseHistory(bool restart) {
+void LineInputEditor::SearchNextReverseHistory(bool restart) {
   if (restart) {
     reverse_history_index_ = 0;
   } else {
@@ -469,12 +481,12 @@ void LineInputBase::SearchNextReverseHistory(bool restart) {
   pos_ = 0;
 }
 
-void LineInputBase::HandleFormFeed() {
+void LineInputEditor::HandleFormFeed() {
   Write("\033c");  // Form feed.
   RepaintLine();
 }
 
-void LineInputBase::Insert(char c) {
+void LineInputEditor::Insert(char c) {
   if (pos_ == cur_line().size() &&
       (max_cols_ == 0 || cur_line().size() + prompt_.size() < max_cols_ - 1)) {
     // Append to end and no scrolling needed. Optimize output to avoid
@@ -490,21 +502,21 @@ void LineInputBase::Insert(char c) {
   }
 }
 
-void LineInputBase::MoveLeft() {
+void LineInputEditor::MoveLeft() {
   if (pos_ > 0) {
     pos_--;
     RepaintLine();
   }
 }
 
-void LineInputBase::MoveRight() {
+void LineInputEditor::MoveRight() {
   if (pos_ < cur_line().size()) {
     pos_++;
     RepaintLine();
   }
 }
 
-void LineInputBase::MoveUp() {
+void LineInputEditor::MoveUp() {
   if (history_index_ < history_.size() - 1) {
     history_index_++;
     pos_ = cur_line().size();
@@ -512,7 +524,7 @@ void LineInputBase::MoveUp() {
   }
 }
 
-void LineInputBase::MoveDown() {
+void LineInputEditor::MoveDown() {
   if (history_index_ > 0) {
     history_index_--;
     pos_ = cur_line().size();
@@ -520,17 +532,17 @@ void LineInputBase::MoveDown() {
   }
 }
 
-void LineInputBase::MoveHome() {
+void LineInputEditor::MoveHome() {
   pos_ = 0;
   RepaintLine();
 }
 
-void LineInputBase::MoveEnd() {
+void LineInputEditor::MoveEnd() {
   pos_ = cur_line().size();
   RepaintLine();
 }
 
-void LineInputBase::TransposeLastTwoCharacters() {
+void LineInputEditor::TransposeLastTwoCharacters() {
   if (pos_ >= 2) {
     auto swap = cur_line()[pos_ - 1];
     cur_line()[pos_ - 1] = cur_line()[pos_ - 2];
@@ -539,18 +551,18 @@ void LineInputBase::TransposeLastTwoCharacters() {
   }
 }
 
-void LineInputBase::CancelCommand() {
+void LineInputEditor::CancelCommand() {
   Write("^C\r\n");
   ResetLineState();
   RepaintLine();
 }
 
-void LineInputBase::DeleteToEnd() {
+void LineInputEditor::DeleteToEnd() {
   cur_line().resize(pos_);
   RepaintLine();
 }
 
-void LineInputBase::CancelCompletion() {
+void LineInputEditor::CancelCompletion() {
   cur_line() = line_before_completion_;
   pos_ = pos_before_completion_;
   completion_mode_ = false;
@@ -558,13 +570,13 @@ void LineInputBase::CancelCompletion() {
   RepaintLine();
 }
 
-void LineInputBase::AcceptCompletion() {
+void LineInputEditor::AcceptCompletion() {
   completion_mode_ = false;
   completions_ = std::vector<std::string>();
   // Line shouldn't need repainting since this doesn't update it.
 }
 
-void LineInputBase::RepaintLine() {
+void LineInputEditor::RepaintLine() {
   std::string prompt, line_data;
   if (!reverse_history_mode_) {
     prompt = prompt_;
@@ -608,7 +620,7 @@ void LineInputBase::RepaintLine() {
   Write(buf);
 }
 
-std::string LineInputBase::GetReverseHistoryPrompt() const {
+std::string LineInputEditor::GetReverseHistoryPrompt() const {
   std::string buf;
   buf.reserve(64);
 
@@ -619,7 +631,7 @@ std::string LineInputBase::GetReverseHistoryPrompt() const {
   return buf;
 }
 
-std::string LineInputBase::GetReverseHistorySuggestion() const {
+std::string LineInputEditor::GetReverseHistorySuggestion() const {
   if (reverse_history_input_.empty())
     return {};
 
@@ -629,7 +641,7 @@ std::string LineInputBase::GetReverseHistorySuggestion() const {
   return history_[reverse_history_index_];
 }
 
-void LineInputBase::ResetLineState() {
+void LineInputEditor::ResetLineState() {
   editing_ = true;
   pos_ = 0;
   eof_ = false;
@@ -641,8 +653,8 @@ void LineInputBase::ResetLineState() {
 
 // LineInputStdout ---------------------------------------------------------------------------------
 
-LineInputStdout::LineInputStdout(const std::string& prompt) : LineInputBase(prompt) {
-  set_max_cols(GetTerminalMaxCols(STDIN_FILENO));
+LineInputStdout::LineInputStdout(const std::string& prompt) : LineInputEditor(prompt) {
+  SetMaxCols(GetTerminalMaxCols(STDIN_FILENO));
 }
 LineInputStdout::~LineInputStdout() {}
 
@@ -709,7 +721,7 @@ std::string LineInputBlockingStdio::ReadLine() {
     if (OnInput(read_buf))
       break;
   }
-  return line();
+  return GetLine();
 }
 
 }  // namespace line_input

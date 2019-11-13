@@ -45,71 +45,98 @@ struct SpecialCharacters {
   static const char* kTermCursorToColFormat;  // printf format.
 };
 
-// This class implements a push model for input of characters, allowing it to
-// be used in asynchronous contexts.
+// Abtract base class for line input.
 //
-// The model is you create a LineInput class outside of the input loop. It
-// encapsulates the history state and remembers the prompt. When you want to
-// read a line:
+// This class implements a push model for input of characters, allowing it to be used in
+// asynchronous contexts.
+//
+// The model is you create a LineInput class outside of the input loop. It encapsulates the history
+// state and remembers the prompt. When you want to read a line:
 //
 //  1. Call BeginReadLine().
 //  2. Push data to it via OnInput() until it returns true.
-//  3. Get the input from line().
+//  3. Check IsEof() and get the input from GetLine().
 //  4. Add line to history if desired.
 //  5. Repeat.
-class LineInputBase {
+class LineInput {
  public:
+  virtual ~LineInput() = default;
+
   // Given some typing, returns a prioritized list of completions.
-  using CompletionCallback = fit::function<std::vector<std::string>(const std::string&)>;
+  using AutocompleteCallback = fit::function<std::vector<std::string>(const std::string&)>;
 
-  explicit LineInputBase(const std::string& prompt);
-  virtual ~LineInputBase();
+  // Setup -----------------------------------------------------------------------------------------
 
-  // The column width of the screen before horizontal scrolling. If 0,
-  // scrolling will be disabled.
-  void set_max_cols(size_t max) { max_cols_ = max; }
+  // Provides the callback for tab completion.
+  virtual void SetAutocompleteCallback(AutocompleteCallback cb) = 0;
 
-  // The completion callback provides suggestions for tab completion. When
-  // unset, tab completion will be disabled.
-  void set_completion_callback(CompletionCallback cc) { completion_callback_ = std::move(cc); }
+  // Sets the maximum width of a line. Beyond this the input will scroll. Setitng to 0 will disable
+  // horizontal scrolling.
+  virtual void SetMaxCols(size_t max) = 0;
 
-  // Returns the current line text.
-  const std::string& line() const { return history_[history_index_]; }
+  // Querying --------------------------------------------------------------------------------------
 
-  // Returns whether a Ctrl-D has been read.
-  bool eof() const { return eof_; }
+  // Returns true if EOF has been indicated (Control-D from the terminal). This will be valid for
+  // the current line only. It will be reset for the next BeginReadLine().
+  virtual bool IsEof() const = 0;
 
-  // Returns the current insert position.
-  size_t pos() const { return pos_; }
+  // Returns the current input text.
+  virtual const std::string& GetLine() const = 0;
 
-  const std::deque<std::string>& history() const { return history_; }
+  // Returns the current history. The most resent input is at the begin().
+  virtual const std::deque<std::string>& GetHistory() const = 0;
+
+  // State -----------------------------------------------------------------------------------------
 
   // Call to initialize reading a new line.
-  void BeginReadLine();
+  virtual void BeginReadLine() = 0;
 
-  // Provides one character of input to the editor. Returns true if the line
-  // is complete (the user has pressed enter).
-  virtual bool OnInput(char c);
+  // Provides one character of input to the editor. Returns true if the line is complete (the user
+  // has pressed enter).
+  virtual bool OnInput(char c) = 0;
 
-  // Adds the given line to history. If the history is longer than
-  // max_history_, the oldest thing will be deleted.
+  // Adds the given line to history. If the history is longer than max_history_, the oldest thing
+  // will be deleted.
   //
   // Only valid to be called before BeginReadLine() starts the next line input.
-  void AddToHistory(const std::string& line);
+  virtual void AddToHistory(const std::string& line) = 0;
 
-  // The input can be hidden and re-shown. Hiding it will erase the current
-  // line and put the cursor at the beginning of the line, but not change
-  // any internal state. Showing it again will repaint the line at the new
-  // cursor position. This allows other output to be printed to the screen
+  // The input can be hidden and re-shown. Hiding it will erase the current line and put the cursor
+  // at the beginning of the line, but not change any internal state. Showing it again will repaint
+  // the line at the new cursor position. This allows other output to be printed to the screen
   // without interfering with the input.
   //
   // OnInput() should not be called while hidden.
-  void Hide();
-  void Show();
+  virtual void Hide() = 0;
+  virtual void Show() = 0;
 
   // Enables and disables raw mode if applicable.
-  virtual void EnsureRawMode() {}
-  virtual void EnsureNoRawMode() {}
+  virtual void EnsureRawMode() = 0;
+  virtual void EnsureNoRawMode() = 0;
+};
+
+// Implementation of LineInput that implements the editing state. Output is still abstract to
+// allow for output to different places.
+class LineInputEditor : public LineInput {
+ public:
+  explicit LineInputEditor(const std::string& prompt);
+  virtual ~LineInputEditor();
+
+  // LineInput implementation.
+  void SetAutocompleteCallback(AutocompleteCallback cb) override;
+  void SetMaxCols(size_t max) override;
+  bool IsEof() const override;
+  const std::string& GetLine() const override;
+  const std::deque<std::string>& GetHistory() const override;
+  void BeginReadLine() override;
+  bool OnInput(char c) override;
+  void AddToHistory(const std::string& line) override;
+  void Hide() override;
+  void Show() override;
+  void EnsureRawMode() override {}
+  void EnsureNoRawMode() override {}
+
+  size_t pos() const { return pos_; }
 
   bool in_reverse_history_mode() const { return reverse_history_mode_; }
   size_t reverse_history_index() const { return reverse_history_index_; }
@@ -176,7 +203,7 @@ class LineInputBase {
   std::string prompt_;
 
   size_t max_cols_ = 0;
-  CompletionCallback completion_callback_;
+  AutocompleteCallback autocomplete_callback_;
 
   // Indicates whether the line is currently visible (as controlled by
   // Show()/Hide()).
@@ -235,15 +262,17 @@ class LineInputBase {
 // output will be automatically derived from the terminal associated wit, as that is
 // pointing to the current line, which we don't want to do a history search in.
 // stdout (if any).
-class LineInputStdout : public LineInputBase {
+class LineInputStdout : public LineInputEditor {
  public:
   LineInputStdout(const std::string& prompt);
   ~LineInputStdout() override;
 
+  // LineInput implementation.
   void EnsureRawMode() override;
   void EnsureNoRawMode() override;
 
  protected:
+  // LineInputEditor implementation.
   void Write(const std::string& str) override;
 
  private:

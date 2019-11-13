@@ -57,11 +57,11 @@ void OptionsLineInputBase::HandleLine(const std::string& line, bool canceled) {
 // OptionsLineInputStdout --------------------------------------------------------------------------
 
 bool OptionsLineInputStdout::OnInput(char c) {
-  if (!LineInputBase::OnInput(c))
+  if (!LineInputStdout::OnInput(c))
     return false;
 
-  bool canceled = eof();
-  HandleLine(line(), canceled);
+  bool canceled = IsEof();
+  HandleLine(GetLine(), canceled);
   return true;
 }
 

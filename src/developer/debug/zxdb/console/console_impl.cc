@@ -92,7 +92,7 @@ ConsoleImpl::ConsoleImpl(Session* session)
   FillCommandContextCallback fill_command_context([this](Command* cmd) {
     context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
   });
-  line_input_.set_completion_callback([fill_command_context = std::move(fill_command_context)](
+  line_input_.SetAutocompleteCallback([fill_command_context = std::move(fill_command_context)](
                                           const std::string& prefix) -> std::vector<std::string> {
     return GetCommandCompletions(prefix, fill_command_context);
   });
@@ -143,7 +143,7 @@ bool ConsoleImpl::SaveHistoryFile() {
 
   // We need to invert the order the deque has the entries.
   std::string history_data;
-  const auto& history = line_input_.history();
+  const auto& history = line_input_.GetHistory();
   for (auto it = history.rbegin(); it != history.rend(); it++) {
     auto trimmed = fxl::TrimString(*it, " ");
     // We ignore empty entries or quit commands.
@@ -256,14 +256,14 @@ void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {
     }
 
     // EOF (ctrl-d) should exit gracefully.
-    if (current_line_input_->eof()) {
+    if (current_line_input_->IsEof()) {
       current_line_input_->EnsureNoRawMode();
       Console::Output("\n");
       debug_ipc::MessageLoop::Current()->QuitNow();
       return;
     }
 
-    std::string line = current_line_input_->line();
+    std::string line = current_line_input_->GetLine();
     Result result = ProcessInputLine(line);
     if (result == Result::kQuit)
       return;

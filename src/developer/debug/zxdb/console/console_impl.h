@@ -50,7 +50,7 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
   debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
   // Which line input is active right now. Will always be valid.
-  line_input::LineInputBase* current_line_input_ = nullptr;
+  line_input::LineInput* current_line_input_ = nullptr;
 
   line_input::LineInputStdout line_input_;
   // Will only be valid while the console is in "options" mode.
