@@ -289,10 +289,26 @@ Zircon has a different [fuzzer.gni template][fuzzer.gni] from the rest of Fuchsi
 ```python
 import("$zx/public/gn/fuzzer.gni")
 
-fuzzer("zx_fuzzer") {
+fuzzer("zx-fuzzer") {
   sources = [ "zx_fuzzer.cpp" ]
   deps = [ ":zx_sources" ]
 }
+```
+
+---------------------------------------
+
+> NOTE: Due to gn unification, you will also need to manually add the binary targets to
+> `build/unification/images/BUILD.gn`:
+
+> [TODO(41279)](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=41279): Update these docs with zircon
+> fuzzing instructions.
+
+```
+aggregate_manifest("legacy-image") {
+  deps = [ (...)
+    ":bin.zx-fuzzer.asan",
+    ":bin.zx-fuzzer.asan-ubsan",
+    ":bin.zx-fuzzer.ubsan",
 ```
 
 Zircon fuzzers will be built with all supported sanitizers automatically. These fuzzers can be included in a
