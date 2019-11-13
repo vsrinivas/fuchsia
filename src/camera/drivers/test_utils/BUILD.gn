@@ -24,6 +24,7 @@ source_set("fake-buffer-collection") {
     "//src/camera/drivers/isp/modules",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/image-format",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zircon-internal",

@@ -57,7 +57,7 @@ zx_status_t Ge2dTask::AllocCanvasId(const image_format_2_t* image_format, zx_han
 
 zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* input_buffer_collection,
                                           const image_format_2_t* input_image_format) {
-  if (input_image_format->pixel_format.type != ZX_PIXEL_FORMAT_NV12) {
+  if (input_image_format->pixel_format.type != fuchsia_sysmem_PixelFormatType_NV12) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (((input_image_format->display_height % 2) != 0) || (input_image_format->bytes_per_row == 0)) {
@@ -94,7 +94,7 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
 zx_status_t Ge2dTask::AllocOutputCanvasIds(
     const buffer_collection_info_2_t* output_buffer_collection,
     const image_format_2_t* output_image_format) {
-  if (output_image_format->pixel_format.type != ZX_PIXEL_FORMAT_NV12) {
+  if (output_image_format->pixel_format.type != fuchsia_sysmem_PixelFormatType_NV12) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (((output_image_format->display_height % 2) != 0) ||
@@ -252,7 +252,7 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     return status;
   }
 
-  if (wm_info->wm_image_format.pixel_format.type != ZX_PIXEL_FORMAT_ARGB_8888) {
+  if (wm_info->wm_image_format.pixel_format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
     FX_LOG(ERROR, "%s: Image format type not supported\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }

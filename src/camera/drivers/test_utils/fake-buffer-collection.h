@@ -27,14 +27,15 @@ zx_status_t CreateContiguousBufferCollectionInfo(
     uint32_t height, uint32_t num_buffers);
 
 // Create a fake ImageFormat2.
-zx_status_t GetImageFormat2(uint32_t pixel_format_type, image_format_2_t& image_format,
-                            uint32_t width, uint32_t height);
+zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format_type,
+                           uint32_t width, uint32_t height);
 
 // Creates a BufferCollectionInfo2 that is allocated with contiguous memory, similar
-// to the above.
-zx_status_t CreateContiguousBufferCollectionInfo2(
+// to the above. Note that the image dimensions are provided as part of image_format
+// instead of as function arguments.
+zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, const image_format_2_t& image_format,
-    zx_handle_t bti_handle, uint32_t width, uint32_t height, uint32_t num_buffers);
+    zx_handle_t bti_handle, uint32_t num_buffers);
 
 }  // namespace camera
 

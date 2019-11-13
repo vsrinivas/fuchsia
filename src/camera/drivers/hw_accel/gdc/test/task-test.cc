@@ -80,22 +80,21 @@ class TaskTest : public zxtest::Test {
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     frame_ready_ = false;
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, input_image_format_,
-                                      kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[0], kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[1], kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[2], kWidth, kHeight));
-    zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
-        input_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
-        buffer_collection_count);
+    ASSERT_OK(camera::GetImageFormat(input_image_format_, fuchsia_sysmem_PixelFormatType_NV12,
+                                     kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[0],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[1],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+    zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
+        input_buffer_collection_, input_image_format_, bti_handle_.get(), buffer_collection_count);
     ASSERT_OK(status);
 
-    status = camera::CreateContiguousBufferCollectionInfo2(
-        output_buffer_collection_, output_image_format_table_[0], bti_handle_.get(), kWidth,
-        kHeight, buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo(
+        output_buffer_collection_, output_image_format_table_[0], bti_handle_.get(),
+        buffer_collection_count);
     ASSERT_OK(status);
 
     zx::vmo config_vmo;
@@ -227,7 +226,7 @@ TEST_F(TaskTest, BasicCreationTest) {
 TEST_F(TaskTest, InvalidFormatTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   image_format_2_t format;
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
   format.pixel_format.type = ZX_PIXEL_FORMAT_MONO_8;
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
@@ -516,13 +515,13 @@ TEST(TaskTest, NonContigVmoTest) {
   buffer_collection_info_2_t output_buffer_collection;
   ASSERT_OK(fake_bti_create(&bti_handle));
   image_format_2_t format;
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
-  zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
-      input_buffer_collection, format, bti_handle, kWidth, kHeight, kNumberOfBuffers);
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(input_buffer_collection, format,
+                                                                    bti_handle, kNumberOfBuffers);
   ASSERT_OK(status);
 
-  status = camera::CreateContiguousBufferCollectionInfo2(
-      output_buffer_collection, format, bti_handle, kWidth, kHeight, kNumberOfBuffers);
+  status = camera::CreateContiguousBufferCollectionInfo(output_buffer_collection, format,
+                                                        bti_handle, kNumberOfBuffers);
   ASSERT_OK(status);
 
   ASSERT_OK(zx::vmo::create(kConfigSize, 0, &config_vmo));
@@ -535,8 +534,8 @@ TEST(TaskTest, NonContigVmoTest) {
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
   image_format_2_t image_format_table[kImageFormatTableSize];
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, image_format_table[0],
-                                    kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
+                                   kWidth, kHeight));
   status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
                       image_format_table, 1, 0, &info, 1, &callback, zx::bti(bti_handle));
   // Expecting Task setup to convert the non-contig vmo to contig
@@ -561,8 +560,9 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
   image_format_2_t image_format_table[kImageFormatTableSize];
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, image_format_table[0],
-                                    kWidth, kHeight));
+
+  EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
+                                   kWidth, kHeight));
   gdc_config_info info;
   info.config_vmo = config_vmo;
   info.size = kConfigSize;

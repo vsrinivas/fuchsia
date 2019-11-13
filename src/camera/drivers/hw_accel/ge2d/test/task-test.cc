@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/image-format/image_format.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
@@ -93,14 +94,14 @@ class TaskTest : public zxtest::Test {
  protected:
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     frame_ready_ = false;
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, input_image_format_,
-                                      kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[0], kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[1], kWidth / 2, kHeight / 2));
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12,
-                                      output_image_format_table_[2], kWidth / 4, kHeight / 4));
+    ASSERT_OK(camera::GetImageFormat(input_image_format_, fuchsia_sysmem_PixelFormatType_NV12,
+                                     kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[0],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[1],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth / 2, kHeight / 2));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2],
+                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth / 4, kHeight / 4));
     // Set up fake Resize info, Watermark info, Watermark vmo.
     resize_info_.crop.crop_x = 100;
     resize_info_.crop.crop_y = 100;
@@ -109,23 +110,22 @@ class TaskTest : public zxtest::Test {
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
     watermark_info_.loc_x = 100;
     watermark_info_.loc_y = 100;
-    ASSERT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-                                      watermark_info_.wm_image_format, kWidth / 4, kHeight / 4));
+    ASSERT_OK(camera::GetImageFormat(watermark_info_.wm_image_format,
+                                     fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
+                                     kHeight / 4));
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
-    uint32_t watermark_size =
-        (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
+    uint32_t watermark_size = ImageFormatImageSize(&watermark_info_.wm_image_format);
+
     zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), watermark_size, 0,
                                                   watermark_vmo_.reset_and_get_address());
     ASSERT_OK(status);
 
-    status = camera::CreateContiguousBufferCollectionInfo2(
-        input_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
-        buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo(
+        input_buffer_collection_, input_image_format_, bti_handle_.get(), buffer_collection_count);
     ASSERT_OK(status);
 
-    status = camera::CreateContiguousBufferCollectionInfo2(
-        output_buffer_collection_, input_image_format_, bti_handle_.get(), kWidth, kHeight,
-        buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo(
+        output_buffer_collection_, input_image_format_, bti_handle_.get(), buffer_collection_count);
     ASSERT_OK(status);
   }
 
@@ -305,7 +305,7 @@ TEST_F(TaskTest, InitOutputResTest) {
 TEST_F(TaskTest, InvalidFormatTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   image_format_2_t format;
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
   format.pixel_format.type = ZX_PIXEL_FORMAT_MONO_8;
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
@@ -587,15 +587,15 @@ TEST(TaskTest, NonContigVmoTest) {
   ASSERT_OK(fake_bti_create(&bti_handle));
 
   image_format_2_t format;
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, image_format_table[0],
-                                    kWidth, kHeight));
-  zx_status_t status = camera::CreateContiguousBufferCollectionInfo2(
-      input_buffer_collection, format, bti_handle, kWidth, kHeight, 0);
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
+                                   kWidth, kHeight));
+  zx_status_t status =
+      camera::CreateContiguousBufferCollectionInfo(input_buffer_collection, format, bti_handle, 0);
   ASSERT_OK(status);
 
-  status = camera::CreateContiguousBufferCollectionInfo2(output_buffer_collection, format,
-                                                         bti_handle, kWidth, kHeight, 0);
+  status =
+      camera::CreateContiguousBufferCollectionInfo(output_buffer_collection, format, bti_handle, 0);
   ASSERT_OK(status);
 
   uint32_t watermark_size =
@@ -605,8 +605,9 @@ TEST(TaskTest, NonContigVmoTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-                                    watermark_info.wm_image_format, kWidth / 4, kHeight / 4));
+  EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
+                                   fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
+                                   kHeight / 4));
   status =
       task->InitWatermark(&input_buffer_collection, &output_buffer_collection, &watermark_info,
                           zx::vmo(watermark_vmo), &format, image_format_table,
@@ -633,11 +634,12 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
   image_format_2_t format;
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, format, kWidth, kHeight));
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_NV12, image_format_table[0],
-                                    kWidth, kHeight));
-  EXPECT_OK(camera::GetImageFormat2(fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-                                    watermark_info.wm_image_format, kWidth / 4, kHeight / 4));
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
+                                   kWidth, kHeight));
+  EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
+                                   fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
+                                   kHeight / 4));
   status = task->InitWatermark(nullptr, nullptr, &watermark_info, zx::vmo(watermark_vmo), &format,
                                image_format_table, kImageFormatTableSize, 0, &callback,
                                zx::bti(bti_handle), fake_canvas);

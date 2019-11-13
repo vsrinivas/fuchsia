@@ -5,14 +5,18 @@
 #include "fake-buffer-collection.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/image-format/image_format.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/device/sysmem.h>
+#include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 
 #include <src/camera/drivers/isp/modules/dma-format.h>
+
+#include "zircon/system/fidl/fuchsia-sysmem/gen/llcpp/include/fuchsia/sysmem/llcpp/fidl.h"
 
 namespace camera {
 
@@ -62,36 +66,52 @@ static void GetFakeBufferSettings(buffer_collection_info_2_t& buffer_collection,
   buffer_collection.settings.has_image_format_constraints = false;
 }
 
-zx_status_t GetImageFormat2(uint32_t pixel_format_type, image_format_2_t& image_format,
-                            uint32_t width, uint32_t height) {
-  // Convert fuchsia_sysmem_PixelFormatType to ZX_PIXEL_FORMAT_
-  // So we can use The ZX macro to get bytes.
-  if (fuchsia_sysmem_PixelFormatType_NV12 == pixel_format_type)
-    image_format.pixel_format.type = ZX_PIXEL_FORMAT_NV12;
-  else if (fuchsia_sysmem_PixelFormatType_R8G8B8A8 == pixel_format_type)
-    // XXX: Is this the correct one to pick ?
-    image_format.pixel_format.type = ZX_PIXEL_FORMAT_ARGB_8888;
-  else
+zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format_type,
+                           uint32_t width, uint32_t height) {
+  // TODO(b/41294) Determine if this constraint can be removed, as the code became
+  //      more general with the switch to ImageFormat functions.
+  if (pixel_format_type != fuchsia_sysmem_PixelFormatType_NV12 &&
+      pixel_format_type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
+    FX_LOG(ERROR, "", "Unsupported pixel format type");
     return ZX_ERR_NOT_SUPPORTED;
-  image_format.coded_width = width;
-  image_format.coded_height = height;
-  image_format.display_width = width;
-  image_format.display_height = height;
-  image_format.layers = 2;
-  // Only NV12 format is supported.
-  image_format.bytes_per_row = width * ZX_PIXEL_FORMAT_BYTES(image_format.pixel_format.type);
+  }
+
+  image_format = {
+      .pixel_format =
+          {
+              .type = pixel_format_type,
+              .has_format_modifier = false,
+              .format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_NONE,
+          },
+      .coded_width = width,
+      .coded_height = height,
+      .display_width = width,
+      .display_height = height,
+      .layers = (pixel_format_type == fuchsia_sysmem_PixelFormatType_NV12 ? 2u : 1u),
+      .color_space.type = fuchsia_sysmem_ColorSpaceType_SRGB,
+      .has_pixel_aspect_ratio = false,
+      .pixel_aspect_ratio_width = 1,
+      .pixel_aspect_ratio_height = 1,
+  };
+
+  image_format.bytes_per_row =
+      width * ImageFormatStrideBytesPerWidthPixel(&image_format.pixel_format);
+
   return ZX_OK;
 }
 
-zx_status_t CreateContiguousBufferCollectionInfo2(buffer_collection_info_2_t& buffer_collection,
-                                                  const image_format_2_t& image_format,
-                                                  zx_handle_t bti_handle, uint32_t width,
-                                                  uint32_t height, uint32_t num_buffers) {
+zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buffer_collection,
+                                                 const image_format_2_t& image_format,
+                                                 zx_handle_t bti_handle, uint32_t num_buffers) {
+  // set all the vmo handles to invalid:
+  for (fuchsia_sysmem_VmoBuffer& vmo_buffer : buffer_collection.buffers) {
+    vmo_buffer.vmo = ZX_HANDLE_INVALID;
+  }
+
   if (num_buffers >= countof(buffer_collection.buffers)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  // Hardcoding this to 2 layers, 4 bytes per pixel.
-  size_t vmo_size = width * height * 4 * 2;
+  size_t vmo_size = ImageFormatImageSize(&image_format);
   buffer_collection.buffer_count = num_buffers;
   GetFakeBufferSettings(buffer_collection, vmo_size);
   zx_status_t status;
