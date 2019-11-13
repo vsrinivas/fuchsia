@@ -21,6 +21,7 @@ inline constexpr size_t kMaxMessageHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
 // TODO(mariagl): Remove dependency on FIDL internal structure layout, see
 // LE-449.
 inline constexpr size_t kPointerSize = sizeof(uintptr_t);
+inline constexpr size_t kFlexibleUnionHdrSize = sizeof(fidl_xunion_t);
 inline constexpr size_t kStatusEnumSize = sizeof(int32_t);
 inline constexpr size_t kHandleSize = sizeof(zx_handle_t);
 inline constexpr size_t kVectorHeaderSize = sizeof(fidl_vector_t);
