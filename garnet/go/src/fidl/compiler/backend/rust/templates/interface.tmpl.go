@@ -250,7 +250,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			{{- range $method := $interface.Methods }}
 			{{- if not $method.HasRequest }}
 			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
@@ -277,7 +277,7 @@ impl futures::Stream for {{ $interface.Name }}EventStream {
 			{{- end -}}
 			{{- end }}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal,
+				ordinal: tx_header.ordinal(),
 				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
@@ -459,11 +459,11 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal() {
 				{{- range $method := $interface.Methods }}
 				{{- if $method.HasRequest }}
 				{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
@@ -490,8 +490,8 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 						{{- if $method.HasResponse -}}
 							responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},
 							{{- else -}}
 							control_handle,
@@ -501,7 +501,7 @@ impl futures::Stream for {{ $interface.Name }}RequestStream {
 				{{- end }}
 				{{- end }}
 				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
+					ordinal: header.ordinal(),
 					service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
@@ -538,7 +538,7 @@ impl {{ $interface.Name }}RequestMessage {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal {
+		match header.ordinal() {
 			{{- range $method := $interface.Methods }}
 			{{- if $method.HasRequest }}
 			{{ template "OrdinalMatchPattern" .Ordinals.Reads }} => {
@@ -560,14 +560,14 @@ impl {{ $interface.Name }}RequestMessage {
 						{{- end -}}
 					{{- end -}}
 					{{- if $method.HasResponse -}}
-						tx_id: header.tx_id.into(),
+						tx_id: header.tx_id().into(),
 					{{- end -}}
 				})
 			}
 			{{- end }}
 			{{- end }}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
+				ordinal: header.ordinal(),
 				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			}),
 		}
@@ -668,16 +668,13 @@ impl {{ $interface.Name }}Encoder {
 		mut in_{{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
+		let header = fidl::encoding::TransactionHeader::new(
 			{{- if $method.HasResponse }}
 			tx_id,
 			{{- else -}}
-			tx_id: 0,
+			0,
 			{{- end -}}
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: {{ $method.Ordinals.Write.Ordinal }},
-		};
+			{{ $method.Ordinals.Write.Ordinal }});
 		let mut body = (
 			{{- range $index, $param := $method.Request -}}
 			in_{{ $param.Name -}},
@@ -699,16 +696,13 @@ impl {{ $interface.Name }}Encoder {
 		mut in_{{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
+		let header = fidl::encoding::TransactionHeader::new(
 			{{- if $method.HasRequest }}
 			tx_id,
 			{{- else -}}
-			tx_id: 0,
+			0,
 			{{- end -}}
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: {{ $method.Ordinals.Write.Ordinal }},
-		};
+			{{ $method.Ordinals.Write.Ordinal }});
 		let mut body = (
 			{{- range $index, $param := $method.Response -}}
 			in_{{ $param.Name -}},
@@ -751,12 +745,8 @@ impl {{ $interface.Name }}ControlHandle {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: {{ $method.Ordinals.Write.Ordinal }},
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, {{ $method.Ordinals.Write.Ordinal }});
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
@@ -861,12 +851,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}

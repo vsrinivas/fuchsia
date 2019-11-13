@@ -304,7 +304,7 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			0x697fd73200000000 | 0x42e90e9a86944b3 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
@@ -320,7 +320,7 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 				))
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal,
+				ordinal: tx_header.ordinal(),
 				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
@@ -524,11 +524,11 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal() {
 				0x1e03f87500000000 | 0x3931f96bc77fba8 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -547,8 +547,8 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestEmptyResponse {responder:WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x668d7f800000000 | 0x4625ad5934067a48 => {
@@ -560,8 +560,8 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestWithResponse {responder:WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x19c2137100000000 | 0x46e5095902913025 => {
@@ -582,8 +582,8 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x1973292000000000 | 0x553860267eceec0 => {
@@ -595,12 +595,12 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestWithResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
+					ordinal: header.ordinal(),
 					service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
@@ -640,7 +640,7 @@ impl WithAndWithoutRequestResponseRequestMessage {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal {
+		match header.ordinal() {
 			0x1e03f87500000000 | 0x3931f96bc77fba8 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
@@ -651,13 +651,13 @@ impl WithAndWithoutRequestResponseRequestMessage {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestEmptyResponse {tx_id: header.tx_id.into(),})
+				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestEmptyResponse {tx_id: header.tx_id().into(),})
 			}
 			0x668d7f800000000 | 0x4625ad5934067a48 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestWithResponse {tx_id: header.tx_id.into(),})
+				Ok(WithAndWithoutRequestResponseRequestMessage::NoRequestWithResponse {tx_id: header.tx_id().into(),})
 			}
 			0x19c2137100000000 | 0x46e5095902913025 => {
 				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
@@ -669,16 +669,16 @@ impl WithAndWithoutRequestResponseRequestMessage {
 				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestEmptyResponse {arg: out_tuple,tx_id: header.tx_id.into(),})
+				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestEmptyResponse {arg: out_tuple,tx_id: header.tx_id().into(),})
 			}
 			0x1973292000000000 | 0x553860267eceec0 => {
 				let mut out_tuple: (String) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestWithResponse {arg: out_tuple,tx_id: header.tx_id.into(),})
+				Ok(WithAndWithoutRequestResponseRequestMessage::WithRequestWithResponse {arg: out_tuple,tx_id: header.tx_id().into(),})
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
+				ordinal: header.ordinal(),
 				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			}),
 		}
@@ -807,10 +807,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_no_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x1e03f87500000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x1e03f87500000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -820,11 +817,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4df6dbd500000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4df6dbd500000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -834,11 +828,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4df6dbd500000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4df6dbd500000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -848,11 +839,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x668d7f800000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x668d7f800000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -862,11 +850,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x668d7f800000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x668d7f800000000);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -875,10 +860,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_with_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_arg: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x19c2137100000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x19c2137100000000);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -888,11 +870,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x76f2397300000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x76f2397300000000);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -902,11 +881,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x76f2397300000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x76f2397300000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -916,11 +892,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x1973292000000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x1973292000000000);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -930,11 +903,8 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x1973292000000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x1973292000000000);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -943,10 +913,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_on_empty_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x697fd73200000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x697fd73200000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -955,10 +922,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_on_with_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7a47120700000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x7a47120700000000);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -987,12 +951,8 @@ impl WithAndWithoutRequestResponseControlHandle {
 		self.inner.shutdown_with_epitaph(status)
 	}
 	pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x697fd73200000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, 0x697fd73200000000);
 
 		let mut response = ();
 
@@ -1010,12 +970,8 @@ impl WithAndWithoutRequestResponseControlHandle {
 	
 	pub fn send_on_with_response(&self,
 		mut ret: &str) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7a47120700000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, 0x7a47120700000000);
 
 		let mut response = (ret);
 
@@ -1089,12 +1045,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 	}
 
 	fn send_raw(&self,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = ();
 
@@ -1167,12 +1118,7 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 	}
 
 	fn send_raw(&self,mut ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (ret);
 
@@ -1245,12 +1191,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 	}
 
 	fn send_raw(&self,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = ();
 
@@ -1323,12 +1264,7 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 	}
 
 	fn send_raw(&self,mut ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (ret);
 
@@ -1500,9 +1436,9 @@ impl futures::Stream for WithErrorSyntaxEventStream {
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal,
+				ordinal: tx_header.ordinal(),
 				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
@@ -1643,11 +1579,11 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal() {
 				0x4f3c32be00000000 | 0x592157d505db2bcf => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -1657,8 +1593,8 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
 					Ok(WithErrorSyntaxRequest::ResponseAsStruct {responder:WithErrorSyntaxResponseAsStructResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x7b58113900000000 | 0x20cf80ad7d9b60be => {
@@ -1670,8 +1606,8 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
 					Ok(WithErrorSyntaxRequest::ErrorAsPrimitive {responder:WithErrorSyntaxErrorAsPrimitiveResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x4c95de1f00000000 | 0x3fcd36560f812e7f => {
@@ -1683,12 +1619,12 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
 					Ok(WithErrorSyntaxRequest::ErrorAsEnum {responder:WithErrorSyntaxErrorAsEnumResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
+					ordinal: header.ordinal(),
 					service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
@@ -1716,27 +1652,27 @@ impl WithErrorSyntaxRequestMessage {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal {
+		match header.ordinal() {
 			0x4f3c32be00000000 | 0x592157d505db2bcf => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithErrorSyntaxRequestMessage::ResponseAsStruct {tx_id: header.tx_id.into(),})
+				Ok(WithErrorSyntaxRequestMessage::ResponseAsStruct {tx_id: header.tx_id().into(),})
 			}
 			0x7b58113900000000 | 0x20cf80ad7d9b60be => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithErrorSyntaxRequestMessage::ErrorAsPrimitive {tx_id: header.tx_id.into(),})
+				Ok(WithErrorSyntaxRequestMessage::ErrorAsPrimitive {tx_id: header.tx_id().into(),})
 			}
 			0x4c95de1f00000000 | 0x3fcd36560f812e7f => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(WithErrorSyntaxRequestMessage::ErrorAsEnum {tx_id: header.tx_id.into(),})
+				Ok(WithErrorSyntaxRequestMessage::ErrorAsEnum {tx_id: header.tx_id().into(),})
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
+				ordinal: header.ordinal(),
 				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			}),
 		}
@@ -1806,11 +1742,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4f3c32be00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4f3c32be00000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1820,11 +1753,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4f3c32be00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4f3c32be00000000);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1834,11 +1764,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7b58113900000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x7b58113900000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1848,11 +1775,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7b58113900000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x7b58113900000000);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1862,11 +1786,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4c95de1f00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4c95de1f00000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1876,11 +1797,8 @@ impl WithErrorSyntaxEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4c95de1f00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4c95de1f00000000);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1966,12 +1884,7 @@ impl WithErrorSyntaxResponseAsStructResponder {
 	}
 
 	fn send_raw(&self,mut result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (result);
 
@@ -2044,12 +1957,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
 	}
 
 	fn send_raw(&self,mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (result);
 
@@ -2122,12 +2030,7 @@ impl WithErrorSyntaxErrorAsEnumResponder {
 	}
 
 	fn send_raw(&self,mut result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (result);
 
@@ -2323,7 +2226,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			0x1c78c20200000000 | 0x2558b206a254d8a0 => {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
@@ -2332,7 +2235,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 				))
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal,
+				ordinal: tx_header.ordinal(),
 				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
@@ -2495,11 +2398,11 @@ impl futures::Stream for ChannelProtocolRequestStream {
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal() {
 				0x556693d200000000 | 0x1b1e059b3f02bffc => {
 					let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -2518,8 +2421,8 @@ impl futures::Stream for ChannelProtocolRequestStream {
 
 					Ok(ChannelProtocolRequest::MethodB {a: req.0,b: req.1,responder:ChannelProtocolMethodBResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				0x4b02e28600000000 | 0x36caa6fff7569577 => {
@@ -2531,12 +2434,12 @@ impl futures::Stream for ChannelProtocolRequestStream {
 
 					Ok(ChannelProtocolRequest::MutateSocket {a: req,responder:ChannelProtocolMutateSocketResponder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
+								tx_id: header.tx_id(),
+								ordinal: header.ordinal(),
 							},})
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
+					ordinal: header.ordinal(),
 					service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
@@ -2574,7 +2477,7 @@ impl ChannelProtocolRequestMessage {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal {
+		match header.ordinal() {
 			0x556693d200000000 | 0x1b1e059b3f02bffc => {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
@@ -2585,16 +2488,16 @@ impl ChannelProtocolRequestMessage {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(ChannelProtocolRequestMessage::MethodB {a: out_tuple.0,b: out_tuple.1,tx_id: header.tx_id.into(),})
+				Ok(ChannelProtocolRequestMessage::MethodB {a: out_tuple.0,b: out_tuple.1,tx_id: header.tx_id().into(),})
 			}
 			0x4b02e28600000000 | 0x36caa6fff7569577 => {
 				let mut out_tuple: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
 
-				Ok(ChannelProtocolRequestMessage::MutateSocket {a: out_tuple,tx_id: header.tx_id.into(),})
+				Ok(ChannelProtocolRequestMessage::MutateSocket {a: out_tuple,tx_id: header.tx_id().into(),})
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
+				ordinal: header.ordinal(),
 				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			}),
 		}
@@ -2693,10 +2596,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_method_a_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x556693d200000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x556693d200000000);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2705,10 +2605,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_event_a_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x1c78c20200000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x1c78c20200000000);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2718,11 +2615,8 @@ impl ChannelProtocolEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0xac6551b00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0xac6551b00000000);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2732,11 +2626,8 @@ impl ChannelProtocolEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0xac6551b00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0xac6551b00000000);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2746,11 +2637,8 @@ impl ChannelProtocolEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4b02e28600000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4b02e28600000000);
 		let mut body = (in_a,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2760,11 +2648,8 @@ impl ChannelProtocolEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x4b02e28600000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			tx_id,0x4b02e28600000000);
 		let mut body = (in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2795,12 +2680,8 @@ impl ChannelProtocolControlHandle {
 	pub fn send_event_a(&self,
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x1c78c20200000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, 0x1c78c20200000000);
 
 		let mut response = (a, b);
 
@@ -2874,12 +2755,7 @@ impl ChannelProtocolMethodBResponder {
 	}
 
 	fn send_raw(&self,mut result: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (result);
 
@@ -2952,12 +2828,7 @@ impl ChannelProtocolMutateSocketResponder {
 	}
 
 	fn send_raw(&self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: self.tx_id,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: self.ordinal,
-		};
+		let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
 
 		let mut response = (b);
 

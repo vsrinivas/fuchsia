@@ -143,6 +143,16 @@ pub struct Context {
     pub unions_use_xunion_format: bool,
 }
 
+impl Context {
+    fn header_flags(&self) -> HeaderFlags {
+        if self.unions_use_xunion_format {
+            HeaderFlags::UNIONS_USE_XUNION_FORMAT
+        } else {
+            HeaderFlags::empty()
+        }
+    }
+}
+
 /// Encoding state
 #[derive(Debug)]
 pub struct Encoder<'a> {
@@ -194,6 +204,11 @@ pub struct Decoder<'a> {
     context: Context,
 }
 
+/// The default context for encoding.
+fn default_encode_context() -> Context {
+    Context { unions_use_xunion_format: ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed) }
+}
+
 impl<'a> Encoder<'a> {
     /// FIDL2-encodes `x` into the provided data and handle buffers.
     pub fn encode<T: Encodable + ?Sized>(
@@ -201,9 +216,7 @@ impl<'a> Encoder<'a> {
         handles: &'a mut Vec<Handle>,
         x: &mut T,
     ) -> Result<()> {
-        let context = Context {
-            unions_use_xunion_format: ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed),
-        };
+        let context = default_encode_context();
         Self::encode_with_context(&context, buf, handles, x)
     }
 
@@ -2667,14 +2680,14 @@ macro_rules! fidl_xunion {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct TransactionHeader {
     /// Transaction ID which identifies a request-response pair
-    pub tx_id: u32,
+    tx_id: u32,
     /// Flags set for this message. MUST NOT be validated by bindings
-    pub flags: [u8; 3],
+    flags: [u8; 3],
     /// Magic number indicating the message's wire format. Two sides with
     /// different magic numbers are incompatible with each other.
-    pub magic_number: u8,
+    magic_number: u8,
     /// Ordinal which identifies the FIDL method
-    pub ordinal: u64,
+    ordinal: u64,
 }
 
 impl TransactionHeader {
@@ -2724,18 +2737,52 @@ bitflags! {
     }
 }
 
+impl Into<[u8; 3]> for HeaderFlags {
+    fn into(self) -> [u8; 3] {
+        let mut bytes: [u8; 3] = [0; 3];
+        LittleEndian::write_u24(&mut bytes, self.bits);
+        bytes
+    }
+}
+
 impl TransactionHeader {
+    /// Creates a new transaction header with the default encode context and magic number.
+    pub fn new(tx_id: u32, ordinal: u64) -> Self {
+        TransactionHeader::new_full(tx_id, ordinal, &default_encode_context(), MAGIC_NUMBER_INITIAL)
+    }
+    /// Creates a new transaction header with a specific context and magic number.
+    pub fn new_full(tx_id: u32, ordinal: u64, context: &Context, magic_number: u8) -> Self {
+        TransactionHeader {
+            tx_id,
+            flags: context.header_flags().into(),
+            magic_number,
+            ordinal,
+        }
+    }
+    /// Returns the header's transaction id.
+    pub fn tx_id(&self) -> u32 {
+        self.tx_id
+    }
+    /// Returns the header's message ordinal.
+    pub fn ordinal(&self) -> u64 {
+        self.ordinal
+    }
+    /// Returns true if the header is for an epitaph message.
+    pub fn is_epitaph(&self) -> bool {
+        self.ordinal == EPITAPH_ORDINAL
+    }
+
+    /// Returns the magic number.
+    pub fn magic_number(&self) -> u8 {
+        self.magic_number
+    }
+
     /// Returns the header's flags as a `HeaderFlags` value.
     ///
     /// The result will only contain bits listed in the `HeaderFlags`
     /// definition. Thus, `header.set_flags(header.flags())` is not a no-op.
     pub fn flags(&self) -> HeaderFlags {
         HeaderFlags::from_bits_truncate(LittleEndian::read_u24(&self.flags))
-    }
-
-    /// Sets the header's flags from a `HeaderFlags` value.
-    pub fn set_flags(&mut self, flags: HeaderFlags) {
-        LittleEndian::write_u24(&mut self.flags, flags.bits);
     }
 
     /// Returns the context to use for decoding the message body associated with this header.

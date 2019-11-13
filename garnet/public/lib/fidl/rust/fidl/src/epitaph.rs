@@ -6,9 +6,7 @@
 
 use {
     crate::{
-        encoding::{
-            self, EpitaphBody, TransactionHeader, TransactionMessage, MAGIC_NUMBER_INITIAL,
-        },
+        encoding::{self, EpitaphBody, TransactionHeader, TransactionMessage},
         error::Error,
         AsyncChannel, Channel, Handle,
     },
@@ -54,12 +52,7 @@ pub(crate) fn write_epitaph_impl<T: ChannelLike>(
     status: zx_status::Status,
 ) -> Result<(), Error> {
     let mut msg = TransactionMessage {
-        header: TransactionHeader {
-            tx_id: 0,
-            flags: [0, 0, 0],
-            magic_number: MAGIC_NUMBER_INITIAL,
-            ordinal: encoding::EPITAPH_ORDINAL,
-        },
+        header: TransactionHeader::new(0, encoding::EPITAPH_ORDINAL),
         body: &mut EpitaphBody { error: status },
     };
     encoding::with_tls_encoded(&mut msg, |bytes, handles| {

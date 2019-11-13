@@ -159,7 +159,7 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		std::task::Poll::Ready(Some(match tx_header.ordinal {
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
 			0x577495a100000000 | 0x15e4293098574a7 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
@@ -175,7 +175,7 @@ impl futures::Stream for SwitchingOrdinalsEventStream {
 				))
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal,
+				ordinal: tx_header.ordinal(),
 				service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
@@ -328,11 +328,11 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 			// A message has been received from the channel
 			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 			if !header.is_compatible() {
-				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number))));
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
 			}
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-			std::task::Poll::Ready(Some(match header.ordinal {
+			std::task::Poll::Ready(Some(match header.ordinal() {
 				0x7784636700000000 | 0x254f3bdfa9d3dcab => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -352,7 +352,7 @@ impl futures::Stream for SwitchingOrdinalsRequestStream {
 					Ok(SwitchingOrdinalsRequest::OnlyGeneratedOrdinal {control_handle,})
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
+					ordinal: header.ordinal(),
 					service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
@@ -378,7 +378,7 @@ impl SwitchingOrdinalsRequestMessage {
 		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-		match header.ordinal {
+		match header.ordinal() {
 			0x7784636700000000 | 0x254f3bdfa9d3dcab => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
@@ -392,7 +392,7 @@ impl SwitchingOrdinalsRequestMessage {
 				Ok(SwitchingOrdinalsRequestMessage::OnlyGeneratedOrdinal {})
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: header.ordinal,
+				ordinal: header.ordinal(),
 				service_name: <SwitchingOrdinalsMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			}),
 		}
@@ -447,10 +447,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_ordinal_five_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7784636700000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x7784636700000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -459,10 +456,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_only_generated_ordinal_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x27c9581f00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x27c9581f00000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -471,10 +465,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_ordinal_fifteen_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x577495a100000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x577495a100000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -483,10 +474,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_only_generated_ordinal_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7fec464e00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(0,0x7fec464e00000000);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -515,12 +503,8 @@ impl SwitchingOrdinalsControlHandle {
 		self.inner.shutdown_with_epitaph(status)
 	}
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x577495a100000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, 0x577495a100000000);
 
 		let mut response = ();
 
@@ -537,12 +521,8 @@ impl SwitchingOrdinalsControlHandle {
 	}
 	
 	pub fn send_event_only_generated_ordinal(&self) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader {
-			tx_id: 0,
-			flags: [0; 3],
-			magic_number: fidl::encoding::MAGIC_NUMBER_INITIAL,
-			ordinal: 0x7fec464e00000000,
-		};
+		let header = fidl::encoding::TransactionHeader::new(
+			0, 0x7fec464e00000000);
 
 		let mut response = ();
 

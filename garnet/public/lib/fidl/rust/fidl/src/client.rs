@@ -8,7 +8,7 @@ use {
     crate::{
         encoding::{
             decode_transaction_header, Decodable, Decoder, Encodable, Encoder, EpitaphBody,
-            TransactionHeader, TransactionMessage, EPITAPH_ORDINAL, MAGIC_NUMBER_INITIAL,
+            TransactionHeader, TransactionMessage,
         },
         handle::{AsyncChannel, Handle, MessageBuf},
         Error,
@@ -136,15 +136,7 @@ impl Client {
 
     /// Send an encodable message without expecting a response.
     pub fn send<T: Encodable>(&self, body: &mut T, ordinal: u64) -> Result<(), Error> {
-        let msg = &mut TransactionMessage {
-            header: TransactionHeader {
-                tx_id: 0,
-                ordinal,
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-            },
-            body,
-        };
+        let msg = &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body };
         crate::encoding::with_tls_encoded(msg, |bytes, handles| {
             self.send_raw_msg(&**bytes, handles)
         })
@@ -158,12 +150,7 @@ impl Client {
     ) -> QueryResponseFut<D> {
         let res_fut = self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: tx_id.as_raw_id(),
-                    flags: [0; 3],
-                    magic_number: MAGIC_NUMBER_INITIAL,
-                    ordinal,
-                },
+                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal),
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
@@ -479,9 +466,9 @@ impl ClientInner {
             let (header, body_bytes) =
                 decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
             if !header.is_compatible() {
-                return Err(Error::IncompatibleMagicNumber(header.magic_number));
+                return Err(Error::IncompatibleMagicNumber(header.magic_number()));
             }
-            if header.ordinal == EPITAPH_ORDINAL {
+            if header.is_epitaph() {
                 // Received an epitaph. Record this so that future operations receive the same
                 // epitaph.
                 let handles = &mut [];
@@ -498,7 +485,7 @@ impl ClientInner {
             // Epitaph handling is done, so the lock is no longer required.
             drop(epitaph_lock);
 
-            if header.tx_id == 0 {
+            if header.tx_id() == 0 {
                 // received an event
                 let mut lock = self.event_channel.lock();
                 lock.queue.push_back(buf);
@@ -511,7 +498,7 @@ impl ClientInner {
                 }
             } else {
                 // received a message response
-                let recvd_interest_id = InterestId::from_txid(Txid(header.tx_id));
+                let recvd_interest_id = InterestId::from_txid(Txid(header.tx_id()));
 
                 // Look for a message interest with the given ID.
                 // If one is found, store the message so that it can be picked up later.
@@ -631,15 +618,8 @@ pub mod sync {
         pub fn send<E: Encodable>(&mut self, msg: &mut E, ordinal: u64) -> Result<(), Error> {
             self.buf.clear();
             let (buf, handles) = self.buf.split_mut();
-            let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: 0,
-                    flags: [0; 3],
-                    magic_number: MAGIC_NUMBER_INITIAL,
-                    ordinal,
-                },
-                body: msg,
-            };
+            let msg =
+                &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
             Encoder::encode(buf, handles, msg)?;
             self.channel.write(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?;
             Ok(())
@@ -656,12 +636,7 @@ pub mod sync {
             self.buf.clear();
             let (buf, handles) = self.buf.split_mut();
             let msg = &mut TransactionMessage {
-                header: TransactionHeader {
-                    tx_id: QUERY_TX_ID,
-                    flags: [0; 3],
-                    magic_number: MAGIC_NUMBER_INITIAL,
-                    ordinal,
-                },
+                header: TransactionHeader::new(QUERY_TX_ID, ordinal),
                 body: msg,
             };
             Encoder::encode(buf, handles, msg)?;
@@ -689,7 +664,7 @@ pub mod sync {
             }
             let (buf, handles) = self.buf.split_mut();
             let (header, body_bytes) = decode_transaction_header(buf)?;
-            if header.tx_id != QUERY_TX_ID || header.ordinal != ordinal {
+            if header.tx_id() != QUERY_TX_ID || header.ordinal() != ordinal {
                 return Err(Error::UnexpectedSyncResponse);
             }
             let mut output = D::new_empty();
@@ -703,6 +678,7 @@ pub mod sync {
 mod tests {
     use super::*;
     use {
+        crate::encoding::MAGIC_NUMBER_INITIAL,
         crate::epitaph::{self, ChannelEpitaphExt},
         failure::{Error, ResultExt},
         fuchsia_async as fasync,
@@ -768,17 +744,9 @@ mod tests {
             server_end.read(&mut received).expect("failed to read on server end");
             let (buf, _handles) = received.split_mut();
             let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
-            assert_eq!(header.tx_id, sync::QUERY_TX_ID);
-            assert_eq!(header.ordinal, SEND_ORDINAL);
-            send_transaction(
-                TransactionHeader {
-                    tx_id: header.tx_id,
-                    flags: [0; 3],
-                    magic_number: MAGIC_NUMBER_INITIAL,
-                    ordinal: header.ordinal,
-                },
-                &server_end,
-            );
+            assert_eq!(header.tx_id(), sync::QUERY_TX_ID);
+            assert_eq!(header.ordinal(), SEND_ORDINAL);
+            send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
         });
         let response_data = client
             .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, zx::Time::after(5.seconds()))
@@ -837,12 +805,7 @@ mod tests {
                         // since FIDL txids start with `1`.
 
             let (bytes, handles) = (&mut vec![], &mut vec![]);
-            let header = TransactionHeader {
-                tx_id: id,
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 42,
-            };
+            let header = TransactionHeader::new(id, 42);
             encode_transaction(header, bytes, handles);
             server.write(bytes, handles).expect("Server channel write failed");
         };
@@ -922,12 +885,7 @@ mod tests {
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader {
-            tx_id: 0,
-            flags: [0; 3],
-            magic_number: MAGIC_NUMBER_INITIAL,
-            ordinal: 5,
-        };
+        let header = TransactionHeader::new(0, 5);
         encode_transaction(header, bytes, handles);
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);
@@ -960,7 +918,7 @@ mod tests {
         // Send the event from the server
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader { tx_id: 0, flags: [0; 3], magic_number: 0, ordinal: 5 };
+        let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context { unions_use_xunion_format: false }, 0);
         encode_transaction(header, bytes, handles);
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);
@@ -1013,12 +971,7 @@ mod tests {
         let mut response_txid = Txid(0);
         let mut response_future = client.send_raw_query(|tx_id, bytes, handles| {
             response_txid = tx_id;
-            let header = TransactionHeader {
-                tx_id: response_txid.as_raw_id(),
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 42,
-            };
+            let header = TransactionHeader::new(response_txid.as_raw_id(), 42);
             encode_transaction(header, bytes, handles);
             Ok(())
         });
@@ -1034,15 +987,7 @@ mod tests {
         assert_eq!(event_waker_count.get(), 0);
 
         // next, simulate an event coming in
-        send_transaction(
-            TransactionHeader {
-                tx_id: 0,
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 5,
-            },
-            &server_end,
-        );
+        send_transaction(TransactionHeader::new(0, 5), &server_end);
 
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
@@ -1055,15 +1000,7 @@ mod tests {
         assert!(event_receiver.poll_next_unpin(event_cx).is_ready());
 
         // next, simulate a response coming in
-        send_transaction(
-            TransactionHeader {
-                tx_id: response_txid.as_raw_id(),
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 42,
-            },
-            &server_end,
-        );
+        send_transaction(TransactionHeader::new(response_txid.as_raw_id(), 42), &server_end);
 
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
@@ -1086,12 +1023,7 @@ mod tests {
         let (response1_waker, response1_waker_count) = new_count_waker();
         let response1_cx = &mut Context::from_waker(&response1_waker);
         let mut response1_future = client.send_raw_query(|tx_id, bytes, handles| {
-            let header = TransactionHeader {
-                tx_id: tx_id.as_raw_id(),
-                flags: [0, 0, 0],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 42,
-            };
+            let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
             encode_transaction(header, bytes, handles);
             Ok(())
         });
@@ -1106,12 +1038,7 @@ mod tests {
         let (response2_waker, response2_waker_count) = new_count_waker();
         let response2_cx = &mut Context::from_waker(&response2_waker);
         let mut response2_future = client.send_raw_query(|tx_id, bytes, handles| {
-            let header = TransactionHeader {
-                tx_id: tx_id.as_raw_id(),
-                flags: [0, 0, 0],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 42,
-            };
+            let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
             encode_transaction(header, bytes, handles);
             Ok(())
         });
@@ -1166,15 +1093,7 @@ mod tests {
         let client = Client::new(client_end);
 
         // first simulate an event coming in, even though nothing has polled
-        send_transaction(
-            TransactionHeader {
-                tx_id: 0,
-                flags: [0; 3],
-                magic_number: MAGIC_NUMBER_INITIAL,
-                ordinal: 5,
-            },
-            &server_end,
-        );
+        send_transaction(TransactionHeader::new(0, 5), &server_end);
 
         // next, poll on a response
         let (response_waker, _response_waker_count) = new_count_waker();
