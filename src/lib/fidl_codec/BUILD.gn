@@ -15,6 +15,7 @@ static_library("fidl_codec") {
     "display_handle.h",
     "display_options.h",
     "encoder.h",
+    "json_visitor.h",
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",

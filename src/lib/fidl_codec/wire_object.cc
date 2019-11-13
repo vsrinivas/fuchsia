@@ -11,6 +11,7 @@
 
 #include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_handle.h"
+#include "src/lib/fidl_codec/json_visitor.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
@@ -26,127 +27,6 @@ const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_green=*/"\u001b[32m", /*new_blue=*/"\u001b[34m",
                         /*new_white_on_magenta=*/"\u001b[45m\u001b[37m",
                         /*new_yellow_background=*/"\u001b[103m");
-
-namespace {
-
-class JsonVisitor : public Visitor {
- public:
-  explicit JsonVisitor(rapidjson::Value* result, rapidjson::Document::AllocatorType* allocator)
-      : result_(result), allocator_(allocator) {}
-
- private:
-  void VisitValue(const Value* node) override {
-    std::stringstream ss;
-    node->PrettyPrint(ss, WithoutColors, nullptr, "", 0, 0, 0);
-    result_->SetString(ss.str(), *allocator_);
-  }
-
-  void VisitStringValue(const StringValue* node) override {
-    if (node->is_null()) {
-      result_->SetNull();
-    } else if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
-    } else {
-      result_->SetString(reinterpret_cast<const char*>(node->data()), node->string_length(),
-                         *allocator_);
-    }
-  }
-
-  void VisitObject(const Object* node) override {
-    if (node->is_null()) {
-      result_->SetNull();
-    } else {
-      result_->SetObject();
-      for (const auto& member : node->struct_definition().members()) {
-        auto it = node->fields().find(std::string(member->name()));
-        if (it == node->fields().end())
-          continue;
-        const auto& [name, value] = *it;
-        rapidjson::Value key;
-        key.SetString(name.c_str(), *allocator_);
-        result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[name.c_str()], allocator_);
-        value->Visit(&visitor);
-      }
-    }
-  }
-
-  void VisitEnvelopeValue(const EnvelopeValue* node) override { node->value()->Visit(this); }
-
-  void VisitTableValue(const TableValue* node) override {
-    result_->SetObject();
-    for (const auto& field : node->envelopes()) {
-      if (!field.value()->is_null()) {
-        rapidjson::Value key;
-        key.SetString(field.name().c_str(), *allocator_);
-        result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[field.name().c_str()], allocator_);
-        field.value()->Visit(&visitor);
-      }
-    }
-  }
-
-  void VisitUnionValue(const UnionValue* node) override {
-    if (node->is_null()) {
-      result_->SetNull();
-    } else {
-      result_->SetObject();
-      rapidjson::Value key;
-      key.SetString(node->field().name().c_str(), *allocator_);
-      result_->AddMember(key, rapidjson::Value(), *allocator_);
-      JsonVisitor visitor(&(*result_)[node->field().name().c_str()], allocator_);
-      node->field().value()->Visit(&visitor);
-    }
-  }
-
-  void VisitArrayValue(const ArrayValue* node) override {
-    result_->SetArray();
-    for (const auto& value : node->values()) {
-      rapidjson::Value element;
-      JsonVisitor visitor(&element, allocator_);
-      value->Visit(&visitor);
-      result_->PushBack(element, *allocator_);
-    }
-  }
-
-  void VisitVectorValue(const VectorValue* node) override {
-    if (node->is_null()) {
-      result_->SetNull();
-    } else {
-      result_->SetArray();
-      for (const auto& value : node->values()) {
-        rapidjson::Value element;
-        JsonVisitor visitor(&element, allocator_);
-        value->Visit(&visitor);
-        result_->PushBack(element, *allocator_);
-      }
-    }
-  }
-
-  void VisitEnumValue(const EnumValue* node) override {
-    if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
-    } else {
-      std::string name = node->enum_definition().GetNameFromBytes(node->data());
-      result_->SetString(name.c_str(), *allocator_);
-    }
-  }
-
-  void VisitBitsValue(const BitsValue* node) override {
-    if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
-    } else {
-      std::string name = node->bits_definition().GetNameFromBytes(node->data());
-      result_->SetString(name.c_str(), *allocator_);
-    }
-  }
-
- private:
-  rapidjson::Value* result_;
-  rapidjson::Document::AllocatorType* allocator_;
-};
-
-}  // namespace
 
 void Value::Visit(Visitor* visitor) const { visitor->VisitValue(this); }
 
@@ -448,6 +328,8 @@ void EnvelopeValue::PrettyPrint(std::ostream& os, const Colors& colors,
   value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
 }
 
+void EnvelopeValue::Visit(Visitor* visitor) const { visitor->VisitEnvelopeValue(this); }
+
 TableValue::TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count)
     : NullableValue(type), table_definition_(table_definition), envelope_count_(envelope_count) {}
 
@@ -472,8 +354,6 @@ int TableValue::DisplaySize(int remaining_size) const {
   size += 2;
   return size;
 }
-
-void EnvelopeValue::Visit(Visitor* visitor) const { visitor->VisitEnvelopeValue(this); }
 
 void TableValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   for (uint64_t envelope_id = 0; envelope_id < envelope_count_; ++envelope_id) {
