@@ -207,7 +207,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
     UpdateSourceTrans(source, &info);
 
     bool setup_done = false;
-    fbl::RefPtr<AudioPacketRef> pkt_ref;
+    fbl::RefPtr<Packet> pkt_ref;
 
     bool release_packet;
     while (true) {
@@ -278,7 +278,7 @@ void AudioOutput::SetupMix(Mixer* mixer) {
 }
 
 bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
-                             const fbl::RefPtr<AudioPacketRef>& packet) {
+                             const fbl::RefPtr<Packet>& packet) {
   TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
@@ -481,7 +481,7 @@ void AudioOutput::SetupTrim(Mixer* mixer) {
   trim_threshold_ = mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks);
 }
 
-bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
+bool AudioOutput::ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref) {
   TRACE_DURATION("audio", "AudioOutput::ProcessTrim");
   FX_DCHECK(pkt_ref);
 

@@ -18,7 +18,7 @@ namespace media::audio {
 
 class RingBuffer;
 
-class AudioPacketRef;
+class Packet;
 
 class AudioOutput : public AudioDevice {
  public:
@@ -92,11 +92,11 @@ class AudioOutput : public AudioDevice {
 
   void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
-                  const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+                  const fbl::RefPtr<Packet>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetupTrim(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+  bool ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   zx::time next_sched_time_;

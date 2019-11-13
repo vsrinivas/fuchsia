@@ -13,8 +13,8 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/audio_packet_ref.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
 namespace media::audio {
@@ -43,7 +43,7 @@ class AudioLinkPacketSource : public AudioLink {
   }
 
   // PendingQueue operations used by the packet source. Never call these from the destination.
-  void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet);
+  void PushToPendingQueue(const fbl::RefPtr<Packet>& packet);
   void FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
 
   // PendingQueue operations used by the destination. Never call these from the source.
@@ -56,7 +56,7 @@ class AudioLinkPacketSource : public AudioLink {
   // wait if the front of the queue is involved in a mixing operation. This, in turn, guarantees
   // that audio packets are always returned to the user in the order which they were queued in
   // without forcing AudioRenderers to wait to queue new data if a mix operation is in progress.
-  fbl::RefPtr<AudioPacketRef> LockPendingQueueFront(bool* was_flushed);
+  fbl::RefPtr<Packet> LockPendingQueueFront(bool* was_flushed);
   void UnlockPendingQueueFront(bool release_packet);
 
  private:
@@ -68,9 +68,8 @@ class AudioLinkPacketSource : public AudioLink {
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;
 
-  std::deque<fbl::RefPtr<AudioPacketRef>> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
-  std::deque<fbl::RefPtr<AudioPacketRef>> pending_flush_packet_queue_
-      FXL_GUARDED_BY(pending_mutex_);
+  std::deque<fbl::RefPtr<Packet>> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
+  std::deque<fbl::RefPtr<Packet>> pending_flush_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_
       FXL_GUARDED_BY(pending_mutex_);
   bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;

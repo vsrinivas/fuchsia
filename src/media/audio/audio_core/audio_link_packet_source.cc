@@ -41,7 +41,7 @@ fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(fbl::RefPtr<Aud
       new AudioLinkPacketSource(std::move(source), std::move(dest), std::move(format)));
 }
 
-void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet) {
+void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<Packet>& packet) {
   TRACE_DURATION("audio", "AudioLinkPacketSource::PushToPendingQueue");
   std::lock_guard<std::mutex> locker(pending_mutex_);
   pending_packet_queue_.emplace_back(std::move(packet));
@@ -49,7 +49,7 @@ void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>
 
 void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   TRACE_DURATION("audio", "AudioLinkPacketSource::FlushPendingQueue");
-  std::deque<fbl::RefPtr<AudioPacketRef>> flushed_packets;
+  std::deque<fbl::RefPtr<Packet>> flushed_packets;
 
   {
     std::lock_guard<std::mutex> locker(pending_mutex_);
@@ -88,7 +88,7 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
   }
 }
 
-fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(bool* was_flushed) {
+fbl::RefPtr<Packet> AudioLinkPacketSource::LockPendingQueueFront(bool* was_flushed) {
   FX_DCHECK(was_flushed);
   std::lock_guard<std::mutex> locker(pending_mutex_);
 

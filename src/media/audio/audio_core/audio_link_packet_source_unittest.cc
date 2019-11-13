@@ -33,7 +33,7 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
     return AudioLinkPacketSource::Create(input, output, Format::Create(stream_type));
   }
 
-  fbl::RefPtr<AudioPacketRef> CreateAudioPacketRef(uint32_t payload_buffer_id = 0) {
+  fbl::RefPtr<Packet> CreatePacket(uint32_t payload_buffer_id = 0) {
     auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
     zx_status_t res = vmo_mapper->CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (res != ZX_OK) {
@@ -44,7 +44,7 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
     packet.payload_buffer_id = payload_buffer_id;
     packet.payload_offset = 0;
     packet.payload_size = PAGE_SIZE;
-    return fbl::MakeRefCounted<AudioPacketRef>(
+    return fbl::MakeRefCounted<Packet>(
         std::move(vmo_mapper), dispatcher(), [this] { ++released_packet_count_; },
         std::move(packet), 0, 0);
   }
@@ -61,7 +61,7 @@ TEST_F(AudioLinkPacketSourceTest, PushToPendingQueue) {
   // Enqueue a packet.
   ASSERT_TRUE(link->pending_queue_empty());
 
-  link->PushToPendingQueue(CreateAudioPacketRef());
+  link->PushToPendingQueue(CreatePacket());
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(0u, released_packet_count());
 }
@@ -71,7 +71,7 @@ TEST_F(AudioLinkPacketSourceTest, FlushPendingQueue) {
 
   // Enqueue a packet.
   ASSERT_TRUE(link->pending_queue_empty());
-  link->PushToPendingQueue(CreateAudioPacketRef());
+  link->PushToPendingQueue(CreatePacket());
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(0u, released_packet_count());
 
@@ -89,9 +89,9 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
 
   // Enqueue some packets.
   ASSERT_TRUE(link->pending_queue_empty());
-  link->PushToPendingQueue(CreateAudioPacketRef(0));
-  link->PushToPendingQueue(CreateAudioPacketRef(1));
-  link->PushToPendingQueue(CreateAudioPacketRef(2));
+  link->PushToPendingQueue(CreatePacket(0));
+  link->PushToPendingQueue(CreatePacket(1));
+  link->PushToPendingQueue(CreatePacket(2));
   ASSERT_FALSE(link->pending_queue_empty());
   ASSERT_EQ(0u, released_packet_count());
 

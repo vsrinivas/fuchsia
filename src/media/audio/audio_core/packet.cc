@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_packet_ref.h"
+#include "src/media/audio/audio_core/packet.h"
 
 #include <lib/async/cpp/task.h>
 
@@ -12,10 +12,9 @@
 
 namespace media::audio {
 
-AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
-                               async_dispatcher_t* callback_dispatcher, fit::closure callback,
-                               fuchsia::media::StreamPacket packet, uint32_t frac_frame_len,
-                               int64_t start_pts)
+Packet::Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
+               fit::closure callback, fuchsia::media::StreamPacket packet, uint32_t frac_frame_len,
+               int64_t start_pts)
     : vmo_ref_(std::move(vmo_ref)),
       callback_(std::move(callback)),
       packet_(packet),
@@ -23,14 +22,14 @@ AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
       start_pts_(start_pts),
       end_pts_(start_pts + frac_frame_len),
       dispatcher_(callback_dispatcher) {
-  TRACE_DURATION("audio", "AudioPacketRef::AudioPacketRef");
+  TRACE_DURATION("audio", "Packet::Packet");
   TRACE_FLOW_BEGIN("audio.debug", "process_packet", nonce_);
   FX_DCHECK(dispatcher_ != nullptr);
   FX_DCHECK(vmo_ref_ != nullptr);
 }
 
-AudioPacketRef::~AudioPacketRef() {
-  TRACE_DURATION("audio", "AudioPacketRef::~AudioPacketRef");
+Packet::~Packet() {
+  TRACE_DURATION("audio", "Packet::~Packet");
   TRACE_FLOW_END("audio.debug", "process_packet", nonce_);
   if (callback_) {
     async::PostTask(dispatcher_, std::move(callback_));

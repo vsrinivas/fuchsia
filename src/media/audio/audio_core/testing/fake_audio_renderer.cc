@@ -8,8 +8,8 @@
 
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/audio_packet_ref.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/audio_core/packet.h"
 
 namespace media::audio::testing {
 namespace {
@@ -66,7 +66,7 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
     timeline_func_ = TimelineFunction(0, now.get(), rate);
   }
 
-  auto packet_ref = fbl::MakeRefCounted<AudioPacketRef>(
+  auto packet_ref = fbl::MakeRefCounted<Packet>(
       vmo_ref_, dispatcher_, [] {}, packet, frame_count << kPtsFractionalBits, next_pts_);
   next_pts_ = packet_ref->end_pts();
   ForEachDestLink([moved_packet = std::move(packet_ref)](auto& link) {

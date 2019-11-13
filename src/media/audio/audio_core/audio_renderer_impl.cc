@@ -593,8 +593,8 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Create the packet.
   auto packet_ref =
-      fbl::MakeRefCounted<AudioPacketRef>(payload_buffer, dispatcher_, std::move(callback), packet,
-                                          frame_count << kPtsFractionalBits, start_pts);
+      fbl::MakeRefCounted<Packet>(payload_buffer, dispatcher_, std::move(callback), packet,
+                                  frame_count << kPtsFractionalBits, start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if the user does not
   // provide an explicit PTS.

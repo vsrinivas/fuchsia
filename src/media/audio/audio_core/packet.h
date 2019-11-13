@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PACKET_REF_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PACKET_REF_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PACKET_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_PACKET_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
@@ -20,13 +20,13 @@ namespace media::audio {
 // pattern.  They are the most frequently allocated object in the mixer (easily
 // 100s per second) and they do not live very long at all (300-400mSec at most),
 // so they could easily be causing heap fragmentation issues.
-class AudioPacketRef : public fbl::RefCounted<AudioPacketRef> {
+class Packet : public fbl::RefCounted<Packet> {
  public:
-  AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
-                 fit::closure callback, fuchsia::media::StreamPacket packet,
-                 uint32_t frac_frame_len, int64_t start_pts);
+  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
+         fit::closure callback, fuchsia::media::StreamPacket packet, uint32_t frac_frame_len,
+         int64_t start_pts);
 
-  ~AudioPacketRef();
+  ~Packet();
 
   // Accessors for starting and ending presentation time stamps expressed in
   // units of audio frames (note, not media time), as signed 50.13 fixed point
@@ -72,4 +72,4 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef> {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PACKET_REF_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_PACKET_H_
