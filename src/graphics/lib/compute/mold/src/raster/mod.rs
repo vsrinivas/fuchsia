@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod segments;
-
-pub use segments::{RasterSegments, RasterSegmentsIter};
-
 use std::{iter, rc::Rc};
 
 #[cfg(feature = "tracing")]
@@ -17,6 +13,10 @@ use crate::{
     segment::Segment,
     tile::{TileContour, TileContourBuilder},
 };
+
+mod segments;
+
+pub use segments::{RasterSegments, RasterSegmentsIter};
 
 // Used in spinel-mold.
 #[doc(hidden)]

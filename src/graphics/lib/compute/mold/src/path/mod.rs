@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::point::Point;
+
 mod segments;
 mod transform;
-
-use crate::point::Point;
 
 use segments::PathSegments;
 use transform::Transform;

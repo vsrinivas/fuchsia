@@ -2,14 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod byte_fraction;
-mod color;
-mod segments;
-
-use byte_fraction::ByteFraction;
-use color::Color;
-use segments::TileSegments;
-
 use std::mem;
 
 #[cfg(feature = "tracing")]
@@ -21,6 +13,14 @@ use crate::{
     tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
+
+mod byte_fraction;
+mod color;
+mod segments;
+
+use byte_fraction::ByteFraction;
+use color::Color;
+use segments::TileSegments;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PixelFormat {
