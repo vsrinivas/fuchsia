@@ -39,7 +39,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
         volume_manager_(dispatcher()) {
     fzl::VmoMapper vmo_mapper;
     FX_CHECK(vmo_mapper.CreateAndMap(kAudioCapturerUnittestVmarSize,
-                                      /*flags=*/0, nullptr, &vmo_) == ZX_OK);
+                                     /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
 
  protected:

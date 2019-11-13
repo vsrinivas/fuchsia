@@ -77,8 +77,7 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
 
     // Serve up the emulated audio-input directory
     ASSERT_EQ(zx::channel::create(0, &c1, &c2), ZX_OK);
-    ASSERT_EQ(vfs_.Serve(input_dir_, std::move(c1), fs::VnodeConnectionOptions::ReadOnly()),
-              ZX_OK);
+    ASSERT_EQ(vfs_.Serve(input_dir_, std::move(c1), fs::VnodeConnectionOptions::ReadOnly()), ZX_OK);
     ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-input", c2.release()), ZX_OK);
 
     // Serve up the emulated audio-output directory

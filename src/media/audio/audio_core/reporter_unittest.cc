@@ -409,8 +409,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       UintIs("channels", stream_type.channels),
                       UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), UintIs("muted", 1),
-                      UintIs("calls to SetGainWithRamp", 2),
-                      UintIs("min lead time (ns)", 1000000),
+                      UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0))))))))))));
 }
 
