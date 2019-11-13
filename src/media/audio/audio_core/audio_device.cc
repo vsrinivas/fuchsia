@@ -76,8 +76,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     for (auto& link : source_links_) {
       if (link.GetSource()->type() == AudioObject::Type::AudioRenderer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-        link.bookkeeping()->gain.SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
-                                                   : limited.gain_db);
+        link.gain().SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
       }
     }
   } else {
@@ -87,8 +86,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     for (auto& link : dest_links_) {
       if (link.GetDest()->type() == AudioObject::Type::AudioCapturer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-        link.bookkeeping()->gain.SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
-                                                     : limited.gain_db);
+        link.gain().SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
       }
     }
   }

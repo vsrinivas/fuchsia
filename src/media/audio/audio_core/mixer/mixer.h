@@ -15,12 +15,94 @@
 
 namespace media::audio {
 
-struct Bookkeeping;
-
 class Mixer {
  public:
   static constexpr uint32_t FRAC_ONE = 1u << kPtsFractionalBits;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
+
+  // Bookkeeping
+  //
+  // This struct represents the state of that mix operation from the source point-of-view. In a Mix,
+  // the relationship between sources and destinations is many-to-one, so this struct largely
+  // includes details about its source stream, and how it relates to the destination.
+  //
+  // When calling Mix(), we communicate resampling details with three parameters found in the
+  // Bookkeeping. To augment step_size, rate_modulo and denominator arguments capture any remaining
+  // aspects that are not expressed by the 19.13 fixed-point step_size. Because frac_src_offset and
+  // step_size both use the 19.13 format, they exhibit the same precision limitations. These rate
+  // and position limitations are reiterated upon the start of each mix job.
+  //
+  // Just as we address *rate* with rate_modulo and denominator, likewise for *position* Bookkeeping
+  // uses src_pos_modulo to track initial and ongoing modulo of src subframes. This work is only
+  // partially complete; the remaining work (e.g., setting src_pos_modulo's initial value to
+  // anything other than 0) is tracked with MTWN-128.
+  //
+  // With *rate*, the effect of inaccuracy accumulates over time, causing measurable distortion that
+  // cripples larger mix jobs. For *position*, a change in mix job size affects distortion frequency
+  // but not distortion amplitude. Having added this to Bookkeeping, any residual effect seems to
+  // be below audible thresholds; for now we are deferring the remaining work.
+  struct Bookkeeping {
+    // This object maintains gain values contained in the mix path. This includes source gain and a
+    // snapshot of destination gain (Gain objects correspond with source streams, so the definitive
+    // value for destination gain is naturally owned elsewhere). In the future, this object may
+    // include explicit Mute states for source and dest stages, a separately controlled Usage gain
+    // stage, and/or the ability to ramp one or more of these gains over time. Gain accepts level in
+    // dB, and provides gainscale as float multiplier.
+    Gain gain;
+
+    // This 19.13 fixed-point value represents how much to increment our sampling position in the
+    // input (src) stream, for each output (dest) frame produced.
+    uint32_t step_size = Mixer::FRAC_ONE;
+
+    // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
+    // subsequent denominator) expresses leftover precision. When non-zero, rate_modulo and
+    // denominator express a fractional value of step_size unit that src position should advance,
+    // for each dest frame.
+    uint32_t rate_modulo = 0;
+
+    // If step_size cannot perfectly express the mix's resampling ratio, this parameter (along with
+    // precedent rate_modulo) expresses leftover precision. When non-zero, rate_modulo and
+    // denominator express a fractional value of step_size unit that src position should advance,
+    // for each dest frame.
+    uint32_t denominator = 0;
+
+    // This function returns a snapshot of the denominator as determined by the
+    // 'dest_frames_to_frac_source_frames' timeline transform.
+    uint32_t SnapshotDenominatorFromDestTrans() const {
+      return dest_frames_to_frac_source_frames.rate().reference_delta();
+    }
+
+    // If src_offset cannot perfectly express the source's position, this parameter (along with
+    // denominator) expresses any leftover precision. When present, src_pos_modulo and denominator
+    // express a fractional value of src_offset unit that should be used when advancing src
+    // position.
+    uint32_t src_pos_modulo = 0;
+
+    // This translates a destination frame value into a source subframe value. The output values of
+    // this function is in 19.13 input subframes.
+    TimelineFunction dest_frames_to_frac_source_frames;
+
+    // dest_frames_to_frac_source_frames may change over time; this value represents the current
+    // generation (which version), so any change can be detected.
+    uint32_t dest_trans_gen_id = kInvalidGenerationId;
+
+    // This translates a CLOCK_MONOTONIC value into a source subframe value. The output values of
+    // this function is in 19.13 input subframes.
+    TimelineFunction clock_mono_to_frac_source_frames;
+
+    // clock_mono_to_frac_source_frames may change over time; this value represents the current
+    // generation (which version), so any change can be detected.
+    uint32_t source_trans_gen_id = kInvalidGenerationId;
+
+    void Reset() {
+      src_pos_modulo = 0;
+      gain.ClearSourceRamp();
+    }
+
+    static constexpr uint32_t kScaleArrLen = 960;
+    std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
+  };
+
   virtual ~Mixer() = default;
 
   //
@@ -93,11 +175,6 @@ class Mixer {
   // results with existing values in the dest buffer). When false, Mix will
   // overwrite any existing destination buffer values with its mix output.
   //
-  // @param info
-  // The Bookkeeping struct (documented above) contains initial and ongoing
-  // details about how this source relates to this destination, specifically in
-  // the areas of timing/clocking and gain scaling.
-  //
   // @return True if the mixer is finished with this source data and will not
   // need it in the future. False if the mixer has not consumed the entire
   // source buffer and will need more of it in the future.
@@ -107,16 +184,14 @@ class Mixer {
   //
   // TODO(37356): Make frac_src_frames and frac_src_offset typesafe
   virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-                   uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-                   Bookkeeping* info) = 0;
+                   uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) = 0;
   //
   // Reset
   //
   // Reset the internal state of the mixer. Will be called every time there is
   // a discontinuity in the source stream. Mixer implementations should reset
-  // anything related to their internal filter state. If/when we include the
-  // Bookkeeping struct into Mixer, this would include clearing src_pos_modulo.
-  virtual void Reset() {}
+  // anything related to their internal filter state.
+  virtual void Reset() { bookkeeping().Reset(); }
 
   //
   // Filter widths
@@ -144,128 +219,16 @@ class Mixer {
   inline uint32_t pos_filter_width() const { return pos_filter_width_; }
   inline uint32_t neg_filter_width() const { return neg_filter_width_; }
 
+  Bookkeeping& bookkeeping() { return bookkeeping_; }
+  const Bookkeeping& bookkeeping() const { return bookkeeping_; }
+
  protected:
   Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width);
 
  private:
   uint32_t pos_filter_width_;
   uint32_t neg_filter_width_;
-};
-
-// TODO(mpuryear): integrate Bookkeeping into the Mixer class: MTWN-129.
-// TODO(mpuryear): Rationalize naming/usage of Bookkeeping and MixJob structs.
-//
-// Bookkeeping
-// Maintained by an AudioLink object that connects a source stream to a
-// destination mix stream, this struct represents the state of that mix
-// operation from the source point-of-view. In a Mix, the relationship between
-// sources and destinations is many-to-one, so this struct largely includes
-// details about its source stream, and how it relates to the destination.
-//
-// When calling Mix(), we communicate resampling details with three parameters
-// found in the Bookkeeping. To augment step_size, rate_modulo and denominator
-// arguments capture any remaining aspects that are not expressed by the 19.13
-// fixed-point step_size. Because frac_src_offset and step_size both use
-// the 19.13 format, they exhibit the same precision limitations. These rate
-// and position limitations are reiterated upon the start of each mix job.
-//
-// Just as we address *rate* with rate_modulo and denominator, likewise for
-// *position* Bookkeeping uses src_pos_modulo to track initial and ongoing
-// modulo of src subframes. This work is only partially complete; the
-// remaining work (e.g., setting src_pos_modulo's initial value to anything
-// other than 0) is tracked with MTWN-128.
-//
-// With *rate*, the effect of inaccuracy accumulates over time, causing
-// measurable distortion that cripples larger mix jobs. For *position*, a
-// change in mix job size affects distortion frequency but not distortion
-// amplitude. Having added this to Bookkeeping, any residual effect seems to
-// be below audible thresholds; for now we are deferring the remaining work.
-
-// Bookkeeping struct members:
-//
-// mixer
-// This is a pointer to the Mixer object that resamples the input. Currently the
-// resampler types include SampleAndHold and LinearInterpolation.
-//
-// gain
-// This object maintains gain values contained in the mix path. This includes
-// source gain and a snapshot of destination gain (Gain objects correspond with
-// source streams, so the definitive value for destination gain is naturally
-// owned elsewhere). In the future, this object may include explicit Mute
-// states for source and dest stages, a separately controlled Usage gain
-// stage, and/or the ability to ramp one or more of these gains over time.
-// Gain accepts level in dB, and provides gainscale as float multiplier.
-//
-// step_size
-// This 19.13 fixed-point value represents how much to increment our sampling
-// position in the input (src) stream, for each output (dest) frame produced.
-//
-// rate_modulo
-// If step_size cannot perfectly express the mix's resampling ratio, this
-// parameter (along with subsequent denominator) expresses leftover precision.
-// When non-zero, rate_modulo and denominator express a fractional value of
-// step_size unit that src position should advance, for each dest frame.
-//
-// denominator
-// If step_size cannot perfectly express the mix's resampling ratio, this
-// parameter (along with precedent rate_modulo) expresses leftover precision.
-// When non-zero, rate_modulo and denominator express a fractional value of
-// step_size unit that src position should advance, for each dest frame.
-//
-// SnapshotDenominatorFromDestTrans
-// This inline function returns a snapshot of the denominator as determined by
-// the 'dest_frames_to_frac_source_frames' timeline transform.
-//
-// src_pos_modulo
-// If src_offset cannot perfectly express the source's position, this
-// parameter (along with denominator) expresses any leftover precision. When
-// present, src_pos_modulo and denominator express a fractional value of
-// src_offset unit that should be used when advancing src position.
-//
-// dest_frames_to_frac_source_frames
-// This translates a destination frame value into a source subframe value.
-//
-// dest_trans_gen_id
-// dest_frames_to_frac_source_frames may change over time; this value represents
-// the current generation (which version), so any change can be detected.
-//
-// clock_mono_to_frac_source_frames
-// This translates a CLOCK_MONOTONIC value into a source subframe value.
-//
-// source_trans_gen_id
-// clock_mono_to_frac_source_frames may change over time; this value represents
-// the current generation (which version), so any change can be detected.
-//
-struct Bookkeeping {
-  std::unique_ptr<Mixer> mixer;
-  Gain gain;
-
-  uint32_t step_size = Mixer::FRAC_ONE;
-  uint32_t rate_modulo = 0;
-  uint32_t denominator = 0;
-  uint32_t SnapshotDenominatorFromDestTrans() const {
-    return dest_frames_to_frac_source_frames.rate().reference_delta();
-  }
-  uint32_t src_pos_modulo = 0;
-
-  // The output values of these functions are in 19.13 input subframes.
-  // TODO(mpuryear): should TLFunctions also produce a modulo?
-  TimelineFunction dest_frames_to_frac_source_frames;
-  uint32_t dest_trans_gen_id = kInvalidGenerationId;
-
-  TimelineFunction clock_mono_to_frac_source_frames;
-  uint32_t source_trans_gen_id = kInvalidGenerationId;
-
-  void Reset() {
-    mixer->Reset();
-    src_pos_modulo = 0;
-    gain.ClearSourceRamp();
-  }
-
-  // TODO(mpuryear): move this into the Mixer or Gain class, along with the
-  // other Bookkeeping parameters.
-  static constexpr uint32_t kScaleArrLen = 960;
-  std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
+  Bookkeeping bookkeeping_;
 };
 
 }  // namespace media::audio

@@ -844,10 +844,10 @@ void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
     gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
 
     if (volume_command.ramp.has_value()) {
-      link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                                     volume_command.ramp->ramp_type);
+      link.gain().SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                        volume_command.ramp->ramp_type);
     } else {
-      link.bookkeeping()->gain.SetSourceGain(gain_db);
+      link.gain().SetSourceGain(gain_db);
     }
   });
 }

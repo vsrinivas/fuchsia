@@ -21,8 +21,7 @@ class PointSamplerImpl : public PointSampler {
   PointSamplerImpl() : PointSampler(kPositiveFilterWidth, kNegativeFilterWidth) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-           Bookkeeping* info) override;
+           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
  private:
   static constexpr uint32_t kPositiveFilterWidth = 0;
@@ -42,8 +41,7 @@ class NxNPointSamplerImpl : public PointSampler {
       : PointSampler(kPositiveFilterWidth, kNegativeFilterWidth), chan_count_(chan_count) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-           Bookkeeping* info) override;
+           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
  private:
   static constexpr uint32_t kPositiveFilterWidth = 0;
@@ -126,8 +124,8 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
-    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
-      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    if (dest_frames > Mixer::Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Mixer::Bookkeeping::kScaleArrLen + dest_off;
     }
   }
 
@@ -211,10 +209,10 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
+    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) {
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
-  FX_DCHECK(info != nullptr);
 
+  auto info = &bookkeeping();
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
   if (info->gain.IsUnity()) {
@@ -339,8 +337,8 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_f
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
-    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
-      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    if (dest_frames > Mixer::Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Mixer::Bookkeeping::kScaleArrLen + dest_off;
     }
   }
 
@@ -425,12 +423,11 @@ template <typename SrcSampleType>
 bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                              uint32_t* dest_offset, const void* src,
                                              uint32_t frac_src_frames, int32_t* frac_src_offset,
-                                             bool accumulate, Bookkeeping* info) {
+                                             bool accumulate) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");
-  FX_DCHECK(info != nullptr);
 
+  auto info = &bookkeeping();
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
-
   if (info->gain.IsUnity()) {
     return accumulate ? (hasModulo ? Mix<ScalerType::EQ_UNITY, true, true>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,

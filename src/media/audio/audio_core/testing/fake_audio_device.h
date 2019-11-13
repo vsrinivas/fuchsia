@@ -67,10 +67,7 @@ class FakeAudioOutput : public FakeAudioDevice {
 
   // Required, to allocate and set the mixer+bookkeeping
   zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final {
-    auto mix_bookkeeping = std::make_unique<Bookkeeping>();
-    mix_bookkeeping->mixer = std::make_unique<audio::mixer::NoOp>();
-    link->set_bookkeeping(std::move(mix_bookkeeping));
-
+    link->set_mixer(std::make_unique<audio::mixer::NoOp>());
     return ZX_OK;
   }
 

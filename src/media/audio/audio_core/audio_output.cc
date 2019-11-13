@@ -111,8 +111,6 @@ void AudioOutput::Process() {
 
 zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
-  auto mix_bookkeeping = std::make_unique<Bookkeeping>();
-
   // For now, refuse to link to anything but a packet source. This code does not currently know how
   // to properly handle a ring-buffer source.
   if (link->source_type() != AudioLink::SourceType::Packet) {
@@ -122,14 +120,14 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
   // If we have an output, pick a mixer based on the input and output formats. Otherwise, we only
   // need a NoOp mixer (for the time being).
   auto& packet_link = static_cast<AudioLinkPacketSource&>(*link);
+  std::unique_ptr<Mixer> mixer;
   if (output_producer_) {
-    mix_bookkeeping->mixer =
-        Mixer::Select(packet_link.format_info().format(), *(output_producer_->format()));
+    mixer = Mixer::Select(packet_link.format_info().format(), *(output_producer_->format()));
   } else {
-    mix_bookkeeping->mixer = std::make_unique<audio::mixer::NoOp>();
+    mixer = std::make_unique<audio::mixer::NoOp>();
   }
 
-  if (mix_bookkeeping->mixer == nullptr) {
+  if (mixer == nullptr) {
     FX_LOGS(ERROR)
         << "*** Audio system mixer cannot convert between formats *** (could not select mixer "
            "while linking to output). Usually, this indicates a 'num_channels' mismatch.";
@@ -147,16 +145,13 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
     AudioDeviceSettings::GainState cur_gain_state;
     settings->SnapshotGainState(&cur_gain_state);
 
-    mix_bookkeeping->gain.SetDestGain(
+    mixer->bookkeeping().gain.SetDestGain(
         cur_gain_state.muted
             ? fuchsia::media::audio::MUTED_GAIN_DB
             : fbl::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
 
-  // Settings should exist but if they don't, we use default DestGain (Unity).
-
-  // Things went well. Stash a reference to our bookkeeping and get out.
-  packet_link.set_bookkeeping(std::move(mix_bookkeeping));
+  packet_link.set_mixer(std::move(mixer));
   return ZX_OK;
 }
 
@@ -208,10 +203,9 @@ void AudioOutput::ForEachLink(TaskType task_type) {
     auto packet_link = fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
     auto source = link->GetSource();
 
-    // It would be nice to be able to use a dynamic cast for this, but currently we are building
-    // with no-rtti
-    FX_DCHECK(packet_link->bookkeeping() != nullptr);
-    auto& info = *packet_link->bookkeeping();
+    FX_DCHECK(packet_link->mixer() != nullptr);
+    auto mixer = packet_link->mixer();
+    auto& info = mixer->bookkeeping();
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
     UpdateSourceTrans(source, &info);
@@ -227,7 +221,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       bool was_flushed;
       pkt_ref = packet_link->LockPendingQueueFront(&was_flushed);
       if (was_flushed) {
-        info.mixer->Reset();
+        mixer->Reset();
       }
 
       // If the queue is empty, then we are done.
@@ -238,7 +232,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // If we have not set up for this renderer yet, do so. If the setup fails for any reason, stop
       // processing packets for this renderer.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix) ? SetupMix(&info) : SetupTrim(&info);
+        setup_done = (task_type == TaskType::Mix) ? SetupMix(mixer) : SetupTrim(mixer);
         if (!setup_done) {
           // Clear our ramps, if we exit with error?
           break;
@@ -247,8 +241,8 @@ void AudioOutput::ForEachLink(TaskType task_type) {
 
       // Now process the packet at the front of the renderer's queue. If the packet has been
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-      release_packet = (task_type == TaskType::Mix) ? ProcessMix(source, &info, pkt_ref)
-                                                    : ProcessTrim(&info, pkt_ref);
+      release_packet =
+          (task_type == TaskType::Mix) ? ProcessMix(source, mixer, pkt_ref) : ProcessTrim(pkt_ref);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
       // we should now do with the source packet.
@@ -277,38 +271,36 @@ void AudioOutput::ForEachLink(TaskType task_type) {
   }
 }
 
-bool AudioOutput::SetupMix(Bookkeeping* info) {
+bool AudioOutput::SetupMix(Mixer* mixer) {
   TRACE_DURATION("audio", "AudioOutput::SetupMix");
   // If we need to recompose our transformation from destination frame space to source fractional
   // frames, do so now.
-  FX_DCHECK(info);
-  UpdateDestTrans(cur_mix_job_, info);
+  FX_DCHECK(mixer);
+  UpdateDestTrans(cur_mix_job_, &mixer->bookkeeping());
   cur_mix_job_.frames_produced = 0;
 
   return true;
 }
 
-bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping* info,
+bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
                              const fbl::RefPtr<AudioPacketRef>& packet) {
   TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
   // Sanity check our parameters.
-  FX_DCHECK(info);
+  FX_DCHECK(mixer);
   FX_DCHECK(packet);
 
   // We had better have a valid job, or why are we here?
   FX_DCHECK(cur_mix_job_.buf_frames);
   FX_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
 
-  // We also must have selected a mixer, or we are in trouble.
-  FX_DCHECK(info->mixer);
-  Mixer& mixer = *(info->mixer);
+  auto& info = mixer->bookkeeping();
 
   // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
   // may be relevant eventually, but currently it contributes nothing. Tell ForEachLink we are done,
   // but hold the packet for now.
-  if (!info->dest_frames_to_frac_source_frames.subject_delta()) {
+  if (!info.dest_frames_to_frac_source_frames.subject_delta()) {
     return false;
   }
 
@@ -324,14 +316,14 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
 
   // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps for
   // the first and last dest frames we need, translated into the source (frac_frame) timeline.
-  int64_t frac_source_for_first_mix_job_frame = info->dest_frames_to_frac_source_frames(
+  int64_t frac_source_for_first_mix_job_frame = info.dest_frames_to_frac_source_frames(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
 
   // This represents (in the frac_frame source timeline) the time of the LAST dest frame we need.
   // Without the "-1", this would be the first destination frame of the NEXT job.
   int64_t frac_source_for_final_mix_job_frame =
       frac_source_for_first_mix_job_frame +
-      info->dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1);
+      info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1);
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
@@ -350,9 +342,9 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   // our first sampling point, then this packet is entirely in the past and may be skipped.
   // Returning true means we're done with the packet (it can be completed) and we would like another
   if (frac_source_for_final_packet_frame <
-      (frac_source_for_first_mix_job_frame - mixer.neg_filter_width())) {
-    auto clock_mono_late = zx::nsec(info->clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-        frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
+      (frac_source_for_first_mix_job_frame - mixer->neg_filter_width())) {
+    auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
+        frac_source_for_first_mix_job_frame - mixer->neg_filter_width() -
         frac_source_for_first_packet_frame));
 
     source->UnderflowOccurred(frac_source_for_first_packet_frame,
@@ -366,7 +358,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   // Returning false (based on requirement that packets must be presented in timestamp-chronological
   // order) means that we have consumed all of the available packet "supply" as we can at this time.
   if (frac_source_for_first_packet_frame >
-      (frac_source_for_final_mix_job_frame + mixer.pos_filter_width())) {
+      (frac_source_for_final_mix_job_frame + mixer->pos_filter_width())) {
     return false;
   }
 
@@ -377,12 +369,12 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
       frac_source_for_first_mix_job_frame - frac_source_for_first_packet_frame;
   int64_t dest_offset_64 = 0;
   int64_t frac_source_pos_edge_first_mix_frame =
-      frac_source_for_first_mix_job_frame + mixer.pos_filter_width();
+      frac_source_for_first_mix_job_frame + mixer->pos_filter_width();
 
   // If the packet's first frame comes after the filter window's positive edge,
   // then we should skip some frames in the destination buffer before starting to produce data.
   if (frac_source_for_first_packet_frame > frac_source_pos_edge_first_mix_frame) {
-    const TimelineRate& dest_to_src = info->dest_frames_to_frac_source_frames.rate();
+    const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
     // The dest_buffer offset is based on the distance from mix job start to packet start (measured
     // in frac_frames), converted into frames in the destination timeline. As we scale the
     // frac_frame delta into dest frames, we want to "round up" any subframes that are present; any
@@ -413,9 +405,9 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   // Looks like we are ready to go. Mix.
   FX_DCHECK(packet->frac_frame_len() <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
-  FX_DCHECK(frac_source_offset + mixer.pos_filter_width() >= 0);
+  FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= 0);
   bool consumed_source = false;
-  if (frac_source_offset + static_cast<int32_t>(mixer.pos_filter_width()) <
+  if (frac_source_offset + static_cast<int32_t>(mixer->pos_filter_width()) <
       static_cast<int32_t>(packet->frac_frame_len())) {
     // When calling Mix(), we communicate the resampling rate with three parameters. We augment
     // step_size with rate_modulo and denominator arguments that capture the remaining rate
@@ -442,16 +434,17 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
     auto prev_frac_source_offset = frac_source_offset;
 
     // Check whether we are still ramping
-    bool ramping = info->gain.IsRamping();
+    bool ramping = info.gain.IsRamping();
     if (ramping) {
-      info->gain.GetScaleArray(info->scale_arr.get(),
-                               std::min(dest_frames_left - dest_offset, Bookkeeping::kScaleArrLen),
-                               cur_mix_job_.local_to_output->rate());
+      info.gain.GetScaleArray(
+          info.scale_arr.get(),
+          std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
+          cur_mix_job_.local_to_output->rate());
     }
 
-    consumed_source = info->mixer->Mix(buf, dest_frames_left, &dest_offset, packet->payload(),
-                                       packet->frac_frame_len(), &frac_source_offset,
-                                       cur_mix_job_.accumulate, info);
+    consumed_source =
+        mixer->Mix(buf, dest_frames_left, &dest_offset, packet->payload(), packet->frac_frame_len(),
+                   &frac_source_offset, cur_mix_job_.accumulate);
     FX_DCHECK(dest_offset <= dest_frames_left);
     AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)
                              << prev_frac_source_offset << " to " << std::setw(8)
@@ -460,7 +453,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
-      info->gain.Advance(dest_offset - prev_dest_offset, cur_mix_job_.local_to_output->rate());
+      info.gain.Advance(dest_offset - prev_dest_offset, cur_mix_job_.local_to_output->rate());
     }
   } else {
     // This packet was initially within our mix window. After realigning our sampling point to the
@@ -471,7 +464,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   }
 
   if (consumed_source) {
-    FX_DCHECK(frac_source_offset + info->mixer->pos_filter_width() >= packet->frac_frame_len());
+    FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= packet->frac_frame_len());
   }
 
   cur_mix_job_.frames_produced += dest_offset;
@@ -480,11 +473,11 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping
   return consumed_source;
 }
 
-bool AudioOutput::SetupTrim(Bookkeeping* info) {
+bool AudioOutput::SetupTrim(Mixer* mixer) {
   TRACE_DURATION("audio", "AudioOutput::SetupTrim");
   // Compute the cutoff time used to decide whether to trim packets. ForEachLink has already updated
   // our transformation, no need for us to do so here.
-  FX_DCHECK(info);
+  FX_DCHECK(mixer);
 
   auto now = fxl::TimePoint::FromEpochDelta(
       fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
@@ -494,12 +487,12 @@ bool AudioOutput::SetupTrim(Bookkeeping* info) {
   // If a forward transformation fails it must be because of overflow, which should be impossible
   // unless user defined a playback rate where the ratio of media-ticks-to-local-ticks is greater
   // than one.
-  trim_threshold_ = info->clock_mono_to_frac_source_frames(local_now_ticks);
+  trim_threshold_ = mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks);
 
   return true;
 }
 
-bool AudioOutput::ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
+bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   TRACE_DURATION("audio", "AudioOutput::ProcessTrim");
   FX_DCHECK(pkt_ref);
 
@@ -511,7 +504,8 @@ bool AudioOutput::ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRe
   return true;
 }
 
-void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Bookkeeping* bk) {
+void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source,
+                                    Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "AudioOutput::UpdateSourceTrans");
   FX_DCHECK(source != nullptr);
 
@@ -529,7 +523,7 @@ void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Book
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
 
-void AudioOutput::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
+void AudioOutput::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "AudioOutput::UpdateDestTrans");
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from local time to output frames.

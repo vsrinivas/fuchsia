@@ -16,7 +16,7 @@ namespace media::audio {
 
 constexpr uint32_t Mixer::FRAC_ONE;
 constexpr uint32_t Mixer::FRAC_MASK;
-constexpr uint32_t Bookkeeping::kScaleArrLen;
+constexpr uint32_t Mixer::Bookkeeping::kScaleArrLen;
 
 Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
     : pos_filter_width_(pos_filter_width), neg_filter_width_(neg_filter_width) {}

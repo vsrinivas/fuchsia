@@ -14,8 +14,7 @@ class NoOp : public Mixer {
   NoOp() : Mixer(0, 0) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-           Bookkeeping* info) override;
+           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 };
 
 }  // namespace media::audio::mixer

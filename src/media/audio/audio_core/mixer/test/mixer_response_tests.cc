@@ -62,14 +62,13 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   uint32_t dest_offset = 0;
   uint32_t frac_src_frames = kFreqTestBufSize << kPtsFractionalBits;
 
-  Bookkeeping info;
   // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
   // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
   // these frames are exactly what would have immediately preceded the first data in the buffer.
   // This enables resamplers with significant side width to perform as they would in steady-state.
   int32_t frac_src_offset = frac_src_frames;
   auto source_is_consumed = mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
-                                       frac_src_frames, &frac_src_offset, false, &info);
+                                       frac_src_frames, &frac_src_offset, false);
   FX_DCHECK(source_is_consumed);
   FX_DCHECK(dest_offset == 0u);
   FX_DCHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
@@ -77,7 +76,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   // We now have a full cache of previous frames (for resamplers that require this), so do the mix.
   frac_src_offset = 0;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(), frac_src_frames,
-             &frac_src_offset, false, &info);
+             &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(frac_src_frames));
 
@@ -272,7 +271,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
   std::vector<float> accum(num_dest_frames);
 
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
-  Bookkeeping info;
+  auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
   info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
   info.denominator = num_dest_frames;
@@ -322,7 +321,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     // This enables resamplers with significant side width to perform as they would in steady-state.
     int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
     auto source_is_consumed = mixer->Mix(accum.data(), num_dest_frames, &dest_offset, source.data(),
-                                         frac_src_frames, &frac_src_offset, false, &info);
+                                         frac_src_frames, &frac_src_offset, false);
     FX_CHECK(source_is_consumed);
     FX_CHECK(dest_offset == 0u);
     FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
@@ -332,7 +331,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
       mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
-                 &frac_src_offset, false, &info);
+                 &frac_src_offset, false);
     }
 
     int32_t expected_frac_src_offset = frac_src_frames;
@@ -349,7 +348,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
       // this, within the positive filter width of this sampler.
       frac_src_offset -= frac_src_frames;
       mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
-                 &frac_src_offset, false, &info);
+                 &frac_src_offset, false);
       expected_frac_src_offset = 0;
     }
     EXPECT_EQ(dest_offset, dest_frames);
@@ -1353,7 +1352,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto accum = std::make_unique<float[]>(num_chans * num_dest_frames);
 
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
-  Bookkeeping info;
+  auto& info = mixer->bookkeeping();
   info.step_size = (Mixer::FRAC_ONE * num_src_frames) / num_dest_frames;
   info.rate_modulo = (Mixer::FRAC_ONE * num_src_frames) - (info.step_size * num_dest_frames);
   info.denominator = num_dest_frames;
@@ -1368,7 +1367,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // This enables resamplers with significant side width to perform as they would in steady-state.
   int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
   auto source_is_consumed = mixer->Mix(accum.get(), num_dest_frames, &dest_offset, source.get(),
-                                       frac_src_frames, &frac_src_offset, false, &info);
+                                       frac_src_frames, &frac_src_offset, false);
   FX_CHECK(source_is_consumed);
   FX_CHECK(dest_offset == 0u);
   FX_CHECK(frac_src_offset == static_cast<int32_t>(frac_src_frames));
@@ -1378,7 +1377,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
     mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(), frac_src_frames,
-               &frac_src_offset, false, &info);
+               &frac_src_offset, false);
   }
   int32_t expected_frac_src_offset = frac_src_frames;
   if (dest_offset < dest_frames) {
@@ -1394,7 +1393,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     // this, within the positive filter width of this sampler.
     frac_src_offset -= frac_src_frames;
     mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(), frac_src_frames,
-               &frac_src_offset, false, &info);
+               &frac_src_offset, false);
     expected_frac_src_offset = 0;
   }
   EXPECT_EQ(dest_offset, dest_frames);

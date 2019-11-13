@@ -197,7 +197,7 @@ class AudioCapturerImpl : public AudioObject,
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool MixToIntermediate(uint32_t mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  void UpdateTransformation(Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap)
+  void UpdateTransformation(Mixer::Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool QueueNextAsyncPendingBuffer() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token())
@@ -212,7 +212,7 @@ class AudioCapturerImpl : public AudioObject,
   // Helper function used to return a set of pending capture buffers to a user.
   void FinishBuffers(const PcbList& finished_buffers) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Bookkeeping helper.
+  // Mixer helper.
   void UpdateFormat(fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
                     uint32_t frames_per_second) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 

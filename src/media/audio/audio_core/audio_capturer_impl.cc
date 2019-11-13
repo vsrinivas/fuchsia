@@ -143,7 +143,7 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
     gain_db = Gain::CombineGains(gain_db, stream_gain_db);
     gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
 
-    link.bookkeeping()->gain.SetDestGain(gain_db);
+    link.gain().SetDestGain(gain_db);
   });
 }
 
@@ -222,36 +222,25 @@ void AudioCapturerImpl::fbl_recycle() {
 
 zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
-  zx_status_t res;
-
-  // Allocate our bookkeeping for our link.
-  std::unique_ptr<Bookkeeping> info(new Bookkeeping());
-  link->set_bookkeeping(std::move(info));
 
   // Choose a mixer
   switch (state_.load()) {
-    // If we have not received a VMO yet, then we are still waiting for the user
-    // to commit to a format. We cannot select a mixer yet.
-    case State::WaitingForVmo:
-      res = ZX_OK;
-      break;
-
     // We are operational. Go ahead and choose a mixer.
     case State::OperatingSync:
     case State::OperatingAsync:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
-      res = ChooseMixer(link);
-      break;
+      return ChooseMixer(link);
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
     case State::Shutdown:
-      res = ZX_ERR_BAD_STATE;
-      break;
+    // If we have not received a VMO yet, then we are still waiting for the user
+    // to commit to a format. We should not be establishing links before the
+    // capturer is ready.
+    case State::WaitingForVmo:
+      return ZX_ERR_BAD_STATE;
   }
-
-  return res;
 }
 
 void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
@@ -311,13 +300,6 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
   // Success, record our new format.
   UpdateFormat(stream_type.sample_format, stream_type.channels, stream_type.frames_per_second);
 
-  volume_manager_.NotifyStreamChanged(this);
-  if (loopback_) {
-    route_graph_.SetLoopbackCapturerRoutingProfile(this, {.routable = true});
-  } else {
-    route_graph_.SetCapturerRoutingProfile(this, {.routable = true});
-  }
-
   cleanup.cancel();
 }
 
@@ -344,11 +326,11 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     FX_LOGS(ERROR) << "Bad state while assigning payload buffer "
                    << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
-  } else {
-    FX_DCHECK(payload_buf_virt_ == nullptr);
-    FX_DCHECK(payload_buf_size_ == 0);
-    FX_DCHECK(payload_buf_frames_ == 0);
   }
+
+  FX_DCHECK(payload_buf_virt_ == nullptr);
+  FX_DCHECK(payload_buf_size_ == 0);
+  FX_DCHECK(payload_buf_frames_ == 0);
 
   // Take ownership of the VMO, fetch and sanity check the size.
   payload_buf_vmo_ = std::move(payload_buf_vmo);
@@ -421,46 +403,14 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // configured this capturer's mode, so we are now in the OperatingSync state.
   state_.store(State::OperatingSync);
 
-  // Tell our source links what format we prefer.
-  //
-  // TODO(39888): Any source configuration based on capturer preference should be mediated by a
-  // policy component at link time, rather than these notifications going directly to source(s).
-  ForEachSourceLink([this](auto& link) {
-    const auto& source = link.GetSource();
-    switch (source->type()) {
-      case AudioObject::Type::Output:
-      case AudioObject::Type::Input: {
-        auto& device = static_cast<AudioDevice&>(*source);
-        device.NotifyDestFormatPreference(format_);
-        break;
-      }
-
-      case AudioObject::Type::AudioRenderer:
-        // TODO(13688): Support capturing from packet sources
-        break;
-
-      case AudioObject::Type::AudioCapturer:
-        FX_DCHECK(false);
-        break;
-    }
-  });
-
-  // Select a mixer for each active link here.
-  //
-  // TODO(39888): Set the mixer earlier (when source and destination are linked) instead of doing it
-  // here. There should be an invariant that source and destination objects cannot be linked unless
-  // both have a configured format. Otherwise, dynamic format changes require breaking/re-forming
-  // links, making the already-tricky "seamless format change" even more difficult.
-  std::vector<fbl::RefPtr<AudioLink>> cleanup_list;
-  ForEachSourceLink([this, &cleanup_list](auto& link) {
-    auto copy = fbl::RefPtr(&link);
-    if (ChooseMixer(copy) != ZX_OK) {
-      cleanup_list.emplace_back(std::move(copy));
-    }
-  });
-
-  for (auto& link : cleanup_list) {
-    AudioObject::RemoveLink(link);
+  // Mark ourselves as routable now that we're fully configured.
+  FX_DCHECK(source_link_count() == 0)
+      << "No links should be established before a capturer has a payload buffer";
+  volume_manager_.NotifyStreamChanged(this);
+  if (loopback_) {
+    route_graph_.SetLoopbackCapturerRoutingProfile(this, {.routable = true});
+  } else {
+    route_graph_.SetCapturerRoutingProfile(this, {.routable = true});
   }
 
   cleanup.cancel();
@@ -711,19 +661,21 @@ void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
 }
 
 // Display a mixer bookkeeping struct.
-void DumpBookkeeping(const Bookkeeping& info) {
-  AUD_VLOG_OBJ(SPEW, &info) << "(Bookkeep) mixer " << info.mixer.get() << " gain " << &info.gain
-                            << ", step_size x" << std::hex << info.step_size << ", rate_mod/den "
-                            << std::dec << info.rate_modulo << "/" << info.denominator
-                            << " src_pos_mod " << info.src_pos_modulo << ", src_trans_gen "
-                            << info.source_trans_gen_id << ", dest_trans_gen "
-                            << info.dest_trans_gen_id;
+void DumpMixer(const Mixer& mixer) {
+  auto& mix_state = mixer.bookkeeping();
+  AUD_VLOG_OBJ(SPEW, &mix_state) << "(Bookkeep) mixer " << &mixer << " gain " << &mix_state.gain
+                                 << ", step_size x" << std::hex << mix_state.step_size
+                                 << ", rate_mod/den " << std::dec << mix_state.rate_modulo << "/"
+                                 << mix_state.denominator << " src_pos_mod "
+                                 << mix_state.src_pos_modulo << ", src_trans_gen "
+                                 << mix_state.source_trans_gen_id << ", dest_trans_gen "
+                                 << mix_state.dest_trans_gen_id;
 
-  FX_VLOGS(SPEW) << "info.dest_frames_to_frac_source_frames:";
-  DumpTimelineFunction(info.dest_frames_to_frac_source_frames);
+  FX_VLOGS(SPEW) << "mix_state.dest_frames_to_frac_source_frames:";
+  DumpTimelineFunction(mix_state.dest_frames_to_frac_source_frames);
 
-  FX_VLOGS(SPEW) << "info.clock_mono_to_frac_source_frames:";
-  DumpTimelineFunction(info.clock_mono_to_frac_source_frames);
+  FX_VLOGS(SPEW) << "mix_state.clock_mono_to_frac_source_frames:";
+  DumpTimelineFunction(mix_state.clock_mono_to_frac_source_frames);
 }
 
 zx_status_t AudioCapturerImpl::Process() {
@@ -1098,9 +1050,10 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       return false;
     }
 
-    // Get our capture link bookkeeping.
-    FX_DCHECK(link->bookkeeping() != nullptr);
-    auto& info = static_cast<Bookkeeping&>(*link->bookkeeping());
+    // Get our capture link mixer.
+    FX_DCHECK(link->mixer() != nullptr);
+    auto& mixer = static_cast<Mixer&>(*link->mixer());
+    auto& info = mixer.bookkeeping();
 
     // If this gain scale is at or below our mute threshold, skip this source,
     // as it will not contribute to this mix pass.
@@ -1121,8 +1074,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     // Update clock transformation if needed.
-    FX_DCHECK(info.mixer != nullptr);
-    UpdateTransformation(&info, rb_snap);
+    UpdateTransformation(&mixer.bookkeeping(), rb_snap);
 
     // Based on current timestamp, determine which ring buffer portions can be safely read. This
     // safe area will be contiguous, although it may be split by the ring boundary. Determine the
@@ -1218,8 +1170,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // If this source region's final frame occurs before our filter's negative edge (centered at
       // this job's first sample), this source region is entirely in the past and must be skipped.
       // We have overflowed; we could have started [job_start-region_start+negative_edge] sooner.
-      if (region_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
-        if (rb_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
+      if (region_last_frame_pts < (job_start - mixer.neg_filter_width())) {
+        if (rb_last_frame_pts < (job_start - mixer.neg_filter_width())) {
           auto clock_mono_late =
               zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
                   job_start - rb_last_frame_pts));
@@ -1236,7 +1188,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // If the PTS of the first frame of audio in our source region is after
       // the positive window edge of our filter centered at our job's sampling
       // point, then source region is entirely in the future and we are done.
-      if (region.sfrac_pts > (job_end + info.mixer->pos_filter_width())) {
+      if (region.sfrac_pts > (job_end + mixer.pos_filter_width())) {
         break;
       }
 
@@ -1245,7 +1197,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // relative to start of source region, the first sampling point will be.
       int64_t source_offset_64 = job_start - region.sfrac_pts;
       int64_t dest_offset_64 = 0;
-      int64_t first_sample_pos_window_edge = job_start + info.mixer->pos_filter_width();
+      int64_t first_sample_pos_window_edge = job_start + mixer.pos_filter_width();
 
       const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
       // If source region's first frame is after filter's positive edge, skip some output frames.
@@ -1318,9 +1270,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // measurable and attributable to this jitter, we will defer this work.
       //
       // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
-      bool consumed_source =
-          info.mixer->Mix(buf, frames_left, &dest_offset, region_source, region_frac_frame_len,
-                          &frac_source_offset, accumulate, &info);
+      bool consumed_source = mixer.Mix(buf, frames_left, &dest_offset, region_source,
+                                       region_frac_frame_len, &frac_source_offset, accumulate);
       FX_DCHECK(dest_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1346,7 +1297,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   return true;
 }
 
-void AudioCapturerImpl::UpdateTransformation(Bookkeeping* info,
+void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
                                              const AudioDriver::RingBufferSnapshot& rb_snap) {
   TRACE_DURATION("audio", "AudioCapturerImpl::UpdateTransformation");
   FX_DCHECK(info != nullptr);
@@ -1592,6 +1543,7 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
 zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
   FX_DCHECK(link != nullptr);
+  FX_LOGS(ERROR) << "ChooseMixer; this " << this;
 
   const auto& source = link->GetSource();
   FX_DCHECK(source);
@@ -1618,14 +1570,9 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Extract our bookkeeping from the link, then set the mixer in it.
-  FX_DCHECK(link->bookkeeping() != nullptr);
-  auto& info = static_cast<Bookkeeping&>(*link->bookkeeping());
-
-  FX_DCHECK(info.mixer == nullptr);
-  info.mixer = Mixer::Select(*source_format, *format_);
-
-  if (info.mixer == nullptr) {
+  // Select a mixer.
+  auto mixer = Mixer::Select(*source_format, *format_);
+  if (!mixer) {
     FX_LOGS(WARNING) << "Failed to find mixer for capturer.";
     FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second << " ch "
                      << source_format->channels << " sample fmt "
@@ -1646,13 +1593,14 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
     device.GetDeviceInfo(&device_info);
 
     const auto muted = device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-    info.gain.SetSourceGain(
+    mixer->bookkeeping().gain.SetSourceGain(
         muted ? fuchsia::media::audio::MUTED_GAIN_DB
               : std::clamp(device_info.gain_info.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
+
   // Else (if device is an Audio Output), use default SourceGain (Unity). Device
   // gain has already been applied "on the way down" during the render mix.
-
+  link->set_mixer(std::move(mixer));
   return ZX_OK;
 }
 

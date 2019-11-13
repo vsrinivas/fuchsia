@@ -75,12 +75,11 @@ void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate,
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  Bookkeeping info;
+  auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
-  bool mix_result =
-      mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf, num_frames << kPtsFractionalBits,
-                 &frac_src_offset, accumulate, &info);
+  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,
+                               num_frames << kPtsFractionalBits, &frac_src_offset, accumulate);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));

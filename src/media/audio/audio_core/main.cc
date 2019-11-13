@@ -32,6 +32,8 @@ int main(int argc, const char** argv) {
   Logging::Init(FX_LOG_INFO, {"audio_core"});
 #endif
 
+  FX_LOGS(INFO) << "AudioCore starting up";
+
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::Create();
   REP(Init(component_context.get()));

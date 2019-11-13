@@ -54,6 +54,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   // The VolumeCurve of the link, representing either the source or destination's mapping from
   // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
   const VolumeCurve& volume_curve() const;
+  Gain& gain() { return mixer()->bookkeeping().gain; }
 
   SourceType source_type() const { return source_type_; }
 
@@ -61,12 +62,9 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   void Invalidate() { valid_.store(false); }
   bool valid() const { return valid_.load(); }
 
-  // Bookkeeping access.
-  const std::unique_ptr<Bookkeeping>& bookkeeping() const { return bookkeeping_; }
-  void set_bookkeeping(std::unique_ptr<Bookkeeping> bookkeeping) {
-    FX_DCHECK(bookkeeping_ == nullptr);
-    bookkeeping_ = std::move(bookkeeping);
-  }
+  // Mixer access.
+  Mixer* mixer() const { return mixer_.get(); }
+  void set_mixer(std::unique_ptr<Mixer> mixer) { mixer_ = std::move(mixer); }
 
  protected:
   AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
@@ -78,7 +76,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   const SourceType source_type_;
   fbl::RefPtr<AudioObject> source_;
   fbl::RefPtr<AudioObject> dest_;
-  std::unique_ptr<Bookkeeping> bookkeeping_;
+  std::unique_ptr<Mixer> mixer_;
   std::atomic_bool valid_;
   const std::optional<VolumeCurve> volume_curve_;
 };

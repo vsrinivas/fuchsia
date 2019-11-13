@@ -48,8 +48,8 @@ class AudioOutput : public AudioDevice {
 
   // TODO(mpuryear): per MTWN-129, integrate it into the Mixer class itself.
   // TODO(mpuryear): Rationalize naming/usage of bookkeeping and MixJob structs.
-  void UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Bookkeeping* bk);
-  void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
+  void UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Mixer::Bookkeeping* bk);
+  void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
 
   void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
@@ -92,13 +92,13 @@ class AudioOutput : public AudioDevice {
 
   void ForEachLink(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupMix(Bookkeeping* info) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Bookkeeping* info,
+  bool SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  bool SetupTrim(Bookkeeping* info) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessTrim(Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+  bool SetupTrim(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  bool ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   fxl::TimePoint next_sched_time_;

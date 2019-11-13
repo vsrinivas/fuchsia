@@ -20,11 +20,12 @@ class LinearSamplerImpl : public LinearSampler {
   LinearSamplerImpl() : LinearSampler(kPositiveFilterWidth, kNegativeFilterWidth) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-           Bookkeeping* info) override;
+           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
-  // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
-  void Reset() override { memset(filter_data_, 0, sizeof(filter_data_)); }
+  void Reset() override {
+    LinearSampler::Reset();
+    memset(filter_data_, 0, sizeof(filter_data_));
+  }
 
  private:
   static constexpr uint32_t kPositiveFilterWidth = FRAC_ONE - 1;
@@ -50,11 +51,10 @@ class NxNLinearSamplerImpl : public LinearSampler {
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
-           Bookkeeping* info) override;
+           uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) override;
 
-  // If/when Bookkeeping is included in this class, clear src_pos_modulo here.
   void Reset() override {
+    LinearSampler::Reset();
     memset(filter_data_u_.get(), 0, chan_count_ * sizeof(filter_data_u_[0]));
   }
 
@@ -140,8 +140,8 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
-    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
-      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    if (dest_frames > Mixer::Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Mixer::Bookkeeping::kScaleArrLen + dest_off;
     }
   }
 
@@ -288,10 +288,10 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
-    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
+    uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate) {
   TRACE_DURATION("audio", "LinearSamplerImpl::Mix");
-  FX_DCHECK(info != nullptr);
 
+  auto info = &bookkeeping();
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
 
   if (info->gain.IsUnity()) {
@@ -412,8 +412,8 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
                   << ", dest_frames: " << dest_frames << ", dest_off: " << dest_off;
   }
   if constexpr (ScaleType == ScalerType::RAMPING) {
-    if (dest_frames > Bookkeeping::kScaleArrLen + dest_off) {
-      dest_frames = Bookkeeping::kScaleArrLen + dest_off;
+    if (dest_frames > Mixer::Bookkeeping::kScaleArrLen + dest_off) {
+      dest_frames = Mixer::Bookkeeping::kScaleArrLen + dest_off;
     }
   }
 
@@ -559,12 +559,11 @@ template <typename SrcSampleType>
 bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                               uint32_t* dest_offset, const void* src,
                                               uint32_t frac_src_frames, int32_t* frac_src_offset,
-                                              bool accumulate, Bookkeeping* info) {
+                                              bool accumulate) {
   TRACE_DURATION("audio", "NxNLinearSamplerImpl::Mix");
-  FX_DCHECK(info != nullptr);
 
+  auto info = &bookkeeping();
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
-
   if (info->gain.IsUnity()) {
     return accumulate ? (hasModulo ? Mix<ScalerType::EQ_UNITY, true, true>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,

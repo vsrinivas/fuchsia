@@ -245,10 +245,9 @@ TEST(PassThru, NoOp) {
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  Bookkeeping info;
   bool mix_result =
       no_op_mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-                       fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
+                       fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, 0u);
