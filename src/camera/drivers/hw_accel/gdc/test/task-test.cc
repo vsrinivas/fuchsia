@@ -548,13 +548,54 @@ TEST(TaskTest, NonContigVmoTest) {
   }
 }
 
+TEST(TaskTest, InvalidConfigVmoTest) {
+  zx_handle_t bti_handle = ZX_HANDLE_INVALID;
+  hw_accel_callback_t callback;
+  zx::vmo config_vmo;
+  buffer_collection_info_2_t input_buffer_collection;
+  buffer_collection_info_2_t output_buffer_collection;
+  ASSERT_OK(fake_bti_create(&bti_handle));
+  image_format_2_t format;
+  EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
+  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(input_buffer_collection, format,
+                                                                    bti_handle, kNumberOfBuffers);
+  ASSERT_OK(status);
+
+  status = camera::CreateContiguousBufferCollectionInfo(output_buffer_collection, format,
+                                                        bti_handle, kNumberOfBuffers);
+  ASSERT_OK(status);
+
+  gdc_config_info info;
+  info.config_vmo = ZX_HANDLE_INVALID;
+  info.size = kConfigSize;
+
+  fbl::AllocChecker ac;
+  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
+  EXPECT_TRUE(ac.check());
+  image_format_2_t image_format_table[kImageFormatTableSize];
+  EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
+                                   kWidth, kHeight));
+  status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
+                      image_format_table, 1, 0, &info, 1, &callback, zx::bti(bti_handle));
+  // Expecting Task setup to convert the non-contig vmo to contig
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
+    ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection.buffers[i].vmo));
+  }
+  for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
+    ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection.buffers[i].vmo));
+  }
+}
+
 TEST(TaskTest, InvalidBufferCollectionTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   hw_accel_callback_t callback;
-  zx_handle_t config_vmo;
+  zx::vmo config_vmo;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status = zx_vmo_create_contiguous(bti_handle, kConfigSize, 0, &config_vmo);
+  zx_status_t status =
+      zx_vmo_create_contiguous(bti_handle, kConfigSize, 0, config_vmo.reset_and_get_address());
+
   ASSERT_OK(status);
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
@@ -564,13 +605,12 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
   gdc_config_info info;
-  info.config_vmo = config_vmo;
+  info.config_vmo = config_vmo.release();
   info.size = kConfigSize;
 
   status = task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1, &callback,
                       zx::bti(bti_handle));
   EXPECT_NE(ZX_OK, status);
-  zx_handle_close(config_vmo);
 }
 
 }  // namespace

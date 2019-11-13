@@ -28,6 +28,7 @@ namespace {
 constexpr uint32_t kHiu = 0;
 constexpr uint32_t kGdc = 1;
 constexpr uint32_t kAxiAlignment = 16;
+constexpr uint32_t kWordSize = 4;
 
 enum {
   COMPONENT_PDEV,
@@ -141,7 +142,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   Stop();
 
   // Program the GDC configuration registers.
-  auto size = AxiWordAlign(task->GetConfigVmoSize(task->output_format_index()));
+  auto size = task->GetConfigVmoSize(task->output_format_index())/kWordSize;
   auto addr = AxiWordAlign(task->GetConfigVmoPhysAddr(task->output_format_index()));
   ConfigAddr::Get()
       .ReadFrom(gdc_mmio())

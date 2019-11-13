@@ -26,6 +26,10 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
 
   for (uint32_t i = 0; i < config_vmos_count; i++) {
     zx::vmo vmo(config_vmo_list[i].config_vmo);
+    if (!vmo.is_valid()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
     uint64_t size;
     auto status = vmo.get_size(&size);
     if (status != ZX_OK) {
