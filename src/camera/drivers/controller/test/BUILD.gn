@@ -97,6 +97,7 @@ executable("controller-allocator-test") {
   sources = [
     "../format-conversion.cc",
     "../memory_allocation.cc",
+    "../pipeline_gdc.cc",
     "../pipeline_manager.cc",
     "../processing_node.cc",
     "../stream_protocol.cc",

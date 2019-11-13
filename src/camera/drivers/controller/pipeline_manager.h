@@ -57,8 +57,13 @@ class PipelineManager {
   fit::result<ProcessNode*, zx_status_t> CreateOutputNode(
       ProcessNode* parent_node, const InternalConfigNode& internal_output_node);
 
+  fit::result<ProcessNode*, zx_status_t> CreateGdcNode(PipelineInfo* info, ProcessNode* parent_node,
+                                                       const InternalConfigNode& internal_gdc_node);
+
   // Create the stream pipeline graph
-  fit::result<ProcessNode*, zx_status_t> CreateGraph(PipelineInfo* info, ProcessNode* parent_node);
+  fit::result<ProcessNode*, zx_status_t> CreateGraph(PipelineInfo* info,
+                                                     const InternalConfigNode& internal_node,
+                                                     ProcessNode* parent_node);
 
   // Gets the next node for the requested stream path
   const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
@@ -105,7 +110,7 @@ class PipelineManager {
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
-  __UNUSED ddk::GdcProtocolClient gdc_;
+  ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
   std::unique_ptr<ProcessNode> full_resolution_stream_;
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;

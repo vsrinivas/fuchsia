@@ -328,6 +328,7 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
 
 static InternalConfigNode Gdc1() {
   return {
+      .type = kGdc,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |

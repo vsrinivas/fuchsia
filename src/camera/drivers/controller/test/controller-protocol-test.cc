@@ -172,17 +172,58 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.stream_config = &stream_config;
 
     auto result = pipeline_manager_->CreateInputNode(&info);
+    ASSERT_EQ(true, result.is_ok());
+
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
+
+    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
+    ASSERT_EQ(true, graph_result.is_ok());
+
+    ASSERT_NE(nullptr, graph_result.value());
+    EXPECT_NE(nullptr, graph_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+  }
+
+  void TestConfigure_MonitorConfig() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* internal_info = nullptr;
+    // Get internal configuration for debug config
+    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig,
+                                                                           &internal_info));
+    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
+    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
+        internal_info, fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(
+        fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    PipelineInfo info;
+    info.output_buffers = std::move(buffer_collection);
+    info.image_format_index = 0;
+    info.node = *stream_config_node;
+    info.stream_config = &stream_config;
+
+    auto result = pipeline_manager_->CreateInputNode(&info);
     EXPECT_EQ(true, result.is_ok());
 
     EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, result.value()->type());
 
-    auto graph_result = pipeline_manager_->CreateGraph(&info, result.value().get());
-    EXPECT_EQ(true, graph_result.is_ok());
+    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
+    ASSERT_EQ(true, graph_result.is_ok());
 
     ASSERT_NE(nullptr, graph_result.value());
     EXPECT_NE(nullptr, graph_result.value()->client_stream());
     EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+
+    // Check if GDC node was created.
+    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
   }
 
   void TestShutdownPathAfterStreamingOn() {
@@ -212,7 +253,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, result.value()->type());
 
-    auto graph_result = pipeline_manager_->CreateGraph(&info, result.value().get());
+    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
     EXPECT_EQ(true, graph_result.is_ok());
 
     ASSERT_NE(nullptr, graph_result.value());
@@ -261,6 +302,8 @@ TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
 TEST_F(ControllerProtocolTest, TestShutdownPathAfterStreamingOn) {
   TestShutdownPathAfterStreamingOn();
 }
+
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig) { TestConfigure_MonitorConfig(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

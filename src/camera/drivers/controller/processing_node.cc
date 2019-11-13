@@ -21,16 +21,17 @@ void ProcessNode::OnReadyToProcess(uint32_t buffer_index) {
     client_stream_->FrameReady(buffer_index);
     return;
   }
+
+  if (type_ == NodeType::kGdc) {
+    ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(hw_accelerator_task_index_, buffer_index));
+  }
   // TODO(braval): Add support for other types of nodes
 }
 
 void ProcessNode::OnFrameAvailable(uint32_t buffer_index) {
-  // This API is not in use for |kOutputStream|
-  ZX_ASSERT(type_ != NodeType::kOutputStream);
-
-  // TODO(braval): Free up the frame for the parent
-  // We will be modifying the signature of this API which would also have
-  // information of which frame to free for the producer (parent)
+  // This API is only used for |kInputStream| because ISP uses
+  // a different callback compared to GDC and GE2D.
+  ZX_ASSERT(type_ == NodeType::kInputStream);
 
   // Loop through all the child nodes and call their |OnFrameAvailable|
   for (auto& i : child_nodes_info_) {
@@ -42,11 +43,28 @@ void ProcessNode::OnFrameAvailable(uint32_t buffer_index) {
   }
 }
 
+void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
+  // This API is not in use for |kOutputStream|
+  ZX_ASSERT(type_ != NodeType::kOutputStream);
+
+  // Free up parent's frame
+  parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
+
+  // Loop through all the child nodes and call their |OnFrameAvailable|
+  for (auto& i : child_nodes_info_) {
+    auto& child_node = i.child_node;
+    // TODO(braval): Regulate frame rate here
+    if (child_node->enabled()) {
+      child_node->OnReadyToProcess(info->buffer_id);
+    }
+  }
+}
+
 void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
   // First release this nodes Frames (GDC, GE2D)
   switch (type_) {
     case NodeType::kGdc: {
-      // TODO(braval): Inform the HW accelerator for freeing up the frames
+      gdc_.ReleaseFrame(hw_accelerator_task_index_, buffer_index);
       break;
     }
     case NodeType::kGe2d: {
@@ -58,7 +76,7 @@ void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
       return;
     }
     case NodeType::kOutputStream: {
-      // Need to just call parent's Release Frame which is done below
+      parent_node_->OnReleaseFrame(buffer_index);
       break;
     }
     default: {
@@ -66,10 +84,6 @@ void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
       return;
     }
   }
-  // Call parents ReleaseFrame()
-  // TODO(braval): Handle the case where we need to ensure that all
-  // children have freed up the buffers.
-  parent_node_->OnReleaseFrame(buffer_index);
 }
 
 void ProcessNode::OnStartStreaming() {
