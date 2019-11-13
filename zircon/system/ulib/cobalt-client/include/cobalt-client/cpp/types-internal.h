@@ -2,30 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
+#define COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
 
+#include <fuchsia/cobalt/c/fidl.h>
 #include <stdint.h>
 #include <unistd.h>
 
 #include <cobalt-client/cpp/metric-options.h>
-
 #include <fbl/string.h>
 #include <fbl/vector.h>
-// TODO(gevalentino): Remove when host code diverges from target code in filesystems,
-// and host/target compatibility is not required.
-#ifdef __Fuchsia__
-#include <fuchsia/cobalt/c/fidl.h>
-#endif
 
 namespace cobalt_client {
 namespace internal {
 // Note: Everything on this namespace is internal, no external users should rely
 // on the behaviour of any of these classes.
 // A value pair which represents a bucket index and the count for such index.
-
-// TODO(gevalentino): Remove when host code diverges from target code in filesystems,
-// and host/target compatibility is not required.
-#ifdef __Fuchsia__
 using HistogramBucket = fuchsia_cobalt_HistogramBucket;
 
 enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
@@ -34,19 +26,6 @@ enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
   kFishfood = fuchsia_cobalt_ReleaseStage_FISHFOOD,
   kDebug = fuchsia_cobalt_ReleaseStage_DEBUG,
 };
-#else
-struct HistogramBucket {
-  uint32_t index;
-  int64_t count;
-};
-
-enum class ReleaseStage {
-  kGa,
-  kDogfood,
-  kFishfood,
-  kDebug,
-};
-#endif
 
 struct RemoteMetricInfo {
   // Generates |name| from the contents of metric options.
@@ -115,3 +94,5 @@ class FlushInterface {
 
 }  // namespace internal
 }  // namespace cobalt_client
+
+#endif  // COBALT_CLIENT_CPP_TYPES_INTERNAL_H_

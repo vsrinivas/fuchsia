@@ -4,6 +4,9 @@
 
 #include <unistd.h>
 
+#ifndef ZIRCON_SYSTEM_ULIB_COBALT_CLIENT_TEST_FAKE_LOGGER_H_
+#define ZIRCON_SYSTEM_ULIB_COBALT_CLIENT_TEST_FAKE_LOGGER_H_
+
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -87,3 +90,5 @@ class FakeLogger : public Logger {
 
 }  // namespace internal
 }  // namespace cobalt_client
+
+#endif  // ZIRCON_SYSTEM_ULIB_COBALT_CLIENT_TEST_FAKE_LOGGER_H_

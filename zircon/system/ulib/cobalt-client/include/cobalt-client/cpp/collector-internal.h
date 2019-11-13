@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef COBALT_CLIENT_CPP_COLLECTOR_INTERNAL_H_
+#define COBALT_CLIENT_CPP_COLLECTOR_INTERNAL_H_
 
-#include <limits.h>
-#include <stdint.h>
-
-#include <cobalt-client/cpp/counter-internal.h>
-#include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/types-internal.h>
-#include <fbl/string_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
+#include <stdint.h>
 #include <zircon/types.h>
+
+#include <cobalt-client/cpp/types-internal.h>
+#include <fbl/string_buffer.h>
 
 namespace cobalt_client {
 namespace internal {
@@ -98,3 +97,5 @@ class CobaltLogger : public Logger {
 
 }  // namespace internal
 }  // namespace cobalt_client
+
+#endif  // COBALT_CLIENT_CPP_COLLECTOR_INTERNAL_H_

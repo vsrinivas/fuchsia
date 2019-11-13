@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/collector-internal.h>
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -11,6 +10,9 @@
 #include <lib/fidl/txn_header.h>
 
 #include <utility>
+
+#include <cobalt-client/cpp/collector-internal.h>
+#include <cobalt-client/cpp/histogram-internal.h>
 
 namespace cobalt_client {
 namespace internal {

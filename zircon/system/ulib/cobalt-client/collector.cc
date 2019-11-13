@@ -4,7 +4,6 @@
 
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 
@@ -14,7 +13,6 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 
 namespace cobalt_client {

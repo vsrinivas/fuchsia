@@ -2,41 +2,56 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("cobalt-client") {
-  sdk = "source"
-  sdk_headers = [
-    "cobalt-client/cpp/collector-internal.h",
-    "cobalt-client/cpp/collector.h",
-    "cobalt-client/cpp/counter-internal.h",
-    "cobalt-client/cpp/counter.h",
-    "cobalt-client/cpp/histogram-internal.h",
-    "cobalt-client/cpp/histogram.h",
-    "cobalt-client/cpp/metric-options.h",
-    "cobalt-client/cpp/types-internal.h",
+source_set("types-internal") {
+  public = [
+    "cpp/types-internal.h",
   ]
-  host = true
+  public_deps = [
+    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/ulib/fbl",
+  ]
+  visibility = [ "./*" ]
+}
+
+source_set("collector") {
   sources = [
     "cobalt_logger.cc",
     "collector.cc",
+  ]
+  public_deps = [
+    "$zx/system/ulib/zx",
+  ]
+  include_dirs = [ "./include/" ]
+  deps = [
+    ":types-internal",
+    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/public",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+  ]
+  visibility = [ "./*" ]
+}
+
+source_set("metrics") {
+  sources = [
     "counter.cc",
     "histogram.cc",
     "metric_info.cc",
   ]
-
+  include_dirs = [ "./include/" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c.headers",
-    "$zx/system/ulib/fzl:headers",
+    ":collector",
+    ":types-internal",
+    "$zx/system/public",
   ]
+  visibility = [ "./*" ]
+}
 
-  deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+zx_library("cobalt-client") {
+  sources = []
+  public_deps = [
+    ":collector",
+    ":metrics",
   ]
 }
 
@@ -47,10 +62,9 @@ zx_library("in-memory-logger") {
     "in-memory-logger.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c.headers",
-    "$zx/system/ulib/cobalt-client:headers",
+    ":metrics",
   ]
   deps = [
-    ":cobalt-client",
+    ":types-internal",
   ]
 }
