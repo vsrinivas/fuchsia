@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <sys/mman.h>
 #include <unistd.h>
-
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <unittest/unittest.h>
-#include <sys/mman.h>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -28,13 +28,11 @@ uint32_t x86_linear_address_width() {
 
 #endif
 
-bool address_space_limits_test() {
-  BEGIN_TEST;
-
+TEST(MemoryMappingTest, AddressSpaceLimitsTest) {
 #if defined(__x86_64__)
   size_t page_size = getpagesize();
   zx_handle_t vmo;
-  EXPECT_EQ(zx_vmo_create(page_size, 0, &vmo), ZX_OK);
+  EXPECT_OK(zx_vmo_create(page_size, 0, &vmo));
   EXPECT_NE(vmo, ZX_HANDLE_INVALID, "vm_object_create");
 
   // This is the lowest non-canonical address on x86-64.  We want to
@@ -45,8 +43,8 @@ bool address_space_limits_test() {
 
   zx_info_vmar_t vmar_info;
   zx_status_t status = zx_object_get_info(zx_vmar_root_self(), ZX_INFO_VMAR, &vmar_info,
-                                          sizeof(vmar_info), NULL, NULL);
-  EXPECT_EQ(ZX_OK, status, "get_info");
+                                          sizeof(vmar_info), nullptr, nullptr);
+  EXPECT_OK(status, "get_info");
 
   // Check that we cannot map a page ending at |noncanon_addr|.
   size_t offset = noncanon_addr - page_size - vmar_info.base;
@@ -61,7 +59,7 @@ bool address_space_limits_test() {
   offset = noncanon_addr - page_size * 2 - vmar_info.base;
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                        offset, vmo, 0, page_size, &addr);
-  EXPECT_EQ(ZX_OK, status, "vm_map");
+  EXPECT_OK(status, "vm_map");
 
   // Check that ZX_VM_SPECIFIC fails on already-mapped locations.
   // Otherwise, the previous mapping could have overwritten
@@ -71,54 +69,38 @@ bool address_space_limits_test() {
   EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "vm_map");
 
   // Clean up.
-  status = zx_vmar_unmap(zx_vmar_root_self(), addr, page_size);
-  EXPECT_EQ(ZX_OK, status, "vm_unmap");
-  status = zx_handle_close(vmo);
-  EXPECT_EQ(ZX_OK, status, "handle_close");
+  EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), addr, page_size));
+  EXPECT_OK(zx_handle_close(vmo));
 #endif
-
-  END_TEST;
 }
 
-bool mmap_zerofilled_test() {
-  BEGIN_TEST;
-
-  char* addr = (char*)mmap(NULL, 16384, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+TEST(MemoryMappingTest, MmapZerofilledTest) {
+  char* addr = (char*)mmap(nullptr, 16384, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
   for (size_t i = 0; i < 16384; i++) {
     EXPECT_EQ('\0', addr[i], "non-zero memory found");
   }
   int unmap_result = munmap(addr, 16384);
   EXPECT_EQ(0, unmap_result, "munmap should have succeeded");
-
-  END_TEST;
 }
 
-bool mmap_len_test() {
-  BEGIN_TEST;
-
-  uint32_t* addr = (uint32_t*)mmap(NULL, 0, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+TEST(MemoryMappingTest, MmapLenTest) {
+  uint32_t* addr = (uint32_t*)mmap(nullptr, 0, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   auto test_errno = errno;
   EXPECT_EQ(MAP_FAILED, addr, "mmap should fail when len == 0");
   EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL when len == 0");
 
-  addr = (uint32_t*)mmap(NULL, PTRDIFF_MAX, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  addr = (uint32_t*)mmap(nullptr, PTRDIFF_MAX, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   test_errno = errno;
   EXPECT_EQ(MAP_FAILED, addr, "mmap should fail when len >= PTRDIFF_MAX");
   EXPECT_EQ(ENOMEM, test_errno, "mmap errno should be ENOMEM when len >= PTRDIFF_MAX");
-
-  END_TEST;
 }
 
-bool mmap_offset_test() {
-  BEGIN_TEST;
-
+TEST(MemoryMappingTest, MmapOffsetTest) {
   uint32_t* addr =
-      (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 4);
+      (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 4);
   auto test_errno = errno;
   EXPECT_EQ(MAP_FAILED, addr, "mmap should fail for unaligned offset");
   EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL for unaligned offset");
-
-  END_TEST;
 }
 
 // Define a little fragment of code that we can copy.
@@ -141,13 +123,11 @@ __asm__(
     "end_add:"
     ".popsection");
 
-bool mmap_PROT_EXEC_test() {
-  BEGIN_TEST;
-
+TEST(MemoryMappingTest, MmapProtExecTest) {
   // Allocate a page that will later be made executable.
   size_t page_size = getpagesize();
   void* addr =
-      mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_JIT, -1, 0);
+      mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_JIT, -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap should have succeeded for PROT_READ|PROT_WRITE");
 
   // Copy over code from our address space into the newly allocated memory.
@@ -168,63 +148,51 @@ bool mmap_PROT_EXEC_test() {
   // Deallocate pages
   result = munmap(addr, page_size);
   EXPECT_EQ(0, result, "munmap unexpectedly failed");
-
-  END_TEST;
 }
 
-bool mmap_prot_test() {
-  BEGIN_TEST;
-
+TEST(MemoryMappingTest, MmapProtTest) {
   volatile uint32_t* addr =
-      (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
+      (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap should have succeeded for PROT_NONE");
 
-  addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap failed for read-only alloc");
 
   // This is somewhat pointless, to have a private read-only mapping, but we
   // should be able to read it.
   EXPECT_EQ(*addr, *addr, "could not read from mmaped address");
 
-  addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1,
-                         0);
+  addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
+                         -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap failed for read-write alloc");
 
   // Now we test writing to the mapped memory, and verify that we can read it
   // back.
   *addr = 5678u;
   EXPECT_EQ(5678u, *addr, "writing to address returned by mmap failed");
-
-  END_TEST;
 }
 
-bool mmap_flags_test() {
-  BEGIN_TEST;
-
-  uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_ANON, -1, 0);
+TEST(MemoryMappingTest, MmapFlagsTest) {
+  uint32_t* addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_ANON, -1, 0);
   auto test_errno = errno;
   EXPECT_EQ(MAP_FAILED, addr, "mmap should fail without MAP_PRIVATE or MAP_SHARED");
   EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL with bad flags");
 
-  addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_SHARED | MAP_ANON, -1,
-                         0);
+  addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_SHARED | MAP_ANON,
+                         -1, 0);
   test_errno = errno;
   EXPECT_EQ(MAP_FAILED, addr, "mmap should fail with both MAP_PRIVATE and MAP_SHARED");
   EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL with bad flags");
 
-  addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap failed with MAP_PRIVATE flags");
 
-  addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_SHARED | MAP_ANON, -1, 0);
+  addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ, MAP_SHARED | MAP_ANON, -1, 0);
   EXPECT_NE(MAP_FAILED, addr, "mmap failed with MAP_SHARED flags");
-
-  END_TEST;
 }
 
-bool mprotect_test() {
-  BEGIN_TEST;
-
-  uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ | PROT_WRITE,
+TEST(MemoryMappingTest, MprotectTest) {
+  uint32_t* addr = (uint32_t*)mmap(nullptr, sizeof(uint32_t), PROT_READ | PROT_WRITE,
                                    MAP_PRIVATE | MAP_ANON, -1, 0);
   ASSERT_NE(MAP_FAILED, addr, "mmap failed to map");
 
@@ -236,12 +204,11 @@ bool mprotect_test() {
   int status = mprotect(addr, page_size, PROT_READ);
   EXPECT_EQ(0, status, "mprotect failed to downgrade to read-only");
 
-  ASSERT_DEATH(
-      [](void* crashaddr) {
-        uint32_t* intptr = static_cast<uint32_t*>(crashaddr);
-        *intptr = 12;
-      },
-      addr, "write to addr should have caused a crash");
+  ASSERT_DEATH(([&addr]() {
+                 uint32_t* intptr = static_cast<uint32_t*>(addr);
+                 *intptr = 12;
+               }),
+               "write to addr should have caused a crash");
 
   status = mprotect(addr, page_size, PROT_WRITE);
   auto test_errno = errno;
@@ -251,19 +218,6 @@ bool mprotect_test() {
   status = mprotect(addr, page_size, PROT_NONE);
   test_errno = errno;
   EXPECT_EQ(0, status, "mprotect should succeed for PROT_NONE");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(memory_mapping_tests)
-RUN_TEST(address_space_limits_test);
-RUN_TEST(mmap_zerofilled_test);
-RUN_TEST(mmap_len_test);
-RUN_TEST(mmap_PROT_EXEC_test);
-RUN_TEST(mmap_offset_test);
-RUN_TEST(mmap_prot_test);
-RUN_TEST(mmap_flags_test);
-RUN_TEST(mprotect_test);
-END_TEST_CASE(memory_mapping_tests)
