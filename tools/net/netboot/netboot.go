@@ -20,11 +20,13 @@ import (
 	"golang.org/x/net/ipv6"
 )
 
+// NodenameWildcard is the wildcard for discovering all nodes.
+const NodenameWildcard = "*"
+
 // Magic constants used by the netboot protocol.
 const (
-	baseCookie     = uint32(0x12345678)
-	magic          = 0xAA774217 // see //zircon/system/public/zircon/boot/netboot.h
-	targetWildcard = "*"        // see https://fuchsia.googlesource.com/fuchsia/+/b95bb07fc5b61c66788c9ebec778734c21089a00/zircon/tools/netprotocol/netprotocol.c#69
+	baseCookie = uint32(0x12345678)
+	magic      = 0xAA774217 // see //zircon/system/public/zircon/boot/netboot.h
 )
 
 // Port numbers used by the netboot protocol.
@@ -93,6 +95,10 @@ type Target struct {
 	// Interface is the index of the "local" interface connecting to
 	// the Fuchsia device. nil if this does not apply.
 	Interface *net.Interface
+
+	// Error is the error associated with the device when returned via
+	// the StartDiscover function.
+	Error error
 }
 
 // NewClient creates a new Client instance.
@@ -103,12 +109,6 @@ func NewClient(timeout time.Duration) *Client {
 		AdvertPort: advertPort,
 		Cookie:     baseCookie,
 	}
-}
-
-type netbootQueryListener struct {
-	targets <-chan *Target
-	errors  <-chan error
-	cleanup func() error
 }
 
 type netbootQuery struct {
@@ -263,62 +263,31 @@ func (n *netbootQuery) close() error {
 	return n.conn.Close()
 }
 
-// startQueryListener is a utility function which starts by sending a query, and
-// then listening for all responses.
-func (n *Client) startQueryListener(nodename string, fuchsia bool) (*netbootQueryListener, error) {
-	n.Cookie++
-	q, err := newNetbootQuery(nodename, n.Cookie, n.ServerPort, fuchsia)
-	if err != nil {
-		return nil, err
-	}
-	errCh := make(chan error)
-	tCh := make(chan *Target)
-	go func() {
-		defer q.close()
-		if err := q.write(); err != nil {
-			errCh <- err
-			return
-		}
-
-		for {
-			target, err := q.read()
-			if err != nil {
-				errCh <- err
-				return
-			}
-			if target != nil {
-				tCh <- target
-			}
-		}
-	}()
-	return &netbootQueryListener{tCh, errCh, q.close}, nil
-}
-
 // Discover resolves the address of host and returns either the netsvc or
 // Fuchsia address dependending on the value of fuchsia.
 func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*net.UDPAddr, error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
-	listener, err := n.startQueryListener(nodename, fuchsia)
+	t := make(chan *Target)
+	cleanup, err := n.StartDiscover(t, nodename, fuchsia)
 	if err != nil {
 		return nil, err
 	}
-	defer listener.cleanup()
+	defer cleanup()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("timed out waiting for results")
-		case target := <-listener.targets:
-			if strings.Contains(target.Nodename, nodename) {
-				ifaceName := ""
-				if target.Interface != nil {
-					ifaceName = target.Interface.Name
-				}
-				return &net.UDPAddr{IP: target.TargetAddress, Zone: ifaceName}, nil
+		case target := <-t:
+			if err := target.Error; err != nil {
+				return nil, err
 			}
+			ifaceName := ""
+			if target.Interface != nil {
+				ifaceName = target.Interface.Name
+			}
+			return &net.UDPAddr{IP: target.TargetAddress, Zone: ifaceName}, nil
 			continue
-		case err := <-listener.errors:
-			return nil, err
 		}
 	}
 }
@@ -331,11 +300,12 @@ func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*
 func (n *Client) DiscoverAll(ctx context.Context, fuchsia bool) ([]*Target, error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
-	listener, err := n.startQueryListener(targetWildcard, fuchsia)
+	t := make(chan *Target)
+	cleanup, err := n.StartDiscover(t, NodenameWildcard, fuchsia)
 	if err != nil {
 		return nil, err
 	}
-	defer listener.cleanup()
+	defer cleanup()
 	results := []*Target{}
 	for {
 		select {
@@ -344,12 +314,75 @@ func (n *Client) DiscoverAll(ctx context.Context, fuchsia bool) ([]*Target, erro
 				return nil, nil
 			}
 			return results, nil
-		case target := <-listener.targets:
-			results = append(results, target)
-		case err = <-listener.errors:
-			return nil, err
+		case target := <-t:
+			// If there's an error and devices hav already been found,
+			// this isn't an error.
+			if err := target.Error; err != nil && len(results) == 0 {
+				return nil, err
+			}
+			if err := target.Error; err == nil {
+				results = append(results, target)
+			}
 		}
 	}
+}
+
+// StartDiscover takes a channel and returns every Target as it is found. Returns
+// a cleanup function for closing the discovery connection or an error if there
+// is a failure.
+//
+// Errors within discovery will be propagated up the channel via the Target.Error
+// field.
+//
+// The Timeout field is not used with this function, and as such it is the
+// caller's responsibility to handle timeouts when using this function.
+//
+// Example:
+//	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+//	defer cancel()
+//	cleanup, err := c.StartDiscover(t, true)
+//	if err != nil {
+//		return err
+//	}
+//	defer cleanup()
+//	for {
+//		select {
+//			case target := <-t:
+//				// Do something with the target.
+//			case <-ctx.Done():
+//				// Do something now that the parent context is
+//				// completed.
+//		}
+//	}
+func (n *Client) StartDiscover(t chan<- *Target, nodename string, fuchsia bool) (func() error, error) {
+	n.Cookie++
+	q, err := newNetbootQuery(nodename, n.Cookie, n.ServerPort, fuchsia)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		defer q.close()
+		if err := q.write(); err != nil {
+			t <- &Target{Error: err}
+			return
+		}
+
+		for {
+			target, err := q.read()
+			if err != nil {
+				t <- &Target{Error: err}
+				return
+			}
+			if target != nil {
+				// Only skip if there's a name mismatch.
+				if nodename != NodenameWildcard && !strings.Contains(target.Nodename, nodename) {
+					continue
+				}
+				t <- target
+			}
+		}
+	}()
+	return q.close, nil
 }
 
 // Beacon receives the beacon packet, returning the address of the sender.

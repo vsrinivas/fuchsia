@@ -53,7 +53,8 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 			}
 			var req netbootMessage
 			if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
-				t.Fatal(err)
+				t.Logf("malformed binary read: %v", err)
+				continue
 			}
 			for _, n := range nodenames {
 				res := netbootMessage{
@@ -67,7 +68,7 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 				copy(res.Data[:], n)
 				var resBuf bytes.Buffer
 				if err := binary.Write(&resBuf, binary.LittleEndian, res); err != nil {
-					t.Fatal(err)
+					t.Fatalf("binary write: %v", err)
 				}
 				conn.WriteToUDP(resBuf.Bytes(), addr)
 			}
