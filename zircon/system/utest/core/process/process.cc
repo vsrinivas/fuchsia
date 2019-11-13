@@ -18,7 +18,7 @@
 #include <climits>
 
 #include <mini-process/mini-process.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -30,8 +30,7 @@ constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::fs_base;
 
 const zx_time_t kTimeoutNs = ZX_MSEC(250);
 
-bool long_name_succeeds() {
-  BEGIN_TEST;
+TEST(ProcessTest, LongNameSucceeds) {
   // Creating a process with a super long name should succeed.
   static const char long_name[] =
       "0123456789012345678901234567890123456789"
@@ -40,113 +39,98 @@ bool long_name_succeeds() {
 
   zx_handle_t proc;
   zx_handle_t vmar;
-  ASSERT_EQ(zx_process_create(zx_job_default(), long_name, sizeof(long_name), 0, &proc, &vmar),
-            ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), long_name, sizeof(long_name), 0, &proc, &vmar));
   static char proc_name[ZX_MAX_NAME_LEN];
-  ASSERT_EQ(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN), ZX_OK);
+  ASSERT_OK(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN));
   ASSERT_EQ(strncmp(proc_name, long_name, ZX_MAX_NAME_LEN - 1), 0);
-  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
-  ASSERT_EQ(zx_handle_close(proc), ZX_OK);
-  END_TEST;
+  ASSERT_OK(zx_handle_close(vmar));
+  ASSERT_OK(zx_handle_close(proc));
 }
 
-bool empty_name_succeeds() {
-  BEGIN_TEST;
+TEST(ProcessTest, EmptyNameSucceeds) {
   // Creating a process with "" name, 0 name_len should succeed.
   zx_handle_t proc;
   zx_handle_t vmar;
-  ASSERT_EQ(zx_process_create(zx_job_default(), "", 0, 0, &proc, &vmar), ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), "", 0, 0, &proc, &vmar));
   static char proc_name[ZX_MAX_NAME_LEN];
-  ASSERT_EQ(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN), ZX_OK);
+  ASSERT_OK(zx_object_get_property(proc, ZX_PROP_NAME, proc_name, ZX_MAX_NAME_LEN));
   ASSERT_EQ(strcmp(proc_name, ""), 0);
-  ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
-  ASSERT_EQ(zx_handle_close(proc), ZX_OK);
-  END_TEST;
+  ASSERT_OK(zx_handle_close(vmar));
+  ASSERT_OK(zx_handle_close(proc));
 }
 
-bool mini_process_sanity() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, MiniProcessSanity) {
   zx_handle_t proc;
   zx_handle_t thread;
   zx_handle_t vmar;
 
-  ASSERT_EQ(zx_process_create(zx_job_default(), "mini-p", 3u, 0, &proc, &vmar), ZX_OK);
-  ASSERT_EQ(zx_thread_create(proc, "mini-p", 2u, 0u, &thread), ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), "mini-p", 3u, 0, &proc, &vmar));
+  ASSERT_OK(zx_thread_create(proc, "mini-p", 2u, 0u, &thread));
 
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t cmd_channel;
-  EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true, &cmd_channel), ZX_OK);
+  EXPECT_OK(start_mini_process_etc(proc, thread, vmar, event, true, &cmd_channel));
 
-  EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr), ZX_OK);
+  EXPECT_OK(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr));
 
   zx_handle_t oev;
-  EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_CREATE_EVENT, &oev), ZX_OK);
+  EXPECT_OK(mini_process_cmd(cmd_channel, MINIP_CMD_CREATE_EVENT, &oev));
 
   EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
 
   zx_handle_close(thread);
   zx_handle_close(proc);
   zx_handle_close(vmar);
-  END_TEST;
 }
 
-bool process_start_no_handle() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, ProcessStartNoHandle) {
   zx_handle_t proc;
   zx_handle_t thread;
   zx_handle_t vmar;
 
   constexpr const char kTestName[] = "test-no-handles";
-  ASSERT_EQ(zx_process_create(zx_job_default(), kTestName, sizeof(kTestName) - 1, 0, &proc, &vmar),
-            ZX_OK);
-  ASSERT_EQ(zx_thread_create(proc, kTestName, sizeof(kTestName) - 1, 0u, &thread), ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), kTestName, sizeof(kTestName) - 1, 0, &proc, &vmar));
+  ASSERT_OK(zx_thread_create(proc, kTestName, sizeof(kTestName) - 1, 0u, &thread));
 
   // The process will get no handles, but it can still make syscalls.
   // The vDSO's e_entry points to zx_process_exit.  So the process will
   // enter at `zx_process_exit(ZX_HANDLE_INVALID);`.
   uintptr_t entry;
-  EXPECT_EQ(mini_process_load_vdso(proc, vmar, nullptr, &entry), ZX_OK);
+  EXPECT_OK(mini_process_load_vdso(proc, vmar, nullptr, &entry));
 
   // The vDSO ABI needs a stack, though zx_process_exit actually might not.
   uintptr_t stack_base, sp;
-  EXPECT_EQ(mini_process_load_stack(vmar, false, &stack_base, &sp), ZX_OK);
+  EXPECT_OK(mini_process_load_stack(vmar, false, &stack_base, &sp));
   zx_handle_close(vmar);
 
-  EXPECT_EQ(zx_process_start(proc, thread, entry, sp, ZX_HANDLE_INVALID, 0), ZX_OK);
+  EXPECT_OK(zx_process_start(proc, thread, entry, sp, ZX_HANDLE_INVALID, 0));
   zx_handle_close(thread);
 
   zx_signals_t signals;
-  EXPECT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED, zx_deadline_after(ZX_SEC(1)), &signals),
-            ZX_OK);
+  EXPECT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, zx_deadline_after(ZX_SEC(1)), &signals));
   EXPECT_EQ(signals, ZX_TASK_TERMINATED);
 
   zx_info_process_t info{};
-  EXPECT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr),
-            ZX_OK);
+  EXPECT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
   EXPECT_EQ(info.return_code, int64_t{ZX_HANDLE_INVALID});
 
   zx_handle_close(proc);
-  END_TEST;
 }
 
-bool process_start_fail() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, ProcessStartFail) {
   zx_handle_t event1, event2;
   zx_handle_t process;
   zx_handle_t thread;
 
-  ASSERT_EQ(zx_event_create(0u, &event1), ZX_OK);
-  ASSERT_EQ(zx_event_create(0u, &event2), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event1));
+  ASSERT_OK(zx_event_create(0u, &event2));
 
-  ASSERT_EQ(start_mini_process(zx_job_default(), event1, &process, &thread), ZX_OK);
+  ASSERT_OK(start_mini_process(zx_job_default(), event1, &process, &thread));
 
   zx_handle_t other_thread;
-  ASSERT_EQ(zx_thread_create(process, "test", 4u, 0, &other_thread), ZX_OK);
+  ASSERT_OK(zx_thread_create(process, "test", 4u, 0, &other_thread));
 
   // Test that calling process_start() again for an existing process fails in a
   // reasonable way. Also test that the transferred object is closed.
@@ -156,20 +140,17 @@ bool process_start_fail() {
   zx_handle_close(process);
   zx_handle_close(thread);
   zx_handle_close(other_thread);
-  END_TEST;
 }
 
-bool process_not_killed_via_thread_close() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, ProcessNotKilledViaThreadClose) {
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t process;
   zx_handle_t thread;
-  ASSERT_EQ(start_mini_process(zx_job_default(), event, &process, &thread), ZX_OK);
+  ASSERT_OK(start_mini_process(zx_job_default(), event, &process, &thread));
 
-  EXPECT_EQ(zx_handle_close(thread), ZX_OK);
+  EXPECT_OK(zx_handle_close(thread));
 
   // The timeout below does not have to be large because the processing happens
   // synchronously if indeed |thread| is the last handle.
@@ -179,21 +160,18 @@ bool process_not_killed_via_thread_close() {
       ZX_ERR_TIMED_OUT);
   EXPECT_NE(signals, ZX_TASK_TERMINATED);
 
-  EXPECT_EQ(zx_handle_close(process), ZX_OK);
-  END_TEST;
+  EXPECT_OK(zx_handle_close(process));
 }
 
-bool process_not_killed_via_process_close() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, ProcessNotKilledViaProcessClose) {
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t process;
   zx_handle_t thread;
-  ASSERT_EQ(start_mini_process(zx_job_default(), event, &process, &thread), ZX_OK);
+  ASSERT_OK(start_mini_process(zx_job_default(), event, &process, &thread));
 
-  EXPECT_EQ(zx_handle_close(process), ZX_OK);
+  EXPECT_OK(zx_handle_close(process));
 
   // The timeout below does not have to be large because the processing happens
   // synchronously if indeed |process| is the last handle.
@@ -201,63 +179,56 @@ bool process_not_killed_via_process_close() {
   EXPECT_EQ(zx_object_wait_one(thread, ZX_TASK_TERMINATED, zx_deadline_after(ZX_MSEC(1)), &signals),
             ZX_ERR_TIMED_OUT);
 
-  EXPECT_EQ(zx_handle_close(thread), ZX_OK);
-  END_TEST;
+  EXPECT_OK(zx_handle_close(thread));
 }
 
-bool kill_process_via_thread_kill() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, KillProcessViaThreadKill) {
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t process;
   zx_handle_t thread;
-  ASSERT_EQ(start_mini_process(zx_job_default(), event, &process, &thread), ZX_OK);
+  ASSERT_OK(start_mini_process(zx_job_default(), event, &process, &thread));
 
   // Killing the only thread should cause the process to terminate.
-  EXPECT_EQ(zx_task_kill(thread), ZX_OK);
+  EXPECT_OK(zx_task_kill(thread));
 
   zx_signals_t signals;
-  EXPECT_EQ(zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
+  EXPECT_OK(zx_object_wait_one(process, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
   EXPECT_EQ(signals, ZX_TASK_TERMINATED);
 
-  EXPECT_EQ(zx_handle_close(process), ZX_OK);
-  EXPECT_EQ(zx_handle_close(thread), ZX_OK);
-  END_TEST;
+  EXPECT_OK(zx_handle_close(process));
+  EXPECT_OK(zx_handle_close(thread));
 }
 
-bool kill_process_via_vmar_destroy() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, KillProcessViaVmarDestroy) {
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t proc;
   zx_handle_t vmar;
-  ASSERT_EQ(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar), ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar));
 
   zx_handle_t thread;
-  ASSERT_EQ(zx_thread_create(proc, "th", 2u, 0u, &thread), ZX_OK);
+  ASSERT_OK(zx_thread_create(proc, "th", 2u, 0u, &thread));
 
   // Make the process busy-wait rather than using a vDSO call because
   // if it maps in the vDSO then zx_vmar_destroy is prohibited.
-  EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true, nullptr), ZX_OK);
+  EXPECT_OK(start_mini_process_etc(proc, thread, vmar, event, true, nullptr));
 
   // Destroying the root VMAR should cause the process to terminate.
   test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(proc));
-  EXPECT_EQ(zx_vmar_destroy(vmar), ZX_OK);
-  EXPECT_EQ(catcher.ExpectException(), ZX_OK);
+  EXPECT_OK(zx_vmar_destroy(vmar));
+  EXPECT_OK(catcher.ExpectException());
 
   zx_signals_t signals;
-  EXPECT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
+  EXPECT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
   signals &= ZX_TASK_TERMINATED;
   EXPECT_EQ(signals, ZX_TASK_TERMINATED);
 
-  EXPECT_EQ(zx_handle_close(proc), ZX_OK);
-  EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
-  EXPECT_EQ(zx_handle_close(thread), ZX_OK);
-  END_TEST;
+  EXPECT_OK(zx_handle_close(proc));
+  EXPECT_OK(zx_handle_close(vmar));
+  EXPECT_OK(zx_handle_close(thread));
 }
 
 zx_status_t dup_send_handle(zx_handle_t channel, zx_handle_t handle) {
@@ -268,46 +239,44 @@ zx_status_t dup_send_handle(zx_handle_t channel, zx_handle_t handle) {
   return zx_channel_write(channel, 0u, nullptr, 0u, &dup, 1u);
 }
 
-bool kill_channel_handle_cycle() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, KillChannelHandleCycle) {
   zx_handle_t chan[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
-  ASSERT_EQ(zx_channel_create(0u, &chan[0], &chan[1]), ZX_OK);
+  ASSERT_OK(zx_channel_create(0u, &chan[0], &chan[1]));
 
   zx_handle_t proc1, proc2;
   zx_handle_t vmar1, vmar2;
 
   zx_handle_t job_child;
-  ASSERT_EQ(zx_job_create(zx_job_default(), 0u, &job_child), ZX_OK);
+  ASSERT_OK(zx_job_create(zx_job_default(), 0u, &job_child));
 
-  ASSERT_EQ(zx_process_create(job_child, "ttp1", 4u, 0u, &proc1, &vmar1), ZX_OK);
-  ASSERT_EQ(zx_process_create(job_child, "ttp2", 4u, 0u, &proc2, &vmar2), ZX_OK);
+  ASSERT_OK(zx_process_create(job_child, "ttp1", 4u, 0u, &proc1, &vmar1));
+  ASSERT_OK(zx_process_create(job_child, "ttp2", 4u, 0u, &proc2, &vmar2));
 
   zx_handle_t thread1, thread2;
 
-  ASSERT_EQ(zx_thread_create(proc1, "th1", 3u, 0u, &thread1), ZX_OK);
-  ASSERT_EQ(zx_thread_create(proc2, "th2", 3u, 0u, &thread2), ZX_OK);
+  ASSERT_OK(zx_thread_create(proc1, "th1", 3u, 0u, &thread1));
+  ASSERT_OK(zx_thread_create(proc2, "th2", 3u, 0u, &thread2));
 
   // Now we stuff duplicated process and thread handles into each side of the channel.
-  EXPECT_EQ(dup_send_handle(chan[0], proc2), ZX_OK);
-  EXPECT_EQ(dup_send_handle(chan[0], thread2), ZX_OK);
+  EXPECT_OK(dup_send_handle(chan[0], proc2));
+  EXPECT_OK(dup_send_handle(chan[0], thread2));
 
-  EXPECT_EQ(dup_send_handle(chan[1], proc1), ZX_OK);
-  EXPECT_EQ(dup_send_handle(chan[1], thread1), ZX_OK);
+  EXPECT_OK(dup_send_handle(chan[1], proc1));
+  EXPECT_OK(dup_send_handle(chan[1], thread1));
 
   // The process start with each one side of the channel. We don't have access to the
   // channel anymore.
 
   zx_handle_t minip_chn[2];
 
-  EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], true, &minip_chn[0]), ZX_OK);
-  EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], true, &minip_chn[1]), ZX_OK);
+  EXPECT_OK(start_mini_process_etc(proc1, thread1, vmar1, chan[0], true, &minip_chn[0]));
+  EXPECT_OK(start_mini_process_etc(proc2, thread2, vmar2, chan[1], true, &minip_chn[1]));
 
-  EXPECT_EQ(zx_handle_close(vmar2), ZX_OK);
-  EXPECT_EQ(zx_handle_close(vmar1), ZX_OK);
+  EXPECT_OK(zx_handle_close(vmar2));
+  EXPECT_OK(zx_handle_close(vmar1));
 
-  EXPECT_EQ(zx_handle_close(proc1), ZX_OK);
-  EXPECT_EQ(zx_handle_close(proc2), ZX_OK);
+  EXPECT_OK(zx_handle_close(proc1));
+  EXPECT_OK(zx_handle_close(proc2));
 
   // Make (relatively) certain the processes are alive.
 
@@ -321,71 +290,65 @@ bool kill_channel_handle_cycle() {
       ZX_ERR_TIMED_OUT);
 
   // At this point the two processes have each other thread/process handles.
-  EXPECT_EQ(zx_handle_close(thread1), ZX_OK);
+  EXPECT_OK(zx_handle_close(thread1));
 
   EXPECT_EQ(
       zx_object_wait_one(thread2, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals),
       ZX_ERR_TIMED_OUT);
 
   // The only way out of this situation is to use the job handle.
-  EXPECT_EQ(zx_task_kill(job_child), ZX_OK);
+  EXPECT_OK(zx_task_kill(job_child));
 
-  EXPECT_EQ(zx_object_wait_one(thread2, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
+  EXPECT_OK(zx_object_wait_one(thread2, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
   signals &= ZX_TASK_TERMINATED;
   EXPECT_EQ(signals, ZX_TASK_TERMINATED);
 
-  EXPECT_EQ(zx_handle_close(thread2), ZX_OK);
-  EXPECT_EQ(zx_handle_close(job_child), ZX_OK);
-
-  END_TEST;
+  EXPECT_OK(zx_handle_close(thread2));
+  EXPECT_OK(zx_handle_close(job_child));
 }
 
 // Tests that |zx_info_process_t| fields reflect the current state of a process.
-bool info_reflects_process_state() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, InfoReflectsProcessState) {
   // Create a process with one thread.
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t job_child;
-  ASSERT_EQ(zx_job_create(zx_job_default(), 0u, &job_child), ZX_OK);
+  ASSERT_OK(zx_job_create(zx_job_default(), 0u, &job_child));
 
   zx_handle_t proc;
   zx_handle_t vmar;
-  ASSERT_EQ(zx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar), ZX_OK);
+  ASSERT_OK(zx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar));
 
   zx_handle_t thread;
-  ASSERT_EQ(zx_thread_create(proc, "th", 3u, 0u, &thread), ZX_OK);
+  ASSERT_OK(zx_thread_create(proc, "th", 3u, 0u, &thread));
 
   zx_info_process_t info;
-  ASSERT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
+  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
   EXPECT_FALSE(info.started, "process should not appear as started");
   EXPECT_FALSE(info.exited, "process should not appear as exited");
   EXPECT_EQ(info.return_code, 0, "return code is zero");
 
   zx_handle_t minip_chn;
   // Start the process and make (relatively) certain it's alive.
-  ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, true, &minip_chn), ZX_OK);
+  ASSERT_OK(start_mini_process_etc(proc, thread, vmar, event, true, &minip_chn));
   zx_signals_t signals;
   ASSERT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals),
             ZX_ERR_TIMED_OUT);
 
-  ASSERT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
+  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
   EXPECT_TRUE(info.started, "process should appear as started");
   EXPECT_FALSE(info.exited, "process should not appear as exited");
 
   // Kill the process and wait for it to terminate.
-  ASSERT_EQ(zx_task_kill(proc), ZX_OK);
-  ASSERT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals), ZX_OK);
+  ASSERT_OK(zx_task_kill(proc));
+  ASSERT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
   ASSERT_EQ(signals, ZX_TASK_TERMINATED);
 
-  ASSERT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
+  ASSERT_OK(zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL));
   EXPECT_TRUE(info.started, "process should appear as started");
   EXPECT_TRUE(info.exited, "process should appear as exited");
   EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_SYSCALL_KILL, "process retcode invalid");
-
-  END_TEST;
 }
 
 // Helper class to encapsulate starting a process with up to kNumThreads no-op child threads.
@@ -394,50 +357,37 @@ class TestProcess {
   static constexpr int kMaxThreads = 3;
 
   // Creates the process handle, must be called first before any other function.
-  bool CreateProcess() {
-    BEGIN_HELPER;
-
+  void CreateProcess() {
     constexpr const char* kProcessName = "test_process";
-    EXPECT_EQ(zx_process_create(zx_job_default(), kProcessName, strlen(kProcessName), 0, &process_,
-                                &vmar_),
-              ZX_OK);
-
-    END_HELPER;
+    EXPECT_OK(zx_process_create(zx_job_default(), kProcessName, strlen(kProcessName), 0, &process_,
+                                &vmar_));
   }
 
   // Creates a child thread but does not start it.
-  bool CreateThread() {
-    BEGIN_HELPER;
-
+  void CreateThread() {
     ASSERT_LT(num_threads_, kMaxThreads);
 
     zx_handle_t thread;
     char name[32];
     size_t name_length = snprintf(name, sizeof(name), "test_thread_%d", num_threads_);
-    ASSERT_EQ(zx_thread_create(process_, name, name_length, 0, &thread), ZX_OK);
+    ASSERT_OK(zx_thread_create(process_, name, name_length, 0, &thread));
 
     threads_[num_threads_++] = thread;
-
-    END_HELPER;
   }
 
   // Starts the process and all child threads.
-  bool StartProcess() {
-    BEGIN_HELPER;
-
+  void StartProcess() {
     ASSERT_GT(num_threads_, 0);
 
     // The first thread must start the process.
     // We don't use this event but starting a new process requires passing it a handle.
     zx_handle_t event = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
-    ASSERT_EQ(start_mini_process_etc(process_, threads_[0], vmar_, event, true, nullptr), ZX_OK);
+    ASSERT_OK(zx_event_create(0u, &event));
+    ASSERT_OK(start_mini_process_etc(process_, threads_[0], vmar_, event, true, nullptr));
 
     for (int i = 1; i < num_threads_; ++i) {
-      ASSERT_EQ(start_mini_process_thread(threads_[i], vmar_), ZX_OK);
+      ASSERT_OK(start_mini_process_thread(threads_[i], vmar_));
     }
-
-    END_HELPER;
   }
 
   // Waits for a signal on the requested thread and returns true if the result
@@ -454,15 +404,11 @@ class TestProcess {
   }
 
   // Do this explicitly rather than in the destructor to catch any errors.
-  bool StopProcess() {
-    BEGIN_HELPER;
-
-    EXPECT_EQ(zx_task_kill(process_), ZX_OK);
-    EXPECT_EQ(zx_handle_close(process_), ZX_OK);
-    EXPECT_EQ(zx_handle_close(vmar_), ZX_OK);
-    EXPECT_EQ(zx_handle_close_many(threads_, num_threads_), ZX_OK);
-
-    END_HELPER;
+  void StopProcess() {
+    EXPECT_OK(zx_task_kill(process_));
+    EXPECT_OK(zx_handle_close(process_));
+    EXPECT_OK(zx_handle_close(vmar_));
+    EXPECT_OK(zx_handle_close_many(threads_, num_threads_));
   }
 
   zx_handle_t process() const { return process_; }
@@ -476,233 +422,193 @@ class TestProcess {
   zx_handle_t threads_[kMaxThreads];
 };
 
-bool suspend() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, Suspend) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   zx_handle_t suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_self() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendSelf) {
   zx_handle_t suspend_token;
   EXPECT_EQ(zx_task_suspend(zx_process_self(), &suspend_token), ZX_ERR_NOT_SUPPORTED);
-
-  END_TEST;
 }
 
-bool suspend_multiple_threads() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendMultipleThreads) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   zx_handle_t suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(1, ZX_THREAD_SUSPENDED, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(1, ZX_THREAD_RUNNING, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_before_creating_threads() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendBeforeCreatingThreads) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
 
   zx_handle_t suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
 
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_before_starting_threads() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendBeforeStartingThreads) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
 
   zx_handle_t suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
 
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_process_then_thread() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendProcessThenThread) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   zx_handle_t process_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &process_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
   zx_handle_t thread_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.thread(0), &thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.thread(0), &thread_suspend_token));
 
   // When we release the process token, the thread should remain suspended.
-  ASSERT_EQ(zx_handle_close(process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(process_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_ERR_TIMED_OUT));
 
   // Now close the thread token and it should resume.
-  ASSERT_EQ(zx_handle_close(thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(thread_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_thread_then_process() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendThreadThenProcess) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   zx_handle_t thread_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.thread(0), &thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.thread(0), &thread_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
   zx_handle_t process_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &process_suspend_token));
 
-  ASSERT_EQ(zx_handle_close(process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(process_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_ERR_TIMED_OUT));
 
-  ASSERT_EQ(zx_handle_close(thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(thread_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_thread_and_process_before_starting_process() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendThreadAndProcessBeforeStartingProcess) {
   TestProcess test_process;
 
   // Create and immediately suspend the process and thread.
-  ASSERT_TRUE(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
   zx_handle_t process_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &process_suspend_token));
 
-  ASSERT_TRUE(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
   zx_handle_t thread_suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.thread(0), &thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.thread(0), &thread_suspend_token));
 
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
   // Resume the process, thread should stay suspended.
-  ASSERT_EQ(zx_handle_close(process_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(process_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_ERR_TIMED_OUT));
 
-  ASSERT_EQ(zx_handle_close(thread_suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(thread_suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_twice() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendTwice) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   zx_handle_t suspend_tokens[2];
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_tokens[0]), ZX_OK);
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_tokens[1]), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_tokens[0]));
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_tokens[1]));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_tokens[0]), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_tokens[0]));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_ERR_TIMED_OUT));
 
-  ASSERT_EQ(zx_handle_close(suspend_tokens[1]), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_tokens[1]));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
-bool suspend_twice_before_creating_threads() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendTwiceBeforeCreatingThreads) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
 
   zx_handle_t suspend_tokens[2];
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_tokens[0]), ZX_OK);
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_tokens[1]), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_tokens[0]));
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_tokens[1]));
 
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_tokens[0]), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_tokens[0]));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_ERR_TIMED_OUT));
 
-  ASSERT_EQ(zx_handle_close(suspend_tokens[1]), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_tokens[1]));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
 // This test isn't super reliable since it has to try to suspend and resume while a thread is in
@@ -712,39 +618,33 @@ bool suspend_twice_before_creating_threads() {
 // In the expected case this test will always succeed, but if there is an underlying bug it
 // will occasionally fail, so if this test begins to show flakiness it likely represents a real
 // bug.
-bool suspend_with_dying_thread() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, SuspendWithDyingThread) {
   TestProcess test_process;
-  ASSERT_TRUE(test_process.CreateProcess());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.CreateThread());
-  ASSERT_TRUE(test_process.StartProcess());
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+  ASSERT_NO_FAILURES(test_process.StartProcess());
 
   // Kill the middle thread.
-  ASSERT_EQ(zx_task_kill(test_process.thread(1)), ZX_OK);
+  ASSERT_OK(zx_task_kill(test_process.thread(1)));
 
   // Now suspend the process and make sure it still works on the live threads.
   zx_handle_t suspend_token;
-  ASSERT_EQ(zx_task_suspend(test_process.process(), &suspend_token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(test_process.process(), &suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_SUSPENDED, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_SUSPENDED, ZX_OK));
 
-  ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
+  ASSERT_OK(zx_handle_close(suspend_token));
   ASSERT_TRUE(test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK));
   ASSERT_TRUE(test_process.WaitForThreadSignal(2, ZX_THREAD_RUNNING, ZX_OK));
 
-  ASSERT_TRUE(test_process.StopProcess());
-
-  END_TEST;
+  ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
 // A stress test designed to create a race where one thread is creating a process while another
 // thread is killing its parent job.
-bool create_and_kill_job_race_stress() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, CreateAndKillJobRaceStress) {
   constexpr zx_duration_t kTestDuration = ZX_SEC(1);
   srand(4);
 
@@ -826,37 +726,34 @@ bool create_and_kill_job_race_stress() {
   for (auto& t : creators) {
     int res;
     ASSERT_EQ(thrd_join(t, &res), thrd_success);
-    ASSERT_EQ(res, ZX_OK);
+    ASSERT_OK(res);
   }
 
   int res;
   ASSERT_EQ(thrd_join(killer, &res), thrd_success);
-  ASSERT_EQ(res, ZX_OK);
+  ASSERT_OK(res);
 
   zx_handle_close(args.job->load());
-
-  END_TEST;
 }
 
-bool process_start_write_thread_state() {
-  BEGIN_TEST;
-
+// TODO(fxb/8477): deflake and reenable this test.
+TEST(ProcessTest, DISABLED_ProcessStartWriteThreadState) {
   zx_handle_t proc;
   zx_handle_t vmar;
-  ASSERT_EQ(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar), ZX_OK);
+  ASSERT_OK(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar));
 
   zx_handle_t thread;
-  ASSERT_EQ(zx_thread_create(proc, "th", 2u, 0u, &thread), ZX_OK);
+  ASSERT_OK(zx_thread_create(proc, "th", 2u, 0u, &thread));
 
   // Suspend the thread before it starts.
   zx_handle_t token;
-  ASSERT_EQ(zx_task_suspend(thread, &token), ZX_OK);
+  ASSERT_OK(zx_task_suspend(thread, &token));
 
   zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+  ASSERT_OK(zx_event_create(0u, &event));
 
   zx_handle_t minip_chn;
-  ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, false, &minip_chn), ZX_OK);
+  ASSERT_OK(start_mini_process_etc(proc, thread, vmar, event, false, &minip_chn));
 
   // Get a known word into memory to point the thread pointer at.  It would
   // be simpler and sufficient for the purpose of this test just to check
@@ -865,44 +762,42 @@ bool process_start_write_thread_state() {
   // directly (rdfsbase) and it can only be used in a memory access.
   const uintptr_t kCheckValue = MINIP_THREAD_POINTER_CHECK_VALUE;
   zx_handle_t vmo;
-  ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
-  ASSERT_EQ(zx_vmo_write(vmo, &kCheckValue, 0, sizeof(kCheckValue)), ZX_OK);
+  ASSERT_OK(zx_vmo_create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx_vmo_write(vmo, &kCheckValue, 0, sizeof(kCheckValue)));
   uintptr_t addr;
-  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &addr), ZX_OK);
-  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+  ASSERT_OK(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &addr));
+  EXPECT_OK(zx_handle_close(vmo));
 
   // Wait for the new thread to reach quiescent suspended state.
   zx_signals_t signals;
-  EXPECT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &signals), ZX_OK);
+  EXPECT_OK(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &signals));
   EXPECT_TRUE(signals & ZX_THREAD_SUSPENDED);
 
   // Fetch the initial register state.
   zx_thread_state_general_regs_t regs;
-  ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
+  ASSERT_OK(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
   EXPECT_EQ(regs.*kThreadRegister, 0);
 
   // Write it back with the thread register pointed at our memory.
   regs.*kThreadRegister = addr;
-  ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
-            ZX_OK);
+  ASSERT_OK(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
 
   // Now let the thread run again.
-  EXPECT_EQ(zx_handle_close(token), ZX_OK);
+  EXPECT_OK(zx_handle_close(token));
 
   // Complete the startup handshake that had to be delayed while the thread
   // was suspended.
-  EXPECT_EQ(mini_process_wait_for_ack(minip_chn), ZX_OK);
+  EXPECT_OK(mini_process_wait_for_ack(minip_chn));
 
   // Now have it read from its thread pointer and check the value.
-  EXPECT_EQ(mini_process_cmd(minip_chn, MINIP_CMD_CHECK_THREAD_POINTER, nullptr), ZX_OK);
+  EXPECT_OK(mini_process_cmd(minip_chn, MINIP_CMD_CHECK_THREAD_POINTER, nullptr));
 
   // All done!
   EXPECT_EQ(mini_process_cmd(minip_chn, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
 
-  EXPECT_EQ(zx_handle_close(proc), ZX_OK);
-  EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
-  EXPECT_EQ(zx_handle_close(thread), ZX_OK);
-  END_TEST;
+  EXPECT_OK(zx_handle_close(proc));
+  EXPECT_OK(zx_handle_close(vmar));
+  EXPECT_OK(zx_handle_close(thread));
 }
 
 // This checks for lock ordering violations between the acquiring the process dispatcher lock and
@@ -914,32 +809,28 @@ bool process_start_write_thread_state() {
 // object_wait_async and port_cancel are used as syscalls that will allow us to hold the handle
 // table lock whilst operating on a process in a way that requires grabbing the dispatcher lock.
 // This represents the 'correct' ordering.
-bool process_wait_async_cancel_self() {
-  BEGIN_TEST;
-
+TEST(ProcessTest, ProcessWaitAsyncCancelSelf) {
   // Start up a thread in a mini-process that is given a copy of the process handle and will
   // create a port and infinitely loop doing process.wait_async(port) + port.cancel(process)
   zx::process process;
   zx::vmar vmar;
 
   constexpr const char kProcessName[] = "test_process";
-  ASSERT_EQ(zx::process::create(*zx::job::default_job(), kProcessName, sizeof(kProcessName), 0,
-                                &process, &vmar),
-            ZX_OK);
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kProcessName, sizeof(kProcessName), 0,
+                                &process, &vmar));
 
   zx::thread thread;
 
   constexpr const char kThreadName[] = "test_thread";
-  ASSERT_EQ(zx::thread::create(process, kThreadName, sizeof(kThreadName), 0, &thread), ZX_OK);
+  ASSERT_OK(zx::thread::create(process, kThreadName, sizeof(kThreadName), 0, &thread));
 
   zx::channel cntrl_channel;
   zx::process process_dup;
-  ASSERT_EQ(process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process_dup), ZX_OK);
-  ASSERT_EQ(start_mini_process_etc(process.get(), thread.get(), vmar.get(), process_dup.release(),
-                                   true, cntrl_channel.reset_and_get_address()),
-            ZX_OK);
+  ASSERT_OK(process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process_dup));
+  ASSERT_OK(start_mini_process_etc(process.get(), thread.get(), vmar.get(), process_dup.release(),
+                                   true, cntrl_channel.reset_and_get_address()));
 
-  ASSERT_EQ(mini_process_cmd_send(cntrl_channel.get(), MINIP_CMD_WAIT_ASYNC_CANCEL), ZX_OK);
+  ASSERT_OK(mini_process_cmd_send(cntrl_channel.get(), MINIP_CMD_WAIT_ASYNC_CANCEL));
 
   // Call get_info several times on the process. We're trying to trigger a race that will cause a
   // kernel deadlock. In testing with the deadlock present 10000 iterations would reliably trigger
@@ -948,45 +839,13 @@ bool process_wait_async_cancel_self() {
   size_t actual;
   size_t available;
   for (int i = 0; i < 10000; i++) {
-    ASSERT_EQ(process.get_info(ZX_INFO_PROCESS_VMOS, &vmo, sizeof(vmo), &actual, &available),
-              ZX_OK);
+    ASSERT_OK(process.get_info(ZX_INFO_PROCESS_VMOS, &vmo, sizeof(vmo), &actual, &available));
   }
   // We need to explicitly kill the process tree as we gave the mini-process a handle to itself,
   // so it is able to keep itself alive when we close our copies of the handles otherwise.
-  ASSERT_EQ(process.kill(), ZX_OK);
+  ASSERT_OK(process.kill());
   zx_signals_t pending;
-  ASSERT_EQ(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &pending), ZX_OK);
-
-  END_TEST;
+  ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &pending));
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(process_tests)
-RUN_TEST(long_name_succeeds);
-RUN_TEST(empty_name_succeeds);
-RUN_TEST(mini_process_sanity);
-RUN_TEST(process_start_fail);
-RUN_TEST(process_start_no_handle);
-RUN_TEST(process_not_killed_via_thread_close);
-RUN_TEST(process_not_killed_via_process_close);
-RUN_TEST(kill_process_via_thread_kill);
-RUN_TEST(kill_process_via_vmar_destroy);
-RUN_TEST(kill_channel_handle_cycle);
-RUN_TEST(info_reflects_process_state);
-RUN_TEST(suspend);
-RUN_TEST(suspend_self);
-RUN_TEST(suspend_multiple_threads);
-RUN_TEST(suspend_before_creating_threads);
-RUN_TEST(suspend_before_starting_threads);
-RUN_TEST(suspend_process_then_thread);
-RUN_TEST(suspend_thread_then_process);
-RUN_TEST(suspend_thread_and_process_before_starting_process);
-RUN_TEST(suspend_twice);
-RUN_TEST(suspend_twice_before_creating_threads);
-RUN_TEST(suspend_with_dying_thread);
-RUN_TEST(process_wait_async_cancel_self);
-// TODO(FLK-370): deflake and reenable this test.
-// RUN_TEST(process_start_write_thread_state)
-RUN_TEST_LARGE(create_and_kill_job_race_stress);
-END_TEST_CASE(process_tests)
