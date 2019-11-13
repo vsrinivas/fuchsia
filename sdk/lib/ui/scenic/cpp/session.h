@@ -34,9 +34,18 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
   using PresentCallback = fit::function<void(fuchsia::images::PresentationInfo info)>;
+  // Provides immediate information about predicted future latch and presentation times.
+  using Present2Callback =
+      fit::function<void(fuchsia::scenic::scheduling::FuturePresentationTimes info)>;
+  // Provides immediate information about predicted future latch and presentation times.
+  using RequestPresentationTimesCallback =
+      fit::function<void(fuchsia::scenic::scheduling::FuturePresentationTimes info)>;
 
   // Called when session events are received.
   using EventHandler = fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
+  // Called when one or more Present2s are presented.
+  using OnFramePresentedCallback =
+      fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
@@ -63,6 +72,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   // Sets a callback which is invoked when events are received.
   void set_event_handler(EventHandler event_handler) { event_handler_ = std::move(event_handler); }
+
+  // Sets the callback invoked when frames are presented.
+  void set_on_frame_presented_handler(OnFramePresentedCallback callback);
 
   // Gets a pointer to the underlying session interface.
   fuchsia::ui::scenic::Session* session() { return session_.get(); }
@@ -102,6 +114,16 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   // Overloaded |Present()| using zx::time.
   void Present(zx::time presentation_time, PresentCallback callback);
+
+  // Immediately invokes the callback, providing predicted information back to the client.
+  // Presents all previously enqueued operations.
+  // Implicitly flushes all queued operations to the session.
+  void Present2(zx_duration_t requested_presentation_time, zx_duration_t requested_prediction_span,
+                Present2Callback immediate_callback);
+
+  // Immediately invokes the callback, providing predicted information back to the client.
+  void RequestPresentationTimes(zx_duration_t requested_prediction_span,
+                                RequestPresentationTimesCallback callback);
 
   // Unbinds the internal SessionPtr; this allows moving this across threads.
   void Unbind();

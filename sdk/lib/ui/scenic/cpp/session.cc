@@ -47,6 +47,9 @@ Session::~Session() {
   ZX_DEBUG_ASSERT_MSG(resource_count_ == 0, "Some resources outlived the session: %u",
                       resource_count_);
 }
+void Session::set_on_frame_presented_handler(OnFramePresentedCallback callback) {
+  session_.events().OnFramePresented = std::move(callback);
+}
 
 uint32_t Session::AllocResourceId() {
   uint32_t resource_id = next_resource_id_++;
@@ -107,6 +110,19 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
 
 void Session::Present(zx::time presentation_time, PresentCallback callback) {
   Present(presentation_time.get(), std::move(callback));
+}
+
+void Session::Present2(zx_duration_t requested_presentation_time,
+                       zx_duration_t requested_prediction_span,
+                       Present2Callback immediate_callback) {
+  session_->Present2(requested_presentation_time, std::move(acquire_fences_),
+                     std::move(release_fences_), requested_prediction_span,
+                     std::move(immediate_callback));
+}
+
+void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
+                                       RequestPresentationTimesCallback callback) {
+  session_->RequestPresentationTimes(requested_prediction_span, std::move(callback));
 }
 
 void Session::Unbind() {
