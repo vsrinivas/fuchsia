@@ -28,13 +28,15 @@
 #include "decoder_instance.h"
 #include "device_ctx.h"
 #include "firmware_blob.h"
+#include "parser.h"
 #include "registers.h"
 #include "stream_buffer.h"
 #include "video_decoder.h"
 
 class AmlogicVideo final : public VideoDecoder::Owner,
                            public DecoderCore::Owner,
-                           public CanvasEntry::Owner {
+                           public CanvasEntry::Owner,
+                           public Parser::Owner {
  public:
   AmlogicVideo();
 
@@ -57,8 +59,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                     uint32_t alignment_log2, uint32_t flags,
                                                     const char* name) override;
-  [[nodiscard]]
-  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
+  [[nodiscard]] fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
 
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
       __TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -96,27 +97,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
   __WARN_UNUSED_RESULT
   zx_status_t InitializeEsParser();
-  __WARN_UNUSED_RESULT
-  zx_status_t ParseVideo(void* data, uint32_t len);
-  __WARN_UNUSED_RESULT
-  zx_status_t ParseVideoPhysical(zx_paddr_t paddr, uint32_t len);
 
-  // If parser_running_, try to cause WaitForParsingCompleted() to return
-  // ZX_ERR_CANCELED ASAP.  If !parser_running_, do nothing.  The caller is
-  // responsible for ensuring that only its own decoder's work is ever canceled.
-  void TryStartCancelParsing();
-  // Any error: The caller should call CancelParsing() to clean up.
-  // ZX_ERR_CANCELED: TryStartCancelParsing() was called and the caller should
-  //   call CancelParsing() to cancel the parsing, just as the caller
-  //   does for any error from WaitForParsingCompleted().  This error code in
-  //   this context can be thought of as ZX_ERR_YOU_SHOULD_CANCEL_PARSING_NOW.
-  //   It's not an indication that parsing is already canceled, only that the
-  //   caller should call CancelParsing().
-  // ZX_OK: The parsing is done.  If the caller called TryStartCancelParsing()
-  //   at some point, no harm done.  The caller should not call CancelParsing().
-  __WARN_UNUSED_RESULT
-  zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
-  void CancelParsing();
+  __WARN_UNUSED_RESULT Parser* parser() { return parser_.get(); }
+
   __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
 
@@ -184,7 +167,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::unique_ptr<DmcRegisterIo> dmc_;
   std::unique_ptr<ResetRegisterIo> reset_;
   std::unique_ptr<DemuxRegisterIo> demux_;
-  std::unique_ptr<ParserRegisterIo> parser_;
+  std::unique_ptr<ParserRegisterIo> parser_regs_;
 
   std::unique_ptr<MmioRegisters> registers_;
 
@@ -194,26 +177,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // can create their own separate InterfaceHandle<Allocator>(s) by calling
   // ConnectToSysmem().
   fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
-  std::unique_ptr<io_buffer_t> parser_input_;
-
-  // This buffer holds an ES start code that's used to get an interrupt when the
-  // parser is finished.
-  io_buffer_t search_pattern_ = {};
 
   zx::bti bti_;
-
-  // ZX_USER_SIGNAL_0 is for parser done.
-  // ZX_USER_SIGNAL_1 is for client wants ParseVideo() to return
-  //   ZX_ERR_CANCELED ASAP.
-  //
-  // Both must be un-signaled while parser_running_ is false (transients while
-  // under parser_running_lock_ are fine).
-  //
-  // While parser_running_ is true, either can become signaled as appropriate.
-  zx::event parser_finished_event_;
-
-  std::mutex parser_running_lock_;
-  bool parser_running_ = false;
 
   zx::handle parser_interrupt_handle_;
   zx::handle vdec0_interrupt_handle_;
@@ -236,6 +201,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // The decoder core for the currently-running decoder. It must be powered on.
   DecoderCore* core_ = nullptr;
+
+  std::unique_ptr<Parser> parser_;
 
   __TA_GUARDED(video_decoder_lock_)
   std::unique_ptr<DecoderInstance> current_instance_;

@@ -87,6 +87,8 @@ if (target_cpu == "arm64") {
       "macros.h",
       "mpeg12_decoder.cc",
       "mpeg12_decoder.h",
+      "parser.cc",
+      "parser.h",
       "pts_manager.cc",
       "pts_manager.h",
       "registers.h",

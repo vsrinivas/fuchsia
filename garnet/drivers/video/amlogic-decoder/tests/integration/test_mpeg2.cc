@@ -50,8 +50,8 @@ class TestMpeg2 {
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
     auto bear_mpeg2 = TestSupport::LoadFirmwareFile("video_test_data/bear.mpeg2");
     ASSERT_NE(nullptr, bear_mpeg2);
-    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_mpeg2->ptr, bear_mpeg2->size));
-    EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
+    EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(bear_mpeg2->ptr, bear_mpeg2->size));
+    EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
 
     EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 

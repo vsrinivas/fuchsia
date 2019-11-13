@@ -66,8 +66,8 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(
-          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
+                                /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -86,8 +86,8 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+                 frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
@@ -101,8 +101,8 @@ class TestH264 {
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-      EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264->ptr, bear_h264->size));
-      EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
+      EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(bear_h264->ptr, bear_h264->size));
+      EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
       video->core_->InitializeDirectInput();
       EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_h264->ptr, bear_h264->size));
@@ -112,8 +112,8 @@ class TestH264 {
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     if (use_parser) {
-      EXPECT_EQ(ZX_OK, video->ParseVideo(larger_h264->ptr, larger_h264->size));
-      EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
+      EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(larger_h264->ptr, larger_h264->size));
+      EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
     } else {
       EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(larger_h264->ptr, larger_h264->size));
     }
@@ -138,8 +138,8 @@ class TestH264 {
     ASSERT_NE(nullptr, bear_h264);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(
-          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
+                                /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE, /*is_secure=*/false);
     video->InitializeInterrupts();
@@ -157,8 +157,8 @@ class TestH264 {
             ++frame_count;
             EXPECT_EQ(320u, frame->display_width);
             EXPECT_EQ(180u, frame->display_height);
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+                 frame->coded_height);
             constexpr uint32_t kFirstVideoFrameCount = 26;
             if (frame_count == kFirstVideoFrameCount)
               wait_valid.set_value();
@@ -210,8 +210,8 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(
-          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
+                                /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -228,8 +228,8 @@ class TestH264 {
           [&video, &frame_count, &first_wait_valid,
            &received_pts_set](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count,
-                 frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+                 frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
@@ -267,8 +267,8 @@ class TestH264 {
         video->pts_manager()->InsertPts(parsed_video_size, true, pts_count++);
       }
       if (use_parser) {
-        EXPECT_EQ(ZX_OK, video->ParseVideo(nal.data(), nal.size()));
-        EXPECT_EQ(ZX_OK, video->WaitForParsingCompleted(ZX_SEC(10)));
+        EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(nal.data(), nal.size()));
+        EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
       } else {
         EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(nal.data(), nal.size()));
       }

@@ -5,8 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
 
-#include <ddk/io-buffer.h>
 #include <lib/zx/handle.h>
+
+#include <ddk/io-buffer.h>
 
 #include "internal_buffer.h"
 #include "memory_barriers.h"
@@ -18,6 +19,8 @@ struct MmioRegisters {
   DmcRegisterIo* dmc;
   HiuRegisterIo* hiubus;
   ResetRegisterIo* reset;
+  ParserRegisterIo* parser;
+  DemuxRegisterIo* demux;
 };
 
 struct InputContext {
@@ -37,21 +40,17 @@ class DecoderCore {
  public:
   class Owner {
    public:
-    [[nodiscard]]
-    virtual zx::unowned_bti bti() = 0;
+    [[nodiscard]] virtual zx::unowned_bti bti() = 0;
 
-    [[nodiscard]]
-    virtual MmioRegisters* mmio() = 0;
+    [[nodiscard]] virtual MmioRegisters* mmio() = 0;
 
     virtual void UngateClocks() = 0;
 
     virtual void GateClocks() = 0;
 
-    [[nodiscard]]
-    virtual DeviceType device_type() = 0;
+    [[nodiscard]] virtual DeviceType device_type() = 0;
 
-    [[nodiscard]]
-    virtual fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() = 0;
+    [[nodiscard]] virtual fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() = 0;
   };
 
   virtual ~DecoderCore() {}
@@ -74,8 +73,8 @@ class DecoderCore {
   virtual __WARN_UNUSED_RESULT uint32_t GetStreamInputOffset() = 0;
   virtual __WARN_UNUSED_RESULT uint32_t GetReadOffset() = 0;
 
-  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(
-      InputContext* context, bool is_secure) {
+  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(InputContext* context,
+                                                                  bool is_secure) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void SaveInputContext(InputContext* context) {}

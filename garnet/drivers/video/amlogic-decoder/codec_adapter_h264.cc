@@ -185,8 +185,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     // invalidate call here instead of two with no downsides.
     //
     // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                     frame->stride * frame->coded_height);
+    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
     io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                      frame->stride * frame->coded_height / 2);
 
@@ -297,7 +296,7 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // preventing us from starting another wait.  Or if we didn't set
   // is_cancelling_input_processing_ = true soon enough, then this call does
   // make WaitForParsingCompleted() return faster.
-  video_->TryStartCancelParsing();
+  video_->parser()->TryStartCancelParsing();
 
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -513,8 +512,8 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
 
   constraints->set_is_physically_contiguous_required(true);
   ::zx::bti very_temp_kludge_bti;
-  zx_status_t dup_status = ::zx::unowned_bti(video_->bti())
-                               ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
+  zx_status_t dup_status =
+      ::zx::unowned_bti(video_->bti())->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
   if (dup_status != ZX_OK) {
     events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d", dup_status);
     return nullptr;
@@ -1159,13 +1158,13 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
     // Convert data from vaddr to paddr.  All the input buffers are pinned
     // continuously.
     zx_paddr_t data_paddr = buffer->physical_base() + (data - buffer->base());
-    status = video_->ParseVideoPhysical(data_paddr, length);
+    status = video_->parser()->ParseVideoPhysical(data_paddr, length);
     if (status != ZX_OK) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
     }
   } else {
-    status = video_->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length);
+    status = video_->parser()->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length);
     if (status != ZX_OK) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return false;
@@ -1200,9 +1199,9 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
     is_cancelling = is_cancelling_input_processing_;
   }
 
-  if (is_cancelling || ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+  if (is_cancelling || ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
     DLOG("is_cancelling: %u", is_cancelling);
-    video_->CancelParsing();
+    video_->parser()->CancelParsing();
     OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
     return false;
   }
