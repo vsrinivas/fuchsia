@@ -5,6 +5,7 @@
 use failure::{format_err, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::*;
+use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -71,7 +72,15 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
             if let Some(stash_value) = self.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
             {
                 if let Value::Stringval(string_value) = &*stash_value {
-                    self.current_data = Some(serde_json::from_str(&string_value).unwrap());
+                    let data = match serde_json::from_str(&string_value) {
+                        Ok(val) => val,
+                        Err(e) => {
+                            fx_log_err!("Failed to serialize value from stash, returning default");
+                            fx_log_err!("{}", e);
+                            T::DEFAULT_VALUE
+                        }
+                    };
+                    self.current_data = Some(data);
                 } else {
                     panic!("Unexpected type for key found in stash");
                 }
@@ -310,6 +319,32 @@ mod tests {
                 match req {
                     StoreAccessorRequest::GetValue { key: _, responder } => {
                         responder.send(None.map(OutOfLineUnion)).unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        let mut storage: DeviceStorage<TestStruct> = DeviceStorage::new(stash_proxy, None);
+
+        let result = storage.get().await;
+
+        assert_eq!(result.value, VALUE0);
+    }
+
+    // For an invalid stash value, the get() method should return the default value.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_invalid_stash() {
+        let (stash_proxy, mut stash_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        fasync::spawn(async move {
+            while let Some(req) = stash_stream.try_next().await.unwrap() {
+                #[allow(unreachable_patterns)]
+                    match req {
+                    StoreAccessorRequest::GetValue { key: _, responder } => {
+                        let mut response = Value::Stringval("invalid value".to_string());
+                        responder.send(Some(&mut response).map(OutOfLineUnion)).unwrap();
                     }
                     _ => {}
                 }

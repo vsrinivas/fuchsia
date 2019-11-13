@@ -454,7 +454,6 @@ fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage
 
 fn str_to_audio_source(src: &str) -> Result<fidl_fuchsia_settings::AudioStreamSettingSource, &str> {
     match src.to_lowercase().as_str() {
-        "default" | "d" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::Default),
         "user" | "u" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
         "system" | "s" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
         _ => Err("Couldn't parse audio source type"),
@@ -503,9 +502,8 @@ mod tests {
     #[test]
     fn test_str_to_audio_source() {
         println!("Running test_str_to_audio_source");
-        let test_cases = vec!["Default", "USER", "system", "unexpected_source_type"];
+        let test_cases = vec!["USER", "system", "unexpected_source_type"];
         let expected = vec![
-            Ok(fidl_fuchsia_settings::AudioStreamSettingSource::Default),
             Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
             Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
             Err("Couldn't parse audio source type"),

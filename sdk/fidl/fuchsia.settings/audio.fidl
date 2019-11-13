@@ -20,16 +20,14 @@ protocol Audio {
 
 /// The source of the volume settings. The volume is set according to the source.
 enum AudioStreamSettingSource {
-    /// The volume is default.
-    DEFAULT = 0;
 
     /// The volume is set by the user. When the |source| in AudioStreamSettings is
     /// set to this, the audio volume is set to |user_volume|.
-    USER = 1;
+    USER = 0;
 
     /// The system takes control of the volume. This is used when the system constantly
     /// calculates and changes the volume. The volume is not stored for this source.
-    SYSTEM = 2;
+    SYSTEM = 1;
 };
 
 table Volume {

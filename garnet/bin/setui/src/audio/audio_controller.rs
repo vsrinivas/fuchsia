@@ -43,7 +43,7 @@ pub const DEFAULT_AUDIO_INFO: AudioInfo =
 pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
     AudioStream {
         stream_type: stream_type,
-        source: AudioSettingSource::Default,
+        source: AudioSettingSource::User,
         user_volume_level: DEFAULT_VOLUME_LEVEL,
         user_volume_muted: DEFAULT_VOLUME_MUTED,
     }

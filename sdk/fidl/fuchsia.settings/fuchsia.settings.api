@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.settings/accessibility.fidl": "6eb250d1b8b1e943425860276946de30",
-  "fidl/fuchsia.settings/audio.fidl": "239ad60eee553d2d91fd715fcee75f1c",
+  "fidl/fuchsia.settings/audio.fidl": "095adae90bcd13394d17b39138964395",
   "fidl/fuchsia.settings/device.fidl": "f20ca892f948380b2630ddaa8769e946",
   "fidl/fuchsia.settings/display.fidl": "53088b83ff68e0efc861fd06f828d513",
   "fidl/fuchsia.settings/do_not_disturb.fidl": "cf2a2a00a6905d3a796693793547478b",

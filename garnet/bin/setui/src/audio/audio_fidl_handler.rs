@@ -82,7 +82,6 @@ impl From<AudioStreamType> for AudioRenderUsage {
 impl From<AudioStreamSettingSource> for AudioSettingSource {
     fn from(source: AudioStreamSettingSource) -> Self {
         match source {
-            AudioStreamSettingSource::Default => AudioSettingSource::Default,
             AudioStreamSettingSource::User => AudioSettingSource::User,
             AudioStreamSettingSource::System => AudioSettingSource::System,
         }
@@ -92,7 +91,6 @@ impl From<AudioStreamSettingSource> for AudioSettingSource {
 impl From<AudioSettingSource> for AudioStreamSettingSource {
     fn from(source: AudioSettingSource) -> Self {
         match source {
-            AudioSettingSource::Default => AudioStreamSettingSource::Default,
             AudioSettingSource::User => AudioStreamSettingSource::User,
             AudioSettingSource::System => AudioStreamSettingSource::System,
         }
