@@ -51,9 +51,5 @@ bool VdsoWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     writer->Printf("VDSO_INTERFACE_FUNCTION(zx_%s);\n\n", syscall->name().c_str());
   }
 
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
-
   return true;
 }

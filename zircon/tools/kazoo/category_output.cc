@@ -24,13 +24,12 @@ bool CategoryOutput(const SyscallLibrary& library, Writer* writer) {
 
     if (!syscalls_in_category.empty()) {
       std::string category_kernel_style = CamelToSnake(category);
-      // TODO(syscall-fidl-transition): Extra leading \n here for consistency.
-      writer->Printf("\n#define HAVE_SYSCALL_CATEGORY_%s 1\n", category_kernel_style.c_str());
+      writer->Printf("#define HAVE_SYSCALL_CATEGORY_%s 1\n", category_kernel_style.c_str());
       writer->Printf("SYSCALL_CATEGORY_BEGIN(%s)\n", category_kernel_style.c_str());
       for (const auto& name : syscalls_in_category) {
         writer->Printf("    SYSCALL_IN_CATEGORY(%s)\n", name.c_str());
       }
-      writer->Printf("SYSCALL_CATEGORY_END(%s)\n", category_kernel_style.c_str());
+      writer->Printf("SYSCALL_CATEGORY_END(%s)\n\n", category_kernel_style.c_str());
     }
   }
 

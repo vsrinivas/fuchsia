@@ -24,9 +24,5 @@ bool AsmOutput(const SyscallLibrary& library, Writer* writer) {
     ++i;
   }
 
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
-
   return true;
 }

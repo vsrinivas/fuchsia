@@ -19,9 +19,5 @@ bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer) {
                    syscall->name().c_str());
   }
 
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
-
   return true;
 }

@@ -26,7 +26,6 @@ TEST(AsmOutput, Simple) {
 
 m_syscall zx_couple_do_thing 0 1 1
 m_syscall zx_couple_get_stuff 1 2 1
-
 )");
 }
 
@@ -47,7 +46,6 @@ TEST(AsmOutput, WithInternal) {
 
 m_syscall zx_couple_do_thing 0 1 0
 m_syscall zx_couple_get_stuff 1 2 1
-
 )");
 }
 

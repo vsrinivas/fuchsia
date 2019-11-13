@@ -9,12 +9,10 @@ namespace {
 
 void KernelDeclaration(const Syscall& syscall, Writer* writer) {
   writer->Printf("%s ", GetCKernelModeName(syscall.kernel_return_type()).c_str());
-  writer->Printf("sys_%s(\n", syscall.name().c_str());
+  writer->Printf("sys_%s(", syscall.name().c_str());
 
-  if (syscall.kernel_arguments().size() == 0) {
-    // TODO(syscall-fidl-transition): Drop this, and maybe the preceding \n.
-    writer->Printf("    ");
-  } else {
+  if (syscall.kernel_arguments().size() > 0) {
+    writer->Puts("\n");
     for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall.kernel_arguments()[i];
       const bool last = i == syscall.kernel_arguments().size() - 1;
@@ -43,10 +41,6 @@ bool KernelHeaderOutput(const SyscallLibrary& library, Writer* writer) {
 
     KernelDeclaration(*syscall, writer);
   }
-
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
 
   return true;
 }

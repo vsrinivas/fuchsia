@@ -107,7 +107,6 @@ __EXPORT extern zx_status_t _zx_selection_clock_get(
     zx_clock_t clock_id,
     zx_time_t* out) __NONNULL((2)) __LEAF_FN;
 
-
 )");
 }
 

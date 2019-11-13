@@ -33,8 +33,7 @@ zx_status_t sys_kernelcases_bti_pin(
     size_t num_addrs,
     user_out_handle* pmt);
 
-void sys_kernelcases_thread_exit(
-    ) __NO_RETURN;
+void sys_kernelcases_thread_exit() __NO_RETURN;
 
 zx_status_t sys_kernelcases_mtrace_control(
     zx_handle_t handle,
@@ -53,7 +52,6 @@ zx_status_t sys_kernelcases_read(
     uint32_t num_handles,
     user_out_ptr<uint32_t> actual_bytes,
     user_out_ptr<uint32_t> actual_handles);
-
 
 )");
 }

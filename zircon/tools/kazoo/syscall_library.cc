@@ -275,9 +275,9 @@ bool Syscall::MapRequestResponseToKernelAbi() {
     }
   }
 
-  // TODO(syscall-fidl-transition): Now that we've got all the arguments in their natural order,
-  // honor the "ArgReorder" attribute, which reorders arguments arbitrarily to match existing
-  // declaration order.
+  // Now that we've got all the arguments in their natural order, honor the
+  // "ArgReorder" attribute, which reorders arguments arbitrarily to match
+  // existing declaration order.
   return HandleArgReorder();
 }
 

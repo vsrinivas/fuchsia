@@ -25,7 +25,6 @@ TEST(KernelBranchesOutput, Simple) {
 
 start_syscall_dispatch
 syscall_dispatch 1 single_do_thing
-
 )");
 }
 

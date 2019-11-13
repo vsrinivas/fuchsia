@@ -69,7 +69,6 @@ extern {
         m: zx_ticks_t
         );
 
-
 }
 )");
 }

@@ -19,9 +19,5 @@ bool UserHeaderOutput(const SyscallLibrary& library, Writer* writer) {
     CDeclaration(*syscall, "__EXPORT extern ", "_zx_", writer);
   }
 
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
-
   return true;
 }

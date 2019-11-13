@@ -29,7 +29,6 @@ TEST(JsonOutput, KernelCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -100,7 +99,6 @@ TEST(JsonOutput, KernelCases) {
         "noreturn"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -114,7 +112,6 @@ TEST(JsonOutput, KernelCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -170,7 +167,6 @@ TEST(JsonOutput, KernelCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -255,7 +251,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -269,7 +264,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -299,7 +293,6 @@ TEST(JsonOutput, RustCases) {
         "noreturn"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -313,7 +306,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -334,7 +326,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -390,7 +381,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -419,7 +409,6 @@ TEST(JsonOutput, RustCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -532,7 +521,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -590,7 +578,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -632,7 +619,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -681,7 +667,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -751,7 +736,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -801,7 +785,6 @@ TEST(JsonOutput, SelectionCases) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],
@@ -881,7 +864,6 @@ TEST(JsonOutput, RightsSpecs) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
         "handle", "must", "have", "ZX_RIGHT_DESTROY", "."
@@ -918,7 +900,6 @@ TEST(JsonOutput, OutVoidptr) {
         "*"
       ],
       "top_description": [
-        
       ],
       "requirements": [
       ],

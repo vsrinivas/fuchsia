@@ -85,8 +85,7 @@ bool RustOutput(const SyscallLibrary& library, Writer* writer) {
     }
     writer->Puts(";\n\n");
   }
-  // TODO(syscall-fidl-transition): Bonus \n here.
-  writer->Puts("\n}\n");
+  writer->Puts("}\n");
 
   return true;
 }

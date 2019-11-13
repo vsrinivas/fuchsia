@@ -49,8 +49,10 @@ function show_if_changed() {
   fi
 }
 
-# If you `mv /tmp/kazoo-output /tmp/kazoo-previous` for a build at origin/master,
-# then this will note any differences from master vs. the current work.
+# If you:
+#   rm -rf /tmp/kazoo-previous/ && mv /tmp/kazoo-output /tmp/kazoo-previous
+# for a build at origin/master, then this will note any differences from
+# master vs. the current work.
 if [ -d "/tmp/kazoo-previous/" ]; then
   show_if_changed "arm-asm.S"
   show_if_changed "syscall-category.inc"

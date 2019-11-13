@@ -43,7 +43,6 @@ zx_status_t _zx_syscall_test_wrapper(int32_t a, int32_t b, int32_t c) {
 
 VDSO_INTERFACE_FUNCTION(zx_syscall_test_wrapper);
 
-
 )");
 }
 

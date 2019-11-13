@@ -20,9 +20,5 @@ bool VdsoHeaderOutput(const SyscallLibrary& library, Writer* writer) {
     CDeclaration(*syscall, "__LOCAL extern ", "SYSCALL_zx_", writer);
   }
 
-  // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
-  // for consistency.
-  writer->Puts("\n");
-
   return true;
 }

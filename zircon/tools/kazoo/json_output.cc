@@ -92,9 +92,6 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
     const auto doc_split = BreakAsAbigenParser(syscall.short_description());
     if (!doc_split.empty()) {
       iprintn(("\"" + JoinStrings(doc_split, "\", \"") + "\"").c_str());
-    } else {
-      // TODO(syscall-fidl-transition): This is unnecessary.
-      iprintn("");
     }
     out();
     iprintn("],");
