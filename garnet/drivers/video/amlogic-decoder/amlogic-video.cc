@@ -68,10 +68,15 @@ enum Interrupt {
 };
 
 enum {
-  kComponentPdev,
-  kComponentSysmem,
-  kComponentCanvas,
-  kComponentCount,
+  kComponentPdev = 0,
+  kComponentSysmem = 1,
+  kComponentCanvas = 2,
+  // The tee is optional.
+  kComponentTee = 3,
+  // with tee
+  kMaxComponentCount = 4,
+  // without tee
+  kMinComponentCount = 3,
 };
 
 AmlogicVideo::AmlogicVideo() {
@@ -750,13 +755,17 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* components[kComponentCount];
+  zx_device_t* components[kMaxComponentCount];
   size_t actual;
   composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != countof(components)) {
+  if (actual < kMinComponentCount || actual > kMaxComponentCount) {
     DECODE_ERROR("could not get components\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
+  // If tee is available as a component, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
+  // if there were a less fragile way to detect this.  Passing in driver metadata for this doesn't
+  // seem worthwhile so far.  There's no tee on vim2.
+  is_tee_available_ = (actual == kMaxComponentCount);
 
   status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
@@ -774,6 +783,19 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol\n");
     return status;
+  }
+
+  if (is_tee_available_) {
+    status = device_get_protocol(components[kComponentTee], ZX_PROTOCOL_TEE, &tee_);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Could not get TEE protocol, despite is_tee_available_");
+      return status;
+    }
+    // TODO(39808): remove log spam once we're loading firmware via video_firmware TA
+    LOG(INFO, "Got ZX_PROTOCOL_TEE");
+  } else {
+    // TODO(39808): remove log spam once we're loading firmware via video_firmware TA
+    LOG(INFO, "Skipped ZX_PROTOCOL_TEE");
   }
 
   pdev_device_info_t info;

@@ -22,6 +22,7 @@
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
+#include <ddk/protocol/tee.h>
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
@@ -169,6 +170,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   pdev_protocol_t pdev_{};
   sysmem_protocol_t sysmem_{};
   amlogic_canvas_protocol_t canvas_{};
+
+  // Unlike sysmem and canvas, tee is optional (no tee on vim2).
+  tee_protocol_t tee_{};
+  bool is_tee_available_ = false;
+
   DeviceType device_type_ = DeviceType::kUnknown;
   zx::handle secure_monitor_;
   std::unique_ptr<CbusRegisterIo> cbus_;
