@@ -11,7 +11,7 @@ use crate::{
     path::Path,
     point::Point,
     segment::Segment,
-    tile::contour::{TileContour, TileContourBuilder},
+    tile::contour::{Contour, ContourBuilder},
 };
 
 mod segments;
@@ -23,7 +23,7 @@ pub use segments::{RasterSegments, RasterSegmentsIter};
 #[derive(Debug)]
 pub struct RasterInner {
     segments: RasterSegments,
-    tile_contour: TileContour,
+    contour: Contour,
 }
 
 impl RasterInner {
@@ -33,7 +33,7 @@ impl RasterInner {
         Raster {
             inner: Rc::clone(inner),
             translation,
-            translated_tile_contour: Some(inner.tile_contour.translated(translation)),
+            translated_contour: Some(inner.contour.translated(translation)),
         }
     }
 }
@@ -48,7 +48,7 @@ pub struct Raster {
     #[doc(hidden)]
     pub inner: Rc<RasterInner>,
     translation: Point<i32>,
-    translated_tile_contour: Option<TileContour>,
+    translated_contour: Option<Contour>,
 }
 
 impl Raster {
@@ -58,27 +58,27 @@ impl Raster {
         segments.collect()
     }
 
-    fn build_contour(segments: &RasterSegments) -> TileContour {
+    fn build_contour(segments: &RasterSegments) -> Contour {
         #[cfg(feature = "tracing")]
-        duration!("gfx", "Raster::tile_contour");
-        let mut tile_contour_builder = TileContourBuilder::new();
+        duration!("gfx", "Raster::contour");
+        let mut contour_builder = ContourBuilder::new();
 
         for segment in segments.iter() {
-            tile_contour_builder.enclose(&segment);
+            contour_builder.enclose(&segment);
         }
 
-        tile_contour_builder.build()
+        contour_builder.build()
     }
 
     fn from_segments(segments: impl Iterator<Item = Segment<f32>>) -> Self {
         let segments =
             Self::rasterize(segments.flat_map(|segment| segment.to_sp_segments()).flatten());
-        let tile_contour = Self::build_contour(&segments);
+        let contour = Self::build_contour(&segments);
 
         Self {
-            inner: Rc::new(RasterInner { segments, tile_contour }),
+            inner: Rc::new(RasterInner { segments, contour }),
             translation: Point::new(0, 0),
-            translated_tile_contour: None,
+            translated_contour: None,
         }
     }
 
@@ -117,12 +117,10 @@ impl Raster {
     }
 
     pub(crate) fn maxed() -> Self {
-        let inner = RasterInner {
-            segments: RasterSegments::new(),
-            tile_contour: TileContourBuilder::maxed(),
-        };
+        let inner =
+            RasterInner { segments: RasterSegments::new(), contour: ContourBuilder::maxed() };
 
-        Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_tile_contour: None }
+        Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_contour: None }
     }
 
     /// Creates a new raster from an `Iterator` of `paths`.
@@ -189,15 +187,15 @@ impl Raster {
 
         if self.translation != translation {
             self.translation = translation;
-            self.translated_tile_contour = Some(inner.tile_contour.translated(translation));
+            self.translated_contour = Some(inner.contour.translated(translation));
         }
     }
 
-    fn from_segments_and_contour<'r>(segments: RasterSegments, tile_contour: TileContour) -> Self {
+    fn from_segments_and_contour<'r>(segments: RasterSegments, contour: Contour) -> Self {
         Self {
-            inner: Rc::new(RasterInner { segments, tile_contour }),
+            inner: Rc::new(RasterInner { segments, contour }),
             translation: Point::new(0, 0),
-            translated_tile_contour: None,
+            translated_contour: None,
         }
     }
 
@@ -210,16 +208,16 @@ impl Raster {
     /// let union = Raster::union(iter::repeat(&Raster::empty()).take(3));
     /// ```
     pub fn union<'r>(rasters: impl Iterator<Item = &'r Self>) -> Self {
-        let mut tile_contour = TileContourBuilder::empty();
+        let mut contour = ContourBuilder::empty();
         let segments = rasters
             .map(|raster| {
-                tile_contour = tile_contour.union(raster.tile_contour());
+                contour = contour.union(raster.contour());
                 raster.segments().iter().map(move |segment| segment.translate(raster.translation))
             })
             .flatten()
             .collect();
 
-        Self::from_segments_and_contour(segments, tile_contour)
+        Self::from_segments_and_contour(segments, contour)
     }
 
     /// Creates a uinion-raster from all `rasters` but discards all segment data.
@@ -233,9 +231,8 @@ impl Raster {
     pub fn union_without_segments<'r>(rasters: impl Iterator<Item = &'r Self>) -> Self {
         Self::from_segments_and_contour(
             RasterSegments::new(),
-            rasters.fold(TileContourBuilder::empty(), |tile_contour, raster| {
-                tile_contour.union(raster.tile_contour())
-            }),
+            rasters
+                .fold(ContourBuilder::empty(), |contour, raster| contour.union(raster.contour())),
         )
     }
 
@@ -243,8 +240,8 @@ impl Raster {
         &self.inner.segments
     }
 
-    pub(crate) fn tile_contour(&self) -> &TileContour {
-        self.translated_tile_contour.as_ref().unwrap_or(&self.inner.tile_contour)
+    pub(crate) fn contour(&self) -> &Contour {
+        self.translated_contour.as_ref().unwrap_or(&self.inner.contour)
     }
 
     pub(crate) fn translation(&self) -> Point<i32> {
@@ -334,7 +331,7 @@ mod tests {
                 ),
             ]
         );
-        assert_eq!(union.inner.tile_contour.tiles(), vec![(0, 0)]);
+        assert_eq!(union.inner.contour.tiles(), vec![(0, 0)]);
     }
 
     #[test]
@@ -349,6 +346,6 @@ mod tests {
             Raster::union_without_segments([Raster::new(&path1), Raster::new(&path2)].into_iter());
 
         assert_eq!(union.inner.segments.iter().collect::<Vec<_>>(), vec![]);
-        assert_eq!(union.inner.tile_contour.tiles(), vec![(0, 0)]);
+        assert_eq!(union.inner.contour.tiles(), vec![(0, 0)]);
     }
 }

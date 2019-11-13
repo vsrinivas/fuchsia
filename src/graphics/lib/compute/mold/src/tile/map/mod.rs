@@ -20,14 +20,11 @@ use crate::{
     point::Point,
     raster::{Raster, RasterSegments},
     segment::Segment,
-    tile::{Tile, TileOp, TILE_SIZE},
+    tile::{Op, Tile, TILE_SIZE},
     PIXEL_WIDTH,
 };
 
-// TODO(dragostis): Remove in later CL.
-pub use painter::{ColorBuffer, PixelFormat};
-
-use painter::{Context, Painter};
+use painter::{ColorBuffer, Context, Painter, PixelFormat};
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
@@ -74,7 +71,7 @@ impl Tiles {
         let i = i.max(0);
 
         if 0 <= j && (j as usize) < height {
-            raster.tile_contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
+            raster.contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
                 if !is_partial || tile.needs_render {
                     tile.push_segment(p0, segment_range.clone());
                 }
@@ -136,7 +133,7 @@ impl<'m> Layers<'m> {
         self.layers.get(id).map(|layer| layer.raster.segments())
     }
 
-    pub fn ops(&self, id: &u32) -> Option<&[TileOp]> {
+    pub fn ops(&self, id: &u32) -> Option<&[Op]> {
         self.layers.get(id).map(|layer| &layer.ops[..])
     }
 }
@@ -200,12 +197,12 @@ impl Map {
         self.height
     }
 
-    pub fn global(&mut self, id: u32, ops: Vec<TileOp>) {
+    pub fn global(&mut self, id: u32, ops: Vec<Op>) {
         self.print(id, Layer::new(Raster::maxed(), ops));
     }
 
     fn touch_tiles(&mut self, raster: Raster) {
-        raster.tile_contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+        raster.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
     }
 
     pub fn print(&mut self, id: u32, layer: Layer) {
@@ -232,7 +229,7 @@ impl Map {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::print_changes");
         let raster = layer.raster.clone();
-        raster.tile_contour().for_each_tile(tiles, |tile| {
+        raster.contour().for_each_tile(tiles, |tile| {
             if !layer.is_partial.get() || tile.needs_render {
                 tile.new_layer(id, raster.translation());
             }
@@ -259,9 +256,7 @@ impl Map {
         for layer in self.layers.values() {
             if layer.new_segments.get() {
                 let raster = layer.raster.clone();
-                raster
-                    .tile_contour()
-                    .for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+                raster.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
             }
         }
 
@@ -381,7 +376,7 @@ pub(crate) mod tests {
     }
 
     fn print(map: &mut Map, id: u32, raster: Raster) {
-        map.print(id, Layer::new(raster, vec![TileOp::CoverWipNonZero]));
+        map.print(id, Layer::new(raster, vec![Op::CoverWipNonZero]));
     }
 
     fn segments(raster: &Raster, range: Range<usize>) -> LayerNode {
@@ -522,7 +517,7 @@ pub(crate) mod tests {
 
         let mut raster = Raster::new(&path);
 
-        map.global(0, vec![TileOp::ColorAccZero]);
+        map.global(0, vec![Op::ColorAccZero]);
 
         print(&mut map, 1, raster.clone());
 
@@ -569,8 +564,8 @@ pub(crate) mod tests {
 
         let raster = Raster::new(&path);
 
-        map.global(0, vec![TileOp::ColorAccZero]);
-        map.print(1, Layer::new(raster.clone(), vec![TileOp::CoverWipNonZero]));
+        map.global(0, vec![Op::ColorAccZero]);
+        map.print(1, Layer::new(raster.clone(), vec![Op::CoverWipNonZero]));
 
         // Multiple of 8.
         const STRIDE: usize = (WIDTH + 7) & !7;
@@ -601,7 +596,7 @@ pub(crate) mod tests {
 
         let raster = Raster::new(&path);
 
-        map.global(0, vec![TileOp::ColorAccZero]);
+        map.global(0, vec![Op::ColorAccZero]);
 
         print(&mut map, 1, raster.clone());
 

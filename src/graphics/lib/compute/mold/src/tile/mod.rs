@@ -12,11 +12,8 @@ mod op;
 
 use map::LayerNode;
 
-// TODO(dragostis): Remove in later CL.
-pub use crate::layer::Layer;
-pub use map::painter::{ColorBuffer, PixelFormat};
 pub use map::Map;
-pub use op::TileOp;
+pub use op::Op;
 
 pub(crate) const TILE_SIZE: usize = 32;
 pub(crate) const TILE_SHIFT: i32 = TILE_SIZE.trailing_zeros() as i32;

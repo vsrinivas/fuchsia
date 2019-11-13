@@ -12,7 +12,7 @@ use crate::{
     segment::Segment,
     tile::{
         map::{LayerNode, Layers},
-        Tile, TileOp, TILE_SIZE,
+        Op, Tile, TILE_SIZE,
     },
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
@@ -304,7 +304,7 @@ impl Painter {
     fn process_layer<'a, 'b, B: ColorBuffer>(
         &'a mut self,
         context: &'b Context<B>,
-    ) -> Option<(TileSegments<'b>, &'b [TileOp])> {
+    ) -> Option<(TileSegments<'b>, &'b [Op])> {
         let tile = context.tile;
 
         if let Some(layer) = tile.layers.get(self.layer_index) {
@@ -373,36 +373,36 @@ impl Painter {
                 #[cfg(feature = "tracing")]
                 duration!("gfx:mold", "Painter::execute_op", "op" => op.name());
                 match op {
-                    TileOp::CoverWipZero => self.cover_wip_zero(),
-                    TileOp::CoverWipNonZero => self.cover_wip(
+                    Op::CoverWipZero => self.cover_wip_zero(),
+                    Op::CoverWipNonZero => self.cover_wip(
                         segments.clone(),
                         segments.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::NonZero,
                     ),
-                    TileOp::CoverWipEvenOdd => self.cover_wip(
+                    Op::CoverWipEvenOdd => self.cover_wip(
                         segments.clone(),
                         segments.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::EvenOdd,
                     ),
-                    TileOp::CoverWipMask => self.cover_wip_mask(),
-                    TileOp::CoverAccZero => self.cover_acc_zero(),
-                    TileOp::CoverAccAccumulate => self.cover_acc_accumulate(),
-                    TileOp::CoverMaskZero => self.cover_mask_zero(),
-                    TileOp::CoverMaskOne => self.cover_mask_one(),
-                    TileOp::CoverMaskCopyFromWip => self.cover_mask_copy_from_wip(),
-                    TileOp::CoverMaskCopyFromAcc => self.cover_mask_copy_from_acc(),
-                    TileOp::CoverMaskInvert => self.cover_mask_invert(),
-                    TileOp::ColorWipZero => self.color_wip_zero(),
-                    TileOp::ColorWipFillSolid(color) => self.color_wip_fill_solid(*color),
-                    TileOp::ColorAccZero => self.color_acc_zero(),
-                    TileOp::ColorAccBlendOver => self.color_acc_blend_over(),
-                    TileOp::ColorAccBlendAdd => self.color_acc_blend_add(),
-                    TileOp::ColorAccBlendMultiply => self.color_acc_blend_multiply(),
-                    TileOp::ColorAccBackground(color) => self.color_acc_background(*color),
+                    Op::CoverWipMask => self.cover_wip_mask(),
+                    Op::CoverAccZero => self.cover_acc_zero(),
+                    Op::CoverAccAccumulate => self.cover_acc_accumulate(),
+                    Op::CoverMaskZero => self.cover_mask_zero(),
+                    Op::CoverMaskOne => self.cover_mask_one(),
+                    Op::CoverMaskCopyFromWip => self.cover_mask_copy_from_wip(),
+                    Op::CoverMaskCopyFromAcc => self.cover_mask_copy_from_acc(),
+                    Op::CoverMaskInvert => self.cover_mask_invert(),
+                    Op::ColorWipZero => self.color_wip_zero(),
+                    Op::ColorWipFillSolid(color) => self.color_wip_fill_solid(*color),
+                    Op::ColorAccZero => self.color_acc_zero(),
+                    Op::ColorAccBlendOver => self.color_acc_blend_over(),
+                    Op::ColorAccBlendAdd => self.color_acc_blend_add(),
+                    Op::ColorAccBlendMultiply => self.color_acc_blend_multiply(),
+                    Op::ColorAccBackground(color) => self.color_acc_background(*color),
                 }
             }
         }
@@ -432,12 +432,7 @@ impl Painter {
 mod tests {
     use super::*;
 
-    use crate::{
-        path::Path,
-        point::Point,
-        raster::Raster,
-        tile::{Layer, Map},
-    };
+    use crate::{layer::Layer, path::Path, point::Point, raster::Raster, tile::Map};
 
     fn polygon(path: &mut Path, points: &[(f32, f32)]) {
         for window in points.windows(2) {
@@ -535,7 +530,7 @@ mod tests {
         color_vertical: u32,
         color_horizontal: u32,
         color_background: u32,
-        blend_op: TileOp,
+        blend_op: Op,
     ) -> Map {
         let mut map = Map::new(3, 3);
 
@@ -545,16 +540,16 @@ mod tests {
         let mut band_horizontal = Path::new();
         polygon(&mut band_horizontal, &[(0.0, 2.0), (3.0, 2.0), (3.0, 1.0), (0.0, 1.0)]);
 
-        map.global(0, vec![TileOp::ColorAccZero]);
+        map.global(0, vec![Op::ColorAccZero]);
         map.print(
             1,
             Layer::new(
                 Raster::new(&band_vertical),
                 vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(color_vertical),
+                    Op::CoverWipZero,
+                    Op::CoverWipNonZero,
+                    Op::ColorWipZero,
+                    Op::ColorWipFillSolid(color_vertical),
                     blend_op,
                 ],
             ),
@@ -564,15 +559,15 @@ mod tests {
             Layer::new(
                 Raster::new(&band_horizontal),
                 vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(color_horizontal),
+                    Op::CoverWipZero,
+                    Op::CoverWipNonZero,
+                    Op::ColorWipZero,
+                    Op::ColorWipFillSolid(color_horizontal),
                     blend_op,
                 ],
             ),
         );
-        map.global(3, vec![TileOp::ColorAccBackground(color_background)]);
+        map.global(3, vec![Op::ColorAccBackground(color_background)]);
 
         map
     }
@@ -580,7 +575,7 @@ mod tests {
     #[test]
     fn blend_over() {
         assert_eq!(
-            draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, TileOp::ColorAccBlendOver)
+            draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, Op::ColorAccBlendOver)
                 .render_to_bitmap(),
             vec![
                 0xFF22_0000,
@@ -598,7 +593,7 @@ mod tests {
 
     #[test]
     fn blend_over_then_remove() {
-        let mut map = draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, TileOp::ColorAccBlendOver);
+        let mut map = draw_bands(0x2200_00FF, 0x0022_00FF, 0x0000_22FF, Op::ColorAccBlendOver);
 
         assert_eq!(
             map.render_to_bitmap(),
@@ -636,7 +631,7 @@ mod tests {
     #[test]
     fn subtle_opacity_accumulation() {
         assert_eq!(
-            draw_bands(0x0000_0001, 0x0000_0001, 0x0000_0001, TileOp::ColorAccBlendOver)
+            draw_bands(0x0000_0001, 0x0000_0001, 0x0000_0001, Op::ColorAccBlendOver)
                 .render_to_bitmap(),
             vec![
                 0xFF00_0000,

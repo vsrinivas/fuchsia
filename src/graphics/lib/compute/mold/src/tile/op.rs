@@ -5,8 +5,8 @@
 macro_rules! ops {
     ( @filter $slf:expr, [], [ $( $v1:ident )* ],  [ $( $v2:ident )* ] ) => {
         match $slf {
-            $( TileOp::$v1 => stringify!($v1), )*
-            $( TileOp::$v2(..) => stringify!($v2), )*
+            $( Op::$v1 => stringify!($v1), )*
+            $( Op::$v2(..) => stringify!($v2), )*
         }
     };
 
@@ -29,11 +29,11 @@ macro_rules! ops {
 
     ( $( $tokens:tt )* ) => {
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        pub enum TileOp {
+        pub enum Op {
             $( $tokens )*
         }
 
-        impl TileOp {
+        impl Op {
             #[cfg(feature = "tracing")]
             #[inline]
             pub(crate) fn name(&self) -> &'static str {

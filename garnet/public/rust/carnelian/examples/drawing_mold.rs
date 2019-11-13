@@ -12,8 +12,8 @@ use carnelian::{
 use failure::Error;
 use fuchsia_zircon::{ClockId, Time};
 use mold::{
-    tile::{ColorBuffer, Layer, Map, PixelFormat, TileOp},
-    Path, Raster,
+    tile::{Map, Op},
+    ColorBuffer, Layer, Path, PixelFormat, Raster,
 };
 use rusttype::{Contour, Font, Scale, Segment};
 use std::{
@@ -139,9 +139,9 @@ struct Contents {
 impl Contents {
     fn make_background(size: &Size) -> Map {
         let mut map = Map::new(size.width.floor() as usize, size.height.floor() as usize);
-        map.global(0, vec![TileOp::ColorAccZero]);
+        map.global(0, vec![Op::ColorAccZero]);
 
-        map.global(3, vec![TileOp::ColorAccBackground(0xEBD5_B3FF)]);
+        map.global(3, vec![Op::ColorAccBackground(0xEBD5_B3FF)]);
         map
     }
 
@@ -184,11 +184,11 @@ impl Contents {
             Layer::new(
                 self.rect.clone(),
                 vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(0x7B68_EEFF),
-                    TileOp::ColorAccBlendOver,
+                    Op::CoverWipZero,
+                    Op::CoverWipNonZero,
+                    Op::ColorWipZero,
+                    Op::ColorWipFillSolid(0x7B68_EEFF),
+                    Op::ColorAccBlendOver,
                 ],
             ),
         );
@@ -198,11 +198,11 @@ impl Contents {
             Layer::new(
                 raster,
                 vec![
-                    TileOp::CoverWipZero,
-                    TileOp::CoverWipNonZero,
-                    TileOp::ColorWipZero,
-                    TileOp::ColorWipFillSolid(0x0000_00FF),
-                    TileOp::ColorAccBlendOver,
+                    Op::CoverWipZero,
+                    Op::CoverWipNonZero,
+                    Op::ColorWipZero,
+                    Op::ColorWipFillSolid(0x0000_00FF),
+                    Op::ColorAccBlendOver,
                 ],
             ),
         );

@@ -7,13 +7,13 @@ use std::{
 };
 
 use mold::{
-    tile::{Map, TileOp},
+    tile::{Map, Op},
     Raster,
 };
 
 use crate::*;
 
-unsafe fn spn_to_tile_ops(cmds: &Vec<u32>) -> Vec<TileOp> {
+unsafe fn spn_to_tile_ops(cmds: &Vec<u32>) -> Vec<Op> {
     let cmds = slice::from_raw_parts(cmds.as_ptr(), cmds.capacity());
     let mut cmds = cmds.iter().copied();
     let mut ops = vec![];
@@ -21,37 +21,37 @@ unsafe fn spn_to_tile_ops(cmds: &Vec<u32>) -> Vec<TileOp> {
     while let Some(op) = cmds.next() {
         match op {
             SPN_STYLING_OPCODE_NOOP => (),
-            SPN_STYLING_OPCODE_COVER_NONZERO => ops.push(TileOp::CoverWipNonZero),
-            SPN_STYLING_OPCODE_COVER_EVENODD => ops.push(TileOp::CoverWipEvenOdd),
-            SPN_STYLING_OPCODE_COVER_ACCUMULATE => ops.push(TileOp::CoverAccAccumulate),
-            SPN_STYLING_OPCODE_COVER_MASK => ops.push(TileOp::CoverWipMask),
-            SPN_STYLING_OPCODE_COVER_WIP_ZERO => ops.push(TileOp::CoverWipZero),
-            SPN_STYLING_OPCODE_COVER_ACC_ZERO => ops.push(TileOp::CoverAccZero),
-            SPN_STYLING_OPCODE_COVER_MASK_ZERO => ops.push(TileOp::CoverMaskZero),
-            SPN_STYLING_OPCODE_COVER_MASK_ONE => ops.push(TileOp::CoverMaskOne),
-            SPN_STYLING_OPCODE_COVER_MASK_INVERT => ops.push(TileOp::CoverMaskInvert),
+            SPN_STYLING_OPCODE_COVER_NONZERO => ops.push(Op::CoverWipNonZero),
+            SPN_STYLING_OPCODE_COVER_EVENODD => ops.push(Op::CoverWipEvenOdd),
+            SPN_STYLING_OPCODE_COVER_ACCUMULATE => ops.push(Op::CoverAccAccumulate),
+            SPN_STYLING_OPCODE_COVER_MASK => ops.push(Op::CoverWipMask),
+            SPN_STYLING_OPCODE_COVER_WIP_ZERO => ops.push(Op::CoverWipZero),
+            SPN_STYLING_OPCODE_COVER_ACC_ZERO => ops.push(Op::CoverAccZero),
+            SPN_STYLING_OPCODE_COVER_MASK_ZERO => ops.push(Op::CoverMaskZero),
+            SPN_STYLING_OPCODE_COVER_MASK_ONE => ops.push(Op::CoverMaskOne),
+            SPN_STYLING_OPCODE_COVER_MASK_INVERT => ops.push(Op::CoverMaskInvert),
             SPN_STYLING_OPCODE_COLOR_FILL_SOLID => {
                 let color = cmds.next().expect(
                     "SPN_STYLING_OPCODE_COLOR_FILL_SOLID must be follow by the color value",
                 );
-                ops.push(TileOp::ColorWipFillSolid(color));
+                ops.push(Op::ColorWipFillSolid(color));
                 cmds.next();
             }
             SPN_STYLING_OPCODE_COLOR_FILL_GRADIENT_LINEAR => unimplemented!(),
-            SPN_STYLING_OPCODE_COLOR_WIP_ZERO => ops.push(TileOp::ColorWipZero),
-            SPN_STYLING_OPCODE_COLOR_ACC_ZERO => ops.push(TileOp::ColorAccZero),
-            SPN_STYLING_OPCODE_BLEND_OVER => ops.push(TileOp::ColorAccBlendOver),
-            SPN_STYLING_OPCODE_BLEND_PLUS => ops.push(TileOp::ColorAccBlendAdd),
-            SPN_STYLING_OPCODE_BLEND_MULTIPLY => ops.push(TileOp::ColorAccBlendMultiply),
+            SPN_STYLING_OPCODE_COLOR_WIP_ZERO => ops.push(Op::ColorWipZero),
+            SPN_STYLING_OPCODE_COLOR_ACC_ZERO => ops.push(Op::ColorAccZero),
+            SPN_STYLING_OPCODE_BLEND_OVER => ops.push(Op::ColorAccBlendOver),
+            SPN_STYLING_OPCODE_BLEND_PLUS => ops.push(Op::ColorAccBlendAdd),
+            SPN_STYLING_OPCODE_BLEND_MULTIPLY => ops.push(Op::ColorAccBlendMultiply),
             SPN_STYLING_OPCODE_BLEND_KNOCKOUT => unimplemented!(),
-            SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK => ops.push(TileOp::CoverMaskCopyFromWip),
-            SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK => ops.push(TileOp::CoverMaskCopyFromAcc),
+            SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK => ops.push(Op::CoverMaskCopyFromWip),
+            SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK => ops.push(Op::CoverMaskCopyFromAcc),
             SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND => {
                 let color = cmds.next().expect(
                     "SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND \
                      must be follow by the color value",
                 );
-                ops.push(TileOp::ColorAccBackground(color));
+                ops.push(Op::ColorAccBackground(color));
                 cmds.next();
             }
             SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE => (),
@@ -317,8 +317,7 @@ impl Styling {
                             .get(layer_id)
                             .map(|raster| raster.clone())
                             .unwrap_or_else(|| Raster::empty());
-                        let layer =
-                            mold::tile::Layer::new(raster, unsafe { spn_to_tile_ops(cmds) });
+                        let layer = mold::Layer::new(raster, unsafe { spn_to_tile_ops(cmds) });
 
                         prints.insert(id);
                         map.print(id, layer);
@@ -344,7 +343,7 @@ impl Styling {
                             if let Some(cmds) = enter_cmds {
                                 let id =
                                     Commands::new(*range_lo, CommandsType::Enter, *depth).value;
-                                let layer = mold::tile::Layer::new(raster.clone(), unsafe {
+                                let layer = mold::Layer::new(raster.clone(), unsafe {
                                     spn_to_tile_ops(cmds)
                                 });
 
@@ -354,7 +353,7 @@ impl Styling {
                             if let Some(cmds) = leave_cmds {
                                 let id =
                                     Commands::new(*range_hi, CommandsType::Leave, *depth).value;
-                                let layer = mold::tile::Layer::new(raster.clone(), unsafe {
+                                let layer = mold::Layer::new(raster.clone(), unsafe {
                                     spn_to_tile_ops(cmds)
                                 });
 

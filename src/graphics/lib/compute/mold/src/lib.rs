@@ -22,6 +22,7 @@ const PIXEL_SHIFT: i32 = PIXEL_WIDTH.trailing_zeros() as i32;
 // `GRID_LIMIT * PIXEL_WIDTH` must not exceed `i32::max_value()`.
 const GRID_LIMIT: i32 = 16_777_216 / PIXEL_WIDTH;
 
+pub use layer::Layer;
 pub use path::Path;
 pub use point::Point;
 pub use raster::{Raster, RasterInner};
