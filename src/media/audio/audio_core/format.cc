@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/format.h"
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio {
 
-AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType format)
-    : format_(format) {
+Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(stream_type) {
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
-  frames_per_ns_ = TimelineRate(format_.frames_per_second, ZX_SEC(1));
+  frames_per_ns_ = TimelineRate(stream_type_.frames_per_second, ZX_SEC(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed point timestamps.
   frame_to_media_ratio_ = TimelineRate(1 << kPtsFractionalBits, 1);
 
   // Figure out the total number of bytes in a packed frame.
-  switch (format_.sample_format) {
+  switch (stream_type_.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       bytes_per_frame_ = 1;
       break;
@@ -43,13 +42,26 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType
       break;
   }
 
-  bytes_per_frame_ *= format_.channels;
+  bytes_per_frame_ *= stream_type_.channels;
+}
+
+Format::Format(const Format& o)
+    : stream_type_(o.stream_type_),
+      frames_per_ns_(o.frames_per_ns_),
+      frame_to_media_ratio_(o.frame_to_media_ratio_),
+      bytes_per_frame_(o.bytes_per_frame_) {}
+
+Format& Format::operator=(const Format& o) {
+  stream_type_ = o.stream_type_;
+  frames_per_ns_ = o.frames_per_ns_;
+  frame_to_media_ratio_ = o.frame_to_media_ratio_;
+  bytes_per_frame_ = o.bytes_per_frame_;
+  return *this;
 }
 
 // static
-fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
-    fuchsia::media::AudioStreamType format) {
-  return fbl::AdoptRef(new AudioRendererFormatInfo(format));
+fbl::RefPtr<Format> Format::Create(fuchsia::media::AudioStreamType format) {
+  return fbl::MakeRefCounted<Format>(format);
 }
 
 }  // namespace media::audio

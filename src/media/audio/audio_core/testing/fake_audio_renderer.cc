@@ -26,7 +26,7 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 fbl::RefPtr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
     async_dispatcher_t* dispatcher) {
   auto renderer = FakeAudioRenderer::Create(dispatcher);
-  renderer->set_format_info(AudioRendererFormatInfo::Create(kDefaultStreamType));
+  renderer->set_format(Format::Create(kDefaultStreamType));
   return renderer;
 }
 
@@ -39,13 +39,13 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
 }
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) {
-  FX_CHECK(format_info_valid());
-  uint32_t frame_count = format_info()->frames_per_ns().Scale(duration.to_nsecs());
+  FX_CHECK(format_valid());
+  uint32_t frame_count = format()->frames_per_ns().Scale(duration.to_nsecs());
 
   fuchsia::media::StreamPacket packet;
   packet.pts = fuchsia::media::NO_TIMESTAMP;
   packet.payload_offset = buffer_offset_;
-  packet.payload_size = format_info()->bytes_per_frame() * frame_count;
+  packet.payload_size = format()->bytes_per_frame() * frame_count;
   buffer_offset_ += packet.payload_size;
 
   FX_CHECK(packet.payload_offset + packet.payload_size <= vmo_ref_->size());

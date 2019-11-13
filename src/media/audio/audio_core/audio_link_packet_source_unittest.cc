@@ -24,14 +24,13 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
     auto output = fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::Output));
     // The values chosen here are not important. The AudioLinkPacketSource doesn't actualy use this
     // internally so anything will do here for the purposes of these tests. It just has to be sane
-    // enough to pass the validation done in |AudioRendererFormatInfo|.
+    // enough to pass the validation done in |Format|.
     auto stream_type = fuchsia::media::AudioStreamType{
         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
         .channels = 2,
         .frames_per_second = 100,
     };
-    return AudioLinkPacketSource::Create(input, output,
-                                         AudioRendererFormatInfo::Create(stream_type));
+    return AudioLinkPacketSource::Create(input, output, Format::Create(stream_type));
   }
 
   fbl::RefPtr<AudioPacketRef> CreateAudioPacketRef(uint32_t payload_buffer_id = 0) {

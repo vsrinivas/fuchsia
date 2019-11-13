@@ -176,12 +176,12 @@ bool AudioRendererImpl::ValidateConfig() {
     return true;
   }
 
-  if (!format_info_valid() || payload_buffers_.empty()) {
+  if (!format_valid() || payload_buffers_.empty()) {
     return false;
   }
 
   // Compute the number of fractional frames per PTS tick.
-  uint32_t fps = format_info()->format().frames_per_second;
+  uint32_t fps = format()->stream_type().frames_per_second;
   uint32_t frac_fps = fps << kPtsFractionalBits;
   frac_frames_per_pts_tick_ =
       TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps, 1));
@@ -210,10 +210,10 @@ bool AudioRendererImpl::ValidateConfig() {
   // outputs (and selecting resampling filters) might belong here as well.
 
   // Initialize the WavWriter here.
-  wav_writer_.Initialize(nullptr, format_info()->format().sample_format,
-                         format_info()->format().channels,
-                         format_info()->format().frames_per_second,
-                         (format_info()->bytes_per_frame() * 8) / format_info()->format().channels);
+  wav_writer_.Initialize(nullptr, format()->stream_type().sample_format,
+                         format()->stream_type().channels,
+                         format()->stream_type().frames_per_second,
+                         (format()->bytes_per_frame() * 8) / format()->stream_type().channels);
 
   config_validated_ = true;
   return true;
@@ -364,7 +364,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
   cfg.frames_per_second = format.frames_per_second;
-  format_info_ = AudioRendererFormatInfo::Create(cfg);
+  format_ = Format::Create(cfg);
 
   route_graph_.SetRendererRoutingProfile(this, {.routable = true});
   volume_manager_.NotifyStreamChanged(this);
@@ -518,7 +518,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Start by making sure that the region we are receiving is made from an integral number of audio
   // frames. Count the total number of frames in the process.
-  uint32_t frame_size = format_info()->bytes_per_frame();
+  uint32_t frame_size = format()->bytes_per_frame();
   FX_DCHECK(frame_size != 0);
   if (packet.payload_size % frame_size) {
     FX_LOGS(ERROR) << "Region length (" << packet.payload_size

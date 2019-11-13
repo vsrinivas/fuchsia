@@ -12,7 +12,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -49,16 +49,16 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // The VolumeCurve for the object, representing its mapping from volume to gain.
   virtual std::optional<VolumeCurve> GetVolumeCurve() const { return std::nullopt; }
 
-  // Note: format_info() is subject to change and must only be accessed from the main message loop
-  // thread. Outputs which are running on mixer threads should never access format_info() directly
-  // from a mix thread. Instead, they should use the format_info which was assigned to the AudioLink
+  // Note: format() is subject to change and must only be accessed from the main message loop
+  // thread. Outputs which are running on mixer threads should never access format() directly
+  // from a mix thread. Instead, they should use the format which was assigned to the AudioLink
   // at the time the link was created.
-  virtual const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
-    static fbl::RefPtr<AudioRendererFormatInfo> null_info;
+  virtual const fbl::RefPtr<Format>& format() const {
+    static fbl::RefPtr<Format> null_info;
     return null_info;
   }
 
-  bool format_info_valid() const { return format_info() != nullptr; }
+  bool format_valid() const { return format() != nullptr; }
 
   virtual std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
       int64_t reference_time) {

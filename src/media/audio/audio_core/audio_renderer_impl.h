@@ -18,7 +18,7 @@
 
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -84,7 +84,7 @@ class AudioRendererImpl : public AudioObject,
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinLeadTime();
 
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<Format> format_;
 
   std::vector<fuchsia::media::AudioRenderUsage> allowed_usages_;
   fuchsia::media::AudioRenderUsage usage_;
@@ -144,7 +144,7 @@ class AudioRendererImpl : public AudioObject,
   void UnderflowOccurred(int64_t source_start, int64_t mix_point,
                          zx::duration underflow_duration) final;
   void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) final;
-  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const final { return format_info_; }
+  const fbl::RefPtr<Format>& format() const final { return format_; }
   std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
       int64_t reference_time) final;
 

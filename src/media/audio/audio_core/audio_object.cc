@@ -37,8 +37,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   // Create a link of the appropriate type based on our source.
   fbl::RefPtr<AudioLink> link;
   if (source->type() == AudioObject::Type::AudioRenderer) {
-    FX_DCHECK(source->format_info_valid());
-    link = AudioLinkPacketSource::Create(source, dest, source->format_info());
+    FX_DCHECK(source->format_valid());
+    link = AudioLinkPacketSource::Create(source, dest, source->format());
   } else {
     link = AudioLinkRingBufferSource::Create(source, dest);
   }

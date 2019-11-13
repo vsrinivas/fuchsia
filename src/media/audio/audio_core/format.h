@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/media/cpp/timeline_rate.h>
@@ -12,25 +12,25 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/macros.h"
-
 namespace media::audio {
 
-class AudioRendererFormatInfo : public fbl::RefCounted<AudioRendererFormatInfo> {
+class Format : public fbl::RefCounted<Format> {
  public:
-  static fbl::RefPtr<AudioRendererFormatInfo> Create(fuchsia::media::AudioStreamType format);
+  static fbl::RefPtr<Format> Create(fuchsia::media::AudioStreamType format);
 
-  const fuchsia::media::AudioStreamType& format() const { return format_; }
+  Format(fuchsia::media::AudioStreamType format);
+
+  // Allow copy.
+  Format(const Format&);
+  Format& operator=(const Format&);
+
+  const fuchsia::media::AudioStreamType& stream_type() const { return stream_type_; }
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }
   const TimelineRate& frame_to_media_ratio() const { return frame_to_media_ratio_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(AudioRendererFormatInfo);
-
-  AudioRendererFormatInfo(fuchsia::media::AudioStreamType format);
-
-  fuchsia::media::AudioStreamType format_;
+  fuchsia::media::AudioStreamType stream_type_;
   TimelineRate frames_per_ns_;
   TimelineRate frame_to_media_ratio_;
   uint32_t bytes_per_frame_;
@@ -38,4 +38,4 @@ class AudioRendererFormatInfo : public fbl::RefCounted<AudioRendererFormatInfo> 
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_FORMAT_H_

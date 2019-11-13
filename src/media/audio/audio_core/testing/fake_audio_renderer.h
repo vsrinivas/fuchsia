@@ -24,15 +24,13 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   FakeAudioRenderer(async_dispatcher_t* dispatcher);
 
-  void set_format_info(fbl::RefPtr<AudioRendererFormatInfo> format_info) {
-    format_info_ = std::move(format_info);
-  }
+  void set_format(fbl::RefPtr<Format> format) { format_ = std::move(format); }
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
   void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1));
 
   // |media::audio::AudioObject|
-  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const override { return format_info_; }
+  const fbl::RefPtr<Format>& format() const override { return format_; }
   std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
       int64_t reference_time) override {
     return {std::make_pair(timeline_func_, 1)};
@@ -65,7 +63,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   zx::duration FindMinLeadTime();
 
   async_dispatcher_t* dispatcher_;
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_ = nullptr;
+  fbl::RefPtr<Format> format_ = nullptr;
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   size_t buffer_offset_ = 0;
   TimelineFunction timeline_func_;

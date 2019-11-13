@@ -6,7 +6,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -30,10 +30,9 @@ class FakeAudioObject : public AudioObject {
 
   FakeAudioObject(AudioObject::Type object_type)
       : AudioObject(object_type),
-        format_info_(AudioRendererFormatInfo::Create(
-            {.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8})) {}
+        format_(Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8})) {}
 
-  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const override { return format_info_; }
+  const fbl::RefPtr<Format>& format() const override { return format_; }
 
   std::vector<AudioObject*> SourceLinks() {
     std::vector<AudioObject*> source_links;
@@ -49,7 +48,7 @@ class FakeAudioObject : public AudioObject {
   }
 
  private:
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<Format> format_;
 };
 
 // TODO(39532): Remove; use a real output class with fake hardware.

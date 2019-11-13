@@ -14,7 +14,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_packet_ref.h"
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
 namespace media::audio {
@@ -23,7 +23,7 @@ class AudioLinkPacketSource : public AudioLink {
  public:
   static fbl::RefPtr<AudioLinkPacketSource> Create(fbl::RefPtr<AudioObject> source,
                                                    fbl::RefPtr<AudioObject> dest,
-                                                   fbl::RefPtr<AudioRendererFormatInfo> format);
+                                                   fbl::RefPtr<Format> format);
   ~AudioLinkPacketSource() override;
 
   // Accessor for the format info assigned to this link.
@@ -34,7 +34,7 @@ class AudioLinkPacketSource : public AudioLink {
   // needing to obtain any locks. A lock-less single writer, single reader, triple-buffer object
   // would be perfect for this (I have one of these lying around from a previous project, I just
   // need to see if I am allowed to use it or not).
-  const AudioRendererFormatInfo& format_info() const { return *format_info_; }
+  const Format& format() const { return *format_; }
 
   // Common pending queue ops.
   bool pending_queue_empty() const {
@@ -61,9 +61,9 @@ class AudioLinkPacketSource : public AudioLink {
 
  private:
   AudioLinkPacketSource(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
-                        fbl::RefPtr<AudioRendererFormatInfo> format_info);
+                        fbl::RefPtr<Format> format);
 
-  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<Format> format_;
 
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;

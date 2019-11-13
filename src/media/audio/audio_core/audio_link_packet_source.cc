@@ -6,16 +6,16 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/audio_renderer_format_info.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/format.h"
 
 namespace media::audio {
 
 AudioLinkPacketSource::AudioLinkPacketSource(fbl::RefPtr<AudioObject> source,
                                              fbl::RefPtr<AudioObject> dest,
-                                             fbl::RefPtr<AudioRendererFormatInfo> format_info)
+                                             fbl::RefPtr<Format> format)
     : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
-      format_info_(std::move(format_info)) {}
+      format_(std::move(format)) {}
 
 AudioLinkPacketSource::~AudioLinkPacketSource() {
   pending_flush_packet_queue_.clear();
@@ -24,9 +24,9 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 }
 
 // static
-fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
-    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
-    fbl::RefPtr<AudioRendererFormatInfo> format) {
+fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(fbl::RefPtr<AudioObject> source,
+                                                                 fbl::RefPtr<AudioObject> dest,
+                                                                 fbl::RefPtr<Format> format) {
   TRACE_DURATION("audio", "AudioLinkPacketSource::Create");
   FX_DCHECK(source);
   FX_DCHECK(dest);
