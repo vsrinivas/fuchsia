@@ -28,6 +28,8 @@ extern const fidl_type_t example_NoCodingTablesStresssorTable;
 extern const fidl_type_t example_UnionSize12Aligned4Table;
 extern const fidl_type_t example_XUnionWithUnionsTable;
 extern const fidl_type_t example_XUnionWithUnionsNullableRefTable;
+extern const fidl_type_t example_TableWithUnionSize12Aligned4Table;
+extern const fidl_type_t example_Regression8TableWithUnionSize12Aligned4Table;
 extern const fidl_type_t example_Sandwich2Table;
 extern const fidl_type_t example_UnionAtTheBottomTable;
 extern const fidl_type_t example_XUnionOfUnionTable;
@@ -77,6 +79,8 @@ extern const fidl_type_t example_SimpleTableArrayStructTable;
 extern const fidl_type_t example_Sandwich7Table;
 extern const fidl_type_t example_Sandwich1WithOptUnionTable;
 extern const fidl_type_t example_OutOfLineSandwich1WithOptUnionTable;
+extern const fidl_type_t example_Regression8VectorOfOptUnionSize12Aligned4Table;
+extern const fidl_type_t example_Regression8OptUnionSize12Aligned4Table;
 extern const fidl_type_t example_Regression3Table;
 extern const fidl_type_t example_Regression1Table;
 extern const fidl_type_t example_Regression2Table;
@@ -93,6 +97,7 @@ extern const fidl_type_t example_Regression6Table;
 
 static const fidl_type_t Pointer26example_UnionSize8Aligned4Table = fidl_type_t(::fidl::FidlCodedUnionPointer(&example_UnionSize8Aligned4Table.coded_union));
 static const fidl_type_t Pointer17example_Sandwich1Table = fidl_type_t(::fidl::FidlCodedStructPointer(&example_Sandwich1Table.coded_struct));
+static const fidl_type_t Pointer27example_UnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedUnionPointer(&example_UnionSize12Aligned4Table.coded_union));
 static const fidl_type_t Pointer29example_StructSize3Alignment1Table = fidl_type_t(::fidl::FidlCodedStructPointer(&example_StructSize3Alignment1Table.coded_struct));
 static const fidl_type_t Pointer19example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnionPointer(&example_StringUnionTable.coded_union));
 static const fidl_type_t Pointer19example_Size8Align8Table = fidl_type_t(::fidl::FidlCodedStructPointer(&example_Size8Align8Table.coded_struct));
@@ -176,6 +181,9 @@ static const fidl_type_t Array32_19example_SimpleTableTable = fidl_type_t(::fidl
 
 constexpr static inline const ::fidl::FidlCodedVector* Vector1nonnullable29example_Sandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 static const fidl_type_t Vector1nonnullable29example_Sandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedVector(&example_Sandwich1WithOptUnionTable, 1u, 24u, ::fidl::kNonnullable, Vector1nonnullable29example_Sandwich1WithOptUnionAltTypePointerTable()));
+
+constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+static const fidl_type_t Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedVector(&Pointer27example_UnionSize12Aligned4Table, 4294967295u, 8u, ::fidl::kNonnullable, Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4AltTypePointerTable()));
 
 static const fidl_type_t String200nonnullableTable = fidl_type_t(::fidl::FidlCodedString(200u, ::fidl::kNonnullable));
 
@@ -406,6 +414,19 @@ static const ::fidl::FidlXUnionField Fields35example_XUnionWithUnionsNullableRef
     ::fidl::FidlXUnionField(&example_UnionSize12Aligned4Table,1987954326u)
 };
 const fidl_type_t example_XUnionWithUnionsNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields35example_XUnionWithUnionsNullableRef, ::fidl::kNullable, "example/XUnionWithUnions", ::fidl::kFlexible));
+
+static const ::fidl::FidlTableField Fields36example_TableWithUnionSize12Aligned4[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint8Table,1u),
+    ::fidl::FidlTableField(&example_UnionSize12Aligned4Table,3u),
+    ::fidl::FidlTableField(&::fidl::internal::kUint8Table,5u)
+};
+const fidl_type_t example_TableWithUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedTable(Fields36example_TableWithUnionSize12Aligned4, 3u, "example/TableWithUnionSize12Aligned4"));
+
+static const ::fidl::FidlStructField Fields47example_Regression8TableWithUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&example_TableWithUnionSize12Aligned4Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression8TableWithUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields47example_Regression8TableWithUnionSize12Aligned4, 1u, 16u, "example/Regression8TableWithUnionSize12Aligned4", example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields17example_Sandwich2[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u),
@@ -731,6 +752,20 @@ static const ::fidl::FidlStructField Fields38example_OutOfLineSandwich1WithOptUn
 constexpr static inline const ::fidl::FidlCodedStruct* example_OutOfLineSandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_OutOfLineSandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38example_OutOfLineSandwich1WithOptUnion, 3u, 48u, "example/OutOfLineSandwich1WithOptUnion", example_OutOfLineSandwich1WithOptUnionAltTypePointerTable()));
 
+static const ::fidl::FidlStructField Fields49example_Regression8VectorOfOptUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression8VectorOfOptUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields49example_Regression8VectorOfOptUnionSize12Aligned4, 1u, 16u, "example/Regression8VectorOfOptUnionSize12Aligned4", example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields41example_Regression8OptUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&Pointer27example_UnionSize12Aligned4Table, 0u, 0u),
+    ::fidl::FidlStructField(&Pointer27example_UnionSize12Aligned4Table, 8u, 0u),
+    ::fidl::FidlStructField(&Pointer27example_UnionSize12Aligned4Table, 16u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8OptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression8OptUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields41example_Regression8OptUnionSize12Aligned4, 3u, 24u, "example/Regression8OptUnionSize12Aligned4", example_Regression8OptUnionSize12Aligned4AltTypePointerTable()));
+
 static const ::fidl::FidlStructField Fields19example_Regression3[] = {
     ::fidl::FidlStructField(&Pointer19example_Regression2Table, 0u, 0u)
 };
@@ -840,6 +875,8 @@ extern const fidl_type_t v1_example_NoCodingTablesStresssorTable;
 extern const fidl_type_t v1_example_UnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_XUnionWithUnionsTable;
 extern const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable;
+extern const fidl_type_t v1_example_TableWithUnionSize12Aligned4Table;
+extern const fidl_type_t v1_example_Regression8TableWithUnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_Sandwich2Table;
 extern const fidl_type_t v1_example_UnionAtTheBottomTable;
 extern const fidl_type_t v1_example_XUnionOfUnionTable;
@@ -889,6 +926,8 @@ extern const fidl_type_t v1_example_SimpleTableArrayStructTable;
 extern const fidl_type_t v1_example_Sandwich7Table;
 extern const fidl_type_t v1_example_Sandwich1WithOptUnionTable;
 extern const fidl_type_t v1_example_OutOfLineSandwich1WithOptUnionTable;
+extern const fidl_type_t v1_example_Regression8VectorOfOptUnionSize12Aligned4Table;
+extern const fidl_type_t v1_example_Regression8OptUnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_Regression3Table;
 extern const fidl_type_t v1_example_Regression1Table;
 extern const fidl_type_t v1_example_Regression2Table;
@@ -905,6 +944,7 @@ extern const fidl_type_t v1_example_Regression6Table;
 
 static const fidl_type_t v1_Pointer29v1_example_UnionSize8Aligned4Table = fidl_type_t(::fidl::FidlCodedUnionPointer(&v1_example_UnionSize8Aligned4Table.coded_union));
 static const fidl_type_t v1_Pointer20v1_example_Sandwich1Table = fidl_type_t(::fidl::FidlCodedStructPointer(&v1_example_Sandwich1Table.coded_struct));
+static const fidl_type_t v1_Pointer30v1_example_UnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedUnionPointer(&v1_example_UnionSize12Aligned4Table.coded_union));
 static const fidl_type_t v1_Pointer32v1_example_StructSize3Alignment1Table = fidl_type_t(::fidl::FidlCodedStructPointer(&v1_example_StructSize3Alignment1Table.coded_struct));
 static const fidl_type_t v1_Pointer22v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnionPointer(&v1_example_StringUnionTable.coded_union));
 static const fidl_type_t v1_Pointer22v1_example_Size8Align8Table = fidl_type_t(::fidl::FidlCodedStructPointer(&v1_example_Size8Align8Table.coded_struct));
@@ -988,6 +1028,9 @@ static const fidl_type_t v1_Array32_22v1_example_SimpleTableTable = fidl_type_t(
 
 constexpr static inline const ::fidl::FidlCodedVector* v1_Vector1nonnullable32v1_example_Sandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 static const fidl_type_t v1_Vector1nonnullable32v1_example_Sandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedVector(&v1_example_Sandwich1WithOptUnionTable, 1u, 40u, ::fidl::kNonnullable, v1_Vector1nonnullable32v1_example_Sandwich1WithOptUnionAltTypePointerTable()));
+
+constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+static const fidl_type_t v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedVector(&v1_Pointer30v1_example_UnionSize12Aligned4Table, 4294967295u, 24u, ::fidl::kNonnullable, v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4AltTypePointerTable()));
 
 static const fidl_type_t v1_String200nonnullableTable = fidl_type_t(::fidl::FidlCodedString(200u, ::fidl::kNonnullable));
 
@@ -1218,6 +1261,19 @@ static const ::fidl::FidlXUnionField Fields38v1_example_XUnionWithUnionsNullable
     ::fidl::FidlXUnionField(&v1_example_UnionSize12Aligned4Table,1987954326u)
 };
 const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(2u, Fields38v1_example_XUnionWithUnionsNullableRef, ::fidl::kNullable, "example/XUnionWithUnions", ::fidl::kFlexible));
+
+static const ::fidl::FidlTableField Fields39v1_example_TableWithUnionSize12Aligned4[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint8Table,1u),
+    ::fidl::FidlTableField(&v1_example_UnionSize12Aligned4Table,3u),
+    ::fidl::FidlTableField(&::fidl::internal::kUint8Table,5u)
+};
+const fidl_type_t v1_example_TableWithUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedTable(Fields39v1_example_TableWithUnionSize12Aligned4, 3u, "example/TableWithUnionSize12Aligned4"));
+
+static const ::fidl::FidlStructField Fields50v1_example_Regression8TableWithUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&v1_example_TableWithUnionSize12Aligned4Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression8TableWithUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields50v1_example_Regression8TableWithUnionSize12Aligned4, 1u, 16u, "example/Regression8TableWithUnionSize12Aligned4", v1_example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields20v1_example_Sandwich2[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -1542,6 +1598,20 @@ static const ::fidl::FidlStructField Fields41v1_example_OutOfLineSandwich1WithOp
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_OutOfLineSandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_OutOfLineSandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41v1_example_OutOfLineSandwich1WithOptUnion, 3u, 48u, "example/OutOfLineSandwich1WithOptUnion", v1_example_OutOfLineSandwich1WithOptUnionAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields52v1_example_Regression8VectorOfOptUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression8VectorOfOptUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields52v1_example_Regression8VectorOfOptUnionSize12Aligned4, 1u, 16u, "example/Regression8VectorOfOptUnionSize12Aligned4", v1_example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields44v1_example_Regression8OptUnionSize12Aligned4[] = {
+    ::fidl::FidlStructField(&v1_Pointer30v1_example_UnionSize12Aligned4Table, 0u, 0u),
+    ::fidl::FidlStructField(&v1_Pointer30v1_example_UnionSize12Aligned4Table, 24u, 0u),
+    ::fidl::FidlStructField(&v1_Pointer30v1_example_UnionSize12Aligned4Table, 48u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8OptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression8OptUnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields44v1_example_Regression8OptUnionSize12Aligned4, 3u, 72u, "example/Regression8OptUnionSize12Aligned4", v1_example_Regression8OptUnionSize12Aligned4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_example_Regression3[] = {
     ::fidl::FidlStructField(&v1_Pointer22v1_example_Regression2Table, 0u, 0u)
@@ -1872,6 +1942,17 @@ constexpr static inline const ::fidl::FidlCodedVector* v1_Vector1nonnullable32v1
 }
 
 
+constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4AltTypePointerTable() {
+  return &v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4Table.coded_vector;
+}
+
+constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable42v1_Pointer30v1_example_UnionSize12Aligned4AltTypePointerTable() {
+  return &Vector4294967295nonnullable36Pointer27example_UnionSize12Aligned4Table.coded_vector;
+}
+
+
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nullable27String4294967295nonnullableAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nullable27String4294967295nonnullableAltTypePointerTable() {
   return &v1_Vector4294967295nullable30v1_String4294967295nonnullableTable.coded_vector;
@@ -2122,6 +2203,39 @@ constexpr static inline const ::fidl::FidlCodedStruct* example_Regression7TableU
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression7TableUnionXUnionAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression7TableUnionXUnionAltTypePointerTable() {
   return &example_Regression7TableUnionXUnionTable.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8OptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8OptUnionSize12Aligned4AltTypePointerTable() {
+  return &v1_example_Regression8OptUnionSize12Aligned4Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8OptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8OptUnionSize12Aligned4AltTypePointerTable() {
+  return &example_Regression8OptUnionSize12Aligned4Table.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() {
+  return &v1_example_Regression8TableWithUnionSize12Aligned4Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8TableWithUnionSize12Aligned4AltTypePointerTable() {
+  return &example_Regression8TableWithUnionSize12Aligned4Table.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() {
+  return &v1_example_Regression8VectorOfOptUnionSize12Aligned4Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8VectorOfOptUnionSize12Aligned4AltTypePointerTable() {
+  return &example_Regression8VectorOfOptUnionSize12Aligned4Table.coded_struct;
 }
 
 

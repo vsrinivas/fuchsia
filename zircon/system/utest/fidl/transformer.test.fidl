@@ -17,7 +17,7 @@ union UnionSize12Aligned4 {
     1: uint8 unused1; // avoid tag 0
     2: uint8 unused2; // avoid tag 1
     3: uint8 unused3; // avoid tag 2
-    4: array<uint8>:6 variant; // 0x20d1d3bf
+    4: array<uint8>:6 variant;
 };
 
 struct StructSize16Alignment8 {
@@ -460,6 +460,28 @@ table TableOfUnionThenXUnionThenTableThenXUnionThenUnion {
 
 struct Regression7TableUnionXUnion {
     TableOfUnionThenXUnionThenTableThenXUnionThenUnion value;
+};
+
+struct Regression8OptUnionSize12Aligned4 {
+    UnionSize12Aligned4? opt_union1;
+    UnionSize12Aligned4? opt_union2;
+    UnionSize12Aligned4? opt_union3;
+};
+
+struct Regression8VectorOfOptUnionSize12Aligned4 {
+    vector<UnionSize12Aligned4?> value;
+};
+
+table TableWithUnionSize12Aligned4 {
+    1: uint8 before;
+    2: reserved;
+    3: UnionSize12Aligned4 member;
+    4: reserved;
+    5: uint8 after;
+};
+
+struct Regression8TableWithUnionSize12Aligned4 {
+    TableWithUnionSize12Aligned4 value;
 };
 
 protocol FakeProtocol {

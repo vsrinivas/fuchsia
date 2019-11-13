@@ -326,7 +326,8 @@ class TransformerBase {
       case fidl::kFidlTypeUnion: {
         const auto& src_coded_union = type->coded_union;
         const auto& dst_coded_union = *src_coded_union.alt_type;
-        return TransformUnion(src_coded_union, dst_coded_union, position, out_traversal_result);
+        return TransformUnion(src_coded_union, dst_coded_union, position, dst_size,
+                              out_traversal_result);
       }
       case fidl::kFidlTypeArray: {
         const auto convert = [](const fidl::FidlCodedArray& coded_array) {
@@ -806,7 +807,7 @@ class TransformerBase {
 
   virtual zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
                                      const fidl::FidlCodedUnion& dst_coded_union,
-                                     const Position& position,
+                                     const Position& position, uint32_t dst_size,
                                      TraversalResult* out_traversal_result) = 0;
 
   inline zx_status_t Fail(zx_status_t status, const char* error_msg) {
@@ -865,11 +866,13 @@ class V1ToOld final : public TransformerBase {
 
     out_traversal_result->dst_out_of_line_size += dst_aligned_size;
 
-    return TransformUnion(src_coded_union, dst_coded_union, union_position, out_traversal_result);
+    return TransformUnion(src_coded_union, dst_coded_union, union_position,
+                          FIDL_ALIGN(dst_coded_union.size), out_traversal_result);
   }
 
   zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
-                             const fidl::FidlCodedUnion& dst_coded_union, const Position& position,
+                             const fidl::FidlCodedUnion& dst_coded_union,
+                             const Position& position, uint32_t dst_size,
                              TraversalResult* out_traversal_result) {
     assert(src_coded_union.field_count == dst_coded_union.field_count);
 
@@ -967,7 +970,8 @@ class V1ToOld final : public TransformerBase {
 
     // Pad after static-union data.
     auto field_padding_position = field_position.IncreaseDstInlineOffset(dst_field_unpadded_size);
-    const auto status_pad_field = src_dst->Pad(field_padding_position, dst_field.padding);
+    const auto dst_padding = (dst_size - dst_coded_union.size) + dst_field.padding;
+    const auto status_pad_field = src_dst->Pad(field_padding_position, dst_padding);
     if (status_pad_field != ZX_OK) {
       return Fail(status_pad_field, "unable to pad union variant");
     }
@@ -1021,11 +1025,14 @@ class OldToV1 final : public TransformerBase {
     };
 
     out_traversal_result->src_out_of_line_size += src_aligned_size;
-    return TransformUnion(src_coded_union, dst_coded_union, union_position, out_traversal_result);
+    return TransformUnion(src_coded_union, dst_coded_union, union_position,
+                          0 /* unused: xunions are FIDL_ALIGNed */,
+                          out_traversal_result);
   }
 
   zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
-                             const fidl::FidlCodedUnion& dst_coded_union, const Position& position,
+                             const fidl::FidlCodedUnion& dst_coded_union,
+                             const Position& position, uint32_t /* unused: dst_size */,
                              TraversalResult* out_traversal_result) {
     assert(src_coded_union.field_count == dst_coded_union.field_count);
 
