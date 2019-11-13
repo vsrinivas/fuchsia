@@ -18,14 +18,6 @@ BUILD_DIR=
 BOOT_IMG=
 ZIRCON_BOOTIMAGE=
 
-# internal use
-FUTILITY=host-tools/futility
-KEYBLOCK="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel.keyblock"
-PRIVATEKEY="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
-ITSSCRIPT_TEMPLATE="${DIR}/its_script"
-DUMMY_DEVICE_TREE="${ZIRCON_DIR}/kernel/target/arm64/dtb/dummy-device-tree.dtb"
-LZ4="${BUILD_DIR}/tools/lz4"
-
 function HELP {
     echo "help:"
     echo "-B <build-dir>  : path to zircon build directory"
@@ -60,6 +52,14 @@ fi
 if [[ -z "${BOOT_IMG}" ]]; then
     BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
 fi
+
+# internal use
+FUTILITY="host-tools/futility"
+KEYBLOCK="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel.keyblock"
+PRIVATEKEY="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
+ITSSCRIPT_TEMPLATE="${DIR}/its_script"
+DUMMY_DEVICE_TREE="${ZIRCON_DIR}/kernel/target/arm64/dtb/dummy-device-tree.dtb"
+LZ4="${BUILD_DIR}/tools/lz4"
 
 # boot shim for our board
 BOOT_SHIM="${BUILD_DIR}/${BOARD}-boot-shim.bin"
