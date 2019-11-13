@@ -146,27 +146,30 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
 
 void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> device,
                                                     fbl::RefPtr<AudioDeviceSettings> settings) {
+  // If this device is still waiting for initialization, move it over to the set of active devices.
+  // Otherwise (if not waiting for initialization), we've been removed.
+  auto dev = devices_pending_init_.extract(device->token());
+  if (!dev) {
+    return;
+  }
+
+  // If this device should be completely ignored, remove it entirely from our awareness.
   if (settings->Ignored()) {
     REP(IgnoringDevice(*device));
     RemoveDevice(device);
     return;
   }
 
-  REP(ActivatingDevice(*device));
+  devices_.insert(std::move(dev));
 
-  // Move the device over to the set of active devices.
-  devices_.insert(devices_pending_init_.extract(device->token()));
+  REP(ActivatingDevice(*device));
   device->SetActivated();
 
-  // Now that we have our gain settings (restored from disk, cloned from
-  // others, or default), reapply them via the device itself.  We do this in
-  // order to allow the device the chance to apply its own internal limits,
-  // which may not permit the values which had been read from disk.
+  // We now have gain settings (restored from disk, cloned from others, or default). Reapply them
+  // via the device so it can apply its internal limits (which may not permit the values from disk).
   //
-  // TODO(johngro): Clean this pattern up, it is really awkward.  On the one
-  // hand, we would really like the settings to be completely independent from
-  // the devices, but on the other hand, there are limits for various settings
-  // which may be need imposed by the device's capabilities.
+  // TODO(johngro): Clean up this awkward pattern. We want settings to be independent of devices;
+  // however, a device's capabilities may require certain limits on these settings.
   constexpr uint32_t kAllSetFlags = fuchsia::media::SetAudioGainFlag_GainValid |
                                     fuchsia::media::SetAudioGainFlag_MuteValid |
                                     fuchsia::media::SetAudioGainFlag_AgcValid;
@@ -175,9 +178,8 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
   REP(SettingDeviceGainInfo(*device, gain_info, kAllSetFlags));
   device->SetGainInfo(gain_info, kAllSetFlags);
 
-  // Notify interested users of this new device. Check whether this will become
-  // the new default device, so we can set 'is_default' in the notification
-  // properly. Right now, "default" device is defined simply as last-plugged.
+  // Notify interested users of the new device. If it will become the new default, set 'is_default'
+  // properly in the notification ("default" device is currently defined simply as last-plugged).
   fuchsia::media::AudioDeviceInfo info;
   device->GetDeviceInfo(&info);
 
@@ -198,6 +200,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
 
   REP(RemovingDevice(*device));
 
+  // If device was active: reset the default (based on most-recently-plugged).
   if (device->activated()) {
     OnDeviceUnplugged(device, device->plug_time());
   }
@@ -208,7 +211,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   auto& device_set = device->activated() ? devices_ : devices_pending_init_;
   device_set.erase(device->token());
 
-  // If device was active: reset the default & notify clients of the removal.
+  // If device was active: notify clients of the removal.
   if (device->activated()) {
     for (auto& client : bindings_.bindings()) {
       client->events().OnDeviceRemoved(device->token());

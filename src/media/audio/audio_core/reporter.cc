@@ -13,6 +13,11 @@ namespace media::audio {
 
 #if ENABLE_REPORTER
 
+constexpr char kRendererNotFound[] = "Specified renderer not found";
+constexpr char kCapturerNotFound[] = "Specified capturer not found";
+constexpr char kPayloadNotFound[] = "Specified payload buffer not found";
+constexpr char kDeviceNotFound[] = "Specified device not found";
+
 // static
 Reporter& Reporter::Singleton() {
   static Reporter singleton;
@@ -111,7 +116,7 @@ void Reporter::SettingDeviceGainInfo(const AudioDevice& device,
                                      uint32_t set_flags) {
   Device* d = device.is_output() ? FindOutput(device) : FindInput(device);
   if (d == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kDeviceNotFound;
     return;
   }
 
@@ -142,7 +147,7 @@ void Reporter::SettingRendererStreamType(const fuchsia::media::AudioRenderer& re
                                          const fuchsia::media::AudioStreamType& stream_type) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -155,7 +160,7 @@ void Reporter::AddingRendererPayloadBuffer(const fuchsia::media::AudioRenderer& 
                                            uint32_t buffer_id, uint64_t size) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -168,7 +173,7 @@ void Reporter::RemovingRendererPayloadBuffer(const fuchsia::media::AudioRenderer
                                              uint32_t buffer_id) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
   r->payload_buffers_.erase(buffer_id);
@@ -178,12 +183,12 @@ void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& render
                                      const fuchsia::media::StreamPacket& packet) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
   auto payload_buffer = r->payload_buffers_.find(packet.payload_buffer_id);
   if (payload_buffer == r->payload_buffers_.end()) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kPayloadNotFound;
     return;
   }
   payload_buffer->second.packets_.Add(1);
@@ -192,7 +197,7 @@ void Reporter::SendingRendererPacket(const fuchsia::media::AudioRenderer& render
 void Reporter::SettingRendererGain(const fuchsia::media::AudioRenderer& renderer, float gain_db) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -204,7 +209,7 @@ void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& 
                                            fuchsia::media::audio::RampType ramp_type) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -215,7 +220,7 @@ void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& 
 void Reporter::SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -226,7 +231,7 @@ void Reporter::SettingRendererMinClockLeadTime(const fuchsia::media::AudioRender
                                                zx::duration min_clock_lead_time) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -237,7 +242,7 @@ void Reporter::SettingRendererPtsContinuityThreshold(const fuchsia::media::Audio
                                                      float threshold_seconds) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kRendererNotFound;
     return;
   }
 
@@ -256,7 +261,7 @@ void Reporter::SettingCapturerStreamType(const fuchsia::media::AudioCapturer& ca
                                          const fuchsia::media::AudioStreamType& stream_type) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
 
@@ -269,7 +274,7 @@ void Reporter::AddingCapturerPayloadBuffer(const fuchsia::media::AudioCapturer& 
                                            uint32_t buffer_id, uint64_t size) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
 
@@ -282,12 +287,12 @@ void Reporter::SendingCapturerPacket(const fuchsia::media::AudioCapturer& captur
                                      const fuchsia::media::StreamPacket& packet) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
   auto payload_buffer = c->payload_buffers_.find(packet.payload_buffer_id);
   if (payload_buffer == c->payload_buffers_.end()) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kPayloadNotFound;
     return;
   }
   payload_buffer->second.packets_.Add(1);
@@ -296,7 +301,7 @@ void Reporter::SendingCapturerPacket(const fuchsia::media::AudioCapturer& captur
 void Reporter::SettingCapturerGain(const fuchsia::media::AudioCapturer& capturer, float gain_db) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
 
@@ -308,7 +313,7 @@ void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& 
                                            fuchsia::media::audio::RampType ramp_type) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
 
@@ -319,7 +324,7 @@ void Reporter::SettingCapturerGainWithRamp(const fuchsia::media::AudioCapturer& 
 void Reporter::SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted) {
   Capturer* c = FindCapturer(capturer);
   if (c == nullptr) {
-    FX_LOGS(FATAL);
+    FX_LOGS(ERROR) << kCapturerNotFound;
     return;
   }
 

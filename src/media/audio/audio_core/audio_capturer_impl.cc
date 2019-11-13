@@ -107,7 +107,10 @@ AudioCapturerImpl::AudioCapturerImpl(
 
 AudioCapturerImpl::~AudioCapturerImpl() {
   TRACE_DURATION("audio.debug", "AudioCapturerImpl::~AudioCapturerImpl");
+
   volume_manager_.RemoveStream(this);
+  REP(RemovingCapturer(*this));
+
   FX_DCHECK(!payload_buf_vmo_.is_valid());
   FX_DCHECK(payload_buf_virt_ == nullptr);
 }
@@ -171,8 +174,6 @@ void AudioCapturerImpl::Shutdown(std::unique_ptr<AudioCapturerImpl> self) {
         }
 
         self->payload_buf_vmo_.reset();
-
-        REP(RemovingCapturer(*self.get()));
       }));
 }
 
