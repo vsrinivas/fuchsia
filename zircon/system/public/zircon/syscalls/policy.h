@@ -14,22 +14,33 @@ __BEGIN_CDECLS
 
 // Policy is applied for the conditions that are not
 // specified by the parent job policy.
-#define ZX_JOB_POL_RELATIVE                 0u
+#define ZX_JOB_POL_RELATIVE                     0u
 // Policy is either applied as-is or the syscall fails.
-#define ZX_JOB_POL_ABSOLUTE                 1u
+#define ZX_JOB_POL_ABSOLUTE                     1u
 
 // Basic policy topic.
-#define ZX_JOB_POL_BASIC                    0u
-// Timer slack policy topic.
-#define ZX_JOB_POL_TIMER_SLACK              1u
+#define ZX_JOB_POL_BASIC_V1                     0u
+#define ZX_JOB_POL_BASIC_V2            0x01000000u
 
-// Input structure to use with ZX_JOB_POL_BASIC.
-typedef struct zx_policy_basic {
+// Timer slack policy topic.
+#define ZX_JOB_POL_TIMER_SLACK                  1u
+
+// Input structure to use with ZX_JOB_POL_BASIC_V1.
+typedef struct zx_policy_basic_v1 {
     uint32_t condition;
     uint32_t policy;
-} zx_policy_basic_t;
+} zx_policy_basic_v1_t;
 
-typedef struct zx_policy_basic zx_policy_basic_v1_t;
+// Input structure to use with ZX_JOB_POL_BASIC_V2.
+typedef struct zx_policy_basic_v2 {
+    uint32_t condition;
+    uint32_t action;
+    uint32_t flags;
+} zx_policy_basic_v2_t;
+
+#define ZX_JOB_POL_BASIC        ZX_JOB_POL_BASIC_V1
+typedef struct zx_policy_basic_v1 zx_policy_basic;
+typedef struct zx_policy_basic_v1 zx_policy_basic_t;
 
 // Conditions handled by job policy.
 #define ZX_POL_BAD_HANDLE                    0u

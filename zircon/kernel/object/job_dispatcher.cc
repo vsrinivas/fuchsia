@@ -437,7 +437,7 @@ bool JobDispatcher::CanSetPolicy() TA_REQ(get_lock()) {
   return true;
 }
 
-zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic* in_policy,
+zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v1* in_policy,
                                           size_t policy_count) {
   Guard<fbl::Mutex> guard{get_lock()};
 
@@ -451,6 +451,11 @@ zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic* 
     return status;
 
   return ZX_OK;
+}
+
+zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v2* in_policy,
+                                          size_t policy_count) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& policy) {

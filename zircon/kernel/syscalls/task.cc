@@ -512,6 +512,7 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options, user_out_ha
   return status;
 }
 
+template <typename TPolicy>
 static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
                                         user_in_ptr<const void> _policy, uint32_t count) {
   if ((options != ZX_JOB_POL_RELATIVE) && (options != ZX_JOB_POL_ABSOLUTE)) {
@@ -522,13 +523,12 @@ static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
   }
 
   fbl::AllocChecker ac;
-  fbl::InlineArray<zx_policy_basic, kPolicyBasicInlineCount> policy(&ac, count);
+  fbl::InlineArray<TPolicy, kPolicyBasicInlineCount> policy(&ac, count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto status =
-      _policy.reinterpret<const zx_policy_basic>().copy_array_from_user(policy.get(), count);
+  auto status = _policy.reinterpret<const TPolicy>().copy_array_from_user(policy.get(), count);
   if (status != ZX_OK) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -574,8 +574,10 @@ static zx_status_t job_set_policy_timer_slack(zx_handle_t handle, uint32_t optio
 zx_status_t sys_job_set_policy(zx_handle_t handle, uint32_t options, uint32_t topic,
                                user_in_ptr<const void> _policy, uint32_t count) {
   switch (topic) {
-    case ZX_JOB_POL_BASIC:
-      return job_set_policy_basic(handle, options, _policy, count);
+    case ZX_JOB_POL_BASIC_V1:
+      return job_set_policy_basic<zx_policy_basic_v1>(handle, options, _policy, count);
+    case ZX_JOB_POL_BASIC_V2:
+      return job_set_policy_basic<zx_policy_basic_v2>(handle, options, _policy, count);
     case ZX_JOB_POL_TIMER_SLACK:
       return job_set_policy_timer_slack(handle, options, _policy, count);
     default:

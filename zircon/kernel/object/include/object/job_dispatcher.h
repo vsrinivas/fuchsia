@@ -105,7 +105,13 @@ class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_
   //
   // It is an error to set policy on a non-empty job, i.e. a job with one or more sub-jobs or
   // processes.
-  zx_status_t SetBasicPolicy(uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count);
+
+  // V1 flavor (on its way out)
+  zx_status_t SetBasicPolicy(uint32_t mode, const zx_policy_basic_v1* in_policy,
+                             size_t policy_count);
+  // V2 flavor (on its way in)
+  zx_status_t SetBasicPolicy(uint32_t mode, const zx_policy_basic_v2* in_policy,
+                             size_t policy_count);
 
   // Set timer slack policy.
   //
