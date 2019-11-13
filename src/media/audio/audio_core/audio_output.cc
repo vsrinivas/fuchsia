@@ -10,7 +10,6 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
@@ -18,12 +17,11 @@
 
 namespace media::audio {
 
-static constexpr fxl::TimeDelta kMaxTrimPeriod = fxl::TimeDelta::FromMilliseconds(10);
+static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
 AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
     : AudioDevice(Type::Output, threading_model, registry) {
-  next_sched_time_ = fxl::TimePoint::FromEpochDelta(
-      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
+  next_sched_time_ = async::Now(mix_domain().dispatcher());
   next_sched_time_known_ = true;
   source_link_refs_.reserve(16u);
 }
@@ -31,8 +29,7 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* regist
 void AudioOutput::Process() {
   TRACE_DURATION("audio", "AudioOutput::Process");
   bool mixed = false;
-  fxl::TimePoint now = fxl::TimePoint::FromEpochDelta(
-      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
+  auto now = async::Now(mix_domain().dispatcher());
 
   // At this point, we should always know when our implementation would like to be called to do some
   // mixing work next. If we do not know, then we should have already shut down.
@@ -96,13 +93,12 @@ void AudioOutput::Process() {
 
   // Figure out when we should wake up to do more work again. No matter how long our implementation
   // wants to wait, we need to make sure to wake up and periodically trim our input queues.
-  fxl::TimePoint max_sched_time = now + kMaxTrimPeriod;
+  auto max_sched_time = now + kMaxTrimPeriod;
   if (next_sched_time_ > max_sched_time) {
     next_sched_time_ = max_sched_time;
   }
 
-  zx::time next_time(static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds()));
-  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_time);
+  zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();
@@ -478,9 +474,8 @@ void AudioOutput::SetupTrim(Mixer* mixer) {
   // our transformation, no need for us to do so here.
   FX_DCHECK(mixer);
 
-  auto now = fxl::TimePoint::FromEpochDelta(
-      fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
-  int64_t local_now_ticks = (now - fxl::TimePoint()).ToNanoseconds();
+  auto now = async::Now(mix_domain().dispatcher());
+  int64_t local_now_ticks = (now - zx::time(0)).to_nsecs();
 
   // RateControlBase guarantees that the transformation into the media timeline is never singular.
   // If a forward transformation fails it must be because of overflow, which should be impossible

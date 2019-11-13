@@ -63,7 +63,7 @@ class FakeAudioOutput : public AudioOutput {
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
 
-  bool StartMixJob(MixJob* job, fxl::TimePoint process_start) override { return true; }
+  bool StartMixJob(MixJob* job, zx::time process_start) override { return true; }
   bool FinishMixJob(const MixJob& job) override { return true; }
 
  private:

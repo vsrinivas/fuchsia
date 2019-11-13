@@ -6,17 +6,17 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/time.h>
 
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_output.h"
 
 namespace media::audio {
 
-static constexpr fxl::TimeDelta TRIM_PERIOD = fxl::TimeDelta::FromMilliseconds(10);
+static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 
 // Throttle output may only be owned on the FIDL thread.
 class ThrottleOutput : public AudioOutput {
@@ -35,14 +35,14 @@ class ThrottleOutput : public AudioOutput {
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     if (uninitialized_) {
-      last_sched_time_ = fxl::TimePoint::Now();
+      last_sched_time_ = async::Now(mix_domain().dispatcher());
       UpdatePlugState(true, zx::time(0));
       Process();
       uninitialized_ = false;
     }
   }
 
-  bool StartMixJob(MixJob* job, fxl::TimePoint process_start) override {
+  bool StartMixJob(MixJob* job, zx::time process_start) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
     if (process_start > last_sched_time_) {
@@ -79,7 +79,7 @@ class ThrottleOutput : public AudioOutput {
   }
 
  private:
-  fxl::TimePoint last_sched_time_;
+  zx::time last_sched_time_;
   bool uninitialized_ = true;
 };
 

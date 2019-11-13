@@ -86,7 +86,7 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
+bool DriverOutput::StartMixJob(MixJob* job, zx::time process_start) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
@@ -289,7 +289,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
   int64_t low_water_time = cm2rd_pos.ApplyInverse(low_water_frames);
-  SetNextSchedTime(fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(low_water_time)));
+  SetNextSchedTime(zx::time(low_water_time));
 }
 
 void DriverOutput::OnDriverInfoFetched() {

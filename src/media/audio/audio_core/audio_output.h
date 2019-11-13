@@ -8,8 +8,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/media/cpp/timeline_function.h>
+#include <lib/zx/time.h>
 
-#include "src/lib/fxl/time/time_point.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
@@ -57,18 +57,17 @@ class AudioOutput : public AudioDevice {
 
   zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final;
 
-  void SetNextSchedTime(fxl::TimePoint next_sched_time) {
+  void SetNextSchedTime(zx::time next_sched_time) {
     next_sched_time_ = next_sched_time;
     next_sched_time_known_ = true;
   }
 
-  void SetNextSchedDelay(const fxl::TimeDelta& next_sched_delay) {
-    auto now = fxl::TimePoint::FromEpochDelta(
-        fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));
+  void SetNextSchedDelay(const zx::duration& next_sched_delay) {
+    auto now = async::Now(mix_domain().dispatcher());
     SetNextSchedTime(now + next_sched_delay);
   }
 
-  virtual bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
+  virtual bool StartMixJob(MixJob* job, zx::time process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
   virtual bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
@@ -101,7 +100,7 @@ class AudioOutput : public AudioDevice {
   bool ProcessTrim(const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  fxl::TimePoint next_sched_time_;
+  zx::time next_sched_time_;
   bool next_sched_time_known_;
 
   // Vector used to hold references to source links while mixing (instead of
