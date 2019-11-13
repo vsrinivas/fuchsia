@@ -354,11 +354,11 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
     auto return_code_and_errno = fut.get();
     switch (optname) {
       case SO_RCVTIMEO:
-        EXPECT_EQ(return_code_and_errno.first, 0, "%s", strerror(errno));
+        EXPECT_EQ(return_code_and_errno.first, 0, "%s", strerror(return_code_and_errno.second));
         break;
       case SO_SNDTIMEO:
         EXPECT_EQ(return_code_and_errno.first, -1);
-        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(errno));
+        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(return_code_and_errno.second));
         break;
     }
   }
