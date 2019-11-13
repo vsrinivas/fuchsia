@@ -33,6 +33,7 @@ template("go_fidl_compatibility_test") {
   binary_target = "compatibility_test_server_${target_name}_bin"
   binary_output = "compatibility_test_server_${target_name}"
   package_target = "fidl_compatibility_test_server_${target_name}"
+  cmx_path = "meta/fidl_compatibility_test_server_${target_name}.cmx"
 
   go_binary(binary_target) {
     gopackage = "compatibility_test"
@@ -56,7 +57,7 @@ template("go_fidl_compatibility_test") {
     binary = binary_output
     meta = [
       {
-        path = "meta/fidl_compatibility_test_server_go.cmx"
+        path = cmx_path
         dest = "${target_name}.cmx"
       },
     ]

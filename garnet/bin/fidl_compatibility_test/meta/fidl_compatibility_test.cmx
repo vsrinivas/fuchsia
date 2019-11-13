@@ -4,6 +4,7 @@
             "cpp",
             "cpp_write_xunion",
             "go",
+            "go_write_xunion",
             "llcpp",
             "llcpp_write_xunion",
             "rust"
