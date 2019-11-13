@@ -39,6 +39,9 @@ constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
 // also see SDMMC_PAGES_COUNT in ddk/protocol/sdmmc.h
 constexpr int kDmaDescCount = 512;
 
+// 64k max per descriptor
+static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
+
 constexpr zx::duration kResetTime                = zx::sec(1);
 constexpr zx::duration kClockStabilizationTime   = zx::msec(150);
 constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
@@ -330,7 +333,11 @@ int Sdhci::IrqThread() {
   return thrd_success;
 }
 
-zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req) {
+template <typename DescriptorType>
+zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
+  constexpr zx_paddr_t kPhysAddrMask =
+      sizeof(descs->address) == sizeof(uint32_t) ? 0x0000'0000'ffff'ffff : 0xffff'ffff'ffff'ffff;
+
   const uint64_t req_len = req->blockcount * req->blocksize;
   const bool is_read = req->cmd_flags & SDMMC_CMD_READ;
 
@@ -373,41 +380,71 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req) {
       .sg_count = 0,
   };
   phys_iter_t iter;
-  phys_iter_init(&iter, &buf, Adma64Descriptor::kMaxDescriptorLength);
+  phys_iter_init(&iter, &buf, kMaxDescriptorLength);
 
   int count = 0;
-  for (Adma64Descriptor* desc = descs_;; desc++) {
+  for (DescriptorType* desc = descs;; desc++) {
     zx_paddr_t paddr;
     size_t length = phys_iter_next(&iter, &paddr);
     if (length == 0) {
-      if (desc != descs_) {
+      if (desc != descs) {
         desc -= 1;
         // set end bit on the last descriptor
-        desc->attr = Adma64DescriptorAttributes::Get(desc->attr).set_end(1).reg_value();
+        desc->attr = Adma2DescriptorAttributes::Get(desc->attr).set_end(1).reg_value();
         break;
       } else {
         zxlogf(TRACE, "sdhci: empty descriptor list!\n");
         return ZX_ERR_NOT_SUPPORTED;
       }
-    } else if (length > Adma64Descriptor::kMaxDescriptorLength) {
+    } else if (length > kMaxDescriptorLength) {
       zxlogf(TRACE, "sdhci: chunk size > %zu is unsupported\n", length);
       return ZX_ERR_NOT_SUPPORTED;
     } else if ((++count) > kDmaDescCount) {
       zxlogf(TRACE, "sdhci: request with more than %zd chunks is unsupported\n", length);
       return ZX_ERR_NOT_SUPPORTED;
     }
-    desc->address = paddr;
+
+    if ((paddr & kPhysAddrMask) != paddr) {
+      zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if constexpr (sizeof(desc->address) == sizeof(uint32_t)) {
+      desc->address = static_cast<uint32_t>(paddr);
+    } else {
+      desc->address = paddr;
+    }
     desc->length = static_cast<uint16_t>(length);
-    desc->attr = Adma64DescriptorAttributes::Get().set_valid(1).set_act2(1).reg_value();
+    desc->attr = Adma2DescriptorAttributes::Get()
+                     .set_valid(1)
+                     .set_type(Adma2DescriptorAttributes::kTypeData)
+                     .reg_value();
   }
 
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
-    Adma64Descriptor* desc = descs_;
+    DescriptorType* desc = descs;
     do {
-      zxlogf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n", desc->address,
-             desc->length, desc->attr);
-    } while (!Adma64DescriptorAttributes::Get((desc++)->attr).end());
+      if constexpr (sizeof(desc->address) == sizeof(uint32_t)) {
+        zxlogf(SPEW, "desc: addr=0x%" PRIx32 " length=0x%04x attr=0x%04x\n", desc->address,
+               desc->length, desc->attr);
+      } else {
+        zxlogf(SPEW, "desc: addr=0x%" PRIx64 " length=0x%04x attr=0x%04x\n", desc->address,
+               desc->length, desc->attr);
+      }
+    } while (!Adma2DescriptorAttributes::Get((desc++)->attr).end());
   }
+
+  zx_paddr_t desc_phys = iobuf_.phys();
+  if ((desc_phys & kPhysAddrMask) != desc_phys) {
+    zxlogf(ERROR, "sdhci: 64-bit physical address supplied for 32-bit DMA\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  AdmaSystemAddress::Get(0).FromValue(Lo32(desc_phys)).WriteTo(&regs_mmio_buffer_);
+  AdmaSystemAddress::Get(1).FromValue(Hi32(desc_phys)).WriteTo(&regs_mmio_buffer_);
+
+  zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x\n", Lo32(desc_phys), Hi32(desc_phys));
+
   return ZX_OK;
 }
 
@@ -421,7 +458,7 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
   TransferMode transfer_mode = TransferMode::Get().FromValue(0);
   PrepareCmd(req, &transfer_mode, &command);
 
-  if (req->use_dma && !SupportsAdma2_64Bit()) {
+  if (req->use_dma && !SupportsAdma2()) {
     zxlogf(TRACE, "sdhci: host does not support DMA\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -447,17 +484,16 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
 
   if (has_data) {
     if (req->use_dma) {
-      if ((st = BuildDmaDescriptor(req)) != ZX_OK) {
+      if (Capabilities0::Get().ReadFrom(&regs_mmio_buffer_).v3_64_bit_system_address_support()) {
+        st = BuildDmaDescriptor(req, reinterpret_cast<AdmaDescriptor96*>(iobuf_.virt()));
+      } else {
+        st = BuildDmaDescriptor(req, reinterpret_cast<AdmaDescriptor64*>(iobuf_.virt()));
+      }
+
+      if (st != ZX_OK) {
         zxlogf(ERROR, "sdhci: failed to build DMA descriptor\n");
         return st;
       }
-
-      zx_paddr_t desc_phys = iobuf_.phys();
-      AdmaSystemAddress::Get(0).FromValue(Lo32(desc_phys)).WriteTo(&regs_mmio_buffer_);
-      AdmaSystemAddress::Get(1).FromValue(Hi32(desc_phys)).WriteTo(&regs_mmio_buffer_);
-
-      zxlogf(SPEW, "sdhci: descs at 0x%x 0x%x\n", Lo32(desc_phys), Hi32(desc_phys));
-
       transfer_mode.set_dma_enable(1);
     }
 
@@ -824,10 +860,7 @@ zx_status_t Sdhci::Init() {
     info_.caps |= SDMMC_HOST_CAP_BUS_WIDTH_8;
   }
   if (caps0.adma2_support() && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
-    info_.caps |= SDMMC_HOST_CAP_ADMA2;
-  }
-  if (caps0.v3_64_bit_system_address_support() && !(quirks_ & SDHCI_QUIRK_NO_DMA)) {
-    info_.caps |= SDMMC_HOST_CAP_SIXTY_FOUR_BIT;
+    info_.caps |= SDMMC_HOST_CAP_DMA;
   }
   if (caps0.voltage_3v3_support()) {
     info_.caps |= SDMMC_HOST_CAP_VOLTAGE_330;
@@ -869,21 +902,25 @@ zx_status_t Sdhci::Init() {
   }
 
   // allocate and setup DMA descriptor
-  if (SupportsAdma2_64Bit()) {
-    status = iobuf_.Init(bti_.get(), kDmaDescCount * sizeof(Adma64Descriptor),
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (SupportsAdma2()) {
+    auto host_control1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
+    if (caps0.v3_64_bit_system_address_support()) {
+      status = iobuf_.Init(bti_.get(), kDmaDescCount * sizeof(AdmaDescriptor96),
+                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
+      host_control1.set_dma_select(HostControl1::kDmaSelect64BitAdma2);
+    } else {
+      status = iobuf_.Init(bti_.get(), kDmaDescCount * sizeof(AdmaDescriptor64),
+                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
+      host_control1.set_dma_select(HostControl1::kDmaSelect32BitAdma2);
+    }
+
     if (status != ZX_OK) {
       zxlogf(ERROR, "sdhci: error allocating DMA descriptors\n");
       return status;
     }
-    descs_ = reinterpret_cast<Adma64Descriptor*>(iobuf_.virt());
     info_.max_transfer_size = kDmaDescCount * PAGE_SIZE;
 
-    // Select ADMA2
-    HostControl1::Get()
-        .ReadFrom(&regs_mmio_buffer_)
-        .set_dma_select(HostControl1::kDmaSelect64BitAdma2)
-        .WriteTo(&regs_mmio_buffer_);
+    host_control1.WriteTo(&regs_mmio_buffer_);
   } else {
     // no maximum if only PIO supported
     info_.max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED;

@@ -413,7 +413,7 @@ zx_status_t AmlSdEmmc::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
 void AmlSdEmmc::SetupCmdDesc(sdmmc_req_t* req, aml_sd_emmc_desc_t** out_desc) {
   aml_sd_emmc_desc_t* desc;
   if (req->use_dma) {
-    ZX_DEBUG_ASSERT((dev_info_.caps & SDMMC_HOST_CAP_ADMA2));
+    ZX_DEBUG_ASSERT((dev_info_.caps & SDMMC_HOST_CAP_DMA));
     desc = reinterpret_cast<aml_sd_emmc_desc_t*>(descs_buffer_.virt());
     memset(desc, 0, descs_buffer_.size());
   } else {
@@ -921,7 +921,7 @@ zx_status_t AmlSdEmmc::Init() {
   dev_info_.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 |
                    SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50;
   if (board_config_.supports_dma) {
-    dev_info_.caps |= SDMMC_HOST_CAP_ADMA2;
+    dev_info_.caps |= SDMMC_HOST_CAP_DMA;
     zx_status_t status =
         descs_buffer_.Init(bti_.get(), AML_DMA_DESC_MAX_COUNT * sizeof(aml_sd_emmc_desc_t),
                            IO_BUFFER_RW | IO_BUFFER_CONTIG);

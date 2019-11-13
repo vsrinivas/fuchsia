@@ -28,6 +28,21 @@ using DeviceType = ddk::Device<Sdhci, ddk::UnbindableNew>;
 
 class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_protocol> {
  public:
+  // Visible for testing.
+  struct AdmaDescriptor96 {
+    uint16_t attr;
+    uint16_t length;
+    uint64_t address;
+  } __PACKED;
+  static_assert(sizeof(AdmaDescriptor96) == 12, "unexpected ADMA2 descriptor size");
+
+  struct AdmaDescriptor64 {
+    uint16_t attr;
+    uint16_t length;
+    uint32_t address;
+  } __PACKED;
+  static_assert(sizeof(AdmaDescriptor64) == 8, "unexpected ADMA2 descriptor size");
+
   Sdhci(zx_device_t* parent, ddk::MmioBuffer regs_mmio_buffer, zx::bti bti, zx::interrupt irq,
         const ddk::SdhciProtocolClient sdhci)
       : DeviceType(parent),
@@ -91,23 +106,14 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   ddk::MmioBuffer regs_mmio_buffer_;
 
+  // DMA descriptors, visible for testing
+  ddk::IoBuffer iobuf_ = {};
+
  private:
-  struct Adma64Descriptor {
-    // 64k max per descriptor
-    static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
-
-    uint16_t attr;
-    uint16_t length;
-    uint64_t address;
-  } __PACKED;
-
-  static_assert(sizeof(Adma64Descriptor) == 12, "unexpected ADMA2 descriptor size");
-
   static void PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* command);
 
-  bool SupportsAdma2_64Bit() const {
-    return (info_.caps & SDMMC_HOST_CAP_ADMA2) && (info_.caps & SDMMC_HOST_CAP_SIXTY_FOUR_BIT) &&
-           !(quirks_ & SDHCI_QUIRK_NO_DMA);
+  bool SupportsAdma2() const {
+    return (info_.caps & SDMMC_HOST_CAP_DMA) && !(quirks_ & SDHCI_QUIRK_NO_DMA);
   }
 
   zx_status_t WaitForInhibit(const PresentState mask) const;
@@ -122,7 +128,8 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   int IrqThread() TA_EXCL(mtx_);
 
-  zx_status_t BuildDmaDescriptor(sdmmc_req_t* req);
+  template <typename DescriptorType>
+  zx_status_t BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs);
   zx_status_t StartRequestLocked(sdmmc_req_t* req) TA_REQ(mtx_);
   zx_status_t FinishRequest(sdmmc_req_t* req);
 
@@ -132,10 +139,6 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   const ddk::SdhciProtocolClient sdhci_;
 
   zx::bti bti_;
-
-  // DMA descriptors
-  ddk::IoBuffer iobuf_ = {};
-  Adma64Descriptor* descs_ = nullptr;
 
   // Held when a command or action is in progress.
   fbl::Mutex mtx_;

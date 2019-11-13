@@ -86,6 +86,7 @@ class PresentState : public hwreg::RegisterBase<PresentState, uint32_t> {
 
 class HostControl1 : public hwreg::RegisterBase<HostControl1, uint8_t> {
  public:
+  static constexpr uint8_t kDmaSelect32BitAdma2 = 0b10;
   static constexpr uint8_t kDmaSelect64BitAdma2 = 0b11;
 
   static auto Get() { return hwreg::RegisterAddr<HostControl1>(0x28); }
@@ -325,18 +326,18 @@ class AdmaSystemAddress : public hwreg::RegisterBase<AdmaSystemAddress, uint32_t
   }
 };
 
-class Adma64DescriptorAttributes
-    : public hwreg::RegisterBase<Adma64DescriptorAttributes, uint16_t> {
+class Adma2DescriptorAttributes : public hwreg::RegisterBase<Adma2DescriptorAttributes, uint16_t> {
  public:
+  static constexpr uint16_t kTypeData = 0b10;
+
   static auto Get(uint16_t value = 0) {
-    Adma64DescriptorAttributes ret;
+    Adma2DescriptorAttributes ret;
     ret.set_reg_value(value);
     return ret;
   }
 
   DEF_RSVDZ_FIELD(15, 6);
-  DEF_BIT(5, act2);
-  DEF_BIT(4, act1);
+  DEF_FIELD(5, 4, type);
   DEF_RSVDZ_BIT(3);
   DEF_BIT(2, intr);
   DEF_BIT(1, end);

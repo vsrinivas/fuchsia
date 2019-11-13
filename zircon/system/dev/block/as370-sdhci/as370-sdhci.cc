@@ -83,9 +83,7 @@ zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
 
 uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
-uint64_t As370Sdhci::SdhciGetQuirks() {
-  return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER | SDHCI_QUIRK_NO_DMA;
-}
+uint64_t As370Sdhci::SdhciGetQuirks() { return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER; }
 
 void As370Sdhci::SdhciHwReset() {}
 

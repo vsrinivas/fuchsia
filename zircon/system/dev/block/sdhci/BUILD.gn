@@ -24,13 +24,14 @@ zx_driver("sdhci") {
 zx_test("sdhci-test") {
   output_name = "sdhci-test"
   sources = [
-    "sdhci.cc",
     "sdhci-test.cc",
+    "sdhci.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.sdhci",
     "$zx/system/banjo/ddk.protocol.sdmmc",
+    "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",

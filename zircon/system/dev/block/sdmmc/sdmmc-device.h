@@ -23,9 +23,7 @@ class SdmmcDevice {
   const ddk::SdmmcProtocolClient& host() const { return host_; }
   const sdmmc_host_info_t& host_info() const { return host_info_; }
 
-  bool UseDma() const {
-    return (host_info_.caps & (SDMMC_HOST_CAP_ADMA2 | SDMMC_HOST_CAP_SIXTY_FOUR_BIT));
-  }
+  bool UseDma() const { return host_info_.caps & SDMMC_HOST_CAP_DMA; }
 
   // Update the current voltage field, e.g. after reading the card status registers.
   void SetCurrentVoltage(sdmmc_voltage_t new_voltage) { signal_voltage_ = new_voltage; }
