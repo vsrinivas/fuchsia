@@ -35,6 +35,10 @@ protocol FidlCodecTestInterface {
     TwoStringVectors(vector<string:100>:10 v_1, vector<string:100>:10 v_2);
     VectorUint8(vector<uint8>:100 v);
     VectorUint32(vector<uint32>:100 v);
+    VectorStruct(vector<SmallStruct>:100 v);
+    ArrayStruct(array<SmallStruct>:3 a);
+    VectorStruct2(vector<SmallUnevenStruct>:100 v);
+    ArrayStruct2(array<SmallUnevenStruct>:3 a);
 
     Struct(PrimitiveTypes p);
     BoolStruct(BoolStructType s);
@@ -107,6 +111,11 @@ struct SmallStruct {
     uint8 a;
     uint8 b;
     uint8 c;
+};
+
+struct SmallUnevenStruct {
+    uint32 a;
+    uint8 b;
 };
 
 struct TwoStringStruct {

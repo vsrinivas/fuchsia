@@ -102,6 +102,7 @@ void Encoder::VisitObjectBody(const Object* node, size_t existing_size) {
   FXL_DCHECK(existing_size <= bytes_.size());
 
   size_t object_offset = bytes_.size() - existing_size;
+  size_t object_size = node->struct_definition().size();
 
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(std::string(member->name()));
@@ -111,8 +112,8 @@ void Encoder::VisitObjectBody(const Object* node, size_t existing_size) {
     it->second->Visit(this);
   }
 
-  // Structs always pad to next 8-byte alignment.
-  Align8();
+  FXL_DCHECK(bytes_.size() <= object_offset + object_size);
+  bytes_.resize(object_offset + object_size);
 }
 
 void Encoder::VisitUnionAsXUnion(const UnionValue* node) {

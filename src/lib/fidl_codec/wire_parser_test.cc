@@ -713,6 +713,73 @@ TEST_DECODE_WIRE(TwoStringNullableStructInt, TwoStringNullableStructInt,
                  TwoStringStructIntPretty("harpo", "chico", 1),
                  TwoStringStructFromValsPtr("harpo", "chico"), 1)
 
+TEST_DECODE_WIRE(VectorStruct, VectorStruct,
+                 R"({"v":[{"a":"1","b":"2","c":"3"},{"a":"2","b":"4","c":"6"},)"
+                 R"({"a":"3","b":"6","c":"9"}]})",
+                 "{\n"
+                 "  v: #gre#vector<test.fidlcodec.examples/SmallStruct>#rst# = [\n"
+                 "    { a: #gre#uint8#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst#, c: "
+                 "#gre#uint8#rst# = #blu#3#rst# },\n"
+                 "    { a: #gre#uint8#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst#, c: "
+                 "#gre#uint8#rst# = #blu#6#rst# },\n"
+                 "    { a: #gre#uint8#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst#, c: "
+                 "#gre#uint8#rst# = #blu#9#rst# }\n"
+                 "  ]\n"
+                 "}",
+                 std::vector{SmallStructFromVals(1, 2, 3), SmallStructFromVals(2, 4, 6),
+                             SmallStructFromVals(3, 6, 9)})
+
+TEST_DECODE_WIRE(ArrayStruct, ArrayStruct,
+                 R"({"a":[{"a":"1","b":"2","c":"3"},{"a":"2","b":"4","c":"6"},)"
+                 R"({"a":"3","b":"6","c":"9"}]})",
+                 "{\n"
+                 "  a: #gre#array<test.fidlcodec.examples/SmallStruct>#rst# = [\n"
+                 "    { a: #gre#uint8#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst#, c: "
+                 "#gre#uint8#rst# = #blu#3#rst# }\n"
+                 "    { a: #gre#uint8#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst#, c: "
+                 "#gre#uint8#rst# = #blu#6#rst# }\n"
+                 "    { a: #gre#uint8#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst#, c: "
+                 "#gre#uint8#rst# = #blu#9#rst# }\n"
+                 "  ]\n"
+                 "}",
+                 std::array{SmallStructFromVals(1, 2, 3), SmallStructFromVals(2, 4, 6),
+                            SmallStructFromVals(3, 6, 9)})
+
+namespace {
+
+test::fidlcodec::examples::SmallUnevenStruct SmallUnevenStructFromVals(uint8_t a, uint8_t b) {
+  test::fidlcodec::examples::SmallUnevenStruct ss;
+  ss.a = a;
+  ss.b = b;
+  return ss;
+}
+
+}  // namespace
+
+TEST_DECODE_WIRE(VectorStruct2, VectorStruct2,
+                 R"({"v":[{"a":"1","b":"2"},{"a":"2","b":"4"},{"a":"3","b":"6"}]})",
+                 "{\n"
+                 "  v: #gre#vector<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
+                 "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# },"
+                 " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# },\n"
+                 "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
+                 "  ]\n"
+                 "}",
+                 std::vector{SmallUnevenStructFromVals(1, 2), SmallUnevenStructFromVals(2, 4),
+                             SmallUnevenStructFromVals(3, 6)})
+
+TEST_DECODE_WIRE(ArrayStruct2, ArrayStruct2,
+                 R"({"a":[{"a":"1","b":"2"},{"a":"2","b":"4"},{"a":"3","b":"6"}]})",
+                 "{\n"
+                 "  a: #gre#array<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
+                 "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# }\n"
+                 "    { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
+                 "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
+                 "  ]\n"
+                 "}",
+                 std::array{SmallUnevenStructFromVals(1, 2), SmallUnevenStructFromVals(2, 4),
+                            SmallUnevenStructFromVals(3, 6)})
+
 // Union and XUnion tests
 
 namespace {
