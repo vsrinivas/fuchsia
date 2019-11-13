@@ -3,20 +3,24 @@
 // found in the LICENSE file.
 
 use crate::bind_library;
-use crate::bind_program;
+use crate::bind_program::{self, Condition, ConditionOp, Statement, Value};
 use crate::dependency_graph::{self, DependencyGraph};
+use crate::instruction;
 use crate::make_identifier;
 use crate::parser_common::{self, CompoundIdentifier, Include};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::File;
+use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 pub enum CompilerError {
     FileOpenError(PathBuf),
     FileReadError(PathBuf),
-    FileWriteError(PathBuf),
+    EncodingError,
     BindParserError(parser_common::BindParserError),
     DependencyError(dependency_graph::DependencyError<CompoundIdentifier>),
     DuplicateIdentifier(CompoundIdentifier),
@@ -25,9 +29,39 @@ pub enum CompilerError {
     UndeclaredKey(CompoundIdentifier),
     MissingExtendsKeyword(CompoundIdentifier),
     InvalidExtendsKeyword(CompoundIdentifier),
+    UnknownKey(CompoundIdentifier),
+    IfStatementMustBeTerminal,
 }
 
-#[allow(dead_code)]
+pub fn compile(
+    program: PathBuf,
+    libraries: &[PathBuf],
+) -> Result<Vec<instruction::Instruction>, CompilerError> {
+    let mut file =
+        File::open(&program).map_err(|_| CompilerError::FileOpenError(program.clone()))?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf).map_err(|_| CompilerError::FileReadError(program.clone()))?;
+    let ast = bind_program::Ast::from_str(&buf).map_err(CompilerError::BindParserError)?;
+
+    let mut library_asts = vec![];
+    for library in libraries {
+        let mut file =
+            File::open(library).map_err(|_| CompilerError::FileOpenError(library.clone()))?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).map_err(|_| CompilerError::FileReadError(library.clone()))?;
+        library_asts
+            .push(bind_library::Ast::from_str(&buf).map_err(CompilerError::BindParserError)?);
+    }
+
+    let dependencies: Vec<&bind_library::Ast> = resolve_dependencies(&ast, library_asts.iter())?;
+
+    let symbol_table = construct_symbol_table(dependencies.into_iter())?;
+
+    let symbolic_instructions = compile_statements(ast.statements, &symbol_table)?;
+
+    Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
+}
+
 fn resolve_dependencies<'a>(
     program: &bind_program::Ast,
     libraries: impl Iterator<Item = &'a bind_library::Ast> + Clone,
@@ -58,7 +92,7 @@ fn resolve_dependencies<'a>(
 #[derive(Debug, Clone, PartialEq)]
 enum Symbol {
     DeprecatedKey(u32),
-    Key(bind_library::ValueType),
+    Key(String, bind_library::ValueType),
     NumberValue(u64),
     StringValue(String),
     BoolValue(bool),
@@ -148,7 +182,7 @@ fn construct_symbol_table(
             // Type-check the qualified name against the existing symbols, and check that extended
             // keys are previously defined and that non-extended keys are not.
             match symbol_table.get(&qualified) {
-                Some(Symbol::Key(value_type)) => {
+                Some(Symbol::Key(_, value_type)) => {
                     if !declaration.extends {
                         return Err(CompilerError::DuplicateIdentifier(qualified));
                     }
@@ -164,7 +198,10 @@ fn construct_symbol_table(
                     if declaration.extends {
                         return Err(CompilerError::UndeclaredKey(qualified));
                     }
-                    symbol_table.insert(qualified.clone(), Symbol::Key(declaration.value_type));
+                    symbol_table.insert(
+                        qualified.clone(),
+                        Symbol::Key(qualified.to_string(), declaration.value_type),
+                    );
                 }
             }
 
@@ -303,6 +340,189 @@ fn get_deprecated_symbols() -> HashMap<CompoundIdentifier, Symbol> {
     symbol_table
 }
 
+#[derive(Debug, PartialEq)]
+enum SymbolicInstruction {
+    AbortIfEqual { lhs: Symbol, rhs: Symbol },
+    AbortIfNotEqual { lhs: Symbol, rhs: Symbol },
+    Label(u32),
+    UnconditionalJump { label: u32 },
+    JumpIfEqual { lhs: Symbol, rhs: Symbol, label: u32 },
+    JumpIfNotEqual { lhs: Symbol, rhs: Symbol, label: u32 },
+    UnconditionalAbort,
+    UnconditionalBind,
+}
+
+impl SymbolicInstruction {
+    fn to_instruction(self) -> instruction::Instruction {
+        match self {
+            SymbolicInstruction::AbortIfEqual { lhs, rhs } => instruction::Instruction::Abort(
+                instruction::Condition::Equal(lhs.to_bytecode(), rhs.to_bytecode()),
+            ),
+            SymbolicInstruction::AbortIfNotEqual { lhs, rhs } => instruction::Instruction::Abort(
+                instruction::Condition::NotEqual(lhs.to_bytecode(), rhs.to_bytecode()),
+            ),
+            SymbolicInstruction::Label(label_id) => instruction::Instruction::Label(label_id),
+            SymbolicInstruction::UnconditionalJump { label } => {
+                instruction::Instruction::Goto(instruction::Condition::Always, label)
+            }
+            SymbolicInstruction::JumpIfEqual { lhs, rhs, label } => instruction::Instruction::Goto(
+                instruction::Condition::Equal(lhs.to_bytecode(), rhs.to_bytecode()),
+                label,
+            ),
+            SymbolicInstruction::JumpIfNotEqual { lhs, rhs, label } => {
+                instruction::Instruction::Goto(
+                    instruction::Condition::NotEqual(lhs.to_bytecode(), rhs.to_bytecode()),
+                    label,
+                )
+            }
+            SymbolicInstruction::UnconditionalAbort => {
+                instruction::Instruction::Abort(instruction::Condition::Always)
+            }
+            SymbolicInstruction::UnconditionalBind => {
+                instruction::Instruction::Match(instruction::Condition::Always)
+            }
+        }
+    }
+}
+
+fn compile_statements(
+    statements: Vec<Statement>,
+    symbol_table: &HashMap<CompoundIdentifier, Symbol>,
+) -> Result<Vec<SymbolicInstruction>, CompilerError> {
+    let mut compiler = Compiler::new(symbol_table);
+    compiler.compile_statements(statements)?;
+    Ok(compiler.instructions)
+}
+
+struct Compiler<'a> {
+    instructions: Vec<SymbolicInstruction>,
+    next_label_id: u32,
+    symbol_table: &'a HashMap<CompoundIdentifier, Symbol>,
+}
+
+impl<'a> Compiler<'a> {
+    fn new(symbol_table: &'a HashMap<CompoundIdentifier, Symbol>) -> Self {
+        Compiler { instructions: vec![], next_label_id: 0, symbol_table }
+    }
+
+    fn lookup_identifier(&self, identifier: CompoundIdentifier) -> Result<Symbol, CompilerError> {
+        let symbol =
+            self.symbol_table.get(&identifier).ok_or(CompilerError::UnknownKey(identifier))?;
+        Ok(symbol.clone())
+    }
+
+    fn lookup_value(&self, value: Value) -> Result<Symbol, CompilerError> {
+        match value {
+            Value::NumericLiteral(n) => Ok(Symbol::NumberValue(n)),
+            Value::StringLiteral(s) => Ok(Symbol::StringValue(s)),
+            Value::BoolLiteral(b) => Ok(Symbol::BoolValue(b)),
+            Value::Identifier(ident) => self
+                .symbol_table
+                .get(&ident)
+                .ok_or(CompilerError::UnknownKey(ident))
+                .map(|x| x.clone()),
+        }
+    }
+
+    fn compile_statements(&mut self, statements: Vec<Statement>) -> Result<(), CompilerError> {
+        self.compile_block(statements)?;
+
+        // If none of the statements caused an abort, then we should bind the driver.
+        self.instructions.push(SymbolicInstruction::UnconditionalBind);
+
+        Ok(())
+    }
+
+    fn get_unique_label(&mut self) -> u32 {
+        let label = self.next_label_id;
+        self.next_label_id += 1;
+        label
+    }
+
+    fn compile_block(&mut self, statements: Vec<Statement>) -> Result<(), CompilerError> {
+        let mut iter = statements.into_iter().peekable();
+        while let Some(statement) = iter.next() {
+            match statement {
+                Statement::ConditionStatement(Condition { lhs, op, rhs }) => {
+                    let lhs_symbol = self.lookup_identifier(lhs)?;
+                    let rhs_symbol = self.lookup_value(rhs)?;
+                    let instruction = match op {
+                        ConditionOp::Equals => {
+                            SymbolicInstruction::AbortIfEqual { lhs: lhs_symbol, rhs: rhs_symbol }
+                        }
+                        ConditionOp::NotEquals => SymbolicInstruction::AbortIfNotEqual {
+                            lhs: lhs_symbol,
+                            rhs: rhs_symbol,
+                        },
+                    };
+                    self.instructions.push(instruction);
+                }
+                Statement::Accept { identifier, values } => {
+                    let lhs_symbol = self.lookup_identifier(identifier)?;
+                    let label_id = self.get_unique_label();
+                    for value in values {
+                        self.instructions.push(SymbolicInstruction::JumpIfEqual {
+                            lhs: lhs_symbol.clone(),
+                            rhs: self.lookup_value(value)?,
+                            label: label_id,
+                        });
+                    }
+                    self.instructions.push(SymbolicInstruction::UnconditionalAbort);
+                    self.instructions.push(SymbolicInstruction::Label(label_id));
+                }
+                Statement::If { blocks, else_block } => {
+                    if !iter.peek().is_none() {
+                        return Err(CompilerError::IfStatementMustBeTerminal);
+                    }
+
+                    let final_label_id = self.get_unique_label();
+
+                    for (Condition { lhs, op, rhs }, block_statements) in blocks {
+                        let lhs_symbol = self.lookup_identifier(lhs)?;
+                        let rhs_symbol = self.lookup_value(rhs)?;
+
+                        // Generate instructions for the condition.
+                        let label_id = self.get_unique_label();
+                        let instruction = match op {
+                            ConditionOp::Equals => SymbolicInstruction::JumpIfNotEqual {
+                                lhs: lhs_symbol,
+                                rhs: rhs_symbol,
+                                label: label_id,
+                            },
+                            ConditionOp::NotEquals => SymbolicInstruction::JumpIfEqual {
+                                lhs: lhs_symbol,
+                                rhs: rhs_symbol,
+                                label: label_id,
+                            },
+                        };
+                        self.instructions.push(instruction);
+
+                        // Compile the block itself.
+                        self.compile_block(block_statements)?;
+
+                        // Jump to after the if statement.
+                        self.instructions
+                            .push(SymbolicInstruction::UnconditionalJump { label: final_label_id });
+
+                        // Insert a label to jump to when the condition fails.
+                        self.instructions.push(SymbolicInstruction::Label(label_id));
+                    }
+
+                    // Compile the else block.
+                    self.compile_block(else_block)?;
+
+                    // Insert a label to jump to at the end of the whole if statement. Note that we
+                    // could just emit an unconditional bind instead of jumping, since we know that
+                    // if statements are terminal, but we do the jump to be consistent with
+                    // condition and accept statements.
+                    self.instructions.push(SymbolicInstruction::Label(final_label_id));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -326,7 +546,7 @@ mod test {
             let st = construct_symbol_table(libraries.iter()).unwrap();
             assert_eq!(
                 st.get(&make_identifier!("test", "symbol")),
-                Some(&Symbol::Key(bind_library::ValueType::Number))
+                Some(&Symbol::Key("test.symbol".to_string(), bind_library::ValueType::Number))
             );
             assert_eq!(
                 st.get(&make_identifier!("test", "symbol", "x")),
@@ -362,7 +582,7 @@ mod test {
             let st = construct_symbol_table(libraries.iter()).unwrap();
             assert_eq!(
                 st.get(&make_identifier!("lib_a", "symbol")),
-                Some(&Symbol::Key(bind_library::ValueType::Number))
+                Some(&Symbol::Key("lib_a.symbol".to_string(), bind_library::ValueType::Number))
             );
             assert_eq!(
                 st.get(&make_identifier!("lib_a", "symbol", "x")),
@@ -405,7 +625,7 @@ mod test {
             let st = construct_symbol_table(libraries.iter()).unwrap();
             assert_eq!(
                 st.get(&make_identifier!("lib_a", "symbol")),
-                Some(&Symbol::Key(bind_library::ValueType::Number))
+                Some(&Symbol::Key("lib_a.symbol".to_string(), bind_library::ValueType::Number))
             );
             assert_eq!(
                 st.get(&make_identifier!("lib_a", "symbol", "x")),
@@ -515,11 +735,11 @@ mod test {
             let st = construct_symbol_table(libraries.iter()).unwrap();
             assert_eq!(
                 st.get(&make_identifier!("lib_a", "symbol")),
-                Some(&Symbol::Key(bind_library::ValueType::Number))
+                Some(&Symbol::Key("lib_a.symbol".to_string(), bind_library::ValueType::Number))
             );
             assert_eq!(
                 st.get(&make_identifier!("lib_b", "symbol")),
-                Some(&Symbol::Key(bind_library::ValueType::Number))
+                Some(&Symbol::Key("lib_b.symbol".to_string(), bind_library::ValueType::Number))
             );
         }
 
@@ -653,6 +873,190 @@ mod test {
                 Err(CompilerError::TypeMismatch(make_identifier!("lib_a", "symbol")))
             );
         }
+    }
+
+    #[test]
+    fn condition() {
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![Statement::ConditionStatement(Condition {
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(42),
+            })],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, &symbol_table),
+            Ok(vec![
+                SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(42)
+                },
+                SymbolicInstruction::UnconditionalBind
+            ])
+        );
+    }
+
+    #[test]
+    fn accept() {
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![Statement::Accept {
+                identifier: make_identifier!("abc"),
+                values: vec![Value::NumericLiteral(42), Value::NumericLiteral(314)],
+            }],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, &symbol_table),
+            Ok(vec![
+                SymbolicInstruction::JumpIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(42),
+                    label: 0
+                },
+                SymbolicInstruction::JumpIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(314),
+                    label: 0
+                },
+                SymbolicInstruction::UnconditionalAbort,
+                SymbolicInstruction::Label(0),
+                SymbolicInstruction::UnconditionalBind,
+            ])
+        );
+    }
+
+    #[test]
+    fn if_else() {
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![Statement::If {
+                blocks: vec![
+                    (
+                        Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(1),
+                        },
+                        vec![Statement::ConditionStatement(Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(2),
+                        })],
+                    ),
+                    (
+                        Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(2),
+                        },
+                        vec![Statement::ConditionStatement(Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(3),
+                        })],
+                    ),
+                ],
+                else_block: vec![Statement::ConditionStatement(Condition {
+                    lhs: make_identifier!("abc"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::NumericLiteral(3),
+                })],
+            }],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, &symbol_table),
+            Ok(vec![
+                SymbolicInstruction::JumpIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                    label: 1
+                },
+                SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(2)
+                },
+                SymbolicInstruction::UnconditionalJump { label: 0 },
+                SymbolicInstruction::Label(1),
+                SymbolicInstruction::JumpIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(2),
+                    label: 2
+                },
+                SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(3)
+                },
+                SymbolicInstruction::UnconditionalJump { label: 0 },
+                SymbolicInstruction::Label(2),
+                SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(3)
+                },
+                SymbolicInstruction::Label(0),
+                SymbolicInstruction::UnconditionalBind,
+            ])
+        );
+    }
+
+    #[test]
+    fn if_else_must_be_terminal() {
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![
+                Statement::If {
+                    blocks: vec![(
+                        Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(1),
+                        },
+                        vec![Statement::ConditionStatement(Condition {
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(2),
+                        })],
+                    )],
+                    else_block: vec![Statement::ConditionStatement(Condition {
+                        lhs: make_identifier!("abc"),
+                        op: ConditionOp::Equals,
+                        rhs: Value::NumericLiteral(3),
+                    })],
+                },
+                Statement::Accept {
+                    identifier: make_identifier!("abc"),
+                    values: vec![Value::NumericLiteral(42), Value::NumericLiteral(314)],
+                },
+            ],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, &symbol_table),
+            Err(CompilerError::IfStatementMustBeTerminal)
+        );
     }
 
     #[test]

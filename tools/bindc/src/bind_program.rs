@@ -38,9 +38,9 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Condition {
-    lhs: CompoundIdentifier,
-    op: ConditionOp,
-    rhs: Value,
+    pub lhs: CompoundIdentifier,
+    pub op: ConditionOp,
+    pub rhs: Value,
 }
 
 #[derive(Debug, Clone, PartialEq)]
