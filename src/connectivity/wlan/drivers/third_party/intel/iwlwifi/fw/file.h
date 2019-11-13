@@ -637,6 +637,7 @@ enum iwl_fw_dbg_trigger_flags {
   IWL_FW_DBG_FORCE_RESTART = BIT(0),
 };
 
+#if 0   // NEEDS_PORTING
 /**
  * enum iwl_fw_dbg_trigger_vif_type - define the VIF type for a trigger
  * @IWL_FW_DBG_CONF_VIF_ANY: any vif type
@@ -658,6 +659,7 @@ enum iwl_fw_dbg_trigger_vif_type {
   IWL_FW_DBG_CONF_VIF_P2P_DEVICE = NL80211_IFTYPE_P2P_DEVICE,
   IWL_FW_DBG_CONF_VIF_NAN = NL80211_IFTYPE_NAN,
 };
+#endif  // NEEDS_PORTING
 
 /**
  * struct iwl_fw_dbg_trigger_tlv - a TLV that describes the trigger

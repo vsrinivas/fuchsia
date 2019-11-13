@@ -24,6 +24,8 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <ddk/hw/wlan/wlaninfo.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
 
 typedef uint32_t __be32;
@@ -182,7 +184,7 @@ struct page {
 };
 
 struct wireless_dev {
-  enum nl80211_iftype iftype;
+  wlan_info_mac_role_t iftype;
 };
 
 ////

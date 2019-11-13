@@ -108,12 +108,14 @@ static inline struct iwl_fw_dbg_trigger_tlv* _iwl_fw_dbg_get_trigger(const struc
     _iwl_fw_dbg_get_trigger((fw), (id));      \
   })
 
+#if 0   // NEEDS_PORTING
 static inline bool iwl_fw_dbg_trigger_vif_match(struct iwl_fw_dbg_trigger_tlv* trig,
                                                 struct wireless_dev* wdev) {
   uint32_t trig_vif = le32_to_cpu(trig->vif_type);
 
   return trig_vif == IWL_FW_DBG_CONF_VIF_ANY || wdev->iftype == trig_vif;
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_fw_dbg_trigger_stop_conf_match(struct iwl_fw_runtime* fwrt,
                                                       struct iwl_fw_dbg_trigger_tlv* trig) {

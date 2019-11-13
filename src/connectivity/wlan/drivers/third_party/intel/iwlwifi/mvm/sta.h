@@ -489,7 +489,7 @@ int iwl_mvm_rm_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_add_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta, uint32_t qmask,
-                             enum nl80211_iftype iftype, enum iwl_sta_type type);
+                             wlan_info_mac_role_t iftype, enum iwl_sta_type type);
 void iwl_mvm_dealloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 void iwl_mvm_dealloc_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta);
 int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
