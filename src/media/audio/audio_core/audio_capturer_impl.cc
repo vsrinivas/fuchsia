@@ -1543,7 +1543,6 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
 zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
   FX_DCHECK(link != nullptr);
-  FX_LOGS(ERROR) << "ChooseMixer; this " << this;
 
   const auto& source = link->GetSource();
   FX_DCHECK(source);
