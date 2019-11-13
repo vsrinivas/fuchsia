@@ -422,9 +422,6 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
     // mix job size affects the distortion's frequency but not its amplitude. We expect the effects
     // to be below audible thresholds. Until the effects are measurable and attributable to this
     // jitter, we will defer this work.
-    //
-    // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
-
     auto prev_dest_offset = dest_offset;
     auto prev_frac_source_offset = frac_source_offset;
 

@@ -46,8 +46,7 @@ class AudioOutput : public AudioDevice {
     uint32_t frames_produced;
   };
 
-  // TODO(mpuryear): per MTWN-129, integrate it into the Mixer class itself.
-  // TODO(mpuryear): Rationalize naming/usage of bookkeeping and MixJob structs.
+  // TODO(13415): Integrate it into the Mixer class itself.
   void UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Mixer::Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
 

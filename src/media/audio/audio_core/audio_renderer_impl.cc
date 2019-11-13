@@ -360,7 +360,6 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   REP(SettingRendererStreamType(*this, format));
 
   // Create a new format info object so we can create links to outputs.
-  // TODO(mpuryear): Consider consolidating most of the format_info class.
   fuchsia::media::AudioStreamType cfg;
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
@@ -382,7 +381,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
-  // TODO(MTWN-375): Lift this restriction.
+  // TODO(13655): Lift this restriction.
   if (IsOperating()) {
     FX_LOGS(ERROR) << "Attempted to set payload buffer while in operational mode.";
     return;
@@ -413,7 +412,7 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
-  // TODO(MTWN-375): Lift this restriction.
+  // TODO(13655): Lift this restriction.
   if (IsOperating()) {
     FX_LOGS(ERROR) << "Attempted to remove payload buffer while in the operational mode.";
     return;
@@ -585,10 +584,10 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Snap the starting pts to an input frame boundary.
   //
-  // TODO(mpuryear): Don't do this. If a user wants to write an explicit timestamp on an input
+  // TODO(13374): Don't do this. If a user wants to write an explicit timestamp on an input
   // packet which schedules the packet to start at a fractional position on the input time line, we
   // should probably permit this. We need to make sure that the mixer cores are ready to handle this
-  // case before proceeding, however. See MTWN-88
+  // case before proceeding, however.
   constexpr auto mask = ~((static_cast<int64_t>(1) << kPtsFractionalBits) - 1);
   start_pts &= mask;
 

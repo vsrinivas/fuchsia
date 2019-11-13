@@ -18,8 +18,8 @@ constexpr bool kEnableFinalMixWavWriter = false;
 
 class DriverOutput : public AudioOutput {
  public:
-  // TODO(MTWN-269): Revert these to 20/30 instead of 50/60.
-  //                 In the long term, get these into the range of 5/10.
+  // TODO(13550): Revert these to 20/30 instead of 50/60. In the long term, get these into the
+  // range of 5/10.
   static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 

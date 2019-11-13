@@ -396,16 +396,14 @@ void DriverOutput::OnDriverConfigComplete() {
 
   // Set up the intermediate buffer at the AudioOutput level
   //
-  // TODO(mpuryear): The intermediate buffer probably does not need to be as
-  // large as the entire ring buffer.  Consider limiting this to be something
-  // only slightly larger than a nominal mix job.
+  // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
+  // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
   SetupMixBuffer(rb.frames());
 
   // Start the ring buffer running
   //
-  // TODO(mpuryear) : Don't actually start things up here.  We should start only
-  // when we have clients with work to do, and we should stop when we have no
-  // work to do.  See MTWN-5
+  // TODO(13292) : Don't actually start things up here. We should start only when we have clients
+  // with work to do, and we should stop when we have no work to do.
   zx_status_t res = driver()->Start();
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to start ring buffer";
