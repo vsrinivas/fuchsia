@@ -14,10 +14,10 @@ fuchsia::ui::input::PointerEvent ToPointerEvent(
           // Accessibility Pointer Events are only touch for now.
           .type = fuchsia::ui::input::PointerEventType::TOUCH,
           .phase = a11y_event.phase(),
-          // Please note that for detecting a gesture, global coordinates are used. Later, if
-          // necessary, local coordinates are sent.
-          .x = a11y_event.global_point().x,
-          .y = a11y_event.global_point().y};
+          // Please note that for detecting a gesture, normalized device coordinates are used.
+          // Later, if necessary, local coordinates are sent.
+          .x = a11y_event.ndc_point().x,
+          .y = a11y_event.ndc_point().y};
 }
 
 }  // namespace a11y

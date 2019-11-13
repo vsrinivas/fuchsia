@@ -28,10 +28,10 @@ bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& poin
   }
   gesture_start_info->device_id = pointer_event.device_id();
 
-  if (!pointer_event.has_global_point()) {
+  if (!pointer_event.has_ndc_point()) {
     return false;
   }
-  gesture_start_info->starting_global_position = pointer_event.global_point();
+  gesture_start_info->starting_ndc_position = pointer_event.ndc_point();
 
   if (pointer_event.has_local_point()) {
     gesture_start_info->starting_local_position = pointer_event.local_point();
@@ -53,7 +53,7 @@ bool ValidatePointerEvent(const GestureInfo gesture_start_info,
                           const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   // Check if pointer_event has all the required fields.
   if (!pointer_event.has_event_time() || !pointer_event.has_pointer_id() ||
-      !pointer_event.has_device_id() || !pointer_event.has_global_point()) {
+      !pointer_event.has_device_id() || !pointer_event.has_ndc_point()) {
     FX_LOGS(ERROR) << "Pointer Event is missing required information.";
     return false;
   }

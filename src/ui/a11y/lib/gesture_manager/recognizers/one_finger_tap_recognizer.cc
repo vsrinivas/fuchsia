@@ -104,8 +104,8 @@ void OneFingerTapRecognizer::ResetState() {
   abandon_task_.Cancel();
   // Reset GestureInfo.
   gesture_start_info_.gesture_start_time = 0;
-  gesture_start_info_.starting_global_position.x = 0;
-  gesture_start_info_.starting_global_position.y = 0;
+  gesture_start_info_.starting_ndc_position.x = 0;
+  gesture_start_info_.starting_ndc_position.y = 0;
   // Important! Do not set local coordinates to zero. std::optional is used here
   // to indicate that they can be either present or not. Zero is present and may
   // lead to errors.
@@ -128,9 +128,9 @@ void OneFingerTapRecognizer::ResetState() {
 bool OneFingerTapRecognizer::ValidatePointerEventForTap(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   // Check if the new pointer event is under the threshold value for the move.
-  if ((std::abs(pointer_event.global_point().x - gesture_start_info_.starting_global_position.x) >
+  if ((std::abs(pointer_event.ndc_point().x - gesture_start_info_.starting_ndc_position.x) >
        kGestureMoveThreshold) ||
-      (std::abs(pointer_event.global_point().y - gesture_start_info_.starting_global_position.y) >
+      (std::abs(pointer_event.ndc_point().y - gesture_start_info_.starting_ndc_position.y) >
        kGestureMoveThreshold)) {
     FX_LOGS(INFO) << "Touch point has moved more than the threshold value.";
     return false;

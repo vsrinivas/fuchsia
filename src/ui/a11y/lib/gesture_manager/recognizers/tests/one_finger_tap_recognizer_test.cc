@@ -40,7 +40,7 @@ AccessibilityPointerEvent GetDefaultPointerEvent() {
   event.set_pointer_id(1);
   event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
   event.set_phase(Phase::ADD);
-  event.set_global_point({4, 4});
+  event.set_ndc_point({.5, .5});
   event.set_viewref_koid(100);
   event.set_local_point({2, 2});
   return event;
@@ -302,9 +302,9 @@ TEST_F(OneFingerTapRecognizerTest, GesturePerformedOverLargerArea) {
     auto event = GetDefaultPointerEvent();
     event.set_phase(Phase::UP);
     ::fuchsia::math::PointF position;
-    position.x = event.global_point().x + a11y::OneFingerTapRecognizer::kGestureMoveThreshold + 1;
-    position.x = event.global_point().y + a11y::OneFingerTapRecognizer::kGestureMoveThreshold + 1;
-    event.set_global_point(position);
+    position.x = event.ndc_point().x + a11y::OneFingerTapRecognizer::kGestureMoveThreshold + 1;
+    position.x = event.ndc_point().y + a11y::OneFingerTapRecognizer::kGestureMoveThreshold + 1;
+    event.set_ndc_point(position);
     one_finger_tap_recognizer_.HandleEvent(event);
     EXPECT_TRUE(member.IsRejectCalled());
     EXPECT_FALSE(member.IsOnWinCalled());

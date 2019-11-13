@@ -25,6 +25,7 @@
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
+#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
@@ -69,6 +70,17 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
+// View bound clipping is supposed to be exclusive, so to avoid spurious edge cases it's important
+// to dispatch input events from their logical center. For discrete pixel coordinates, this would
+// involve jittering it by (.5, .5). In addition, we floor the coordinate first in case the input
+// device does support subpixel coordinates; if we wanted to center within the subpixel input
+// resolution, we'd need to know the actual input resolution, which we don't, so just pretend
+// they're always at pixel resolution.
+void JitterPointerEvent(PointerEvent* pointer_event) {
+  pointer_event->x = std::floor(pointer_event->x) + .5f;
+  pointer_event->y = std::floor(pointer_event->y) + .5f;
+}
+
 // LINT.IfChange
 // Helper for Dispatch[Touch|Mouse]Command and PerformGlobalHitTest.
 escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
@@ -85,72 +97,94 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // Vulkan's z-in semantics. Similarly since hit testing originates from the camera it should not
   // be necessary to step back from the camera for the hit ray.
   //
-  // During dispatch, we translate an arbitrary pointer's (x,y) device-space
-  // coordinates to a View's (x', y') model-space coordinates. We clamp the
-  // (x,y) coordinates to its lower-bound int value, and then jitter the
-  // coordinates by (0.5, 0.5) to make sure the ray always starts off in the
-  // center of the pixel.
-  return {{std::floor(x) + 0.5f, std::floor(y) + 0.5f, 1.f, 1.f},  // Origin as homogeneous point.
-          {0.f, 0.f, -1.f, 0.f}};
+  // During hit testing, we translate an arbitrary pointer's (x,y) device-space
+  // coordinates to a View's (x', y') model-space coordinates.
+  return {{x, y, 1, 1},  // Origin as homogeneous point.
+          {0, 0, -1, 0}};
 }
 // LINT.ThenChange(//src/ui/scenic/lib/gfx/tests/hittest_global_unittest.cc)
 
-// Helper for Dispatch[Touch|Mouse]Command.
-escher::vec2 TransformPointerEvent(const escher::ray4& ray, const escher::mat4& transform) {
-  const escher::ray4 local_ray = transform * ray;
+gfx::LayerStackPtr GetLayerStack(gfx::Engine* engine, GlobalId compositor_id) {
+  FXL_DCHECK(engine);
+  gfx::CompositorWeakPtr compositor = engine->scene_graph()->GetCompositor(compositor_id);
+  FXL_DCHECK(compositor) << "No compositor, violated invariant.";
 
-  // We treat distance as 0 to simplify; otherwise the formula is:
-  // hit = homogenize(local_ray.origin + distance * local_ray.direction);
-  escher::vec2 hit(escher::homogenize(local_ray.origin));
+  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
+  FXL_DCHECK(layer_stack) << "No layer stack, violated invariant.";
 
-  FXL_VLOG(2) << "Coordinate transform (device->view): (" << ray.origin.x << ", " << ray.origin.y
-              << ")->(" << hit.x << ", " << hit.y << ")";
-  return hit;
+  return layer_stack;
 }
 
 // The x and y values are in device (screen) coordinates.
 // The initial dispatch logic guarantees a valid compositor and layer stack.
-// NOTE: The returned gfx::Hit struct contains a raw Node*, so callers:
-//   - must not retain it, or extends its lifetime via Refptr,
-//   - must not write into it,
-//   - may call const functions against it.
+// NOTE: The accumulated hit structs contain resources that callers should let go of as soon as
+// possible.
 //
 // Only the root presenter creates compositors and sends input commands.
 // This invariant means this dispatcher context's session, handling an input
 // command, also originally created the compositor.
 //
-void PerformGlobalHitTest(gfx::Engine* engine, GlobalId compositor_id, float x, float y,
+void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const escher::vec2& pointer,
                           gfx::HitAccumulator<gfx::ViewHit>* accumulator) {
-  FXL_DCHECK(engine);
-
-  escher::ray4 ray = CreateScreenPerpendicularRay(x, y);
+  escher::ray4 ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
   FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
-
-  gfx::CompositorWeakPtr compositor = engine->scene_graph()->GetCompositor(compositor_id);
-  FXL_DCHECK(compositor) << "No compositor, violated invariant.";
-
-  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-  FXL_DCHECK(layer_stack.get()) << "No layer stack, violated invariant.";
 
   gfx::HitTester hit_tester;
   layer_stack->HitTest(ray, &hit_tester, accumulator);
 }
 
 // Helper for DispatchCommand.
-PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x, float y) {
+PointerEvent ClonePointerWithCoords(const PointerEvent& event, const escher::vec2& coords) {
   PointerEvent clone;
   fidl::Clone(event, &clone);
-  clone.x = x;
-  clone.y = y;
+  clone.x = coords.x;
+  clone.y = coords.y;
   return clone;
+}
+
+escher::vec2 PointerCoords(const PointerEvent& event) { return {event.x, event.y}; }
+
+// Helper for Dispatch[Touch|Mouse]Command.
+escher::vec2 TransformPointerCoords(const escher::vec2& pointer, const glm::mat4 transform) {
+  const escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
+  const escher::ray4 local_ray = transform * screen_ray;
+
+  // We treat distance as 0 to simplify; otherwise the formula is:
+  // hit = homogenize(local_ray.origin + distance * local_ray.direction);
+  escher::vec2 hit(escher::homogenize(local_ray.origin));
+
+  FXL_VLOG(2) << "Coordinate transform (device->view): (" << screen_ray.origin.x << ", "
+              << screen_ray.origin.y << ")->(" << hit.x << ", " << hit.y << ")";
+  return hit;
+}
+
+// Finds (Vulkan) normalized device coordinates with respect to the (single) layer. This is intended
+// for magnification gestures.
+escher::vec2 NormalizePointerCoords(const escher::vec2& pointer,
+                                    const gfx::LayerStackPtr& layer_stack) {
+  if (layer_stack->layers().empty()) {
+    return {0, 0};
+  }
+
+  // RootPresenter only owns one layer per presentation/layer stack. To support multiple layers,
+  // we'd need to partition the input space. So, for now to simplify things we'll treat the layer
+  // size as display dimensions, and if we ever find more than one layer in a stack, we should
+  // worry.
+  FXL_DCHECK(layer_stack->layers().size() == 1)
+      << "Multiple GFX layers; multi-layer input dispatch not implemented.";
+  const gfx::Layer& layer = **layer_stack->layers().begin();
+
+  return {
+      layer.width() > 0 ? 2.f * pointer.x / layer.width() - 1 : 0,
+      layer.height() > 0 ? 2.f * pointer.y / layer.height() - 1 : 0,
+  };
 }
 
 // Helper for EnqueueEventToView.
 // Builds a pointer event with local view coordinates.
 PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event, const glm::mat4& transform) {
-  const escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer_event.x, pointer_event.y);
-  const escher::vec2 hit = TransformPointerEvent(screen_ray, transform);
-  return ClonePointerWithCoords(pointer_event, hit.x, hit.y);
+  return ClonePointerWithCoords(pointer_event,
+                                TransformPointerCoords(PointerCoords(pointer_event), transform));
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.
@@ -166,19 +200,20 @@ bool IsFocusChange(gfx::ViewPtr view) {
 
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
-AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& global,
-                                                         const PointerEvent& local,
+AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& original,
+                                                         const escher::vec2& ndc_point,
+                                                         const escher::vec2& local_point,
                                                          uint64_t viewref_koid) {
   AccessibilityPointerEvent event;
-  event.set_event_time(global.event_time);
-  event.set_device_id(global.device_id);
-  event.set_pointer_id(global.pointer_id);
-  event.set_type(global.type);
-  event.set_phase(global.phase);
-  event.set_global_point({global.x, global.y});
+  event.set_event_time(original.event_time);
+  event.set_device_id(original.device_id);
+  event.set_pointer_id(original.pointer_id);
+  event.set_type(original.type);
+  event.set_phase(original.phase);
+  event.set_ndc_point({ndc_point.x, ndc_point.y});
   event.set_viewref_koid(viewref_koid);
   if (viewref_koid != ZX_KOID_INVALID) {
-    event.set_local_point({local.x, local.y});
+    event.set_local_point({local_point.x, local_point.y});
   }
   return event;
 }
@@ -231,7 +266,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
 
   InputCommand& input = command.input();
   if (input.is_send_keyboard_input()) {
-    DispatchCommand(std::move(input.send_keyboard_input()));
+    DispatchCommand(input.send_keyboard_input());
   } else if (input.is_send_pointer_input()) {
     // Compositor and layer stack required for dispatch.
     GlobalId compositor_id(command_dispatcher_context()->session_id(),
@@ -244,26 +279,33 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     if (!layer_stack)
       return;  // It's legal to race against GFX's layer stack setup.
 
-    DispatchCommand(std::move(input.send_pointer_input()));
+    DispatchCommand(input.send_pointer_input());
   } else if (input.is_set_hard_keyboard_delivery()) {
-    DispatchCommand(std::move(input.set_hard_keyboard_delivery()));
+    DispatchCommand(input.set_hard_keyboard_delivery());
   } else if (input.is_set_parallel_dispatch()) {
-    DispatchCommand(std::move(input.set_parallel_dispatch()));
+    DispatchCommand(input.set_parallel_dispatch());
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
-  const PointerEventType& event_type = command.pointer_event.type;
-  if (event_type == PointerEventType::TOUCH) {
-    DispatchTouchCommand(std::move(command));
-  } else if (event_type == PointerEventType::MOUSE) {
-    DispatchMouseCommand(std::move(command));
-  } else {
-    // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
-    // events, which need to trigger an additional hit test on the DOWN event
-    // and send CANCEL events to disassociated clients.
-    FXL_LOG(INFO) << "Add stylus support.";
+
+  SendPointerInputCmd jittered = command;
+  JitterPointerEvent(&jittered.pointer_event);
+
+  switch (command.pointer_event.type) {
+    case PointerEventType::TOUCH:
+      DispatchTouchCommand(jittered);
+      break;
+    case PointerEventType::MOUSE:
+      DispatchMouseCommand(jittered);
+      break;
+    default:
+      // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
+      // events, which need to trigger an additional hit test on the DOWN event
+      // and send CANCEL events to disassociated clients.
+      FXL_LOG(INFO) << "Add stylus support.";
+      break;
   }
 }
 
@@ -274,7 +316,7 @@ void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd command) 
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, but honors the no-focus property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& command) {
   TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
   trace_flow_id_t trace_id =
       PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor);
@@ -282,8 +324,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
 
   const uint32_t pointer_id = command.pointer_event.pointer_id;
   const Phase pointer_phase = command.pointer_event.phase;
-  const float pointer_x = command.pointer_event.x;
-  const float pointer_y = command.pointer_event.y;
+  const escher::vec2 pointer = PointerCoords(command.pointer_event);
 
   const bool a11y_enabled = ShouldForwardAccessibilityPointerEvents();
 
@@ -294,7 +335,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
 
     gfx::SessionHitAccumulator accumulator;
-    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &accumulator);
+    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -365,14 +406,14 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
     // for "top hit".
     glm::mat4 view_transform(1.f);
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
+    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+    gfx::LayerStackPtr layer_stack = GetLayerStack(engine_, compositor_id);
     {
-      GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
-
       // Find top-hit target and send it to accessibility.
       // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
       // will keep going until we find a hit with a valid owning View.
       gfx::TopHitAccumulator top_hit;
-      PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+      PerformGlobalHitTest(layer_stack, pointer, &top_hit);
 
       if (top_hit.hit()) {
         const gfx::ViewHit& hit = *top_hit.hit();
@@ -381,9 +422,11 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
         view_ref_koid = hit.view->view_ref_koid();
       }
     }
-    const auto top_hit_view_local = BuildLocalPointerEvent(command.pointer_event, view_transform);
-    AccessibilityPointerEvent packet =
-        BuildAccessibilityPointerEvent(command.pointer_event, top_hit_view_local, view_ref_koid);
+
+    const auto ndc = NormalizePointerCoords(pointer, layer_stack);
+    const auto top_hit_view_local = TransformPointerCoords(pointer, view_transform);
+    AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
+        command.pointer_event, ndc, top_hit_view_local, view_ref_koid);
     pointer_event_buffer_->AddEvents(pointer_id, std::move(deferred_events), std::move(packet));
   }
 
@@ -408,11 +451,10 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
-void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& command) {
   const uint32_t device_id = command.pointer_event.device_id;
   const Phase pointer_phase = command.pointer_event.phase;
-  const float pointer_x = command.pointer_event.x;
-  const float pointer_y = command.pointer_event.y;
+  const escher::vec2 pointer = PointerCoords(command.pointer_event);
 
   FXL_DCHECK(command.pointer_event.type == PointerEventType::MOUSE);
   FXL_DCHECK(pointer_phase != Phase::ADD && pointer_phase != Phase::REMOVE &&
@@ -426,7 +468,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &top_hit);
 
     ViewStack hit_view;
 
@@ -473,7 +515,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(engine_, compositor_id, pointer_x, pointer_y, &top_hit);
+    PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &top_hit);
 
     if (top_hit.hit()) {
       const gfx::ViewHit& hit = *top_hit.hit();
@@ -488,7 +530,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd comm
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd& command) {
   // Send keyboard events to the active focus via Text Sync.
   SyncText(input_system_->text_sync_service(), command.keyboard_event);
 
@@ -498,7 +540,7 @@ void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd command)
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd& command) {
   const SessionId session_id = command_dispatcher_context()->session_id();
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
@@ -524,7 +566,7 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd co
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd& command) {
   FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
                 << (command.parallel_dispatch ? "ON" : "OFF");
   parallel_dispatch_ = command.parallel_dispatch;

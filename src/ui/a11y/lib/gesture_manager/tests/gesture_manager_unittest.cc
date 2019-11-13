@@ -26,7 +26,7 @@ AccessibilityPointerEvent GetDefaultPointerEvent() {
   event.set_pointer_id(1);
   event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
   event.set_phase(Phase::ADD);
-  event.set_global_point({4, 4});
+  event.set_ndc_point({4, 4});
   event.set_viewref_koid(100);
   event.set_local_point({2, 2});
   return event;

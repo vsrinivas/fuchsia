@@ -38,8 +38,8 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   };
 
   // Max value by which pointer events can move(relative to first point of contact), and still are
-  // valid for tap gestures.
-  static constexpr uint32_t kGestureMoveThreshold = 8;
+  // valid for tap gestures, in NDC.
+  static constexpr float kGestureMoveThreshold = 1.f / 16;
 
   // Maximum time the tap can be performed.
   static constexpr zx::duration kOneFingerTapTimeout = zx::msec(300);

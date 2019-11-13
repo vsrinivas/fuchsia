@@ -193,14 +193,14 @@ class InputCommandDispatcher : public CommandDispatcher {
   };
 
   // Per-command dispatch logic.
-  void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
-  void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd command);
-  void DispatchCommand(const fuchsia::ui::input::SetHardKeyboardDeliveryCmd command);
-  void DispatchCommand(const fuchsia::ui::input::SetParallelDispatchCmd command);
+  void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
+  void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd& command);
+  void DispatchCommand(const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& command);
+  void DispatchCommand(const fuchsia::ui::input::SetParallelDispatchCmd& command);
 
   // Per-pointer-type dispatch logic.
-  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
-  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd command);
+  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
+  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
 
   // Enqueue the focus event into an EventReporter.
   static void ReportFocusEvent(EventReporter* reporter, fuchsia::ui::input::FocusEvent focus);

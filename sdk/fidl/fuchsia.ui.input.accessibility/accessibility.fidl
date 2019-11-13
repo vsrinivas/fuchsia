@@ -33,8 +33,11 @@ table PointerEvent {
     4: fuchsia.ui.input.PointerEventType type;
     /// Phase of this event, e.g. add, down, etc.
     5: fuchsia.ui.input.PointerEventPhase phase;
-    /// The point of this pointer event in global screen coordinates.
-    6: fuchsia.math.PointF global_point;
+    /// The coordinate of this pointer event in normalized device coordinates.
+    /// Normalized device coordinates have dimensions in the range [-1, 1],
+    /// with (0, 0) being the center of the device and axes aligned with the
+    /// native display.
+    6: fuchsia.math.PointF ndc_point;
     /// The viewref koid of the top most view hit for this pointer event.
     /// This field is set to `ZX_KOID_INVALID` when there is no view hit and
     /// `local_point` is undefined.
