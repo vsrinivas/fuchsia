@@ -121,6 +121,6 @@ protocol Volume {
     Shrink(uint64 start_slice, uint64 slice_count) -> (zx.status status);
 
     // Destroys the current partition, removing it from the VolumeManager, and
-    // freeing all underlying storage.
+    // freeing all underlying storage. The connection to the volume is also closed.
     Destroy() -> (zx.status status);
 };

@@ -61,6 +61,8 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "zircon/errors.h"
+
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
@@ -486,15 +488,9 @@ void CheckNoAccessBlock(int fd, size_t block, size_t count) {
   ASSERT_EQ(read(fd, buf.get(), len), -1);
 }
 
-void CheckDeadBlock(int fd) {
-  fbl::AllocChecker ac;
-  constexpr size_t kBlocksize = 8192;
-  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlocksize]);
-  ASSERT_TRUE(ac.check());
-  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-  ASSERT_EQ(write(fd, buf.get(), kBlocksize), -1);
-  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-  ASSERT_EQ(read(fd, buf.get(), kBlocksize), -1);
+void CheckDeadConnection(int fd) {
+  lseek(fd, 0, SEEK_SET);
+  ASSERT_EQ(EBADF, errno);
 }
 
 void Upgrade(const fzl::FdioCaller& caller, const uint8_t* old_guid, const uint8_t* new_guid,
@@ -1110,8 +1106,6 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   ValidateFVM(ramdisk_device());
 }
 
-// TODO(fxb/41215): Fix and re-enable
-#if 0
 // Test removing VPartitions within an FVM
 TEST_F(FvmTest, TestVPartitionDestroy) {
   constexpr uint64_t kBlockSize = 512;
@@ -1157,38 +1151,23 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(blob_channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   CheckWriteReadBlock(data_fd.get(), 0, 1);
-  CheckDeadBlock(blob_fd.get());
   CheckWriteReadBlock(sys_fd.get(), 0, 1);
-
-  // We also can't re-destroy the blob partition.
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(blob_channel->get(), &status), ZX_OK);
-  ASSERT_NE(status, ZX_OK);
-
-  // We also can't allocate slices to the destroyed blob partition.
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(blob_channel->get(), 1, 1, &status), ZX_OK);
-  ASSERT_NE(status, ZX_OK);
+  CheckDeadConnection(blob_fd.get());
 
   // Destroy the other two VPartitions.
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(data_channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  CheckDeadBlock(data_fd.get());
-  CheckDeadBlock(blob_fd.get());
   CheckWriteReadBlock(sys_fd.get(), 0, 1);
+  CheckDeadConnection(data_fd.get());
 
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(sys_channel->get(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  CheckDeadBlock(data_fd.get());
-  CheckDeadBlock(blob_fd.get());
-  CheckDeadBlock(sys_fd.get());
+  CheckDeadConnection(sys_fd.get());
 
-  ASSERT_EQ(close(data_fd.release()), 0);
-  ASSERT_EQ(close(blob_fd.release()), 0);
-  ASSERT_EQ(close(sys_fd.release()), 0);
   ASSERT_EQ(close(fd.release()), 0);
 
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
-#endif
 
 TEST_F(FvmTest, TestVPartitionQuery) {
   constexpr uint64_t kBlockSize = 512;
