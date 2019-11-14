@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
-
-#include <fbl/algorithm.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <perftest/perftest.h>
+#include <limits.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -22,10 +24,10 @@ constexpr size_t kSize = MB(1);
 
 struct Helper {
   Helper() {
-    ZX_ASSERT(zx::vmar::root_self()->allocate(0, GB(1), ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC,
-                                              &vmar, &vmar_base) == ZX_OK);
+    ASSERT_OK(zx::vmar::root_self()->allocate(0, GB(1), ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC,
+                                              &vmar, &vmar_base));
 
-    ZX_ASSERT(zx::vmo::create(MB(4), 0, &vmo) == ZX_OK);
+    ASSERT_OK(zx::vmo::create(MB(4), 0, &vmo));
   }
 
   ~Helper() { vmar.destroy(); }
@@ -70,11 +72,11 @@ bool MmuMapUnmapTest(perftest::RepeatState* state) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    ZX_ASSERT(helper.MapInChunks(511 * KB(4), kSize,
-                                 /* force_into_mmu */ true) == ZX_OK);
+    ASSERT_OK(helper.MapInChunks(511 * KB(4), kSize,
+                                 /* force_into_mmu */ true));
 
     state->NextStep();
-    ZX_ASSERT(helper.vmar.unmap(helper.vmar_base, kSize) == ZX_OK);
+    ASSERT_OK(helper.vmar.unmap(helper.vmar_base, kSize));
   }
   return true;
 }
@@ -92,8 +94,8 @@ bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
     // Map just under a large page at a time, to force small pages.  We map many
     // pages at once still, to exercise any optimizations the kernel may perform
     // for small contiguous mappings.
-    ZX_ASSERT(helper.MapInChunks(511 * KB(4), kSize,
-                                 /* force_into_mmu */ false) == ZX_OK);
+    ASSERT_OK(helper.MapInChunks(511 * KB(4), kSize,
+                                 /* force_into_mmu */ false));
 
     state->NextStep();
     // Read fault everything in
@@ -103,7 +105,7 @@ bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
     }
 
     state->NextStep();
-    ZX_ASSERT(helper.vmar.unmap(helper.vmar_base, kSize) == ZX_OK);
+    ASSERT_OK(helper.vmar.unmap(helper.vmar_base, kSize));
   }
   return true;
 }

@@ -5,10 +5,13 @@
 #include <lib/fdio/spawn.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
-#include <perftest/perftest.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+
+#include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -23,11 +26,11 @@ constexpr const char* const kArgv[]{kPath, nullptr};
 bool SpawnTest(perftest::RepeatState* state) {
   while (state->KeepRunning()) {
     zx::handle process;
-    ZX_ASSERT(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, kPath, kArgv,
-                         process.reset_and_get_address()) == ZX_OK);
-    ZX_ASSERT(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr) == ZX_OK);
+    ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, kPath, kArgv,
+                         process.reset_and_get_address()));
+    ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
     zx_info_process_t info;
-    ZX_ASSERT(process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
+    ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
     ZX_ASSERT(info.exited);
     ZX_ASSERT(info.return_code == 0);
   }

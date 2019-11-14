@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/socket.h>
+
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/zx/socket.h>
 #include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -20,17 +23,17 @@ bool SocketWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 
   zx::socket socket1;
   zx::socket socket2;
-  ZX_ASSERT(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2) == ZX_OK);
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2));
   std::vector<char> buffer(message_size);
 
   while (state->KeepRunning()) {
     size_t bytes_written;
-    ZX_ASSERT(socket1.write(0, buffer.data(), buffer.size(), &bytes_written) == ZX_OK);
+    ASSERT_OK(socket1.write(0, buffer.data(), buffer.size(), &bytes_written));
     ZX_ASSERT(bytes_written == buffer.size());
     state->NextStep();
 
     size_t bytes_read;
-    ZX_ASSERT(socket2.read(0, buffer.data(), buffer.size(), &bytes_read) == ZX_OK);
+    ASSERT_OK(socket2.read(0, buffer.data(), buffer.size(), &bytes_read));
     ZX_ASSERT(bytes_read == buffer.size());
   }
   return true;

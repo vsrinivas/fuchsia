@@ -13,6 +13,7 @@
 #include <fs/vfs.h>
 #include <perftest/perftest.h>
 
+#include "assert.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 
@@ -60,7 +61,7 @@ bool TestLookup(perftest::RepeatState* state, size_t file_count) {
   int i = 0;
   while (state->KeepRunning()) {
     fbl::RefPtr<fs::Vnode> out;
-    ZX_ASSERT(dir->Lookup(&out, file_names[i]) == ZX_OK);
+    ASSERT_OK(dir->Lookup(&out, file_names[i]));
     i = (i + 1) % file_names.size();
   }
   return true;

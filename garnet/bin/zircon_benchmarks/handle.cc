@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/event.h>
+
 #include <thread>
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/zx/event.h>
 #include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -15,7 +18,7 @@ namespace {
 // until told to stop via a shared variable.
 void DoHandleValid(std::atomic<bool>* stop, zx::event* event) {
   while (!stop->load(std::memory_order_relaxed)) {
-    ZX_ASSERT(event->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) == ZX_OK);
+    ASSERT_OK(event->get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
   }
 }
 
@@ -30,7 +33,7 @@ void DoHandleValid(std::atomic<bool>* stop, zx::event* event) {
 bool HandleValid(perftest::RepeatState* state, uint32_t num_threads) {
   // Object so we have a handle to test validity of.
   zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+  ASSERT_OK(zx::event::create(0, &event));
 
   // Shared variable for signaling worker threads to stop.
   std::atomic<bool> stop(false);
@@ -43,7 +46,7 @@ bool HandleValid(perftest::RepeatState* state, uint32_t num_threads) {
   }
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(event.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr) == ZX_OK);
+    ASSERT_OK(event.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
   }
 
   // Inform our worker threads to stop so we can nicely join them.

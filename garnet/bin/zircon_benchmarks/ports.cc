@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/zx/port.h>
-#include <perftest/perftest.h>
 #include <zircon/syscalls/port.h>
+
+#include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -16,15 +19,15 @@ bool PortQueueWaitTest(perftest::RepeatState* state) {
   state->DeclareStep("wait");
 
   zx::port port;
-  ZX_ASSERT(zx::port::create(0, &port) == ZX_OK);
+  ASSERT_OK(zx::port::create(0, &port));
   zx_port_packet in_packet;
   zx_port_packet out_packet = {};
   out_packet.type = ZX_PKT_TYPE_USER;
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(port.queue(&out_packet) == ZX_OK);
+    ASSERT_OK(port.queue(&out_packet));
     state->NextStep();
-    ZX_ASSERT(port.wait(zx::time::infinite(), &in_packet) == ZX_OK);
+    ASSERT_OK(port.wait(zx::time::infinite(), &in_packet));
   }
   return true;
 }

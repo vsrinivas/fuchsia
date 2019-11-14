@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/channel.h>
+
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/zx/channel.h>
 #include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -20,14 +23,13 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size) {
 
   zx::channel channel1;
   zx::channel channel2;
-  ZX_ASSERT(zx::channel::create(0, &channel1, &channel2) == ZX_OK);
+  ASSERT_OK(zx::channel::create(0, &channel1, &channel2));
   std::vector<char> buffer(message_size);
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(channel1.write(0, buffer.data(), buffer.size(), nullptr, 0) == ZX_OK);
+    ASSERT_OK(channel1.write(0, buffer.data(), buffer.size(), nullptr, 0));
     state->NextStep();
-    ZX_ASSERT(channel2.read(0, buffer.data(), nullptr, buffer.size(), 0, nullptr, nullptr) ==
-              ZX_OK);
+    ASSERT_OK(channel2.read(0, buffer.data(), nullptr, buffer.size(), 0, nullptr, nullptr));
   }
   return true;
 }

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/fifo.h>
+
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/zx/fifo.h>
 #include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -21,18 +24,18 @@ bool FifoWriteReadTest(perftest::RepeatState* state, uint32_t entry_size, uint32
 
   zx::fifo fifo1;
   zx::fifo fifo2;
-  ZX_ASSERT(zx::fifo::create(PAGE_SIZE / entry_size, entry_size, 0, &fifo1, &fifo2) == ZX_OK);
+  ASSERT_OK(zx::fifo::create(PAGE_SIZE / entry_size, entry_size, 0, &fifo1, &fifo2));
   // The buffer represents |batch_size| consecutive entries.
   std::vector<char> buffer(entry_size * batch_size);
 
   while (state->KeepRunning()) {
     size_t entries_written;
-    ZX_ASSERT(fifo1.write(entry_size, buffer.data(), batch_size, &entries_written) == ZX_OK);
+    ASSERT_OK(fifo1.write(entry_size, buffer.data(), batch_size, &entries_written));
     ZX_ASSERT(entries_written == batch_size);
     state->NextStep();
 
     size_t entries_read;
-    ZX_ASSERT(fifo2.read(entry_size, buffer.data(), batch_size, &entries_read) == ZX_OK);
+    ASSERT_OK(fifo2.read(entry_size, buffer.data(), batch_size, &entries_read));
     ZX_ASSERT(entries_read == batch_size);
   }
   return true;

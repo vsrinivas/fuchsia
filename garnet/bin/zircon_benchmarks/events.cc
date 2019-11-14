@@ -3,17 +3,20 @@
 // found in the LICENSE file.
 
 #include <lib/zx/event.h>
-#include <perftest/perftest.h>
 #include <zircon/assert.h>
+
+#include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
 bool EventSignalTest(perftest::RepeatState* state) {
   zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+  ASSERT_OK(zx::event::create(0, &event));
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(event.signal(0, 0) == ZX_OK);
+    ASSERT_OK(event.signal(0, 0));
   }
   return true;
 }
@@ -23,11 +26,11 @@ bool EventDuplicateTest(perftest::RepeatState* state) {
   state->DeclareStep("close_handle");
 
   zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+  ASSERT_OK(zx::event::create(0, &event));
 
   while (state->KeepRunning()) {
     zx::event dup_event;
-    ZX_ASSERT(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event) == ZX_OK);
+    ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event));
 
     state->NextStep();
     // This step covers the work done by dup_event's destructor.
@@ -41,15 +44,15 @@ bool EventReplaceTest(perftest::RepeatState* state) {
   state->DeclareStep("close_handle");
 
   zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
+  ASSERT_OK(zx::event::create(0, &event));
 
   while (state->KeepRunning()) {
     zx::event dup_event;
-    ZX_ASSERT(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event) == ZX_OK);
+    ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_event));
 
     state->NextStep();
     zx::event replaced_event;
-    ZX_ASSERT(dup_event.replace(ZX_RIGHT_SAME_RIGHTS, &replaced_event) == ZX_OK);
+    ASSERT_OK(dup_event.replace(ZX_RIGHT_SAME_RIGHTS, &replaced_event));
 
     state->NextStep();
     // This step covers the work done by replaced_event's destructor.
@@ -59,12 +62,12 @@ bool EventReplaceTest(perftest::RepeatState* state) {
 
 bool WaitForAlreadySignaledEventTest(perftest::RepeatState* state) {
   zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
-  ZX_ASSERT(event.signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
+  ASSERT_OK(zx::event::create(0, &event));
+  ASSERT_OK(event.signal(0, ZX_EVENT_SIGNALED));
 
   while (state->KeepRunning()) {
     zx_signals_t pending = 0;
-    ZX_ASSERT(event.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending) == ZX_OK);
+    ASSERT_OK(event.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending));
   }
   return true;
 }
@@ -74,14 +77,14 @@ bool WaitForManyWithAlreadySignaledEventTest(perftest::RepeatState* state) {
   zx::event events[kNumItems];
   zx_wait_item_t wait_items[kNumItems] = {};
   for (size_t i = 0; i < kNumItems; ++i) {
-    ZX_ASSERT(zx::event::create(0, &events[i]) == ZX_OK);
+    ASSERT_OK(zx::event::create(0, &events[i]));
     wait_items[i].handle = events[i].get();
     wait_items[i].waitfor = ZX_EVENT_SIGNALED;
   }
-  ZX_ASSERT(events[0].signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
+  ASSERT_OK(events[0].signal(0, ZX_EVENT_SIGNALED));
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(zx::event::wait_many(wait_items, kNumItems, zx::time(0)) == ZX_OK);
+    ASSERT_OK(zx::event::wait_many(wait_items, kNumItems, zx::time(0)));
   }
   return true;
 }

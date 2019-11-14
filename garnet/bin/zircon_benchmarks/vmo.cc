@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
 #include <perftest/perftest.h>
+
+#include "assert.h"
 
 namespace {
 
@@ -17,20 +20,20 @@ bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, bool d
   state->SetBytesProcessedPerRun(copy_size);
 
   zx::vmo vmo;
-  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
   std::vector<char> buffer(copy_size);
 
   // Write the buffer so that the pages are pre-committed. This matters
   // more for the read case.
-  ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
+  ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
 
   if (do_write) {
     while (state->KeepRunning()) {
-      ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
+      ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
     }
   } else {
     while (state->KeepRunning()) {
-      ZX_ASSERT(vmo.read(buffer.data(), 0, copy_size) == ZX_OK);
+      ASSERT_OK(vmo.read(buffer.data(), 0, copy_size));
     }
   }
   return true;
@@ -44,45 +47,43 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
   state->SetBytesProcessedPerRun(copy_size);
 
   zx::vmo vmo;
-  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
   std::vector<char> buffer(copy_size);
   zx_vaddr_t mapped_addr;
 
   zx::vmo vmo_buf;
   if (!user_memcpy) {
     // Create a temporary VMO that we can use to get the kernel to read/write our mapped memory.
-    ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo_buf) == ZX_OK);
+    ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo_buf));
   }
 
   // Write the buffer so that the pages are pre-committed. This matters
   // more for the read case.
-  ZX_ASSERT(vmo.write(buffer.data(), 0, copy_size) == ZX_OK);
+  ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
 
   if (do_write) {
     while (state->KeepRunning()) {
-      ZX_ASSERT(zx::vmar::root_self()->map(0, vmo, 0, copy_size,
-                                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags,
-                                           &mapped_addr) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->map(
+          0, vmo, 0, copy_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(reinterpret_cast<void*>(mapped_addr), buffer.data(), copy_size);
       } else {
         // To write to the mapped in portion we *read* from the temporary VMO.
-        ZX_ASSERT(vmo_buf.read(reinterpret_cast<void*>(mapped_addr), 0, copy_size) == ZX_OK);
+        ASSERT_OK(vmo_buf.read(reinterpret_cast<void*>(mapped_addr), 0, copy_size));
       }
-      ZX_ASSERT(zx::vmar::root_self()->unmap(mapped_addr, copy_size) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->unmap(mapped_addr, copy_size));
     }
   } else {  // read
     while (state->KeepRunning()) {
-      ZX_ASSERT(zx::vmar::root_self()->map(0, vmo, 0, copy_size,
-                                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags,
-                                           &mapped_addr) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->map(
+          0, vmo, 0, copy_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(buffer.data(), reinterpret_cast<void*>(mapped_addr), copy_size);
       } else {
         // To read from the mapped in portion we *write* it to the temporary VMO.
-        ZX_ASSERT(vmo_buf.write(reinterpret_cast<void*>(mapped_addr), 0, copy_size) == ZX_OK);
+        ASSERT_OK(vmo_buf.write(reinterpret_cast<void*>(mapped_addr), 0, copy_size));
       }
-      ZX_ASSERT(zx::vmar::root_self()->unmap(mapped_addr, copy_size) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->unmap(mapped_addr, copy_size));
     }
   }
   return true;
@@ -112,26 +113,26 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, bool do_map)
   }
 
   zx::vmo vmo;
-  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
-  ZX_ASSERT(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0) == ZX_OK);
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0));
 
   while (state->KeepRunning()) {
     zx_vaddr_t addr = 0;
     if (do_map) {
-      ZX_ASSERT(zx::vmar::root_self()->map(0, vmo, 0, copy_size, ZX_VM_MAP_RANGE | ZX_VM_PERM_READ,
-                                           &addr) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, copy_size, ZX_VM_MAP_RANGE | ZX_VM_PERM_READ,
+                                           &addr));
       state->NextStep();
     }
 
     zx::vmo clone;
-    ZX_ASSERT(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone) == ZX_OK);
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
     state->NextStep();
 
     clone.reset();
 
     if (do_map) {
       state->NextStep();
-      ZX_ASSERT(zx::vmar::root_self()->unmap(addr, copy_size) == ZX_OK);
+      ASSERT_OK(zx::vmar::root_self()->unmap(addr, copy_size));
     }
   }
 
@@ -156,22 +157,22 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, b
   state->SetBytesProcessedPerRun(copy_size);
 
   zx::vmo vmo;
-  ZX_ASSERT(zx::vmo::create(copy_size, 0, &vmo) == ZX_OK);
-  ZX_ASSERT(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0) == ZX_OK);
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0));
 
   std::vector<char> buffer(copy_size);
 
   while (state->KeepRunning()) {
     zx::vmo clone;
-    ZX_ASSERT(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone) == ZX_OK);
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
     state->NextStep();
 
     const zx::vmo& target = do_target_clone ? clone : vmo;
     if (do_full_op) {
       if (do_write) {
-        ZX_ASSERT(target.write(buffer.data(), 0, copy_size) == ZX_OK);
+        ASSERT_OK(target.write(buffer.data(), 0, copy_size));
       } else {
-        ZX_ASSERT(target.read(buffer.data(), 0, copy_size) == ZX_OK);
+        ASSERT_OK(target.read(buffer.data(), 0, copy_size));
       }
     } else {
       // There's no special meaning behind the particular value of this
@@ -180,9 +181,9 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, b
       static constexpr uint64_t kWriteInterval = 8 * ZX_PAGE_SIZE;
       for (uint64_t offset = 0; offset < copy_size; offset += kWriteInterval) {
         if (do_write) {
-          ZX_ASSERT(target.write(buffer.data(), offset, PAGE_SIZE) == ZX_OK);
+          ASSERT_OK(target.write(buffer.data(), offset, PAGE_SIZE));
         } else {
-          ZX_ASSERT(target.read(buffer.data(), offset, PAGE_SIZE) == ZX_OK);
+          ASSERT_OK(target.read(buffer.data(), offset, PAGE_SIZE));
         }
       }
     }
