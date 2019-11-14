@@ -64,6 +64,7 @@ generated_file("zbi_tests") {
   foreach(image, zircon_images) {
     if (image.type == "zbi" && defined(image.tags) &&
         image.tags + [ "zbi-test" ] - [ "zbi-test" ] != image.tags &&
+        image.tags + [ "disabled" ] - [ "disabled" ] == image.tags &&
         image.cpu == current_cpu) {
       contents += [
         {

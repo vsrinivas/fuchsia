@@ -46,6 +46,12 @@ zbi_test_success_string =
 #     time to cause the machine to reboot instead of powering off.
 #     - Type: list(string)
 #
+#   * tags
+#     - Optional: See zbi() for full details.  The tag "disabled" here
+#     causes this ZBI test to be disabled for bot runs.  It will still
+#     be built and can be run manually, but won't be run automatically.
+#     - Type: list(string)
+#
 # See zbi() for other parameters.
 template("zbi_test") {
   test_target = target_name
