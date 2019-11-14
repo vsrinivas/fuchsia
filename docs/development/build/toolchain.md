@@ -94,12 +94,12 @@ ninja stage2-distribution
 To include compiler runtimes and C++ library for Linux, you need to use
 `LINUX_<architecture>_SYSROOT` flag to point at the sysroot and specify
 the correct host triple. For example, to build the runtimes for
-`x86_64-linux-gnu` using the sysroot from your Fuchsia checkout, you
+`x86_64-unknown-linux-gnu` using the sysroot from your Fuchsia checkout, you
 would use:
 
 ```bash
-  -DBOOTSTRAP_LLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
   -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
 ```
 
 To install the compiler just built into `/usr/local`, you can use the
@@ -118,6 +118,10 @@ Note: the second stage build uses LTO (Link Time Optimization) to
 achieve better runtime performance of the final compiler. LTO often
 requires a large amount of memory and is very slow. Therefore it may not
 be very practical for day-to-day development.
+
+Note: If the Fuchsia build fails due to missing `runtime.json`,
+`aarch64-fuchsia.manifest`, or `x86_64-fuchsia.manifest` files, you can copy
+them over from the prebuilt toolchain.
 
 ## Developing Clang
 
@@ -173,15 +177,10 @@ checkout (on Linux):
 CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/prebuilt/third_party/clang/linux-x64/bin/
 ```
 
-<aside class="note">
-Fuchsia Clang installation only contains static libc++
-host library (on Linux), so you will need the following two flags to
-avoid linker errors:
-<pre>
-  -DCMAKE_EXE_LINKER_FLAGS="-ldl -lpthread" \
-  -DCMAKE_SHARED_LINKER_FLAGS="-ldl -lpthread"
-</pre>
-</aside>
+Note: To build Fuchsia, you need a stripped version of the toolchain runtime
+binaries. Use `DESTDIR=/path/to/install/dir ninja install-distribution-stripped`
+to get a stripped install and then point your build configuration to
+`/path/to/install/dir/bin` as your toolchain.
 
 ### Sanitizers
 
@@ -286,8 +285,8 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_LTO=OFF \
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
   -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -308,8 +307,8 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_LTO=OFF \
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-unknown-linux-gnu \
   -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
