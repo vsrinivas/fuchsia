@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+
+#include <memory>
+#include <utility>
 
 #include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
 #include <fbl/vector.h>
-#include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 
-#include <memory>
-#include <utility>
-
+#include "cobalt-client/cpp/types-internal.h"
 #include "fake_logger.h"
 
 namespace cobalt_client {
@@ -41,18 +42,18 @@ constexpr uint32_t kMetricId = 1;
 constexpr uint32_t kBuckets = 5;
 
 // Event code to be used by default MetricOptions.
-constexpr uint32_t kEventCode = 1;
+constexpr std::array<uint32_t, MetricInfo::kMaxEventCodes> kEventCodes = {1, 2, 3, 4, 5};
 
 // Component name used for the tests.
 constexpr char kComponent[] = "SomeRandomCollectorComponent";
 
-RemoteMetricInfo MakeRemoteMetricInfo(uint32_t metric_id = kMetricId,
-                                      uint32_t event_code = kEventCode,
-                                      const char* component = kComponent) {
-  RemoteMetricInfo metric_info;
-  metric_info.component = component;
+MetricInfo MakeMetricInfo(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
+                          uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
+                          uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
+  MetricInfo metric_info;
+  metric_info.component = kComponent;
   metric_info.metric_id = metric_id;
-  metric_info.event_code = event_code;
+  metric_info.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
   return metric_info;
 }
 
@@ -66,24 +67,48 @@ CollectorOptions MakeCollectorOptions() {
   return options;
 }
 
-MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code = kEventCode) {
+MetricOptions MakeMetricOptionsWithDefault() {
   MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kRemote);
-  options.metric_id = metric_id;
-  options.event_code = event_code;
+  options.SetMode(MetricOptions::Mode::kEager);
+  options.metric_id = kMetricId;
+  options.event_codes = kEventCodes;
   options.component = kComponent;
   return options;
 }
 
-HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId,
-                                      uint32_t event_code = kEventCode) {
+MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
+                                uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
+                                uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
+  MetricOptions options;
+  options.SetMode(MetricOptions::Mode::kEager);
+  options.metric_id = metric_id;
+  options.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
+  options.component = kComponent;
+  return options;
+}
+
+HistogramOptions MakeHistogramOptionsWithDefault() {
   // | .....| ....| ...| .... |
   // -inf  -2     0    2    +inf
   HistogramOptions options =
       HistogramOptions::CustomizedLinear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
-  options.SetMode(MetricOptions::Mode::kRemote);
+  options.SetMode(MetricOptions::Mode::kEager);
+  options.metric_id = kMetricId;
+  options.event_codes = kEventCodes;
+  options.component = kComponent;
+  return options;
+}
+
+HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
+                                      uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
+                                      uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
+  // | .....| ....| ...| .... |
+  // -inf  -2     0    2    +inf
+  HistogramOptions options =
+      HistogramOptions::CustomizedLinear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
+  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = metric_id;
-  options.event_code = event_code;
+  options.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
   options.component = kComponent;
   return options;
 }
@@ -123,8 +148,8 @@ bool ConstructFromOptionsTest() {
   CollectorOptions options = MakeCollectorOptions();
   Collector collector = Collector(std::move(options));
   // Sanity check nothing crashes.
-  auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
-  auto counter = Counter(MakeMetricOptions(), &collector);
+  auto histogram = Histogram<kBuckets>(MakeHistogramOptionsWithDefault(), &collector);
+  auto counter = Counter(MakeMetricOptionsWithDefault(), &collector);
 
   histogram.Add(1);
   counter.Increment();
@@ -141,8 +166,8 @@ bool ConstructFromOptionsWithProjectNameTest() {
   options.project_name = kProjectName;
   Collector collector = Collector(std::move(options));
   // Sanity check nothing crashes.
-  auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
-  auto counter = Counter(MakeMetricOptions(), &collector);
+  auto histogram = Histogram<kBuckets>(MakeHistogramOptionsWithDefault(), &collector);
+  auto counter = Counter(MakeMetricOptionsWithDefault(), &collector);
 
   histogram.Add(1);
   counter.Increment();
@@ -155,7 +180,7 @@ bool AddCounterTest() {
   BEGIN_TEST;
   std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
   Collector collector(std::move(logger));
-  auto counter = Counter(MakeMetricOptions(), &collector);
+  auto counter = Counter(MakeMetricOptionsWithDefault(), &collector);
   counter.Increment(5);
   ASSERT_EQ(counter.GetRemoteCount(), 5);
   END_TEST;
@@ -184,7 +209,7 @@ bool AddHistogramTest() {
   std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
   Collector collector(std::move(logger));
 
-  auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
+  auto histogram = Histogram<kBuckets>(MakeHistogramOptionsWithDefault(), &collector);
 
   histogram.Add(-4, 2);
   ASSERT_EQ(histogram.GetRemoteCount(-4), 2);
@@ -217,7 +242,7 @@ bool AddHistogramMultipleTest() {
 // values for the right metric and event_code.
 bool FlushTest() {
   BEGIN_TEST;
-  HistogramOptions options = MakeHistogramOptions();
+  HistogramOptions options = MakeHistogramOptionsWithDefault();
   std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
   FakeLogger* logger_ptr = logger.get();
   Collector collector(std::move(logger));
@@ -247,14 +272,14 @@ bool FlushTest() {
 
   // -4 goes to underflow bucket(0)
   size_t bucket = options.map_fn(-4, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeRemoteMetricInfo(1, 1))[bucket].count, 2);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 1))[bucket].count, 2);
 
   // -1 goes to first non underflow bucket(1)
   bucket = options.map_fn(-1, histogram_2.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeRemoteMetricInfo(1, 2))[bucket].count, 3);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 2))[bucket].count, 3);
 
-  EXPECT_EQ(logger_ptr->GetCounter(MakeRemoteMetricInfo(2, 1)), 5);
-  EXPECT_EQ(logger_ptr->GetCounter(MakeRemoteMetricInfo(2, 2)), 3);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 1)), 5);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 2)), 3);
   END_TEST;
 }
 
@@ -294,16 +319,16 @@ bool FlushFailTest() {
 
   // -4 goes to underflow bucket(0)
   size_t bucket = options.map_fn(-4, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeRemoteMetricInfo(1, 1))[bucket].count, 2);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 1))[bucket].count, 2);
 
   // -1 goes to first non underflow bucket(1), and its expected to be 0 because the logger failed.
   bucket = options.map_fn(-1, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeRemoteMetricInfo(1, 2))[bucket].count, 0);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 2))[bucket].count, 0);
 
-  EXPECT_EQ(logger_ptr->GetCounter(MakeRemoteMetricInfo(2, 1)), 5);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 1)), 5);
 
   // Expected to be 0, because the logger failed.
-  EXPECT_EQ(logger_ptr->GetCounter(MakeRemoteMetricInfo(2, 2)), 0);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 2)), 0);
   END_TEST;
 }
 
@@ -326,7 +351,7 @@ struct ObserveFnArgs {
   sync_completion_t* start;
 };
 
-static const HistogramOptions kDefaultObserverOptions = MakeHistogramOptions();
+static const HistogramOptions kDefaultObserverOptions = MakeHistogramOptionsWithDefault();
 
 int ObserveFn(void* vargs) {
   ObserveFnArgs* args = reinterpret_cast<ObserveFnArgs*>(vargs);
@@ -378,7 +403,7 @@ int FlushFn(void* vargs) {
 template <bool should_fail>
 bool FlushMultithreadTest() {
   BEGIN_TEST;
-  HistogramOptions options = MakeHistogramOptions();
+  HistogramOptions options = MakeHistogramOptionsWithDefault();
   // Preallocate with the number of logs to prevent realloc problems.
   std::unique_ptr<FakeLogger> logger = std::make_unique<FakeLogger>();
   FakeLogger* logger_ptr = logger.get();
@@ -443,13 +468,13 @@ bool FlushMultithreadTest() {
         for (size_t bucket = 0; bucket < hist->size(); ++bucket) {
           double value =
               options.reverse_map_fn(static_cast<uint32_t>(bucket), hist->size(), options);
-          auto& logged_hist = logger_ptr->GetHistogram(MakeRemoteMetricInfo(metric_id, event_code));
+          auto& logged_hist = logger_ptr->GetHistogram(MakeMetricInfo(metric_id, event_code));
           EXPECT_EQ((should_fail ? hist->GetRemoteCount(value) : logged_hist[bucket].count),
                     expected_bucket_count);
         }
       }
       for (auto& counter : counters) {
-        int64_t logged_count = logger_ptr->GetCounter(MakeRemoteMetricInfo(metric_id, event_code));
+        int64_t logged_count = logger_ptr->GetCounter(MakeMetricInfo(metric_id, event_code));
         ASSERT_EQ(logged_count + counter->GetRemoteCount(), expected_bucket_count);
       }
     }

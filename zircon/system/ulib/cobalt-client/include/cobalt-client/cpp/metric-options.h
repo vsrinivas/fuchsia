@@ -4,66 +4,47 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#include <fbl/function.h>
-#include <fbl/string.h>
+#include <array>
+#include <cstdint>
+#include <string>
 
 namespace cobalt_client {
 
 // Defines basic set of options for instantiating a metric.
 struct MetricOptions {
   enum class Mode : uint8_t {
+    // This mode means that metric initialization occurs at object construction.
+    kEager,
     // This mode marks a set of options as a placeholder, allowing metric instantiations to
     // defer initialization to a later stage.
     kLazy,
-    // Metric is aggregated locally and published via collector interface.
-    kLocal,
-    // Metric deltas are aggregated locally, and sent for global aggregation to a remote
-    // service.
-    kRemote,
-    // Combination of kLocal and kRemote.
-    kRemoteAndLocal,
   };
 
   void SetMode(Mode mode) { this->mode = mode; }
 
-  // Returns true if the metrics supports remote collection.
-  // This is values collected by another service, such as Cobalt.
-  bool IsRemote() const { return mode == Mode::kRemote || mode == Mode::kRemoteAndLocal; }
-
-  // Returns true if the metric supports in process collection.
-  // This is values tied to the process life-time.
-  bool IsLocal() const { return mode == Mode::kLocal || mode == Mode::kRemoteAndLocal; }
+  // Returns true if this does not represent a valid configuration, and is in |kLazy| mode.
+  bool IsEager() const { return mode == Mode::kEager; }
 
   // Returns true if this does not represent a valid configuration, and is in |kLazy| mode.
   bool IsLazy() const { return mode == Mode::kLazy; }
 
-  // Required for local metrics. If not set, and metric is both Local and Remote,
-  // this will be generated from the |metric_id|, |event_code|(if not 0) and |component|(if not
-  // empty).
-  fbl::String name;
-
   // Provides refined metric collection for remote and local metrics.
-  // Warning: |component| is not yet supported in the backend, so it will be ignored.
-  fbl::String component;
-
-  // Function that translates |metric_id| to a human readable name.
-  // If returns |nullptr| or is unset, the stringified version of |uint32_t| will be used.
-  const char* (*get_metric_name)(uint32_t);
-
-  // Function that translates |event_code| to a human readable name.
-  // If returns |nullptr| or is unset, the stringified version of |uint32_t| will be used.
-  const char* (*get_event_name)(uint32_t);
+  std::string component;
 
   // Used by remote metrics to match with the respective unique id for the projects defined
   // metrics in the backend.
   uint32_t metric_id;
 
-  // Provides refined metric collection for |kRemote| and |kLocal| metrics.
-  // |event_code| 0 is reserved for Unknown events.
-  // Warning: |event_code| is not yet supported in the backend, so it will be set to 0.
-  uint32_t event_code;
+  // Provides refined metric collection for metrics, by including the repective event_codes
+  // when logging into cobalt.
+  //
+  // This is the equivalent of the event enums defined in the cobalt configuration, because of this
+  // order matters.
+  //
+  // E.g. Metric{id:1, event_codes:{0,0,0,0,1}}
+  //      Metric{id:1, event_codes:{0,0,0,0,2}}
+  // Can be seen independently in the cobalt backend, or aggregated together.
+  std::array<uint32_t, 5> event_codes;
 
   // Defines whether the metric is local or remote.
   // Internal use, should not be set manually.

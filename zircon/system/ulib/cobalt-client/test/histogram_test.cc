@@ -17,6 +17,7 @@
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/types-internal.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -42,27 +43,27 @@ constexpr uint64_t kMetricId = 1;
 // Component name.
 constexpr char kComponent[] = "SomeRandomHistogramComponent";
 
-constexpr uint32_t kEventCode = 2;
+constexpr std::array<uint32_t, MetricInfo::kMaxEventCodes> kEventCodes = {2, 3, 4, 5, 6};
 
-RemoteMetricInfo MakeRemoteMetricInfo() {
-  RemoteMetricInfo metric_info;
+MetricInfo MakeMetricInfo() {
+  MetricInfo metric_info;
   metric_info.metric_id = kMetricId;
   metric_info.component = kComponent;
-  metric_info.event_code = kEventCode;
+  metric_info.event_codes = kEventCodes;
   return metric_info;
 }
 
 HistogramOptions MakeHistogramOptions() {
   HistogramOptions options = HistogramOptions::CustomizedExponential(kBuckets, 2, 1, 0);
-  options.SetMode(MetricOptions::Mode::kRemote);
+  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.component = kComponent;
-  options.event_code = kEventCode;
+  options.event_codes = kEventCodes;
   return options;
 }
 
 RemoteHistogram<kBuckets> MakeRemoteHistogram() {
-  return RemoteHistogram<kBuckets>(MakeRemoteMetricInfo());
+  return RemoteHistogram<kBuckets>(MakeMetricInfo());
 }
 
 bool HistEventValuesEq(const fbl::Vector<HistogramBucket>& actual,
@@ -225,7 +226,7 @@ bool TestLazyInitialization() {
   // The metadata is the same, and each bucket contains bucket_index count.
   auto& hist_entry = logger.logged_histograms()[0];
 
-  EXPECT_TRUE(hist_entry.metric_info == MakeRemoteMetricInfo());
+  EXPECT_TRUE(hist_entry.metric_info == MakeMetricInfo());
 
   // Verify there is a bucket event_data.
   EXPECT_TRUE(HistEventValuesEq(hist_entry.buckets, expected_buckets));
@@ -263,7 +264,7 @@ bool TestFlush() {
   // The metadata is the same, and each bucket contains bucket_index count.
   auto& hist_entry = logger.logged_histograms()[0];
 
-  EXPECT_TRUE(hist_entry.metric_info == MakeRemoteMetricInfo());
+  EXPECT_TRUE(hist_entry.metric_info == MakeMetricInfo());
 
   // Verify there is a bucket event_data.
   EXPECT_TRUE(HistEventValuesEq(hist_entry.buckets, expected_buckets));
@@ -460,7 +461,7 @@ bool TestAddAfterFlush() {
   HistogramOptions options = HistogramOptions::CustomizedExponential(/*bucket_count=*/kBuckets,
                                                                      /*base=*/2,
                                                                      /*scalar=*/1, /*offset=*/-10);
-  options.SetMode(MetricOptions::Mode::kRemote);
+  options.SetMode(MetricOptions::Mode::kEager);
   internal::FlushInterface* remote_histogram;
   FakeLogger logger;
   Histogram<kBuckets> histogram(options, &remote_histogram);

@@ -83,7 +83,6 @@ class BlockDeviceHarness : public zxtest::Test {
                                             sizeof(data_guid), &ramdisk_));
     } else {
       ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_));
-
     }
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
                                                             ramdisk_get_path(ramdisk_), &fd_));
@@ -276,10 +275,13 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   EXPECT_NOT_OK(device.CheckFilesystem());
 
   // Verify a corruption event was logged.
-  uint32_t metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
+  cobalt_client::InMemoryLogger::MetricInfo info;
+  info.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
       fs_metrics::Event::kDataCorruption);
-  ASSERT_NE(logger_->counters().find(metric_id), logger_->counters().end());
-  ASSERT_EQ(logger_->counters().at(metric_id), 1);
+  info.event_codes = {};
+  info.component = {};
+  ASSERT_NE(logger_->counters().find(info), logger_->counters().end());
+  ASSERT_EQ(logger_->counters().at(info), 1);
 }
 
 // TODO: Add tests for Zxcrypt binding.

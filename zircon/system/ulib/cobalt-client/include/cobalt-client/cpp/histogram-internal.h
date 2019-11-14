@@ -64,13 +64,12 @@ void InitBucketBuffer(HistogramBucket* buckets, uint32_t bucket_count);
 
 // Sets |metric_info| to respective values from |options|, and initializes the buckets.
 void InitLazily(const MetricOptions& options, HistogramBucket* buckets, uint32_t num_buckets,
-                RemoteMetricInfo* metric_info);
+                MetricInfo* metric_info);
 
 // Sets the count of each bucket in |bucket_buffer| to the respective value in
 // |buckets|, and sets the count in |buckets| to 0.
-bool HistogramFlush(const RemoteMetricInfo& metric_info, Logger* logger,
-                    BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
-                    uint32_t num_buckets);
+bool HistogramFlush(const MetricInfo& metric_info, Logger* logger, BaseCounter<uint64_t>* buckets,
+                    HistogramBucket* bucket_buffer, uint32_t num_buckets);
 
 // Undo's an ungoing Flush effects.
 void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
@@ -85,7 +84,7 @@ template <uint32_t num_buckets>
 class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface {
  public:
   RemoteHistogram() = default;
-  RemoteHistogram(const RemoteMetricInfo& metric_info)
+  RemoteHistogram(const MetricInfo& metric_info)
       : BaseHistogram<num_buckets>(), metric_info_(metric_info) {
     InitBucketBuffer(bucket_buffer_, num_buckets);
   }
@@ -106,7 +105,7 @@ class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface
   void UndoFlush() override { HistogramUndoFlush(this->buckets_, bucket_buffer_, num_buckets); }
 
   // Returns the metric_id associated with this remote metric.
-  const RemoteMetricInfo& metric_info() const { return metric_info_; }
+  const MetricInfo& metric_info() const { return metric_info_; }
 
  private:
   // Buffer for out of line allocation for the data being sent
@@ -115,7 +114,7 @@ class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface
   HistogramBucket bucket_buffer_[num_buckets];
 
   // Metric information such as metric_id, event_code and component.
-  RemoteMetricInfo metric_info_;
+  MetricInfo metric_info_;
 };
 
 }  // namespace internal

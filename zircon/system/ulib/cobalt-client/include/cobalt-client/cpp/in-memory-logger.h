@@ -18,8 +18,11 @@ namespace cobalt_client {
 // The class intentionally virtual and not final, to allow customization by unit tests.
 class InMemoryLogger : public internal::Logger {
  public:
-  using RemoteMetricInfo = internal::RemoteMetricInfo;
+  using MetricInfo = internal::MetricInfo;
   using HistogramBucket = internal::HistogramBucket;
+  template <typename MetricType>
+  using MetricMap = std::map<MetricInfo, MetricType, MetricInfo::LessThan>;
+  using HistogramStorage = std::map<uint32_t, Histogram<1>::Count>;
 
   InMemoryLogger() = default;
   InMemoryLogger(const InMemoryLogger&) = delete;
@@ -29,24 +32,22 @@ class InMemoryLogger : public internal::Logger {
   ~InMemoryLogger() override;
 
   // Adds the contents of buckets and the required info to a buffer.
-  bool Log(const RemoteMetricInfo& remote_info, const HistogramBucket* buckets,
+  bool Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
            size_t num_buckets) override;
 
   // Adds the count and the required info to a buffer.
-  bool Log(const RemoteMetricInfo& remote_info, int64_t count) override;
+  bool Log(const MetricInfo& metric_info, int64_t count) override;
 
-  const std::map<uint64_t, Counter::Count>& counters() const { return persisted_counters_; }
+  const MetricMap<Counter::Count>& counters() const { return persisted_counters_; }
 
-  const std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>>& histograms() const {
-    return persisted_histograms_;
-  }
+  const MetricMap<HistogramStorage>& histograms() const { return persisted_histograms_; }
 
   void fail_logging(bool fail) { fail_logging_ = fail; }
 
  protected:
   bool fail_logging_ = false;
-  std::map<uint64_t, Counter::Count> persisted_counters_;
-  std::map<uint64_t, std::map<uint32_t, Histogram<1>::Count>> persisted_histograms_;
+  MetricMap<Counter::Count> persisted_counters_;
+  MetricMap<HistogramStorage> persisted_histograms_;
 };
 
 }  // namespace cobalt_client

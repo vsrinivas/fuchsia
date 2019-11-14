@@ -114,7 +114,7 @@ void HandleChannelStatus(zx::channel* logger_client, zx_status_t result) {
 CobaltLogger::CobaltLogger(CobaltOptions options)
     : options_(std::move(options)), logger_(ZX_HANDLE_INVALID) {}
 
-bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, const HistogramBucket* buckets,
+bool CobaltLogger::Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
                        size_t bucket_count) {
   if (!IsLoggerReady()) {
     return false;
@@ -138,7 +138,7 @@ bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, const HistogramBucke
   return result == ZX_OK && cobalt_status == fuchsia_cobalt_Status_OK;
 }
 
-bool CobaltLogger::Log(const RemoteMetricInfo& metric_info, RemoteCounter::Type count) {
+bool CobaltLogger::Log(const MetricInfo& metric_info, RemoteCounter::Type count) {
   if (!IsLoggerReady()) {
     return false;
   }

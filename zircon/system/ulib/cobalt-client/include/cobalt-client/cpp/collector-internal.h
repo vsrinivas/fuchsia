@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <cobalt-client/cpp/types-internal.h>
+#include <fbl/function.h>
 #include <fbl/string_buffer.h>
 
 namespace cobalt_client {
@@ -56,11 +57,11 @@ class CobaltLogger : public Logger {
   ~CobaltLogger() override {}
 
   // Returns true if the histogram was persisted.
-  bool Log(const RemoteMetricInfo& metric_info, const HistogramBucket* buckets,
+  bool Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
            size_t bucket_count) override;
 
   // Returns true if the counter was persisted.
-  bool Log(const RemoteMetricInfo& metric_info, int64_t count) override;
+  bool Log(const MetricInfo& metric_info, int64_t count) override;
 
   bool IsListeningForReply() const { return logger_factory_.is_valid(); }
 

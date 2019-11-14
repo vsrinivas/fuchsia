@@ -5,12 +5,12 @@
 #pragma once
 
 #include <stdint.h>
+#include <zircon/assert.h>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <zircon/assert.h>
 
 namespace cobalt_client {
 
@@ -28,10 +28,10 @@ class Histogram {
 
   Histogram() = default;
   Histogram(const HistogramOptions& options)
-      : remote_histogram_(internal::RemoteMetricInfo::From(options)), options_(options) {}
+      : remote_histogram_(internal::MetricInfo::From(options)), options_(options) {}
   // Collector's lifetime must exceed the histogram's lifetime.
   Histogram(const HistogramOptions& options, Collector* collector)
-      : remote_histogram_(internal::RemoteMetricInfo::From(options)),
+      : remote_histogram_(internal::MetricInfo::From(options)),
         options_(options),
         collector_(collector) {
     ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Cannot initialize histogram with |kLazy| options.");
@@ -41,7 +41,7 @@ class Histogram {
   }
   // Constructor for internal use only.
   Histogram(const HistogramOptions& options, internal::FlushInterface** flush_interface)
-      : remote_histogram_(internal::RemoteMetricInfo::From(options)), options_(options) {
+      : remote_histogram_(internal::MetricInfo::From(options)), options_(options) {
     ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Cannot initialize histogram with |kLazy| options.");
     *flush_interface = &remote_histogram_;
   }

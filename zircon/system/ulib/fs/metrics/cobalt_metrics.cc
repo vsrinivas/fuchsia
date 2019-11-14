@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <fs/metrics/cobalt_metrics.h>
-#include <fs/metrics/events.h>
 
 #include <utility>
+
+#include <fs/metrics/events.h>
 
 namespace fs_metrics {
 
@@ -18,39 +19,6 @@ struct VnodeCobalt {
     kUnknown = 0,
   };
 };
-
-const char* GetMetricName(uint32_t metric_id) {
-  switch (static_cast<Event>(metric_id)) {
-    case Event::kClose:
-      return "Vnode.Close";
-    case Event::kRead:
-      return "Vnode.Read";
-    case Event::kWrite:
-      return "Vnode.Write";
-    case Event::kAppend:
-      return "Vnode.Append";
-    case Event::kTruncate:
-      return "Vnode.Truncate";
-    case Event::kSetAttr:
-      return "Vnode.SetAttribute";
-    case Event::kGetAttr:
-      return "Vnoode.GetAttribute";
-    case Event::kReadDir:
-      return "Vnode.ReadDir";
-    case Event::kSync:
-      return "Vnode.Sync";
-    case Event::kLookUp:
-      return "Vnode.LookUp";
-    case Event::kCreate:
-      return "Vnode.Create";
-    case Event::kUnlink:
-      return "Vnode.Unlink";
-    case Event::kLink:
-      return "Vnode.Link";
-    default:
-      return "kUnknown";
-  };
-}
 
 // Default options for VnodeMetrics that are in tens of nanoseconds precision.
 const cobalt_client::HistogramOptions kVnodeOptionsNanoOp =
@@ -66,9 +34,9 @@ cobalt_client::HistogramOptions MakeHistogramOptions(const cobalt_client::Histog
                                                      VnodeCobalt::EventCode event_code) {
   cobalt_client::HistogramOptions options = base;
   options.metric_id = static_cast<uint32_t>(metric_id);
-  options.event_code = static_cast<uint32_t>(event_code);
-  options.get_metric_name = GetMetricName;
-  options.get_event_name = nullptr;
+  for (auto& event_code : options.event_codes) {
+    event_code = 0;
+  }
   return options;
 }
 
@@ -78,16 +46,11 @@ VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::Strin
                            bool local_metrics) {
   // Initialize all the metrics for the collector.
   cobalt_client::HistogramOptions nano_base = kVnodeOptionsNanoOp;
+  nano_base.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   cobalt_client::HistogramOptions micro_base = kVnodeOptionsMicroOp;
-  nano_base.component = fs_name;
-  micro_base.component = fs_name;
-  if (local_metrics) {
-    nano_base.SetMode(cobalt_client::MetricOptions::Mode::kRemoteAndLocal);
-    micro_base.SetMode(cobalt_client::MetricOptions::Mode::kRemoteAndLocal);
-  } else {
-    nano_base.SetMode(cobalt_client::MetricOptions::Mode::kRemote);
-    micro_base.SetMode(cobalt_client::MetricOptions::Mode::kRemote);
-  }
+  micro_base.SetMode(cobalt_client::MetricOptions::Mode::kEager);
+  nano_base.component = fs_name.c_str();
+  micro_base.component = fs_name.c_str();
 
   close.Initialize(MakeHistogramOptions(nano_base, Event::kClose, VnodeCobalt::EventCode::kUnknown),
                    collector);

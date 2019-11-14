@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <float.h>
-#include <limits>
-#include <math.h>
-#include <string.h>
-
 #include <cobalt-client/cpp/histogram.h>
+
+#include <float.h>
+
+#include <cmath>
+#include <cstring>
+#include <limits>
 
 #include <cobalt-client/cpp/histogram-internal.h>
 #include <cobalt-client/cpp/metric-options.h>
@@ -95,15 +96,14 @@ void InitBucketBuffer(HistogramBucket* buckets, uint32_t bucket_count) {
 }
 
 void InitLazily(const MetricOptions& options, HistogramBucket* buckets, uint32_t num_buckets,
-                RemoteMetricInfo* metric_info) {
+                MetricInfo* metric_info) {
   ZX_DEBUG_ASSERT(!options.IsLazy());
-  *metric_info = RemoteMetricInfo::From(options);
+  *metric_info = MetricInfo::From(options);
   InitBucketBuffer(buckets, num_buckets);
 }
 
-bool HistogramFlush(const RemoteMetricInfo& metric_info, Logger* logger,
-                    BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
-                    uint32_t num_buckets) {
+bool HistogramFlush(const MetricInfo& metric_info, Logger* logger, BaseCounter<uint64_t>* buckets,
+                    HistogramBucket* bucket_buffer, uint32_t num_buckets) {
   // Sets every bucket back to 0, not all buckets will be at the same instant, but
   // eventual consistency in the backend is good enough.
   for (uint32_t bucket_index = 0; bucket_index < num_buckets; ++bucket_index) {

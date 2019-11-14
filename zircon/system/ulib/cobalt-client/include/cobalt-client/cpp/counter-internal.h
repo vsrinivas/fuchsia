@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <atomic>
 #include <stdint.h>
 #include <unistd.h>
+
+#include <atomic>
 
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
@@ -65,7 +66,7 @@ class BaseCounter {
 class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
  public:
   RemoteCounter() = default;
-  RemoteCounter(const RemoteMetricInfo& metric_info);
+  RemoteCounter(const MetricInfo& metric_info);
   RemoteCounter(const RemoteCounter&) = delete;
   RemoteCounter(RemoteCounter&&);
   RemoteCounter& operator=(const RemoteCounter&) = delete;
@@ -80,12 +81,12 @@ class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
   void Initialize(const MetricOptions& metric_options);
 
   // Returns the metric_id associated with this remote metric.
-  const RemoteMetricInfo& metric_info() const { return metric_info_; }
+  const MetricInfo& metric_info() const { return metric_info_; }
 
  private:
   int64_t buffer_;
   // Unique-Id representing this metric in the backend.
-  RemoteMetricInfo metric_info_;
+  MetricInfo metric_info_;
 };
 
 }  // namespace internal

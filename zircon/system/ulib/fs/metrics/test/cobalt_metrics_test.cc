@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/metrics/cobalt_metrics.h>
+
+#include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 #include <unistd.h>
+
+#include <utility>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
-#include <fs/metrics/cobalt_metrics.h>
-#include <lib/zx/time.h>
-#include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
-
-#include <utility>
 
 namespace fs_metrics {
 namespace {
@@ -33,17 +34,17 @@ cobalt_client::CollectorOptions MakeOptions() {
 cobalt_client::HistogramOptions MakeHistogramOptions() {
   cobalt_client::HistogramOptions options =
       cobalt_client::HistogramOptions::CustomizedExponential(10, 2, 1, 0);
-  options.SetMode(cobalt_client::MetricOptions::Mode::kRemote);
+  options.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   options.metric_id = 1;
-  options.event_code = 0;
+  options.event_codes = {0, 0, 0, 0, 0};
   return options;
 }
 
 cobalt_client::MetricOptions MakeCounterOptions() {
   cobalt_client::MetricOptions options;
-  options.SetMode(cobalt_client::MetricOptions::Mode::kRemote);
+  options.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   options.metric_id = 1;
-  options.event_code = 0;
+  options.event_codes = {0, 0, 0, 0, 0};
   return options;
 }
 

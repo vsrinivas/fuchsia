@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
-#include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/counter.h>
+
 #include <zircon/assert.h>
 
+#include <cstring>
 #include <utility>
+
+#include <cobalt-client/cpp/counter-internal.h>
 
 namespace cobalt_client {
 namespace internal {
 
-RemoteCounter::RemoteCounter(const RemoteMetricInfo& metric_info)
+RemoteCounter::RemoteCounter(const MetricInfo& metric_info)
     : BaseCounter(), metric_info_(metric_info) {
   buffer_ = 0;
 }
@@ -33,18 +34,18 @@ void RemoteCounter::UndoFlush() { this->Increment(buffer_); }
 
 void RemoteCounter::Initialize(const MetricOptions& options) {
   ZX_DEBUG_ASSERT(!options.IsLazy());
-  metric_info_ = RemoteMetricInfo::From(options);
+  metric_info_ = MetricInfo::From(options);
 }
 
 }  // namespace internal
 
 Counter::Counter(const MetricOptions& options)
-    : remote_counter_(internal::RemoteMetricInfo::From(options)), mode_(options.mode) {
+    : remote_counter_(internal::MetricInfo::From(options)), mode_(options.mode) {
   ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
 }
 
 Counter::Counter(const MetricOptions& options, Collector* collector)
-    : remote_counter_(internal::RemoteMetricInfo::From(options)),
+    : remote_counter_(internal::MetricInfo::From(options)),
       collector_(collector),
       mode_(options.mode) {
   ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
@@ -54,7 +55,7 @@ Counter::Counter(const MetricOptions& options, Collector* collector)
 }
 
 Counter::Counter(const MetricOptions& options, internal::FlushInterface** flush_interface)
-    : remote_counter_(internal::RemoteMetricInfo::From(options)),
+    : remote_counter_(internal::MetricInfo::From(options)),
       collector_(nullptr),
       mode_(options.mode) {
   ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");

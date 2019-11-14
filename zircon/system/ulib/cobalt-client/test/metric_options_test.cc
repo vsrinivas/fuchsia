@@ -13,43 +13,21 @@
 namespace cobalt_client {
 namespace {
 
-bool TestLocal() {
-  BEGIN_TEST;
-  MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kLocal);
-  ASSERT_TRUE(options.IsLocal());
-  ASSERT_FALSE(options.IsRemote());
-  ASSERT_FALSE(options.IsLazy());
-  END_TEST;
-}
-
-bool TestRemote() {
-  BEGIN_TEST;
-  MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kRemote);
-  EXPECT_TRUE(options.IsRemote());
-  EXPECT_FALSE(options.IsLocal());
-  EXPECT_FALSE(options.IsLazy());
-  END_TEST;
-}
-
-bool TestLocalAndRemote() {
-  BEGIN_TEST;
-  MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kRemoteAndLocal);
-  EXPECT_TRUE(options.IsRemote());
-  EXPECT_TRUE(options.IsLocal());
-  EXPECT_FALSE(options.IsLazy());
-  END_TEST;
-}
-
 bool TestLazy() {
   BEGIN_TEST;
   MetricOptions options;
   options.SetMode(MetricOptions::Mode::kLazy);
   EXPECT_TRUE(options.IsLazy());
-  EXPECT_FALSE(options.IsRemote());
-  EXPECT_FALSE(options.IsLocal());
+  EXPECT_FALSE(options.IsEager());
+  END_TEST;
+}
+
+bool TestEager() {
+  BEGIN_TEST;
+  MetricOptions options;
+  options.SetMode(MetricOptions::Mode::kEager);
+  EXPECT_TRUE(options.IsEager());
+  EXPECT_FALSE(options.IsLazy());
   END_TEST;
 }
 
@@ -291,9 +269,7 @@ bool TestLinearReverseMap() {
 }
 
 BEGIN_TEST_CASE(MetricOptionsTest)
-RUN_TEST(TestLocal)
-RUN_TEST(TestRemote)
-RUN_TEST(TestLocalAndRemote)
+RUN_TEST(TestEager)
 RUN_TEST(TestLazy)
 END_TEST_CASE(MetricOptionsTest)
 

@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
+#include <fuchsia/cobalt/c/fidl.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+
+#include <atomic>
 
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/counter.h>
@@ -15,9 +19,6 @@
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
-#include <fuchsia/cobalt/c/fidl.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
 #include <unittest/unittest.h>
 
 #include "fake_logger.h"
@@ -42,16 +43,16 @@ namespace {
 
 MetricOptions MakeMetricOptions() {
   MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kRemote);
+  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.component = kComponent;
-  options.event_code = kEventCode;
+  options.event_codes = {kEventCode, 0, 0, 0, 0};
   return options;
 }
 
-RemoteMetricInfo MakeRemoteMetricInfo() { return RemoteMetricInfo::From(MakeMetricOptions()); }
+MetricInfo MakeMetricInfo() { return MetricInfo::From(MakeMetricOptions()); }
 
-RemoteCounter MakeRemoteCounter() { return RemoteCounter(MakeRemoteMetricInfo()); }
+RemoteCounter MakeRemoteCounter() { return RemoteCounter(MakeMetricInfo()); }
 
 // Verify that increments increases the underlying count by 1.
 // This is veryfying the default behaviour.
@@ -231,8 +232,8 @@ bool TestFlush() {
   BEGIN_TEST;
   RemoteCounter counter = MakeRemoteCounter();
   counter.Increment(20);
-  RemoteMetricInfo actual_metric_info;
-  RemoteMetricInfo expected_metric_info = MakeRemoteMetricInfo();
+  MetricInfo actual_metric_info;
+  MetricInfo expected_metric_info = MakeMetricInfo();
   FakeLogger logger;
   logger.set_should_fail(false);
   int64_t actual_count;
