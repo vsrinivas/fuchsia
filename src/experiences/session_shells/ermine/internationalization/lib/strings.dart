@@ -265,8 +265,10 @@ class Strings {
 
   static String openPackage(String packageName) => Intl.message(
         'open $packageName',
-        name: 'open package',
+        name: 'openPackage',
         desc: 'Open an application with supplied package name',
+        args: [packageName],
+        examples: const {'packageName': 'simple_browser'}
       );
 
   static String get name => Intl.message(
