@@ -484,13 +484,9 @@ struct Regression8TableWithUnionSize12Aligned4 {
     TableWithUnionSize12Aligned4 value;
 };
 
-struct Unions {
+struct Regression9Value {
     StringUnion u;
     StringUnion? nullable_u;
-};
-
-struct Result {
-    Unions unions;
 };
 
 // At first, only one member.
@@ -560,5 +556,5 @@ protocol FakeProtocol {
 
     // This method tests a simplified version of the result returned in the
     // EchoStructWithErrorSuccessCase test in the compatibility tests
-    ResultMethod() -> (Result value) error uint32;
+    Regression9() -> (Regression9Value value) error uint32;
 };

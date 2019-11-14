@@ -3214,7 +3214,7 @@ const uint8_t regression8_table_with_union_size12_aligned4_old[] = {
     0x00, 0x00, 0x00, 0x00,
 };
 
-const uint8_t method_result_v1[] = {
+const uint8_t regression9_response_v1[] = {
     0x01, 0x00, 0x00, 0x00, // txn header
     0x01, 0x00, 0x00, 0x01, //
     0x00, 0x00, 0x00, 0x00, //
@@ -3265,7 +3265,7 @@ const uint8_t method_result_v1[] = {
     0x00, 0x00, 0x00, 0x00, // padding
 };
 
-const uint8_t method_result_old[] = {
+const uint8_t regression9_response_old[] = {
     0x01, 0x00, 0x00, 0x00, // header
     0x01, 0x00, 0x00, 0x01, //
     0x00, 0x00, 0x00, 0x00, //
@@ -4164,13 +4164,14 @@ bool regression8_table_with_union_size12_aligned4() {
   END_TEST;
 }
 
-bool method_result() {
+bool regression9_response() {
   BEGIN_TEST;
 
   ASSERT_TRUE(run_fidl_transform(
-    &v1_example_FakeProtocolResultMethodResponseTable,
-    &example_FakeProtocolResultMethodResponseTable,
-    method_result_v1, sizeof(method_result_v1), method_result_old, sizeof(method_result_old)));
+    &v1_example_FakeProtocolRegression9ResponseTable,
+    &example_FakeProtocolRegression9ResponseTable,
+    regression9_response_v1, sizeof(regression9_response_v1),
+    regression9_response_old, sizeof(regression9_response_old)));
 
   END_TEST;
 }
@@ -4353,7 +4354,7 @@ RUN_TEST(regression7_table_union_xunion)
 RUN_TEST(regression8_opt_union_size12_aligned4)
 RUN_TEST(regression8_vector_of_opt_union_size12_aligned4)
 RUN_TEST(regression8_table_with_union_size12_aligned4)
-RUN_TEST(method_result)
+RUN_TEST(regression9_response)
 RUN_TEST(regression10_v1)
 RUN_TEST(regression10_v2)
 RUN_TEST(regression10_v3)

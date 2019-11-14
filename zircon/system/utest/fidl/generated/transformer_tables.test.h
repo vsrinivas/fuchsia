@@ -63,12 +63,11 @@ extern const fidl_type_t example_Sandwich5Table;
 extern const fidl_type_t example_Sandwich3Table;
 extern const fidl_type_t example_StringUnionVectorTable;
 extern const fidl_type_t example_StringUnionTable;
-extern const fidl_type_t example_UnionsTable;
-extern const fidl_type_t example_ResultTable;
-extern const fidl_type_t example_FakeProtocol_ResultMethod_ResponseTable;
-extern const fidl_type_t example_FakeProtocol_ResultMethod_ResultTable;
 extern const fidl_type_t example_StringUnionStructTable;
 extern const fidl_type_t example_StringUnionStructWrapperTable;
+extern const fidl_type_t example_Regression9ValueTable;
+extern const fidl_type_t example_FakeProtocol_Regression9_ResponseTable;
+extern const fidl_type_t example_FakeProtocol_Regression9_ResultTable;
 extern const fidl_type_t example_ArrayStructTable;
 extern const fidl_type_t example_Size8Align8Table;
 extern const fidl_type_t example_Size64Align8Table;
@@ -258,17 +257,17 @@ static const ::fidl::FidlStructField Fields65example_FakeProtocolSendFakeLaunche
 constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestAltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields65example_FakeProtocolSendFakeLauncherCreateComponentRequestRequest, 2u, 96u, "example/FakeProtocolSendFakeLauncherCreateComponentRequestRequest", example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestAltTypePointerTable()));
 
-extern const fidl_type_t example_FakeProtocolResultMethodRequestTable;
-static const ::fidl::FidlStructField Fields39example_FakeProtocolResultMethodRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_FakeProtocolResultMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39example_FakeProtocolResultMethodRequest, 0u, 16u, "example/FakeProtocolResultMethodRequest", example_FakeProtocolResultMethodRequestAltTypePointerTable()));
+extern const fidl_type_t example_FakeProtocolRegression9RequestTable;
+static const ::fidl::FidlStructField Fields38example_FakeProtocolRegression9Request[] = {};
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9RequestAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_FakeProtocolRegression9RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38example_FakeProtocolRegression9Request, 0u, 16u, "example/FakeProtocolRegression9Request", example_FakeProtocolRegression9RequestAltTypePointerTable()));
 
-extern const fidl_type_t example_FakeProtocolResultMethodResponseTable;
-static const ::fidl::FidlStructField Fields40example_FakeProtocolResultMethodResponse[] = {
-    ::fidl::FidlStructField(&example_FakeProtocol_ResultMethod_ResultTable, 16u, 0u)
+extern const fidl_type_t example_FakeProtocolRegression9ResponseTable;
+static const ::fidl::FidlStructField Fields39example_FakeProtocolRegression9Response[] = {
+    ::fidl::FidlStructField(&example_FakeProtocol_Regression9_ResultTable, 16u, 0u)
 };
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_FakeProtocolResultMethodResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields40example_FakeProtocolResultMethodResponse, 1u, 56u, "example/FakeProtocolResultMethodResponse", example_FakeProtocolResultMethodResponseAltTypePointerTable()));
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9ResponseAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_FakeProtocolRegression9ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39example_FakeProtocolRegression9Response, 1u, 56u, "example/FakeProtocolRegression9Response", example_FakeProtocolRegression9ResponseAltTypePointerTable()));
 
 
 static const ::fidl::FidlXUnionField Fields24example_this_is_a_xunion[] = {
@@ -672,32 +671,6 @@ static const ::fidl::FidlUnionField Fields19example_StringUnion[] = {
 constexpr static inline const ::fidl::FidlCodedUnion* example_StringUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields19example_StringUnion, 2u, 8u, 24u, "example/StringUnion", example_StringUnionAltTypePointerTable()));
 
-static const ::fidl::FidlStructField Fields14example_Unions[] = {
-    ::fidl::FidlStructField(&example_StringUnionTable, 0u, 0u),
-    ::fidl::FidlStructField(&Pointer19example_StringUnionTable, 24u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* example_UnionsAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_UnionsTable = fidl_type_t(::fidl::FidlCodedStruct(Fields14example_Unions, 2u, 32u, "example/Unions", example_UnionsAltTypePointerTable()));
-
-static const ::fidl::FidlStructField Fields14example_Result[] = {
-    ::fidl::FidlStructField(&example_UnionsTable, 0u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* example_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_ResultTable = fidl_type_t(::fidl::FidlCodedStruct(Fields14example_Result, 1u, 32u, "example/Result", example_ResultAltTypePointerTable()));
-
-static const ::fidl::FidlStructField Fields42example_FakeProtocol_ResultMethod_Response[] = {
-    ::fidl::FidlStructField(&example_ResultTable, 0u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_FakeProtocol_ResultMethod_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42example_FakeProtocol_ResultMethod_Response, 1u, 32u, "example/FakeProtocol_ResultMethod_Response", example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable()));
-
-static const ::fidl::FidlUnionField Fields40example_FakeProtocol_ResultMethod_Result[] = {
-    ::fidl::FidlUnionField(&example_FakeProtocol_ResultMethod_ResponseTable, 0u, 1u),
-    ::fidl::FidlUnionField(nullptr, 28u, 2u)
-};
-constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t example_FakeProtocol_ResultMethod_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields40example_FakeProtocol_ResultMethod_Result, 2u, 8u, 40u, "example/FakeProtocol_ResultMethod_Result", example_FakeProtocol_ResultMethod_ResultAltTypePointerTable()));
-
 static const ::fidl::FidlStructField Fields25example_StringUnionStruct[] = {
     ::fidl::FidlStructField(&example_StringUnionTable, 0u, 0u),
     ::fidl::FidlStructField(&Pointer19example_StringUnionTable, 24u, 0u)
@@ -710,6 +683,26 @@ static const ::fidl::FidlStructField Fields32example_StringUnionStructWrapper[] 
 };
 constexpr static inline const ::fidl::FidlCodedStruct* example_StringUnionStructWrapperAltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_StringUnionStructWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32example_StringUnionStructWrapper, 1u, 32u, "example/StringUnionStructWrapper", example_StringUnionStructWrapperAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields24example_Regression9Value[] = {
+    ::fidl::FidlStructField(&example_StringUnionTable, 0u, 0u),
+    ::fidl::FidlStructField(&Pointer19example_StringUnionTable, 24u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression9ValueAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression9ValueTable = fidl_type_t(::fidl::FidlCodedStruct(Fields24example_Regression9Value, 2u, 32u, "example/Regression9Value", example_Regression9ValueAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields41example_FakeProtocol_Regression9_Response[] = {
+    ::fidl::FidlStructField(&example_Regression9ValueTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_Regression9_ResponseAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_FakeProtocol_Regression9_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41example_FakeProtocol_Regression9_Response, 1u, 32u, "example/FakeProtocol_Regression9_Response", example_FakeProtocol_Regression9_ResponseAltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields39example_FakeProtocol_Regression9_Result[] = {
+    ::fidl::FidlUnionField(&example_FakeProtocol_Regression9_ResponseTable, 0u, 1u),
+    ::fidl::FidlUnionField(nullptr, 28u, 2u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_Regression9_ResultAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_FakeProtocol_Regression9_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields39example_FakeProtocol_Regression9_Result, 2u, 8u, 40u, "example/FakeProtocol_Regression9_Result", example_FakeProtocol_Regression9_ResultAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields19example_ArrayStruct[] = {
     ::fidl::FidlStructField(&Array72_19example_StringUnionTable, 0u, 0u),
@@ -1009,12 +1002,11 @@ extern const fidl_type_t v1_example_Sandwich5Table;
 extern const fidl_type_t v1_example_Sandwich3Table;
 extern const fidl_type_t v1_example_StringUnionVectorTable;
 extern const fidl_type_t v1_example_StringUnionTable;
-extern const fidl_type_t v1_example_UnionsTable;
-extern const fidl_type_t v1_example_ResultTable;
-extern const fidl_type_t v1_example_FakeProtocol_ResultMethod_ResponseTable;
-extern const fidl_type_t v1_example_FakeProtocol_ResultMethod_ResultTable;
 extern const fidl_type_t v1_example_StringUnionStructTable;
 extern const fidl_type_t v1_example_StringUnionStructWrapperTable;
+extern const fidl_type_t v1_example_Regression9ValueTable;
+extern const fidl_type_t v1_example_FakeProtocol_Regression9_ResponseTable;
+extern const fidl_type_t v1_example_FakeProtocol_Regression9_ResultTable;
 extern const fidl_type_t v1_example_ArrayStructTable;
 extern const fidl_type_t v1_example_Size8Align8Table;
 extern const fidl_type_t v1_example_Size64Align8Table;
@@ -1204,17 +1196,17 @@ static const ::fidl::FidlStructField Fields68v1_example_FakeProtocolSendFakeLaun
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields68v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequest, 2u, 96u, "example/FakeProtocolSendFakeLauncherCreateComponentRequestRequest", v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestAltTypePointerTable()));
 
-extern const fidl_type_t v1_example_FakeProtocolResultMethodRequestTable;
-static const ::fidl::FidlStructField Fields42v1_example_FakeProtocolResultMethodRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_FakeProtocolResultMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_example_FakeProtocolResultMethodRequest, 0u, 16u, "example/FakeProtocolResultMethodRequest", v1_example_FakeProtocolResultMethodRequestAltTypePointerTable()));
+extern const fidl_type_t v1_example_FakeProtocolRegression9RequestTable;
+static const ::fidl::FidlStructField Fields41v1_example_FakeProtocolRegression9Request[] = {};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9RequestAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_FakeProtocolRegression9RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41v1_example_FakeProtocolRegression9Request, 0u, 16u, "example/FakeProtocolRegression9Request", v1_example_FakeProtocolRegression9RequestAltTypePointerTable()));
 
-extern const fidl_type_t v1_example_FakeProtocolResultMethodResponseTable;
-static const ::fidl::FidlStructField Fields43v1_example_FakeProtocolResultMethodResponse[] = {
-    ::fidl::FidlStructField(&v1_example_FakeProtocol_ResultMethod_ResultTable, 16u, 0u)
+extern const fidl_type_t v1_example_FakeProtocolRegression9ResponseTable;
+static const ::fidl::FidlStructField Fields42v1_example_FakeProtocolRegression9Response[] = {
+    ::fidl::FidlStructField(&v1_example_FakeProtocol_Regression9_ResultTable, 16u, 0u)
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_FakeProtocolResultMethodResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43v1_example_FakeProtocolResultMethodResponse, 1u, 40u, "example/FakeProtocolResultMethodResponse", v1_example_FakeProtocolResultMethodResponseAltTypePointerTable()));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9ResponseAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_FakeProtocolRegression9ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_example_FakeProtocolRegression9Response, 1u, 40u, "example/FakeProtocolRegression9Response", v1_example_FakeProtocolRegression9ResponseAltTypePointerTable()));
 
 
 static const ::fidl::FidlXUnionField Fields27v1_example_this_is_a_xunion[] = {
@@ -1618,32 +1610,6 @@ static const ::fidl::FidlUnionField Fields22v1_example_StringUnion[] = {
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_StringUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_StringUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields22v1_example_StringUnion, 2u, 8u, 24u, "example/StringUnion", v1_example_StringUnionAltTypePointerTable()));
 
-static const ::fidl::FidlStructField Fields17v1_example_Unions[] = {
-    ::fidl::FidlStructField(&v1_example_StringUnionTable, 0u, 0u),
-    ::fidl::FidlStructField(&v1_Pointer22v1_example_StringUnionTable, 24u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_UnionsAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_UnionsTable = fidl_type_t(::fidl::FidlCodedStruct(Fields17v1_example_Unions, 2u, 48u, "example/Unions", v1_example_UnionsAltTypePointerTable()));
-
-static const ::fidl::FidlStructField Fields17v1_example_Result[] = {
-    ::fidl::FidlStructField(&v1_example_UnionsTable, 0u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_ResultTable = fidl_type_t(::fidl::FidlCodedStruct(Fields17v1_example_Result, 1u, 48u, "example/Result", v1_example_ResultAltTypePointerTable()));
-
-static const ::fidl::FidlStructField Fields45v1_example_FakeProtocol_ResultMethod_Response[] = {
-    ::fidl::FidlStructField(&v1_example_ResultTable, 0u, 0u)
-};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_FakeProtocol_ResultMethod_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45v1_example_FakeProtocol_ResultMethod_Response, 1u, 48u, "example/FakeProtocol_ResultMethod_Response", v1_example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable()));
-
-static const ::fidl::FidlUnionField Fields43v1_example_FakeProtocol_ResultMethod_Result[] = {
-    ::fidl::FidlUnionField(&v1_example_FakeProtocol_ResultMethod_ResponseTable, 0u, 1u),
-    ::fidl::FidlUnionField(nullptr, 4u, 2u)
-};
-constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_example_FakeProtocol_ResultMethod_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields43v1_example_FakeProtocol_ResultMethod_Result, 2u, 8u, 24u, "example/FakeProtocol_ResultMethod_Result", v1_example_FakeProtocol_ResultMethod_ResultAltTypePointerTable()));
-
 static const ::fidl::FidlStructField Fields28v1_example_StringUnionStruct[] = {
     ::fidl::FidlStructField(&v1_example_StringUnionTable, 0u, 0u),
     ::fidl::FidlStructField(&v1_Pointer22v1_example_StringUnionTable, 24u, 0u)
@@ -1656,6 +1622,26 @@ static const ::fidl::FidlStructField Fields35v1_example_StringUnionStructWrapper
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_StringUnionStructWrapperAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_StringUnionStructWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_example_StringUnionStructWrapper, 1u, 48u, "example/StringUnionStructWrapper", v1_example_StringUnionStructWrapperAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields27v1_example_Regression9Value[] = {
+    ::fidl::FidlStructField(&v1_example_StringUnionTable, 0u, 0u),
+    ::fidl::FidlStructField(&v1_Pointer22v1_example_StringUnionTable, 24u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression9ValueAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression9ValueTable = fidl_type_t(::fidl::FidlCodedStruct(Fields27v1_example_Regression9Value, 2u, 48u, "example/Regression9Value", v1_example_Regression9ValueAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields44v1_example_FakeProtocol_Regression9_Response[] = {
+    ::fidl::FidlStructField(&v1_example_Regression9ValueTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_Regression9_ResponseAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_FakeProtocol_Regression9_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields44v1_example_FakeProtocol_Regression9_Response, 1u, 48u, "example/FakeProtocol_Regression9_Response", v1_example_FakeProtocol_Regression9_ResponseAltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields42v1_example_FakeProtocol_Regression9_Result[] = {
+    ::fidl::FidlUnionField(&v1_example_FakeProtocol_Regression9_ResponseTable, 0u, 1u),
+    ::fidl::FidlUnionField(nullptr, 4u, 2u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_Regression9_ResultAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_FakeProtocol_Regression9_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields42v1_example_FakeProtocol_Regression9_Result, 2u, 8u, 24u, "example/FakeProtocol_Regression9_Result", v1_example_FakeProtocol_Regression9_ResultAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_example_ArrayStruct[] = {
     ::fidl::FidlStructField(&v1_Array72_22v1_example_StringUnionTable, 0u, 0u),
@@ -2228,25 +2214,25 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolSe
 }
 
 
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodRequestAltTypePointerTable() {
-  return &v1_example_FakeProtocolResultMethodRequestTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9RequestAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9RequestAltTypePointerTable() {
+  return &v1_example_FakeProtocolRegression9RequestTable.coded_struct;
 }
 
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodRequestAltTypePointerTable() {
-  return &example_FakeProtocolResultMethodRequestTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9RequestAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9RequestAltTypePointerTable() {
+  return &example_FakeProtocolRegression9RequestTable.coded_struct;
 }
 
 
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolResultMethodResponseAltTypePointerTable() {
-  return &v1_example_FakeProtocolResultMethodResponseTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9ResponseAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocolRegression9ResponseAltTypePointerTable() {
+  return &v1_example_FakeProtocolRegression9ResponseTable.coded_struct;
 }
 
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolResultMethodResponseAltTypePointerTable() {
-  return &example_FakeProtocolResultMethodResponseTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9ResponseAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocolRegression9ResponseAltTypePointerTable() {
+  return &example_FakeProtocolRegression9ResponseTable.coded_struct;
 }
 
 
@@ -2305,25 +2291,25 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_EmptyStructUni
 }
 
 
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() {
-  return &v1_example_FakeProtocol_ResultMethod_ResponseTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_Regression9_ResponseAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_FakeProtocol_Regression9_ResponseAltTypePointerTable() {
+  return &v1_example_FakeProtocol_Regression9_ResponseTable.coded_struct;
 }
 
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_ResultMethod_ResponseAltTypePointerTable() {
-  return &example_FakeProtocol_ResultMethod_ResponseTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_Regression9_ResponseAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_FakeProtocol_Regression9_ResponseAltTypePointerTable() {
+  return &example_FakeProtocol_Regression9_ResponseTable.coded_struct;
 }
 
 
-constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() {
-  return &v1_example_FakeProtocol_ResultMethod_ResultTable.coded_union;
+constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_Regression9_ResultAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* example_FakeProtocol_Regression9_ResultAltTypePointerTable() {
+  return &v1_example_FakeProtocol_Regression9_ResultTable.coded_union;
 }
 
-constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_ResultMethod_ResultAltTypePointerTable() {
-  return &example_FakeProtocol_ResultMethod_ResultTable.coded_union;
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_Regression9_ResultAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_FakeProtocol_Regression9_ResultAltTypePointerTable() {
+  return &example_FakeProtocol_Regression9_ResultTable.coded_union;
 }
 
 
@@ -2525,14 +2511,14 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression8Vec
 }
 
 
-constexpr static inline const ::fidl::FidlCodedStruct* example_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* example_ResultAltTypePointerTable() {
-  return &v1_example_ResultTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression9ValueAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression9ValueAltTypePointerTable() {
+  return &v1_example_Regression9ValueTable.coded_struct;
 }
 
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_ResultAltTypePointerTable() {
-  return &example_ResultTable.coded_struct;
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression9ValueAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression9ValueAltTypePointerTable() {
+  return &example_Regression9ValueTable.coded_struct;
 }
 
 
@@ -2973,17 +2959,6 @@ constexpr static inline const ::fidl::FidlCodedUnion* example_UnionWithVectorOfV
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionWithVectorOfVectorsAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionWithVectorOfVectorsAltTypePointerTable() {
   return &example_UnionWithVectorOfVectorsTable.coded_union;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* example_UnionsAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* example_UnionsAltTypePointerTable() {
-  return &v1_example_UnionsTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_UnionsAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_example_UnionsAltTypePointerTable() {
-  return &example_UnionsTable.coded_struct;
 }
 
 
