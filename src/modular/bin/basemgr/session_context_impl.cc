@@ -5,11 +5,6 @@
 #include "src/modular/bin/basemgr/session_context_impl.h"
 
 #include <fcntl.h>
-#include <lib/fidl/cpp/synchronous_interface_ptr.h>
-
-#include <memory>
-#include <string>
-#include <utility>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -17,7 +12,6 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {

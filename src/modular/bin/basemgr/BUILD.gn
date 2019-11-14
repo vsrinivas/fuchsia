@@ -25,8 +25,6 @@ executable_package("basemgr") {
   sources = [
     "basemgr_impl.cc",
     "basemgr_impl.h",
-    "basemgr_settings.cc",
-    "basemgr_settings.h",
     "main.cc",
   ]
 
@@ -60,7 +58,6 @@ executable_package("basemgr") {
     "//src/modular/lib/common:async_holder",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/fidl:app_client",
-    "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/lifecycle/cpp",
@@ -115,7 +112,6 @@ source_set("lib") {
     "//peridot/lib/util:pseudo_dir_utils",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
@@ -126,12 +122,9 @@ source_set("lib") {
     "//src/modular/lib/common:async_holder",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/fidl:app_client",
-    "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
-    "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/modular_config",
-    "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
 

@@ -15,39 +15,28 @@ table BasemgrConfig {
     /// Default: true
     1: bool enable_cobalt;
 
-    /// When set to true, the Presenter service controls management of views.
-    /// Default: false
-    2: bool enable_presenter;
-
     /// When set to true, wait for persistent data to initialize.
     /// Default: true
-    3: bool use_minfs;
+    2: bool use_minfs;
 
     /// Create story shells through StoryShellFactory exposed by the session
     /// shell instead of creating separate story shell components. When set,
     /// `story_shell_url` and any story shell args are ignored.
     /// Default: false
-    4: bool use_session_shell_for_story_shell_factory;
-
-    /// Tells basemgr whether it is running as a part of an integration test.
-    /// Default: false
-    5: bool test;
-
-    /// The name of the test
-    6: string:fuchsia.io.MAX_PATH test_name;
+    3: bool use_session_shell_for_story_shell_factory;
 
     /// Launch configurations specific to base shell.
-    7: BaseShellConfig base_shell;
+    4: BaseShellConfig base_shell;
 
     /// A map of launch configurations specific to session shells.
-    8: vector<SessionShellMapEntry> session_shell_map;
+    5: vector<SessionShellMapEntry> session_shell_map;
 
     /// Launch configurations specific to story shell.
-    9: StoryShellConfig story_shell;
+    6: StoryShellConfig story_shell;
 
     /// Temporary placeholder to pass configurations to sessionmgr. Will be
     /// removed with the completion of MF-10.
-    10: AppConfig sessionmgr;
+    7: AppConfig sessionmgr;
 };
 
 table BaseShellConfig {

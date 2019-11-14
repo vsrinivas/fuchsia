@@ -173,13 +173,6 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kEnableCobalt, data->mutable_enable_cobalt(),
                         has_enable_cobalt, true);
 
-  bool has_enable_presenter = data->has_enable_presenter();
-  xdr->FieldWithDefault(modular_config::kEnablePresenter, data->mutable_enable_presenter(),
-                        has_enable_presenter, false);
-
-  bool has_test = data->has_test();
-  xdr->FieldWithDefault(modular_config::kTest, data->mutable_test(), has_test, false);
-
   bool has_use_minfs = data->has_use_minfs();
   xdr->FieldWithDefault(modular_config::kUseMinfs, data->mutable_use_minfs(), has_use_minfs, true);
 

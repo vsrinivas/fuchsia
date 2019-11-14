@@ -4,17 +4,12 @@
 
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <lib/fidl/cpp/type_converter.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
-#include "src/modular/bin/basemgr/basemgr_settings.h"
 #include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
-#include "src/modular/bin/basemgr/noop_clipboard_impl.h"
-#include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
@@ -170,15 +165,6 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
 }
 
 void BasemgrImpl::Start() {
-  if (config_.basemgr_config().test()) {
-    // Print test banner.
-    FXL_LOG(INFO) << std::endl
-                  << std::endl
-                  << "======================== Starting Test ["
-                  << config_.basemgr_config().test_name() << "]" << std::endl
-                  << "============================================================" << std::endl;
-  }
-
   // Wait for persistent data to come up.
   if (config_.basemgr_config().use_minfs()) {
     WaitForMinfs();
@@ -255,13 +241,6 @@ void BasemgrImpl::Shutdown() {
 
   state_ = State::SHUTTING_DOWN;
 
-  if (config_.basemgr_config().test()) {
-    FXL_LOG(INFO) << std::endl
-                  << "============================================================" << std::endl
-                  << "======================== [" << config_.basemgr_config().test_name()
-                  << "] Done";
-  }
-
   // |session_provider_| teardown is asynchronous because it holds the
   // sessionmgr processes.
   session_provider_.Teardown(kSessionProviderTimeout, [this] {
@@ -309,14 +288,11 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
     StopBaseShell();
   }
 
-  // Ownership of the Presenter should be moved to the session shell for tests
-  // that enable presenter, and production code.
-  if (!config_.basemgr_config().test() || config_.basemgr_config().enable_presenter()) {
-    presentation_container_ = std::make_unique<PresentationContainer>(
-        presenter_.get(), std::move(view_holder_token),
-        /* shell_config= */ GetActiveSessionShellConfig(),
-        /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
-  }
+  // Ownership of the Presenter should be moved to the session shell.
+  presentation_container_ = std::make_unique<PresentationContainer>(
+      presenter_.get(), std::move(view_holder_token),
+      /* shell_config= */ GetActiveSessionShellConfig(),
+      /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
 }
 
 void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {
@@ -369,9 +345,8 @@ void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // If there are no session shell settings specified, default to showing
     // setup.
-    if (!config_.basemgr_config().test() &&
-        active_session_shell_configs_index_ >=
-            config_.basemgr_config().session_shell_map().size()) {
+    if (active_session_shell_configs_index_ >=
+        config_.basemgr_config().session_shell_map().size()) {
       StartBaseShell();
       return;
     }

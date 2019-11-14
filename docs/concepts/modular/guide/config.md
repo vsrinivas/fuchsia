@@ -88,9 +88,6 @@ modular_config() target in the product's base packages.
 - `enable_cobalt`: **boolean** _(optional)_
   - When set to false, Cobalt statistics are disabled.
   - **default**: `true`
-- `enable_presenter`: **boolean** _(optional)_
-  - When set to true, the Presenter service controls management of views.
-  - **default**: `false`
 - `use_minfs`: **boolean** _(optional)_
   - When set to true, wait for persistent data to initialize.
   - **default**: `true`
@@ -98,9 +95,6 @@ modular_config() target in the product's base packages.
   - Create story shells through StoryShellFactory exposed by the session shell
     instead of creating separate story shell components. When set,
     `story_shell_url` and any story shell args are ignored.
-  - **default**: `false`
-- `test`: **boolean** _(optional)_
-  - Tells basemgr whether it is running as a part of an integration test.
   - **default**: `false`
 
 ## Sessionmgr fields

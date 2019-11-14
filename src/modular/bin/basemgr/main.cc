@@ -19,7 +19,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
-#include "src/modular/bin/basemgr/basemgr_settings.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
@@ -49,12 +48,6 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
   }
   return modular::InitializeCobalt(dispatcher, component_context);
 };
-
-fuchsia::modular::session::BasemgrConfig CreateBasemgrConfigFromCommandLine(
-    fxl::CommandLine command_line) {
-  modular::BasemgrSettings settings(command_line);
-  return settings.CreateBasemgrConfig();
-}
 
 bool LoginModeOverrideIsSpecified(const fuchsia::setui::SettingsObject& settings_obj,
                                   fuchsia::setui::LoginOverride login_override) {
@@ -210,14 +203,9 @@ int main(int argc, const char** argv) {
         modular_config::kSessionmgrUrl);
     modular_config.mutable_basemgr_config()->mutable_sessionmgr()->set_args({});
   } else {
-    // Read command line arguments
-    auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    if (command_line.HasOption("help")) {
-      std::cout << modular::BasemgrSettings::GetUsage() << std::endl;
-      return 0;
-    }
-
-    modular_config.set_basemgr_config(CreateBasemgrConfigFromCommandLine(command_line));
+    std::cerr << "basemgr does not support arguments. Please use basemgr_launcher to "
+              << "launch basemgr with custom configurations." << std::endl;
+    return 1;
   }
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

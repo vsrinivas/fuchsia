@@ -17,7 +17,6 @@
 
 #include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/session_context_impl.h"
-#include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {

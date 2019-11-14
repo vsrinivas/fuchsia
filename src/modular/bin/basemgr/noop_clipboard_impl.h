@@ -8,9 +8,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-#include "src/lib/fxl/macros.h"
-#include "src/modular/lib/fidl/array_to_string.h"
-
 namespace modular {
 
 // An agent responsible for providing the fuchsia::modular::Clipboard service to

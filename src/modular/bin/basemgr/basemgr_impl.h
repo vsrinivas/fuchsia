@@ -16,23 +16,16 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_request.h>
-#include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
-#include <lib/sys/cpp/component_context.h>
-
-#include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/basemgr/basemgr_settings.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/basemgr/noop_clipboard_impl.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/bin/basemgr/session_user_provider_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
-#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

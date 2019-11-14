@@ -21,10 +21,6 @@
 #include <lib/fit/function.h>
 #include <lib/sys/inspect/cpp/component.h>
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/component/cpp/service_provider_impl.h"
 #include "src/lib/fxl/macros.h"
@@ -36,7 +32,6 @@
 #include "src/modular/bin/sessionmgr/user_intelligence_provider_impl.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/fidl/app_client.h"
-#include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/view_host.h"
 #include "src/modular/lib/module_manifest/module_facet_reader.h"

@@ -7,11 +7,6 @@
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
-#include <utility>
-
-#include "src/modular/lib/fidl/clone.h"
-#include "src/modular/lib/fidl/json_xdr.h"
-
 namespace modular {
 
 namespace {

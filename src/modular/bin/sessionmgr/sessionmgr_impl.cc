@@ -5,18 +5,11 @@
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 
 #include <fcntl.h>
-#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
-#include <fuchsia/ledger/cpp/fidl.h>
-#include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/status.h>
-
-#include <memory>
-#include <string>
 
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -27,7 +20,6 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
@@ -44,7 +36,6 @@
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
-#include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/module_manifest/module_facet_reader_impl.h"
 

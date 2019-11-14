@@ -330,7 +330,6 @@ TEST_F(TestHarnessImplTest, EnvironmentServiceDirectory) {
 TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   auto config = R"({
   "basemgr": {
-    "test": true,
     "base_shell": {
       "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
       "keep_alive_after_login": true
@@ -362,7 +361,6 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
       });
 
   RunLoopUntil([&] { return done; });
-  EXPECT_TRUE(basemgr_config.test());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
             basemgr_config.base_shell().app_config().url());
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());

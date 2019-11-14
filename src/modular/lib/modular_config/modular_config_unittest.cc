@@ -152,7 +152,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   // Verify that the second reader has the same same config values as the original |config_contents|
   basemgr_config = second_reader.GetBasemgrConfig();
   EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
-  EXPECT_TRUE(basemgr_config.test());
   EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());
 
   sessionmgr_config = second_reader.GetSessionmgrConfig();
@@ -176,9 +175,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
 
   fuchsia::modular::session::BasemgrConfig basemgr_config;
   basemgr_config.set_enable_cobalt(false);
-  basemgr_config.set_enable_presenter(true);
   basemgr_config.set_use_minfs(false);
-  basemgr_config.set_test(true);
   basemgr_config.set_use_session_shell_for_story_shell_factory(true);
   basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(base_shell_url);
   basemgr_config.mutable_base_shell()->set_keep_alive_after_login(true);
@@ -217,10 +214,8 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
 
   // Check that none of the configs were modified as part of GetConfigAsString
   EXPECT_FALSE(basemgr_config.enable_cobalt());
-  EXPECT_TRUE(basemgr_config.enable_presenter());
   EXPECT_FALSE(basemgr_config.use_minfs());
   EXPECT_TRUE(basemgr_config.use_session_shell_for_story_shell_factory());
-  EXPECT_TRUE(basemgr_config.test());
   EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
   EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());

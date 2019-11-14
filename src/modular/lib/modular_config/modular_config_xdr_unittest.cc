@@ -26,8 +26,6 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
 
   std::string expected_json = R"({
     "enable_cobalt":true,
-    "enable_presenter":false,
-    "test":false,
     "use_minfs":true,
     "use_session_shell_for_story_shell_factory":false,
     "base_shell":{
@@ -57,10 +55,8 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   EXPECT_TRUE(XdrRead(read_json, &read_config, XdrBasemgrConfig));
 
   EXPECT_TRUE(read_config.enable_cobalt());
-  EXPECT_FALSE(read_config.enable_presenter());
   EXPECT_TRUE(read_config.use_minfs());
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
-  EXPECT_FALSE(read_config.test());
 
   EXPECT_EQ(
       "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"

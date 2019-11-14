@@ -10,7 +10,6 @@
 
 #include <peridot/lib/util/pseudo_dir_utils.h>
 
-#include "src/modular/bin/basemgr/session_context_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
