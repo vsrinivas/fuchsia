@@ -24,7 +24,6 @@ test_package("identity_bin_unittests") {
     "account_handler:bin_test",
     "account_manager:bin_test",
     "dev_auth_provider:bin_test",
-    "dev_auth_provider_iotid:bin_test",
     "google_auth_provider:bin_test",
   ]
 
@@ -39,10 +38,6 @@ test_package("identity_bin_unittests") {
     },
     {
       name = "dev_auth_provider_bin_test"
-      environments = basic_envs
-    },
-    {
-      name = "dev_auth_provider_iotid_bin_test"
       environments = basic_envs
     },
     {

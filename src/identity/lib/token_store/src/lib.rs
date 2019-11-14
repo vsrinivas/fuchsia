@@ -127,7 +127,7 @@ pub trait AuthDb {
 mod tests {
     use super::*;
 
-    const TEST_AUTH_PROVIDER: &str = "test_iot";
+    const TEST_AUTH_PROVIDER: &str = "test_provider";
     const TEST_ID: &str = "user@test.com";
     const TEST_REFRESH_TOKEN: &str = "123456789@#$&*(%)_@(&";
     const TEST_PRIVATE_KEY: &[u8] = &[9, 8, 7, 6, 5];

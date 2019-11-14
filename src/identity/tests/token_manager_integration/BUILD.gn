@@ -11,7 +11,6 @@ group("token_manager_integration") {
   deps = [
     ":token_manager_integration_test_pkg",
     "//src/identity/bin/dev_auth_provider",
-    "//src/identity/bin/dev_auth_provider_iotid",
   ]
 }
 

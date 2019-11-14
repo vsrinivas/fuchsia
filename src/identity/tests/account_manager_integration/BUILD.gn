@@ -13,7 +13,6 @@ group("account_manager_integration") {
     ":account_manager_integration_test_pkg",
     ":account_manager_prototype",
     "//src/identity/bin/dev_auth_provider",
-    "//src/identity/bin/dev_auth_provider_iotid",
   ]
 }
 

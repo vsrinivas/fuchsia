@@ -9,14 +9,12 @@ use fidl;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
-    AppConfig, AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker,
-    AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, CredentialEcKey, Status,
+    AppConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, Status,
     TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
     TokenManagerGetAccessTokenResponder, TokenManagerGetFirebaseTokenResponder,
     TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
     TokenManagerRequestStream, UserProfileInfo,
 };
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
@@ -121,56 +119,48 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                 app_scopes,
                 auth_code,
                 responder,
-            } => responder.send_result(self.authorize(
-                context,
-                app_config,
-                auth_ui_context,
-                user_profile_id,
-                app_scopes,
-                auth_code
-            ).await),
+            } => responder.send_result(
+                self.authorize(
+                    context,
+                    app_config,
+                    auth_ui_context,
+                    user_profile_id,
+                    app_scopes,
+                    auth_code,
+                )
+                .await,
+            ),
             TokenManagerRequest::GetAccessToken {
                 app_config,
                 user_profile_id,
                 app_scopes,
                 responder,
-            } => responder.send_result(self.get_access_token(
-                app_config,
-                user_profile_id,
-                app_scopes
-            ).await),
+            } => responder
+                .send_result(self.get_access_token(app_config, user_profile_id, app_scopes).await),
             TokenManagerRequest::GetIdToken {
                 app_config,
                 user_profile_id,
                 audience,
                 responder,
-            } => responder.send_result(self.get_id_token(
-                app_config,
-                user_profile_id,
-                audience
-            ).await),
+            } => responder
+                .send_result(self.get_id_token(app_config, user_profile_id, audience).await),
             TokenManagerRequest::GetFirebaseToken {
                 app_config,
                 user_profile_id,
                 audience,
                 firebase_api_key,
                 responder,
-            } => responder.send_result(self.get_firebase_token(
-                app_config,
-                user_profile_id,
-                audience,
-                firebase_api_key
-            ).await),
+            } => responder.send_result(
+                self.get_firebase_token(app_config, user_profile_id, audience, firebase_api_key)
+                    .await,
+            ),
             TokenManagerRequest::DeleteAllTokens {
                 app_config,
                 user_profile_id,
                 force,
                 responder,
-            } => responder.send_result(self.delete_all_tokens(
-                app_config,
-                user_profile_id,
-                force
-            ).await),
+            } => responder
+                .send_result(self.delete_all_tokens(app_config, user_profile_id, force).await),
             TokenManagerRequest::ListProfileIds { app_config, responder } => {
                 responder.send_result(self.list_profile_ids(app_config))
             }
@@ -184,114 +174,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         app_config: AppConfig,
         _auth_ui_context: Option<ClientEnd<AuthenticationUiContextMarker>>,
         user_profile_id: Option<String>,
-        app_scopes: Vec<String>,
-        auth_code: Option<String>,
+        _app_scopes: Vec<String>,
+        _auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
         // TODO(jsankey): Currently auth_ui_context is neither supplied by Topaz nor allowed to
         // override the auth UI context supplied at token manager construction (AUTH-110).
         // Depending on the outcome of design discussions either pass it through or remove it
         // entirely.
-        // TODO(ukode, jsankey): This iotid check against the auth_provider_type is brittle and is
-        // only a short-term solution. Eventually, this information will be coming from the
-        // AuthProviderConfig params in some form.
-        if app_config.auth_provider_type.to_ascii_lowercase().contains("iotid") {
-            self.handle_iotid_authorize(
-                context,
-                app_config,
-                user_profile_id,
-                app_scopes,
-                auth_code
-            ).await
-        } else {
-            self.handle_authorize(context, app_config, user_profile_id, app_scopes).await
-        }
-    }
-
-    /// Implements the FIDL TokenManager.Authorize method using an AuthProvider that supports
-    /// IoT ID.
-    async fn handle_iotid_authorize<'a>(
-        &'a self,
-        context: &'a TokenManagerContext,
-        app_config: AppConfig,
-        user_profile_id: Option<String>,
-        _app_scopes: Vec<String>,
-        auth_code: Option<String>,
-    ) -> TokenManagerResult<UserProfileInfo> {
-        let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-
-        let (ui_context_client_end, ui_context_server_end) =
-            create_endpoints().token_manager_status(Status::UnknownError)?;
-        context
-            .auth_ui_context_provider
-            .get_authentication_ui_context(ui_context_server_end)
-            .token_manager_status(Status::InvalidAuthContext)?;
-
-        // TODO(ukode): Create a new attestation signer handle for each request using the device
-        // attestation key with better error handling.
-        let (attestation_signer_client_end, _) =
-            create_endpoints().token_manager_status(Status::UnknownError)?;
-
-        // TODO(ukode): Add product root certificates and device attestation certificate to this
-        // certificate chain.
-        let certificate_chain = Vec::<String>::new();
-
-        // TODO(ukode): Create an ephemeral credential key and add the public key params here.
-        let credential_key = CredentialEcKey {
-            curve: String::from("P-256"),
-            key_x_val: String::from("TODO"),
-            key_y_val: String::from("TODO"),
-            fingerprint_sha_256: String::from("TODO"),
-        };
-
-        let mut attestation_jwt_params = AttestationJwtParams {
-            credential_eckey: credential_key,
-            certificate_chain: certificate_chain,
-            auth_code: auth_code.unwrap_or("".to_string()),
-        };
-
-        let (status, credential, _access_token, auth_challenge, user_profile_info) =
-            auth_provider_proxy.get_persistent_credential_from_attestation_jwt(
-                attestation_signer_client_end,
-                &mut attestation_jwt_params,
-                Some(ui_context_client_end),
-                user_profile_id.as_ref().map(|x| &**x),
-            ).await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
-
-        match (credential, auth_challenge, user_profile_info) {
-            (Some(credential), Some(_auth_challenge), Some(user_profile_info)) => {
-                // Store persistent credential
-                let db_value = CredentialValue::new(
-                    app_config.auth_provider_type,
-                    user_profile_info.id.clone(),
-                    credential,
-                    None,
-                )
-                .map_err(|_| Status::AuthProviderServerError)?;
-                self.token_store.lock().add_credential(db_value)?;
-
-                // TODO(ukode): Store credential keys
-
-                // TODO(ukode): Cache auth_challenge
-                Ok(*user_profile_info)
-            }
-            _ => Err(TokenManagerError::from(status)),
-        }
-    }
-
-    /// Implements the FIDL TokenManager.Authorize method using an AuthProvider that does not
-    /// support IoT ID.
-    async fn handle_authorize<'a>(
-        &'a self,
-        context: &'a TokenManagerContext,
-        app_config: AppConfig,
-        user_profile_id: Option<String>,
-        _app_scopes: Vec<String>,
-    ) -> TokenManagerResult<UserProfileInfo> {
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
 
@@ -306,11 +195,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             .get_persistent_credential(
                 Some(ui_context_client_end),
                 user_profile_id.as_ref().map(|x| &**x),
-            ).await
-        .map_err(|err| {
-            self.discard_auth_provider_proxy(auth_provider_type);
-            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-        })?;
+            )
+            .await
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
 
         match (credential, user_profile_info) {
             (Some(credential), Some(user_profile_info)) => {
@@ -352,94 +242,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
 
-        // TODO(ukode, jsankey): This iotid check against the auth_provider_type is brittle and is
-        // only a short-term solution. Eventually, this information will be coming from the
-        // AuthProviderConfig params in some form or based on existence of credential_key for the
-        // given user.
-        if app_config.auth_provider_type.to_ascii_lowercase().contains("iotid") {
-            self.handle_iotid_get_access_token(
-                app_config,
-                user_profile_id,
-                refresh_token,
-                app_scopes,
-                cache_key,
-            ).await
-        } else {
-            self.handle_get_access_token(app_config, refresh_token, app_scopes, cache_key).await
-        }
-    }
-
-    /// Implements the FIDL TokenManager.GetAccessToken method using an auth provider that supports
-    /// IoT ID.
-    async fn handle_iotid_get_access_token(
-        &self,
-        app_config: AppConfig,
-        user_profile_id: String,
-        refresh_token: String,
-        app_scopes: Vec<String>,
-        cache_key: AccessTokenKey,
-    ) -> TokenManagerResult<Arc<OAuthToken>> {
-        let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-
-        // TODO(ukode): Retrieve the ephemeral credential key from store and add the public key
-        // params here.
-        let credential_key = CredentialEcKey {
-            curve: String::from("P-256"),
-            key_x_val: String::from("TODO"),
-            key_y_val: String::from("TODO"),
-            fingerprint_sha_256: String::from("TODO"),
-        };
-
-        // TODO(ukode): Create a new attestation signer handle for each request using the device
-        // attestation key with better error handling.
-        let (_server_chan, client_chan) = zx::Channel::create()
-            .token_manager_status(Status::InternalError)
-            .expect("Failed to create attestation_signer");
-        let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
-
-        // TODO(ukode): Read challenge from cache.
-        let mut assertion_jwt_params = AssertionJwtParams {
-            credential_eckey: credential_key,
-            challenge: Some("".to_string()),
-        };
-
-        let fut =
-            auth_provider_proxy.get_app_access_token_from_assertion_jwt(
-                attestation_signer,
-                &mut assertion_jwt_params,
-                &refresh_token,
-                &mut app_scopes.iter().map(|x| &**x),
-            );
-        let (status, updated_credential, access_token, auth_challenge) = fut
-            .await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
-
-        match (updated_credential, access_token, auth_challenge) {
-            (Some(updated_credential), Some(access_token), Some(_auth_challenge)) => {
-                // Store updated_credential in token store
-                let db_value = CredentialValue::new(
-                    app_config.auth_provider_type,
-                    user_profile_id.clone(),
-                    updated_credential,
-                    None,
-                )
-                .map_err(|_| Status::AuthProviderServerError)?;
-
-                self.token_store.lock().add_credential(db_value)?;
-
-                // Cache access token
-                let native_token = Arc::new(OAuthToken::from(*access_token));
-                self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
-
-                // TODO(ukode): Cache auth_challenge
-                Ok(native_token)
-            }
-            _ => Err(TokenManagerError::from(status)),
-        }
+        self.handle_get_access_token(app_config, refresh_token, app_scopes, cache_key).await
     }
 
     /// Implements the FIDL TokenManager.GetAccessToken method using an auth provider that does not
@@ -459,12 +262,10 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             app_config.client_id.as_ref().map(|x| &**x),
             &mut app_scopes.iter().map(|x| &**x),
         );
-        let (status, provider_token) = fut
-            .await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
+        let (status, provider_token) = fut.await.map_err(|err| {
+            self.discard_auth_provider_proxy(auth_provider_type);
+            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+        })?;
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
@@ -498,9 +299,9 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let refresh_token = self.get_refresh_token(&db_key)?;
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-        let (status, provider_token) =
-            auth_provider_proxy
-                .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x)).await
+        let (status, provider_token) = auth_provider_proxy
+            .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x))
+            .await
             .map_err(|err| {
                 self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -538,13 +339,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let id_token_future = self.get_id_token(app_config, user_profile_id, Some(audience));
         let proxy_future = self.get_auth_provider_proxy(&auth_provider_type);
         let (id_token, auth_provider_proxy) = try_join!(id_token_future, proxy_future)?;
-        let (status, provider_token) = 
-            auth_provider_proxy.get_app_firebase_token(&*id_token, &api_key)
-        .await
-        .map_err(|err| {
-            self.discard_auth_provider_proxy(&auth_provider_type);
-            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-        })?;
+        let (status, provider_token) = auth_provider_proxy
+            .get_app_firebase_token(&*id_token, &api_key)
+            .await
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(&auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
         self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
@@ -574,12 +375,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         // Request that the auth provider revoke the credential server-side.
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-        let status =
-            auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token).await
-                .map_err(|err| {
-                    self.discard_auth_provider_proxy(auth_provider_type);
-                    TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-                })?;
+        let status = auth_provider_proxy
+            .revoke_app_or_persistent_credential(&refresh_token)
+            .await
+            .map_err(|err| {
+                self.discard_auth_provider_proxy(auth_provider_type);
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
 
         if status != AuthProviderStatus::Ok {
             if force {
@@ -814,11 +616,7 @@ mod tests {
     ) -> Result<(), failure::Error> {
         let tmp_dir = TempDir::new().unwrap();
         let db_path = tmp_dir.path().join("tokens.json");
-        create_and_serve_token_manager_with_db_path(
-            &db_path,
-            stream,
-            auth_provider_supplier
-        ).await
+        create_and_serve_token_manager_with_db_path(&db_path, stream, auth_provider_supplier).await
     }
 
     /// Creates an in-memory TokenManager and serves requests for it.
@@ -959,13 +757,15 @@ mod tests {
         let auth_ui_context = None;
         let app_scopes = Vec::<String>::default();
         let auth_code = None;
-        tm_proxy.authorize(
-            &mut app_config,
-            auth_ui_context,
-            &mut app_scopes.iter().map(|x| &**x),
-            Some(user_profile_id),
-            auth_code
-        ).await
+        tm_proxy
+            .authorize(
+                &mut app_config,
+                auth_ui_context,
+                &mut app_scopes.iter().map(|x| &**x),
+                Some(user_profile_id),
+                auth_code,
+            )
+            .await
     }
 
     /// Wrapper for TokenManager::GetAccessToken
@@ -976,11 +776,13 @@ mod tests {
     ) -> Result<(Status, Option<String>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
         let app_scopes = Vec::<String>::default();
-        tm_proxy.get_access_token(
-            &mut app_config,
-            user_profile_id,
-            &mut app_scopes.iter().map(|x| &**x)
-        ).await
+        tm_proxy
+            .get_access_token(
+                &mut app_config,
+                user_profile_id,
+                &mut app_scopes.iter().map(|x| &**x),
+            )
+            .await
     }
 
     /// Wrapper for TokenManager::GetIdToken
@@ -1000,12 +802,9 @@ mod tests {
         user_profile_id: &'a str,
     ) -> Result<(Status, Option<Box<FirebaseToken>>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
-        tm_proxy.get_firebase_token(
-            &mut app_config,
-            user_profile_id,
-            "AUDIENCE",
-            "FIREBASE_API_KEY"
-        ).await
+        tm_proxy
+            .get_firebase_token(&mut app_config, user_profile_id, "AUDIENCE", "FIREBASE_API_KEY")
+            .await
     }
 
     /// Wrapper for TokenManager::DeleteAllTokens
@@ -1033,14 +832,19 @@ mod tests {
         );
         let (proxy, stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let token_manager_clone = Arc::clone(&token_manager);
-        token_manager.task_group().spawn(|cancel| async move {
-            let context = create_token_manager_context();
-            assert!(
-                token_manager_clone.handle_requests_from_stream(&context, stream, cancel)
+        token_manager
+            .task_group()
+            .spawn(|cancel| {
+                async move {
+                    let context = create_token_manager_context();
+                    assert!(token_manager_clone
+                        .handle_requests_from_stream(&context, stream, cancel)
+                        .await
+                        .is_ok());
+                }
+            })
             .await
-            .is_ok());
-        }).await
-        .expect("spawning failed");
+            .expect("spawning failed");
         assert!(token_manager.task_group().cancel().await.is_ok());
         // Check that the accessor's task group cancelled the task group that was passed to new()
         assert!(task_group.cancel().await.is_err());
@@ -1071,8 +875,7 @@ mod tests {
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
         let client_fut = async move {
             // Authorize Gavin to Hooli
-            let (status, user_profile_info) =
-                authorize_simple(&tm_proxy, "hooli", "GAVIN").await?;
+            let (status, user_profile_info) = authorize_simple(&tm_proxy, "hooli", "GAVIN").await?;
             assert_eq!(status, Status::Ok);
             let user_profile_info = user_profile_info.expect("user_profile_info is empty");
             assert_eq!(user_profile_info.id, "GAVIN");
@@ -1113,8 +916,9 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ).await;
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1157,8 +961,9 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ).await;
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1228,8 +1033,9 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ).await;
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1317,8 +1123,9 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
-        ).await;
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1351,9 +1158,10 @@ mod tests {
             create_and_serve_token_manager_with_db_path(
                 &db_path,
                 tm_stream,
-                &auth_provider_supplier
-            )
-        ).await;
+                &auth_provider_supplier,
+            ),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1392,9 +1200,10 @@ mod tests {
             create_and_serve_token_manager_with_db_path(
                 &db_path,
                 tm_stream,
-                &auth_provider_supplier
-            )
-        ).await;
+                &auth_provider_supplier,
+            ),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());
@@ -1481,8 +1290,9 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_in_memory_token_manager(tm_stream, &auth_provider_supplier)
-        ).await;
+            create_and_serve_in_memory_token_manager(tm_stream, &auth_provider_supplier),
+        )
+        .await;
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
         assert!(tm_result.is_ok());

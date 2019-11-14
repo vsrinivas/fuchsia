@@ -35,19 +35,14 @@ const std::string kEnvironment = "dev_token_mgr_test_env";
 const std::string kTestUserId = "tq_auth_user_1";
 const std::string kTestAppUrl = "/pkgfs/packages/test_auth_client/bin/app";
 const std::string kDevIdp = "Dev";
-const std::string kDevIotIDIdp = "DevIotID";
 const bool kForce = true;
 
 const std::string kTokenManagerFactoryUrl =
     "fuchsia-pkg://fuchsia.com/"
     "token_manager_factory#meta/token_manager_factory.cmx";
-const TestComponentParam kTestComponentParams[] = {
-    {kDevIdp,
-     "fuchsia-pkg://fuchsia.com/dev_auth_provider#"
-     "meta/dev_auth_provider.cmx"},
-    {kDevIotIDIdp,
-     "fuchsia-pkg://fuchsia.com/dev_auth_provider_iotid#"
-     "meta/dev_auth_provider_iotid.cmx"}};
+const std::string kDevAuthProviderUrl =
+    "fuchsia-pkg://fuchsia.com/dev_auth_provider#"
+    "meta/dev_auth_provider.cmx";
 
 fuchsia::auth::AppConfig MakeDevAppConfig(const std::string& auth_provider_type) {
   fuchsia::auth::AppConfig dev_app_config;
@@ -67,7 +62,6 @@ using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 
 class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
-                               public ::testing::WithParamInterface<TestComponentParam>,
                                fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest() : auth_context_provider_binding_(this) {}
@@ -88,12 +82,12 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
     environment_->ConnectToService(token_mgr_factory_.NewRequest());
     ASSERT_TRUE(token_mgr_factory_.is_bound());
 
-    std::string auth_provider_type = GetParam().auth_provider_type;
+    std::string auth_provider_type = kDevIdp;
     dev_app_config_ = MakeDevAppConfig(auth_provider_type);
 
     fuchsia::auth::AuthProviderConfig dev_auth_provider_config;
     dev_auth_provider_config.auth_provider_type = auth_provider_type;
-    dev_auth_provider_config.url = GetParam().auth_provider_url;
+    dev_auth_provider_config.url = kDevAuthProviderUrl;
     std::vector<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(dev_auth_provider_config));
 
@@ -154,7 +148,7 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
   FXL_DISALLOW_COPY_AND_ASSIGN(DevTokenManagerAppTest);
 };
 
-TEST_P(DevTokenManagerAppTest, Authorize) {
+TEST_F(DevTokenManagerAppTest, Authorize) {
   std::vector<std::string> scopes;
   scopes.push_back("test_scope");
   bool call_complete = false;
@@ -177,7 +171,7 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
   RunLoopUntil([&] { return call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetAccessToken) {
+TEST_F(DevTokenManagerAppTest, GetAccessToken) {
   RegisterUser(dev_app_config_);
   std::vector<std::string> scopes;
   bool call_complete = false;
@@ -192,54 +186,39 @@ TEST_P(DevTokenManagerAppTest, GetAccessToken) {
   RunLoopUntil([&] { return call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetIdToken) {
+TEST_F(DevTokenManagerAppTest, GetIdToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
   token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
                          [&](Status status, fidl::StringPtr id_token) {
-                           if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-                             // TODO(ukode): Not yet supported for IotID
-                             EXPECT_EQ(Status::INVALID_REQUEST, status);
-                           } else {
-                             EXPECT_EQ(Status::OK, status);
-                             ASSERT_TRUE(id_token.has_value());
-                             EXPECT_NE(std::string::npos, id_token->find(":idt_"));
-                           }
+                           EXPECT_EQ(Status::OK, status);
+                           ASSERT_TRUE(id_token.has_value());
+                           EXPECT_NE(std::string::npos, id_token->find(":idt_"));
                            call_complete = true;
                          });
   RunLoopUntil([&] { return call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
+TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
   token_mgr_->GetFirebaseToken(
       dev_app_config_, user_profile_id_.value(), "firebase_test_api_key", "",
       [&](Status status, FirebaseTokenPtr firebase_token) {
-        if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-          // TODO(ukode): Not yet supported for IotID
-          EXPECT_EQ(Status::INVALID_REQUEST, status);
-        } else {
-          EXPECT_EQ(Status::OK, status);
-          EXPECT_NE(std::string::npos, firebase_token->id_token.find(":fbt_"));
-          ASSERT_TRUE(firebase_token->email.has_value());
-          EXPECT_NE(std::string::npos, firebase_token->email->find("@firebase.example.com"));
-          ASSERT_TRUE(firebase_token->local_id.has_value());
-          EXPECT_NE(std::string::npos, firebase_token->local_id->find("local_id_"));
-        }
+        EXPECT_EQ(Status::OK, status);
+        EXPECT_NE(std::string::npos, firebase_token->id_token.find(":fbt_"));
+        ASSERT_TRUE(firebase_token->email.has_value());
+        EXPECT_NE(std::string::npos, firebase_token->email->find("@firebase.example.com"));
+        ASSERT_TRUE(firebase_token->local_id.has_value());
+        EXPECT_NE(std::string::npos, firebase_token->local_id->find("local_id_"));
         call_complete = true;
       });
   RunLoopUntil([&] { return call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
-  // TODO(ukode): Not yet supported for IotID
-  if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-    return;
-  }
-
+TEST_F(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
   FirebaseTokenPtr firebase_token;
   FirebaseTokenPtr other_firebase_token;
   FirebaseTokenPtr cached_firebase_token;
@@ -272,12 +251,7 @@ TEST_P(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
   EXPECT_EQ(firebase_token->local_id, cached_firebase_token->local_id);
 }
 
-TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
-  // TODO(ukode): Not yet supported for IotID
-  if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-    return;
-  }
-
+TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   RegisterUser(dev_app_config_);
   bool last_call_complete = false;
 
@@ -323,12 +297,7 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
   RunLoopUntil([&] { return last_call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
-  // TODO(ukode): Not yet supported for IotID
-  if (dev_app_config_.auth_provider_type == kDevIotIDIdp) {
-    return;
-  }
-
+TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
   fidl::StringPtr id_token;
   fidl::StringPtr second_user_id_token;
 
@@ -367,7 +336,7 @@ TEST_P(DevTokenManagerAppTest, GetIdTokenFromCache) {
   RunLoopUntil([&] { return last_call_complete; });
 }
 
-TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
+TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
   fidl::StringPtr access_token;
 
   RegisterUser(dev_app_config_);
@@ -398,7 +367,7 @@ TEST_P(DevTokenManagerAppTest, GetAccessTokenFromCache) {
 // Tests user re-authorization flow that generates fresh long lived credentials
 // and verifies that short lived credentials are based on the most recent long
 // lived credentials.
-TEST_P(DevTokenManagerAppTest, Reauthorize) {
+TEST_F(DevTokenManagerAppTest, Reauthorize) {
   std::string user_profile_id;
   std::string credential;
   bool authorize_complete = false;
@@ -454,6 +423,5 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   RunLoopUntil([&] { return last_call_complete; });
 }
 
-INSTANTIATE_TEST_SUITE_P(Cpp, DevTokenManagerAppTest, ::testing::ValuesIn(kTestComponentParams));
 }  // namespace
 }  // namespace e2e_dev
