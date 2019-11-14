@@ -32,8 +32,7 @@ void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack, const MdnsA
   inbound_message_callback_ = [this, callback = std::move(inbound_message_callback)](
                                   std::unique_ptr<DnsMessage> message,
                                   const ReplyAddress& reply_address) {
-    if (interface_transceivers_by_address_.find(reply_address.socket_address().address()) ==
-        interface_transceivers_by_address_.end()) {
+    if (!IsLocalInterfaceAddress(reply_address.socket_address().address())) {
       callback(std::move(message), reply_address);
     }
   };
@@ -189,6 +188,12 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
   interface_transceivers_by_address_.emplace(address, std::move(interface_transceiver));
 
   return true;
+}
+
+bool MdnsTransceiver::IsLocalInterfaceAddress(const inet::IpAddress& address) {
+  return interface_transceivers_by_address_.find(
+             address.is_mapped_from_v4() ? address.mapped_v4_address() : address) !=
+         interface_transceivers_by_address_.end();
 }
 
 }  // namespace mdns

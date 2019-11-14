@@ -256,3 +256,34 @@ test_package("mdns_netemul_tests") {
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/mdns_netemul_test", "")
 }
+
+test_package("mdns_netemul_v6_tests") {
+  deps = [
+    ":mdns_netemul_test_agent",
+    ":netemul_empty_v6_binaries",
+    "//src/connectivity/network/tests:device_name_provider",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns_netemul_test_agent.cmx")
+      dest = "mdns_netemul_test_agent.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "mdns_netemul_test_agent"
+    },
+  ]
+
+  tests = [
+    {
+      name = "mdns_netemul_v6_test"
+    },
+  ]
+}
+
+group("netemul_empty_v6_binaries") {
+  write_file("$root_out_dir/mdns_netemul_v6_test", "")
+}

@@ -61,6 +61,9 @@ class MdnsTransceiver {
       const std::string& name,
       std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev);
 
+  // Determines if |address| identifies one of the NICs in |interface_transceivers_by_address_|.
+  bool IsLocalInterfaceAddress(const inet::IpAddress& address);
+
   fuchsia::netstack::NetstackPtr netstack_;
   const MdnsAddresses* addresses_;
   fit::closure link_change_callback_;

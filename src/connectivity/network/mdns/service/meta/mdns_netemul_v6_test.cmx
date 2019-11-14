@@ -1,0 +1,120 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/mdns_netemul_tests#meta/mdns_netemul_test_agent.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "apps": [
+                            {
+                                "arguments": [
+                                    "--remote"
+                                ]
+                            }
+                        ],
+                        "inherit_services": false,
+                        "name": "remote",
+                        "services": {
+                            "fuchsia.device.NameProvider": {
+                                "arguments": [
+                                    "--nodename",
+                                    "mdns-test-device-remote"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                            },
+                            "fuchsia.devicesettings.DeviceSettingsManager": {
+                                "arguments": [
+                                    "-s",
+                                    "DeviceName=mdns-test-device-remote"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                            },
+                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                        },
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "remote-ep",
+                                    "-i",
+                                    "fe80::4607:bff:fe60:595d/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ]
+                    }
+                ],
+                "name": "local",
+                "services": {
+                    "fuchsia.device.NameProvider": {
+                        "arguments": [
+                            "--nodename",
+                            "mdns-test-device-local"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                    },
+                    "fuchsia.devicesettings.DeviceSettingsManager": {
+                        "arguments": [
+                            "-s",
+                            "DeviceName=mdns-test-device-local"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                    },
+                    "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "local-ep",
+                            "-i",
+                            "fe80::4607:bff:fe60:595e/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    },
+                    {
+                        "arguments": [
+                            "-e",
+                            "local-ep2",
+                            "-i",
+                            "fe80::4607:bff:fe60:595f/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {
+                        "arguments": [
+                            "--local"
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "remote-ep"
+                        },
+                        {
+                            "name": "local-ep"
+                        },
+                        {
+                            "name": "local-ep2"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

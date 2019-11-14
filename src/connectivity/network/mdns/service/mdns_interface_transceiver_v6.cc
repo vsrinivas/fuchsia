@@ -20,7 +20,7 @@ MdnsInterfaceTransceiverV6::MdnsInterfaceTransceiverV6(inet::IpAddress address,
 MdnsInterfaceTransceiverV6::~MdnsInterfaceTransceiverV6() {}
 
 int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
-  char param = 0;
+  int param = 0;
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &param, sizeof(param));
   if (result < 0) {
@@ -75,7 +75,13 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, " << strerror(errno);
+    if (errno == ENOPROTOOPT) {
+      // TODO(fxb/41357): remove the bug reference when the bug is fixed.
+      FXL_LOG(WARNING) << "fxb/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, " << strerror(errno);
+    }
   }
 
   return result;
@@ -86,7 +92,12 @@ int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, " << strerror(errno);
+    if (errno == ENOPROTOOPT) {
+      FXL_LOG(WARNING) << "IPV6_MULTICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, " << strerror(errno);
+    }
   }
 
   return result;
@@ -97,7 +108,13 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   int param = 1;
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_HOPLIMIT, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);
+    if (errno == ENOPROTOOPT) {
+      // TODO(fxb/41358): remove the bug reference when the bug is fixed.
+      FXL_LOG(WARNING) << "fxb/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);
+    }
     return result;
   }
 

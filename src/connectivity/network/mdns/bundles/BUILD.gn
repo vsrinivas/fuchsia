@@ -30,6 +30,7 @@ group("tests") {
   public_deps = [
     "//src/connectivity/network/mdns/service:mdns_fuzzers",
     "//src/connectivity/network/mdns/service:mdns_netemul_tests",
+    "//src/connectivity/network/mdns/service:mdns_netemul_v6_tests",
     "//src/connectivity/network/mdns/service:mdns_tests",
   ]
 }

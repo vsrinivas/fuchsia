@@ -285,7 +285,10 @@ class Mdns : public MdnsAgent::Host {
       instance_publishers_by_instance_full_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
 #ifdef MDNS_TRACE
-  bool verbose_ = false;
+  // Because |verbose_| defaults to true, traffic will be logged as long as the
+  // enable_mdns_trace gn arg is set to true. This is preferred, as there is no
+  // way (currently) to set |verbose_| to true at runtime.
+  bool verbose_ = true;
 #endif  // MDNS_TRACE
   std::shared_ptr<ResourceRenewer> resource_renewer_;
   bool prohibit_agent_removal_ = false;

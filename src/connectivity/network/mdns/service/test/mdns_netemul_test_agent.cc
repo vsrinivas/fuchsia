@@ -28,7 +28,9 @@ const std::vector<std::string> kText = {"chowder", "hammock", "beanstalk"};
 constexpr uint16_t kPriority = 4;
 constexpr uint16_t kWeight = 5;
 const std::string kRemoteHostName = "mdns-test-device-remote";
-const fuchsia::net::Ipv4Address kRemoteAddress{{192, 168, 0, 1}};
+const fuchsia::net::Ipv4Address kRemoteV4Address{{192, 168, 0, 1}};
+//const fuchsia::net::Ipv6Address kRemoteV6Address{{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//                                                  0x46, 0x07, 0x0b, 0xff, 0xfe, 0x60, 0x59, 0x5d}};
 const zx_duration_t kTimeout = ZX_SEC(60);
 
 namespace mdns::test {
@@ -91,15 +93,23 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
             return;
           }
 
-          if (!v4_address) {
-            std::cerr << "FAILED: Host name resolution didn't product V4 address.\n";
-            Quit(1);
-            return;
-          }
-
-          if (!fidl::Equals(*v4_address, kRemoteAddress)) {
-            std::cerr << "FAILED: Host name resolution produced bad V4 address " << *v4_address
-                      << "\n";
+          if (v4_address) {
+            if (!fidl::Equals(*v4_address, kRemoteV4Address)) {
+              std::cerr << "FAILED: Host name resolution produced bad V4 address " << *v4_address
+                        << "\n";
+              Quit(1);
+              return;
+            }
+          } else if (v6_address) {
+            // TODO(dalesat): Restore this check once we have predictable addresses in netemul.
+            // if (!fidl::Equals(*v6_address, kRemoteV6Address)) {
+            //   std::cerr << "FAILED: Host name resolution produced bad V6 address " << *v6_address
+            //             << "\n";
+            //   Quit(1);
+            //   return;
+            // }
+          } else {
+            std::cerr << "FAILED: Host name resolution produced no address\n";
             Quit(1);
             return;
           }
@@ -160,8 +170,16 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
   }
 
   bool VerifyRemoteEndpoint(const fuchsia::net::Endpoint& endpoint) {
-    return endpoint.port == kPort && endpoint.addr.is_ipv4() &&
-           fidl::Equals(endpoint.addr.ipv4(), kRemoteAddress);
+    if (endpoint.port != kPort) {
+      return false;
+    }
+
+    if (endpoint.addr.is_ipv4() && fidl::Equals(endpoint.addr.ipv4(), kRemoteV4Address)) {
+      return true;
+    }
+
+    // TODO(dalesat): Restore this check once we have predictable addresses in netemul.
+    return endpoint.addr.is_ipv6();  // && fidl::Equals(endpoint.addr.ipv6(), kRemoteV6Address);
   }
 
   sys::ComponentContext* component_context_;
