@@ -385,11 +385,6 @@ impl Contents {
 
         // Place previous rasters in clear layer.
         // TODO: Replace with better partial update system.
-        // Make sure clear layer has at least one raster.
-        // TODO: Remove when mold is not requiring each layer to have a raster.
-        if self.previous_rasters.is_empty() {
-            composition.place(&hour_hand_raster.borrow(), scene.clear_layer_id);
-        }
         for raster in self.previous_rasters.drain(..) {
             composition.place(&raster.borrow(), scene.clear_layer_id);
         }
