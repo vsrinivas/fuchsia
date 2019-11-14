@@ -289,8 +289,8 @@ class TestH264 {
 
  private:
   // This is called from the interrupt handler, which already holds the lock.
-  static void ReturnFrame(AmlogicVideo* video,
-                          std::shared_ptr<VideoFrame> frame) __TA_NO_THREAD_SAFETY_ANALYSIS {
+  static void ReturnFrame(AmlogicVideo* video, std::shared_ptr<VideoFrame> frame) {
+    video->AssertVideoDecoderLockHeld();
     video->video_decoder_->ReturnFrame(frame);
   }
 };

@@ -61,8 +61,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
                                                     const char* name) override;
   [[nodiscard]] fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
 
-  __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+  __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override {
+    AssertVideoDecoderLockHeld();
     assert(decoder);
     return decoder == video_decoder_;
   }
@@ -126,12 +126,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) { return video_decoder_; }
 
+  // This should be called only to mollify the lock detection in cases where
+  // it's guaranteed that the video decoder lock is already held. This can't
+  // actually be implemented on top of std::mutex.
+  void AssertVideoDecoderLockHeld() __TA_ASSERT(video_decoder_lock_) {}
+
   // This tries to schedule the next runnable decoder. It may leave the current
   // decoder scheduled if no other decoder is runnable.
   void TryToReschedule() __TA_REQUIRES(video_decoder_lock_);
-  void TryToRescheduleAssumeVideoDecoderLocked() __TA_NO_THREAD_SAFETY_ANALYSIS {
-    TryToReschedule();
-  }
 
   __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
                                                         bool use_parser, bool is_secure);

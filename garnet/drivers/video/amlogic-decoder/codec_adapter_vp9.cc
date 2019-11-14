@@ -851,7 +851,10 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::FrameWasOutput() { video_->TryToRescheduleAssumeVideoDecoderLocked(); }
+void CodecAdapterVp9::FrameWasOutput() {
+  video_->AssertVideoDecoderLockHeld();
+  video_->TryToReschedule();
+}
 
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
@@ -1100,7 +1103,8 @@ void CodecAdapterVp9::OnCoreCodecEos() {
     ZX_DEBUG_ASSERT(is_input_end_of_stream_queued_);
   }  // ~lock
   decoder_->SetPausedAtEndOfStream();
-  video_->TryToRescheduleAssumeVideoDecoderLocked();
+  video_->AssertVideoDecoderLockHeld();
+  video_->TryToReschedule();
   events_->onCoreCodecOutputEndOfStream(false);
 }
 

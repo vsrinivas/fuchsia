@@ -90,7 +90,8 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override { ReadMoreInputData(decoder); }
 
   // Called while the decoder lock is held.
-  void FrameWasOutput() override __TA_NO_THREAD_SAFETY_ANALYSIS {
+  void FrameWasOutput() override {
+    video_->AssertVideoDecoderLockHeld();
     DLOG("Resetting hardware\n");
     video_->SwapOutCurrentInstance();
     bool swapped_in_other = false;
@@ -512,13 +513,13 @@ class TestVP9 {
 
  private:
   // This is called from the interrupt handler, which already holds the lock.
-  static void ReturnFrame(AmlogicVideo* video,
-                          std::shared_ptr<VideoFrame> frame) __TA_NO_THREAD_SAFETY_ANALYSIS {
+  static void ReturnFrame(AmlogicVideo* video, std::shared_ptr<VideoFrame> frame) {
+    video->AssertVideoDecoderLockHeld();
     video->video_decoder_->ReturnFrame(frame);
   }
 
-  static void SetReallocateBuffersNextFrameForTesting(AmlogicVideo* video)
-      __TA_NO_THREAD_SAFETY_ANALYSIS {
+  static void SetReallocateBuffersNextFrameForTesting(AmlogicVideo* video) {
+    video->AssertVideoDecoderLockHeld();
     static_cast<Vp9Decoder*>(video->video_decoder_)
         ->set_reallocate_buffers_next_frame_for_testing();
   }
