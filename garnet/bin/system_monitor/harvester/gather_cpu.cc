@@ -44,7 +44,7 @@ void GatherCpu::GatherDeviceProperties() {
 }
 
 void GatherCpu::Gather() {
-  // TODO(smbug.com/34): Determine the array size at runtime (32 is arbitrary).
+  // TODO(fxb/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
   zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,

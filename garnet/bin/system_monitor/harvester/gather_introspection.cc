@@ -12,7 +12,7 @@
 namespace harvester {
 
 void GatherIntrospection::Gather() {
-  // TODO(smbug.com/223): Use lib inspect to get inspection data (rather than
+  // TODO(fxb/223): Use lib inspect to get inspection data (rather than
   // the test/placeholder used here).
   std::string fake_json_data = "{ \"test\": 5 }";
   DockyardProxyStatus status = Dockyard().SendInspectJson(

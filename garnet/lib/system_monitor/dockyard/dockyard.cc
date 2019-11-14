@@ -459,7 +459,7 @@ bool Dockyard::StartCollectingFrom(ConnectionRequest&& request,
   on_connection_handler_ = callback;
   server_thread_ = std::thread([this]() { RunGrpcServer(); });
   GT_LOG(INFO) << "Starting collecting from " << request.DeviceName();
-  // TODO(smbug.com/39): Connect to the device and start the harvester.
+  // TODO(fxb/39): Connect to the device and start the harvester.
   return server_thread_.joinable();
 }
 
