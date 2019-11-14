@@ -53,6 +53,7 @@ group("banjo") {
     "ddk.protocol.platform.device",
     "ddk.protocol.power",
     "ddk.protocol.powerimpl",
+    "ddk.protocol.pwm",
     "ddk.protocol.rawnand",
     "ddk.protocol.scpi",
     "ddk.protocol.sdhci",

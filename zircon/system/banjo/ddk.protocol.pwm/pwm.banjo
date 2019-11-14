@@ -1,0 +1,66 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.pwm;
+
+using zx;
+
+struct PwmConfig {
+   bool polarity;
+   uint32 period_ns;
+   /// duty_cycle range: [0.0, 100.0]
+   float32 duty_cycle;
+   /// TODO(41256): Vendor extensions
+   /// mode_config should be mode specific parameters. The first parameter should always be mode.
+   /// The struct should also define the = operator and == operator.
+   /// For example, a PWM supporting regular mode and 2 timer mode should have:
+   /// struct mode_config {
+   ///   uint32 mode;
+   ///   float32 duty_cycle2;
+   ///   uint32 timer1;
+   ///   uint32 timer2;
+   ///   mode_config& operator=(const mode_config& other) { ... }
+   ///   bool operator==(const mode_config& other) const { ... }
+   /// };
+   vector<voidptr> mode_config;
+};
+
+[Layout = "ddk-protocol"]
+protocol Pwm {
+    /// Gets the current config of the PWM.
+    /// @Returns : |config| : current config of PWM.
+    GetConfig() -> (PwmConfig config);
+
+    /// Sets the configurations of the PWM
+    /// |config| : Configurations.
+    /// @Returns: |s| : ZX_OK if success.
+    SetConfig(PwmConfig config) -> (zx.status s);
+
+    /// Enables the PWM.
+    /// @Returns : |s| : ZX_OK if success.
+    Enable() -> (zx.status s);
+
+    /// Disables the PWM.
+    /// @Returns : |s| : ZX_OK  if success.
+    Disable() -> (zx.status s);
+};
+
+[Layout = "ddk-protocol"]
+protocol PwmImpl {
+    /// Sets the configurations of the PWM.
+    /// |idx| : Index of requested PWM.
+    /// |config| : Configurations.
+    /// @Returns: |s| : ZX_OK if success.
+    SetConfig(uint32 idx, PwmConfig config) -> (zx.status s);
+
+    /// Enables the PWM.
+    /// |idx| : Index of requested PWM.
+    /// @Returns : |s| : ZX_OK if success.
+    Enable(uint32 idx) -> (zx.status s);
+
+    /// Disables the PWM.
+    /// |idx| : Index of requested PWM.
+    /// @Returns : |s| : ZX_OK  if success.
+    Disable(uint32 idx) -> (zx.status s);
+};
