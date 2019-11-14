@@ -79,8 +79,15 @@ zx_status_t VmObjectPhysical::CreateChildSlice(uint64_t offset, uint64_t size, b
                                                fbl::RefPtr<VmObject>* child_vmo) {
   canary_.Assert();
 
-  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size) || size == 0) {
+  // Offset must be page aligned.
+  if (!IS_PAGE_ALIGNED(offset)) {
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Make sure size is page aligned.
+  zx_status_t status = RoundSize(size, &size);
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Forbid creating children of resizable VMOs. This restriction may be lifted in the future.

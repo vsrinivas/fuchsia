@@ -162,12 +162,6 @@ class VmObjectPaged final : public VmObject {
       // This function reaches into the created child, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  static constexpr uint64_t MAX_SIZE = VmPageList::MAX_SIZE;
-  // Ensure that MAX_SIZE + PAGE_SIZE doesn't overflow so VmObjectPaged doesn't
-  // need to worry about overflow for loop bounds.
-  static_assert(MAX_SIZE <= ROUNDDOWN(UINT64_MAX, PAGE_SIZE) - PAGE_SIZE);
-  static_assert(MAX_SIZE % PAGE_SIZE == 0);
-
   uint32_t ScanForZeroPages(bool reclaim) override;
 
  private:

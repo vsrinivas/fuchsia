@@ -74,7 +74,7 @@ VmPageOrMarker* VmPageList::LookupOrAllocate(uint64_t offset) {
   uint64_t node_offset = offset_to_node_offset(offset, list_skew_);
   size_t index = offset_to_node_index(offset, list_skew_);
 
-  if (node_offset >= VmObjectPaged::MAX_SIZE) {
+  if (node_offset >= VmPageList::MAX_SIZE) {
     return nullptr;
   }
 

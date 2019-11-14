@@ -345,4 +345,46 @@ TEST(VmoSliceTestCase, CowPageSourceThroughSlices) {
   }
 }
 
+TEST(VmoSliceTestCase, RoundUpSizePhysical) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+  const size_t size = PAGE_SIZE;
+
+  zx::vmo parent_contig_vmo;
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
+
+  // Create child slice with size < PAGE_SIZE, should round up and succeed.
+  zx::vmo child;
+  ASSERT_OK(parent_contig_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, 42, &child));
+}
+
+TEST(VmoSliceTestCase, RoundUpSize) {
+  // Create parent VMO and put some data in it near the end.
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  uint8_t val = 42;
+  EXPECT_OK(vmo.write(&val, PAGE_SIZE - 64, sizeof(val)));
+
+  // Create child slice with size < PAGE_SIZE, should round up and succeed.
+  zx::vmo slice_vmo;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, 42, &slice_vmo));
+
+  // Should be able to read the data in the rounded up portion.
+  EXPECT_OK(slice_vmo.read(&val, PAGE_SIZE - 64, sizeof(val)));
+  EXPECT_EQ(val, 42);
+}
+
 }  // namespace

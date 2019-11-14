@@ -390,6 +390,21 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
   return ZX_OK;
 }
 
+// round up the size to the next page size boundary and make sure we dont wrap
+zx_status_t VmObject::RoundSize(uint64_t size, uint64_t* out_size) {
+  *out_size = ROUNDUP_PAGE_SIZE(size);
+  if (*out_size < size) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // there's a max size to keep indexes within range
+  if (*out_size > MAX_SIZE) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return ZX_OK;
+}
+
 static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
   notenoughargs:

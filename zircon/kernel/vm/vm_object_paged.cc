@@ -100,21 +100,6 @@ bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_
   return true;
 }
 
-// round up the size to the next page size boundary and make sure we dont wrap
-zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
-  *out_size = ROUNDUP_PAGE_SIZE(size);
-  if (*out_size < size) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  // there's a max size to keep indexes within range
-  if (*out_size > VmObjectPaged::MAX_SIZE) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return ZX_OK;
-}
-
 bool SlotHasPinnedPage(VmPageOrMarker* slot) {
   return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
 }

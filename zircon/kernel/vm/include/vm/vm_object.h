@@ -385,6 +385,14 @@ class VmObject : public fbl::RefCounted<VmObject>,
   // is, there is no mechanism to get access to a VMO via this name.
   fbl::Name<ZX_MAX_NAME_LEN> name_;
 
+  static zx_status_t RoundSize(uint64_t size, uint64_t* out_size);
+
+  static constexpr uint64_t MAX_SIZE = VmPageList::MAX_SIZE;
+  // Ensure that MAX_SIZE + PAGE_SIZE doesn't overflow so no VmObjects
+  // need to worry about overflow for loop bounds.
+  static_assert(MAX_SIZE <= ROUNDDOWN(UINT64_MAX, PAGE_SIZE) - PAGE_SIZE);
+  static_assert(MAX_SIZE % PAGE_SIZE == 0);
+
  private:
   // perform a cache maintenance operation against the vmo.
   enum class CacheOpType { Invalidate, Clean, CleanInvalidate, Sync };
