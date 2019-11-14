@@ -201,24 +201,21 @@ void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> s
   }
 }
 
-void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
-                                                        uint64_t thread_koid) {
-  // Trigger breakpoint.
-  debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::ExceptionType::kSoftware;
-  notification.thread.process_koid = process_koid;
-  notification.thread.thread_koid = thread_koid;
-  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+// Fill a NotifyException object with all the information we need to simulate a breakpoint.
+std::vector<std::unique_ptr<zxdb::Frame>> InterceptionWorkflowTest::FillBreakpoint(
+    debug_ipc::NotifyException* notification, uint64_t process_koid, uint64_t thread_koid) {
+  notification->type = debug_ipc::ExceptionType::kSoftware;
+  notification->thread.process_koid = process_koid;
+  notification->thread.thread_koid = thread_koid;
+  notification->thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification->thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 
   debug_ipc::StackFrame frame1(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
   debug_ipc::StackFrame frame2(kSyscallAddress, kFrame2Sp);
   debug_ipc::StackFrame frame3(kSyscallAddress, kFrame3Sp);
 
   data_.PopulateRegisters(process_koid, &frame1.regs);
-  notification.thread.frames.push_back(frame1);
-
-  mock_remote_api().PopulateBreakpointIds(kSyscallAddress, notification);
+  notification->thread.frames.push_back(frame1);
 
   zxdb::SymbolContext context(0);
   std::vector<std::unique_ptr<zxdb::Frame>> frames;
@@ -234,6 +231,17 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
       threads_[thread_koid], frame2,
       zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/main.cc", kFrame3Line),
                      kFrame3Column, context)));
+  return frames;
+}
+
+void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
+                                                        uint64_t thread_koid) {
+  // Trigger breakpoint.
+  debug_ipc::NotifyException notification;
+  std::vector<std::unique_ptr<zxdb::Frame>> frames =
+      FillBreakpoint(&notification, process_koid, thread_koid);
+
+  mock_remote_api().PopulateBreakpointIds(kSyscallAddress, notification);
 
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 
@@ -319,6 +327,41 @@ void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t 
                      kFrame3Column, context)));
 
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
+}
+
+// Functions are different from syscalls because syscalls have a '@' in their name.
+// Because of that, zxdb handles the syscalls differently.
+// For functions, we can't use TriggerSyscallBreakpoint because the breakpoint is not
+// recognized.
+void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller,
+                                                   const char* syscall_name,
+                                                   std::unique_ptr<SystemCallTest> syscall) {
+  controller->Initialize(session(),
+                         std::make_unique<SyscallDisplayDispatcherTest>(
+                             nullptr, decode_options_, display_options_, result_, controller),
+                         syscall_name);
+  data_.set_syscall(std::move(syscall));
+  data_.load_syscall_data();
+
+  debug_ipc::NotifyException notification;
+  // Fill the breakpoint.
+  std::vector<std::unique_ptr<zxdb::Frame>> frames =
+      FillBreakpoint(&notification, kFirstPid, kFirstThreadKoid);
+  threads_[kFirstThreadKoid]->GetStack().SetFramesForTest(std::move(frames),
+                                                          /*has_all_frames=*/true);
+
+  // Instead of using PopulateBreakpointIds and InjectException, we need to directly
+  // call our function interception code.
+  SyscallDecoderDispatcher* dispatcher = controller->workflow().syscall_decoder_dispatcher();
+  for (const auto& syscall : dispatcher->syscalls()) {
+    if (syscall->name() == syscall_name) {
+      dispatcher->DecodeSyscall(
+          &controller->workflow().system_observer().process_observer().thread_observer(),
+          threads_[kFirstThreadKoid], syscall.get());
+    }
+  }
+
+  debug_ipc::MessageLoop::Current()->Run();
 }
 
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,

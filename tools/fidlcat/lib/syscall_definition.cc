@@ -2556,6 +2556,51 @@ const ZxWaitItem* ZxWaitItem::GetClass() {
 
 void SyscallDecoderDispatcher::Populate() {
   {
+    Syscall* extract_handles =
+        AddFunction("processargs_extract_handles", SyscallReturnType::kNoReturn);
+    // Arguments
+    auto nhandles = extract_handles->Argument<uint32_t>(SyscallType::kUint32);
+    auto handles = extract_handles->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto handle_info = extract_handles->PointerArgument<uint32_t>(SyscallType::kUint32Hexa);
+    // Inputs
+    extract_handles->InputBuffer<zx_handle_t, zx_handle_t, uint32_t>(
+        "handles", SyscallType::kHandle, std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
+        std::make_unique<ArgumentAccess<uint32_t>>(nhandles));
+    extract_handles->InputBuffer<uint32_t, uint32_t, uint32_t>(
+        "handles", SyscallType::kUint32Hexa,
+        std::make_unique<ArgumentAccess<uint32_t>>(handle_info),
+        std::make_unique<ArgumentAccess<uint32_t>>(nhandles));
+    extract_handles->set_inputs_decoded_action(&SyscallDecoderDispatcher::ExtractHandles);
+  }
+
+  {
+    Syscall* libc_extensions_init =
+        AddFunction("__libc_extensions_init", SyscallReturnType::kNoReturn);
+    // Arguments
+    auto handle_count = libc_extensions_init->Argument<uint32_t>(SyscallType::kUint32);
+    auto handle = libc_extensions_init->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto handle_info = libc_extensions_init->PointerArgument<uint32_t>(SyscallType::kUint32Hexa);
+    auto name_count = libc_extensions_init->Argument<uint32_t>(SyscallType::kUint32);
+    auto names = libc_extensions_init->PointerArgument<char*>(SyscallType::kChar);
+    // Inputs
+    libc_extensions_init->Input<uint32_t>("handle_count",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(handle_count));
+    libc_extensions_init->InputBuffer<zx_handle_t, zx_handle_t, uint32_t>(
+        "handle", SyscallType::kHandle, std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(handle_count));
+    libc_extensions_init->InputBuffer<uint32_t, uint32_t, uint32_t>(
+        "handle_info", SyscallType::kUint32Hexa,
+        std::make_unique<ArgumentAccess<uint32_t>>(handle_info),
+        std::make_unique<ArgumentAccess<uint32_t>>(handle_count));
+    libc_extensions_init->Input<uint32_t>("name_count",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(name_count));
+    libc_extensions_init->InputStringBuffer("names", std::make_unique<ArgumentAccess<char*>>(names),
+                                            std::make_unique<ArgumentAccess<uint32_t>>(name_count),
+                                            80);
+    libc_extensions_init->set_inputs_decoded_action(&SyscallDecoderDispatcher::LibcExtensionsInit);
+  }
+
+  {
     Syscall* zx_clock_get = Add("zx_clock_get", SyscallReturnType::kStatus);
     // Arguments
     auto clock_id = zx_clock_get->Argument<zx_clock_t>(SyscallType::kClock);

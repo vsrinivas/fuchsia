@@ -346,6 +346,9 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   void SimulateSyscall(std::unique_ptr<SystemCallTest> syscall, ProcessController* controller,
                        bool interleaved_test, bool multi_thread);
+  std::vector<std::unique_ptr<zxdb::Frame>> FillBreakpoint(debug_ipc::NotifyException* notification,
+                                                           uint64_t process_koid,
+                                                           uint64_t thread_koid);
   void TriggerSyscallBreakpoint(uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
@@ -354,6 +357,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                             std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                             debug_ipc::ExceptionType type);
   void TriggerException(uint64_t process_koid, uint64_t thread_koid, debug_ipc::ExceptionType type);
+  void PerformFunctionTest(ProcessController* controller, const char* syscall_name,
+                           std::unique_ptr<SystemCallTest> syscall);
 
  protected:
   DataForSyscallTest data_;

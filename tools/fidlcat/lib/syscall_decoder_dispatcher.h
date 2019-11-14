@@ -27,6 +27,7 @@
 #include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/exception_decoder.h"
+#include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
@@ -864,6 +865,51 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
   const std::unique_ptr<Access<SizeType>> elem_count_;
 };
 
+// An input/output which is a buffer. Each item in this buffer is a pointer to a C string.
+class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputStringBuffer(int64_t error_code, std::string_view name,
+                                 std::unique_ptr<Access<char*>> buffer,
+                                 std::unique_ptr<Access<uint32_t>> count, size_t max_size)
+      : SyscallInputOutputBase(error_code, name),
+        buffer_(std::move(buffer)),
+        count_(std::move(count)),
+        max_size_(max_size) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    count_->Load(decoder, stage);
+
+    if (count_->Loaded(decoder, stage)) {
+      uint32_t count = count_->Value(decoder, stage);
+      if (count > 0) {
+        buffer_->LoadArray(decoder, stage, count * sizeof(char*));
+        if (buffer_->ArrayLoaded(decoder, stage, count * sizeof(char*))) {
+          const char* const* buffer = buffer_->Content(decoder, stage);
+          if (buffer != nullptr) {
+            for (uint32_t i = 0; i < count; ++i) {
+              if (buffer[i] != nullptr) {
+                decoder->LoadBuffer(stage, reinterpret_cast<uint64_t>(buffer[i]), max_size_);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Access to the buffer which contains all the items.
+  const std::unique_ptr<Access<char*>> buffer_;
+  // Element count in the buffer.
+  const std::unique_ptr<Access<uint32_t>> count_;
+  // Maximum size of a string.
+  size_t max_size_;
+};
+
 // An input/output which is a string. This is always displayed inline.
 template <typename FromType>
 class SyscallInputOutputString : public SyscallInputOutputBase {
@@ -1084,14 +1130,20 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
 // Defines a syscall we want to decode/display.
 class Syscall {
  public:
-  Syscall(std::string_view name, SyscallReturnType return_type)
-      : name_(name), return_type_(return_type), breakpoint_name_(name_ + "@plt") {}
+  Syscall(std::string_view name, SyscallReturnType return_type, bool is_function)
+      : name_(name),
+        return_type_(return_type),
+        is_function_(is_function),
+        breakpoint_name_(is_function_ ? name_ : name_ + "@plt") {}
 
   // Name of the syscall.
   [[nodiscard]] const std::string& name() const { return name_; }
 
   // Type of the syscall returned value.
   [[nodiscard]] SyscallReturnType return_type() const { return return_type_; }
+
+  // True if this class describes a regular function and not a syscall.
+  bool is_function() const { return is_function_; }
 
   // Name of the breakpoint used to watch the syscall.
   [[nodiscard]] const std::string& breakpoint_name() const { return breakpoint_name_; }
@@ -1110,6 +1162,16 @@ class Syscall {
   // conditionally displayed depending on the syscall error code.
   [[nodiscard]] const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const {
     return outputs_;
+  }
+
+  // The code to execute when the input is decoded and before the input is displayed.
+  // If it exists and returns false, the input is not displayed.
+  [[nodiscard]] bool (SyscallDecoderDispatcher::*inputs_decoded_action() const)(SyscallDecoder*) {
+    return inputs_decoded_action_;
+  }
+  void set_inputs_decoded_action(
+      bool (SyscallDecoderDispatcher::*inputs_decoded_action)(SyscallDecoder* decoder)) {
+    inputs_decoded_action_ = inputs_decoded_action;
   }
 
   // Adds an argument definition to the syscall.
@@ -1159,6 +1221,13 @@ class Syscall {
                    std::unique_ptr<Access<SizeType>> elem_count = nullptr) {
     inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType, SizeType>>(
         0, name, syscall_type, std::move(buffer), std::move(elem_size), std::move(elem_count)));
+  }
+
+  // Adds an input buffer. Each element of the buffer if a pointer to a C string.
+  void InputStringBuffer(std::string_view name, std::unique_ptr<Access<char*>> buffer,
+                         std::unique_ptr<Access<uint32_t>> count, size_t max_size) {
+    inputs_.push_back(std::make_unique<SyscallInputOutputStringBuffer>(0, name, std::move(buffer),
+                                                                       std::move(count), max_size));
   }
 
   // Adds an input string to display.
@@ -1343,10 +1412,12 @@ class Syscall {
  private:
   const std::string name_;
   const SyscallReturnType return_type_;
+  const bool is_function_;
   const std::string breakpoint_name_;
   std::vector<std::unique_ptr<SyscallArgumentBase>> arguments_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> inputs_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> outputs_;
+  bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
 };
 
 // Decoder for syscalls. This creates the breakpoints for all the syscalls we
@@ -1363,6 +1434,11 @@ class SyscallDecoderDispatcher {
   const DecodeOptions& decode_options() const { return decode_options_; }
 
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
+
+  const Inference& inference() const { return inference_; }
+
+  // Display a handle. Also display the data we have inferered for this handle (if any).
+  void DisplayHandle(zx_handle_t handle, const fidl_codec::Colors& colors, std::ostream& os);
 
   // Decode an intercepted system call.
   // Called when a thread reached a breakpoint on a system call.
@@ -1411,12 +1487,32 @@ class SyscallDecoderDispatcher {
   // Feeds syscalls_ with all the syscalls we can decode.
   void Populate();
 
-  // Add a syscall. Used by Populate.
-  Syscall* Add(std::string_view name, SyscallReturnType return_type) {
-    auto syscall = std::make_unique<Syscall>(name, return_type);
+  // Add a function we want to put a breakpoint on. Used by Populate.
+  Syscall* AddFunction(std::string_view name, SyscallReturnType return_type) {
+    auto syscall = std::make_unique<Syscall>(name, return_type, /*is_function=*/true);
     auto result = syscall.get();
     syscalls_.push_back(std::move(syscall));
     return result;
+  }
+
+  // Add a syscall. Used by Populate.
+  Syscall* Add(std::string_view name, SyscallReturnType return_type) {
+    auto syscall = std::make_unique<Syscall>(name, return_type, /*is_function=*/false);
+    auto result = syscall.get();
+    syscalls_.push_back(std::move(syscall));
+    return result;
+  }
+
+  // Called when we intercept processargs_extract_handles.
+  bool ExtractHandles(SyscallDecoder* decoder) {
+    inference_.ExtractHandles(decoder);
+    return false;
+  }
+
+  // Called when we intercept __libc_extensions_init.
+  bool LibcExtensionsInit(SyscallDecoder* decoder) {
+    inference_.LibcExtensionsInit(decoder);
+    return false;
   }
 
   // Decoding options.
@@ -1430,6 +1526,9 @@ class SyscallDecoderDispatcher {
 
   // The intercepted exceptions we are currently decoding.
   std::map<uint64_t, std::unique_ptr<ExceptionDecoder>> exception_decoders_;
+
+  // All the handles for which we have some information.
+  Inference inference_;
 };
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
@@ -1722,14 +1821,9 @@ inline void DisplayValue<uint32_t>(SyscallDecoderDispatcher* dispatcher,
       GuestTrapName(value, os);
       os << colors.reset;
       break;
-    case SyscallType::kHandle: {
-      zx_handle_info_t handle_info;
-      handle_info.handle = value;
-      handle_info.type = ZX_OBJ_TYPE_NONE;
-      handle_info.rights = 0;
-      fidl_codec::DisplayHandle(colors, handle_info, os);
+    case SyscallType::kHandle:
+      dispatcher->DisplayHandle(value, colors, os);
       break;
-    }
     case SyscallType::kInfoMapsType:
       os << colors.red;
       InfoMapsTypeName(value, os);

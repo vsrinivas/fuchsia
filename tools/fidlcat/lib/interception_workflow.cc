@@ -367,42 +367,46 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
 
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;
-    if (!syscall_decoder_dispatcher()->decode_options().syscall_filters.empty()) {
-      put_breakpoint = false;
-      for (const auto& syscall_filter :
-           syscall_decoder_dispatcher()->decode_options().syscall_filters) {
-        if (regex_match(syscall->name(), syscall_filter)) {
-          put_breakpoint = true;
-          break;
+    if (!syscall->is_function()) {
+      // Only apply the filters to syscalls. We always want to intercept regular
+      // functions because they give us the information about the starting handles.
+      if (!syscall_decoder_dispatcher()->decode_options().syscall_filters.empty()) {
+        put_breakpoint = false;
+        for (const auto& syscall_filter :
+             syscall_decoder_dispatcher()->decode_options().syscall_filters) {
+          if (regex_match(syscall->name(), syscall_filter)) {
+            put_breakpoint = true;
+            break;
+          }
+        }
+      }
+      if (put_breakpoint) {
+        for (const auto& syscall_filter :
+             syscall_decoder_dispatcher()->decode_options().exclude_syscall_filters) {
+          if (regex_match(syscall->name(), syscall_filter)) {
+            put_breakpoint = false;
+            break;
+          }
         }
       }
     }
     if (put_breakpoint) {
-      for (const auto& syscall_filter :
-           syscall_decoder_dispatcher()->decode_options().exclude_syscall_filters) {
-        if (regex_match(syscall->name(), syscall_filter)) {
-          put_breakpoint = false;
-          break;
+      zxdb::BreakpointSettings settings;
+      settings.enabled = true;
+      settings.name = syscall->name();
+      settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+      settings.type = debug_ipc::BreakpointType::kSoftware;
+      settings.locations.emplace_back(zxdb::Identifier(syscall->breakpoint_name()));
+      settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
+      settings.scope_target = process->GetTarget();
+
+      zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
+
+      breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
         }
-      }
-      if (put_breakpoint) {
-        zxdb::BreakpointSettings settings;
-        settings.enabled = true;
-        settings.name = syscall->name();
-        settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
-        settings.type = debug_ipc::BreakpointType::kSoftware;
-        settings.locations.emplace_back(zxdb::Identifier(syscall->breakpoint_name()));
-        settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-        settings.scope_target = process->GetTarget();
-
-        zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
-
-        breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
-          if (!err.ok()) {
-            FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
-          }
-        });
-      }
+      });
     }
   }
 }

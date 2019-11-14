@@ -240,7 +240,12 @@ void SyscallDecoder::LoadInputs() {
 }
 
 void SyscallDecoder::StepToReturnAddress() {
-  use_->SyscallInputsDecoded(this);
+  // Eventually calls the code before displaying the input (which may invalidate
+  // the display).
+  if ((syscall_->inputs_decoded_action() == nullptr) ||
+      (dispatcher_->*(syscall_->inputs_decoded_action()))(this)) {
+    use_->SyscallInputsDecoded(this);
+  }
 
   if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
     // We don't expect the syscall to return and it doesn't have any output.

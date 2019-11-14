@@ -9,6 +9,7 @@ if (current_toolchain == host_toolchain) {
     public = [
       "decoder.h",
       "exception_decoder.h",
+      "inference.h",
       "interception_workflow.h",
       "syscall_decoder.h",
       "syscall_decoder_dispatcher.h",
@@ -18,6 +19,7 @@ if (current_toolchain == host_toolchain) {
     sources = [
       "decoder.cc",
       "exception_decoder.cc",
+      "inference.cc",
       "interception_workflow.cc",
       "syscall_decoder.cc",
       "syscall_decoder_dispatcher.cc",

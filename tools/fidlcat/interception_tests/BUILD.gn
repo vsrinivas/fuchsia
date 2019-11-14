@@ -39,6 +39,7 @@ if (current_toolchain == host_toolchain) {
       "resource_test.cc",
       "smc_test.cc",
       "socket_test.cc",
+      "startup_test.cc",
       "system_test.cc",
       "task_test.cc",
       "thread_test.cc",

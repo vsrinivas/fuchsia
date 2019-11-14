@@ -173,6 +173,8 @@ class InterceptionWorkflow {
     return syscall_decoder_dispatcher_.get();
   }
 
+  InterceptingSystemObserver& system_observer() { return system_observer_; }
+
   InterceptionWorkflow(const InterceptionWorkflow&) = delete;
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
 

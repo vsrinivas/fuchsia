@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {
@@ -84,6 +85,37 @@ void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t 
   }
 }
 
+void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                                    SyscallDecoder* decoder, Stage stage,
+                                                    std::string_view line_header, int tabs,
+                                                    std::ostream& os) const {
+  os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
+  const fidl_codec::Colors& colors = dispatcher->colors();
+  os << ':' << colors.green << "string" << colors.reset << ": ";
+  const char* const* buffer = buffer_->Content(decoder, stage);
+  if (buffer == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    uint32_t count = count_->Value(decoder, stage);
+    if (count == 0) {
+      os << "empty\n";
+      return;
+    }
+    const char* separator = "";
+    for (uint32_t i = 0; i < count; ++i) {
+      if (buffer[i] != nullptr) {
+        os << separator;
+        const char* string = reinterpret_cast<const char*>(
+            decoder->BufferContent(stage, reinterpret_cast<uint64_t>(buffer[i])));
+        size_t string_size = (string == nullptr) ? 0 : strnlen(string, max_size_);
+        DisplayString(colors, string, string_size, os);
+        separator = ", ";
+      }
+    }
+  }
+  os << '\n';
+}
+
 const char* SyscallInputOutputFixedSizeString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
                                                              SyscallDecoder* decoder, Stage stage,
                                                              const char* separator,
@@ -136,6 +168,21 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
           decoder->thread()->GetProcess()->GetKoid(), handle_value, bytes_value, num_bytes_value,
           handle_infos_value, num_handles_value, type(), os, line_header, tabs)) {
     CantDecode(bytes_value, num_bytes_value, num_handles_value, dispatcher, line_header, tabs, os);
+  }
+}
+
+void SyscallDecoderDispatcher::DisplayHandle(zx_handle_t handle, const fidl_codec::Colors& colors,
+                                             std::ostream& os) {
+  zx_handle_info_t handle_info;
+  handle_info.handle = handle;
+  handle_info.type = ZX_OBJ_TYPE_NONE;
+  handle_info.rights = 0;
+  fidl_codec::DisplayHandle(colors, handle_info, os);
+  const HandleDescription* known_handle = inference_.GetHandleDescription(handle);
+  if (known_handle != nullptr) {
+    os << '(';
+    known_handle->Display(colors, os);
+    os << ')';
   }
 }
 
