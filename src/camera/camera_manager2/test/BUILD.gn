@@ -30,3 +30,30 @@ executable("camera-manager-test") {
     "//zircon/public/lib/fzl",
   ]
 }
+
+executable("camera_plug_detector_test") {
+  testonly = true
+
+  sources = [
+    "camera_plug_detector_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//src/camera/camera_manager2:lib",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
+  ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fzl",
+  ]
+}

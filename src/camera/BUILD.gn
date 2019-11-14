@@ -39,6 +39,7 @@ test_package("camera_tests") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
+    "//src/camera/camera_manager2/test:camera_plug_detector_test",
     "//src/camera/drivers/controller/test:controller-allocator-test",
     "//src/camera/drivers/controller/test:controller-protocol-test",
     "//src/camera/drivers/controller/test:controller-test",
@@ -144,6 +145,11 @@ test_package("camera_tests") {
       name = "camera-manager-test"
       manifest = "camera_manager2/test/meta/camera_manager_test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "camera_plug_detector_test"
+      manifest = "camera_manager2/test/meta/camera_plug_detector_test.cmx"
+      environments = basic_envs
     },
     {
       name = "mali_009_test"

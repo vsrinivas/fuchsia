@@ -8,10 +8,13 @@ source_set("lib") {
   sources = [
     "camera_manager_app.cc",
     "camera_manager_app.h",
+    "camera_plug_detector.cc",
+    "camera_plug_detector.h",
   ]
 
   deps = [
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
 

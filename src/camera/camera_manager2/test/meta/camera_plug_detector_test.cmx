@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/camera_plug_detector_test"
+    }
+}
