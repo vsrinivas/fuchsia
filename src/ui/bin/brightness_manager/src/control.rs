@@ -3,13 +3,17 @@ use crate::sensor::SensorControl;
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use fidl_fuchsia_ui_brightness::ControlRequest as BrightnessControlRequest;
+use fidl_fuchsia_ui_brightness::{
+    BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
+};
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
+use lazy_static::lazy_static;
+use splines::{Interpolation, Key, Spline};
 
 // Delay between sensor reads
 const SLOW_SCAN_TIMEOUT_MS: i64 = 2000;
@@ -19,6 +23,24 @@ const QUICK_SCAN_TIMEOUT_MS: i64 = 100;
 // This seems small but it is significant and works nicely.
 const LARGE_CHANGE_THRESHOLD_NITS: i32 = 4;
 
+//This is the default table, and a default curve will be generated base on this table.
+//This will be replaced once SetBrightnessTable is called.
+lazy_static! {
+    static ref BRIGHTNESS_TABLE: BrightnessTable = {
+        let mut lux_to_nits = Vec::new();
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 10. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 20. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 40. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 70. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 110. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 160. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 250., display_nits: 200. });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 300., display_nits: 250. });
+
+        BrightnessTable { points: lux_to_nits }
+    };
+}
+
 pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
@@ -26,6 +48,7 @@ pub struct Control {
     auto_brightness_on: bool,
     auto_brightness_abort_handle: AbortHandle,
     max_brightness: f64,
+    spline: Spline<f32, f32>,
 }
 
 impl Control {
@@ -39,9 +62,13 @@ impl Control {
 
         let auto_brightness_on = true;
 
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let brightness_table = BrightnessTable { points: points.to_vec() };
+        let spline_arg = generate_spline(brightness_table);
+
         // Startup auto-brightness loop
         let auto_brightness_abort_handle =
-            start_auto_brightness_task(sensor.clone(), backlight.clone());
+            start_auto_brightness_task(sensor.clone(), backlight.clone(), spline_arg.clone());
 
         Control {
             backlight,
@@ -50,6 +77,7 @@ impl Control {
             auto_brightness_on,
             auto_brightness_abort_handle,
             max_brightness: 250.0,
+            spline: spline_arg,
         }
     }
 
@@ -76,7 +104,9 @@ impl Control {
                     fx_log_err!("Failed to reply to WatchCurrentBrightness: {}", e);
                 }
             }
-            _ => fx_log_err!("received {:?}", request),
+            BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
+                self.set_brightness_table(table).await;
+            }
         }
     }
 
@@ -85,8 +115,11 @@ impl Control {
         if !self.auto_brightness_on {
             fx_log_info!("Auto-brightness turned on");
             self.auto_brightness_abort_handle.abort();
-            self.auto_brightness_abort_handle =
-                start_auto_brightness_task(self.sensor.clone(), self.backlight.clone());
+            self.auto_brightness_abort_handle = start_auto_brightness_task(
+                self.sensor.clone(),
+                self.backlight.clone(),
+                self.spline.clone(),
+            );
             self.auto_brightness_on = true;
         }
     }
@@ -137,6 +170,21 @@ impl Control {
         }
     }
 
+    /// auto brightness need to stop at this point or not
+    async fn set_brightness_table(&mut self, table: BrightnessTable) {
+        fx_log_info!("Setting brightness table.");
+        self.spline = generate_spline(table);
+
+        if self.auto_brightness_on {
+            self.auto_brightness_abort_handle.abort();
+            self.auto_brightness_abort_handle = start_auto_brightness_task(
+                self.sensor.clone(),
+                self.backlight.clone(),
+                self.spline.clone(),
+            );
+        }
+    }
+
     /// Converts from our FIDL's 0.0-1.0 value to backlight's 0-max_brightness value
     fn convert_to_scaled_value_based_on_max_brightness(&self, value: f32) -> u16 {
         let value = num_traits::clamp(value, 0.0, 1.0);
@@ -162,27 +210,41 @@ impl ControlTrait for Control {
     }
 }
 
+// TODO(kpt) Move all the folllowing functions into Control. This is delayed so that in the CL
+// for the creation of this code the reviewer can see more easily that the code is unchanged
+// after the extraction from main.rs.
+
+fn generate_spline(table: BrightnessTable) -> Spline<f32, f32> {
+    let BrightnessTable { points } = &table;
+    let mut lux_to_nits_table_to_splines = Vec::new();
+    for brightness_point in points {
+        lux_to_nits_table_to_splines.push(Key::new(
+            brightness_point.ambient_lux,
+            brightness_point.display_nits,
+            Interpolation::Linear,
+        ));
+    }
+    Spline::from_iter(lux_to_nits_table_to_splines.iter().cloned())
+}
+
 // TODO(kpt) Move this and other functions into Control so that they can share the struct
 /// Runs the main auto-brightness code.
 /// This task monitors its running boolean and terminates if it goes false.
 fn start_auto_brightness_task(
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
+    spline: Spline<f32, f32>,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
         Abortable::new(
             async move {
-                let max_brightness = {
-                    let backlight = backlight.lock().await;
-                    backlight.get_max_absolute_brightness()
-                };
                 let mut set_brightness_abort_handle = None::<AbortHandle>;
                 // initialize to an impossible number
                 let mut last_nits: i32 = -1000;
                 loop {
                     let sensor = sensor.clone();
-                    let nits = read_sensor_and_get_brightness(sensor, max_brightness).await;
+                    let nits = read_sensor_and_get_brightness(sensor, &spline).await;
                     let backlight_clone = backlight.clone();
                     if let Some(handle) = set_brightness_abort_handle {
                         handle.abort();
@@ -207,7 +269,7 @@ fn start_auto_brightness_task(
 
 async fn read_sensor_and_get_brightness(
     sensor: Arc<Mutex<dyn SensorControl>>,
-    max_brightness: f64,
+    spline: &Spline<f32, f32>,
 ) -> u16 {
     let lux = {
         // Get the sensor reading in its own mutex block
@@ -217,20 +279,21 @@ async fn read_sensor_and_get_brightness(
         let report = fut.await.expect("Could not read from the sensor");
         report.illuminance
     };
-    brightness_curve_lux_to_nits(lux, max_brightness)
+    brightness_curve_lux_to_nits(lux, spline).await
 }
 
 /// Sets the appropriate backlight brightness based on the ambient light sensor reading.
 /// This will be a brightness curve but for the time being we know that the sensor
 /// goes from 0 to 800 for the office and the backlight takes 0-255 so we take a simple approach.
-fn brightness_curve_lux_to_nits(lux: u16, max_brightness: f64) -> u16 {
-    // Office brightness is about 240 lux, we want the screen full on at this level.
-    let max_lux = 240;
 
-    let lux = num_traits::clamp(lux, 0, max_lux);
-    let nits = (max_brightness * lux as f64 / max_lux as f64) as u16;
-    // Minimum brightness of 1 for nighttime viewing.
-    num_traits::clamp(nits, 1, max_brightness as u16)
+async fn brightness_curve_lux_to_nits(lux: u16, spline: &Spline<f32, f32>) -> u16 {
+    let result = (*spline).clamped_sample(lux as f32);
+    match result {
+        Some(nits) => {
+            return nits as u16;
+        }
+        None => return 1 as u16,
+    }
 }
 
 /// Sets the brightness of the backlight to a specific value.
@@ -378,6 +441,9 @@ mod tests {
         let (sensor, _backlight) = set_mocks(400, 253.0);
         let set_brightness_abort_handle = None::<AbortHandle>;
         let (auto_brightness_abort_handle, _abort_registration) = AbortHandle::new_pair();
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let brightness_table_old = BrightnessTable { points: points.to_vec() };
+        let spline_arg = generate_spline(brightness_table_old.clone());
         Control {
             sensor,
             backlight: _backlight,
@@ -385,20 +451,68 @@ mod tests {
             auto_brightness_on: true,
             auto_brightness_abort_handle,
             max_brightness: 250.0,
+            spline: spline_arg,
         }
     }
-    #[test]
-    fn test_brightness_curve() {
-        assert_eq!(1, brightness_curve_lux_to_nits(0, 250.0));
-        assert_eq!(1, brightness_curve_lux_to_nits(1, 250.0));
-        assert_eq!(2, brightness_curve_lux_to_nits(2, 250.0));
-        assert_eq!(15, brightness_curve_lux_to_nits(15, 250.0));
-        assert_eq!(16, brightness_curve_lux_to_nits(16, 250.0));
-        assert_eq!(104, brightness_curve_lux_to_nits(100, 250.0));
-        assert_eq!(156, brightness_curve_lux_to_nits(150, 250.0));
-        assert_eq!(208, brightness_curve_lux_to_nits(200, 250.0));
-        assert_eq!(250, brightness_curve_lux_to_nits(240, 250.0));
-        assert_eq!(250, brightness_curve_lux_to_nits(300, 250.0));
+
+    fn generate_spline(table: BrightnessTable) -> Spline<f32, f32> {
+        let BrightnessTable { points } = &table;
+        let mut lux_to_nits_table_to_splines = Vec::new();
+        for brightness_point in points {
+            lux_to_nits_table_to_splines.push(Key::new(
+                brightness_point.ambient_lux,
+                brightness_point.display_nits,
+                Interpolation::Linear,
+            ));
+        }
+        Spline::from_iter(lux_to_nits_table_to_splines.iter().cloned())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_curve() {
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let brightness_table = BrightnessTable { points: points.to_vec() };
+        let spline = generate_spline(brightness_table);
+
+        assert_eq!(10, brightness_curve_lux_to_nits(0, &spline).await);
+        assert_eq!(10, brightness_curve_lux_to_nits(1, &spline).await);
+        assert_eq!(10, brightness_curve_lux_to_nits(2, &spline).await);
+        assert_eq!(12, brightness_curve_lux_to_nits(15, &spline).await);
+        assert_eq!(13, brightness_curve_lux_to_nits(16, &spline).await);
+        assert_eq!(70, brightness_curve_lux_to_nits(100, &spline).await);
+        assert_eq!(110, brightness_curve_lux_to_nits(150, &spline).await);
+        assert_eq!(151, brightness_curve_lux_to_nits(200, &spline).await);
+        assert_eq!(190, brightness_curve_lux_to_nits(240, &spline).await);
+        assert_eq!(250, brightness_curve_lux_to_nits(300, &spline).await);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_curve_after_set_new_brightness_table() {
+        let mut control = generate_control_struct();
+        let brightness_table = {
+            let mut lux_to_nits = Vec::new();
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 250., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 300., display_nits: 50. });
+
+            BrightnessTable { points: lux_to_nits }
+        };
+        control.set_brightness_table(brightness_table).await;
+        assert_eq!(50, brightness_curve_lux_to_nits(0, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(1, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(2, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(15, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(16, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(100, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(150, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(200, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(240, &control.spline).await);
+        assert_eq!(50, brightness_curve_lux_to_nits(300, &control.spline).await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -468,16 +582,22 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_bright() {
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let brightness_table = BrightnessTable { points: points.to_vec() };
+        let spline = generate_spline(brightness_table);
         let (sensor, _backlight) = set_mocks(400, 253.0);
-        let nits = read_sensor_and_get_brightness(sensor, 250.0).await;
+        let nits = read_sensor_and_get_brightness(sensor, &spline).await;
         assert_eq!(250, nits);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_low_light() {
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let brightness_table = BrightnessTable { points: points.to_vec() };
+        let spline = generate_spline(brightness_table);
         let (sensor, _backlight) = set_mocks(0, 0.0);
-        let nits = read_sensor_and_get_brightness(sensor, 250.0).await;
-        assert_eq!(1, nits);
+        let nits = read_sensor_and_get_brightness(sensor, &spline).await;
+        assert_eq!(10, nits);
     }
 
     #[fasync::run_singlethreaded(test)]
