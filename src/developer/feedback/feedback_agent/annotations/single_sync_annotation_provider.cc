@@ -13,8 +13,7 @@ using fuchsia::feedback::Annotation;
 
 SingleSyncAnnotationProvider::SingleSyncAnnotationProvider(const std::string& key) : key_(key) {}
 
-std::vector<fit::promise<fuchsia::feedback::Annotation>>
-
+fit::promise<std::vector<fuchsia::feedback::Annotation>>
 SingleSyncAnnotationProvider::GetAnnotations() {
   const auto annotation_value = GetAnnotation();
   if (!annotation_value) {
@@ -26,10 +25,10 @@ SingleSyncAnnotationProvider::GetAnnotations() {
   annotation.key = key_;
   annotation.value = std::move(annotation_value.value());
 
-  std::vector<fit::promise<Annotation>> annotations;
-  annotations.push_back(fit::make_ok_promise(std::move(annotation)));
+  std::vector<Annotation> annotations;
+  annotations.push_back(std::move(annotation));
 
-  return annotations;
+  return fit::make_ok_promise(std::move(annotations));
 }
 
 }  // namespace feedback

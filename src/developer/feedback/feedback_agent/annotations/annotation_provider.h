@@ -23,7 +23,7 @@ class AnnotationProvider {
  public:
   virtual ~AnnotationProvider() = default;
 
-  virtual std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations() = 0;
+  virtual fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() = 0;
 };
 
 }  // namespace feedback

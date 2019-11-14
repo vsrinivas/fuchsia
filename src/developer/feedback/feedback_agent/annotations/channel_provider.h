@@ -30,7 +30,7 @@ class ChannelProvider : public AnnotationProvider {
                   zx::duration timeout);
 
   static std::set<std::string> GetSupportedAnnotations();
-  std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
 
  private:
   async_dispatcher_t* dispatcher_;

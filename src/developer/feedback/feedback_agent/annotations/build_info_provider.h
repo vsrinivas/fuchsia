@@ -22,7 +22,7 @@ class BuildInfoProvider : public AnnotationProvider {
   explicit BuildInfoProvider(const std::set<std::string>& annotations_to_get);
 
   static std::set<std::string> GetSupportedAnnotations();
-  std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
 
  private:
   const std::set<std::string> annotations_to_get_;

@@ -64,21 +64,22 @@ std::set<std::string> BuildInfoProvider::GetSupportedAnnotations() {
   return annotations;
 }
 
-std::vector<fit::promise<Annotation>> BuildInfoProvider::GetAnnotations() {
-  std::vector<fit::promise<Annotation>> annotations;
+fit::promise<std::vector<Annotation>> BuildInfoProvider::GetAnnotations() {
+  std::vector<Annotation> annotations;
   for (const auto& annotation_key : annotations_to_get_) {
     auto annotation_value = GetAnnotation(annotation_key);
     if (annotation_value) {
       Annotation annotation;
       annotation.key = annotation_key;
       annotation.value = std::move(annotation_value.value());
-      annotations.push_back(fit::make_ok_promise(std::move(annotation)));
+
+      annotations.push_back(std::move(annotation));
     } else {
       FX_LOGS(WARNING) << "Failed to build annotation " << annotation_key;
     }
   }
 
-  return annotations;
+  return fit::make_ok_promise(annotations);
 }
 
 }  // namespace feedback

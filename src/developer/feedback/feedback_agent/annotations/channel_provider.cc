@@ -28,27 +28,27 @@ std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
   };
 }
 
-std::vector<fit::promise<Annotation>> ChannelProvider::GetAnnotations() {
+fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
   std::vector<fit::promise<Annotation>> annotations;
 
   auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_);
 
   // Move |channel_ptr| in to the callback to ensure its lifetime.
-  auto promise = channel_ptr->GetCurrent(timeout_)
-                     .and_then([channel_ptr = std::move(channel_ptr)](
-                                   const std::string& channel) -> fit::result<Annotation> {
-                       Annotation annotation;
-                       annotation.key = kAnnotationChannel;
-                       annotation.value = channel;
-                       return fit::ok(std::move(annotation));
-                     })
-                     .or_else([] {
-                       FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationChannel;
-                       return fit::error();
-                     });
-  annotations.push_back(std::move(promise));
+  return channel_ptr->GetCurrent(timeout_)
+      .and_then([channel_ptr = std::move(channel_ptr)](const std::string& channel) {
+        std::vector<Annotation> annotations;
 
-  return annotations;
+        Annotation annotation;
+        annotation.key = kAnnotationChannel;
+        annotation.value = channel;
+
+        annotations.push_back(std::move(annotation));
+        return fit::ok(std::move(annotations));
+      })
+      .or_else([] {
+        FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationChannel;
+        return fit::error();
+      });
 }
 
 namespace internal {

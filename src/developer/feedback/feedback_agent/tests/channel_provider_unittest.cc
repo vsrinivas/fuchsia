@@ -12,6 +12,7 @@
 #include <zircon/errors.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
@@ -39,19 +40,27 @@ class ChannelProviderTest : public gtest::TestLoopFixture {
     }
   }
 
-  fit::result<Annotation> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
-    fit::result<Annotation> annotation;
+  std::optional<std::string> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
+    std::optional<std::string> channel;
     ChannelProvider provider(dispatcher(), service_directory_provider_.service_directory(),
                              timeout);
     auto promises = provider.GetAnnotations();
-    if (promises.size() >= 1) {
-      executor_.schedule_task(
-          std::move(promises.back()).then([&annotation](fit::result<Annotation>& res) {
-            annotation = std::move(res);
-          }));
-    }
+    executor_.schedule_task(
+        std::move(promises).then([&channel](fit::result<std::vector<Annotation>>& res) {
+          if (res.is_error()) {
+            channel = std::nullopt;
+          } else {
+            std::vector<Annotation> vec = res.take_value();
+            if (vec.empty()) {
+              channel = std::nullopt;
+            } else {
+              FX_CHECK(vec.size() == 1u);
+              channel = std::move(vec.back().value);
+            }
+          }
+        }));
     RunLoopFor(timeout);
-    return annotation;
+    return channel;
   }
 
   async::Executor executor_;
@@ -67,43 +76,43 @@ TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
   stub_channel_provider->set_channel("my-channel");
   SetUpChannelProviderPtr(std::move(stub_channel_provider));
 
-  fit::result<Annotation> result = RetrieveCurrentChannel();
+  const auto result = RetrieveCurrentChannel();
 
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.take_value().value, "my-channel");
+  ASSERT_TRUE(result);
+  EXPECT_EQ(result.value(), "my-channel");
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
 
-  fit::result<Annotation> result = RetrieveCurrentChannel();
+  const auto result = RetrieveCurrentChannel();
 
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.take_value().value, "");
+  ASSERT_TRUE(result);
+  EXPECT_EQ(result.value(), "");
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNotAvailable) {
   SetUpChannelProviderPtr(nullptr);
 
-  fit::result<Annotation> result = RetrieveCurrentChannel();
+  const auto result = RetrieveCurrentChannel();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_FALSE(result);
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProviderClosesConnection>());
 
-  fit::result<Annotation> result = RetrieveCurrentChannel();
+  const auto result = RetrieveCurrentChannel();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_FALSE(result);
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProviderNeverReturns>());
 
-  fit::result<Annotation> result = RetrieveCurrentChannel();
+  const auto result = RetrieveCurrentChannel();
 
-  ASSERT_TRUE(result.is_error());
+  ASSERT_FALSE(result);
 }
 
 TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {

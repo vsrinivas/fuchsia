@@ -22,7 +22,7 @@ class SingleSyncAnnotationProvider : public AnnotationProvider {
   virtual ~SingleSyncAnnotationProvider() = default;
 
   virtual std::optional<std::string> GetAnnotation() = 0;
-  std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
 
  private:
   const std::string key_;

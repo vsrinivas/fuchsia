@@ -10,7 +10,7 @@
 namespace feedback {
 using fuchsia::feedback::Annotation;
 
-std::vector<fit::promise<Annotation>> GetAnnotations(
+std::vector<fit::promise<std::vector<Annotation>>> GetAnnotations(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout) {
   if (allowlist.empty()) {
@@ -18,15 +18,13 @@ std::vector<fit::promise<Annotation>> GetAnnotations(
     return {};
   }
 
-  std::vector<fit::promise<Annotation>> annotations;
+  std::vector<fit::promise<std::vector<Annotation>>> annotation_promises;
 
   for (auto& provider : GetProviders(allowlist, dispatcher, services, timeout)) {
-    auto new_annotations = provider->GetAnnotations();
-    annotations.insert(annotations.end(), std::make_move_iterator(new_annotations.begin()),
-                       std::make_move_iterator(new_annotations.end()));
+    annotation_promises.push_back(provider->GetAnnotations());
   }
 
-  return annotations;
+  return annotation_promises;
 }
 
 }  // namespace feedback

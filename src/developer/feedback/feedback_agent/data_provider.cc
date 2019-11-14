@@ -94,12 +94,15 @@ void DataProvider::GetData(GetDataCallback callback) {
   auto annotations =
       fit::join_promise_vector(
           GetAnnotations(dispatcher_, services_, config_.annotation_allowlist, kDataTimeout))
-          .and_then([](std::vector<fit::result<Annotation>>& annotations)
+          .and_then([](std::vector<fit::result<std::vector<Annotation>>>& annotation_promises)
                         -> fit::result<std::vector<Annotation>> {
             std::vector<Annotation> ok_annotations;
-            for (auto& annotation : annotations) {
-              if (annotation.is_ok()) {
-                ok_annotations.emplace_back(annotation.take_value());
+            for (auto& promise : annotation_promises) {
+              if (promise.is_ok()) {
+                auto annotations = promise.take_value();
+                for (const auto& annotation : annotations) {
+                  ok_annotations.push_back(std::move(annotation));
+                }
               }
             }
 

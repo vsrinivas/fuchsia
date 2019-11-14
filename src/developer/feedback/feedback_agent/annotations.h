@@ -22,7 +22,7 @@ namespace feedback {
 //
 // * only annotations which keys are in the |allowlist| will be returned.
 // * |timeout| is per annotation.
-std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations(
+std::vector<fit::promise<std::vector<fuchsia::feedback::Annotation>>> GetAnnotations(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout);
 
