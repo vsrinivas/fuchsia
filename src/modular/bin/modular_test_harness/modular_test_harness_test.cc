@@ -66,7 +66,7 @@ class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironme
 };
 
 // Test that a session is torn down cleanly.
-TEST_F(ModularTestHarnessDestructionTest, CleanTeardown) {
+TEST_F(ModularTestHarnessDestructionTest, DISABLED_CleanTeardown) {
   modular_testing::TestHarnessBuilder builder;
 
   // Service our FakeSessionShell on a different thread -- this will allow our FakeSessionShell to
