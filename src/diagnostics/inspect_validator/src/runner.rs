@@ -19,7 +19,9 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
             Ok(mut puppet) => {
                 let mut data = Data::new();
                 if let Err(e) = run_trial(&mut puppet, &mut data, trial, results).await {
-                    results.error(format!("Running trial {}, got failure: {:?}", trial.name, e));
+                    results.error(format!("Running trial {}, got failure:\n{}", trial.name, e));
+                } else {
+                    results.log(format!("Trial {} succeeds", trial.name));
                 }
             }
             Err(e) => {
@@ -135,7 +137,7 @@ fn try_compare(
         Ok(puppet_data) => {
             if let Err(e) = data.compare(&puppet_data, diff_type) {
                 bail!(
-                    "Compare error in trial {}, step {}, action {} {:?}: {:?} ",
+                    "Compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
                     trial_name,
                     step_index,
                     action_number,

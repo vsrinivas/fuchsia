@@ -105,8 +105,12 @@ impl Results {
     }
 
     pub fn error(&mut self, message: String) {
-        self.messages.push(message);
+        self.log(message);
         self.failed = true;
+    }
+
+    pub fn log(&mut self, message: String) {
+        self.messages.push(message);
     }
 
     pub fn unimplemented(&mut self, puppet_name: &str, action: &Action) {
@@ -192,11 +196,21 @@ mod tests {
     use {super::*, crate::*};
 
     #[test]
-    fn error_result_fails() {
+    fn error_result_fails_and_outputs() {
         let mut results = Results::new();
         assert!(!results.failed());
         results.error("Oops!".to_string());
         assert!(results.failed());
+        assert!(results.to_json().contains("Oops!"));
+    }
+
+    #[test]
+    fn log_result_does_not_fail_and_outputs() {
+        let mut results = Results::new();
+        assert!(!results.failed());
+        results.log("Harmless message!".to_string());
+        assert!(!results.failed());
+        assert!(results.to_json().contains("Harmless message!"));
     }
 
     #[test]

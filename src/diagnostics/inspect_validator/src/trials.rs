@@ -405,11 +405,13 @@ fn double_histogram_ops_trial() -> Trial {
         actions.push(insert_multiple!(id: 5, value: Number::DoubleT(value), count: 3));
     }
     let mut actions = vec![
-        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5.0,
-                                 step_size: 3.0, buckets: 3, type: DoubleT),
+        // Create exponential first in this test, so that if histograms aren't supported, both
+        // linear and exponential will be reported as unsupported.
         create_exponential_histogram!(parent: ROOT_ID, id: 5, name: "Ehist",
                                 floor: std::f64::consts::PI, initial_step: 2.0,
                                 step_multiplier: 4.0, buckets: 3, type: DoubleT),
+        create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5.0,
+                                 step_size: 3.0, buckets: 3, type: DoubleT),
     ];
     for value in &[std::f64::MIN, std::f64::MAX, std::f64::MIN_POSITIVE, 0.0] {
         push_ops(&mut actions, *value);
