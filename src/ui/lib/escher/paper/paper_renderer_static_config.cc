@@ -21,6 +21,8 @@ const std::vector<std::string> kPaperRendererShaderPaths = {
     "shaders/paper/vert/main_shadow_volume_extrude.vert",
     "shaders/paper/vert/vertex_attributes.vert"};
 
+const std::vector<std::string> kPaperRendererShaderSpirvPaths = {};
+
 const ShaderProgramData kAmbientLightProgramData = {
     .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
                      {ShaderStage::kFragment, "shaders/paper/frag/main_ambient_light.frag"}},

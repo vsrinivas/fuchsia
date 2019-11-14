@@ -28,9 +28,15 @@ struct BufferRange {
 // push-constants for in/output.
 class ComputeShader {
  public:
+#if ESCHER_USE_RUNTIME_GLSL
   ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
                 const std::vector<vk::DescriptorType>& buffer_types, size_t push_constants_size,
                 const char* source_code);
+#else
+  ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
+                const std::vector<vk::DescriptorType>& buffer_types, size_t push_constants_size,
+                std::vector<uint32_t> spir_v);
+#endif
   ~ComputeShader();
 
   // Update descriptors and push-constants, then dispatch x * y * z workgroups.
@@ -49,6 +55,10 @@ class ComputeShader {
                           const void* push_constants);
 
  private:
+  // Construction helper function.
+  void Initialize(const std::vector<vk::ImageLayout>& layouts,
+                  const std::vector<vk::DescriptorType>& buffer_types, size_t push_constants_size);
+
   const vk::Device device_;
   const std::vector<vk::DescriptorSetLayoutBinding> descriptor_set_layout_bindings_;
   const vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_create_info_;

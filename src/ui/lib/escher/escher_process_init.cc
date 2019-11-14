@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/escher_process_init.h"
 
+#if ESCHER_USE_RUNTIME_GLSL
 #include "glslang/Public/ShaderLang.h"
 
 namespace escher {
@@ -13,3 +14,4 @@ void GlslangInitializeProcess() { glslang::InitializeProcess(); }
 void GlslangFinalizeProcess() { glslang::FinalizeProcess(); }
 
 }  // namespace escher
+#endif  // ESCHER_USE_RUNTIME_GLSL

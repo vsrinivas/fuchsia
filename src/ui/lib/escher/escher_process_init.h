@@ -24,8 +24,11 @@ namespace escher {
 // This is admittedly clumsy.  In the long term, Escher will avoid initializing
 // any per-process or per-thread state that may conflict with other client code;
 // it will be enough to simply create and destroy Escher instances.
+
+#if ESCHER_USE_RUNTIME_GLSL
 void GlslangInitializeProcess();
 void GlslangFinalizeProcess();
+#endif
 
 }  // namespace escher
 

@@ -15,7 +15,7 @@ source_set("input") {
     "//garnet/public/lib/inspect_deprecated",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
-    "//src/ui/lib/escher",
+    "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/scenic",
     "//zircon/public/lib/trace",

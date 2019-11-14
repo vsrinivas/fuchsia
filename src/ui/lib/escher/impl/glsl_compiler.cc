@@ -10,10 +10,11 @@
 #include "SPIRV/GlslangToSpv.h"
 #include "StandAlone/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
-#include "spirv-tools/libspirv.hpp"
-#include "spirv-tools/optimizer.hpp"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+
+#include "spirv-tools/libspirv.hpp"
+#include "spirv-tools/optimizer.hpp"
 
 namespace escher {
 namespace impl {
@@ -27,7 +28,7 @@ std::future<SpirvData> GlslToSpirvCompiler::Compile(vk::ShaderStageFlagBits stag
                                                     std::string preamble, std::string entry_point) {
   // Count will be decremented by SynchronousCompile.
   ++active_compile_count_;
-#if !defined(ESCHER_DISABLE_BACKGROUND_COMPILATION)
+#if !defined(ESCHER_DISABLE_BACKGROUND_GLSL_COMPILATION)
   return std::async(std::launch::async, &GlslToSpirvCompiler::SynchronousCompile, this, stage,
                     std::move(source_code), std::move(preamble), std::move(entry_point));
 #else

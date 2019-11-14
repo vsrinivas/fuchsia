@@ -7,7 +7,10 @@
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
+
+#if ESCHER_USE_RUNTIME_GLSL
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
+#endif
 
 namespace {
 using namespace escher;
@@ -192,5 +195,4 @@ VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
   filesystem()->WriteFile(HackFilePath(kComputeIdentityPositionPath), kComputeIdentityPosition);
   EXPECT_EQ(listener.update_count(), 2);
 }
-
 }  // anonymous namespace

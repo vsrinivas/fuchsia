@@ -40,6 +40,7 @@ FuchsiaDataSource::FuchsiaDataSource() : root_dir_(std::make_shared<vfs::PseudoD
 bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
                                                 const char* root) {
   const std::string kRoot(root);
+  base_path_ = kRoot;
   bool success = true;
   for (const auto& path : paths) {
     success &= LoadFile(this, kRoot, path);

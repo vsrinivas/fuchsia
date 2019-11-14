@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/ui/lib/escher/build_args.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
@@ -33,15 +34,24 @@ config("swapchain") {
   ]
 }
 
-config("feature_flags") {
-  defines = []
-}
-
 source_set("common_gfx_config_source_set") {
   visibility = [
     ":gfx_always_optimized",
     ":gfx",
   ]
+}
+
+# Use build flag to determine which version of escher is used.
+source_set("escher_maybe_with_glsl") {
+  if (escher_use_runtime_glsl) {
+    public_deps = [
+      "//src/ui/lib/escher",
+    ]
+  } else {
+    public_deps = [
+      "//src/ui/lib/escher:escher_no_glslang",
+    ]
+  }
 }
 
 # These sources (all part of :gfx) are especially performance-sensitive, so we
@@ -58,8 +68,9 @@ source_set("gfx_always_optimized") {
   ]
   public_configs = [ ":common_include_dirs" ]
   public_deps = [
-    "//src/ui/lib/escher",
+    ":escher_maybe_with_glsl",
   ]
+
   deps = [
     "//sdk/lib/images/cpp",
     "//src/ui/lib/yuv",
@@ -211,10 +222,7 @@ source_set("gfx") {
     "sysmem.h",
   ]
 
-  public_configs = [
-    ":common_include_dirs",
-    ":feature_flags",
-  ]
+  public_configs = [ ":common_include_dirs" ]
 
   configs += [ ":swapchain" ]
 
@@ -321,6 +329,7 @@ source_set("frame_scheduler") {
   ]
   deps = [
     ":display",
+    ":escher_maybe_with_glsl",
     ":frame_metrics_registry",
     ":util",
     "//sdk/fidl/fuchsia.images",
@@ -330,8 +339,8 @@ source_set("frame_scheduler") {
     "//src/ui/scenic/lib/scenic:present2_info",
 
     # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
-    "//src/ui/lib/escher",
   ]
+
   public_deps = [
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//third_party/cobalt/src/registry:buckets_config",
@@ -347,10 +356,9 @@ source_set("util") {
     "util/wrap.h",
   ]
   deps = [
-    "//src/lib/fxl",
-
     # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
-    "//src/ui/lib/escher",
+    ":escher_maybe_with_glsl",
+    "//src/lib/fxl",
   ]
 }
 

@@ -14,6 +14,7 @@ namespace escher {
 
 // List of all the shader paths used by PaperRenderer.
 extern const std::vector<std::string> kPaperRendererShaderPaths;
+extern const std::vector<std::string> kPaperRendererShaderSpirvPaths;
 
 // List of paper renderer shader program data.
 // NOTE: If these are modified in any way, or if a new constant

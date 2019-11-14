@@ -11,6 +11,9 @@
 namespace escher {
 namespace hmd {
 
+extern const char* kPoseLatchingShaderName;
+extern const char* g_kernel_src;
+
 // Uses a simple compute shader to latch a pose out of the pose buffer.
 // public/fidl/fuchsia.ui.gfx/commands.fidl for details on pose buffer.
 class PoseBufferLatchingShader {

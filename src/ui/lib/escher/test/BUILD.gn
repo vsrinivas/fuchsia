@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//src/ui/lib/escher/build_args.gni")
 
 if (is_mac) {
   test("escher_unittests") {
@@ -18,6 +19,10 @@ if (is_mac) {
     ]
   }
 } else {
+  # TODO: Consider breaking this out into two binaries, one that uses
+  # glslang and one that does not. This would ensure we always hav a
+  # compile target for both on the bots, and also exercise any places
+  # where those diverge.
   test("escher_unittests") {
     sources = [
       "debug/debug_font_unittest.cc",
@@ -33,7 +38,6 @@ if (is_mac) {
       "geometry/plane_unittest.cc",
       "gpu_allocator_unittest.cc",
       "gpu_mem_unittest.cc",
-      "impl/glsl_compiler_unittest.cc",
       "impl/image_cache_unittest.cc",
       "math/rotations_unittest.cc",
       "mesh_spec_unittest.cc",
@@ -73,12 +77,18 @@ if (is_mac) {
       "vk/framebuffer_allocator_unittest.cc",
       "vk/image_view_allocator_unittest.cc",
       "vk/render_pass_cache_unittest.cc",
-      "vk/shader_module_template_unittest.cc",
       "vk/shader_program_unittest.cc",
       "vk/validation_layer_test.cc",
       "vk/vulkan_tester.h",
       "vk/vulkan_utils_unittest.cc",
     ]
+
+    if (escher_use_runtime_glsl) {
+      sources += [
+        "impl/glsl_compiler_unittest.cc",
+        "vk/shader_module_template_unittest.cc",
+      ]
+    }
 
     deps = [
       ":force_paper_shader_compiler_to_build_on_host",
@@ -86,10 +96,15 @@ if (is_mac) {
       ":gtest_escher",
       "base:base_unittests",
       "//src/lib/fxl",
-      "//third_party/glslang:glslang_sources",
       "//third_party/googletest:gmock",
-      "//third_party/shaderc:libshaderc",
     ]
+
+    if (escher_use_runtime_glsl) {
+      deps += [
+        "//third_party/glslang:glslang_sources",
+        "//third_party/shaderc:libshaderc",
+      ]
+    }
 
     if (is_linux) {
       deps += [ "//src/ui/lib/escher/shaders:linux_shader_data" ]
@@ -152,8 +167,12 @@ source_set("gtest_escher") {
 
   public_deps = [
     ":gtest_vulkan",
-    "//src/ui/lib/escher",
   ]
+  if (escher_use_runtime_glsl) {
+    public_deps += [ "//src/ui/lib/escher" ]
+  } else {
+    public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
 
   sources = [
     "gtest_escher.cc",

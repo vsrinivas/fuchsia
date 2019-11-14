@@ -10,7 +10,7 @@ executable("paper_shader_compiler") {
   ]
 
   deps = [
-    "//src/ui/lib/escher",
+    "//src/ui/lib/escher:escher",
     "//src/ui/lib/escher/shaders/util:shader_utils",
     "//third_party/shaderc:libshaderc",
   ]

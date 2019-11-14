@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/ui/lib/escher/build_args.gni")
+
 executable("pose_buffer_presenter") {
   output_name = "pose_buffer_presenter"
 
@@ -19,11 +21,16 @@ executable("pose_buffer_presenter") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/ui/scenic/cpp",
-    "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher" ]
+  } else {
+    deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
 
   include_dirs = [
     "//src/ui/lib/escher",

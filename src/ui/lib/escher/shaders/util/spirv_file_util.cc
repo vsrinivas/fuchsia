@@ -27,11 +27,37 @@ bool WriteSpirvToDisk(const std::vector<uint32_t>& spirv, const ShaderVariantArg
   auto full_path = base_path + hash_name;
   FILE* fp = fopen(full_path.c_str(), "wb");
   if (fp) {
-    fwrite(spirv.data(), 1, spirv.size(), fp);
+    fwrite(spirv.data(), sizeof(uint32_t), spirv.size(), fp);
     fclose(fp);
     return true;
   } else {
     FXL_LOG(ERROR) << "Could not write file: " << full_path;
+  }
+
+  return false;
+}
+
+bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_path,
+                       const std::string& shader_name, std::vector<uint32_t>* out_spirv) {
+  FXL_DCHECK(out_spirv);
+  auto hash_name = GenerateHashedSpirvName(shader_name, args);
+  auto full_path = base_path + hash_name;
+  FILE* fp = fopen(full_path.c_str(), "rb");
+  if (fp) {
+    std::size_t binary_size;
+    fseek(fp, 0, SEEK_END);
+    binary_size = ftell(fp);
+    rewind(fp);
+
+    // File was empty.
+    if (binary_size == 0) {
+      return false;
+    }
+
+    uint32_t num_elements = binary_size / sizeof(uint32_t);
+    out_spirv->resize(num_elements);
+    uint32_t num_read = fread(out_spirv->data(), sizeof(uint32_t), num_elements, fp);
+    return num_read == num_elements;
   }
 
   return false;

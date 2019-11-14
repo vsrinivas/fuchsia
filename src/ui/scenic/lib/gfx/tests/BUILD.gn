@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/ui/lib/escher/build_args.gni")
 
 group("tests") {
   testonly = true
@@ -67,7 +68,6 @@ source_set("testing_deps") {
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated:reader",
     "//src/lib/inspect_deprecated/testing",
-    "//src/ui/lib/escher",
     "//src/ui/lib/escher/test:gtest_escher",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/display/tests:mocks",
@@ -79,6 +79,12 @@ source_set("testing_deps") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
+
+  if (escher_use_runtime_glsl) {
+    public_deps += [ "//src/ui/lib/escher" ]
+  } else {
+    public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
 }
 
 source_set("pixel_test") {
@@ -140,13 +146,18 @@ source_set("scenic_pixeltests") {
     "//sdk/fidl/fuchsia.images",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
-    "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
     "//src/ui/lib/yuv",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher" ]
+  } else {
+    deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
 }
 
 executable("unittests") {

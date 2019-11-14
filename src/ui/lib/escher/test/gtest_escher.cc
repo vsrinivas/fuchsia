@@ -51,13 +51,17 @@ void EscherEnvironment::SetUp() {
     vulkan_device_ = VulkanDeviceQueues::New(vulkan_instance_, device_params);
     escher_ = std::make_unique<Escher>(vulkan_device_);
 
+#if ESCHER_USE_RUNTIME_GLSL
     escher::GlslangInitializeProcess();
+#endif
   }
 }
 
 void EscherEnvironment::TearDown() {
   if (!VK_TESTS_SUPPRESSED()) {
+#if ESCHER_USE_RUNTIME_GLSL
     escher::GlslangFinalizeProcess();
+#endif
 
     escher_.reset();
     vulkan_device_.reset();

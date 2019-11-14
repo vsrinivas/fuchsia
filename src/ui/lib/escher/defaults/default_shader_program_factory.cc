@@ -81,8 +81,11 @@ ShaderModuleTemplatePtr DefaultShaderProgramFactory::ObtainShaderModuleTemplate(
     return it->second;
   }
 
-  auto t = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher_->vk_device(), escher_->shaderc_compiler(), stage, source_path, filesystem_);
+  auto t = fxl::MakeRefCounted<ShaderModuleTemplate>(escher_->vk_device(),
+#if ESCHER_USE_RUNTIME_GLSL
+                                                     escher_->shaderc_compiler(),
+#endif
+                                                     stage, source_path, filesystem_);
   templates_[source_path] = t;
   return t;
 }

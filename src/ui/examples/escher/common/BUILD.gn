@@ -78,6 +78,6 @@ source_set("headers") {
     "demo_harness.h",
   ]
   public_deps = [
-    "//src/ui/lib/escher",
+    "//src/ui/lib/escher:escher",
   ]
 }

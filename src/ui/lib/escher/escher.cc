@@ -7,7 +7,11 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/frame_manager.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"
+#if ESCHER_USE_RUNTIME_GLSL
+#include "src/ui/lib/escher/impl/glsl_compiler.h"  // nogncheck
+
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
+#endif
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/impl/mesh_manager.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -26,8 +30,6 @@
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 #include "src/ui/lib/escher/vk/texture.h"
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"
-
-#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
 
@@ -78,8 +80,10 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
                                                 /*use_protected_memory=*/false)),
       transfer_command_buffer_pool_(NewTransferCommandBufferPool(
           vulkan_context_, command_buffer_sequencer_.get(), /*use_protected_memory=*/false)),
+#if ESCHER_USE_RUNTIME_GLSL
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
+#endif
       weak_factory_(this) {
   FXL_DCHECK(vulkan_context_.instance);
   FXL_DCHECK(vulkan_context_.physical_device);

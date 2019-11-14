@@ -7,7 +7,9 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
+#include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
@@ -100,6 +102,49 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
   test::impl::VkDebugReportCollector vk_debug_report_collector_;
 };
 
+// Test to make sure that the shader data constants located in
+// paper_renderer_static_config.h can be used to properly load
+// vulkan shader programs.
+VK_TEST_F(ShaderProgramTest, ShaderConstantsTest) {
+  auto escher = test::GetEscher();
+
+  auto program1 = escher->GetProgram(kAmbientLightProgramData);
+  auto program2 = escher->GetProgram(kAmbientLightProgramData);
+  auto program3 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
+  auto program4 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
+
+  // The first two programs use the same variant args, so should be identical,
+  // and similarly with the last two.
+  EXPECT_EQ(program1, program2);
+  EXPECT_EQ(program3, program4);
+  EXPECT_NE(program1, program3);
+}
+
+// Go through all of the shader programs in |paper_renderer_static_config.h| and make
+// sure that all their spirv can be properly found on disk.
+VK_TEST_F(ShaderProgramTest, SpirVReadFileTest) {
+  auto escher = test::GetEscher();
+  auto base_path = *escher->shader_program_factory()->filesystem()->base_path() + "/shaders/";
+  auto load_and_check_program = [&](const ShaderProgramData& program) {
+    for (const auto& iter : program.source_files) {
+      std::vector<uint32_t> spirv;
+      if (iter.second.size() == 0) {
+        continue;
+      }
+      EXPECT_TRUE(shader_util::ReadSpirvFromDisk(program.args, base_path, iter.second, &spirv))
+          << iter.second;
+      EXPECT_TRUE(spirv.size() > 0);
+    }
+  };
+
+  load_and_check_program(kAmbientLightProgramData);
+  load_and_check_program(kNoLightingProgramData);
+  load_and_check_program(kPointLightProgramData);
+  load_and_check_program(kPointLightFalloffProgramData);
+  load_and_check_program(kShadowVolumeGeometryProgramData);
+  load_and_check_program(kShadowVolumeGeometryDebugProgramData);
+}
+
 VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
@@ -134,12 +179,8 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
   // TODO(ES-183): remove PaperRenderer shader dependency.
-  ShaderVariantArgs variant({{"NO_SHADOW_LIGHTING_PASS", "1"},
-                             {"USE_ATTRIBUTE_UV", "1"},
-                             {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});
-
-  auto program = escher->GetGraphicsProgram("shaders/model_renderer/main.vert",
-                                            "shaders/model_renderer/main.frag", variant);
+  auto program = escher->GetProgram(escher::kNoLightingProgramData);
+  EXPECT_TRUE(program);
 
   auto cb = CommandBuffer::NewForGraphics(escher, /*use_protected_memory=*/false);
 

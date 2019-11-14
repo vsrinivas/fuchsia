@@ -8,14 +8,10 @@ import("//build/testing/environments.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
-declare_args() {
-  # Using Vulkan on host (i.e. Linux) is an involved affair that involves
-  # downloading the Vulkan SDK, setting environment variables, and so forth...
-  # all things that are difficult to achieve in a CQ environment.  Therefore,
-  # by default we use a stub implementation of Vulkan which fails to create a
-  # VkInstance.  This allows everything to build, and also allows running Escher
-  # unit tests which don't require Vulkan.
-  escher_use_null_vulkan_config_on_host = true
+import("//src/ui/lib/escher/build_args.gni")
+
+config("use_runtime_glsl_config") {
+  defines = [ "ESCHER_USE_RUNTIME_GLSL=1" ]
 }
 
 test_package("escher_tests") {
@@ -33,6 +29,7 @@ test_package("escher_tests") {
   public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
+
   resources += [
     {
       path = rebase_path("shaders/model_renderer/default_position.vert")
@@ -85,6 +82,51 @@ test_package("escher_tests") {
     {
       path = rebase_path("shaders/paper/vert/vertex_attributes.vert")
       dest = "shaders/paper/vert/vertex_attributes.vert"
+    },
+
+    # Spirv shaders
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_frag17553292397499926694.spirv"
+      dest =
+          "shaders/shaders_model_renderer_main_frag17553292397499926694.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_frag8280587512758179706.spirv"
+      dest = "shaders/shaders_model_renderer_main_frag8280587512758179706.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_vert11112688489391456647.spirv"
+      dest =
+          "shaders/shaders_model_renderer_main_vert11112688489391456647.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_vert17553292397499926694.spirv"
+      dest =
+          "shaders/shaders_model_renderer_main_vert17553292397499926694.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_vert4295183060635058569.spirv"
+      dest = "shaders/shaders_model_renderer_main_vert4295183060635058569.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_model_renderer_main_vert8280587512758179706.spirv"
+      dest = "shaders/shaders_model_renderer_main_vert8280587512758179706.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv"
+      dest = "shaders/shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_paper_frag_main_point_light_frag11112688489391456647.spirv"
+      dest = "shaders/shaders_paper_frag_main_point_light_frag11112688489391456647.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/shaders_paper_frag_main_point_light_frag4295183060635058569.spirv"
+      dest = "shaders/shaders_paper_frag_main_point_light_frag4295183060635058569.spirv"
+    },
+    {
+      path = "//src/ui/lib/escher/shaders/spirv/pose_buffer_latching_comp14695981039346656037.spirv"
+      dest = "shaders/pose_buffer_latching_comp14695981039346656037.spirv"
     },
   ]
 }
@@ -142,9 +184,7 @@ config("thread_safety_warning") {
 config("vk_mem_alloc_small_heap_max_size") {
   # Set maximum small heap size to 256MB, which works for AEMU (which has 512MB
   # memory heaps) and possibly other devices with limited memory size.
-  defines = [
-    "VMA_SMALL_HEAP_MAX_SIZE=(256ull*1024*1024)"
-  ]
+  defines = [ "VMA_SMALL_HEAP_MAX_SIZE=(256ull*1024*1024)" ]
 }
 
 config("vk_mem_alloc_error_suppression") {
@@ -167,333 +207,364 @@ source_set("vk_mem_alloc") {
 
   public_configs = [
     ":vk_mem_alloc_error_suppression",
-    ":vk_mem_alloc_small_heap_max_size"
+    ":vk_mem_alloc_small_heap_max_size",
   ]
 }
 
-source_set("escher") {
-  defines = [
-    # Currently necessary on Fuchsia, but not Linux.
-    "ESCHER_DISABLE_BACKGROUND_COMPILATION",
-  ]
+# Allows variants of Escher library to be built, e.g. to toggle
+# between runtime GLSL compilation vs using precompiled SPIR-V.
+template("escher_library") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
 
-  deps = [
-    "//third_party/glslang:glslang_default_resource_limits_sources",
-    "//third_party/glslang:glslang_sources",
-    "//third_party/shaderc:libshaderc",
-    "//third_party/spirv-cross",
-    "//third_party/spirv-tools:spvtools_opt",
-  ]
-
-  public_deps = [
-    ":vk_mem_alloc",
-    ":vulkan",
-    "//src/lib/fxl",
-    "//src/ui/lib/escher/base:escher_base",
-    "//src/ui/lib/escher/geometry:escher_geometry",
-    "//src/ui/lib/escher/types:escher_types",
-  ]
-
-  sources = [
-    "acceleration/uniform_grid.cc",
-    "acceleration/uniform_grid.h",
-    "debug/debug_font.cc",
-    "debug/debug_font.h",
-    "debug/debug_rects.cc",
-    "debug/debug_rects.h",
-    "defaults/default_shader_program_factory.cc",
-    "defaults/default_shader_program_factory.h",
-    "escher.cc",
-    "escher.h",
-    "escher_process_init.cc",
-    "escher_process_init.h",
-    "forward_declarations.h",
-    "fs/hack_filesystem.cc",
-    "fs/hack_filesystem.h",
-    "hmd/pose_buffer_latching_shader.cc",
-    "hmd/pose_buffer_latching_shader.h",
-    "impl/command_buffer.cc",
-    "impl/command_buffer.h",
-    "impl/command_buffer_pool.cc",
-    "impl/command_buffer_pool.h",
-    "impl/command_buffer_sequencer.cc",
-    "impl/command_buffer_sequencer.h",
-    "impl/compute_shader.cc",
-    "impl/compute_shader.h",
-    "impl/debug_print.cc",
-    "impl/descriptor_set_pool.cc",
-    "impl/descriptor_set_pool.h",
-    "impl/frame_manager.cc",
-    "impl/frame_manager.h",
-    "impl/gaussian_3x3f16.cc",
-    "impl/gaussian_3x3f16.h",
-    "impl/glsl_compiler.cc",
-    "impl/glsl_compiler.h",
-    "impl/gpu_mem_slab.cc",
-    "impl/gpu_mem_slab.h",
-    "impl/gpu_mem_suballocation.cc",
-    "impl/gpu_mem_suballocation.h",
-    "impl/image_cache.cc",
-    "impl/image_cache.h",
-    "impl/mesh_manager.cc",
-    "impl/mesh_manager.h",
-    "impl/mesh_shader_binding.cc",
-    "impl/mesh_shader_binding.h",
-    "impl/model_data.cc",
-    "impl/model_data.h",
-    "impl/model_pipeline_spec.h",
-    "impl/naive_buffer.cc",
-    "impl/naive_buffer.h",
-    "impl/naive_image.cc",
-    "impl/naive_image.h",
-    "impl/uniform_buffer_pool.cc",
-    "impl/uniform_buffer_pool.h",
-    "impl/vk/pipeline.cc",
-    "impl/vk/pipeline.h",
-    "impl/vk/pipeline_layout.cc",
-    "impl/vk/pipeline_layout.h",
-    "impl/vk/pipeline_spec.cc",
-    "impl/vk/pipeline_spec.h",
-    "impl/vulkan_utils.cc",
-    "impl/vulkan_utils.h",
-    "impl/z_sort.cc",
-    "impl/z_sort.h",
-    "material/color_utils.cc",
-    "material/color_utils.h",
-    "material/material.cc",
-    "material/material.h",
-    "math/lerp.h",
-    "math/rotations.cc",
-    "math/rotations.h",
-    "mesh/indexed_triangle_mesh.h",
-    "mesh/indexed_triangle_mesh_clip.h",
-    "mesh/indexed_triangle_mesh_upload.h",
-    "mesh/tessellation.cc",
-    "mesh/tessellation.h",
-    "paper/paper_draw_call.h",
-    "paper/paper_draw_call_factory.cc",
-    "paper/paper_draw_call_factory.h",
-    "paper/paper_drawable.h",
-    "paper/paper_drawable_flags.h",
-    "paper/paper_light.h",
-    "paper/paper_material.h",
-    "paper/paper_readme.h",
-    "paper/paper_render_funcs.cc",
-    "paper/paper_render_funcs.h",
-    "paper/paper_render_queue.cc",
-    "paper/paper_render_queue.h",
-    "paper/paper_render_queue_context.cc",
-    "paper/paper_render_queue_context.h",
-    "paper/paper_render_queue_flags.h",
-    "paper/paper_renderer.cc",
-    "paper/paper_renderer.h",
-    "paper/paper_renderer_config.h",
-    "paper/paper_renderer_static_config.cc",
-    "paper/paper_renderer_static_config.h",
-    "paper/paper_scene.h",
-    "paper/paper_shader_structs.h",
-    "paper/paper_shape_cache.cc",
-    "paper/paper_shape_cache.h",
-    "paper/paper_transform_stack.cc",
-    "paper/paper_transform_stack.h",
-    "profiling/timestamp_profiler.cc",
-    "profiling/timestamp_profiler.h",
-    "renderer/batch_gpu_uploader.cc",
-    "renderer/batch_gpu_uploader.h",
-    "renderer/buffer_cache.cc",
-    "renderer/buffer_cache.h",
-    "renderer/frame.cc",
-    "renderer/frame.h",
-    "renderer/render_queue.cc",
-    "renderer/render_queue.h",
-    "renderer/render_queue_context.h",
-    "renderer/render_queue_item.h",
-    "renderer/renderer.cc",
-    "renderer/renderer.h",
-    "renderer/semaphore.cc",
-    "renderer/semaphore.h",
-    "renderer/uniform_allocation.h",
-    "renderer/uniform_binding.h",
-    "renderer/uniform_block_allocator.cc",
-    "renderer/uniform_block_allocator.h",
-    "resources/resource.cc",
-    "resources/resource.h",
-    "resources/resource_manager.cc",
-    "resources/resource_manager.h",
-    "resources/resource_recycler.cc",
-    "resources/resource_recycler.h",
-    "resources/resource_type_info.h",
-    "scene/ambient_light.cc",
-    "scene/ambient_light.h",
-    "scene/binding.h",
-    "scene/camera.cc",
-    "scene/camera.h",
-    "scene/directional_light.cc",
-    "scene/directional_light.h",
-    "scene/displacement.cc",
-    "scene/displacement.h",
-    "scene/model.cc",
-    "scene/model.h",
-    "scene/object.cc",
-    "scene/object.h",
-    "scene/shape.cc",
-    "scene/shape.h",
-    "scene/shape_modifier.h",
-    "scene/stage.cc",
-    "scene/stage.h",
-    "scene/viewing_volume.cc",
-    "scene/viewing_volume.h",
-    "shape/mesh.cc",
-    "shape/mesh.h",
-    "shape/mesh_builder.cc",
-    "shape/mesh_builder.h",
-    "shape/mesh_builder_factory.h",
-    "shape/mesh_spec.cc",
-    "shape/mesh_spec.h",
-    "shape/modifier_wobble.cc",
-    "shape/modifier_wobble.h",
-    "shape/rounded_rect.cc",
-    "shape/rounded_rect.h",
-    "shape/rounded_rect_factory.cc",
-    "shape/rounded_rect_factory.h",
-    "status.h",
-    "third_party/granite/vk/command_buffer.cc",
-    "third_party/granite/vk/command_buffer.h",
-    "third_party/granite/vk/command_buffer_pipeline_state.cc",
-    "third_party/granite/vk/command_buffer_pipeline_state.h",
-    "third_party/granite/vk/descriptor_set_layout.cc",
-    "third_party/granite/vk/descriptor_set_layout.h",
-    "third_party/granite/vk/pipeline_layout.cc",
-    "third_party/granite/vk/pipeline_layout.h",
-    "third_party/granite/vk/render_pass.cc",
-    "third_party/granite/vk/render_pass.h",
-    "third_party/granite/vk/render_pass_info.cc",
-    "third_party/granite/vk/render_pass_info.h",
-    "third_party/granite/vk/shader_utils.cc",
-    "third_party/granite/vk/shader_utils.h",
-    "util/align.h",
-    "util/alloca.h",
-    "util/bit_ops.h",
-    "util/bitmap.h",
-    "util/block_allocator.cc",
-    "util/block_allocator.h",
-    "util/debug_print.h",
-    "util/depth_to_color.cc",
-    "util/depth_to_color.h",
-    "util/enum_cast.h",
-    "util/enum_count.h",
-    "util/enum_flags.h",
-    "util/enum_utils.h",
-    "util/epsilon_compare.cc",
-    "util/epsilon_compare.h",
-    "util/hash.h",
-    "util/hash_cache.h",
-    "util/hash_fnv_1a.h",
-    "util/hash_map.h",
-    "util/hashable.h",
-    "util/hasher.h",
-    "util/image_utils.cc",
-    "util/image_utils.h",
-    "util/intrusive_list.h",
-    "util/object_pool.h",
-    "util/pair_hasher.h",
-    "util/stack_allocator.h",
-    "util/stopwatch.h",
-    "util/string_utils.h",
-    "util/trace_macros.h",
-    "util/tracer.cc",
-    "util/tracer.h",
-    "vk/buffer.cc",
-    "vk/buffer.h",
-    "vk/buffer_factory.h",
-    "vk/command_buffer.h",
-    "vk/framebuffer.cc",
-    "vk/framebuffer.h",
-    "vk/gpu_allocator.h",
-    "vk/gpu_mem.cc",
-    "vk/gpu_mem.h",
-    "vk/image.cc",
-    "vk/image.h",
-    "vk/image_view.cc",
-    "vk/image_view.h",
-    "vk/impl/descriptor_set_allocator.cc",
-    "vk/impl/descriptor_set_allocator.h",
-    "vk/impl/framebuffer.cc",
-    "vk/impl/framebuffer.h",
-    "vk/impl/framebuffer_allocator.cc",
-    "vk/impl/framebuffer_allocator.h",
-    "vk/impl/pipeline_layout_cache.cc",
-    "vk/impl/pipeline_layout_cache.h",
-    "vk/impl/render_pass_cache.cc",
-    "vk/impl/render_pass_cache.h",
-    "vk/naive_gpu_allocator.cc",
-    "vk/naive_gpu_allocator.h",
-    "vk/render_pass.cc",
-    "vk/render_pass.h",
-    "vk/render_pass_info.h",
-    "vk/sampler.cc",
-    "vk/sampler.h",
-    "vk/shader_module.cc",
-    "vk/shader_module.h",
-    "vk/shader_module_template.cc",
-    "vk/shader_module_template.h",
-    "vk/shader_program.cc",
-    "vk/shader_program.h",
-    "vk/shader_program_factory.cc",
-    "vk/shader_program_factory.h",
-    "vk/shader_variant_args.cc",
-    "vk/shader_variant_args.h",
-    "vk/texture.cc",
-    "vk/texture.h",
-    "vk/vma_gpu_allocator.cc",
-    "vk/vma_gpu_allocator.h",
-    "vk/vulkan_context.h",
-    "vk/vulkan_device_queues.cc",
-    "vk/vulkan_device_queues.h",
-    "vk/vulkan_instance.cc",
-    "vk/vulkan_instance.h",
-    "vk/vulkan_limits.h",
-    "vk/vulkan_swapchain.cc",
-    "vk/vulkan_swapchain.h",
-    "vk/vulkan_swapchain_helper.cc",
-    "vk/vulkan_swapchain_helper.h",
-  ]
-
-  if (is_fuchsia) {
-    sources += [
-      "flib/fence.h",
-      "flib/fence_listener.cc",
-      "flib/fence_listener.h",
-      "flib/fence_set_listener.cc",
-      "flib/fence_set_listener.h",
-      "flib/release_fence_signaller.cc",
-      "flib/release_fence_signaller.h",
-      "fs/fuchsia_data_source.cc",
-      "fs/fuchsia_data_source.h",
-      "util/fuchsia_utils.cc",
-      "util/fuchsia_utils.h",
+    defines = [
+      # Currently necessary on Fuchsia, but not Linux.
+      "ESCHER_DISABLE_BACKGROUND_GLSL_COMPILATION",
     ]
-    public_deps += [
-      "//sdk/fidl/fuchsia.images",
-      "//sdk/lib/vfs/cpp",
-      "//zircon/public/lib/async-loop-cpp",
-      "//zircon/public/lib/async-loop-default",
-      "//zircon/public/lib/fit",
-      "//zircon/public/lib/trace-vthread",
+
+    deps = [
+      "//third_party/spirv-cross",
+      "//third_party/spirv-tools:spvtools_opt",
     ]
-    deps += [ "//zircon/public/lib/trace" ]
+
+    if (use_runtime_glsl) {
+      deps += [
+        "//third_party/glslang:glslang_default_resource_limits_sources",
+        "//third_party/glslang:glslang_sources",
+        "//third_party/shaderc:libshaderc",
+      ]
+    }
+
+    public_deps = [
+      ":vk_mem_alloc",
+      ":vulkan",
+      "//src/lib/fxl",
+      "//src/ui/lib/escher/base:escher_base",
+      "//src/ui/lib/escher/geometry:escher_geometry",
+      "//src/ui/lib/escher/types:escher_types",
+    ]
+
+    sources = [
+      "acceleration/uniform_grid.cc",
+      "acceleration/uniform_grid.h",
+      "debug/debug_font.cc",
+      "debug/debug_font.h",
+      "debug/debug_rects.cc",
+      "debug/debug_rects.h",
+      "defaults/default_shader_program_factory.cc",
+      "defaults/default_shader_program_factory.h",
+      "escher.cc",
+      "escher.h",
+      "escher_process_init.cc",
+      "escher_process_init.h",
+      "forward_declarations.h",
+      "fs/hack_filesystem.cc",
+      "fs/hack_filesystem.h",
+      "hmd/pose_buffer_latching_shader.cc",
+      "hmd/pose_buffer_latching_shader.h",
+      "impl/command_buffer.cc",
+      "impl/command_buffer.h",
+      "impl/command_buffer_pool.cc",
+      "impl/command_buffer_pool.h",
+      "impl/command_buffer_sequencer.cc",
+      "impl/command_buffer_sequencer.h",
+      "impl/compute_shader.cc",
+      "impl/compute_shader.h",
+      "impl/debug_print.cc",
+      "impl/descriptor_set_pool.cc",
+      "impl/descriptor_set_pool.h",
+      "impl/frame_manager.cc",
+      "impl/frame_manager.h",
+      "impl/gpu_mem_slab.cc",
+      "impl/gpu_mem_slab.h",
+      "impl/gpu_mem_suballocation.cc",
+      "impl/gpu_mem_suballocation.h",
+      "impl/image_cache.cc",
+      "impl/image_cache.h",
+      "impl/mesh_manager.cc",
+      "impl/mesh_manager.h",
+      "impl/mesh_shader_binding.cc",
+      "impl/mesh_shader_binding.h",
+      "impl/model_data.cc",
+      "impl/model_data.h",
+      "impl/model_pipeline_spec.h",
+      "impl/naive_buffer.cc",
+      "impl/naive_buffer.h",
+      "impl/naive_image.cc",
+      "impl/naive_image.h",
+      "impl/uniform_buffer_pool.cc",
+      "impl/uniform_buffer_pool.h",
+      "impl/vk/pipeline.cc",
+      "impl/vk/pipeline.h",
+      "impl/vk/pipeline_layout.cc",
+      "impl/vk/pipeline_layout.h",
+      "impl/vk/pipeline_spec.cc",
+      "impl/vk/pipeline_spec.h",
+      "impl/vulkan_utils.cc",
+      "impl/vulkan_utils.h",
+      "impl/z_sort.cc",
+      "impl/z_sort.h",
+      "material/color_utils.cc",
+      "material/color_utils.h",
+      "material/material.cc",
+      "material/material.h",
+      "math/lerp.h",
+      "math/rotations.cc",
+      "math/rotations.h",
+      "mesh/indexed_triangle_mesh.h",
+      "mesh/indexed_triangle_mesh_clip.h",
+      "mesh/indexed_triangle_mesh_upload.h",
+      "mesh/tessellation.cc",
+      "mesh/tessellation.h",
+      "paper/paper_draw_call.h",
+      "paper/paper_draw_call_factory.cc",
+      "paper/paper_draw_call_factory.h",
+      "paper/paper_drawable.h",
+      "paper/paper_drawable_flags.h",
+      "paper/paper_light.h",
+      "paper/paper_material.h",
+      "paper/paper_readme.h",
+      "paper/paper_render_funcs.cc",
+      "paper/paper_render_funcs.h",
+      "paper/paper_render_queue.cc",
+      "paper/paper_render_queue.h",
+      "paper/paper_render_queue_context.cc",
+      "paper/paper_render_queue_context.h",
+      "paper/paper_render_queue_flags.h",
+      "paper/paper_renderer.cc",
+      "paper/paper_renderer.h",
+      "paper/paper_renderer_config.h",
+      "paper/paper_renderer_static_config.cc",
+      "paper/paper_renderer_static_config.h",
+      "paper/paper_scene.h",
+      "paper/paper_shader_structs.h",
+      "paper/paper_shape_cache.cc",
+      "paper/paper_shape_cache.h",
+      "paper/paper_transform_stack.cc",
+      "paper/paper_transform_stack.h",
+      "profiling/timestamp_profiler.cc",
+      "profiling/timestamp_profiler.h",
+      "renderer/batch_gpu_uploader.cc",
+      "renderer/batch_gpu_uploader.h",
+      "renderer/buffer_cache.cc",
+      "renderer/buffer_cache.h",
+      "renderer/frame.cc",
+      "renderer/frame.h",
+      "renderer/render_queue.cc",
+      "renderer/render_queue.h",
+      "renderer/render_queue_context.h",
+      "renderer/render_queue_item.h",
+      "renderer/renderer.cc",
+      "renderer/renderer.h",
+      "renderer/semaphore.cc",
+      "renderer/semaphore.h",
+      "renderer/uniform_allocation.h",
+      "renderer/uniform_binding.h",
+      "renderer/uniform_block_allocator.cc",
+      "renderer/uniform_block_allocator.h",
+      "resources/resource.cc",
+      "resources/resource.h",
+      "resources/resource_manager.cc",
+      "resources/resource_manager.h",
+      "resources/resource_recycler.cc",
+      "resources/resource_recycler.h",
+      "resources/resource_type_info.h",
+      "scene/ambient_light.cc",
+      "scene/ambient_light.h",
+      "scene/binding.h",
+      "scene/camera.cc",
+      "scene/camera.h",
+      "scene/directional_light.cc",
+      "scene/directional_light.h",
+      "scene/displacement.cc",
+      "scene/displacement.h",
+      "scene/model.cc",
+      "scene/model.h",
+      "scene/object.cc",
+      "scene/object.h",
+      "scene/shape.cc",
+      "scene/shape.h",
+      "scene/shape_modifier.h",
+      "scene/stage.cc",
+      "scene/stage.h",
+      "scene/viewing_volume.cc",
+      "scene/viewing_volume.h",
+      "shaders/util/spirv_file_util.cc",
+      "shaders/util/spirv_file_util.h",
+      "shape/mesh.cc",
+      "shape/mesh.h",
+      "shape/mesh_builder.cc",
+      "shape/mesh_builder.h",
+      "shape/mesh_builder_factory.h",
+      "shape/mesh_spec.cc",
+      "shape/mesh_spec.h",
+      "shape/modifier_wobble.cc",
+      "shape/modifier_wobble.h",
+      "shape/rounded_rect.cc",
+      "shape/rounded_rect.h",
+      "shape/rounded_rect_factory.cc",
+      "shape/rounded_rect_factory.h",
+      "status.h",
+      "third_party/granite/vk/command_buffer.cc",
+      "third_party/granite/vk/command_buffer.h",
+      "third_party/granite/vk/command_buffer_pipeline_state.cc",
+      "third_party/granite/vk/command_buffer_pipeline_state.h",
+      "third_party/granite/vk/descriptor_set_layout.cc",
+      "third_party/granite/vk/descriptor_set_layout.h",
+      "third_party/granite/vk/pipeline_layout.cc",
+      "third_party/granite/vk/pipeline_layout.h",
+      "third_party/granite/vk/render_pass.cc",
+      "third_party/granite/vk/render_pass.h",
+      "third_party/granite/vk/render_pass_info.cc",
+      "third_party/granite/vk/render_pass_info.h",
+      "third_party/granite/vk/shader_utils.cc",
+      "third_party/granite/vk/shader_utils.h",
+      "util/align.h",
+      "util/alloca.h",
+      "util/bit_ops.h",
+      "util/bitmap.h",
+      "util/block_allocator.cc",
+      "util/block_allocator.h",
+      "util/debug_print.h",
+      "util/enum_cast.h",
+      "util/enum_count.h",
+      "util/enum_flags.h",
+      "util/enum_utils.h",
+      "util/epsilon_compare.cc",
+      "util/epsilon_compare.h",
+      "util/hash.h",
+      "util/hash_cache.h",
+      "util/hash_fnv_1a.h",
+      "util/hash_map.h",
+      "util/hashable.h",
+      "util/hasher.h",
+      "util/image_utils.cc",
+      "util/image_utils.h",
+      "util/intrusive_list.h",
+      "util/object_pool.h",
+      "util/pair_hasher.h",
+      "util/stack_allocator.h",
+      "util/stopwatch.h",
+      "util/string_utils.h",
+      "util/trace_macros.h",
+      "util/tracer.cc",
+      "util/tracer.h",
+      "vk/buffer.cc",
+      "vk/buffer.h",
+      "vk/buffer_factory.h",
+      "vk/command_buffer.h",
+      "vk/framebuffer.cc",
+      "vk/framebuffer.h",
+      "vk/gpu_allocator.h",
+      "vk/gpu_mem.cc",
+      "vk/gpu_mem.h",
+      "vk/image.cc",
+      "vk/image.h",
+      "vk/image_view.cc",
+      "vk/image_view.h",
+      "vk/impl/descriptor_set_allocator.cc",
+      "vk/impl/descriptor_set_allocator.h",
+      "vk/impl/framebuffer.cc",
+      "vk/impl/framebuffer.h",
+      "vk/impl/framebuffer_allocator.cc",
+      "vk/impl/framebuffer_allocator.h",
+      "vk/impl/pipeline_layout_cache.cc",
+      "vk/impl/pipeline_layout_cache.h",
+      "vk/impl/render_pass_cache.cc",
+      "vk/impl/render_pass_cache.h",
+      "vk/naive_gpu_allocator.cc",
+      "vk/naive_gpu_allocator.h",
+      "vk/render_pass.cc",
+      "vk/render_pass.h",
+      "vk/render_pass_info.h",
+      "vk/sampler.cc",
+      "vk/sampler.h",
+      "vk/shader_module.cc",
+      "vk/shader_module.h",
+      "vk/shader_module_template.cc",
+      "vk/shader_module_template.h",
+      "vk/shader_program.cc",
+      "vk/shader_program.h",
+      "vk/shader_program_factory.cc",
+      "vk/shader_program_factory.h",
+      "vk/shader_variant_args.cc",
+      "vk/shader_variant_args.h",
+      "vk/texture.cc",
+      "vk/texture.h",
+      "vk/vma_gpu_allocator.cc",
+      "vk/vma_gpu_allocator.h",
+      "vk/vulkan_context.h",
+      "vk/vulkan_device_queues.cc",
+      "vk/vulkan_device_queues.h",
+      "vk/vulkan_instance.cc",
+      "vk/vulkan_instance.h",
+      "vk/vulkan_limits.h",
+      "vk/vulkan_swapchain.cc",
+      "vk/vulkan_swapchain.h",
+      "vk/vulkan_swapchain_helper.cc",
+      "vk/vulkan_swapchain_helper.h",
+    ]
+
+    # These classes contain hard-coded GLSL strings
+    # which must be compiled at runtime.
+    if (use_runtime_glsl) {
+      sources += [
+        "impl/gaussian_3x3f16.cc",
+        "impl/gaussian_3x3f16.h",
+        "impl/glsl_compiler.cc",
+        "impl/glsl_compiler.h",
+        "util/depth_to_color.cc",
+        "util/depth_to_color.h",
+      ]
+    }
+
+    if (is_fuchsia) {
+      sources += [
+        "flib/fence.h",
+        "flib/fence_listener.cc",
+        "flib/fence_listener.h",
+        "flib/fence_set_listener.cc",
+        "flib/fence_set_listener.h",
+        "flib/release_fence_signaller.cc",
+        "flib/release_fence_signaller.h",
+        "fs/fuchsia_data_source.cc",
+        "fs/fuchsia_data_source.h",
+        "util/fuchsia_utils.cc",
+        "util/fuchsia_utils.h",
+      ]
+      public_deps += [
+        "//sdk/fidl/fuchsia.images",
+        "//sdk/lib/vfs/cpp",
+        "//zircon/public/lib/async-loop-cpp",
+        "//zircon/public/lib/async-loop-default",
+        "//zircon/public/lib/fit",
+        "//zircon/public/lib/trace-vthread",
+      ]
+      deps += [ "//zircon/public/lib/trace" ]
+    }
+
+    if (is_linux) {
+      sources += [
+        "fs/linux_data_source.cc",
+        "fs/linux_data_source.h",
+        "util/impl/trace_macros_impl.cc",
+        "util/impl/trace_macros_impl.h",
+      ]
+    }
+
+    public_configs = [ ":thread_safety_warning" ]
+    if (use_runtime_glsl) {
+      public_configs += [ ":use_runtime_glsl_config" ]
+    }
   }
+}
 
-  if (is_linux) {
-    sources += [
-      "fs/linux_data_source.cc",
-      "fs/linux_data_source.h",
-      "util/impl/trace_macros_impl.cc",
-      "util/impl/trace_macros_impl.h",
-    ]
-  }
+escher_library("escher") {
+  use_runtime_glsl = true
+}
 
-  public_configs = [ ":thread_safety_warning" ]
+escher_library("escher_no_glslang") {
+  use_runtime_glsl = false
 }
 
 group("unittests") {

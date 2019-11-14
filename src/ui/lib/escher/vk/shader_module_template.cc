@@ -4,15 +4,19 @@
 
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 
+#include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
-#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
+#if ESCHER_USE_RUNTIME_GLSL
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
+#endif
 
 namespace escher {
 
 namespace {
 
+#if ESCHER_USE_RUNTIME_GLSL
 shaderc_shader_kind ShaderStageToKind(ShaderStage stage) {
   switch (stage) {
     case ShaderStage::kVertex:
@@ -85,8 +89,12 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
   HackFilesystemWatcher* const filesystem_watcher_;
   std::unordered_map<shaderc_include_result*, std::unique_ptr<ResultRecord>> result_map_;
 };
+
+#endif  // ESCHER_USE_RUNTIME_GLSL
+
 }  // anonymous namespace
 
+#if ESCHER_USE_RUNTIME_GLSL
 ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler,
                                            ShaderStage shader_stage, HackFilePath path,
                                            HackFilesystemPtr filesystem)
@@ -95,6 +103,14 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, shaderc::Compiler*
       shader_stage_(shader_stage),
       path_(std::move(path)),
       filesystem_(std::move(filesystem)) {}
+#else
+ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, ShaderStage shader_stage,
+                                           HackFilePath path, HackFilesystemPtr filesystem)
+    : device_(device),
+      shader_stage_(shader_stage),
+      path_(std::move(path)),
+      filesystem_(std::move(filesystem)) {}
+#endif  // ESCHER_USE_RUNTIME_GLSL
 
 ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }
 
@@ -102,7 +118,9 @@ ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(const ShaderVariant
   if (Variant* variant = variants_[args]) {
     return ShaderModulePtr(variant);
   }
+
   auto variant = new Variant(this, args);
+
   auto module_ptr = fxl::AdoptRef<ShaderModule>(variant);
   RegisterVariant(variant);
   variant->ScheduleCompilation();
@@ -127,10 +145,11 @@ void ShaderModuleTemplate::ScheduleVariantCompilation(fxl::WeakPtr<Variant> vari
   // several files are changing at once (as when all changed files are pushed to
   // the device in rapid succession).
   if (variant) {
-    variant->Compile();
+    variant->UpdateModule();
   }
 }
 
+#if ESCHER_USE_RUNTIME_GLSL
 bool ShaderModuleTemplate::CompileVariantToSpirv(const ShaderVariantArgs& args,
                                                  std::vector<uint32_t>* output) {
   FXL_CHECK(output);
@@ -142,8 +161,10 @@ bool ShaderModuleTemplate::CompileVariantToSpirv(const ShaderVariantArgs& args,
     RegisterVariant(variant);
   }
 
+  // Variant only has the method |GenerateSpirV| when ESCHER_USE_RUNTIME_GLSL is true.
   return variant->GenerateSpirV(output);
 }
+#endif
 
 ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate, ShaderVariantArgs args)
     : ShaderModule(tmplate->device_, tmplate->shader_stage_),
@@ -168,10 +189,13 @@ void ShaderModuleTemplate::Variant::ScheduleCompilation() {
   template_->ScheduleVariantCompilation(weak_factory_.GetWeakPtr());
 }
 
+#if ESCHER_USE_RUNTIME_GLSL
+
 // Generates the spirv for a compiled shader and returns it via the |output| parameter.
 // Returns true if the compilation was successful and false otherwise.
 bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output) {
   TRACE_DURATION("gfx", "ShaderModuleTemplate::GenerateSpirV");
+
   FXL_DCHECK(output);
 
   // Clear watcher paths; we'll gather new ones during compilation.
@@ -206,10 +230,21 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
 }
 
 // Generates the spirv  for the shader and recreates the vk shader module with it.
-void ShaderModuleTemplate::Variant::Compile() {
+void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
   if (GenerateSpirV(&spirv)) {
     RecreateModuleFromSpirvAndNotifyListeners(spirv);
   }
 }
+#else
+
+void ShaderModuleTemplate::Variant::UpdateModule() {
+  std::vector<uint32_t> spirv;
+  auto base_path = *template_->filesystem_->base_path() + "/shaders/";
+  if (shader_util::ReadSpirvFromDisk(args_, base_path, template_->path_, &spirv)) {
+    RecreateModuleFromSpirvAndNotifyListeners(spirv);
+  }
+}
+
+#endif  // ESCHER_USE_RUNTIME_GLSL
 }  // namespace escher

@@ -8,15 +8,40 @@
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"
+#include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
+#include "src/ui/lib/escher/impl/glsl_compiler.h"  // nogncheck
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 
-#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
 
 namespace escher {
+
+// Compute shaders currently make use of the glslang compiler and not the shaderc
+// compiler, and they do not take ShaderVariantArgs, so this function is tailored
+// to compile compute shaders specifically.
+bool CompileAndWriteComputeShader(HackFilesystemPtr filesystem, const char* source_code,
+                                  const std::string& name) {
+  std::string abs_root = *filesystem->base_path() + "/shaders/spirv/";
+
+  static escher::impl::GlslToSpirvCompiler compiler;
+
+  std::string code(source_code);
+
+  impl::SpirvData spirv =
+      compiler.Compile(vk::ShaderStageFlagBits::eCompute, {{code.c_str()}}, std::string(), "main")
+          .get();
+
+  if (shader_util::WriteSpirvToDisk(spirv, {}, abs_root, name)) {
+    FXL_LOG(INFO) << "Processing compute shader " << name;
+    return true;
+  }
+  FXL_LOG(ERROR) << "could not write shader " << name << " to disk.";
+
+  return false;
+}
 
 // Compiles all of the provided shader modules and writes out their spirv
 // to disk in the source tree.
@@ -87,6 +112,11 @@ int main(int argc, const char** argv) {
   }
 
   if (!CompileAndWriteShader(filesystem, escher::kShadowVolumeGeometryDebugProgramData)) {
+    return EXIT_FAILURE;
+  }
+
+  if (!CompileAndWriteComputeShader(filesystem, escher::hmd::g_kernel_src,
+                                    escher::hmd::kPoseLatchingShaderName)) {
     return EXIT_FAILURE;
   }
 

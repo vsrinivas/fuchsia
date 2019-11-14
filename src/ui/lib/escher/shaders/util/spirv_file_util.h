@@ -17,6 +17,12 @@ namespace shader_util {
 bool WriteSpirvToDisk(const std::vector<uint32_t>& spirv, const ShaderVariantArgs& args,
                       const std::string& base_path, const std::string& shader_name);
 
+// Reads the spirv for a shader given the original file name and a list of args. Generates the
+// spirv file name based on the hash it calculates and sees if there is anything on disk to read.
+// If so, the function returns true and the code is stored in the out_spirv parameter.
+bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_path,
+                       const std::string& shader_name, std::vector<uint32_t>* out_spirv);
+
 }  // namespace shader_util
 }  // namespace escher
 

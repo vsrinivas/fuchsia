@@ -31,8 +31,11 @@ using ShaderModuleTemplatePtr = fxl::RefPtr<ShaderModuleTemplate>;
 // various #include directives are "#ifdeffed out".
 class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTemplate> {
  public:
-  ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler, ShaderStage shader_stage,
-                       HackFilePath path, HackFilesystemPtr filesystem);
+  ShaderModuleTemplate(vk::Device device,
+#if ESCHER_USE_RUNTIME_GLSL
+                       shaderc::Compiler* compiler,
+#endif
+                       ShaderStage shader_stage, HackFilePath path, HackFilesystemPtr filesystem);
 
   ~ShaderModuleTemplate();
 
@@ -45,10 +48,12 @@ class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTempla
   // details.
   ShaderModulePtr GetShaderModuleVariant(const ShaderVariantArgs& args);
 
+#if ESCHER_USE_RUNTIME_GLSL
   // Generates a shader variant based on the provided arguments and compiles them to spirv.
   // Returns true on success and false if there is a shader compilation error. The spirv
   // code itself is output to the |output| vector parameter.
   bool CompileVariantToSpirv(const ShaderVariantArgs& args, std::vector<uint32_t>* output);
+#endif
 
  private:
   // The ShaderModules returned by GetShaderModuleVariant() are actually
@@ -65,21 +70,23 @@ class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTempla
     Variant(ShaderModuleTemplate* tmplate, ShaderVariantArgs args);
     ~Variant();
 
+    // Updates the vulkan shader module (stored in the parent class ShaderModule)
+    // with the latest SpirV code.
+    void UpdateModule();
+
     const ShaderVariantArgs& args() const { return args_; }
-
-    // Compiles the template's main file, and watches all #included files
-    // for changes.
-    void Compile();
-
-    // Generates the spirv for the variant and outputs it to an std::vector
-    // of uint32_ts if the compilation was successful.
-    bool GenerateSpirV(std::vector<uint32_t>* output);
 
     // Called when Variant is initially created, and also whenever a change is
     // observed in any of the #included files from the last compilation attempt.
     void ScheduleCompilation();
 
-   private:
+#if ESCHER_USE_RUNTIME_GLSL
+    // Generates the spirv for the variant and outputs it to an std::vector
+    // of uint32_ts if the compilation was successful.
+    bool GenerateSpirV(std::vector<uint32_t>* output);
+#endif
+
+   protected:
     const fxl::RefPtr<ShaderModuleTemplate> template_;
     ShaderVariantArgs args_;
 
@@ -100,11 +107,15 @@ class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTempla
   // destroyed before the device/compiler (hence before the Escher, assuming
   // that's where they came from).
   vk::Device device_;
+
+#if ESCHER_USE_RUNTIME_GLSL
   shaderc::Compiler* const compiler_;
+#endif
 
   ShaderStage shader_stage_;
   HackFilePath path_;
   HackFilesystemPtr filesystem_;
+
   HashMap<ShaderVariantArgs, Variant*> variants_;
 };
 

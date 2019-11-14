@@ -117,21 +117,30 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
   // Provide a PseudoDir where the gfx system can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();
   app_context->outgoing()->debug_dir()->AddSharedEntry("gfx", debug_dir);
+
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
+#if ESCHER_USE_RUNTIME_GLSL
     bool success = shader_fs->InitializeWithRealFiles(escher::kPaperRendererShaderPaths);
+#else
+    bool success = shader_fs->InitializeWithRealFiles(escher::kPaperRendererShaderSpirvPaths);
+#endif
     FXL_DCHECK(success) << "Failed to init shader files.";
   }
 
   // Initialize Escher.
+#if ESCHER_USE_RUNTIME_GLSL
   escher::GlslangInitializeProcess();
+#endif
   return escher::EscherUniquePtr(new escher::Escher(vulkan_device_queues, std::move(shader_fs)),
                                  // Custom deleter.
                                  // The vulkan instance is a stack variable, but it is a
                                  // fxl::RefPtr, so we can store by value.
                                  [=](escher::Escher* escher) {
                                    vulkan_instance->DeregisterDebugReportCallback(callback_handle);
+#if ESCHER_USE_RUNTIME_GLSL
                                    escher::GlslangFinalizeProcess();
+#endif
                                    delete escher;
                                  });
 }

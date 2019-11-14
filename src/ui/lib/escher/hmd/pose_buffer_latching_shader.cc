@@ -4,11 +4,13 @@
 
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 
+#include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/scene/camera.h"
+#include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -16,8 +18,8 @@
 namespace escher {
 namespace hmd {
 
-namespace {
-constexpr char g_kernel_src[] = R"GLSL(
+const char* kPoseLatchingShaderName = "pose_buffer_latching.comp";
+const char* g_kernel_src = R"GLSL(
   #version 450
   #extension GL_ARB_separate_shader_objects : enable
 
@@ -97,7 +99,6 @@ constexpr char g_kernel_src[] = R"GLSL(
                 translate(latched_pose.position) * right_view_transform;
   }
   )GLSL";
-}
 
 static constexpr size_t k4x4MatrixSize = 16 * sizeof(float);
 
@@ -153,12 +154,27 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(const FramePtr& frame,
   vp_matrices[3] = right_camera.projection();
 
   if (!kernel_) {
+#if ESCHER_USE_RUNTIME_GLSL
     kernel_ = std::make_unique<impl::ComputeShader>(
         escher_, std::vector<vk::ImageLayout>{},
         std::vector<vk::DescriptorType>{vk::DescriptorType::eUniformBuffer,
                                         vk::DescriptorType::eStorageBuffer,
                                         vk::DescriptorType::eStorageBuffer},
         sizeof(latch_index), g_kernel_src);
+#else
+    std::vector<uint32_t> spirv;
+    auto base_path = escher_->shader_program_factory()->filesystem()->base_path();
+    if (shader_util::ReadSpirvFromDisk(/*ShaderVariantArgs*/ {}, *base_path + "/shaders/",
+                                       kPoseLatchingShaderName, &spirv)) {
+      kernel_ = std::make_unique<impl::ComputeShader>(
+          escher_, std::vector<vk::ImageLayout>{},
+          std::vector<vk::DescriptorType>{vk::DescriptorType::eUniformBuffer,
+                                          vk::DescriptorType::eStorageBuffer,
+                                          vk::DescriptorType::eStorageBuffer},
+          sizeof(latch_index), spirv);
+    }
+
+#endif  // ESCHER_USE_RUNTIME_GLSL
   }
 
   std::vector<TexturePtr> textures;

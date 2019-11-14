@@ -6,7 +6,10 @@
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"
+
+#if ESCHER_USE_RUNTIME_GLSL
+#include "src/ui/lib/escher/impl/glsl_compiler.h"  // nogncheck
+#endif
 #include "src/ui/lib/escher/impl/vk/pipeline.h"
 #include "src/ui/lib/escher/impl/vk/pipeline_spec.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -57,14 +60,9 @@ inline vk::DescriptorSetLayoutCreateInfo CreateDescriptorSetLayoutCreateInfo(
 
 // Used by ComputeShader constructor.
 PipelinePtr CreatePipeline(vk::Device device, vk::DescriptorSetLayout descriptor_set_layout,
-                           uint32_t push_constants_size, const char* source_code,
-                           GlslToSpirvCompiler* compiler) {
+                           uint32_t push_constants_size, const std::vector<uint32_t> spirv) {
   vk::ShaderModule module;
   {
-    SpirvData spirv =
-        compiler->Compile(vk::ShaderStageFlagBits::eCompute, {{source_code}}, std::string(), "main")
-            .get();
-
     vk::ShaderModuleCreateInfo module_info;
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
     module_info.pCode = spirv.data();
@@ -104,6 +102,19 @@ PipelinePtr CreatePipeline(vk::Device device, vk::DescriptorSetLayout descriptor
   return pipeline;
 }
 
+#if ESCHER_USE_RUNTIME_GLSL
+// Used by ComputeShader constructor.
+PipelinePtr CreatePipeline(vk::Device device, vk::DescriptorSetLayout descriptor_set_layout,
+                           uint32_t push_constants_size, const char* source_code,
+                           GlslToSpirvCompiler* compiler) {
+  SpirvData spirv =
+      compiler->Compile(vk::ShaderStageFlagBits::eCompute, {{source_code}}, std::string(), "main")
+          .get();
+
+  return CreatePipeline(device, descriptor_set_layout, push_constants_size, spirv);
+}
+#endif
+
 // Used by ComputeShader constructor.
 inline void InitWriteDescriptorSet(
     vk::WriteDescriptorSet& write,
@@ -116,6 +127,7 @@ inline void InitWriteDescriptorSet(
 
 }  // namespace
 
+#if ESCHER_USE_RUNTIME_GLSL
 ComputeShader::ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
                              const std::vector<vk::DescriptorType>& buffer_types,
                              size_t push_constants_size, const char* source_code)
@@ -127,6 +139,27 @@ ComputeShader::ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLa
       pool_(escher, descriptor_set_layout_create_info_),
       pipeline_(CreatePipeline(device_, pool_.layout(), push_constants_size_, source_code,
                                escher->glsl_compiler())) {
+  Initialize(layouts, buffer_types, push_constants_size);
+}
+#else
+
+ComputeShader::ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
+                             const std::vector<vk::DescriptorType>& buffer_types,
+                             size_t push_constants_size, std::vector<uint32_t> spirv)
+    : device_(escher->vulkan_context().device),
+      descriptor_set_layout_bindings_(CreateLayoutBindings(layouts, buffer_types)),
+      descriptor_set_layout_create_info_(
+          CreateDescriptorSetLayoutCreateInfo(descriptor_set_layout_bindings_)),
+      push_constants_size_(static_cast<uint32_t>(push_constants_size)),
+      pool_(escher, descriptor_set_layout_create_info_),
+      pipeline_(CreatePipeline(device_, pool_.layout(), push_constants_size_, spirv)) {
+  Initialize(layouts, buffer_types, push_constants_size);
+}
+#endif  // ESCHER_USE_RUNTIME_GLSL
+
+void ComputeShader::Initialize(const std::vector<vk::ImageLayout>& layouts,
+                               const std::vector<vk::DescriptorType>& buffer_types,
+                               size_t push_constants_size) {
   FXL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
   descriptor_image_info_.reserve(layouts.size());
   descriptor_buffer_info_.reserve(buffer_types.size());

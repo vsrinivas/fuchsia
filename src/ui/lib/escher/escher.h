@@ -42,7 +42,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
                                 size_t max_vertex_count, size_t max_index_count) override;
 
   // Return new Image containing the provided pixels.
-  ImagePtr NewRgbaImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height, uint8_t* bytes);
+  ImagePtr NewRgbaImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height,
+                        uint8_t* bytes);
   // Returns RGBA image.
   ImagePtr NewCheckerboardImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height);
   // Returns RGBA image.
@@ -119,8 +120,12 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   impl::CommandBufferSequencer* command_buffer_sequencer() {
     return command_buffer_sequencer_.get();
   }
+
+#if ESCHER_USE_RUNTIME_GLSL
   impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
   shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
+#endif
+
   ImageFactory* image_cache() { return image_cache_.get(); }
   BufferCache* buffer_cache() { return buffer_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
@@ -165,8 +170,12 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> protected_command_buffer_pool_;
+
+#if ESCHER_USE_RUNTIME_GLSL
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
   std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
+#endif
+
   // Everything below this point requires |weak_factory_| to be initialized
   // before they can be constructed.
 
